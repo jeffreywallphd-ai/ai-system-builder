@@ -1,6 +1,8 @@
 export {
   HEADLESS_CONTRACT_VERSION,
   HEADLESS_READ_OPERATIONS,
+  HEADLESS_DATA_READ_OPERATIONS,
+  isHeadlessDataReadOperation,
   HEADLESS_WORKFLOW_SOURCE_KINDS,
   isHeadlessHostIncarnationId,
   isHeadlessWorkflowId,
@@ -44,6 +46,7 @@ export * from "./headless-system-management";
 export * from "./headless-plan-review-wire";
 export * from "./headless-plan-step-wire";
 export * from "./headless-data-task-status";
+export * from "./headless-dataset-metadata";
 export * from "./headless-data-local-file";
 export * from "./headless-data-provider-file";
 export * from "./headless-data-app-selection";

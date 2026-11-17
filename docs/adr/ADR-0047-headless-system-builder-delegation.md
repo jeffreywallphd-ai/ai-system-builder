@@ -163,3 +163,9 @@ its local source records with a distinct plan effect receipt. Current
 authorization protects both commit and replay. Source expiry is checked at
 the commit boundary. The effect registers the remote origin. Downstream
 localization and dataset preparation remain their own application actions.
+
+Passive dataset inspection uses authorized dataset-version point-read owners.
+The fixed tools expose at most 16 selected versions and exact same-dataset comparisons
+only to plan-review registrations with current artifact read access. These
+metadata-only queries do not initialize model or preparation runtimes and grant
+no content export, dataset mutation or publication authority.

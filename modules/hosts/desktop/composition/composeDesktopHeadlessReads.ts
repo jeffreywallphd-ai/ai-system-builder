@@ -1,6 +1,7 @@
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
+import type { ReadHeadlessDatasetMetadataUseCase } from "../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case";
 import type { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
 import type { HeadlessConversationStatusUseCase } from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
 import type { HeadlessWorkflowMetadataUseCase } from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
@@ -8,6 +9,7 @@ import {
   HEADLESS_CONTRACT_VERSION,
   HEADLESS_READ_OPERATIONS,
   parseHeadlessReadRequest,
+  isHeadlessDataReadOperation,
   type HeadlessHostIncarnationId,
   type HeadlessReadOperation,
   type HeadlessReadResult,
@@ -59,13 +61,15 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly readWorkflowRole?: () => Promise<OrganizationRole | undefined>;
   readonly conversationStatus?: Pick<HeadlessConversationStatusUseCase, "read">;
   readonly getIngestionTasks?: () => Promise<ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0]>;
+  readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
   const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges,
-    workflows, readWorkflowRole, conversationStatus, getIngestionTasks, isOpen } = dependencies;
+    workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, isOpen } = dependencies;
 
   const supports = (operation: HeadlessReadOperation) => {
     if (operation === "data.ingestion-status") return Boolean(getIngestionTasks);
+    if (operation === "data.dataset-versions" || operation === "data.compare-dataset-versions") return Boolean(getDatasetQueries);
     if (operation === "systems.snapshot" || operation === "systems.changes") return Boolean(committedChanges);
     if (operation === "workflows.list" || operation === "workflows.prepare") return Boolean(workflows && readWorkflowRole);
     if (operation === "conversation-tasks.read") return Boolean(conversationStatus);
@@ -83,7 +87,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         operation: `headless.${operation}`,
         requiredScopes: requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
-          : operation === "data.ingestion-status" ? ["workspace:read", "artifact:read"]
+          : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"]
           : operation === "workspaces.list" ? ["workspace:read"]
           : operation === "workflows.list" || operation === "workflows.prepare" || operation === "conversation-tasks.read"
             ? ["workspace:read", "asset:read", "runtime:read"] : ["workspace:read", "asset:read"],
@@ -109,13 +113,13 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
-      if (operation === "data.ingestion-status" && grant.planReview !== true) return forbidden;
+      if (isHeadlessDataReadOperation(operation) && grant.planReview !== true) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
-          (operation !== "data.ingestion-status" || latest.planReview === true && latest.isCurrent?.() !== false) &&
+          (!isHeadlessDataReadOperation(operation) || latest.planReview === true && latest.isCurrent?.() !== false) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -138,7 +142,7 @@ export function composeDesktopHeadlessReads(dependencies: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
               op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
-              (op !== "data.ingestion-status" || latest.planReview === true)),
+              (!isHeadlessDataReadOperation(op) || latest.planReview === true)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -150,6 +154,16 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "data.dataset-versions":
+        case "data.compare-dataset-versions": {
+          if (!getDatasetQueries) return unavailable;
+          const queries = await getDatasetQueries();
+          response = await queries.execute(parsed.request, {
+            context: {workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
+            stillAllowed: async () => Boolean(await authorizedWorkspace(workspaceId, operation) && await currentScopedGrant([workspaceId])),
+          });
+          break;
+        }
         case "data.ingestion-status": {
           if (!getIngestionTasks) return unavailable;
           const ingestion = await getIngestionTasks();

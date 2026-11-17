@@ -7,6 +7,14 @@ filenames, source contents, provider paths or credentials. Check for
 read, editing or conversation client has no Data grant. This tool starts no task
 and does not approve, cancel or retry an import.
 
+The same mode exposes `aisb_dataset_versions` and
+`aisb_compare_dataset_versions`. They use known dataset or version IDs and return
+only bounded metadata. Supply one to 16 exact `versionIds` from the same dataset.
+Results follow input order. A missing or inaccessible version prevents the
+complete reply. The tool uses exact point reads and never browses history.
+These tools start no model, preparation, publication or UI action. The host checks
+the purpose-specific registration and current artifact permission on every call.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 This stdio process uses the official [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/%40modelcontextprotocol%2Fserver%402.4.0).

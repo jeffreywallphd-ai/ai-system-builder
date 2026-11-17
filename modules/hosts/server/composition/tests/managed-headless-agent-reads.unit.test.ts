@@ -8,6 +8,56 @@ import {systemBuilderSuccess, normalizeSystemBuilderSystemId, normalizeSystemBui
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {normalizeIngestionTaskId, normalizeIngestionTaskFileId, type IngestionTaskRecord} from "../../../../contracts/ingestion";
 import {composeManagedAgentReads} from "../composeManagedAgentReads";
+import {fixture as datasetFixture, workspaceId as dataWorkspaceId, organizationId as dataOrganizationId,
+  principalId as dataPrincipalId, createdAt as dataAt} from "../../../../application/use-cases/dataset-version/tests/headless-dataset-metadata.fixture";
+import {normalizeDatasetId, normalizeDatasetVersionId} from "../../../../contracts/dataset";
+
+test("Managed dataset queries keep tenant context and planner artifact permission current through reply", async () => {
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const {queries} = await datasetFixture(2);
+  const identity = {principalId: dataPrincipalId, organizationId: dataOrganizationId};
+  const planner = {...identity, purpose: "plan-review" as const};
+  let live = true, allowed = true, opens = 0;
+  let afterRead: (() => void) | undefined;
+  const read = composeManagedAgentReads({hostIncarnationId, contexts: {getCurrentOrganizationContext: () => identity},
+    workspaces: {async readWorkspace(id) {return id === dataWorkspaceId ? {workspaceId: id, organizationId: dataOrganizationId,
+      displayName: "Fixture", status: "active", createdAt: dataAt, updatedAt: dataAt} : undefined;}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      assert.deepEqual(requiredScopes, ["workspace:read", "artifact:read"]);
+      if (!allowed) throw new Error("Synthetic denied");
+    }},
+    systems: {read: {async execute() {assert.fail();}}, listTemplates: {async execute() {assert.fail();}}},
+    async getDatasetQueries() {opens++; return {async execute(input, authority) {
+      const result = await queries.execute(input, authority); afterRead?.(); return result;
+    }};},
+  });
+  const version = HEADLESS_CONTRACT_VERSION;
+  const scope = {hostIncarnationId, workspaceId: dataWorkspaceId};
+  const requests = [
+    {version, operation: "data.dataset-versions" as const, input: {...scope, datasetId: normalizeDatasetId("dataset.synthetic"), versionIds: [normalizeDatasetVersionId("version.001")]}},
+    {version, operation: "data.compare-dataset-versions" as const, input: {...scope,
+      fromVersionId: normalizeDatasetVersionId("version.001"), toVersionId: normalizeDatasetVersionId("version.002")}},
+  ];
+  const denied = {ok: false, code: "headless.forbidden"};
+  const description = await read({version, operation: "host.describe", input: {}}, planner, () => live);
+  assert.ok(description.ok && description.operation === "host.describe" && description.value.operations.includes("data.dataset-versions"));
+  assert.equal(opens, 0);
+  for (const request of requests) {
+    assert.deepEqual(await read(request, identity, () => live), denied);
+    allowed = false;
+    const initial = opens;
+    assert.deepEqual(await read(request, planner, () => live), denied);
+    assert.equal(opens, initial);
+    allowed = true;
+    const result = await read(request, planner, () => live);
+    assert.ok(result.ok && result.operation === request.operation);
+    afterRead = () => {live = false;};
+    assert.deepEqual(await read(request, planner, () => live), denied);
+    live = true; afterRead = () => {allowed = false;};
+    assert.deepEqual(await read(request, planner, () => live), denied);
+    allowed = true; afterRead = undefined;
+  }
+});
 
 test("Managed Data reads require the planner registration and current tenant artifact permission", async () => {
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;

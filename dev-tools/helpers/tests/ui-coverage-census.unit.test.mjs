@@ -1105,6 +1105,21 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "7a905e3bd5c98912ac1722d1fe709399265c5ff275e0ec141951cc1e295c1055") {
+    // Two finite dataset queries extend the exact catalog, not host qualification.
+    const saved = JSON.parse(historicalSource("c53e3c142e0e95e6d1bcbda6d958e06795536eaf", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "b6603ce551b19d11e29ffc6acc763f3799b3ee2844262596fc4f9129d23cd037");
+    const expected = structuredClone(saved);
+    const changed = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(changed.facts.sha256, "427a8d7edbea14dba3ccafd2d149ca3387c64c8659935ef1ac39e67b18d10c21");
+    assert.equal(sha(JSON.stringify(changed.facts)), "acd351b61a8caf9377eab7c9d35512ffae686f87d9fe06a4721c8b4992aaf891");
+    expected.sources.find(row => row.path === headlessPackagedSpec).facts = changed.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(saved, {...result,
+      gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "b6603ce551b19d11e29ffc6acc763f3799b3ee2844262596fc4f9129d23cd037") {
     // The added Data status tool changes only the exact packaged catalog witness.
     // Retain every earlier definition, source pin and unqualified drift gap.

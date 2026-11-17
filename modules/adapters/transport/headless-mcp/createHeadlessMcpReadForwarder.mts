@@ -55,6 +55,9 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
   required: z.boolean(), minimum: z.number().optional(), maximum: z.number().optional(),
   maximumLength: z.number().int().positive().optional(), options: z.array(workflowId).min(1).max(32).optional() });
 const resultValue = {
+  // These two finite shapes use the shared exact-target passive decoders below.
+  "data.dataset-versions": z.unknown(),
+  "data.compare-dataset-versions": z.unknown(),
   "data.ingestion-status": z.strictObject({
     taskId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
     state: z.enum(["queued", "transferring", "finalizing", "succeeded", "failed", "cancelled"]),
@@ -129,7 +132,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? ["data.ingestion-status"] as const : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? headless.HEADLESS_DATA_READ_OPERATIONS : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -232,7 +235,7 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
-    if (input.operation === "data.ingestion-status" && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
+    if (headless.isHeadlessDataReadOperation(input.operation) && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -362,6 +365,14 @@ function createForwarder(options: {
       const expected = z.strictObject({ ok: z.literal(true), operation: z.literal(input.operation), value: resultValue[input.operation] });
       const parsed = expected.safeParse(raw);
       if (!parsed.success) return unavailable;
+      if (input.operation === "data.dataset-versions") {
+        const value = headless.readHeadlessDatasetVersionBatch(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
+      if (input.operation === "data.compare-dataset-versions") {
+        const value = headless.readHeadlessDatasetComparison(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
       if (input.operation === "systems.read" &&
           (!parsed.data.value || typeof parsed.data.value !== "object" || !("systemId" in parsed.data.value) ||
             parsed.data.value.systemId !== input.input.systemId)) return unavailable;

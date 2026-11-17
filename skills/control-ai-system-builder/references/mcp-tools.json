@@ -133,6 +133,8 @@
       "mode": "plan-review",
       "tools": [
         "aisb_build_plan_approval_status",
+        "aisb_compare_dataset_versions",
+        "aisb_dataset_versions",
         "aisb_host_describe",
         "aisb_ingestion_status",
         "aisb_list_systems",
@@ -156,6 +158,8 @@
       "mode": "managed-plan-review",
       "tools": [
         "aisb_build_plan_approval_status",
+        "aisb_compare_dataset_versions",
+        "aisb_dataset_versions",
         "aisb_host_describe",
         "aisb_ingestion_status",
         "aisb_list_templates",
@@ -496,6 +500,40 @@
       }
     },
     {
+      "name": "aisb_compare_dataset_versions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "fromVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "toVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "fromVersionId",
+          "toVersionId"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "aisb_create_system",
       "inputSchema": {
         "type": "object",
@@ -529,6 +567,45 @@
           "templateId",
           "name",
           "idempotencyKey"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_dataset_versions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "datasetId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "versionIds": {
+            "minItems": 1,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            }
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "datasetId",
+          "versionIds"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

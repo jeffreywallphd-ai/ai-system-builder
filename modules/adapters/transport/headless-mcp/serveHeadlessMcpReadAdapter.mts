@@ -172,6 +172,21 @@ function addSystemBuilderTools(server: McpServer) {
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
+  if (enablePlanReview) {
+    const datasetId = z.string().min(1).max(160).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
+    const query = (operation: "data.dataset-versions" | "data.compare-dataset-versions", input: {hostIncarnationId: string}, signal?: AbortSignal) => {
+      const parsed = headless.parseHeadlessReadRequest({version, operation, input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, signal) : invalidAuthoring();
+    };
+    server.registerTool("aisb_dataset_versions", {
+      description: "Inspect one to sixteen exact saved version IDs from the same dataset. Returns digests and counts in the requested order without scanning history or returning private recipes, paths or content.",
+      inputSchema: z.strictObject({...workspaceTarget, datasetId, versionIds: z.array(datasetId).min(1).max(headless.HEADLESS_DATASET_VERSION_READ_LIMIT).refine(ids => new Set(ids).size === ids.length)}), annotations: queryHints,
+    }, (input, context) => query("data.dataset-versions", input, context.mcpReq.signal));
+    server.registerTool("aisb_compare_dataset_versions", {
+      description: "Compare two exact saved versions of the same dataset in the approved workspace. Returns only change flags, counts and artifact roles. Starts no preparation or model task.",
+      inputSchema: z.strictObject({...workspaceTarget, fromVersionId: datasetId, toVersionId: datasetId}), annotations: queryHints,
+    }, (input, context) => query("data.compare-dataset-versions", input, context.mcpReq.signal));
+  }
   if (enablePlanReview) server.registerTool("aisb_ingestion_status", {
     description: "Read progress for one known ingestion task in the approved workspace. Returns counts and state without source contents, paths, or credentials.",
     inputSchema: z.strictObject({ ...workspaceTarget, taskId: ingestionId }), annotations: queryHints,

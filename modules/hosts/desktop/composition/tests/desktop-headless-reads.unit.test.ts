@@ -16,6 +16,8 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { normalizeIngestionTaskId, normalizeIngestionTaskFileId, type IngestionTaskRecord } from "../../../../contracts/ingestion";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadGrant } from "../composeDesktopHeadlessReads";
 import { composeDesktopHost } from "../composeDesktopHost";
+import {fixture as datasetFixture, workspaceId as dataWorkspaceId, organizationId as dataOrganizationId,
+  principalId as dataPrincipalId, createdAt as dataAt} from "../../../../application/use-cases/dataset-version/tests/headless-dataset-metadata.fixture";
 
 const workspaceId = createWorkspaceId("fixture-workspace");
 const otherWorkspaceId = createWorkspaceId("other-fixture-workspace");
@@ -30,6 +32,47 @@ const grant: DesktopHeadlessReadGrant = {
   organizationId, principalId, registeredClientId: "fixture-client",
   workspaceIds: [workspaceId], operations: HEADLESS_READ_OPERATIONS,
 };
+
+test("Desktop dataset queries stay lazy and use current plan-review, artifact and tenant authority", async () => {
+  const {queries} = await datasetFixture(2);
+  const plain: DesktopHeadlessReadGrant = {...grant, principalId: dataPrincipalId, organizationId: dataOrganizationId, workspaceIds: [dataWorkspaceId]};
+  let current: DesktopHeadlessReadGrant = {...plain, planReview: true};
+  let opens = 0, allowed = true;
+  let afterRead: (() => void) | undefined;
+  const handler = composeDesktopHeadlessReads({hostIncarnationId, identity: plain,
+    workspaceRepository: {async readWorkspace(id) {return id === dataWorkspaceId ? {workspaceId: id,
+      organizationId: dataOrganizationId, displayName: "Fixture", status: "active", createdAt: dataAt, updatedAt: dataAt} : undefined;}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      if (requiredScopes.includes("artifact:read") && !allowed) throw new Error("Synthetic denied");
+    }},
+    getUseCases() {assert.fail("No system read is needed.");}, isOpen: () => true,
+    async getDatasetQueries() {opens++; return {async execute(input, authority) {
+      const result = await queries.execute(input, authority); afterRead?.(); return result;
+    }};},
+  });
+  const description = await handler(request("host.describe", {}), async () => current);
+  assert.ok(description.ok && description.operation === "host.describe" && description.value.operations.includes("data.dataset-versions"));
+  assert.equal(opens, 0);
+  for (const [operation, target] of [["data.dataset-versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
+    ["data.compare-dataset-versions", {fromVersionId: "version.001", toVersionId: "version.002"}]] as const) {
+    const query = request(operation, {hostIncarnationId, workspaceId: dataWorkspaceId, ...target});
+    assert.deepEqual(await handler(query, async () => plain), forbidden);
+    allowed = false;
+    const initial = opens;
+    assert.deepEqual(await handler(query, async () => current), forbidden);
+    assert.equal(opens, initial);
+    allowed = true;
+    const result = await handler(query, async () => current);
+    assert.ok(result.ok && result.operation === operation);
+    assert.ok(!JSON.stringify(result).includes("private"));
+    afterRead = () => {current = plain;};
+    assert.deepEqual(await handler(query, async () => current), forbidden);
+    current = {...plain, planReview: true};
+    afterRead = () => {allowed = false;};
+    assert.deepEqual(await handler(query, async () => current), forbidden);
+    allowed = true; afterRead = undefined;
+  }
+});
 
 test("Data status needs plan-review and current artifact permission without warming Data on discovery", async () => {
   let opens = 0;

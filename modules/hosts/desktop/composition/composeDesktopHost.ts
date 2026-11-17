@@ -2258,6 +2258,16 @@ export function composeDesktopHost(
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+            getDatasetQueries: organizationDocuments ? async () => {
+              const {ReadDatasetVersionUseCase, CompareDatasetVersionsUseCase} =
+                await import("../../../application/use-cases/dataset-version/dataset-version-read.use-cases");
+              const {ReadHeadlessDatasetMetadataUseCase} =
+                await import("../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case");
+              const dependencies = {repository: createStructuredDatasetVersionRepository(organizationDocuments),
+                workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization};
+              return new ReadHeadlessDatasetMetadataUseCase({versions: new ReadDatasetVersionUseCase(dependencies),
+                comparisons: new CompareDatasetVersionsUseCase(dependencies)});
+            } : undefined,
             committedChanges,
             workflows,
             readWorkflowRole,

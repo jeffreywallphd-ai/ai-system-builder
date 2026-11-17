@@ -17,6 +17,19 @@ Extra source metadata, counter overflow, mismatched IDs and private diagnostics
 fail closed. SDK tools are available only in plan-review mode. Synthetic host,
 route and SDK checks do not qualify the complete live two-host Data journey.
 
+Dataset metadata and comparison share this purpose-specific Data read boundary.
+The application uses at most 16 exact sequential version point reads under the
+existing workspace authorization. It verifies organization, workspace, version
+and dataset ownership around each read. Duplicate or oversized requests fail
+before storage. Missing or foreign records cannot become a partial reply.
+The query never lists the organization or dataset history. Replies contain
+bounded numeric facts and exact digests, with no source keys, private recipes or
+documentation. Comparison uses the existing two-point, same-dataset owner.
+Current authority is checked after each read and
+before transport egress. Shared passive decoders reject extra fields, incorrect
+targets, invalid ordering and inconsistent known split subtotals. These reads authorize
+neither data generation, content export nor dataset publication.
+
 Plan-review clients can propose one immutable Hugging Face source selected for
 that client in the app. The version 3 preview declares required provider reads.
 Both human decision channels display use of the saved provider access. The

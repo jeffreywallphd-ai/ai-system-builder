@@ -11,6 +11,16 @@ import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 
 const MAX_RECIPE_BYTES = 512 * 1024;
 
+/** Exact metadata lookup; never lists another dataset or workspace. */
+export class ReadDatasetVersionUseCase {
+  public constructor(private readonly dependencies: DatasetVersionReadDependencies) {}
+  public async execute(input: {readonly workspaceId: WorkspaceId; readonly versionId: DatasetVersionId}, context: ApplicationRequestContext = {}): Promise<DatasetVersionRecord | undefined> {
+    if (!(await canReadWorkspace(this.dependencies, input.workspaceId, context))) return undefined;
+    const version = await this.dependencies.repository.readVersion(input.workspaceId, input.versionId);
+    return version?.workspaceId === input.workspaceId && version.versionId === input.versionId ? version : undefined;
+  }
+}
+
 export class ListDatasetVersionsUseCase {
   private readonly dependencies: DatasetVersionReadDependencies;
   public constructor(input: DatasetVersionRepositoryPort | DatasetVersionReadDependencies) { this.dependencies = readDependencies(input); }

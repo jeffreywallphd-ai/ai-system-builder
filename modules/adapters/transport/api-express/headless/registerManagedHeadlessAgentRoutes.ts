@@ -3,6 +3,7 @@ import { raw, type Application, type Request, type Response } from "express";
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
   readHeadlessIngestionStatusValue,
+  isHeadlessDataReadOperation, readHeadlessDatasetVersionBatch, readHeadlessDatasetComparison,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -204,8 +205,8 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    const dataStatus = parsed.request.operation === "data.ingestion-status" && Boolean(handlers.planReview);
-    if (!dataStatus && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
+    const dataRead = isHeadlessDataReadOperation(parsed.request.operation) && Boolean(handlers.planReview);
+    if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
@@ -222,7 +223,17 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
-          ...(handlers.planReview && result.value.operations.includes("data.ingestion-status") ? ["data.ingestion-status"] : [])]}});
+          ...(handlers.planReview ? result.value.operations.filter(isHeadlessDataReadOperation) : [])]}});
+    }
+    if (result.operation === "data.dataset-versions") {
+      if (parsed.request.operation !== "data.dataset-versions") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessDatasetVersionBatch(result.value, parsed.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
+    }
+    if (result.operation === "data.compare-dataset-versions") {
+      if (parsed.request.operation !== "data.compare-dataset-versions") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessDatasetComparison(result.value, parsed.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "data.ingestion-status") {
       if (parsed.request.operation !== "data.ingestion-status") return failure(response, 503, "headless.unavailable");

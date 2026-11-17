@@ -17,6 +17,8 @@ import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
+import type {HeadlessDatasetVersionSummary} from "../../../../contracts/headless";
+import {normalizeDatasetVersionId} from "../../../../contracts/dataset";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
@@ -33,13 +35,18 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
-  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status"];
+  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
 const dataStatusTool = "aisb_ingestion_status";
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
+const datasetSummary: HeadlessDatasetVersionSummary = {versionId: normalizeDatasetVersionId("version.001"),
+  versionDigest: `sha256:${"a".repeat(64)}`, createdAt: "2026-11-17T00:00:00.000Z", totalRows: 10, sourceCount: 1,
+  artifactCount: 4, parentVersionId: null, splitSeed: 42, recipeDigest: `sha256:${"b".repeat(64)}`,
+  quality: {policyFingerprint: `sha256:${"c".repeat(64)}`, reportFingerprint: `sha256:${"d".repeat(64)}`},
+  splits: [{role: "train", rowCount: 6}, {role: "validation", rowCount: 2}, {role: "test", rowCount: 2}]};
 
 // This fixture opens several real CLI processes with empty tsx caches and
 // waits once for the managed request deadline. Bound the whole fixture separately.
@@ -116,6 +123,17 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
           ...(invalidStatusReply ? {diagnostic: "private-provider-detail"} : {}),
         }});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "data.dataset-versions" || input.operation === "data.compare-dataset-versions") {
+        const value = input.operation === "data.dataset-versions"
+          ? {workspaceId, datasetId: input.input.datasetId, versions: [datasetSummary],
+            ...(invalidStatusReply ? {path: "private"} : {})}
+          : {fromVersionId: input.input.fromVersionId, toVersionId: input.input.toVersionId, identical: false, rowDelta: 2,
+            sources: {added: 0, removed: 0, changed: 0}, changedArtifactRoles: ["dataset"], recipeChanged: false,
+            qualityPolicyChanged: false, documentationChanged: false, ...(invalidStatusReply ? {path: "private"} : {})};
+        const payload = JSON.stringify({ok: true, operation: input.operation, value});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -272,6 +290,20 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     displacedCapabilities = true;
     assert.deepEqual(await capabilities(), {ok:false, code:"headless.unavailable"});
     const planner = await connect({NODE_EXTRA_CA_CERTS:ca,AISB_HEADLESS_ENABLE_PLAN_REVIEW:"1"});
+    for (const [name, target] of [["aisb_dataset_versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
+      ["aisb_compare_dataset_versions", {fromVersionId: "version.001", toVersionId: "version.002"}]] as const) {
+      const query = {...planBase, ...target};
+      const value = resultText(await planner.callTool({name, arguments: query}));
+      assert.equal(value.ok, true);
+      if (name === "aisb_dataset_versions") assert.deepEqual(value.value.versions, [datasetSummary]);
+      invalidStatusReply = true;
+      assert.deepEqual(resultText(await planner.callTool({name, arguments: query})), {ok: false, code: "headless.unavailable"});
+      invalidStatusReply = false;
+      const calls = requests.length;
+      assert.deepEqual(resultText(await planner.callTool({name, arguments: {...query, workspaceId: "foreign-workspace"}})),
+        {ok: false, code: "headless.forbidden"});
+      assert.equal(requests.length, calls);
+    }
     const tool = (await planner.listTools()).tools.find(entry => entry.name === desktopProviderPreviewTool);
     assert.ok(tool);
     const selected = {...planBase, taskId:normalizeIngestionTaskId("ingestion.managed-synthetic"),
@@ -358,6 +390,14 @@ test("the plan-review stdio mode can run an exact approved step after the app re
           progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
           ...(statusExtra ? {path: "private-synthetic.parquet"} : {}),
         }};
+      if (decoded.request.operation === "data.dataset-versions") return {ok: true, operation: decoded.request.operation,
+        value: {workspaceId, datasetId: decoded.request.input.datasetId, versions: [datasetSummary],
+          ...(statusExtra ? {path: "private"} : {})}};
+      if (decoded.request.operation === "data.compare-dataset-versions") return {ok: true, operation: decoded.request.operation,
+        value: {fromVersionId: decoded.request.input.fromVersionId, toVersionId: decoded.request.input.toVersionId,
+          identical: false, rowDelta: 2, sources: {added: 0, removed: 0, changed: 0}, changedArtifactRoles: ["dataset"],
+          recipeChanged: false, qualityPolicyChanged: false, documentationChanged: false,
+          ...(statusExtra ? {path: "private"} : {})}};
       return { ok: false, code: "headless.unsupported-operation" };
     },
     dataPreview: { hostIncarnationId, async execute(request, grant) {
@@ -450,6 +490,16 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     statusExtra = false; wrongStatusTask = true;
     assert.deepEqual(await call(dataStatusTool, statusTarget), {ok: false, code: "headless.unavailable"});
     wrongStatusTask = false;
+    for (const [name, target] of [["aisb_dataset_versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
+      ["aisb_compare_dataset_versions", {fromVersionId: "version.001", toVersionId: "version.002"}]] as const) {
+      const query = {hostIncarnationId, workspaceId, ...target};
+      const value = await call(name, query);
+      assert.equal(value.ok, true);
+      if (name === "aisb_dataset_versions") assert.deepEqual(value.value.versions, [datasetSummary]);
+      statusExtra = true;
+      assert.deepEqual(await call(name, query), {ok: false, code: "headless.unavailable"});
+      statusExtra = false;
+    }
     assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: true, value: sourceValue });
     wrongPreview = true;
     assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: false, code: "headless.unavailable" });

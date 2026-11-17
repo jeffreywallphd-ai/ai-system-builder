@@ -8,6 +8,19 @@ admitted task read; discovery starts no Data feature or runtime. The finite
 `data.ingestion-status` protocol projects state, revision and progress counts.
 It exposes no filenames, provider coordinates, content or internal messages.
 
+Plan-review clients can inspect saved dataset metadata through the same finite
+read boundary. `data.dataset-versions` accepts one to 16 exact version IDs from
+one dataset. The application performs sequential point reads through
+`ReadDatasetVersionUseCase`, checks current authority around every read and
+returns all requested versions in input order. It never lists history or reads
+unrelated datasets. A missing or foreign version prevents the complete reply.
+`data.compare-dataset-versions` compares two exact versions of the same dataset
+through the existing comparison owner. Both queries recheck current artifact
+permission before reply. They return only IDs, digests, counts, split seeds and
+quality fingerprints. Private recipes, documentation, field names, paths and
+source contents remain internal. Desktop metadata reads do not initialize the
+dataset preparation or model runtime feature. Normal app history is unchanged.
+
 The private [provided-data version qualification](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
 composes the real packaged processor and local SQLite adapter for two-host
 save, compare, setup reuse and restart journeys. The browser test closes and

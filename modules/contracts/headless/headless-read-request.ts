@@ -1,10 +1,19 @@
 import { isSystemBuilderSystemId, type SystemBuilderSystemId } from "../system-builder";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { normalizeIngestionTaskId } from "../ingestion";
-import { hasKnownPassiveCredential } from "../shared";
+import { hasKnownPassiveCredential, copyBoundedPassiveData } from "../shared";
 import type { HeadlessIngestionStatusRequest } from "./headless-data-task-status";
+import { normalizeDatasetId, normalizeDatasetVersionId } from "../dataset";
+import type { HeadlessDatasetMetadataRequest } from "./headless-dataset-metadata";
+import { HEADLESS_DATASET_VERSION_READ_LIMIT } from "./headless-dataset-metadata";
 
 export const HEADLESS_CONTRACT_VERSION = "aisb-headless-v1";
+export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
+  "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions",
+] as const);
+export function isHeadlessDataReadOperation(value: unknown): value is typeof HEADLESS_DATA_READ_OPERATIONS[number] {
+  return HEADLESS_DATA_READ_OPERATIONS.some(operation => operation === value);
+}
 
 export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "host.describe",
@@ -18,7 +27,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "workflows.prepare",
   "conversation-tasks.read",
   "plan.capabilities",
-  "data.ingestion-status",
+  ...HEADLESS_DATA_READ_OPERATIONS,
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -54,6 +63,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 
 export type HeadlessReadRequest =
   | HeadlessIngestionStatusRequest
+  | HeadlessDatasetMetadataRequest
   | ReadRequest<"host.describe", Record<string, never>>
   | ReadRequest<"workspaces.list", HostTarget>
   | ReadRequest<"systems.list", WorkspaceTarget>
@@ -166,12 +176,37 @@ export function parseHeadlessReadRequest(
         : operation === "workflows.prepare" ? ["hostIncarnationId", "workspaceId", "profileId", "source"]
         : operation === "conversation-tasks.read" ? ["hostIncarnationId", "workspaceId", "sessionId", "turnId"]
         : operation === "data.ingestion-status" ? ["hostIncarnationId", "workspaceId", "taskId"]
+        : operation === "data.dataset-versions" ? ["hostIncarnationId", "workspaceId", "datasetId", "versionIds"]
+        : operation === "data.compare-dataset-versions" ? ["hostIncarnationId", "workspaceId", "fromVersionId", "toVersionId"]
         : ["hostIncarnationId", "workspaceId"];
   const input = exactDataRecord(record.input, fields);
   if (!input || !isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalid();
   const { hostIncarnationId, workspaceId, systemId } = input;
   let request: HeadlessReadRequest;
   switch (operation) {
+    case "data.dataset-versions": {
+      if (!isWorkspaceId(workspaceId)) return invalid();
+      try {
+        const datasetId = input.datasetId, ids = copyBoundedPassiveData(input.versionIds);
+        if (typeof datasetId !== "string" || hasKnownPassiveCredential(datasetId) || normalizeDatasetId(datasetId) !== datasetId ||
+            !Array.isArray(ids) || ids.length < 1 || ids.length > HEADLESS_DATASET_VERSION_READ_LIMIT || new Set(ids).size !== ids.length ||
+            ids.some(value => typeof value !== "string" || hasKnownPassiveCredential(value) || normalizeDatasetVersionId(value) !== value)) return invalid();
+        request = {version, operation, input: {hostIncarnationId, workspaceId, datasetId: normalizeDatasetId(datasetId),
+          versionIds: ids.map(normalizeDatasetVersionId)}};
+      } catch { return invalid(); }
+      break;
+    }
+    case "data.compare-dataset-versions": {
+      if (!isWorkspaceId(workspaceId)) return invalid();
+      try {
+        const {fromVersionId: from, toVersionId: to} = input;
+        if (typeof from !== "string" || typeof to !== "string" || hasKnownPassiveCredential(from) || hasKnownPassiveCredential(to) ||
+            normalizeDatasetVersionId(from) !== from || normalizeDatasetVersionId(to) !== to) return invalid();
+        request = {version, operation, input: {hostIncarnationId, workspaceId,
+          fromVersionId: normalizeDatasetVersionId(from), toVersionId: normalizeDatasetVersionId(to)}};
+      } catch { return invalid(); }
+      break;
+    }
     case "data.ingestion-status": {
       const { taskId } = input;
       if (!isWorkspaceId(workspaceId) || typeof taskId !== "string" || hasKnownPassiveCredential(taskId)) return invalid();

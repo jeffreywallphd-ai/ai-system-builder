@@ -4,6 +4,13 @@
 
 Use cases in this folder own application orchestration and remain adapter-agnostic.
 
+`ReadHeadlessDatasetMetadataUseCase` minimizes the existing authorized dataset
+point-read and comparison results. Its host supplies current plan-review authority
+around each read. It admits at most 16 sequential point reads and never scans
+history. Exact tenant/workspace/dataset/version checks precede the bounded
+projection; raw recipes, documents, storage keys and source contents stay inside
+the application. It starts no preparation, runtime or publication task.
+
 Training start failures can carry a fixed `MODEL_TRAINING_START_*` diagnostic code
 for request validation, runtime readiness, base-model lookup, dataset resolution,
 task dispatch or task registration. The original error object, message and cause

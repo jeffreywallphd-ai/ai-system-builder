@@ -6,6 +6,14 @@ progress counts. It contains no filenames, paths, source contents or diagnostic
 messages. The current host must advertise `data.ingestion-status`. An ordinary
 read, editing or conversation registration does not grant access to Data.
 
+Use `aisb_dataset_versions` to inspect one to 16 known version IDs from the
+same dataset. The result follows the order of the requested IDs. A missing or
+inaccessible version prevents the complete reply. The tool reads only those
+versions and does not browse history. `aisb_compare_dataset_versions` compares
+two known versions from the same dataset. Both tools return counts and digests,
+without private recipes or source contents. They start no model or preparation
+task. They require a plan-review client and current Data read permission.
+
 Use [Control AI System Builder](../../skills/control-ai-system-builder/SKILL.md)
 to inspect or edit saved systems, check task status, or send one requested turn
 to an approved conversation through a paired desktop app. Copy the entire skill

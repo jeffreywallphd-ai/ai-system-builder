@@ -73,8 +73,29 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     isCurrent: identity => identity === planIdentity && current,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions"],
       }};
+      if (request.operation === "data.dataset-versions") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {
+          workspaceId: request.input.workspaceId, datasetId: statusMismatch ? "foreign" as never : request.input.datasetId,
+          versions: request.input.versionIds.map(versionId => ({versionId, versionDigest: `sha256:${"a".repeat(64)}` as const,
+            createdAt: "2026-11-17T00:00:00.000Z", totalRows: 10, sourceCount: 1, artifactCount: 1,
+            parentVersionId: null, splitSeed: null, recipeDigest: `sha256:${"b".repeat(64)}` as const,
+            quality: {policyFingerprint: `sha256:${"c".repeat(64)}` as const, reportFingerprint: `sha256:${"d".repeat(64)}` as const},
+            splits: [{role: "train" as const, rowCount: null}, {role: "validation" as const, rowCount: null}, {role: "test" as const, rowCount: null}]})),
+          ...(statusExtra ? {path: "private"} : {}),
+        }};
+      }
+      if (request.operation === "data.compare-dataset-versions") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {
+          fromVersionId: request.input.fromVersionId, toVersionId: statusMismatch ? "foreign" as never : request.input.toVersionId,
+          identical: false, rowDelta: 1, sources: {added: 0, removed: 0, changed: 0}, changedArtifactRoles: ["dataset"],
+          recipeChanged: false, qualityPolicyChanged: false, documentationChanged: false,
+          ...(statusExtra ? {recipeSnapshot: "private"} : {}),
+        }};
+      }
       if (request.operation !== "data.ingestion-status") throw new Error("Unexpected plan read.");
       statusCalls++;
       if (withdrawStatus) current = false;
@@ -158,6 +179,19 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {status:response.status, cache:response.headers.get("cache-control"), body:await response.json()};
     }
     const readRoute = MANAGED_HEADLESS_AGENT_PATHS.read;
+    for (const [operation, target] of [["data.dataset-versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
+      ["data.compare-dataset-versions", {fromVersionId: "version.001", toVersionId: "version.002"}]]) {
+      const query = {version: HEADLESS_CONTRACT_VERSION, operation, input: {...scope, ...target}};
+      assert.equal((await request(query, "fixture-plan", readRoute)).status, 200);
+      statusMismatch = true;
+      assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
+      statusMismatch = false; statusExtra = true;
+      assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
+      statusExtra = false; withdrawStatus = true;
+      assert.equal((await request(query, "fixture-plan", readRoute)).status, 403);
+      withdrawStatus = false; current = true;
+      assert.equal((await request(query, "fixture-agent", readRoute)).status, 403);
+    }
     const statusRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.ingestion-status",
       input: {...scope, taskId: normalizeIngestionTaskId("task.synthetic")}};
     const dataStatus = await request(statusRequest, "fixture-plan", readRoute);

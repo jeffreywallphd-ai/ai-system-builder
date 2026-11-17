@@ -34,6 +34,8 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "conversation-tasks.read": { ...scope, sessionId: "session.1", turnId: "turn.1" },
     "plan.capabilities": scope,
     "data.ingestion-status": { ...scope, taskId: "intake.fixture" },
+    "data.dataset-versions": {...scope, datasetId: "dataset.fixture", versionIds: ["version.001"]},
+    "data.compare-dataset-versions": {...scope, fromVersionId: "version.first", toVersionId: "version.second"},
   };
   assert.deepEqual([...HEADLESS_READ_OPERATIONS].sort(), Object.keys(inputs).sort());
   for (const operation of HEADLESS_READ_OPERATIONS) {

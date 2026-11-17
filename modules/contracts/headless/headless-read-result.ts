@@ -4,6 +4,8 @@ import type { ConversationTurnStatus } from "../conversations";
 import type { ExecutionRunStatus } from "../execution-runs";
 import type { HeadlessSystemManagementRequest } from "./headless-system-management";
 import type { HeadlessIngestionStatus } from "./headless-data-task-status";
+import type { HeadlessDatasetVersionBatch } from "./headless-dataset-metadata";
+import type { DatasetVersionComparison } from "../dataset";
 import {
   HEADLESS_CONTRACT_VERSION,
   type HeadlessChangeCursor,
@@ -51,6 +53,8 @@ type WorkflowField = {
 
 export type HeadlessReadResult =
   | { readonly ok: true; readonly operation: "data.ingestion-status"; readonly value: HeadlessIngestionStatus }
+  | { readonly ok: true; readonly operation: "data.dataset-versions"; readonly value: HeadlessDatasetVersionBatch }
+  | { readonly ok: true; readonly operation: "data.compare-dataset-versions"; readonly value: DatasetVersionComparison }
   | {
       readonly ok: true;
       readonly operation: "host.describe";

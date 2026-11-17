@@ -210,7 +210,7 @@ async function main() {
       }}), {timeout:10_000});
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
-      "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
       "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);

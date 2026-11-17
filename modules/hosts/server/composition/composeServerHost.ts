@@ -150,6 +150,7 @@ import {
   ValidateAssetCompositionPlanUseCase,
   CompareDatasetVersionsUseCase,
   ListDatasetVersionsUseCase,
+  ReadDatasetVersionUseCase,
   ListDatasetReviewTargetsUseCase,
   ReadDatasetReviewPageUseCase,
   RejectDatasetReviewRowUseCase,
@@ -256,6 +257,7 @@ import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
 import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
 import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
 import { composeManagedHeadlessPlanReview } from "./composeManagedHeadlessPlanReview";
+import { ReadHeadlessDatasetMetadataUseCase } from "../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case";
 import { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
 import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
 import type { TenantPlacementConfig } from "../../../contracts/config";
@@ -1693,7 +1695,14 @@ export function composeServerHost(
           "finalizeApprovedProviderFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedProviderFile === "function"
           ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
-          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks}),
+          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks,
+            getDatasetQueries: organizationDocuments ? async () => {
+              const dependencies = {repository: createStructuredDatasetVersionRepository(organizationDocuments),
+                workspaceRepository: workspaces, workspaceAuthorization};
+              return new ReadHeadlessDatasetMetadataUseCase({versions: new ReadDatasetVersionUseCase(dependencies),
+                comparisons: new CompareDatasetVersionsUseCase(dependencies)});
+            } : undefined,
+          }),
           ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
             ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
             placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
