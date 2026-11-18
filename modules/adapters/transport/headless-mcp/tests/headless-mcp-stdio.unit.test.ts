@@ -63,6 +63,10 @@ function contextPreview(input: {workspaceId: unknown; name: unknown; sources: re
 }
 const contextSettings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
   overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]};
+const ragSettings = {kind: "rag-database", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"],
+  modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", batchSize: 4, device: "cpu",
+  sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
+    requireConsentMetadata: false, includeSourceAttribution: true}};
 const contextTaskValue = {taskId: hostIncarnationId, state: "review-required", review: {kind: "markdown-context-pack",
   reportFingerprint: "a".repeat(64), sourceCount: 1, chunkCount: 2, sizeBytes: 1000, requiresExplicitSave: true}};
 // This fixture opens several real CLI processes with empty tsx caches and
@@ -339,6 +343,12 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       {ok: true, operation: "context.models", value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}});
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_generation", arguments: contextInput})),
       {ok: true, operation: "context.preview-generation", value: contextPreview(contextInput)});
+    const ragPlan = checkedPlan(resultText(await planner.callTool({name: "aisb_preview_build_plan", arguments: {...planBase,
+      steps: [{operation: "context.generate-rag", idempotencyKey: randomUUID(), name: contextInput.name,
+        sources: contextInput.sources, settings: ragSettings}]}})));
+    assert.equal(ragPlan.plan.version, "aisb-build-plan-preview-v7");
+    assert.equal(ragPlan.plan.steps[0].modelCalls, "required");
+    assert.equal(ragPlan.plan.steps[0].externalProviderCalls, 0);
     invalidStatusReply = true;
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_generation", arguments: contextInput})), {ok: false, code: "headless.unavailable"});
     invalidStatusReply = false;
@@ -611,6 +621,12 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     assert.deepEqual(await call("aisb_context_models", {hostIncarnationId, workspaceId}), {ok: true, operation: "context.models",
       value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}});
     assert.deepEqual(await call("aisb_preview_context_generation", contextInput), {ok: true, operation: "context.preview-generation", value: contextPreview(contextInput)});
+    const ragPlan = checkedPlan(await call("aisb_preview_build_plan", {hostIncarnationId, workspaceId,
+      steps: [{operation: "context.generate-rag", idempotencyKey: randomUUID(), name: contextInput.name,
+        sources: contextInput.sources, settings: ragSettings}]}));
+    assert.equal(ragPlan.plan.version, "aisb-build-plan-preview-v7");
+    assert.equal(ragPlan.plan.steps[0].modelCalls, "required");
+    assert.equal(ragPlan.plan.steps[0].externalProviderCalls, 0);
     statusExtra = true;
     assert.deepEqual(await call("aisb_preview_context_generation", contextInput), {ok: false, code: "headless.unavailable"});
     statusExtra = false;

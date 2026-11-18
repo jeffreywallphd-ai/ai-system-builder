@@ -12,6 +12,16 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_explicit_desktop_approval_owner_executes_existing_connection_and_scope_regressions(self):
+        path = 'modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals.ts'
+        selected = self.selected([path], ['headless-data-task-status'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts',
+            selected['headless-data-task-status']['argv'])
+        self.assertIn('focused-tests', self.selected([path, 'modules/hosts/desktop/composition/unmapped-approval.ts'],
+            ['headless-data-task-status']))
+        self.assertIn('focused-tests', self.selected([path], ['headless-data-task-status', 'focused-tests']))
+
     def test_model_reference_checks_cover_exact_internal_sources_without_masking_unknown_work(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-model-reference']
         paths = list(definition['sources'])

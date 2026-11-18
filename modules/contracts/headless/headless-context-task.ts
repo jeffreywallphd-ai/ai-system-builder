@@ -15,7 +15,7 @@ export interface HeadlessContextTaskRequest {
 }
 export interface HeadlessContextTaskReview {
   readonly reportFingerprint: string;
-  readonly kind: "markdown-context-pack";
+  readonly kind: "markdown-context-pack" | "rag-database";
   readonly sourceCount: number;
   readonly chunkCount: number;
   readonly sizeBytes: number;
@@ -60,7 +60,7 @@ export function readHeadlessContextTaskValue(value: unknown, selection: Headless
     if (outer.review === null) return task.state === "review-required" ? undefined : {...task, review: null};
     if (task.state !== "review-required") return;
     const review = readStrictPassiveRecord(outer.review, ["reportFingerprint", "kind", "sourceCount", "chunkCount", "sizeBytes", "requiresExplicitSave"]);
-    if (!isDigest(review.reportFingerprint) || review.kind !== "markdown-context-pack" ||
+    if (!isDigest(review.reportFingerprint) || (review.kind !== "markdown-context-pack" && review.kind !== "rag-database") ||
         !bounded(review.sourceCount, HEADLESS_CONTEXT_MAX_SOURCES) || review.sourceCount < 1 ||
         !bounded(review.chunkCount, 1000) || review.chunkCount < 1 || !bounded(review.sizeBytes, CONTEXT_GENERATION_LIMITS.maximumArtifactBytes) ||
         review.sizeBytes < 1 || review.requiresExplicitSave !== true) return;

@@ -28,10 +28,10 @@ use [Build from a written request](references/build-plans.md). It covers the
 supported plan connections, exact resources, approval choices, ordered
 execution and recovery. Open it before preparing a plan.
 
-For a Context or RAG request, use [Prepare Context inputs and packs](references/context-inputs.md)
+For a Context or RAG request, use [Prepare Context inputs, packs and RAG](references/context-inputs.md)
 before selecting saved sources or an embedding model. A metadata preview does
 not start processing or prove that a model is ready. The guide also covers
-separately approved source-derived packs and accepted-task progress.
+separately approved source-derived packs, local RAG builds and accepted-task progress.
 
 ## Read or edit saved systems
 

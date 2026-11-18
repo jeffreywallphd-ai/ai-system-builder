@@ -172,3 +172,9 @@ the list or report deletion. A different key leaves the selected view intact.
   safe-weight files. The runtime-only local reference is excluded from public
   commands and portable manifests. File checks are cooperative; public RAG,
   actual model resources and native custody remain separate qualification.
+
+- Separately enabled `context.generate-rag` plans use preview version7 and bind
+  the exact saved-model witness through atomic issue after source staging.
+  Approval states local embedding work, selected device/policy and separate save.
+  Accepted-task replies stay bounded. Physical retrieval/resources and later
+  save/query/rebuild/display remain separate from the plan-connection checks.

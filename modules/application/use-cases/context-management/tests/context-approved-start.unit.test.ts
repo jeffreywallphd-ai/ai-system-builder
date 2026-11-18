@@ -327,7 +327,14 @@ test("admitted RAG review binds logical model and source policy without exportin
     const review = await h.useCase.read(h.taskId(), h.context);
     const expected = ["attribution", "no-attribution", "reordered-policy"].includes(variant);
     assert.equal(review.ok, expected, variant);
-    if (review.ok) assert.equal(review.value.state, "review-required", variant);
+    if (review.ok) {
+      assert.equal(review.value.state, "review-required", variant);
+      const task = await h.useCase.readAdmittedContextTask(h.taskId(), h.context);
+      assert.equal(task?.state, "review-required", variant);
+      assert.equal(task?.review?.kind, "rag-database", variant);
+      assert.equal(task?.review?.requiresExplicitSave, true);
+      assert.doesNotMatch(JSON.stringify(task), /localModelReference|synthetic-installed-model|Synthetic answer|sourceInformation/);
+    }
     assert.equal(JSON.stringify(review).includes("synthetic-installed-model"), false, variant);
   });
 });

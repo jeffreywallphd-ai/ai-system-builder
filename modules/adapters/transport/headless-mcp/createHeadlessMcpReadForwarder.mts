@@ -177,7 +177,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
-    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
@@ -221,7 +221,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const authorization = `Bearer ${credential}`;
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
-    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
 
@@ -236,6 +236,7 @@ function createForwarder(options: {
   allowLocalDatasetPreparation?: boolean;
   allowDatasetResultSave?: boolean;
   allowContextPackGeneration?: boolean;
+  allowContextRagGeneration?: boolean;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -283,7 +284,8 @@ function createForwarder(options: {
         const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input,
           { allowLocalFileSave: options.allowLocalFileSave === true, allowProviderFileSave: options.allowProviderFileSave === true,
             allowLocalDatasetPreparation: options.allowLocalDatasetPreparation === true,
-            allowDatasetResultSave: options.allowDatasetResultSave === true, allowContextPackGeneration: options.allowContextPackGeneration === true });
+            allowDatasetResultSave: options.allowDatasetResultSave === true, allowContextPackGeneration: options.allowContextPackGeneration === true,
+            allowContextRagGeneration: options.allowContextRagGeneration === true });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         // The host can withhold a reply after it has saved the step. Only
@@ -307,6 +309,9 @@ function createForwarder(options: {
         return {ok: false, code: "headless.forbidden"};
       if (!options.allowContextPackGeneration && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "context.generate-pack"))
+        return {ok: false, code: "headless.forbidden"};
+      if (!options.allowContextRagGeneration && input.operation === "plan.submit" &&
+          input.proposal.requests.some(step => step.operation === "context.generate-rag"))
         return {ok: false, code: "headless.forbidden"};
       if (!options.allowDatasetResultSave && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.save-prepared-dataset"))

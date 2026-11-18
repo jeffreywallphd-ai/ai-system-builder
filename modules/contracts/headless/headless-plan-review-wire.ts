@@ -61,7 +61,8 @@ export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost:
       { allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true,
         allowLocalDatasetPreparation: options?.allowLocalDatasetPreparation === true,
         allowDatasetResultSave: options?.allowDatasetResultSave === true,
-        allowContextPackGeneration: options?.allowContextPackGeneration === true });
+        allowContextPackGeneration: options?.allowContextPackGeneration === true,
+        allowContextRagGeneration: options?.allowContextRagGeneration === true });
     return proposal.ok ? { ok: true, request: { operation, target, proposal } } : invalid;
   } catch { return invalid; }
 }

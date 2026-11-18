@@ -263,3 +263,17 @@ installer fallback, while portable manifests retain the logical model id only.
 Ordinary UI loading is unchanged. This adds no provider, engine, topology,
 native custody or memory guarantee. Public RAG plan wiring and actual model
 qualification still require their own implementation and evidence.
+
+### Existing-owner local RAG plan effect
+
+The same approved extension exposes a separately enabled local RAG generation
+effect through preview version7. It grants only the listed source/model/device/
+policy work after explicit plan approval. Current model-read and source/plan
+authority and an exact private saved-model witness surround one-use issuance;
+submission preserves that witness in the private version-2 plan record, and
+approval decisions cannot replace it. New execution checks it before runtime
+preparation; the issuer recompiles it after staging inside the owning transaction.
+Existing pack/Data fingerprints and task ownership/replay rules are preserved.
+Both approval channels disclose embedding work and separate review/save. This
+adds no engine, network transfer, installation, publication or native exception.
+Actual retrieval/resources and later save/query/display remain separate evidence.

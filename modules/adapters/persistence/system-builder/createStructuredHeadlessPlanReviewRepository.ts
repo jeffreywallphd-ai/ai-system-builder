@@ -5,9 +5,11 @@ import type {
   HeadlessPlanReviewListEntry, HeadlessPlanReviewListResult, HeadlessPlanReviewListTarget,
 } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId,
-  parseHeadlessBuildPlanProposal } from "../../../contracts/headless";
+  parseHeadlessBuildPlanProposal, type HeadlessBuildPlanRequest } from "../../../contracts/headless";
+import type {ApprovedContextEmbeddingModelWitness} from "../../../application/ports/context-management";
+import {readApprovedContextEmbeddingModelWitness} from "../../../application/use-cases/context-management/approved-context-embedding-model";
 import { isOrganizationId } from "../../../contracts/organization";
-import { hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../contracts/shared";
+import { copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../contracts/shared";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import type { StructuredDocumentStore } from "../shared";
 import { HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE } from "./createStructuredHeadlessOperationStore";
@@ -25,7 +27,24 @@ const capacity = { ok: false, code: "capacity" } as const;
 type Failure = Extract<HeadlessPlanReviewResult, { ok: false }>;
 type Action = "propose" | "read" | "decide";
 type Proposal = Extract<ReturnType<typeof parseHeadlessBuildPlanProposal>, { ok: true }>;
-type RecordValue = { readonly version: 1; readonly proposal: unknown; readonly state: HeadlessPlanReviewState };
+export interface ContextPlanModelBinding {readonly step: number; readonly model: ApprovedContextEmbeddingModelWitness;}
+type RecordValue = {readonly version: 1; readonly proposal: unknown; readonly state: HeadlessPlanReviewState} |
+  {readonly version: 2; readonly proposal: unknown; readonly state: HeadlessPlanReviewState; readonly contextModels: readonly ContextPlanModelBinding[]};
+
+function readContextModels(value: unknown, requests: readonly HeadlessBuildPlanRequest[]): readonly ContextPlanModelBinding[] | undefined {
+  try {
+    const expected = requests.flatMap((request, index) => request.operation === "context.generate-rag" ? [{request, step: index + 1}] : []);
+    const rows = copyBoundedPassiveData(value);
+    if (!expected.length || !Array.isArray(rows) || rows.length !== expected.length) return;
+    return Object.freeze(rows.map((row, index) => {
+      const raw = readStrictPassiveRecord(row, ["step", "model"]), target = expected[index];
+      const model = readApprovedContextEmbeddingModelWitness(raw.model);
+      if (raw.step !== target.step || !model || model.modelRecordId !== target.request.input.settings.modelRecordId ||
+          model.modelUpdatedAt !== target.request.input.settings.modelUpdatedAt) throw new Error("The selected Context model is unavailable.");
+      return Object.freeze({step: target.step, model});
+    }));
+  } catch {return;}
+}
 
 class ReviewWriteRetired extends Error {}
 
@@ -39,6 +58,9 @@ export function createStructuredHeadlessPlanReviewRepository(
   allowLocalDatasetPreparation = false,
   allowDatasetResultSave = false,
   allowContextPackGeneration = false,
+  allowContextRagGeneration = false,
+  bindContextModels?: (partition: StructuredDocumentStore, requests: readonly HeadlessBuildPlanRequest[]) =>
+    Promise<readonly ContextPlanModelBinding[] | undefined>,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -85,7 +107,8 @@ export function createStructuredHeadlessPlanReviewRepository(
     async propose(input) {
       const proposal = decodeProposal(input.proposal, input.target, allowLocalFileSave && Boolean(validateNewProposal),
         allowProviderFileSave && Boolean(validateNewProposal), allowLocalDatasetPreparation && Boolean(validateNewProposal),
-        allowDatasetResultSave && Boolean(validateNewProposal), allowContextPackGeneration && Boolean(validateNewProposal));
+        allowDatasetResultSave && Boolean(validateNewProposal), allowContextPackGeneration && Boolean(validateNewProposal),
+        allowContextRagGeneration && Boolean(validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
       return run(input, "propose", async (store, target, key, requireFresh) => {
         const existing = await readReview(store, target, key);
@@ -93,6 +116,9 @@ export function createStructuredHeadlessPlanReviewRepository(
         const eligible = validateNewProposal ? await validateNewProposal(store) : true;
         if (eligible === "stale") return { ok: false, code: "stale" } as const;
         if (!eligible || !input.isCurrent()) return denied;
+        const hasRag = proposal.requests.some(request => request.operation === "context.generate-rag");
+        const contextModels = hasRag ? readContextModels(await bindContextModels?.(store, proposal.requests), proposal.requests) : undefined;
+        if ((hasRag && !contextModels) || !input.isCurrent()) return denied;
         const countKey = sha256(JSON.stringify(scopeParts(target)));
         const count = await store.readDocument(COUNTS, countKey);
         const used = count ? readStrictPassiveRecord(count.value, ["value"]).value : 0;
@@ -109,7 +135,8 @@ export function createStructuredHeadlessPlanReviewRepository(
         const raw = {
           ...proposal.scope, steps: proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })),
         };
-        await store.writeDocument(REVIEWS, key, { version: 1, proposal: raw, state } satisfies RecordValue, { expectedRevision: 0 });
+        const record: RecordValue = contextModels ? {version: 2, proposal: raw, state, contextModels} : {version: 1, proposal: raw, state};
+        await store.writeDocument(REVIEWS, key, record, { expectedRevision: 0 });
         await store.writeDocument(COUNTS, countKey, { value: used + 1 }, { expectedRevision: count?.revision ?? 0 });
         await store.writeDocument(APPROVAL_LIST, list.key, { requests: [{
           registeredClientId: target.scope.registeredClientId, fingerprint: target.fingerprint, expiresAt: state.expiresAt,
@@ -134,7 +161,7 @@ export function createStructuredHeadlessPlanReviewRepository(
         if (!outcome.ok) return outcome;
         const state = readState(outcome.state, previous.revision + 1, previous.stepCount);
         if (state.expiresAt !== previous.expiresAt) return unconfirmed;
-        await store.writeDocument(REVIEWS, key, { version: 1, proposal: review.proposal, state } satisfies RecordValue,
+        await store.writeDocument(REVIEWS, key, {...review.record, state} satisfies RecordValue,
           { expectedRevision: previous.revision });
         if (!await writeExecutionFence(store, key, previous.revision, state.revision))
           throw new Error("The approval execution fence changed.");
@@ -166,9 +193,9 @@ function planKey(target: HeadlessPlanReviewTarget) {
 function sha256(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowLocalFileSave: boolean, allowProviderFileSave = false,
-  allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false) {
+  allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false, allowContextRagGeneration = false) {
   const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId,
-    { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration });
+    { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration });
   if (proposal.ok && proposal.scope.workspaceId === target.scope.workspaceId &&
       sha256(JSON.stringify(proposal.preview)) === target.fingerprint) return proposal;
 }
@@ -176,11 +203,25 @@ function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowL
 async function readReview(store: StructuredDocumentStore, target: HeadlessPlanReviewTarget, key: string) {
   const document = await store.readDocument(REVIEWS, key);
   if (!document) return;
-  const { version, proposal, state } = readStrictPassiveRecord(document.value, ["version", "proposal", "state"]);
-  const parsed = decodeProposal(proposal, target, true, true, true, true, true);
-  if (version !== 1 || !parsed) throw new Error("Stored plan review is unavailable.");
+  const raw = readStrictPassiveRecord(document.value, ["version", "proposal", "state", "contextModels"]);
+  const {version, proposal, state} = raw;
+  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true);
+  if (!parsed) throw new Error("Stored plan review is unavailable.");
+  const normalizedState = readState(state, document.revision, parsed.requests.length);
+  const contextModels = version === 2 ? readContextModels(raw.contextModels, parsed.requests) : undefined;
+  if ((version === 1 && ("contextModels" in raw || parsed.requests.some(request => request.operation === "context.generate-rag"))) ||
+      (version === 2 ? !contextModels : version !== 1)) throw new Error("Stored plan review is unavailable.");
+  const record: RecordValue = version === 2 && contextModels ? {version: 2, proposal, state: normalizedState, contextModels}
+    : {version: 1, proposal, state: normalizedState};
   return { proposal, preview: parsed.preview, requests: parsed.requests,
-    state: readState(state, document.revision, parsed.requests.length) };
+    state: normalizedState, record };
+}
+
+/** Finite permission facts only; the caller must authorize this exact owner/target first. */
+export async function readStructuredHeadlessPlanModelPermission(partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget) {
+  if (!validTarget(target) || partition.organizationId !== target.scope.organizationId) return;
+  const review = await readReview(partition, target, planKey(target));
+  return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag")} : undefined;
 }
 
 /** Used by the execution adapter after current authorization in the same transaction. */
@@ -195,7 +236,8 @@ export async function readStructuredApprovedPlan(
   const { state } = review;
   if (state.revision !== expectedRevision || !state.lastChannel || step > state.approvedSteps ||
       (state.status !== "approved" && !(state.status === "pending" && state.mode === "each-change"))) return;
-  return { expiresAt: state.expiresAt, requests: review.requests };
+  return { expiresAt: state.expiresAt, requests: review.requests,
+    contextModels: review.record.version === 2 ? review.record.contextModels : [] };
 }
 
 /** Serializes a real new write against approval changes, without changing its public decision revision. */

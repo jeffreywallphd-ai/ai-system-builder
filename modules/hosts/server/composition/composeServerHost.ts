@@ -1767,7 +1767,8 @@ export function composeServerHost(
             allowProviderFileSave: Boolean(providerFileSave && managedDocuments.publishWithStableReads),
             allowLocalDatasetPreparation: Boolean(managedDocuments.publishWithStableReads),
             allowDatasetResultSave: Boolean(managedDocuments.publishWithStableReads),
-            allowContextPackGeneration: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
+            allowContextPackGeneration: Boolean(managedDocuments.publishWithStableReads),
+            allowContextRagGeneration: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),

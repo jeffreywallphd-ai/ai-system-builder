@@ -1,5 +1,14 @@
 # Contributor Control Plane
 
+Headless local RAG uses the existing Context contract/owned-start, composed-host,
+approval UI and official MCP feature checks. Its separately enabled version-7
+plan binds the selected saved-model witness through atomic issue after staging.
+The private proposal snapshot is retained across approval decisions. Focused
+same-timestamp substitution cases cover both the first run and later staging;
+accepted historical replay remains separate from new execution.
+Finite task review supports both packs and RAG; it is not a retrieval/model or
+parent qualification. Keep synthetic runtime cases distinct from physical runs.
+
 The focused `headless-ui-control-authority` check also executes strict Data
 presentation contracts, saved-resource lineage and accepted-task-before-lazy-read
 denials, alongside existing lease authority. Unknown sources retain the normal

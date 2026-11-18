@@ -14,7 +14,7 @@ import type {HeadlessDatasetTaskStatusRequest} from "../../../contracts/headless
 import {readStructuredOwnedDatasetPlanTask, readStructuredOwnedDatasetPlanTaskByPlan,
   readStructuredOwnedDatasetPlanTaskSourceDigest} from "../../../adapters/persistence/ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import { readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type HeadlessLocalFileSavePlanRequest,
-  type HeadlessProviderFileSavePlanRequest, type HeadlessLocalDatasetPlanRequest, type HeadlessContextPackPlanRequest,
+  type HeadlessProviderFileSavePlanRequest, type HeadlessLocalDatasetPlanRequest, type HeadlessContextGenerationPlanRequest,
   type HeadlessPlanReviewAgentResult, type HeadlessPlanStepRequest, type HeadlessDatasetResultSavePlanRequest,
   readHeadlessDatasetTaskReviewValue } from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
@@ -261,13 +261,13 @@ export async function validateHeadlessPlanSavedSources(
   validateProviderFile?: (request: HeadlessProviderFileSavePlanRequest) => Promise<true | false | "stale">,
   validateDataset?: (request: HeadlessLocalDatasetPlanRequest) => Promise<true | false | "stale">,
   validateDatasetResult?: (request: HeadlessDatasetResultSavePlanRequest) => Promise<true | false | "stale">,
-  validateContext?: (request: HeadlessContextPackPlanRequest) => Promise<true | false | "stale">,
+  validateContext?: (request: HeadlessContextGenerationPlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
-    if (operation === "context.generate-pack") {
+    if (operation === "context.generate-pack" || operation === "context.generate-rag") {
       if (!validateContext) return false;
       const eligible = await validateContext(request);
       if (eligible !== true) return eligible;

@@ -1030,6 +1030,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
             "modules/hosts/shared/composition/headlessPlanReview.ts",
             "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals.ts",
             "modules/hosts/desktop/composition/desktopHeadlessAudit.ts",
             "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
             "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",

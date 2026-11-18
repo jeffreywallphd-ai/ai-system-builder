@@ -183,3 +183,10 @@ no discovery, installation or network download fallback. Current model/actor
 authority surrounds resolution. Private runtime references are excluded from
 portable manifests. These cooperative checks do not qualify a public RAG effect,
 physical model resources or native custody.
+
+The Managed plan and browser approval owners separately opt into version-7 local
+RAG generation under stable publication. Approval/read/decision and execution
+use the model/source/plan permissions for that exact RAG request; ordinary Data
+and pack permissions keep their existing scope. Atomic issue recompiles the
+saved-model witness, and bounded accepted-task review still needs separate save.
+Fixture passes are not physical retrieval, resource, query/display or native proof.

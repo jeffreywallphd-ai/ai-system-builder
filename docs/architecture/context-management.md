@@ -530,5 +530,29 @@ declared license. Unexpected attribution or private model fields deny review.
 Desktop resolves model features lazily only for admitted model work. Managed
 composition uses its existing configured model roots. These are cooperative
 record/file checks, not native custody, immutable-byte or memory guarantees.
-Actual model execution, public RAG effects, retrieval and parent qualification
-remain separate. Existing Context UI and no-model packs keep their owners.
+Actual model execution, retrieval and parent qualification remain separate.
+Existing Context UI and no-model packs keep their owners.
+
+### Approved local RAG plan connection
+
+Hosts separately opt into `context.generate-rag`. Preview version 7 states local
+embedding work, zero outside calls and the existing four-source/16 MiB/1,000-chunk
+bounds. Version 6 pack and earlier Data/system previews retain their exact shapes
+and fingerprints. Both popup and chat approval disclose the selected model,
+device, policy and distinct review/save boundary.
+
+The shared Context ledger preserves its historical namespaces and pack keys;
+RAG has a distinct actor/client-scoped step-key family. Its source digest also
+binds the private copied saved-model witness. Submission preserves that witness
+for each RAG step in a private version-2 plan record; decision writes retain it.
+Older version-1 pack/Data records and public fingerprints are unchanged. A
+metadata-only new-start check compares the approved witness before opening the
+runtime owner. Accepted receipt replay does not reopen a model or reprocess data.
+Reservation and atomic issue
+recompile that witness with current model-read/source/plan authority, including
+after source staging. Changed model facts cannot dispatch under the old binding.
+Runtime/filesystem effects stay outside retriable transactions. Accepted-only
+RAG task review exposes finite counts/size/fingerprint, never paths or vectors.
+The existing Context owner still checks installed runtime/files and safe loading.
+Physical retrieval/resources, saving/query/rebuild and revocable presentation
+remain separate implementation or qualification work.

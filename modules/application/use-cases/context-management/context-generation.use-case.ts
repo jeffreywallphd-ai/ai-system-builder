@@ -748,13 +748,13 @@ export class ContextGenerationUseCase {
   public peekAdmittedContextReview(requestId: string, context: ApplicationRequestContext): HeadlessContextTaskReview | undefined {
     const scope = this.scopes.get(requestId), pending = this.pending.get(requestId);
     if (!this.confirmedAdmittedTaskIds.has(requestId) || !scope || !context.organizationId || !context.principalId ||
-        !ownsScope(scope, context) || !pending || !ownsScope(pending.scope, context) || pending.command.kind !== "markdown-context-pack" ||
-        pending.command.contextPack?.method !== "none") return;
+        !ownsScope(scope, context) || !pending || !ownsScope(pending.scope, context) ||
+        (pending.command.kind !== "rag-database" && (pending.command.kind !== "markdown-context-pack" || pending.command.contextPack?.method !== "none"))) return;
     const output = pending.runtimeResult.output, preview = pending.runtimeResult.preview;
     const reportFingerprint = createHash("sha256").update(JSON.stringify({requestId, outputDigest: output.digest, sizeBytes: output.sizeBytes,
       commandDigest: contextCommandDigest(pending.command), sourceCount: preview.sourceCount, chunkCount: preview.chunkCount})).digest("hex");
     return readHeadlessContextTaskValue({taskId: requestId, state: "review-required", review: {reportFingerprint,
-      kind: "markdown-context-pack", sourceCount: preview.sourceCount, chunkCount: preview.chunkCount, sizeBytes: output.sizeBytes,
+      kind: pending.command.kind, sourceCount: preview.sourceCount, chunkCount: preview.chunkCount, sizeBytes: output.sizeBytes,
       requiresExplicitSave: true}}, {kind: "task", taskId: requestId})?.review ?? undefined;
   }
 

@@ -28,7 +28,7 @@ import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, runPreparedHea
   validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import type { ManagedPlanReviewRegistration } from "../security/resolveManagedHeadlessClientPolicy";
-import {compileHeadlessContextPlanInputs, runPreparedHeadlessContextPack, type StartHeadlessContext}
+import {compileHeadlessContextPlanInputs, compileHeadlessContextModelBindings, runPreparedHeadlessContextPack, type StartHeadlessContext}
   from "../../shared/composition/headlessContextExecution";
 
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
@@ -36,6 +36,7 @@ const unavailable = { ok: false, code: "headless.unavailable" } as const;
 const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" } as const;
 const planScopes = ["workspace:read", "asset:read", "asset:write"] as const;
 const filePlanScopes = [...planScopes, "artifact:read", "artifact:write"] as const;
+const ragScopes = [...filePlanScopes, "model:read"] as const;
 
 export function composeManagedHeadlessPlanReview(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -150,14 +151,16 @@ export function composeManagedHeadlessPlanReview(options: {
       isOpen: () => boolean): Promise<HeadlessPlanReviewAgentResult> {
       const savesFile = request.operation === "plan.submit" &&
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
-          step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" || step.operation === "context.generate-pack");
+          step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
+          step.operation === "context.generate-pack" || step.operation === "context.generate-rag");
+      const usesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "context.generate-rag");
       if (request.operation === "plan.submit" && request.proposal.requests.some(step =>
-        step.operation === "context.generate-pack" ? !getContextStart :
+        step.operation === "context.generate-pack" || step.operation === "context.generate-rag" ? !getContextStart :
         step.operation === "data.save-prepared-dataset" ? !getDatasetResults :
         step.operation === "data.save-local-source" ? !finalize : step.operation === "data.prepare-local-dataset" ? !getDatasetStart :
           step.operation === "data.save-provider-source" && !finalizeProvider))
         return forbidden;
-      const access = admit(request.target, request.operation, registration, isOpen, savesFile ? filePlanScopes : planScopes);
+      const access = admit(request.target, request.operation, registration, isOpen, usesModel ? ragScopes : savesFile ? filePlanScopes : planScopes);
       if (!access) return forbidden;
       const { target, scope, current, authorizeOwned } = access;
       const { organizationId, principalId, registeredClientId } = scope;
@@ -200,7 +203,8 @@ export function composeManagedHeadlessPlanReview(options: {
             const compiled = await compileHeadlessContextPlanInputs(rootDirectory, documents, selected, scope, async () => current());
             return compiled.ok && compiled.operation === "context.preview-generation" ? true :
               !compiled.ok && compiled.code === "headless.stale" ? "stale" : false;
-          }), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart), Boolean(getDatasetResults), Boolean(getContextStart));
+          }), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart), Boolean(getDatasetResults), Boolean(getContextStart), Boolean(getContextStart),
+          getContextStart ? (partition, requests) => compileHeadlessContextModelBindings(rootDirectory, partition, requests, scope, async () => current()) : undefined);
         const outcome = request.operation === "plan.submit"
           ? await reviews.propose({ target, isCurrent: current, proposal: {
               ...request.proposal.scope,
@@ -222,11 +226,13 @@ export function composeManagedHeadlessPlanReview(options: {
       const { fingerprint, approvalRevision, step } = request.input;
       const fileAccess = finalize || finalizeProvider || getDatasetStart || getDatasetResults || getContextStart
         ? admitWorkspace(request.input, request.operation, registration, isOpen, filePlanScopes) : undefined;
+      const modelAccess = getContextStart ? admitWorkspace(request.input, request.operation, registration, isOpen, ragScopes) : undefined;
       try {
         if (!await access.authorizeCurrent()) return { result: forbidden };
         const prepared = await prepareStructuredHeadlessPlanStep(platform, {
           target, approvalRevision, step, isCurrent: current,
-        }, async (owner, _scope, operation) => operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source" ||
+        }, async (owner, _scope, operation) => operation?.operation === "context.generate-rag" ? Boolean(await modelAccess?.authorizeOwned(owner)) :
+          operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source" ||
           operation?.operation === "data.prepare-local-dataset" || operation?.operation === "data.save-prepared-dataset" || operation?.operation === "context.generate-pack"
           ? Boolean(await fileAccess?.authorizeOwned(owner)) : authorizeOwned(owner),
         Date.now, "stable-reads", Boolean(finalize && fileAccess), finalizeProvider && fileAccess
@@ -239,15 +245,18 @@ export function composeManagedHeadlessPlanReview(options: {
             compileHeadlessDatasetResultInputs(owner.forOrganization(scope.organizationId), selected, scope,
               getDatasetResults, async () => current()) : undefined,
           getContextStart && fileAccess ? async (owner, selected) => {
+            const contextAccess = selected.operation === "context.generate-rag" ? modelAccess : fileAccess;
+            if (!contextAccess) return;
             const compiled = await compileHeadlessContextPlanInputs(rootDirectory, owner.forOrganization(scope.organizationId), selected,
-              scope, async () => current() && await fileAccess.authorizeOwned(owner));
+              scope, async () => current() && await contextAccess.authorizeOwned(owner));
             return compiled.ok && compiled.operation === "context.preview-generation" ? compiled.prepared : undefined;
           } : undefined);
         if (!prepared || !prepared.isCurrent()) return { result: forbidden };
         if (prepared.kind === "context-pack") {
-          if (!fileAccess || !getContextStart) return {result: forbidden};
+          const contextAccess = prepared.request.operation === "context.generate-rag" ? modelAccess : fileAccess;
+          if (!contextAccess || !getContextStart) return {result: forbidden};
           return await runPreparedHeadlessContextPack({prepared, request, context: scope,
-            canUse: fileAccess.authorizeCurrent, resolveStart: getContextStart});
+            canUse: contextAccess.authorizeCurrent, resolveStart: getContextStart});
         }
         if (prepared.kind === "local-file") {
           if (!fileAccess || !finalize) return { result: forbidden };
@@ -302,6 +311,7 @@ export function composeManagedHeadlessPlanReview(options: {
     allowLocalDatasetPreparation: Boolean(getDatasetStart),
     allowDatasetResultSave: Boolean(getDatasetResults),
     allowContextPackGeneration: Boolean(getContextStart),
+    allowContextRagGeneration: Boolean(getContextStart),
     runStep: systems && platform.publishWithStableReads ? handlers.runStep : undefined,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads
       ? (request: HeadlessLocalFileImportRequest, registration: ManagedPlanReviewRegistration, isOpen: () => boolean) =>

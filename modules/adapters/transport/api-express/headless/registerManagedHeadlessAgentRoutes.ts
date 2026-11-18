@@ -58,6 +58,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly allowLocalDatasetPreparation?: boolean;
   readonly allowDatasetResultSave?: boolean;
   readonly allowContextPackGeneration?: boolean;
+  readonly allowContextRagGeneration?: boolean;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -144,7 +145,8 @@ async function respond<Agent>(
       { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true,
         allowLocalDatasetPreparation: handlers.allowLocalDatasetPreparation === true,
         allowDatasetResultSave: handlers.allowDatasetResultSave === true,
-        allowContextPackGeneration: handlers.allowContextPackGeneration === true });
+        allowContextPackGeneration: handlers.allowContextPackGeneration === true,
+        allowContextRagGeneration: handlers.allowContextRagGeneration === true });
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
     const input = parsed.request;
@@ -166,7 +168,8 @@ async function respond<Agent>(
       { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true,
         allowLocalDatasetPreparation: handlers.allowLocalDatasetPreparation === true,
         allowDatasetResultSave: handlers.allowDatasetResultSave === true,
-        allowContextPackGeneration: handlers.allowContextPackGeneration === true });
+        allowContextPackGeneration: handlers.allowContextPackGeneration === true,
+        allowContextRagGeneration: handlers.allowContextRagGeneration === true });
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;

@@ -27,12 +27,15 @@ test("Context task queries select only one exact task or accepted plan step, nev
 test("Context task results disclose finite counters and explicit result-review policy, never raw processor data", () => {
   const value = {taskId: host, state: "review-required", review};
   assert.deepEqual(readHeadlessContextTaskValue(value, selection), value);
+  const rag = {...value, review: {...review, kind: "rag-database"}};
+  assert.deepEqual(readHeadlessContextTaskValue(rag, selection), rag);
   for (const state of ["queued", "running", "saved", "discarded", "cancelled", "failed"])
     assert.deepEqual(readHeadlessContextTaskValue({taskId: host, state, review: null}, selection), {taskId: host, state, review: null});
   for (const changed of [{...value, path: "private/output.zip"}, {...value, preview: {items: [{text: "private source"}]}},
     {...value, taskId: "ab353bdd-7793-44c6-8c36-c470be8c537c"}, {...value, review: null},
     {...value, state: "running"}, {...value, review: {...review, modelId: "supplier/model"}},
-    {...value, review: {...review, kind: "rag-database"}}, {...value, review: {...review, sourceCount: 0}},
+    {...value, review: {...review, kind: "unknown-kind"}}, {...value, review: {...review, sourceCount: 0}},
+    {...rag, review: {...rag.review, embedding: [0.1, 0.2]}}, {...rag, review: {...rag.review, localModelReference: "private/model"}},
     {...value, review: {...review, sourceCount: 5}}, {...value, review: {...review, chunkCount: 0}}, {...value, review: {...review, chunkCount: 1001}},
     {...value, review: {...review, sizeBytes: 64 * 1024 * 1024 + 1}},
     {...value, review: {...review, reportFingerprint: "private report"}}, {...value, review: {...review, requiresExplicitSave: false}},

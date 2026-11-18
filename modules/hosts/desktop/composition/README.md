@@ -165,3 +165,10 @@ this seam. Private model references stay within the runtime request; ordinary
 Context generation cannot supply them. File inspection is cooperative and grants
 no native mutation or offload authority. Public RAG and actual model execution
 remain separate qualification.
+
+The public plan connection separately advertises local RAG generation. Its
+version-7 approval discloses model/device/source policy; current model-read and
+artifact/plan authority apply to proposal and execution. The shared issuer
+recompiles the exact saved-model witness after staging before a one-use start.
+Accepted task review stays bounded and requires separate save. Physical model,
+retrieval, later query/display and parent qualification remain separate.

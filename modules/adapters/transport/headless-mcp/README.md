@@ -210,6 +210,14 @@ profile cleans/chunks exact saved sources without model calls or installation.
 Poll only its accepted task or original plan step. Uncertain reservations cannot
 be adopted or restarted. Replies contain state, counts and a required-review
 fingerprint, never source contents, paths, prompts or embeddings. Separate
-Context save, active RAG, queries/rebuilds and presentation are not granted.
+Context save, queries/rebuilds and presentation are not granted.
 The generated SDK catalog has 39 distinct tools across modes, with 26 Desktop
 and 19 Managed plan-review tools; each mode stays within the existing 32 limit.
+
+Version 7 separately opts into `context.generate-rag` through the same plan
+tools. Its closed settings bind the exact saved embedding model, device and
+source-check policy. Approval discloses local embedding work and fixed limits.
+The host requires current model-read permission, installed safe-weight files
+and the installed-only runtime. It rechecks the saved model witness at atomic
+issue after staging. Task results remain finite and require separate save.
+SDK/fixture passes do not establish actual embedding, retrieval or native proof.

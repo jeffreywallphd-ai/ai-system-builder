@@ -71,3 +71,37 @@ the task was accepted; it does not prove cancellation. Host-exit recovery,
 Context result saving, active RAG queries/rebuilds and result presentation need
 their own supported capability and qualification. Do not describe them as
 available based on this pack-processing receipt.
+
+## Build RAG with an installed local model
+
+Use the separate `context.generate-rag` action when the host supports it.
+Version 7 binds the same exact saved sources to `settings.kind: rag-database`,
+the selected `modelRecordId` and its exact `modelUpdatedAt`. Use the model's
+returned `updatedAt`; do not guess an ID or timestamp. Include the selected CPU
+or CUDA device, batch size and source-check policy. The plan states that local
+embedding work is required and outside service calls are zero.
+
+The first installed-only profile requires a recorded full embedding model,
+existing configured-root files, tokenizer/configuration and one unsharded
+`model.safetensors`. A saved model record alone does not prove availability.
+The host checks files and the installed runtime after approval, before source
+processing. Missing or unsupported profiles stay unavailable; report that fact.
+Do not install software, download weights, substitute another model or lower a
+memory guard to turn an unavailable profile into a successful result.
+
+Explain the exact model record, device, source checks, attribution choice and
+the same four-source/16 MiB/1,000-chunk limits before requesting approval. The
+user can approve the full scoped plan or each change through either supported
+app channel. Non-open license declarations remain non-open; unknown terms stay
+unknown. Attribution selection does not grant license rights.
+
+Run the exact approved step and poll only its accepted Context task. A changed
+saved model invalidates issuance even if its logical model ID is unchanged.
+The private model snapshot is held from plan submission across approval, not
+captured for the first time at execution. A stale new start stops before runtime
+preparation. An already accepted historical task can still be read or replayed.
+The bounded RAG review has counts, size and a fingerprint, never model paths,
+source text or vectors. It still requires a separate save action. A RAG start
+receipt does not grant query, rebuild, publication or window permission and
+does not itself prove retrieval quality or resource qualification. Preserve
+uncertain attempts and the original keys using the rules above.

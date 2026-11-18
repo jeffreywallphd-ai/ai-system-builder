@@ -91,7 +91,7 @@ export function readDesktopPlanApprovalList(value: unknown, workspaceId: Workspa
 
 export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPlanApprovalSelection,
   options: HeadlessBuildPlanCapabilities = { allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true,
-    allowDatasetResultSave: true, allowContextPackGeneration: true }): DesktopPlanApprovalView | undefined {
+    allowDatasetResultSave: true, allowContextPackGeneration: true, allowContextRagGeneration: true }): DesktopPlanApprovalView | undefined {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["selection", "viewId", "preview", "state"]);
     const actual = readDesktopPlanApprovalSelection(raw.selection);
@@ -109,8 +109,10 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
       const dataset = operation === "data.prepare-local-dataset";
       const resultSave = operation === "data.save-prepared-dataset";
       const contextPack = operation === "context.generate-pack";
-      if (contextPack ? !exactLimitFields(limits, ["modelCalls", "maximumSources", "maximumSourceBytes", "maximumTotalBytes",
-          "maximumChunks", "reviewRequired", "explicitSaveRequired"]) || limits.modelCalls !== 0 ||
+      const contextRag = operation === "context.generate-rag";
+      const contextGeneration = contextPack || contextRag;
+      if (contextGeneration ? !exactLimitFields(limits, ["modelCalls", "maximumSources", "maximumSourceBytes", "maximumTotalBytes",
+          "maximumChunks", "reviewRequired", "explicitSaveRequired"]) || limits.modelCalls !== (contextRag ? "required" : 0) ||
           limits.maximumSources !== HEADLESS_CONTEXT_MAX_SOURCES || limits.maximumSourceBytes !== HEADLESS_CONTEXT_MAX_SOURCE_BYTES ||
           limits.maximumTotalBytes !== HEADLESS_CONTEXT_MAX_SOURCES * HEADLESS_CONTEXT_MAX_SOURCE_BYTES ||
           limits.maximumChunks !== 1000 || limits.reviewRequired !== true || limits.explicitSaveRequired !== true : dataset ?
@@ -123,10 +125,10 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
         throw new Error("Invalid processing limits.");
       const providerFile = operation === "data.save-provider-source";
       const savingFile = operation === "data.save-local-source" || providerFile;
-      if (effect !== (contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
+      if (effect !== (contextRag ? "generate-rag-database" : contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
           externalProviderCalls !== (providerFile ? "required" : 0))
         throw new Error("Invalid approval effects.");
-      const fields = readStrictPassiveRecord(input, contextPack ? ["idempotencyKey", "name", "sources", "settings"] :
+      const fields = readStrictPassiveRecord(input, contextGeneration ? ["idempotencyKey", "name", "sources", "settings"] :
         dataset ? ["idempotencyKey", "sources", "recipe", "split", "qualityPreset"] :
         resultSave ? ["idempotencyKey", "taskId", "reportFingerprint", "outputBaseName"] :
         savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :

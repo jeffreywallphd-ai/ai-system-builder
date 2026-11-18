@@ -177,6 +177,7 @@ function addSystemBuilderTools(server: McpServer) {
   const allowLocalDatasetPreparation = enablePlanReview;
   const allowDatasetResultSave = enablePlanReview;
   const allowContextPackGeneration = enablePlanReview;
+  const allowContextRagGeneration = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -194,13 +195,14 @@ function addSystemBuilderTools(server: McpServer) {
   const chunks = {chunkCharacters: z.number().int().min(64).max(32000), overlapCharacters: z.number().int().min(0).max(8000),
     maximumChunks: z.number().int().min(1).max(1000), textFields: z.array(z.string().min(1).max(128)).max(32)};
   const contextPackSettings = z.strictObject({...chunks, kind: z.literal("markdown-context-pack"), cleaningPreset: z.enum(["standard", "strict"])});
+  const contextRagSettings = z.strictObject({...chunks, kind: z.literal("rag-database"), modelRecordId: z.string().refine(headless.isHeadlessContextModelId),
+    modelUpdatedAt: z.string().refine(headless.isHeadlessContextTimestamp), batchSize: z.number().int().min(1).max(32), device: z.enum(["cpu", "cuda"]),
+    sourceChecks: z.strictObject({preset: z.enum(["recommended", "strict"]), allowedLanguages: z.array(z.string().min(2).max(16)).min(1).max(16),
+      requireLicenseMetadata: z.boolean(), requireConsentMetadata: z.boolean(), includeSourceAttribution: z.boolean()})});
   if (enablePlanReview) {
     const contextSettings = z.discriminatedUnion("kind", [
       contextPackSettings,
-      z.strictObject({...chunks, kind: z.literal("rag-database"), modelRecordId: z.string().refine(headless.isHeadlessContextModelId),
-        modelUpdatedAt: z.string().refine(headless.isHeadlessContextTimestamp), batchSize: z.number().int().min(1).max(32), device: z.enum(["cpu", "cuda"]),
-        sourceChecks: z.strictObject({preset: z.enum(["recommended", "strict"]), allowedLanguages: z.array(z.string().min(2).max(16)).min(1).max(16),
-          requireLicenseMetadata: z.boolean(), requireConsentMetadata: z.boolean(), includeSourceAttribution: z.boolean()})}),
+      contextRagSettings,
     ]);
     const contextRead = (operation: "context.models" | "context.preview-generation", input: {hostIncarnationId: string}, signal?: AbortSignal) => {
       const parsed = headless.readHeadlessContextReadRequest({version, operation, input}, input.hostIncarnationId as HeadlessHostIncarnationId);
@@ -274,6 +276,8 @@ function addSystemBuilderTools(server: McpServer) {
     return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
   });
   const step = z.discriminatedUnion("operation", [
+    z.strictObject({operation: z.literal("context.generate-rag"), idempotencyKey, name: z.string().min(1).max(120),
+      sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextRagSettings}),
     z.strictObject({operation: z.literal("context.generate-pack"), idempotencyKey, name: z.string().min(1).max(120),
       sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextPackSettings}),
     z.strictObject({ operation: z.literal("systems.create"), ...create }),
@@ -303,7 +307,7 @@ function addSystemBuilderTools(server: McpServer) {
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -313,7 +317,7 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
-      if (request.operation === "context.generate-pack") {
+      if (request.operation === "context.generate-pack" || request.operation === "context.generate-rag") {
         const {idempotencyKey: _key, ...selected} = request.input;
         const preview = await forward?.({version, operation: "context.preview-generation", input: selected}, signal);
         if (!preview?.ok) return toolResult(preview ?? unavailable);
@@ -409,7 +413,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

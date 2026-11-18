@@ -13,7 +13,11 @@ import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalVa
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient } from "../HeadlessPlanApprovalDialog";
 
-for (const variant of ["local", "provider", "dataset", "result", "context"]) test(variant === "context"
+for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context"]) test(variant === "mixed-context"
+  ? "mixed RAG and pack plans scope model permissions to their own actions in both channels and modes"
+  : variant === "rag"
+  ? "both approval channels and modes disclose exact RAG model, device, policy and separate save permissions"
+  : variant === "context"
   ? "both approval channels and modes show exact Context sources, settings and separate review/save permissions"
   : variant === "result"
   ? "both approval channels disclose an exact immutable dataset save with no processing or publication permission"
@@ -22,16 +26,19 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
   : variant === "provider"
   ? "both app channels disclose provider reads and approve the exact provider save"
   : "both app channels identify the exact file save and approve through the same scoped view", async () => {
-  const provider = variant === "provider", dataset = variant === "dataset", result = variant === "result", context = variant === "context";
+  const mixed = variant === "mixed-context";
+  const provider = variant === "provider", dataset = variant === "dataset", result = variant === "result", context = variant === "context" || mixed, rag = variant === "rag" || mixed;
   const hostIncarnationId = "d52c0a60-3384-48ce-80e4-6102898ad428";
   assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
   const workspaceId = createWorkspaceId("workspace.synthetic");
-  const parsed = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, steps: [{
-    ...(context ? {operation: "context.generate-pack", name: "Support reference", sources: [
+  const steps: Record<string, unknown>[] = [{
+    ...(context || rag ? {operation: rag ? "context.generate-rag" : "context.generate-pack", name: "Support reference", sources: [
       {kind: "ingestion-file", taskId: "ingestion.synthetic", fileId: "file.synthetic", taskRevision: 4},
       {kind: "dataset-version", datasetId: "support", versionId: "support:1234", versionDigest: "sha256:" + "c".repeat(64), role: "train"}],
-      settings: {kind: "markdown-context-pack", cleaningPreset: "strict", chunkCharacters: 500, overlapCharacters: 50,
-        maximumChunks: 100, textFields: ["question", "answer"]}}
+      settings: {chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["question", "answer"],
+        ...(rag ? {kind: "rag-database", modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", device: "cpu", batchSize: 4,
+          sourceChecks: {preset: "strict", allowedLanguages: ["en"], requireLicenseMetadata: true, requireConsentMetadata: true, includeSourceAttribution: false}}
+          : {kind: "markdown-context-pack", cleaningPreset: "strict"})}}
       : result ? {operation: "data.save-prepared-dataset", taskId: "26a7ce63-a472-4779-876a-58500d26b971",
       reportFingerprint: "a".repeat(64), outputBaseName: "Reviewed support answers"}
       : dataset ? {operation: "data.prepare-local-dataset", sources: [{taskId: "ingestion.synthetic", fileId: "file.synthetic", taskRevision: 4}],
@@ -39,14 +46,18 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
       split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"}
       : {operation: provider ? "data.save-provider-source" : "data.save-local-source", taskId: "ingestion.synthetic", fileId: "file.synthetic", taskRevision: 4}),
     idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086da",
-  }] }, hostIncarnationId, { allowLocalFileSave: true, allowProviderFileSave: provider, allowLocalDatasetPreparation: dataset,
-    allowDatasetResultSave: result, allowContextPackGeneration: context });
+  }];
+  if (mixed) steps.push({operation: "context.generate-pack", name: "Support reference", sources: steps[0].sources,
+    idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086db", settings: {kind: "markdown-context-pack", cleaningPreset: "strict",
+      chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["question", "answer"]}});
+  const parsed = parseHeadlessBuildPlanProposal({hostIncarnationId, workspaceId, steps}, hostIncarnationId, { allowLocalFileSave: true, allowProviderFileSave: provider, allowLocalDatasetPreparation: dataset,
+    allowDatasetResultSave: result, allowContextPackGeneration: context, allowContextRagGeneration: rag });
   assert.ok(parsed.ok);
   const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
   const selection = { workspaceId, fingerprint, registeredClientId: "83739bf2-c08e-4d9d-ad84-da05ae2d17f3" };
   const viewId = "36c91778-901d-4e0b-8e71-329157e9d79f";
   const expiresAt = Date.now() + 60_000;
-  const state = { fingerprint, revision: 1, stepCount: 1, approvedSteps: 0, expiresAt, status: "pending" as const };
+  const state = { fingerprint, revision: 1, stepCount: parsed.requests.length, approvedSteps: 0, expiresAt, status: "pending" as const };
   const view = readDesktopPlanApprovalView({ selection, viewId, preview: parsed.preview, state }, selection);
   assert.ok(view);
   assert.equal(readDesktopPlanApprovalView({ selection, viewId, preview: parsed.preview, state }, selection,
@@ -62,13 +73,13 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
   const original = Object.fromEntries(Object.keys(globals).map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   Object.assign(globalThis, globals);
   try {
-    for (const surface of ["popup", "chat"] as const) for (const mode of (context ? ["each-change", "whole-plan"] : ["each-change"]) as ("each-change" | "whole-plan")[]) {
+    for (const surface of ["popup", "chat"] as const) for (const mode of (context || rag ? ["each-change", "whole-plan"] : ["each-change"]) as ("each-change" | "whole-plan")[]) {
       const decisions: DesktopPlanApprovalDecision[] = [];
       const client: HeadlessPlanApprovalClient = {
         async list(workspace) { assert.equal(workspace, workspaceId); return [{ ...selection, expiresAt }]; },
         async open(target) { assert.deepEqual(target, selection); return view; },
-        async decide(decision) { decisions.push(decision); return { ...state, revision: 2, approvedSteps: 1,
-          status: "approved", mode }; },
+        async decide(decision) { decisions.push(decision); return { ...state, revision: 2, approvedSteps: mode === "whole-plan" ? state.stepCount : 1,
+          status: mode === "whole-plan" || state.stepCount === 1 ? "approved" : "pending", mode }; },
         async dismiss() {},
       };
       const root = createRoot(dom.window.document.getElementById("app")!);
@@ -85,8 +96,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
         await act(async () => button("Review request " + fingerprint.slice(0, 8), false).click());
         const changes = dom.window.document.querySelector('[aria-label="Requested changes"]');
         const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]');
-        assert.match(permissions?.textContent ?? "", context ? /Prepare a Markdown Context pack/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
-        assert.match(changes?.textContent ?? "", context ? /Prepare Context pack: Support reference/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
+        assert.match(permissions?.textContent ?? "", rag ? /Build a RAG database/ : context ? /Prepare a Markdown Context pack/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
+        assert.match(changes?.textContent ?? "", rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
           ? /Save the selected Hugging Face source in Data/ : /Save the selected file in Data/);
         if (provider) {
           assert.match(permissions?.textContent ?? "", /using your saved provider access/);
@@ -96,7 +107,7 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
           assert.match(changes?.textContent ?? "", /Preparation task: 26a7ce63-a472-4779-876a-58500d26b971/);
           assert.match(changes?.textContent ?? "", new RegExp("Approved quality report: " + "a".repeat(64)));
           assert.match(permissions?.textContent ?? "", /immutable dataset version/);
-          assert.match(permissions?.textContent ?? "", /No model calls\. No outside publication\. No second processing run/);
+          assert.match(permissions?.textContent ?? "", /Saving this dataset makes no model calls\. No outside publication\. No second processing run/);
           assert.doesNotMatch(permissions?.textContent ?? "", /Process the listed|Save the listed files/);
         } else {
           assert.match(changes?.textContent ?? "", /File reference file\.synthetic/);
@@ -110,7 +121,7 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
         }
         if (context) {
           assert.match(permissions?.textContent ?? "", /4 sources, 4 MiB per source, 16 MiB total and 1,000 text chunks/);
-          assert.match(permissions?.textContent ?? "", /No model calls or model installation/);
+          assert.match(permissions?.textContent ?? "", /Preparing this Markdown pack makes no model calls and installs no models/);
           assert.match(permissions?.textContent ?? "", /Review the result before a separate request to save it/);
           assert.match(permissions?.textContent ?? "", /unknown terms stay unknown/);
           assert.doesNotMatch(permissions?.textContent ?? "", /Save the listed files|immutable dataset version/);
@@ -118,6 +129,18 @@ for (const variant of ["local", "provider", "dataset", "result", "context"]) tes
           assert.match(changes?.textContent ?? "", /Text fields: question, answer/);
           assert.match(changes?.textContent ?? "", /Cleaning: strict\. Chunk size: 500 characters\. Overlap: 50 characters\. Maximum chunks: 100/);
           assert.match(changes?.textContent ?? "", /No summarization or model calls/);
+        }
+        if (rag) {
+          assert.match(permissions?.textContent ?? "", /4 sources, 4 MiB per source, 16 MiB total and 1,000 text chunks/);
+          assert.match(permissions?.textContent ?? "", /existing local safe-weight files/);
+          assert.match(permissions?.textContent ?? "", /Model downloads, installation and outside publication need separate permission/);
+          assert.doesNotMatch(permissions?.textContent ?? "", /No model calls/);
+          assert.match(changes?.textContent ?? "", /Model record: model\.synthetic\. Saved at 2026-11-18T00:00:00.000Z/);
+          assert.match(changes?.textContent ?? "", /Device: cpu\. Embedding batch size: 4/);
+          assert.match(changes?.textContent ?? "", /Source checks: strict\. Languages: en/);
+          assert.match(changes?.textContent ?? "", /Require license: Yes\. Require consent: Yes\. Include source attribution: No/);
+          assert.match(changes?.textContent ?? "", /Use local embeddings/);
+          assert.doesNotMatch(changes?.textContent ?? "", /localModelReference|private\/model/);
         }
         if (mode === "whole-plan") await act(async () => {
           const radio = [...dom.window.document.querySelectorAll<HTMLInputElement>('input[type="radio"]')]

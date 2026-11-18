@@ -33,6 +33,9 @@ test("portable Context guidance and discovery separate metadata from execution a
   for (const text of ["context.generate-pack", "version 6", "requiresExplicitSave: true", "Reserved or issued attempts",
     "full scoped plan or each change", "no model or provider calls", "non-open declarations", "original fingerprint and step"])
     assert.ok(guide.includes(text), `Missing approved Context task boundary: ${text}`);
+  for (const text of ["context.generate-rag", "Version 7", "modelUpdatedAt", "model.safetensors", "before source",
+    "logical model ID is unchanged", "memory guard", "does not itself prove retrieval quality"])
+    assert.ok(guide.includes(text), `Missing installed RAG authority or profile limit: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

@@ -14,3 +14,12 @@ indexes are checked together. Unconfirmed attempts cannot be adopted or reset
 to obtain another start. Outcome recording can retain an already admitted
 acceptance after caller access ends; receipt publication still requires current
 authority. The bounded history grants no host-exit recovery or parent pass.
+
+New RAG plans keep one private selected-model witness per RAG step in version-2
+review records. Submission requires the trusted metadata-only binding callback.
+Approval, revocation and later decisions retain those exact bindings. Public
+snapshots include only the preview and decision state. Older version-1 pack,
+Data and system records keep their schema and fingerprint; an unbound RAG record
+is refused. New starts validate the approved witness before lazy runtime work,
+then compare again at reservation and issue. Accepted receipt replay remains
+independent of later model metadata changes and never starts processing again.

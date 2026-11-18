@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {randomUUID} from "node:crypto";
-import {readHeadlessContextPackPlanRequest} from "../headless-context-plan";
+import {readHeadlessContextPackPlanRequest, readHeadlessContextGenerationPlanRequest} from "../headless-context-plan";
 import {HEADLESS_CONTRACT_VERSION as version, type HeadlessHostIncarnationId} from "../headless-protocol";
 import {createWorkspaceId} from "../../workspace";
 import {parseHeadlessBuildPlanProposal} from "../headless-system-management";
@@ -101,4 +101,63 @@ test("Context pack proposals cannot smuggle model/runtime choices, raw sources, 
   let getters = 0; const accessor = {...input};
   Object.defineProperty(accessor, "settings", {enumerable: true, get() {getters++; return input.settings;}});
   assert.equal(readHeadlessContextPackPlanRequest({...wire, input: accessor}, host).ok, false); assert.equal(getters, 0);
+});
+
+const ragSettings = {kind: "rag-database", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"],
+  modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", batchSize: 4, device: "cpu",
+  sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
+    requireConsentMetadata: false, includeSourceAttribution: true}};
+const ragWire = {version, operation: "context.generate-rag", input: {...input, settings: ragSettings}};
+const ragProposal = {...proposal, steps: [{operation: ragWire.operation, ...fields, settings: ragSettings}]};
+const ragCapabilities = {...capabilities, allowContextRagGeneration: true};
+
+test("RAG generation has separate opt-in authority and a v7 local-embedding preview", () => {
+  const decoded = readHeadlessContextGenerationPlanRequest(ragWire, host); assert.ok(decoded.ok);
+  assert.deepEqual(decoded.request, ragWire);
+  assert.notEqual(decoded.request.input.settings, ragSettings);
+  assert.equal(readHeadlessContextPackPlanRequest(ragWire, host).ok, false);
+  assert.equal(readHeadlessContextGenerationPlanRequest({...ragWire, input}, host).ok, false);
+  assert.equal(readHeadlessContextGenerationPlanRequest({...wire, input: ragWire.input}, host).ok, false);
+  assert.equal(parseHeadlessBuildPlanProposal(ragProposal, host, capabilities).ok, false);
+  const built = parseHeadlessBuildPlanProposal(ragProposal, host, {...ragCapabilities, allowContextPackGeneration: false});
+  assert.ok(built.ok); assert.equal(built.preview.version, "aisb-build-plan-preview-v7");
+  assert.equal(built.preview.steps[0].effect, "generate-rag-database");
+  assert.equal(built.preview.steps[0].externalProviderCalls, 0);
+  assert.equal("modelCalls" in built.preview.steps[0] && built.preview.steps[0].modelCalls, "required");
+  const pack = parseHeadlessBuildPlanProposal(proposal, host, ragCapabilities); assert.ok(pack.ok);
+  assert.equal(pack.preview.version, "aisb-build-plan-preview-v6");
+  for (const patch of [{localModelReference: "private/model"}, {modelId: "supplier/model"}, {modelUpdatedAt: "bad"},
+    {device: "auto"}, {batchSize: 33}, {trustRemoteCode: true}, {sourceChecks: {...ragSettings.sourceChecks, prompt: "execute"}}])
+    assert.equal(readHeadlessContextGenerationPlanRequest({...ragWire, input: {...ragWire.input, settings: {...ragSettings, ...patch}}}, host).ok, false);
+});
+
+test("both approval channels bind RAG permissions and reject hidden or altered limits", () => {
+  const built = parseHeadlessBuildPlanProposal(ragProposal, host, ragCapabilities); assert.ok(built.ok);
+  const selection = {workspaceId: input.workspaceId, fingerprint: "c".repeat(64), registeredClientId: randomUUID()};
+  const value = {selection, viewId: randomUUID(), preview: built.preview, state: {fingerprint: selection.fingerprint,
+    revision: 1, stepCount: 1, approvedSteps: 0, expiresAt: Date.now() + 60000, status: "pending"}};
+  const request = {operation: "open" as const, selection, document: {hostIncarnationId: host,
+    workspaceId: input.workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID()}};
+  assert.deepEqual(readDesktopPlanApprovalView(value, selection, ragCapabilities), value);
+  assert.deepEqual(readManagedBrowserPlanApprovalValue(request, value, ragCapabilities), value);
+  assert.equal(readDesktopPlanApprovalView(value, selection, capabilities), undefined);
+  assert.equal(readManagedBrowserPlanApprovalValue(request, value, capabilities), undefined);
+  for (const patch of [{modelCalls: 0}, {externalProviderCalls: "required"}, {maximumSources: 5}, {maximumTotalBytes: 32 * 1024 * 1024},
+    {maximumChunks: 1001}, {reviewRequired: false}, {explicitSaveRequired: false}, {effect: "generate-context-pack"},
+    {maximumRowsPerSource: 1000}]) {
+    const changed = {...value, preview: {...built.preview, steps: [{...built.preview.steps[0], ...patch}]}};
+    assert.equal(readDesktopPlanApprovalView(changed, selection, ragCapabilities), undefined);
+    assert.equal(readManagedBrowserPlanApprovalValue(request, changed, ragCapabilities), undefined);
+  }
+});
+
+test("RAG receipts expose only accepted task identity under their own capability", () => {
+  const exact = {hostIncarnationId: host, workspaceId: input.workspaceId, fingerprint: "d".repeat(64), approvalRevision: 2, step: 1};
+  const value = {kind: "started", operation: ragWire.operation, reference: {workspaceId: input.workspaceId, taskId: randomUUID()},
+    fingerprint: exact.fingerprint, approvalRevision: 2, step: 1, expiresAt: Date.now() + 60000};
+  assert.deepEqual(readHeadlessPlanStepResult({ok: true, value}, exact, ragCapabilities), {ok: true, value});
+  assert.equal(readHeadlessPlanStepResult({ok: true, value}, exact, capabilities).ok, false);
+  for (const patch of [{kind: "committed"}, {reference: {...value.reference, path: "private/model"}},
+    {reference: {...value.reference, workspaceId: "foreign"}}, {reference: {...value.reference, artifactId: "not-saved"}}])
+    assert.equal(readHeadlessPlanStepResult({ok: true, value: {...value, ...patch}}, exact, ragCapabilities).ok, false);
 });

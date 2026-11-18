@@ -6,8 +6,9 @@ import type {ApplicationRequestContext} from "../../../application/ports";
 import type {ContextGenerationUseCase} from "../../../application/use-cases/context-management";
 import {ReadHeadlessContextTaskUseCase} from "../../../application/use-cases/context-management";
 import {contextCommandDigest} from "../../../application/use-cases/context-management/approved-context-generation-admission";
-import {readHeadlessPlanStepResult, type HeadlessContextPackPlanRequest, type HeadlessPlanStepRequest}
+import {readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type HeadlessContextGenerationPlanRequest, type HeadlessPlanStepRequest}
   from "../../../contracts/headless";
+import type {ContextPlanModelBinding} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {composeHeadlessContextPreview} from "./headlessContextPreview";
 
 type PreparedContextStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, {kind: "context-pack"}>;
@@ -15,13 +16,30 @@ export type StartHeadlessContext = ContextGenerationUseCase["startAdmittedContex
 
 /** Saved metadata only. The transaction performs no runtime, source-byte or provider operation. */
 export async function compileHeadlessContextPlanInputs(rootDirectory: string, documents: StructuredDocumentStore,
-  request: HeadlessContextPackPlanRequest, context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) {
+  request: HeadlessContextGenerationPlanRequest, context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) {
   const {idempotencyKey: _key, ...input} = request.input;
   const compiled = await composeHeadlessContextPreview(documents, rootDirectory).execute({version: request.version,
     operation: "context.preview-generation", input}, {hostIncarnationId: input.hostIncarnationId, context, stillAllowed});
-  if (compiled.ok && compiled.operation === "context.preview-generation" && compiled.prepared.command.kind !== "markdown-context-pack")
-    return {ok: false, code: "headless.source-not-ready"} as const;
+  if (compiled.ok && compiled.operation === "context.preview-generation") {
+    const expected = request.operation === "context.generate-rag" ? "rag-database" : "markdown-context-pack";
+    if (compiled.prepared.command.kind !== expected || (expected === "rag-database" && !compiled.prepared.embeddingModel))
+      return {ok: false, code: "headless.source-not-ready"} as const;
+  }
   return compiled;
+}
+
+/** Private proposal snapshot. Reads saved metadata only, inside the owning transaction. */
+export async function compileHeadlessContextModelBindings(rootDirectory: string, documents: StructuredDocumentStore,
+  requests: readonly HeadlessBuildPlanRequest[], context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) {
+  const bindings: ContextPlanModelBinding[] = [];
+  for (let index = 0; index < requests.length; index++) {
+    const request = requests[index];
+    if (request.operation !== "context.generate-rag") continue;
+    const compiled = await compileHeadlessContextPlanInputs(rootDirectory, documents, request, context, stillAllowed);
+    if (!compiled.ok || compiled.operation !== "context.preview-generation" || !compiled.prepared.embeddingModel || !await stillAllowed()) return;
+    bindings.push({step: index + 1, model: compiled.prepared.embeddingModel});
+  }
+  return bindings;
 }
 
 export function composeHeadlessContextTask(documents: StructuredDocumentStore,
@@ -65,6 +83,7 @@ export async function runPreparedHeadlessContextPack(options: {
   let kind: "started" | "replayed" = "replayed";
   let reference = observed.kind === "accepted" ? observed.reference : undefined;
   if (observed.kind === "absent") {
+    if (!await prepared.validateInputs()) return forbidden;
     const start = await resolveStart();
     if (!start || !prepared.isCurrent() || !await canUse() || !await prepared.stillAllowed()) return forbidden;
     const reserved = await prepared.reserve();
@@ -76,7 +95,8 @@ export async function runPreparedHeadlessContextPack(options: {
       if (!context.organizationId || !context.principalId || context.workspaceId !== prepared.request.input.workspaceId) return forbidden;
       const result = await start(compiled.command, context, {taskId, organizationId: context.organizationId,
         principalId: context.principalId, workspaceId: context.workspaceId, commandDigest: contextCommandDigest(compiled.command),
-        sources: compiled.admissionSources, isCurrent: prepared.isCurrent,
+        sources: compiled.admissionSources, ...(compiled.embeddingModel ? {embeddingModel: compiled.embeddingModel} : {}),
+        isCurrent: prepared.isCurrent,
         stillAllowed: async () => prepared.isCurrent() && await canUse() && await prepared.stillAllowed(),
         issue: () => prepared.issue(taskId, sourceDigest)});
       if (!result.ok || result.value.requestId !== taskId || result.value.taskType !== "generate-context-artifact" ||
@@ -90,7 +110,7 @@ export async function runPreparedHeadlessContextPack(options: {
   if (!prepared.isCurrent() || !await canUse() || !await prepared.stillAllowed()) return forbidden;
   if (!reference) return unconfirmed;
   const {fingerprint, approvalRevision, step} = request.input;
-  return {result: readHeadlessPlanStepResult({ok: true, value: {kind, operation: "context.generate-pack",
+  return {result: readHeadlessPlanStepResult({ok: true, value: {kind, operation: prepared.request.operation,
     reference, fingerprint, approvalRevision, step, expiresAt: prepared.expiresAt}}, request.input,
-    {allowLocalFileSave: false, allowContextPackGeneration: true}), publishIfCurrent: prepared.publishIfCurrent};
+    {allowLocalFileSave: false, allowContextPackGeneration: true, allowContextRagGeneration: true}), publishIfCurrent: prepared.publishIfCurrent};
 }

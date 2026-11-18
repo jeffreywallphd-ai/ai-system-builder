@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import test from "node:test";
 import {createInMemoryStructuredDocumentStore} from "../../shared";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
-import {isHeadlessHostIncarnationId, readHeadlessContextPackPlanRequest} from "../../../../contracts/headless";
+import {isHeadlessHostIncarnationId, readHeadlessContextPackPlanRequest, parseHeadlessBuildPlanProposal} from "../../../../contracts/headless";
+import {createStructuredHeadlessPlanReviewRepository} from "../createStructuredHeadlessPlanReviewRepository";
+import {HeadlessBuildPlanReviewUseCase} from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import {readStructuredOwnedDatasetPlanTask} from "../../ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import {inspectStructuredContextPlanTask, reserveStructuredContextPlanTask, issueStructuredContextPlanTask,
   acceptStructuredContextPlanTask, readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan,
@@ -27,6 +29,49 @@ function fixture() {
     root.runInOwnedTransaction!(part => work(part.forOrganization(organizationId)), fence);
   return {root, owner, target, effect, sourceDigest, transaction};
 }
+
+test("new RAG proposals require a closed private witness for every exact model step and never publish it", async () => {
+  const at = "2026-11-18T00:00:00.000Z";
+  const model = {modelRecordId: "model.synthetic", modelUpdatedAt: at, modelId: "synthetic/embedding", recordDigest: "sha256:" + "e".repeat(64)};
+  const variants = [undefined, [], [{step: 0, model}], [{step: 1, model: {...model, modelRecordId: "model.other"}}],
+    [{step: 1, model: {...model, modelUpdatedAt: "2026-11-18T00:00:01.000Z"}}],
+    [{step: 1, model: {...model, localModelReference: "private/model"}}], [{step: 1, model}, {step: 1, model}], [{step: 1, model}]];
+  for (const [index, bindings] of variants.entries()) {
+    const f = fixture();
+    const proposal = {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.target.scope.workspaceId,
+      steps: [{operation: "context.generate-rag", idempotencyKey: randomUUID(), name: "Synthetic RAG",
+        sources: f.effect.request.input.sources, settings: {kind: "rag-database", chunkCharacters: 500, overlapCharacters: 50,
+          maximumChunks: 100, textFields: ["text"], modelRecordId: model.modelRecordId, modelUpdatedAt: at,
+          device: "cpu", batchSize: 4, sourceChecks: {preset: "recommended", allowedLanguages: ["en"],
+            requireLicenseMetadata: false, requireConsentMetadata: false, includeSourceAttribution: true}}}]};
+    const plan = parseHeadlessBuildPlanProposal(proposal, f.target.hostIncarnationId, {allowLocalFileSave: false, allowContextRagGeneration: true});
+    assert.ok(plan.ok);
+    const target = {...f.target, fingerprint: createHash("sha256").update(JSON.stringify(plan.preview)).digest("hex")};
+    const reviews = createStructuredHeadlessPlanReviewRepository(f.root, async () => true, () => 1, async () => true,
+      false, false, false, false, false, true, bindings === undefined ? undefined : async () => bindings as never);
+    const result = await reviews.propose({target, proposal, isCurrent: () => true});
+    const expected = index === variants.length - 1;
+    assert.equal(result.ok, expected, `binding variant ${index}`);
+    const records = await f.owner.listDocuments("headless/system-builder/plan-reviews");
+    assert.equal(records.length, expected ? 1 : 0);
+    if (result.ok) {
+      assert.doesNotMatch(JSON.stringify(result), /contextModels|recordDigest|sha256:eeee/);
+      assert.equal((records[0].value as {version: number}).version, 2);
+      assert.deepEqual((records[0].value as {contextModels: unknown}).contextModels, bindings);
+      const decisions = new HeadlessBuildPlanReviewUseCase(reviews, () => 1);
+      const actor = {organizationId: target.scope.organizationId, principalId: target.scope.principalId,
+        isCurrent: () => true, canDecide: async () => true};
+      assert.equal((await decisions.decide({fingerprint: target.fingerprint, expectedRevision: 1,
+        decision: {kind: "approve", mode: "whole-plan"}}, target.hostIncarnationId, target.scope,
+        {...actor, channel: "app-popup"})).ok, true);
+      assert.equal((await decisions.decide({fingerprint: target.fingerprint, expectedRevision: 2,
+        decision: {kind: "revoke"}}, target.hostIncarnationId, target.scope,
+        {...actor, channel: "authenticated-chat"})).ok, true);
+      const after = (await f.owner.listDocuments("headless/system-builder/plan-reviews"))[0].value as {version: number; contextModels: unknown; state: {revision: number}};
+      assert.equal(after.version, 2); assert.equal(after.state.revision, 3); assert.deepEqual(after.contextModels, bindings);
+    }
+  }
+});
 
 test("an exact task moves once from reserved to issued to accepted, with a private opaque ID and point-owned replay", async () => {
   const f = fixture();

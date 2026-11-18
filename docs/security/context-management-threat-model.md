@@ -395,3 +395,22 @@ Root containment and file presence are cooperative checks. They do not establish
 native custody, physical volume type, immutable file bytes or memory bounds.
 They do not relax model-location mutation, offload or retained-tree safeguards.
 Actual model/resource and public RAG qualification remain separate.
+
+### Public approved RAG task boundary
+
+The separately advertised RAG action uses a closed version-7 preview and current
+model-read plus artifact/plan authority. It cannot introduce a path, installer,
+remote-code option or external model/provider call. Both host issuers bind the
+selected-model witness into the RAG source digest and recompile it transactionally
+after staging. A private proposal-time model witness is retained across every
+approval decision. New-start metadata validation, reservation and issue compare
+against that witness; clock timestamps alone are not a model revision guarantee.
+Changes present before a new start deny runtime preparation; changes during
+staging deny issue, including when logical ID and timestamp stay the same.
+Accepted historical receipts remain readable without
+reopening the current model. Private bindings never enter public snapshots.
+Exact pack receipt/key semantics remain unchanged; unconfirmed reservations
+cannot be replayed as new execution. Approval views disclose model/device/policy
+and remain separately authorized from execution. Bounded accepted-task review
+never returns raw source text, vectors or private model references. Real model,
+resource/native and later save/query/display controls retain their own evidence.

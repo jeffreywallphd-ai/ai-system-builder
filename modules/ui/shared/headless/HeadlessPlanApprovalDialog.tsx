@@ -196,7 +196,8 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const datasetProcessing = view.preview.steps.some(step => step.operation === "data.prepare-local-dataset");
   const datasetSaving = view.preview.steps.some(step => step.operation === "data.save-prepared-dataset");
   const contextProcessing = view.preview.steps.some(step => step.operation === "context.generate-pack");
-  const processing = datasetProcessing || contextProcessing;
+  const ragProcessing = view.preview.steps.some(step => step.operation === "context.generate-rag");
+  const processing = datasetProcessing || contextProcessing || ragProcessing;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
@@ -209,17 +210,23 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
       {datasetProcessing ? <>
         <li>Process the listed saved local files. Limit: 4 files, 4 MiB per file, 16 MiB total and 1,000 rows per file.</li>
         <li>Use the selected columns, data split and quality checks. Stop for result review before saving a dataset version.</li>
-        <li>No model calls. Dataset saving and publication need separate permission.</li>
+        <li>Dataset preparation makes no model calls. Dataset saving and publication need separate permission.</li>
       </> : null}
       {datasetSaving ? <>
         <li>Save the reviewed task output as an immutable dataset version with the name shown below.</li>
         <li>Use only the approved quality report. Include the source, recipe, data split and quality record.</li>
-        <li>No model calls. No outside publication. No second processing run.</li>
+        <li>Saving this dataset makes no model calls. No outside publication. No second processing run.</li>
       </> : null}
       {contextProcessing ? <>
         <li>Prepare a Markdown Context pack from the listed saved sources. Limit: 4 sources, 4 MiB per source, 16 MiB total and 1,000 text chunks.</li>
         <li>Use the listed text fields, cleaning and chunk settings. Keep recorded license information; unknown terms stay unknown.</li>
-        <li>No model calls or model installation. Review the result before a separate request to save it. Publication needs separate permission.</li>
+        <li>Preparing this Markdown pack makes no model calls and installs no models. Review the result before a separate request to save it. Publication needs separate permission.</li>
+      </> : null}
+      {ragProcessing ? <>
+        <li>Build a RAG database from the listed saved sources. Limit: 4 sources, 4 MiB per source, 16 MiB total and 1,000 text chunks.</li>
+        <li>Read the exact listed model record and use its existing local safe-weight files to create embeddings on the selected device.</li>
+        <li>Apply the selected source checks and attribution setting. Known license terms stay recorded; unknown terms stay unknown.</li>
+        <li>Review the result before a separate save request. Model downloads, installation and outside publication need separate permission.</li>
       </> : null}
       <li>Limit of {state.stepCount} {processing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
       {providerReads
@@ -249,8 +256,8 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
           <strong>Save reviewed dataset: {step.input.outputBaseName}</strong>
           <div>Preparation task: {step.input.taskId}</div>
           <div>Approved quality report: {step.input.reportFingerprint}</div>
-        </> : step.operation === "context.generate-pack" ? <>
-          <strong>Prepare Context pack: {step.input.name}</strong>
+        </> : step.operation === "context.generate-pack" || step.operation === "context.generate-rag" ? <>
+          <strong>{step.operation === "context.generate-rag" ? "Build RAG database" : "Prepare Context pack"}: {step.input.name}</strong>
           <ul>{step.input.sources.map(source => <li key={JSON.stringify(source)}>
             {source.kind === "ingestion-file" ? <>
               File reference {source.fileId}. Upload {source.taskId}, version {source.taskRevision}.
@@ -260,9 +267,19 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
             </>}
           </li>)}</ul>
           <div>Text fields: {step.input.settings.textFields.length ? step.input.settings.textFields.join(", ") : "No specific fields selected"}.</div>
-          <div>Cleaning: {step.input.settings.cleaningPreset}. Chunk size: {step.input.settings.chunkCharacters} characters.
+          {step.input.settings.kind === "rag-database" ? <>
+            <div>Model record: {step.input.settings.modelRecordId}. Saved at {step.input.settings.modelUpdatedAt}.</div>
+            <div>Device: {step.input.settings.device}. Embedding batch size: {step.input.settings.batchSize}.</div>
+            <div>Source checks: {step.input.settings.sourceChecks.preset}. Languages: {step.input.settings.sourceChecks.allowedLanguages.join(", ")}.</div>
+            <div>Require license: {step.input.settings.sourceChecks.requireLicenseMetadata ? "Yes" : "No"}.
+              {" "}Require consent: {step.input.settings.sourceChecks.requireConsentMetadata ? "Yes" : "No"}.
+              {" "}Include source attribution: {step.input.settings.sourceChecks.includeSourceAttribution ? "Yes" : "No"}.</div>
+          </> : null}
+          <div>{step.input.settings.kind === "markdown-context-pack" ? <>Cleaning: {step.input.settings.cleaningPreset}. </> : null}
+            Chunk size: {step.input.settings.chunkCharacters} characters.
             {" "}Overlap: {step.input.settings.overlapCharacters} characters. Maximum chunks: {step.input.settings.maximumChunks}.</div>
-          <div>No summarization or model calls. Result review and a separate save request are required.</div>
+          <div>{step.operation === "context.generate-rag" ? "Use local embeddings." : "No summarization or model calls."}
+            {" "}Result review and a separate save request are required.</div>
         </> : <>
           <strong>{step.operation === "systems.create" ? "Create " : step.operation === "systems.clone" ? "Copy as " : "Rename to "}
             {step.input.name}</strong>

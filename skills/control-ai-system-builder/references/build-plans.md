@@ -161,8 +161,11 @@ For source-derived Context packs, follow [Prepare Context inputs and packs](cont
 Version 6 adds `context.generate-pack` to this same approval and ordered-step
 workflow. The initial profile makes no model calls and requires result review
 before a separate save request. Use `aisb_context_task` for accepted-only progress;
-an uncertain attempt never authorizes a new task. This does not enable active RAG,
-Context saving, query, rebuild, publication or window control.
+an uncertain attempt never authorizes a new task. For installed local RAG builds,
+version 7 separately adds `context.generate-rag`, the exact saved embedding-model
+record, selected device and local embedding permission. Follow the Context guide
+for that profile and its availability checks. Neither start action grants Context
+saving, query, rebuild, publication or window control.
 
 To show saved Data work, use a separately authorized window-control connection
 and the current exact lease. `show-data-source` takes the saved task/file/revision;
