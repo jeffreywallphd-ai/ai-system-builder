@@ -10,6 +10,7 @@ import type {ContextArtifactMediaType} from "../../../../../contracts/context-ma
 import {createOrganizationId} from "../../../../../contracts/organization";
 import {createFilesystemContextResultByteStorageAdapter} from "../createFilesystemContextResultByteStorageAdapter";
 import {verifiedPublicationStream} from "../verifiedPublicationStream";
+import {createFilesystemContextResultOutputSourceAdapter} from "../createFilesystemContextResultOutputSourceAdapter";
 
 const publicationId = "a".repeat(32);
 const key = `workspaces/workspace-a/artifacts/context/${publicationId}`;
@@ -161,3 +162,44 @@ test("private stream verification cannot report success after a rejected EOF", a
   await assert.rejects(async () => {for await (const _chunk of verified.content) {/* inspection */}}, /verification failed/);
   assert.throws(() => verified.result(), /Incomplete content/);
 });
+
+test("owned Context output reading publishes bounded chunks and captures its private selection", async () => fixture(async (root, storage) => {
+  const handle = "synthetic.context.zip", bytes = new Uint8Array(150_000).fill(7);
+  await writeFile(path.join(root, handle), bytes);
+  const input = {runtimeDirectory: root, outputHandle: handle, expectedSizeBytes: bytes.length};
+  const content = createFilesystemContextResultOutputSourceAdapter().readOutput(input);
+  input.outputHandle = "private-foreign.zip";
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of content) {assert.ok(chunk.length <= 64 * 1024); chunks.push(chunk);}
+  assert.deepEqual(Buffer.concat(chunks), Buffer.from(bytes));
+  const published = await storage.publishResult({...request(bytes), content:
+    createFilesystemContextResultOutputSourceAdapter().readOutput({...input, outputHandle: handle})}, context);
+  assert.equal(published.ok, true);
+  assert.deepEqual(new Uint8Array(await readFile(path.join(root, key))), bytes);
+}));
+
+test("owned Context output rejects escapes, mismatched size and missing files without public path disclosure", async () => fixture(async (root, storage) => {
+  const handle = "synthetic.context.zip";
+  await writeFile(path.join(root, handle), new Uint8Array([1, 2, 3]));
+  for (const patch of [{outputHandle: "../escape.zip"}, {outputHandle: "private-foreign.zip"}, {runtimeDirectory: "relative"},
+    {expectedSizeBytes: 2}, {expectedSizeBytes: 0}, {expectedSizeBytes: CONTEXT_GENERATION_LIMITS.maximumArtifactBytes + 1}]) {
+    const content = createFilesystemContextResultOutputSourceAdapter().readOutput({runtimeDirectory: root,
+      outputHandle: handle, expectedSizeBytes: 3, ...patch});
+    const result = await storage.publishResult({...request(), content}, context);
+    assert.equal(result.ok, false);
+    noPrivateError(result);
+    assert.doesNotMatch(JSON.stringify(result), /private-foreign|escape\.zip/);
+    await noTarget(root);
+  }
+}));
+
+test("owned Context output denies a file changed while it streams", async () => fixture(async (root) => {
+  const handle = "synthetic.context.zip", bytes = new Uint8Array(150_000).fill(7);
+  const target = path.join(root, handle);
+  await writeFile(target, bytes);
+  const iterator = createFilesystemContextResultOutputSourceAdapter().readOutput({runtimeDirectory: root,
+    outputHandle: handle, expectedSizeBytes: bytes.length})[Symbol.asyncIterator]();
+  assert.equal((await iterator.next()).done, false);
+  await writeFile(target, new Uint8Array([1]));
+  await assert.rejects(async () => {while (!(await iterator.next()).done) {/* bounded drain */}}, /changed/);
+}));

@@ -144,3 +144,20 @@ result proves no business dispatch and permits fresh staging cleanup. The issued
 ID remains consumed. Lost or contradictory responses retain the exact owned
 lease. This additive path does not alter ordinary Context preparation and is not
 yet advertised through public Headless host composition.
+
+The separate internal `saveAdmittedContextResult` entry uses the exact accepted
+task and current review fingerprint. It requires both optional result-byte and
+owned-output ports and a trusted save-specific admission. It serializes review
+actions, acknowledges issue before file effects, validates exact publication
+size/hash/identity and delegates activation to one atomic metadata commit.
+Unknown issue, byte or commit replies retain the attempt and prevent another
+admitted or ordinary save/discard/cancel. Proven pre-issue denial creates no byte
+effect. A confirmed save is recorded before staging cleanup or outward reply;
+later failures cannot delete it or permit another write. Tests inject cleanup
+refusal and lost acknowledgements in synthetic owned fixtures.
+
+Private save compilation is metadata only. It exposes no raw output content or
+path. The shared host composition requires an exact save authorizer in the same
+root-owned transaction and performs one exact read-only reconciliation of a
+possibly committed reply. It does not provide a public save action, native
+restart recovery or physical RAG/retrieval qualification.

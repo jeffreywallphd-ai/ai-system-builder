@@ -431,3 +431,23 @@ one-use issue and atomic causal metadata remain obligations of the pending save
 owner. Synthetic component tests cover bytes, scope, conflict, stream mutation
 and sanitized failures only. Cooperative containment is not hostile native-race,
 crash-recovery or physical RAG qualification.
+
+### Internal result-save admission and metadata fence
+
+The task owner rejects missing capabilities, foreign scope, a changed review or
+unaccepted task before issue and file reads. Internal admission is never parsed
+from client data. Unknown issuance or output/commit acknowledgement consumes the
+attempt and forbids ordinary save/discard/cancel bypass. Private output selection
+is read through bounded adapter chunks, with regular-file/link/identity/size
+checks and exact final content verification. Unknown or conflicting data is not
+deleted or adopted. Confirmed state is recorded before cleanup or response.
+
+The result ledger associates one issued save with an accepted original task,
+actor/client/host, source digest and independently rechecked review. Insert-only
+catalog and primary binding share its causal-receipt transaction. The shared
+composition requires a trusted exact-save authorizer against that same owner;
+there is no permissive default or generation-approval substitution. Lost commit
+reply reconciliation is one private point read and never disclosure authority.
+The public approved-save decoder/projection/routes are still absent at this
+component boundary. File/worker/native restart custody and physical retrieval
+remain independently qualified obligations.

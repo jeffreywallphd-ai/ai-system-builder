@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, {mock} from "node:test";
+import filesystem from "node:fs/promises";
+import {syncBuiltinESMExports} from "node:module";
 import {createHash, randomUUID} from "node:crypto";
 import {mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile} from "node:fs/promises";
 import {existsSync, readdirSync} from "node:fs";
@@ -9,12 +11,13 @@ import {ContextGenerationUseCase} from "../context-generation.use-case";
 import {contextCommandDigest} from "../approved-context-generation-admission";
 import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
 import {TaskPowerLifecycleService, type TaskPowerLifecyclePort} from "../../../services/runtime/task-power-lifecycle.service";
-import type {ApprovedContextGenerationAdmission} from "../../../ports/context-management";
+import type {ApprovedContextGenerationAdmission, ApprovedContextResultSaveAdmission, ContextResultByteStoragePort} from "../../../ports/context-management";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createOrganizationId} from "../../../../contracts/organization";
 import type {StartContextGenerationCommand} from "../../../../contracts/context-management";
 import {TaskType, type ContextGenerationTaskRequest} from "../../../../contracts/runtime";
-import {createFilesystemArtifactObjectStorageAdapter} from "../../../../adapters/storage/filesystem/artifact-store";
+import {createFilesystemArtifactObjectStorageAdapter, createFilesystemContextResultByteStorageAdapter,
+  createFilesystemContextResultOutputSourceAdapter} from "../../../../adapters/storage/filesystem/artifact-store";
 import type {ArtifactObjectStoragePort} from "../../../ports/storage";
 import type {RuntimeTaskRegistryPort} from "../../../ports/runtime";
 import {createPythonRuntimeTaskRegistryAdapter} from "../../../../adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter";
@@ -33,11 +36,11 @@ function ragCommand(): StartContextGenerationCommand {return {kind: "rag-databas
   sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
     requireConsentMetadata: false, includeSourceAttribution: true}};}
 
-async function withHarness(run: (h: Awaited<ReturnType<typeof harness>>) => Promise<void>, withoutOwner = false, withoutModels = false) {
+async function withHarness(run: (h: Awaited<ReturnType<typeof harness>>) => Promise<void>, withoutOwner = false, withoutModels = false, withoutSave = false) {
   const originalTemp = process.env.TEMP, originalTmp = process.env.TMP;
   const base = await realpath(await mkdtemp(path.join(tmpdir(), "context-admission-test-")));
   process.env.TEMP = base; process.env.TMP = base;
-  const h = await harness(base, withoutOwner, withoutModels);
+  const h = await harness(base, withoutOwner, withoutModels, withoutSave);
   try {await run(h);} finally {
     await h.stop();
     if (originalTemp === undefined) delete process.env.TEMP; else process.env.TEMP = originalTemp;
@@ -48,7 +51,7 @@ async function withHarness(run: (h: Awaited<ReturnType<typeof harness>>) => Prom
     await rm(base, {recursive: true, force: true});
   }
 }
-async function harness(base: string, withoutOwner: boolean, withoutModels = false) {
+async function harness(base: string, withoutOwner: boolean, withoutModels = false, withoutSave = false) {
   const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
   const context = {workspaceId, organizationId, principalId: "principal.synthetic", requestId: "caller-correlation"};
   let allowed = true, issueCount = 0, readCount = 0, dispatchCount = 0, statusCount = 0, cancelCount = 0, maximumReadBytes = 0;
@@ -64,7 +67,16 @@ async function harness(base: string, withoutOwner: boolean, withoutModels = fals
   let installedBridge: RuntimeTaskRegistryPort["startTaskWithoutInstalling"];
   let modelReference: string | undefined = path.join(base, "synthetic-installed-model"), modelChecks = 0;
   let afterModel = () => {};
+  let outputReads = 0, resultWrites = 0;
+  const resultRoot = path.join(base, "result-objects");
+  const resultBytes = createFilesystemContextResultByteStorageAdapter({rootDirectory: resultRoot});
+  const resultSource = createFilesystemContextResultOutputSourceAdapter();
+  let publishHook: ContextResultByteStoragePort["publishResult"] | undefined;
   const useCase = new ContextGenerationUseCase({taskReconciler: withoutOwner ? undefined : reconciler,
+    ...(withoutSave ? {} : {
+      resultBytes: {async publishResult(input, supplied) {resultWrites++; return publishHook ? publishHook(input, supplied) : resultBytes.publishResult(input, supplied);}},
+      resultSource: {readOutput(input) {outputReads++; return resultSource.readOutput(input);}},
+    }),
     ...(withoutModels ? {} : {embeddingModels: {async resolveExistingModel(witness, modelContext, stillAllowed) {
       modelChecks++; assert.equal(witness.modelId, ragCommand().embedding!.modelId);
       assert.equal(modelContext.workspaceId, workspaceId); assert.ok(await stillAllowed()); afterModel();
@@ -116,6 +128,7 @@ async function harness(base: string, withoutOwner: boolean, withoutModels = fals
     isCurrent: () => allowed, stillAllowed: async () => allowed,
     async issue() {issueCount++; return issue();}});
   return {base, useCase, context, reconciler, admission,
+    resultRoot, resultBytes, resultCounts: () => ({outputReads, resultWrites}), setPublishHook(value: typeof publishHook) {publishHook = value;},
     taskId: () => taskId, nextTask() {taskId = randomUUID();},
     counts: () => ({issueCount, readCount, dispatchCount, statusCount, cancelCount}), lastRequest: () => lastRequest, maximumReadBytes: () => maximumReadBytes,
     setAllowed(value: boolean) {allowed = value;}, setBytes(value: Uint8Array) {bytes = value;},
@@ -338,6 +351,152 @@ test("admitted RAG review binds logical model and source policy without exportin
     assert.equal(JSON.stringify(review).includes("synthetic-installed-model"), false, variant);
   });
 });
+
+async function prepareReviewedSave(h: Awaited<ReturnType<typeof harness>>) {
+  const selected = ragCommand(), bytes = Buffer.from("Synthetic reviewed Context result; no real embedding model is executed.");
+  const handle = "synthetic.lancedb.zip";
+  h.setDispatch(async () => {
+    await writeFile(path.join(h.lastRequest()!.payload.runtime.runtimeWorkingDirectory, handle), bytes);
+    return {requestId: h.taskId(), status: "queued"};
+  });
+  assert.ok((await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected))).ok);
+  const source = h.lastRequest()!.payload.sources[0];
+  const common = {artifactId: source.artifactId, digest: source.sourceDigest, mediaType: source.mediaType, sizeBytes: source.sizeBytes};
+  h.setStatus({status: "succeeded", data: {
+    output: {name: handle, outputHandle: handle, mediaType: "application/vnd.ai-system-builder.rag-database+lancedb+zip", sizeBytes: bytes.length, digest: hash(bytes)},
+    sourceInspections: [{...common, ready: true, sourceKind: "structured", format: "csv", textFields: ["text"], alreadyChunked: false, chunkCount: 1}],
+    preview: {kind: "rag-database", name: selected.name, sourceCount: 1, manualEntryCount: 0, chunkCount: 1,
+      items: [{id: "synthetic.chunk", kind: "chunk", text: "Synthetic answer", citations: [{sourceArtifactId: source.artifactId, chunkIndex: 0}]}]},
+    manifest: {schemaVersion: "1", kind: "rag-database", name: selected.name,
+      mediaType: "application/vnd.ai-system-builder.rag-database+lancedb+zip", createdAt: "2026-11-18T00:00:00.000Z",
+      sources: [{...common, chunkCount: 1, chunkingMode: "extracted"}], manualEntries: [], chunking: selected.chunking,
+      sourceChecks: selected.sourceChecks, embedding: {provider: "transformers", modelId: selected.embedding!.modelId, dimensions: 3}},
+  }});
+  const read = await h.useCase.read(h.taskId(), h.context);
+  assert.ok(read.ok); assert.equal(read.value.state, "review-required");
+  const review = h.useCase.peekAdmittedContextReview(h.taskId(), h.context)!;
+  assert.ok(review);
+  let saveIssues = 0, saveCommits = 0;
+  const effectId = randomUUID();
+  let issue: ApprovedContextResultSaveAdmission["issue"] = async () => "issued";
+  let commit: ApprovedContextResultSaveAdmission["commit"] = async artifact => artifact;
+  const admission: ApprovedContextResultSaveAdmission = {effectId, taskId: h.taskId(), reportFingerprint: review.reportFingerprint,
+    organizationId, workspaceId, principalId: h.context.principalId, isCurrent: () => true, stillAllowed: async () => true,
+    async issue() {saveIssues++; return issue();}, async commit(artifact) {saveCommits++; return commit(artifact);}};
+  const request = {taskId: h.taskId(), reportFingerprint: review.reportFingerprint};
+  const outputPath = path.join(h.lastRequest()!.payload.runtime.runtimeWorkingDirectory, handle);
+  return {request, admission, bytes, outputPath, key: `workspaces/${workspaceId}/artifacts/context/${effectId.replace(/-/g, "")}`,
+    counts: () => ({saveIssues, saveCommits, ...h.resultCounts()}), setSaveIssue(value: typeof issue) {issue = value;}, setCommit(value: typeof commit) {commit = value;},
+    save: (provided = admission) => h.useCase.saveAdmittedContextResult(request, h.context, provided)};
+}
+
+test("admitted Context save publishes once after exact review and commits without ordinary metadata writes", async () => withHarness(async h => {
+  const f = await prepareReviewedSave(h);
+  const saved = await f.save();
+  assert.ok(saved.ok); assert.equal(saved.value.state, "saved");
+  assert.deepEqual(f.counts(), {saveIssues: 1, saveCommits: 1, outputReads: 1, resultWrites: 1});
+  assert.deepEqual(await readFile(path.join(h.resultRoot, f.key)), f.bytes);
+  assert.equal(existsSync(f.outputPath), false);
+  assert.ok((await f.save()).ok);
+  assert.equal((await f.save({...f.admission, effectId: randomUUID()})).ok, false);
+  assert.deepEqual(f.counts(), {saveIssues: 1, saveCommits: 1, outputReads: 1, resultWrites: 1});
+}));
+
+test("admitted Context save rejects stale review, foreign actor and missing support before issue or output reads", async () => {
+  await withHarness(async h => {
+    const f = await prepareReviewedSave(h);
+    for (const patch of [{reportFingerprint: "b".repeat(64)}, {taskId: randomUUID()}, {principalId: "foreign"},
+      {workspaceId: createWorkspaceId("foreign")}, {organizationId: createOrganizationId("foreign")}, {effectId: "invalid"},
+      {isCurrent: () => false}, {stillAllowed: async () => false}])
+      assert.equal((await f.save({...f.admission, ...patch})).ok, false);
+    assert.deepEqual(f.counts(), {saveIssues: 0, saveCommits: 0, outputReads: 0, resultWrites: 0});
+  });
+  await withHarness(async h => {
+    const f = await prepareReviewedSave(h);
+    assert.equal(h.useCase.peekAdmittedContextSaveInputs(h.taskId(), h.context), undefined);
+    assert.equal((await f.save()).ok, false);
+    assert.deepEqual(f.counts(), {saveIssues: 0, saveCommits: 0, outputReads: 0, resultWrites: 0});
+  }, false, false, true);
+});
+
+for (const failure of ["issue-unconfirmed", "lost-byte-reply", "wrong-byte-ack", "changed-output", "commit-lost"] as const) {
+  test(`admitted Context save retains ${failure} and forbids duplicate saves or ordinary cleanup bypass`, async () => withHarness(async h => {
+    const f = await prepareReviewedSave(h);
+    if (failure === "issue-unconfirmed") f.setSaveIssue(async () => "unconfirmed");
+    if (failure === "lost-byte-reply") h.setPublishHook(async (input, context) => {
+      assert.ok((await h.resultBytes.publishResult(input, context)).ok);
+      throw new Error("private/path synthetic lost acknowledgement");
+    });
+    if (failure === "wrong-byte-ack") h.setPublishHook(async (input, context) => {
+      const result = await h.resultBytes.publishResult(input, context); assert.ok(result.ok);
+      return {...result, value: {...result.value, sizeBytes: result.value.sizeBytes! + 1}};
+    });
+    if (failure === "changed-output") await writeFile(f.outputPath, new Uint8Array(f.bytes.length).fill(0));
+    if (failure === "commit-lost") f.setCommit(async () => {throw new Error("private/path synthetic metadata acknowledgement");});
+    const result = await f.save(); assert.equal(result.ok, false); assert.doesNotMatch(JSON.stringify(result), /private\/path/);
+    const counts = f.counts();
+    assert.equal((await f.save()).ok, false);
+    assert.equal((await f.save({...f.admission, effectId: randomUUID()})).ok, false);
+    for (const action of ["save", "discard", "cancel"] as const) assert.equal((await h.useCase[action](h.taskId(), h.context)).ok, false);
+    assert.deepEqual(f.counts(), counts);
+    assert.ok(existsSync(f.outputPath));
+    assert.equal(h.counts().cancelCount, 0);
+    if (["lost-byte-reply", "wrong-byte-ack", "commit-lost"].includes(failure)) assert.deepEqual(await readFile(path.join(h.resultRoot, f.key)), f.bytes);
+  }));
+}
+
+test("a proven pre-issue Context save denial permits a fresh approved attempt without byte effects", async () => withHarness(async h => {
+  const f = await prepareReviewedSave(h);
+  f.setSaveIssue(async () => "denied");
+  assert.equal((await f.save()).ok, false);
+  assert.deepEqual(f.counts(), {saveIssues: 1, saveCommits: 0, outputReads: 0, resultWrites: 0});
+  f.setSaveIssue(async () => "issued");
+  assert.ok((await f.save()).ok);
+  assert.deepEqual(f.counts(), {saveIssues: 2, saveCommits: 1, outputReads: 1, resultWrites: 1});
+}));
+
+test("a confirmed Context save survives outward permission loss and can later replay without another write", async () => withHarness(async h => {
+  const f = await prepareReviewedSave(h); let allowed = true;
+  const admission = {...f.admission, isCurrent: () => allowed};
+  f.setCommit(async artifact => {allowed = false; return artifact;});
+  assert.equal((await f.save(admission)).ok, false);
+  assert.deepEqual(await readFile(path.join(h.resultRoot, f.key)), f.bytes);
+  allowed = true;
+  const replay = await f.save(admission);
+  assert.ok(replay.ok); assert.equal(replay.value.state, "saved");
+  assert.deepEqual(f.counts(), {saveIssues: 1, saveCommits: 1, outputReads: 1, resultWrites: 1});
+}));
+
+test("concurrent Context saves cannot dispatch a second effect while publication awaits", async () => withHarness(async h => {
+  const f = await prepareReviewedSave(h);
+  let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => {release = resolve;}), waiting = new Promise<void>(resolve => {entered = resolve;});
+  h.setPublishHook(async (input, context) => {entered(); await gate; return h.resultBytes.publishResult(input, context);});
+  const first = f.save(); await waiting;
+  const second = f.save({...f.admission, effectId: randomUUID()});
+  release(); assert.ok((await first).ok); assert.equal((await second).ok, false);
+  assert.deepEqual(f.counts(), {saveIssues: 1, saveCommits: 1, outputReads: 1, resultWrites: 1});
+}));
+
+test("a Context staging cleanup error cannot erase or repeat its already committed save", async () => withHarness(async h => {
+  const f = await prepareReviewedSave(h), actualRemove = filesystem.rm;
+  let cleanupFailures = 0;
+  const replacement = mock.method(filesystem, "rm", async (...args: Parameters<typeof filesystem.rm>) => {
+    if (String(args[0]) === path.dirname(f.outputPath)) {cleanupFailures++; throw new Error("private/path synthetic cleanup refusal");}
+    return actualRemove(...args);
+  });
+  syncBuiltinESMExports();
+  try {
+    const result = await f.save();
+    assert.ok(result.ok); assert.equal(result.value.state, "saved");
+    assert.equal(cleanupFailures, 1);
+    assert.ok(existsSync(f.outputPath), "Unretired staging stays owned; committed bytes must not be compensated.");
+    assert.deepEqual(await readFile(path.join(h.resultRoot, f.key)), f.bytes);
+    assert.ok((await f.save()).ok);
+    assert.deepEqual(f.counts(), {saveIssues: 1, saveCommits: 1, outputReads: 1, resultWrites: 1});
+    assert.doesNotMatch(JSON.stringify(result), /private\/path/);
+  } finally {replacement.mock.restore(); syncBuiltinESMExports();}
+}));
 
 test("changed source bytes, descriptor, format and binding deny before one-use issuance", async () => {
   for (const patch of [{key: "private/foreign.csv"}, {sizeBytes: originalBytes.length + 1}, {mediaType: "text/plain"}]) await withHarness(async h => {

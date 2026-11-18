@@ -277,3 +277,15 @@ Existing pack/Data fingerprints and task ownership/replay rules are preserved.
 Both approval channels disclose embedding work and separate review/save. This
 adds no engine, network transfer, installation, publication or native exception.
 Actual retrieval/resources and later save/query/display remain separate evidence.
+
+### Existing-owner reviewed Context result save support
+
+Within the same approved extension, the Context owner receives an internal
+one-use result-save admission. Byte publication and owned-output reads stay
+behind narrow ports; catalog, primary binding and causal receipt use the same
+root-owned metadata transaction. Unknown outcomes cannot trigger ordinary-action
+bypass, duplicate publication or adoption. A committed result survives cleanup
+or response failure. The shared composition requires an exact save-specific
+policy/approval check, not the earlier generation approval. Public save contract
+and approval wiring follow separately; this component grants no external,
+native-recovery or physical model/retrieval exception.

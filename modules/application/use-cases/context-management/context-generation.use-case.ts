@@ -71,7 +71,9 @@ import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import { projectContextSourceInformation } from "./context-source-information";
 import {APPROVED_CONTEXT_MAX_PENDING, APPROVED_CONTEXT_MAX_SOURCE_BYTES, APPROVED_CONTEXT_MAX_TASK_HISTORY,
-  type ApprovedContextGenerationAdmission, type ApprovedContextEmbeddingModelResolverPort} from "../../ports/context-management";
+  type ApprovedContextGenerationAdmission, type ApprovedContextEmbeddingModelResolverPort,
+  type ApprovedContextResultSaveAdmission, type ContextResultByteStoragePort,
+  type ContextResultOutputSourcePort, type PreparedContextResultReview} from "../../ports/context-management";
 import {approvedContextAdmissionCurrent, contextCommandDigest, readApprovedContextAdmission} from "./approved-context-generation-admission";
 import {readHeadlessContextTaskValue, type HeadlessContextTaskReview, type HeadlessContextTaskValue} from "../../../contracts/headless/headless-context-task";
 
@@ -106,6 +108,8 @@ interface ContextStartAttempt {
 }
 
 export interface ContextGenerationUseCaseDependencies {
+  readonly resultBytes?: ContextResultByteStoragePort;
+  readonly resultSource?: ContextResultOutputSourcePort;
   readonly embeddingModels?: ApprovedContextEmbeddingModelResolverPort;
   readonly runtimeTaskRegistry: RuntimeTaskRegistryPort;
   readonly taskReconciler?: OwnedTaskReconcilerService;
@@ -384,6 +388,8 @@ export class ContextGenerationUseCase {
     const scope = this.scopes.get(requestId);
     if (!scope || !ownsScope(scope, context)) return createFailureResult(createContractError("not-found", "Context generation task was not found."), context);
     return this.serialize(requestId, async () => {
+      if (this.admittedSaves.has(requestId) && this.admittedSaves.get(requestId)!.phase !== "complete")
+        return createFailureResult(createContractError("unavailable", "The approved Context save is unconfirmed. Its output is retained."), context);
       const cached = this.completed.get(requestId);
       if (cached) {
         if (action === "cancel" || cached.state === (action === "save" ? "saved" : "discarded")) return createSuccessResult(cached, context);
@@ -396,6 +402,10 @@ export class ContextGenerationUseCase {
   private readonly taskReconciler?: OwnedTaskReconcilerService;
   private readonly runtime: RuntimeTaskRegistryPort;
   private readonly embeddingModels?: ApprovedContextEmbeddingModelResolverPort;
+  private readonly resultBytes?: ContextResultByteStoragePort;
+  private readonly resultSource?: ContextResultOutputSourcePort;
+  private readonly admittedSaves = new Map<string, {effectId: string; reportFingerprint: string;
+    phase: "reserving" | "issued" | "unconfirmed" | "complete"}>();
   private readonly bindings: ArtifactStorageBindingPort;
   private readonly storage: ArtifactObjectStoragePort;
   private readonly catalog: ContextArtifactCatalogPort;
@@ -424,6 +434,8 @@ export class ContextGenerationUseCase {
   private readonly pendingPowerStarts = new Map<string, Promise<void>>();
 
   public constructor(dependencies: ContextGenerationUseCaseDependencies) {
+    this.resultBytes = dependencies.resultBytes;
+    this.resultSource = dependencies.resultSource;
     this.runtime = dependencies.runtimeTaskRegistry;
     this.embeddingModels = dependencies.embeddingModels;
     this.taskReconciler = dependencies.taskReconciler;
@@ -756,6 +768,87 @@ export class ContextGenerationUseCase {
     return readHeadlessContextTaskValue({taskId: requestId, state: "review-required", review: {reportFingerprint,
       kind: pending.command.kind, sourceCount: preview.sourceCount, chunkCount: preview.chunkCount, sizeBytes: output.sizeBytes,
       requiresExplicitSave: true}}, {kind: "task", taskId: requestId})?.review ?? undefined;
+  }
+
+  /** Pure internal save compilation; the host must first prove durable client ownership. */
+  public peekAdmittedContextSaveInputs(requestId: string, context: ApplicationRequestContext): PreparedContextResultReview | undefined {
+    const review = this.peekAdmittedContextReview(requestId, context), pending = this.pending.get(requestId);
+    if (!review || !pending || this.completed.has(requestId) || !this.resultBytes || !this.resultSource) return;
+    const {name, outputHandle, mediaType, sizeBytes, digest} = pending.runtimeResult.output;
+    if (mediaType !== CONTEXT_MARKDOWN_PACK_MEDIA_TYPE && mediaType !== CONTEXT_RAG_DATABASE_MEDIA_TYPE) return;
+    if (typeof name !== "string" || !name || name.length > 201 || basename(name) !== name || /[\\/\x00-\x1f]/.test(name)) return;
+    return {review: {...review}, name: pending.command.name, commandDigest: contextCommandDigest(pending.command),
+      output: {name, outputHandle, mediaType, sizeBytes, digest}};
+  }
+
+  /** One finite admitted byte attempt. Unknown effects cannot be repeated via
+   * ordinary save, discard or cancel. The atomic metadata port owns activation. */
+  public async saveAdmittedContextResult(request: {readonly taskId: string; readonly reportFingerprint: string},
+    supplied: ApplicationRequestContext, admission: ApprovedContextResultSaveAdmission): Promise<ContractResult<ContextGenerationStatus>> {
+    const context = {...supplied};
+    const denied = () => createFailureResult(createContractError("forbidden", "The reviewed Context save is unavailable."), context);
+    const unknown = () => createFailureResult(createContractError("unavailable", "The approved Context save could not be confirmed. Its output is retained."), context);
+    if (!request || !admission) return denied();
+    const {taskId, reportFingerprint} = request;
+    const a = {...admission};
+    if (!context.organizationId || !context.principalId || !context.workspaceId || a.organizationId !== context.organizationId ||
+        a.principalId !== context.principalId || a.workspaceId !== context.workspaceId || taskId !== a.taskId || reportFingerprint !== a.reportFingerprint ||
+        typeof taskId !== "string" || typeof reportFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(reportFingerprint) ||
+        typeof a.effectId !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(a.effectId) ||
+        typeof a.isCurrent !== "function" || typeof a.stillAllowed !== "function" || typeof a.issue !== "function" || typeof a.commit !== "function" ||
+        !this.resultBytes || !this.resultSource) return denied();
+    const current = async () => {try {return a.isCurrent() && await a.stillAllowed() && a.isCurrent();} catch {return false;}};
+    if (!await current()) return denied();
+    return this.serialize(taskId, async () => {
+      const workspace = await this.resolveWorkspace(context, "context.save", "artifact:write");
+      if (!workspace.ok || !await current()) return denied();
+      const scope = this.scopes.get(taskId);
+      if (!scope || !ownsScope(scope, context) || !this.confirmedAdmittedTaskIds.has(taskId)) return denied();
+      const previous = this.admittedSaves.get(taskId);
+      if (previous) {
+        const completed = this.completed.get(taskId);
+        return previous.effectId === a.effectId && previous.reportFingerprint === reportFingerprint && previous.phase === "complete" &&
+          completed?.state === "saved" && await current() ? createSuccessResult(completed, context) : unknown();
+      }
+      const prepared = this.peekAdmittedContextSaveInputs(taskId, context), pending = this.pending.get(taskId);
+      if (!prepared || !pending || prepared.review.reportFingerprint !== reportFingerprint || this.saveCleanup.has(taskId) || !await current()) return denied();
+      const attempt = {effectId: a.effectId, reportFingerprint, phase: "reserving" as "reserving" | "issued" | "unconfirmed" | "complete"};
+      this.admittedSaves.set(taskId, attempt);
+      let issued: "issued" | "denied" | "unconfirmed";
+      try {issued = await a.issue();} catch {issued = "unconfirmed";}
+      if (issued !== "issued") {
+        if (issued === "denied") this.admittedSaves.delete(taskId); else attempt.phase = "unconfirmed";
+        return issued === "denied" ? denied() : unknown();
+      }
+      attempt.phase = "issued";
+      try {
+        if (!await current()) {attempt.phase = "unconfirmed"; return denied();}
+        const publicationId = a.effectId.replace(/-/g, ""), output = prepared.output;
+        const stored = await this.resultBytes!.publishResult({publicationId, mediaType: output.mediaType,
+          expectedSizeBytes: output.sizeBytes, expectedSha256: output.digest,
+          content: this.resultSource!.readOutput({runtimeDirectory: pending.runtimeDirectory,
+            outputHandle: output.outputHandle, expectedSizeBytes: output.sizeBytes})}, context);
+        const key = `workspaces/${context.workspaceId}/artifacts/context/${publicationId}`;
+        if (!stored.ok || stored.value.key !== key || stored.value.mediaType !== output.mediaType || stored.value.sizeBytes !== output.sizeBytes ||
+            stored.value.checksum?.algorithm !== "sha256" || stored.value.checksum.value !== output.digest.slice(7) || !await current()) {
+          attempt.phase = "unconfirmed"; return unknown();
+        }
+        const savedArtifact: ContextSavedArtifactReference = {artifactId: key, storageKey: key, kind: prepared.review.kind,
+          name: prepared.name, mediaType: output.mediaType, sizeBytes: output.sizeBytes, digest: output.digest};
+        const committed = await a.commit({...savedArtifact});
+        if (!committed || Object.keys(committed).length !== Object.keys(savedArtifact).length ||
+            !Object.entries(savedArtifact).every(([key, value]) => committed[key as keyof typeof committed] === value)) {
+          attempt.phase = "unconfirmed"; return unknown();
+        }
+        // Preserve a confirmed business outcome before cleanup or disclosure.
+        const completed: ContextGenerationStatus = {requestId: taskId, state: "saved", savedArtifact,
+          sourceInspections: pending.runtimeResult.sourceInspections, preview: pending.runtimeResult.preview, manifest: pending.runtimeResult.manifest};
+        this.completed.set(taskId, completed);
+        attempt.phase = "complete";
+        try {await this.cleanup(taskId);} catch {/* Owned staging remains for existing cleanup; never compensate committed bytes. */}
+        return await current() ? createSuccessResult(completed, context) : denied();
+      } catch {attempt.phase = "unconfirmed"; return unknown();}
+    });
   }
 
   private async readOwned(requestId: string, workspaceId: WorkspaceId, context?: ApplicationRequestContext): Promise<ContractResult<ContextGenerationStatus>> {

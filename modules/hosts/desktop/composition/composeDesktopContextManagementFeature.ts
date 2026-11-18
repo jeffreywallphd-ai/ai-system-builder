@@ -19,6 +19,8 @@ export function composeDesktopContextManagementFeature(
   options: ComposeDesktopContextManagementFeatureOptions,
 ): any {
   const generation = new ContextGenerationUseCase({
+    resultBytes: options.artifacts.contextResultBytes,
+    resultSource: options.artifacts.contextResultSource,
     embeddingModels: options.embeddingModels,
     runtimeTaskRegistry: options.runtime.runtimeTaskRegistry,
     taskReconciler: options.runtime.taskReconciler,

@@ -175,6 +175,8 @@ import {
   createFilesystemArtifactBrowserReadAdapter,
   createFilesystemArtifactContentRetrievalAdapter,
   createFilesystemArtifactObjectStorageAdapter,
+  createFilesystemContextResultByteStorageAdapter,
+  createFilesystemContextResultOutputSourceAdapter,
   createFilesystemIngestionFileByteStorageAdapter,
   createFilesystemGeneratedImagePersistenceAdapter,
   createLocalArtifactCatalogPersistenceAdapter,
@@ -2362,6 +2364,11 @@ export function composeServerHost(
           now: options.now,
         });
       const contextGenerationUseCase = new ContextGenerationUseCase({
+        ...(organizationDocuments ? {
+          resultBytes: createFilesystemContextResultByteStorageAdapter({rootDirectory: registerOptions.storageRootDirectory,
+            organizationContextProvider: options.organizationContextProvider}),
+          resultSource: createFilesystemContextResultOutputSourceAdapter(),
+        } : {}),
         embeddingModels: new ResolveApprovedContextEmbeddingModelUseCase(modelRegistry,
           createLocalContextEmbeddingModelFilesAdapter({allowedRootDirectories: [hfHome, transformersCache]})),
         taskReconciler,

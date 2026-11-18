@@ -78,3 +78,12 @@ EOF size/hash before the contained writer links its final target. Existing
 ingestion normalization, bounds, namespace and result contracts remain intact.
 These component checks do not qualify native races, crash recovery, the owning
 Context task/review admission, metadata commit or public save/query workflows.
+
+`createFilesystemContextResultOutputSourceAdapter` reads a private output chosen
+by the existing Context task owner. It rejects traversal, links, non-regular or
+multiply linked files and mismatched size/identity before streaming. It reads in
+bounded 64 KiB chunks and permits at most one excess-byte observation; complete
+file facts are checked again at EOF. No filesystem discovery, write, deletion or
+adoption is available. The reader closes its handle when the consumer finishes,
+fails or stops. The owning use case must not accept its directory or handle from
+a client, and native parent-substitution/crash qualification remains separate.

@@ -714,3 +714,25 @@ supplied transaction store is valid within that callback. Foreign contexts,
 expired handles and captured-root reentry deny. Queued writes capture nested
 payloads, revision conditions and timestamps before waiting; reads and returned
 write results are detached copies.
+
+## Context reviewed-result metadata
+
+The private structured Context result owner uses only the caller's active
+organization transaction. It binds an accepted Headless task/source digest and
+exact review/output facts, issues one save per task/client and creates catalog,
+primary binding and its causal receipt together. The catalog/binding adapters
+must receive that same transaction store; their insert-only operations refuse
+ordinary records or tombstones instead of adopting them. Byte publication is
+outside the transaction and cannot activate a Context by itself.
+
+Persisted object field order is not identity. The Context result decoder compares
+exact named owner facts and reconstructs canonical fields for its private index
+digest. A JSONB-like reordered-read regression covers reserve, issue, commit and
+replay; it is distinct from physical PostgreSQL deployment qualification.
+
+Shared composition requires an explicit save-specific current-approval/policy
+check over the supplied owner and an immediate before-commit acceptance guard.
+Serializable retries contain metadata only. Lost acknowledgement reconciliation
+reads the exact private save identity plus committed catalog/binding; it does not
+repeat effects or grant disclosure. Unknown writes remain retained. Public save
+wiring and native/crash/physical model qualification remain separate work.

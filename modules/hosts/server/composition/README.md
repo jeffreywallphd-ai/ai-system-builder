@@ -190,3 +190,11 @@ use the model/source/plan permissions for that exact RAG request; ordinary Data
 and pack permissions keep their existing scope. Atomic issue recompiles the
 saved-model witness, and bounded accepted-task review still needs separate save.
 Fixture passes are not physical retrieval, resource, query/display or native proof.
+
+Structured Managed composition supplies the same private Context result-byte
+and owned-output ports. The publisher uses the existing captured organization
+provider mapping; the task owner supplies private file selection. The shared
+result-save metadata composition accepts only the platform root transaction and
+a trusted exact-save policy/approval callback. It performs no runtime/provider
+work in that transaction. This is internal support, not an advertised save
+action or real provider/model/native qualification.

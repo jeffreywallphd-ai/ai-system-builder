@@ -46,3 +46,17 @@ finite Context media type, exact nonempty size and SHA-256, and derives its key
 inside the captured workspace. It has no path, overwrite, catalog/binding or
 delete operation. A successful byte acknowledgement is not a saved Context.
 The result-save owner and atomic metadata receipt remain separate work.
+
+`ApprovedContextResultSaveAdmission` is the separate internal save capability.
+The host must bind it to a current save-specific approval, exact accepted task,
+actor/workspace and review fingerprint. Only an acknowledged one-use issue
+permits publication. Its metadata-only commit must register catalog, primary
+binding and causal receipt in the same root-owned transaction. A general task
+start approval is not a save approval. No client command can supply this port.
+
+`ContextResultOutputSourcePort` reads only the task owner's already selected
+private output. Its runtime directory/handle never come from a transport. The
+filesystem implementation checks a private regular file, captured identity and
+size, reads at most 64 KiB per chunk plus one excess-byte check, and closes its
+handle on completion or failure. These cooperative checks are not native custody
+or crash recovery. Public save approval and routes remain separate work.

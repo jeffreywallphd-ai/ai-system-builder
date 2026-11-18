@@ -4,3 +4,4 @@ export * from "./createFilesystemArtifactContentRetrievalAdapter";
 export * from "./createFilesystemGeneratedImagePersistenceAdapter";
 export * from "./createFilesystemIngestionFileByteStorageAdapter";
 export * from "./createFilesystemContextResultByteStorageAdapter";
+export * from "./createFilesystemContextResultOutputSourceAdapter";

@@ -185,3 +185,11 @@ the list or report deletion. A different key leaves the selected view intact.
   Byte acknowledgement alone grants no task ownership or save approval. The
   owning save admission, atomic causal metadata, public operations and native
   qualification remain separate work.
+
+- The internal Context save owner binds an accepted task and exact reviewed
+  output to one admitted save, a bounded output reader and exclusive byte
+  publication. Catalog, primary binding and causal receipt activate together in
+  the root-owned metadata transaction. The host must supply a separate exact-save
+  authorizer. Unknown outcomes cannot bypass through ordinary review actions;
+  confirmed saves survive cleanup/reply failure. Public save approval/routes and
+  real model/retrieval/native qualification remain separate.

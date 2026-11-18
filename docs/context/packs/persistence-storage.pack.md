@@ -186,3 +186,10 @@
   results, outer-callback rollback, and expired/foreign/root-reentry denial.
 - See `docs/architecture/persistence-and-storage.md` and ADR-0028 for the owning
   semantics; do not infer physical database qualification from an in-memory test.
+
+- Context result-save metadata binds an accepted task/source and exact review.
+  Its insert-only catalog, primary binding and causal receipt share the supplied
+  active root-owned transaction after byte acknowledgement. Exact save-specific
+  policy/approval fencing is mandatory. Unknown effects and ordinary metadata
+  cannot be adopted; one exact lost-commit read cannot authorize another write
+  or public disclosure. Native/crash and physical execution remain separate.

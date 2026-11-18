@@ -172,3 +172,10 @@ artifact/plan authority apply to proposal and execution. The shared issuer
 recompiles the exact saved-model witness after staging before a one-use start.
 Accepted task review stays bounded and requires separate save. Physical model,
 retrieval, later query/display and parent qualification remain separate.
+
+With structured metadata configured, the artifact feature also supplies the
+private Context result-byte publisher and owned-output reader. The Context
+feature injects both into the existing generation owner. Missing capabilities
+deny admitted saving before issue. Ordinary Context saving keeps its current
+path. Public save approval/routes are not enabled by this internal composition;
+the future exact-save host authorizer must own the metadata transaction fence.

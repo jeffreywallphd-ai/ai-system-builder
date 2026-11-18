@@ -14,6 +14,8 @@ import {
   createFilesystemArtifactBrowserReadAdapter,
   createFilesystemArtifactContentRetrievalAdapter,
   createFilesystemArtifactObjectStorageAdapter,
+  createFilesystemContextResultByteStorageAdapter,
+  createFilesystemContextResultOutputSourceAdapter,
   createLocalArtifactCatalogPersistenceAdapter,
   createLocalArtifactStorageBindingAdapter,
 } from "../../../adapters/storage/filesystem";
@@ -51,6 +53,10 @@ export function composeDesktopArtifactFeature(options: ComposeDesktopArtifactFea
     artifactCatalog,
     artifactBindings,
     storage,
+    ...(options.documents ? {
+      contextResultBytes: createFilesystemContextResultByteStorageAdapter({rootDirectory: options.storageRootDirectory}),
+      contextResultSource: createFilesystemContextResultOutputSourceAdapter(),
+    } : {}),
     artifactBrowserRead,
     artifactMediaViewRetrieval,
     storeArtifactUploadUseCase: new StoreArtifactUploadUseCase({ storage, logging: options.loggingPort, now: options.now, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),

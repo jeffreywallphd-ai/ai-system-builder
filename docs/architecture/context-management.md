@@ -573,3 +573,29 @@ must bind an accepted task and exact reviewed output, issue one save effect and
 atomically commit catalog, primary binding and causal receipt after the byte
 acknowledgement. An unknown write remains retained. Public save/query/rebuild,
 host wiring and native/crash qualification remain pending at this boundary.
+
+### Internal reviewed-result save owner
+
+`saveAdmittedContextResult` adds a separate capability-bound save path. It uses
+an already accepted task, copied actor/workspace, current review fingerprint and
+one acknowledged save issue. The owner supplies private directory/handle facts
+to the bounded output adapter, verifies the byte acknowledgement and sends only
+the exact descriptor to the metadata commit callback. It never invokes ordinary
+auto-registering storage or compensates a confirmed save after cleanup failure.
+Uncertain issue/write/commit keeps the attempt and prevents ordinary save,
+discard or cancel from bypassing it. Exact confirmed replay performs no new IO.
+
+The private structured result store binds the original accepted task/source
+digest and verified review. Only one save can issue per task/client. Catalog,
+primary binding and causal receipt commit in the same root-owned transaction,
+with insert-only metadata and no ordinary-record adoption. The shared composition
+requires a trusted save-specific authorizer that reads only the supplied owner;
+its before-commit guard retains current host acceptance. It recompiles the exact
+review/source before issue and commit. A lost commit reply permits one exact
+read-only receipt reconciliation, never another write or outward authority.
+
+Both hosts inject optional byte/source ports for structured storage. No public
+save request, approval projection, MCP or UI route is enabled here. Those must
+bind the exact save authorizer before use; a generation approval is insufficient.
+Synthetic lifecycle/transaction tests and cooperative file checks are distinct
+from real embeddings, retrieval, native custody or process-restart recovery.

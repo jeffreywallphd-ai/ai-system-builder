@@ -28,6 +28,22 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         self.assertNotIn('headless-context-result-bytes', index_only)
         self.assertIn('focused-tests', index_only)
 
+    def test_result_save_checks_bind_internal_owner_metadata_and_related_publication_only(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-result-save-owner']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['architecture'])
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-result-save-owner']['argv']
+        for filename in ['context-approved-start.unit.test.ts', 'structured-headless-context-result-store.unit.test.ts',
+                         'context-result-byte-storage.integration.test.ts']:
+            self.assertTrue(any(value.endswith('/' + filename) for value in command), filename)
+        self.assertNotIn('--suite=all', command)
+        self.assertIn('focused-tests', self.selected(paths + ['modules/hosts/shared/composition/unmapped-context-result.ts'], ['architecture']))
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        host_only = self.selected(['modules/hosts/desktop/composition/composeDesktopArtifactFeature.ts'], ['architecture'])
+        self.assertNotIn('headless-context-result-save-owner', host_only)
+        self.assertIn('focused-tests', host_only)
+
     def test_explicit_desktop_approval_owner_executes_existing_connection_and_scope_regressions(self):
         path = 'modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals.ts'
         selected = self.selected([path], ['headless-data-task-status'])

@@ -68,6 +68,14 @@ only their declared source paths. Unmapped storage work or an explicitly require
 borrow this component's coverage. This check supplies no Context save-owner,
 public workflow, model, native or roadmap completion claim.
 
+The fixed `headless-context-result-save-owner` profile covers exact internal
+result admission, structured metadata and shared composition sources. Its
+focused tests exercise ordinary-action denial after unknown effects, exact byte
+acknowledgement, causal atomic catalog/binding commit, rollback, conflict and
+lost-reply reconciliation. Related host wiring is reviewed and type/build checked;
+these tests do not qualify a public save approval, actual model/retrieval, native
+recovery or the parent increment. Unknown source edits retain generic fallback.
+
 Read `AGENTS.md` and the usual repository context, then start or safely reuse the
 JSON-backed review server and provide its returned link to the user:
 

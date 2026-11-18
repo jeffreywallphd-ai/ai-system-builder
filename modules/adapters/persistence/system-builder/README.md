@@ -23,3 +23,17 @@ Data and system records keep their schema and fingerprint; an unbound RAG record
 is refused. New starts validate the approved witness before lazy runtime work,
 then compare again at reservation and issue. Accepted receipt replay remains
 independent of later model metadata changes and never starts processing again.
+
+`createStructuredHeadlessContextResultStore` is a separate private result-save
+ledger. It binds an accepted task/source digest and exact review/output, issues
+at most one save per task/client and records catalog, primary binding and causal
+receipt in the supplied root-owned transaction. Insert-only metadata refuses
+ordinary records and tombstones. Unknown reservation/issue/commit cannot become
+fresh byte authority. Exact committed receipt reads also verify the matching
+catalog and primary binding; they perform no output, source or model IO.
+
+The caller must enforce current exact save approval/policy in that same owning
+transaction. The shared composition provides this required callback and a
+before-commit guard, with one read-only reconciliation after lost commit reply.
+It does not advertise a public save action, borrow a generation approval or
+qualify native restart/physical RAG behavior.
