@@ -347,6 +347,11 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-context-rebuild-inputs": {
         "automatic_sources": (
+            "modules/contracts/headless/headless-context-query-preview.ts",
+            "modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-query-preview.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-query-preview.unit.test.ts",
+            "modules/hosts/shared/composition/headlessContextQueryPreview.ts",
             "modules/contracts/headless/headless-context-rebuild.ts",
             "modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts",
             "modules/application/use-cases/context-management/headless-context-rebuild.use-case.ts",
@@ -354,6 +359,13 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/shared/composition/headlessContextRebuild.ts",
         ),
         "sources": (
+            "modules/contracts/headless/headless-context-query-preview.ts",
+            "modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-query-preview.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-query-preview.unit.test.ts",
+            "modules/hosts/shared/composition/headlessContextQueryPreview.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts",
             "modules/contracts/headless/headless-context-rebuild.ts",
             "modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts",
             "modules/contracts/headless/headless-read-request.ts",
@@ -376,16 +388,21 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/composeManagedAgentReads.ts",
             "modules/hosts/server/composition/composeServerHost.ts",
             "modules/hosts/server/README.md",
+            "modules/hosts/server/composition/README.md",
             "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts",
             "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
             "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-query-preview.unit.test.ts",
             "modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts",
             "modules/application/use-cases/context-management/tests/headless-context-rebuild.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-context-plan-task-store.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts",
             "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
         ),
     },
@@ -1486,6 +1503,9 @@ PUBLISHED_FORM_CHECKS = {
         ),
     },
     "headless-composer-draft-witnesses": {
+        "automatic_sources": (
+            "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+        ),
         "sources": (
             "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts",
             "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",

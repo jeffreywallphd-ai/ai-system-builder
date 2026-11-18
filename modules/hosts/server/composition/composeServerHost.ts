@@ -1716,6 +1716,10 @@ export function composeServerHost(
               const {composeHeadlessContextRebuildPreview} = await import("../../shared/composition/headlessContextRebuild");
               return composeHeadlessContextRebuildPreview(managedDocuments, registerOptions.storageRootDirectory);
             },
+            getContextQueryPreview: async () => {
+              const {composeHeadlessContextQueryPreview} = await import("../../shared/composition/headlessContextQueryPreview");
+              return composeHeadlessContextQueryPreview(managedDocuments, registerOptions.storageRootDirectory);
+            },
             getDatasetTaskStatus: async () => {
               const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");
               return composeHeadlessDatasetTaskStatus(managedDocuments, async () => prepareTrainingDatasetUseCase);

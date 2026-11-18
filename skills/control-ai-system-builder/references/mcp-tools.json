@@ -149,6 +149,7 @@
         "aisb_prepare_workflow",
         "aisb_preview_build_plan",
         "aisb_preview_context_generation",
+        "aisb_preview_context_query",
         "aisb_preview_context_rebuild",
         "aisb_preview_dataset_preparation",
         "aisb_preview_selected_local_file",
@@ -178,6 +179,7 @@
         "aisb_plan_capabilities",
         "aisb_preview_build_plan",
         "aisb_preview_context_generation",
+        "aisb_preview_context_query",
         "aisb_preview_context_rebuild",
         "aisb_preview_dataset_preparation",
         "aisb_preview_selected_local_file",
@@ -2524,6 +2526,83 @@
           "name",
           "sources",
           "settings"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_preview_context_query",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "object",
+            "properties": {
+              "workspaceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "contextId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "taskId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "kind": {
+                "type": "string",
+                "const": "rag-database"
+              },
+              "artifactDigest": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "workspaceId",
+              "contextId",
+              "taskId",
+              "kind",
+              "artifactDigest"
+            ],
+            "additionalProperties": false
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "maximumResults": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "embeddingDevice": {
+            "type": "string",
+            "enum": [
+              "cpu",
+              "cuda"
+            ]
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "reference",
+          "query",
+          "maximumResults",
+          "embeddingDevice"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

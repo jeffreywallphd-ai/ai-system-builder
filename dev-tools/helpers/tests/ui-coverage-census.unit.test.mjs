@@ -1105,6 +1105,21 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "d665f249a4b27e8408171a9a6250e2f8407cf2ec7db3acf7a43806599e102f20") {
+    // Exact query-preview catalog definition only; retain every execution pin/gap.
+    const saved = JSON.parse(historicalSource("1e888b467430140cfb970bfb599c65f731178a79", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "700706d0871bb29b7d1e388ddb6a8304883f12ae908ff91dafa744defbe5eb2c");
+    const expected = structuredClone(saved);
+    const changed = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(changed.facts.sha256, "14e1117c08ec48daf1f7b441749f67cf122527407bba30a581d28812b6fe52ca");
+    assert.equal(sha(JSON.stringify(changed.facts)), "839aa098e0c88942885f0c1e34ddc1215d90fcbac6bc0de0d0e71cdf66638cae");
+    expected.sources.find(row => row.path === headlessPackagedSpec).facts = changed.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(saved, {...result,
+      gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "700706d0871bb29b7d1e388ddb6a8304883f12ae908ff91dafa744defbe5eb2c") {
     // Exact literal catalog alignment only; retain all original execution gaps.
     const saved = JSON.parse(historicalSource("f57248b306b761a4b2a27486fbfcfe46ab5045da", censusDocument));

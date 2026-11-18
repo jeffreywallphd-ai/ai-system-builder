@@ -213,6 +213,8 @@ function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
             "879ef6ce4a76b478ad0d915f9cc294dd1aa6ac32ff892c161e78a79df847ae76",
             // Exact Context read/rebuild catalog names; no host execution pass.
             "4b7a90b87c26c937e7dae32ef79e42af88f9dec3b9a02c6aae13e69ca8e659f2",
+            // Exact query-preview catalog names only; no host execution pass.
+            "839aa098e0c88942885f0c1e34ddc1215d90fcbac6bc0de0d0e71cdf66638cae",
             "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9",
             "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de",
             "eff2c4bcec59a0555daeafe0edb50e49543a7587861f8e7995b546cee37dab16",

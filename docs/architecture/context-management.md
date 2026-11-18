@@ -25,6 +25,20 @@ approval is data, not new execution permission. Archive bytes and physical runti
 readiness remain not checked. Rebuild execution requires the separate version-9
 approval described below.
 
+### Passive exact question preparation
+
+`context.preview-query` takes an exact saved RAG reference, a transient bounded
+question, explicit CPU/CUDA and result limit. It synchronously copies descriptors
+and hashes exact UTF8 text. Its asynchronous application metadata frame receives
+no question; recorded Context compilation rechecks committed origin, accepted
+producer and original source/model witnesses. Current read/liveness fences surround
+metadata and outward output. Replies contain only the exact reference/hash,
+original model ID/timestamp, counts/limits and not-checked readiness. Route/SDK
+codecs independently correlate the hash. The 2,000-character headless profile fits
+existing request/passive guards; ordinary queries keep their existing bound.
+There is no input cache, durable question, source-byte/model load or query task.
+Public query execution, summaries and physical retrieval/resources remain pending.
+
 ### Revocable Context metadata display
 
 The existing window presentation family admits `show-context-artifact` with the
@@ -33,7 +47,9 @@ Both hosts require current artifact-read and separate window consent. Saved
 selection verifies committed catalog/binding/causal lineage, kind, producer and
 digest without reading bytes. Task selection proves its accepted same-host/actor
 point and plan indexes before observing the existing cached Context owner.
-Presentation cannot initialize the lazy Desktop feature or start a processor.
+Presentation cannot initialize the lazy Desktop feature or grant new business
+work. Accepted-task observation retains owned output validation and existing
+worker recovery under its original lifecycle.
 An absent owner remains unavailable. Fixed summaries expose only state/counts;
 the window and connector context carry opaque selectors, not source/query text.
 Existing lease/document/dirty-navigation/replay/revoke fences stay in control.

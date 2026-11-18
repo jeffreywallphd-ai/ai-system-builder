@@ -34,6 +34,8 @@ not start processing or prove that a model is ready. The guide also covers
 separately approved source-derived packs, local RAG builds, accepted-task progress,
 reviewed result saves, passive saved metadata and separately approved recorded rebuilds.
 The same guide covers saved Context and accepted-task display under a separate window lease.
+Use its passive query preview to obtain an exact question fingerprint without
+saving question text or starting a model. Query execution is a separate capability.
 The rebuild preview grants no new execution or old task control. Keep the guide and generated
 tool catalog from the same revision when installing this skill.
 

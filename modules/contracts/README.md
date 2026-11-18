@@ -1,5 +1,12 @@
 # Contracts
 
+`context.preview-query` accepts an exact saved RAG reference and a transient
+question of at most 2,000 characters. Its strict result contains the exact UTF8
+question hash, original model metadata, counts/limits and not-checked readiness.
+The question is absent from results and metadata dependencies. Existing shared
+passive/request limits and ordinary Context behavior stay unchanged; preview
+supplies no query execution, saved-plan text or result-egress authority.
+
 Headless `context.preview-rebuild` accepts one exact saved Context reference and
 returns only verified recorded source/settings metadata. Strict codecs retain
 new-approval and not-checked readiness facts and reject private/unknown fields.

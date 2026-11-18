@@ -29,6 +29,20 @@ new approval, exact replay, substitutions and parent loss after staging. No
 runtime/model installation, raw-content disclosure, native recovery or resource
 qualification follows. Actual query, display and parent qualification remain open.
 
+## Transient question preview boundary
+
+Strict saved-RAG/text/device/result input is copied and the question is hashed
+synchronously before asynchronous application metadata. Proxies/accessors, invalid
+UTF8, nontext controls, unknown fields, foreign references and excess bounds deny.
+The headless 2,000-character profile preserves existing 8 KiB transport and shared
+passive guards. The metadata dependency receives no question; only recorded
+saved/source/model facts cross that internal boundary. Current scope and synchronous
+liveness after policy awaits fence results. Exact caller-computed hash correlation
+and closed output schemas reject wrong-question replies or echoed private text.
+Normal records/results/diagnostics contain no question, and no source bytes,
+model/runtime, provider or task is touched. Request buffers retain existing request
+lifetime; no forensic erasure or physical/parent qualification is claimed.
+
 ## Revocable Context display boundary
 
 Strict Context selectors carry an exact saved workspace/Context/producer/kind/
@@ -39,6 +53,10 @@ committed catalog/binding/causal metadata, not caller names or generic keys.
 Transient tasks require accepted same-host/actor point and plan indexes before
 cached owner access. Unknown, ordinary, unaccepted, foreign or absent owners deny
 without model/runtime initialization, new task dispatch or source-byte access.
+For an accepted task, observation retains its original owner's output validation
+and existing owned-worker recovery. Display cannot construct a lazy Context
+feature or grant a new business task/save. This existing lifecycle is distinct
+from the metadata-only query preview, which calls no task or runtime owner.
 Fixed bounded interactive summaries omit names, instructions, excerpts, queries,
 model paths and vectors. Existing window delivery/context fences stop new effects
 after revoke while preserving independent work. Source freshness, public queries,

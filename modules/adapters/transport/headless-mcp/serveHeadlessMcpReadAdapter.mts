@@ -240,6 +240,15 @@ function addSystemBuilderTools(server: McpServer) {
         input.hostIncarnationId as HeadlessHostIncarnationId);
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
+    server.registerTool("aisb_preview_context_query", {
+      description: "Prepare one exact local RAG question without storing or returning its text. Takes a saved RAG reference, a question of at most 2000 characters, explicit CPU/CUDA and up to20 results. Returns only the exact question hash, recorded model/source metadata and not-checked readiness. Reads no source bytes and starts no model/runtime/task. Preview is not execution or result-sharing approval.",
+      inputSchema: z.strictObject({...workspaceTarget, reference: savedContextReference.extend({kind: z.literal("rag-database")}),
+        query: z.string().min(1).max(headless.HEADLESS_CONTEXT_QUERY_MAX_CHARACTERS).refine(headless.isHeadlessContextQuestion),
+        maximumResults: z.number().int().min(1).max(20), embeddingDevice: z.enum(["cpu", "cuda"])}), annotations: queryHints,
+    }, (input, context) => {
+      const parsed = headless.readHeadlessContextQueryPreviewRequest({version, operation: "context.preview-query", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     server.registerTool("aisb_preview_context_rebuild", {
       description: "Preview the original recorded sources, settings and model for one exact saved Context reference. Revalidates current workspace/artifact/model permission and recorded source/model identity. Reads no artifact bytes, paths, source text or embeddings and starts no model/runtime. Missing or changed lineage is unavailable. This metadata does not approve rebuilding, adopt the old task or verify physical readiness.",
       inputSchema: z.strictObject({...workspaceTarget, reference: savedContextReference}), annotations: queryHints,

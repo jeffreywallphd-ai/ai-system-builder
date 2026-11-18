@@ -2284,6 +2284,10 @@ export function composeDesktopHost(
               const {composeHeadlessContextRebuildPreview} = await import("../../shared/composition/headlessContextRebuild");
               return composeHeadlessContextRebuildPreview(platformDocuments, registerOptions.storageRootDirectory);
             } : undefined,
+            getContextQueryPreview: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
+              const {composeHeadlessContextQueryPreview} = await import("../../shared/composition/headlessContextQueryPreview");
+              return composeHeadlessContextQueryPreview(platformDocuments, registerOptions.storageRootDirectory);
+            } : undefined,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
             getDatasetTaskStatus: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");

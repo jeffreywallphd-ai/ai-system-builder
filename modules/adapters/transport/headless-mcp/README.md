@@ -1,11 +1,21 @@
 # Local desktop tools over MCP
 
+`aisb_preview_context_query` is a plan-review-only passive read. It accepts one
+exact saved RAG reference, up to 2,000 question characters, explicit CPU/CUDA and
+at most 20 results. The app returns only the exact question hash, recorded model
+metadata, source count and not-checked readiness. The SDK verifies that hash from
+the original UTF8 text and rejects echoed text/private fields. The app does not
+save question text or start any model/task. This is preparation for a separately
+approved query; public execution and query summaries remain pending.
+
 `aisb_present_in_window` also accepts strict `show-context-artifact` and
 `show-context-task` intents. The saved selector contains the complete Context
 reference; the task selector contains one accepted task UUID. Both use existing
 separate window consent and current artifact-read/actor/host policy. They add no
 tool names. The reader observes committed metadata or a cached existing owner,
-never initializing a model/runtime or reading source bytes. Only fixed summaries
+without constructing a lazy Context feature or granting new business work.
+Accepted-task observation retains owned output validation and existing worker
+recovery under its original lifecycle. Only fixed summaries
 and opaque selectors cross the window boundary. Backend execution/save approval,
 public query summaries and physical/host qualification remain separate.
 
@@ -220,8 +230,8 @@ Poll only its accepted task or original plan step. Uncertain reservations cannot
 be adopted or restarted. Replies contain state, counts and a required-review
 fingerprint, never source contents, paths, prompts or embeddings. Separate
 Context save, queries/rebuilds and presentation are not granted.
-The generated SDK catalog has 41 distinct tools across modes, with 28 Desktop
-and 21 Managed plan-review tools; each mode stays within the existing 32 limit.
+The generated SDK catalog has 42 distinct tools across modes, with 29 Desktop
+and 22 Managed plan-review tools; each mode stays within the existing 32 limit.
 
 Version 8 separately enables `context.save-result`. Preview verifies the exact
 accepted task review; the host also binds the reviewed name before approval.

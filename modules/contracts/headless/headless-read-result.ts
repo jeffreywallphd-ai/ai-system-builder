@@ -58,8 +58,10 @@ import type {HeadlessContextModels, HeadlessContextPreview} from "./headless-con
 import type {HeadlessContextTaskValue} from "./headless-context-task";
 import type {HeadlessContextSavedValue} from "./headless-context-result-plan";
 import type {HeadlessContextRebuildValue} from "./headless-context-rebuild";
+import type {HeadlessContextQueryPreviewValue} from "./headless-context-query-preview";
 
 export type HeadlessReadResult =
+  | {readonly ok: true; readonly operation: "context.preview-query"; readonly value: HeadlessContextQueryPreviewValue}
   | {readonly ok: true; readonly operation: "context.preview-rebuild"; readonly value: HeadlessContextRebuildValue}
   | {readonly ok: true; readonly operation: "context.saved"; readonly value: HeadlessContextSavedValue}
   | {readonly ok: true; readonly operation: "context.task"; readonly value: HeadlessContextTaskValue}

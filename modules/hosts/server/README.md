@@ -6,6 +6,12 @@ platform owner validates the original saved/build/source/model lineage without
 runtime access, historic permission reuse or private-field disclosure. It supplies
 no approved rebuild execution or physical readiness.
 
+Managed `context.preview-query` prepares a transient question hash with exact
+saved RAG and original source/model metadata. Current plan-client and workspace/
+artifact/model read policy surround it. The app stores/returns no question text,
+and initializes no model/runtime or source-byte read. Existing request limits
+and not-checked readiness remain; actual query execution is separate work.
+
 A separate version-9 generation approval binds `rebuildOf` to that saved parent.
 The shared partition-owned compiler verifies original inputs/model and current
 permissions before lazy owner resolution, at reservation and at issue after

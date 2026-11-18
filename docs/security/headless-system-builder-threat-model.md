@@ -1,13 +1,27 @@
 # Headless System Builder threat model
 
+## Passive Context question preparation
+
+One fixed plan-review read accepts transient question text and a saved RAG
+reference under current actor/client/workspace/artifact/model policy. Synchronous
+hashing removes question text from the application's async metadata frame and
+persistence dependency. Recorded input compilation checks original saved lineage,
+source freshness and model identity, including same-ID/timestamp substitutions.
+Fixed bounds preserve existing request/shared guards. API and SDK validate the
+exact local question hash and reject private/unknown output fields. No question
+record, runtime initialization, source-byte read, new task or egress grant follows.
+Metadata fixtures and schema/catalog updates remain separate from query execution,
+physical resources, actual app-host journeys and parent qualification.
+
 ## Context window presentation
 
 The fixed saved-Context/task selectors reuse existing separate window consent,
 artifact-read, document and lease/publication fences in both hosts. A full saved
 reference must match committed Context lineage. A task must have exact accepted
 same-host/actor point and plan indexes before any cached owner observation.
-Display cannot initialize a runtime/model, read source bytes or grant execution
-or save authority. Fixed bounded summaries exclude source/query text, vectors,
+Display cannot construct a lazy Context feature or grant a new business task or
+save. Accepted-task observation retains owned output validation and existing
+worker recovery under its original lifecycle. Fixed bounded summaries exclude source/query text, vectors,
 paths and untrusted names. Selector/actor copies survive caller mutation.
 Revocation retires fresh display/context and preserves independent Context work.
 Synthetic structured-owner, delivery and DOM checks remain distinct from public

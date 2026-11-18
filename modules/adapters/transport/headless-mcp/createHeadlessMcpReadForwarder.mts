@@ -1,5 +1,5 @@
 import { Agent, request } from "node:https";
-import { randomUUID } from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessPlanReviewAgentRequest, HeadlessPlanReviewAgentResult, HeadlessPlanStepRequest,
@@ -60,6 +60,7 @@ const resultValue = {
   "context.task": z.unknown(),
   "context.saved": z.unknown(),
   "context.preview-rebuild": z.unknown(),
+  "context.preview-query": z.unknown(),
   "context.models": z.unknown(),
   "context.preview-generation": z.unknown(),
   "data.dataset-versions": z.unknown(),
@@ -141,7 +142,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild"] as const : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -183,6 +184,11 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (input.operation === "context.preview-query") {
+      const copied = headless.readHeadlessContextQueryPreviewRequest(input, input.input.hostIncarnationId);
+      if (!copied.ok) return {ok: false, code: "headless.invalid-request"};
+      input = copied.request;
+    }
     if (!guard(input)) return {ok: false, code: "headless.forbidden"};
     const result = await forward(input, signal);
     if (!result.ok) return result;
@@ -249,7 +255,12 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
-    if ((headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
+    if (input.operation === "context.preview-query") {
+      const copied = headless.readHeadlessContextQueryPreviewRequest(input, input.input.hostIncarnationId);
+      if (!copied.ok) return {ok: false, code: "headless.invalid-request"};
+      input = copied.request;
+    }
+    if ((headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-query" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -399,6 +410,11 @@ function createForwarder(options: {
       const expected = z.strictObject({ ok: z.literal(true), operation: z.literal(input.operation), value: resultValue[input.operation] });
       const parsed = expected.safeParse(raw);
       if (!parsed.success) return unavailable;
+      if (input.operation === "context.preview-query") {
+        const expected = "sha256:" + createHash("sha256").update(input.input.query, "utf8").digest("hex");
+        const value = headless.readHeadlessContextQueryPreviewValue(parsed.data.value, input.input, expected);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
       if (input.operation === "context.preview-rebuild") {
         const value = headless.readHeadlessContextRebuildValue(parsed.data.value, input.input);
         return value ? {ok: true, operation: input.operation, value} : unavailable;

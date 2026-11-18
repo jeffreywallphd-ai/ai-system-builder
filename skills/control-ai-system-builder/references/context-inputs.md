@@ -1,5 +1,27 @@
 # Prepare Context inputs and packs
 
+## Prepare an exact question
+
+Use `aisb_preview_context_query` on a plan-review connection. First read the saved
+RAG item with `aisb_read_context`; keep its exact `reference`. Provide that
+reference, the question, `maximumResults` from 1 to 20, and `embeddingDevice`
+as `cpu` or `cuda`.
+
+Keep the question to 2,000 characters, without leading/trailing whitespace or
+nontext control characters. Interior line breaks and tabs are allowed. The app
+hashes the exact UTF8 text without changing it and returns `queryDigest`, the
+original model ID/timestamp, source count and fixed limits. Keep that fingerprint
+unchanged for this question. A changed question needs a new preview.
+
+The app does not save or return the question or pass it to its asynchronous
+metadata dependency. It rechecks current saved/source/model authority without
+reading source bytes or loading a model. Both `runtimeReadiness` and
+`byteAvailability` remain `not-checked`. This preview grants no query execution,
+source/result sharing, installation or save permission. The public approved
+query step and query summaries remain unavailable until separately implemented.
+
+## Prepare saved inputs
+
 Use a dedicated plan-review connection. First call `aisb_host_describe` and
 check that the host offers `context.models` and `context.preview-generation`.
 These tools prepare metadata for a possible build. They cannot start a build,
@@ -207,9 +229,10 @@ plan approval does not approve window control.
 3. Keep the exact current window lease and a fresh command ID for each new
    selection. An exact replay reads its first receipt. Do not claim that an
    accepted command has already appeared in the window.
-4. The window shows fixed status and counts with opaque identifiers. It reads
-   no source bytes and does not start a model or initialize a processor. A saved
-   file's availability is not checked. Public query summaries remain unavailable
+4. The window shows fixed status and counts with opaque identifiers. Display
+   cannot create the Context feature or approve a new task. Checking an accepted
+   task can validate its output and recover its existing worker under the
+   original task controls. A saved file's availability is not checked. Public query summaries remain unavailable
    until their separate query connection is implemented.
 5. Stop presenting after revoke or expiry. Ending display does not cancel
    independently approved Context work, delete a saved artifact or grant save

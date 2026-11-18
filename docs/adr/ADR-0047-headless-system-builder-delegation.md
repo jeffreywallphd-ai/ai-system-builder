@@ -1,5 +1,16 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+The finite `context.preview-query` read prepares exact transient question hashes
+for the existing approved-plan workflow. It reuses recorded saved Context input
+compilation and current artifact/model/actor/client scope; no new engine, cache,
+storage or retention policy is selected. The headless question bound is 2,000
+characters within existing 8 KiB requests and shared passive limits; ordinary
+Context retains its own bound. Application metadata frames/dependencies receive
+only references after synchronous hashing. Transport buffers retain their existing
+bounded request lifetime. SDK/API response codecs independently correlate exact
+UTF8 hashes. One additional finite plan-review tool preserves the 32-tool mode
+limit. Preview grants no execution, installation, result egress or old-task power.
+
 Context metadata handoff extends the same finite window presentation protocol
 with exact saved Context references and accepted task IDs. Both hosts retain
 current artifact-read, actor/workspace and separate window consent. A shared

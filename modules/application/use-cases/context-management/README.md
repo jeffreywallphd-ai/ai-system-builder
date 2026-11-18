@@ -1,11 +1,20 @@
 # Context Management Application Use Cases
 
+`PreviewHeadlessContextQueryUseCase` copies strict input and hashes the exact
+transient question before its asynchronous application metadata frame. That frame
+and its dependency receive no question text. Current actor/client/workspace and
+post-await liveness fences surround recorded saved/source/model reads and final
+publication. It returns only a correlated hash, original model metadata and fixed
+limits/readiness. It stores nothing and starts no runtime, file read or task.
+
 `ReadHeadlessContextPresentationUseCase` returns fixed bounded interactive
 metadata for exact saved Context references and accepted tasks. It copies the
 selector/actor, fences metadata reads with current permission and verifies every
 saved-reference field. Task dependencies must prove accepted same-host/actor
-ownership before observing an already-loaded owner. This reader cannot initialize
-a model/runtime, read source bytes or grant execution/save authority. Existing
+ownership before observing an already-loaded owner. The reader cannot construct
+a lazy Context feature or grant a new business task/save. Accepted-task observation
+retains its owner's output validation and existing owned-worker recovery under
+the original lifecycle. Fixed display output contains no source bytes. Existing
 window consent owns display and revocation; query summaries remain separate work.
 
 `ReadHeadlessContextRebuildUseCase` is a passive recorded-input projection. Current

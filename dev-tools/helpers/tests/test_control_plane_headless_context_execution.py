@@ -59,10 +59,14 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         self.assertNotIn('focused-tests', selected)
         self.assertEqual(selected['headless-context-rebuild-inputs']['argv'][1:], [
             '--import', 'tsx', '--test', '--',
+            'modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts',
+            'modules/application/use-cases/context-management/tests/headless-context-query-preview.unit.test.ts',
             'modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts',
             'modules/application/use-cases/context-management/tests/headless-context-rebuild.unit.test.ts',
             'modules/adapters/persistence/system-builder/tests/structured-headless-context-plan-task-store.unit.test.ts',
             'modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts',
+            'modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts',
+            'modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts',
             'dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts'])
         self.assertNotIn('headless-data-desktop-plan-qualification', selected)
         self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
@@ -71,6 +75,25 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         host_only = self.selected(['modules/hosts/desktop/composition/composeDesktopHost.ts'], ['architecture'])
         self.assertNotIn('headless-context-rebuild-inputs', host_only)
         self.assertIn('focused-tests', host_only)
+
+    def test_query_preview_reuses_exact_recorded_metadata_checks_without_borrowing_unknown_sources(self):
+        paths = ['modules/contracts/headless/headless-context-query-preview.ts',
+                 'modules/application/use-cases/context-management/headless-context-query-preview.use-case.ts',
+                 'modules/hosts/shared/composition/headlessContextQueryPreview.ts']
+        selected = self.selected(paths, ['architecture'])
+        self.assertIn('headless-context-rebuild-inputs', selected)
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts', selected['headless-context-rebuild-inputs']['argv'])
+        self.assertIn('focused-tests', self.selected(paths + ['modules/hosts/shared/composition/unknown-query-preview.ts'], ['architecture']))
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+
+    def test_changed_census_node_guard_executes_its_exact_existing_registered_suite(self):
+        path = 'dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs'
+        selected = self.selected([path], ['control-plane'])
+        self.assertIn('headless-composer-draft-witnesses', selected)
+        self.assertIn(path, selected['headless-composer-draft-witnesses']['argv'])
+        self.assertEqual(catalog.PUBLISHED_FORM_CHECKS['headless-composer-draft-witnesses']['automatic_sources'], (path,))
+        self.assertIn('control-plane', selected)
 
     def test_artifact_lifecycle_checks_exact_adapter_and_existing_consumer_without_masking_unknown_sources(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-artifact-lifecycle']

@@ -1,10 +1,20 @@
 # Desktop host composition
 
+`context.preview-query` is a separate optional plan-review metadata provider.
+Current artifact/model permission and registration/liveness surround its output.
+It hashes transient question text and compiles the exact saved Context's original
+source/model metadata through the platform owner. It never resolves the lazy
+Context/model runtime, reads source bytes or creates an execution grant. The
+question stays out of records/results; transport request buffers retain their
+existing bounded lifetime. Public query execution and summaries remain pending.
+
 Context window intents use current artifact-read permission and the existing
 separate window consent. The shared Context presentation reader verifies an exact
 committed saved reference or accepted same-host/actor task before observing the
 cached Context owner. The cache is populated only by existing feature use;
 presentation never calls the lazy feature initializer. Missing owners deny.
+Accepted-task observation retains owned output validation and existing worker
+recovery under the original task lifecycle; display grants no new business task.
 Fixed status/counts and opaque selectors cross the display boundary; source bytes,
 models and query text do not. Lease retirement stops new display/context while
 preserving independently authorized Context work. Query summaries remain pending.

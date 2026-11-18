@@ -2,6 +2,7 @@ import type {PreviewHeadlessContextInputsUseCase} from "../../../application/use
 import type {ReadHeadlessContextTaskUseCase} from "../../../application/use-cases/context-management";
 import type {ReadHeadlessContextSavedUseCase} from "../../../application/use-cases/context-management";
 import type {ReadHeadlessContextRebuildUseCase} from "../../../application/use-cases/context-management";
+import type {PreviewHeadlessContextQueryUseCase} from "../../../application/use-cases/context-management";
 import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
@@ -32,6 +33,7 @@ export function composeManagedAgentReads(options: {
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
   readonly getContextRebuildInputs?: () => Promise<Pick<ReadHeadlessContextRebuildUseCase, "execute">>;
+  readonly getContextQueryPreview?: () => Promise<Pick<PreviewHeadlessContextQueryUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
@@ -54,17 +56,18 @@ export function composeManagedAgentReads(options: {
           ...(identity.purpose === "plan-review" && options.getContextTask ? ["context.task"] as const : []),"host.describe", "templates.list", "systems.read",
           ...(identity.purpose === "plan-review" && options.getContextSaved ? ["context.saved"] as const : []),
           ...(identity.purpose === "plan-review" && options.getContextRebuildInputs ? ["context.preview-rebuild"] as const : []),
+          ...(identity.purpose === "plan-review" && options.getContextQueryPreview ? ["context.preview-query"] as const : []),
           ...(identity.purpose === "plan-review" && options.ingestionTasks ? ["data.ingestion-status" as const] : []),
           ...(identity.purpose === "plan-review" && options.getDatasetQueries ? ["data.dataset-versions", "data.compare-dataset-versions"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetInputs ? ["data.preview-dataset-preparation"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskReview ? ["data.dataset-task-review"] as const : [])]}};
     }
-    if (operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
+    if (operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
         operation !== "data.ingestion-status" && operation !== "data.dataset-versions" && operation !== "data.compare-dataset-versions" &&
         operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status" && operation !== "data.dataset-task-review")
       return {ok: false, code: "headless.unsupported-operation"};
-    if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-rebuild") && identity.purpose !== "plan-review") return denied;
+    if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && identity.purpose !== "plan-review") return denied;
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
     const authorized = async (workspaceId: WorkspaceId,
       requestedOperation: HeadlessReadRequest["operation"] | HeadlessSystemManagementRequest["operation"] = operation,
@@ -78,7 +81,7 @@ export function composeManagedAgentReads(options: {
           workspace, operation: `headless.${requestedOperation}`,
           requiredScopes: requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
             : operation === "context.models" ? ["workspace:read", "model:read"]
-            : operation === "context.preview-generation" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
+            : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
             : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
             : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"] : ["workspace:read", "asset:read"],
         });
@@ -87,6 +90,17 @@ export function composeManagedAgentReads(options: {
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "context.preview-query") {
+        if (!options.getContextQueryPreview) return {ok: false, code: "headless.unsupported-operation"};
+        if (!identity.registeredClientId) return denied;
+        const query = await options.getContextQueryPreview();
+        if (!current() || !await authorized(input.workspaceId)) return denied;
+        const result = await query.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {
+          workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
+          clientId: identity.registeredClientId, isCurrent: current,
+          stillAllowed: async () => current() && await authorized(input.workspaceId)});
+        return current() && await authorized(input.workspaceId) && current() ? result : denied;
+      }
       if (operation === "context.preview-rebuild") {
         if (!options.getContextRebuildInputs) return {ok: false, code: "headless.unsupported-operation"};
         if (!identity.registeredClientId) return denied;

@@ -51,6 +51,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let statusMismatch = false;
   let statusExtra = false;
   let withdrawStatus = false;
+  let mutateQueryRequest = false;
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -87,6 +88,16 @@ test("managed plan routes admit only exact proposals, status and an approved ste
             chunkCount: 2, sizeBytes: 128, requiresExplicitSave: true},
           ...(statusExtra ? {outputPath: "private"} : {}),
         }};
+      }
+      if (request.operation === "context.preview-query") {
+        if (withdrawStatus) current = false;
+        if (mutateQueryRequest) Object.assign(request.input, {query: "substituted private question"});
+        return {ok: true, operation: request.operation, value: {reference: request.input.reference,
+          queryDigest: "sha256:" + (statusMismatch ? "f".repeat(64) : createHash("sha256").update(request.input.query, "utf8").digest("hex")),
+          maximumResults: request.input.maximumResults, embeddingDevice: request.input.embeddingDevice,
+          modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", sourceCount: 1,
+          maximumQueryCharacters: 2000, byteAvailability: "not-checked", runtimeReadiness: "not-checked", approvalRequired: true,
+          output: "citation-summary", ...(statusExtra ? {query: request.input.query} : {})}} as never;
       }
       if (request.operation === "context.preview-rebuild") {
         if (withdrawStatus) current = false;
@@ -273,7 +284,10 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     enabled = false;
     assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 400);
     enabled = true;
-    for (const [operation, target] of [["context.preview-rebuild", {reference: {workspaceId, contextId: hostIncarnationId,
+    for (const [operation, target] of [["context.preview-query", {reference: {workspaceId, contextId: hostIncarnationId,
+      taskId: hostIncarnationId, kind: "rag-database", artifactDigest: "sha256:" + "a".repeat(64)},
+      query: "Synthetic private question", maximumResults: 5, embeddingDevice: "cpu"}],
+      ["context.preview-rebuild", {reference: {workspaceId, contextId: hostIncarnationId,
       taskId: hostIncarnationId, kind: "markdown-context-pack", artifactDigest: "sha256:" + "a".repeat(64)}}],
       ["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
       sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
@@ -281,6 +295,12 @@ test("managed plan routes admit only exact proposals, status and an approved ste
         overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]}}]] as const) {
       const query = {version: HEADLESS_CONTRACT_VERSION, operation, input: {...scope, ...target}};
       assert.equal((await request(query, "fixture-plan", readRoute)).status, 200);
+      if (operation === "context.preview-query") {
+        mutateQueryRequest = true;
+        const changed = await request(query, "fixture-plan", readRoute);
+        assert.equal(changed.status, 503); assert.doesNotMatch(JSON.stringify(changed.body), /Synthetic private|substituted private/);
+        mutateQueryRequest = false;
+      }
       statusMismatch = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
       statusMismatch = false; statusExtra = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
       statusExtra = false; withdrawStatus = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 403);

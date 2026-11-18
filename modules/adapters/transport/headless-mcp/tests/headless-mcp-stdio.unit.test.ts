@@ -17,7 +17,7 @@ import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   UI_PRESENTATION_ACTIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
-import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest} from "../../../../contracts/headless";
+import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest, HeadlessContextQueryPreviewRequest} from "../../../../contracts/headless";
 import {normalizeDatasetVersionId} from "../../../../contracts/dataset";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
@@ -34,7 +34,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
-const planReviewTools = ["aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_context_task", "aisb_read_context", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
+const planReviewTools = ["aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_preview_context_query", "aisb_context_task", "aisb_read_context", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation", "aisb_dataset_task_status", "aisb_dataset_task_review"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
@@ -76,6 +76,12 @@ const contextRebuildValue = {reference: contextSavedValue.reference,
   preview: contextPreview({workspaceId, name: "Synthetic context", sources: [
     {kind: "ingestion-file", taskId: "source.task", fileId: "source.file", taskRevision: 1}], settings: contextSettings}),
   byteAvailability: "not-checked"};
+function contextQueryPreview(input: HeadlessContextQueryPreviewRequest["input"]) {
+  return {reference: input.reference, queryDigest: "sha256:" + createHash("sha256").update(input.query, "utf8").digest("hex"),
+    maximumResults: input.maximumResults, embeddingDevice: input.embeddingDevice,
+    modelRecordId: "model.synthetic", modelUpdatedAt: ragSettings.modelUpdatedAt, sourceCount: 1,
+    maximumQueryCharacters: 2000, byteAvailability: "not-checked", runtimeReadiness: "not-checked", approvalRequired: true, output: "citation-summary"};
+}
 // This fixture opens several real CLI processes with empty tsx caches and
 // waits once for the managed request deadline. Bound the whole fixture separately.
 test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 60_000 }, async () => {
@@ -98,6 +104,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let displacedCapabilities = false;
   let displacedProviderReply = false;
   let invalidStatusReply = false;
+  let wrongQuestionDigest = false;
   let changedPreparation = false;
   let sourceReady = true;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
@@ -145,6 +152,12 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           actions:["systems.rename"], approval:"required",
         }});
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "context.preview-query") {
+        const payload = JSON.stringify({ok: true, operation: input.operation, value: {...contextQueryPreview(input.input),
+          ...(wrongQuestionDigest ? {queryDigest: "sha256:" + "f".repeat(64)} : {}), ...(invalidStatusReply ? {query: input.input.query} : {})}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       if (input.operation === "context.preview-rebuild") {
@@ -391,6 +404,17 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     invalidStatusReply = false;
     const contextSavedQuery = {...planBase, contextId: hostIncarnationId};
     const contextRebuildQuery = {...planBase, reference: contextSavedValue.reference};
+    const queryPreviewInput = {...planBase, reference: {...contextSavedValue.reference, kind: "rag-database" as const},
+      query: "Synthetic private question café 📄", maximumResults: 5, embeddingDevice: "cpu" as const};
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_query", arguments: queryPreviewInput})),
+      {ok: true, operation: "context.preview-query", value: contextQueryPreview(queryPreviewInput)});
+    for (const failure of ["hash", "private-text"]) {
+      wrongQuestionDigest = failure === "hash"; invalidStatusReply = failure === "private-text";
+      const denied = resultText(await planner.callTool({name: "aisb_preview_context_query", arguments: queryPreviewInput}));
+      assert.deepEqual(denied, {ok: false, code: "headless.unavailable"});
+      assert.doesNotMatch(JSON.stringify(denied), /Synthetic private|café/);
+    }
+    wrongQuestionDigest = false; invalidStatusReply = false;
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_rebuild", arguments: contextRebuildQuery})),
       {ok: true, operation: "context.preview-rebuild", value: contextRebuildValue});
     const rebuildStep = {operation: "context.generate-pack", idempotencyKey: randomUUID(), name: "Rebuilt context",
@@ -559,6 +583,9 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       if (decoded.request.operation === "context.task") return {ok: true, operation: decoded.request.operation,
         value: {...contextTaskValue, taskId: wrongStatusTask ? randomUUID() : contextTaskValue.taskId,
           ...(statusExtra ? {sourceText: "synthetic private source"} : {})} as never};
+      if (decoded.request.operation === "context.preview-query") return {ok: true, operation: decoded.request.operation,
+        value: {...contextQueryPreview(decoded.request.input), ...(wrongStatusTask ? {queryDigest: "sha256:" + "f".repeat(64)} : {}),
+          ...(statusExtra ? {query: decoded.request.input.query} : {})} as never};
       if (decoded.request.operation === "context.preview-rebuild") return {ok: true, operation: decoded.request.operation,
         value: {...contextRebuildValue, reference: {...contextRebuildValue.reference,
           contextId: wrongStatusTask ? randomUUID() : contextRebuildValue.reference.contextId},
@@ -690,6 +717,15 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     wrongStatusTask = false;
     const contextSavedQuery = {hostIncarnationId, workspaceId, contextId: hostIncarnationId};
     const contextRebuildQuery = {hostIncarnationId, workspaceId, reference: contextSavedValue.reference};
+    const queryPreviewInput = {hostIncarnationId, workspaceId, reference: {...contextSavedValue.reference, kind: "rag-database" as const},
+      query: "Synthetic private question café 📄", maximumResults: 5, embeddingDevice: "cpu" as const};
+    assert.deepEqual(await call("aisb_preview_context_query", queryPreviewInput),
+      {ok: true, operation: "context.preview-query", value: contextQueryPreview(queryPreviewInput)});
+    statusExtra = true;
+    assert.deepEqual(await call("aisb_preview_context_query", queryPreviewInput), {ok: false, code: "headless.unavailable"});
+    statusExtra = false; wrongStatusTask = true;
+    assert.deepEqual(await call("aisb_preview_context_query", queryPreviewInput), {ok: false, code: "headless.unavailable"});
+    wrongStatusTask = false;
     assert.deepEqual(await call("aisb_preview_context_rebuild", contextRebuildQuery),
       {ok: true, operation: "context.preview-rebuild", value: contextRebuildValue});
     const rebuildStep = {operation: "context.generate-pack", idempotencyKey: randomUUID(), name: "Rebuilt context",
@@ -1059,6 +1095,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_read_system", savedSystem);
   assertExactObject("aisb_read_context", [...workspace, "contextId"]);
   assertExactObject("aisb_preview_context_rebuild", [...workspace, "reference"]);
+  assertExactObject("aisb_preview_context_query", [...workspace, "reference", "query", "maximumResults", "embeddingDevice"]);
   assertExactObject("aisb_saved_system_changes", [...workspace, "cursor"]);
   assertExactObject("aisb_list_workflows", [...workspace, "sourceKind"]);
   assertExactObject("aisb_prepare_workflow", [...workspace, "profileId", "source"]);

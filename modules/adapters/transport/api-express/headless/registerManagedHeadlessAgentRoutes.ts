@@ -1,6 +1,7 @@
 import { raw, type Application, type Request, type Response } from "express";
+import {createHash} from "node:crypto";
 
-import {readHeadlessContextRebuildValue} from "../../../../contracts/headless";
+import {readHeadlessContextQueryPreviewValue, readHeadlessContextRebuildValue} from "../../../../contracts/headless";
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
   readHeadlessIngestionStatusValue,
@@ -228,16 +229,21 @@ async function respond<Agent>(
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     const dataRead = (isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
-      parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
+      parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-query" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
+    const questionProof = parsed.request.operation === "context.preview-query" ? (() => {
+      const {query, ...target} = parsed.request.input;
+      return {target: {...target, reference: {...target.reference}},
+        digest: "sha256:" + createHash("sha256").update(query, "utf8").digest("hex")};
+    })() : undefined;
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
     if (!result.ok) {
       const code = readFailures.has(result.code) ? result.code : "headless.unavailable";
       return failure(response, requestErrorStatus(code), code);
     }
-    if (result.operation !== parsed.request.operation)
+    if (result.operation !== parsed.request.operation || (questionProof && result.operation !== "context.preview-query"))
       return failure(response, 503, "headless.unavailable");
     if (result.operation === "host.describe") {
       const {version, hostIncarnationId, workspaces} = result.value;
@@ -247,7 +253,12 @@ async function respond<Agent>(
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
           ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessDataReadOperation(operation) ||
-            isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-rebuild") : [])]}});
+            isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") : [])]}});
+    }
+    if (result.operation === "context.preview-query") {
+      if (!questionProof) return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessContextQueryPreviewValue(result.value, questionProof.target, questionProof.digest);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "context.preview-rebuild") {
       if (parsed.request.operation !== "context.preview-rebuild") return failure(response, 503, "headless.unavailable");

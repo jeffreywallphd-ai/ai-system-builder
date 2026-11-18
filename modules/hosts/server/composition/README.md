@@ -1,11 +1,20 @@
 # Server host composition
 
+Managed query preview uses the same strict transient-text/hash and recorded-input
+metadata reader under current plan-client, organization/workspace and artifact/
+model read policy. The route and SDK independently correlate the exact question
+hash before returning a minimized result. No runtime/model initialization, source
+byte access, durable question storage or task follows from this read. Query
+execution, summaries and physical readiness remain separate.
+
 Managed Context display uses the shared exact saved/accepted-task reader under
 current request organization, workspace, actor and artifact-read policy. Existing
 browser consent owns lease, document, delivery and context fences. The reader uses
 only committed metadata or the already-composed Context owner, with accepted
-same-host/actor proof before observation. No model/runtime initialization, source
-byte read, provider call or new task follows from display. Revocation preserves
+same-host/actor proof before observation. Display constructs no lazy feature and
+grants no new business task. Accepted-task observation retains owned output
+validation and existing worker recovery under its original lifecycle. Fixed
+display output contains no source bytes or private runtime fields. Revocation preserves
 independently authorized work; public query summaries remain pending.
 
 Managed Data presentation routes exact source/version/accepted-task selections

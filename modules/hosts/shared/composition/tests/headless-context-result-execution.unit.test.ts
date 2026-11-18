@@ -29,6 +29,7 @@ import {createTenantPlacementConfig} from "../../../../contracts/config";
 import {HEADLESS_CONTRACT_VERSION as version, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentRequest, type HeadlessPlanStepRequest} from "../../../../contracts/headless";
 import {composeHeadlessContextRebuildPreview, compileRecordedHeadlessContextInputs} from "../headlessContextRebuild";
+import {composeHeadlessContextQueryPreview} from "../headlessContextQueryPreview";
 import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeDesktopHeadlessReads";
 import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
 import {HEADLESS_READ_OPERATIONS} from "../../../../contracts/headless";
@@ -233,15 +234,30 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
       return authorization.authorizeWorkspaceOperation(input);
     }};
     const getContextRebuildInputs = async () => {metadataLoads++; return rebuild;};
+    const queryPreview = composeHeadlessContextQueryPreview(platform, directory);
+    const getContextQueryPreview = async () => {metadataLoads++; return queryPreview;};
     const desktopReads = composeDesktopHeadlessReads({hostIncarnationId, identity, workspaceRepository: workspaces,
       authorization: readAuthorization, getUseCases() {assert.fail("Rebuild metadata cannot load System Builder.");},
-      getContextRebuildInputs, isOpen: () => current});
+      getContextRebuildInputs, getContextQueryPreview, isOpen: () => current});
     const managedReads = composeManagedAgentReads({hostIncarnationId, workspaces, contexts, authorization: readAuthorization,
       systems: {listTemplates() {assert.fail("No System Builder lookup.");}, read() {assert.fail("No System Builder lookup.");}},
-      getContextRebuildInputs});
+      getContextRebuildInputs, getContextQueryPreview});
     const readGrant = {...grant, operations: HEADLESS_READ_OPERATIONS};
     const viaHost = () => host === "Desktop" ? desktopReads(rebuildRequest, async () => readGrant)
       : managedReads(rebuildRequest, registration, () => current);
+    const queryRequest = {version, operation: "context.preview-query" as const, input: {hostIncarnationId, workspaceId,
+      reference: metadata.value.reference, query: "What does the synthetic corpus contain? café 📄", maximumResults: 5, embeddingDevice: "cpu" as const}};
+    const viaQuery = () => host === "Desktop" ? desktopReads(queryRequest, async () => readGrant)
+      : managedReads(queryRequest, registration, () => current);
+    if (kind === "rag") {
+      const ready = await viaQuery(); assert.ok(ready.ok && ready.operation === "context.preview-query", JSON.stringify(ready));
+      assert.equal(ready.value.queryDigest, sha(new TextEncoder().encode(queryRequest.input.query)));
+      assert.equal(ready.value.modelRecordId, model.modelRecordId); assert.equal(ready.value.modelUpdatedAt, at);
+      assert.equal(ready.value.sourceCount, 1); assert.equal(ready.value.maximumResults, 5);
+      assert.equal(ready.value.runtimeReadiness, "not-checked"); assert.equal(ready.value.byteAvailability, "not-checked");
+      assert.doesNotMatch(JSON.stringify(ready), /What does the synthetic|café|private\/model|localPath|storageKey|"query":/);
+      assert.equal(peeks, before); assert.equal(starts, 1); assert.equal(writes, 1);
+    } else assert.equal((await viaQuery()).ok, false, "A context pack cannot become a queryable RAG artifact.");
     assert.deepEqual(await viaHost(), rebuilt);
     const retiredBuildApproval = await reviews.decide({fingerprint: generation.fingerprint, expectedRevision: 2,
       decision: {kind: "revoke"}}, hostIncarnationId, scope,
@@ -249,20 +265,28 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
     assert.ok(retiredBuildApproval.ok, JSON.stringify(retiredBuildApproval));
     assert.equal((await run(generation.fingerprint)).result.ok, false, "Old build permission is no longer executable.");
     assert.deepEqual(await viaHost(), rebuilt, "Current saved-resource authority can read immutable lineage without reusing old permission.");
+    if (kind === "rag") assert.equal((await viaQuery()).ok, true, "Metadata preview uses current saved-resource authority, not old execution permission.");
     if (kind === "rag") {
       await models.registerDownloadedModel({...model, localPath: join(directory, "private/replaced-model")});
       assert.equal((await viaHost()).ok, false, "The same logical model ID and timestamp cannot hide a different saved model.");
+      assert.equal((await viaQuery()).ok, false, "Query preview cannot substitute the original model behind the same ID/timestamp.");
       await models.registerDownloadedModel(model);
       assert.equal((await viaHost()).ok, true);
     }
     const loaded = metadataLoads;
     denyModelRead = true;
     assert.deepEqual(await viaHost(), {ok: false, code: "headless.forbidden"});
+    if (kind === "rag") assert.deepEqual(await viaQuery(), {ok: false, code: "headless.forbidden"});
     assert.equal(metadataLoads, loaded, "Current model permission is checked before the metadata provider.");
     denyModelRead = false;
     const nonPlanner = host === "Desktop" ? await desktopReads(rebuildRequest, async () => ({...readGrant, planReview: undefined}))
       : await managedReads(rebuildRequest, {...registration, purpose: "read"} as never, () => current);
     assert.deepEqual(nonPlanner, {ok: false, code: "headless.forbidden"});
+    if (kind === "rag") {
+      const deniedQuery = host === "Desktop" ? await desktopReads(queryRequest, async () => ({...readGrant, planReview: undefined}))
+        : await managedReads(queryRequest, {...registration, purpose: "read"} as never, () => current);
+      assert.deepEqual(deniedQuery, {ok: false, code: "headless.forbidden"});
+    }
     for (const changed of [{...metadata.value.reference, taskId: randomUUID()},
       {...metadata.value.reference, artifactDigest: "sha256:" + "f".repeat(64)},
       {...metadata.value.reference, contextId: randomUUID()}]) {
@@ -330,6 +354,7 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
     await documents.writeDocument(INGESTION_TASK_NAMESPACE, `${workspaceId}/${priorSource.taskId}`,
       {...priorSource, revision: priorSource.revision + 1}, {expectedRevision: priorSource.revision});
     assert.equal((await viaHost()).ok, false, "A later source revision cannot silently replace the recorded input.");
+    if (kind === "rag") assert.equal((await viaQuery()).ok, false, "Query preview must reject a changed original source.");
     assert.equal(starts, 2); assert.equal(writes, 2);
     ownerAvailable = false;
     const replay = await run(save.fingerprint); assert.ok(replay.result.ok, JSON.stringify(replay.result));

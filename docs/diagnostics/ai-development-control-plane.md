@@ -1,5 +1,13 @@
 # Contributor Control Plane
 
+The fixed `headless-context-rebuild-inputs` check also covers strict transient
+question preparation, its application privacy/liveness checks, existing host
+readers and actual Core/SQLite recorded-metadata consumers. The SDK/API checks
+correlate exact hashes and reject raw-question echo. One exact catalog-only census
+row update preserves original Git pins, statuses and execution gaps; it grants no
+host run pass. Unknown sources and explicit generic tests keep fallback. Query
+execution/summaries and physical/model/resource/parent qualification remain pending.
+
 The fixed `headless-ui-control-authority` check also covers exact saved Context
 and accepted-task presentation using structured owner fixtures. The existing
 Desktop takeover and managed presentation checks cover copied selectors, current

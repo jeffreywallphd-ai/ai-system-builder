@@ -1,5 +1,14 @@
 # Headless client skill
 
+## Prepare a Context question
+
+Use `aisb_preview_context_query` on a plan-review connection. Supply the exact
+saved RAG reference, the question, CPU or CUDA, and a result limit from 1 to 20.
+The question can contain up to 2,000 characters. The app returns its exact
+fingerprint and original model metadata. It does not save or return the question,
+read source files, load a model or start a query. Keep all readiness marked as
+not checked. The public query action and query summaries still need implementation.
+
 ## Show Context in the app
 
 Use this only when the user requests a window handoff. Obtain a current window
@@ -10,8 +19,10 @@ accepted task, send `show-context-task` with its exact task ID. The existing
 
 The agent must keep the workspace, saved digest, kind and producer unchanged.
 The host checks current read permission and window consent. It shows fixed
-status/counts, not source or query text. It does not start a model or initialize
-a processor. A saved file's availability is not checked by this metadata read.
+status/counts, not source or query text. Display cannot create the Context feature
+or approve a new task. Checking an accepted task can validate its output and
+recover its existing worker under the original task controls. A saved file's
+availability is not checked by this metadata read.
 Public query summaries need their separate implementation. Stop display after
 revoke or expiry; independent Context work remains intact. Report window display
 separately from backend completion and save approval.

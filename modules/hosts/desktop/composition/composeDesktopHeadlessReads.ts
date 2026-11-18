@@ -2,6 +2,7 @@ import type {PreviewHeadlessContextInputsUseCase} from "../../../application/use
 import type {ReadHeadlessContextTaskUseCase} from "../../../application/use-cases/context-management";
 import type {ReadHeadlessContextSavedUseCase} from "../../../application/use-cases/context-management";
 import type {ReadHeadlessContextRebuildUseCase} from "../../../application/use-cases/context-management";
+import type {PreviewHeadlessContextQueryUseCase} from "../../../application/use-cases/context-management";
 import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
@@ -75,6 +76,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
   readonly getContextRebuildInputs?: () => Promise<Pick<ReadHeadlessContextRebuildUseCase, "execute">>;
+  readonly getContextQueryPreview?: () => Promise<Pick<PreviewHeadlessContextQueryUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
@@ -84,6 +86,7 @@ export function composeDesktopHeadlessReads(dependencies: {
     workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen } = dependencies;
 
   const supports = (operation: HeadlessReadOperation) => {
+    if (operation === "context.preview-query") return Boolean(dependencies.getContextQueryPreview);
     if (operation === "context.preview-rebuild") return Boolean(dependencies.getContextRebuildInputs);
     if (operation === "context.saved") return Boolean(dependencies.getContextSaved);
     if (operation === "context.task") return Boolean(dependencies.getContextTask);
@@ -111,7 +114,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         requiredScopes: requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
           : operation === "context.models" ? ["workspace:read", "model:read"]
-          : operation === "context.preview-generation" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
+          : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
           : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
           : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"]
           : operation === "workspaces.list" ? ["workspace:read"]
@@ -139,13 +142,13 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
-      if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-rebuild") && grant.planReview !== true) return forbidden;
+      if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && grant.planReview !== true) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
-          (!(isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-rebuild") || latest.planReview === true && latest.isCurrent?.() !== false) &&
+          (!(isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") || latest.planReview === true && latest.isCurrent?.() !== false) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -168,7 +171,7 @@ export function composeDesktopHeadlessReads(dependencies: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
               op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
-              (!(isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved" || op === "context.preview-rebuild") || latest.planReview === true)),
+              (!(isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved" || op === "context.preview-query" || op === "context.preview-rebuild") || latest.planReview === true)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -180,6 +183,17 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "context.preview-query": {
+          if (!dependencies.getContextQueryPreview) return unavailable;
+          const query = await dependencies.getContextQueryPreview();
+          if (!await currentScopedGrant([workspaceId]) || !await authorizedWorkspace(workspaceId, operation)) return forbidden;
+          const result = await query.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {
+            organizationId: identity.organizationId, principalId: identity.principalId, workspaceId}, clientId,
+            isCurrent: () => isOpen() && grant.isCurrent?.() !== false,
+            stillAllowed: async () => Boolean(await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation))});
+          return await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation) &&
+            isOpen() && grant.isCurrent?.() !== false ? result : forbidden;
+        }
         case "context.preview-rebuild": {
           if (!dependencies.getContextRebuildInputs) return unavailable;
           const rebuild = await dependencies.getContextRebuildInputs();
