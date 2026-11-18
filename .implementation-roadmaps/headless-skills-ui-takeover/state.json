@@ -510,6 +510,34 @@
         "Committed reviewed checkpoint e727660aa84ef0726d2d5f8882695d7788de77fc and fast-forwarded rebuild. Historical failures and all parent qualification remain separate."
       ],
       "title": "Review Data work in the app"
+    },
+    {
+      "areas": [
+        "Scoped Context input/model previews",
+        "Installed-only task admission and truthful non-start reporting"
+      ],
+      "chunkId": "prepare-context",
+      "completedAt": "2026-11-18T10:39:55Z",
+      "criteriaIds": [
+        "grounded-context",
+        "security-context-isolation"
+      ],
+      "documentation": [
+        "Context architecture and threat model",
+        "ADR0047 and Context context pack",
+        "Portable Context client guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "rag-and-context-prepare-context",
+      "incrementId": "rag-and-context",
+      "summary": "The client can preview exact saved sources and recorded model settings without starting processing. Approved generation checks existing local model/runtime support before dispatch. A proven non-start now remains distinct from an uncertain outcome and replays without another task. Preparation implementation is complete; Context building/query/rebuild, display and parent qualification remain open.",
+      "tests": [
+        "Passive previews: completed work headless-context-passive-input-preview, receipt2360911a7b0fb4c1a066f79472015e01b9ea037338bb469bba96c8ad90cee57e, review5b7da04ea439f436f5097c51141730974ee6e55905c6da85f3c79a8eb554eea6. Exact source/version/model metadata and no processing on passive reads.",
+        "Existing model files: completed work headless-context-recorded-model-admission, receipt5ef715b8e79dd226eb8f4260acc395d270987c1ebdadd380d8fc143a2721c554, reviewfbbd9f1dbe2c345e75c07d8879d281ffc6b2018c74e352a3ad0c412a81a1f186. Configured-root safe-weight admission; no install or physical model claim.",
+        "Approved RAG connection: completed work headless-context-rag-plan-execution, receiptfc7489607a802e4a307c980365dca90d194fb0929eb4f529d3c79e6b63422f84, reviewc515185b1191a036b74130676283c2079456012106888d517aa21f6a332ee74f. Exact source/model witness retained across approval and issue in both hosts.",
+        "Proven non-start: completed work headless-context-proven-start-denial at795a021dac88f894a5476dd4b1c2de77cc971c70, receipt9b2653e9c0437ea7e1f2d0a02846cfc529a3b84a8fe16b1d2d9f0d5793f873f6, reviewb1882d3a75fc31cad572d69a01d128d732eda617595e2de42db4da5f4ae36230. Nine fixed groups passed; unknown/legacy/revoked cases remain guarded. No task status, repeat dispatch or parent pass from a non-start."
+      ],
+      "title": "Prepare sources and index settings"
     }
   ],
   "completion": null,
@@ -1940,6 +1968,12 @@
       "recordedAt": "2026-11-18T02:17:48Z",
       "sequence": 102,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "04ea754788e178911cb74b45add603b1801c972cfa07be5651cf2a26019afc71",
+      "recordedAt": "2026-11-18T10:39:55Z",
+      "sequence": 103,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -2952,7 +2986,9 @@
       ],
       "allowPendingQualification": false,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "prepare-context"
+      ],
       "deliverables": [
         "RAG/context capability contracts, validation reports and artifact handoffs to Systems",
         "Scoped Context presentation actions and measured retrieval and resource evidence"
@@ -3400,5 +3436,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-18T02:17:48Z"
+  "updatedAt": "2026-11-18T10:39:55Z"
 }
