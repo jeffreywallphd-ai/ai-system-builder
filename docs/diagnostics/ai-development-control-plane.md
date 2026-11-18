@@ -60,6 +60,14 @@ current automated security checks and a separate review for Asset closure.
 
 ## Start a work request
 
+The fixed `headless-context-result-bytes` profile automatically covers the exact
+private Context byte publisher, its stream helper and the existing ingestion
+byte-publication regressions. It runs both focused adapter test files and owns
+only their declared source paths. Unmapped storage work or an explicitly required
+`focused-tests` profile retains generic verification; a barrel-only edit cannot
+borrow this component's coverage. This check supplies no Context save-owner,
+public workflow, model, native or roadmap completion claim.
+
 Read `AGENTS.md` and the usual repository context, then start or safely reuse the
 JSON-backed review server and provide its returned link to the user:
 

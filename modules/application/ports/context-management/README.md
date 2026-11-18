@@ -38,3 +38,11 @@ noninstalling registry and supervisor path; ordinary start is not a substitute.
 checks around that port. A private runtime reference does not prove valid
 weights, native custody, immutable bytes, resource capacity or model quality.
 Public RAG plan wiring and actual model qualification remain separate work.
+
+`ContextResultByteStoragePort` is an internal byte-only publisher for a future
+reviewed-result save. Its caller must bind the accepted task, review fingerprint
+and one-use save approval separately. It accepts an opaque publication identity,
+finite Context media type, exact nonempty size and SHA-256, and derives its key
+inside the captured workspace. It has no path, overwrite, catalog/binding or
+delete operation. A successful byte acknowledgement is not a saved Context.
+The result-save owner and atomic metadata receipt remain separate work.

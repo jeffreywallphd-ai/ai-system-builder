@@ -345,6 +345,31 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/tests/composeServerHost.unit.test.ts",
         ),
     },
+    "headless-context-result-bytes": {
+        "automatic_sources": (
+            "modules/application/ports/context-management/context-result-byte-storage.port.ts",
+            "modules/adapters/storage/filesystem/artifact-store/verifiedPublicationStream.ts",
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemContextResultByteStorageAdapter.ts",
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts",
+        ),
+        "sources": (
+            "modules/application/ports/context-management/context-result-byte-storage.port.ts",
+            "modules/application/ports/context-management/README.md",
+            "modules/adapters/storage/filesystem/artifact-store/verifiedPublicationStream.ts",
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemContextResultByteStorageAdapter.ts",
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/index.ts",
+            "modules/adapters/storage/filesystem/artifact-store/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+        ),
+    },
     "headless-context-owned-start": {
         "automatic_sources": (
             "modules/application/use-cases/context-management/context-generation.use-case.ts",

@@ -62,3 +62,19 @@ reads a stream. Inspection creates no target. Publication checks the complete
 size and digest before publishing the final target, preserves existing targets and returns
 sanitized failures. Its synthetic tests cover these component behaviors only;
 they do not qualify the complete ingestion workflow, native file races or recovery.
+
+`createFilesystemContextResultByteStorageAdapter` reuses the private verified
+stream mechanism for generated Context bytes. It permits only the two Context
+archive media types, a nonempty size up to the existing 64 MiB artifact limit,
+an exact SHA-256 and a 32-character lowercase hexadecimal publication identity.
+The byte key is derived as `workspaces/<workspace>/artifacts/context/<identity>`.
+Server composition can supply its existing organization context provider; the
+publisher captures scope before producer or writer awaits. It writes no catalog
+or primary binding and never deletes a published target after an uncertain
+acknowledgement. There is no existing-object adoption or overwrite mode.
+
+The shared helper copies each intrinsically bounded chunk and verifies complete
+EOF size/hash before the contained writer links its final target. Existing
+ingestion normalization, bounds, namespace and result contracts remain intact.
+These component checks do not qualify native races, crash recovery, the owning
+Context task/review admission, metadata commit or public save/query workflows.

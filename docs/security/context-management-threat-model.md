@@ -414,3 +414,20 @@ cannot be replayed as new execution. Approval views disclose model/device/policy
 and remain separately authorized from execution. Bounded accepted-task review
 never returns raw source text, vectors or private model references. Real model,
 resource/native and later save/query/display controls retain their own evidence.
+
+### Reviewed-result byte storage component
+
+The byte publisher treats stream chunks and output descriptors as untrusted.
+Its closed Context media types, 32-character opaque identity, captured workspace
+and optional organization, nonempty 64 MiB size ceiling and exact SHA-256 reject
+malformed input before publication. Intrinsic chunk length controls allocation;
+a private copy is hashed and written. Full EOF size/hash validation runs before
+the contained writer publishes the target. Conflicting targets survive and no
+post-publication failure grants deletion or adoption authority.
+
+This private port writes no catalog or binding. It cannot assert that the caller
+owns a task or approved a save. Accepted-task ownership, exact review fencing,
+one-use issue and atomic causal metadata remain obligations of the pending save
+owner. Synthetic component tests cover bytes, scope, conflict, stream mutation
+and sanitized failures only. Cooperative containment is not hostile native-race,
+crash-recovery or physical RAG qualification.

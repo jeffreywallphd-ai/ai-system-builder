@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { ApplicationRequestContext } from "../../../../application/ports";
 import type { IngestionFileByteStoragePort } from "../../../../application/ports/ingestion";
 import type { OrganizationRequestContextProviderPort } from "../../../../application/ports/organization";
@@ -8,10 +7,7 @@ import { createStoreArtifactFailureResult, createStoreArtifactSuccessResult, nor
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { writeContainedFileStream } from "../../../filesystem-security";
 import { resolveOrganizationStorageKey } from "../organizationStorageScope";
-
-const getTypedArrayByteLength = Object.getOwnPropertyDescriptor(
-  Object.getPrototypeOf(Uint8Array.prototype), "byteLength",
-)!.get!;
+import { verifiedPublicationStream } from "./verifiedPublicationStream";
 
 interface Options {
   readonly rootDirectory: string;
@@ -33,32 +29,11 @@ export function createFilesystemIngestionFileByteStorageAdapter(options: Options
     return { workspaceId, contexts: organization ? { getCurrentOrganizationContext: () => organization } : undefined };
   };
   const inspect = (input: StreamInput) => {
-    if (!Number.isSafeInteger(input.maximumBytes) || input.maximumBytes < 0 || input.maximumBytes > INGESTION_TASK_MAXIMUM_FILE_BYTES
-      || !Number.isSafeInteger(input.expectedSizeBytes) || input.expectedSizeBytes < 0 || input.expectedSizeBytes > input.maximumBytes) throw new Error("Invalid bounds.");
     const expected = input.expectedSha256 === undefined ? undefined : normalizeIngestionSha256Digest(input.expectedSha256);
-    const hash = createHash("sha256");
-    let sizeBytes = 0;
-    let digest: ReturnType<typeof normalizeIngestionSha256Digest> | undefined;
-    const content = async function* () {
-      for await (const chunk of input.content) {
-        if (!(chunk instanceof Uint8Array)) throw new Error("Invalid content.");
-        const byteLength = getTypedArrayByteLength.call(chunk);
-        if (byteLength > input.maximumBytes - sizeBytes) throw new Error("Invalid content.");
-        // The producer cannot mutate bytes after hashing while the writer awaits I/O.
-        // Concurrent shared growth cannot enlarge the admitted allocation.
-        const owned = new Uint8Array(byteLength);
-        Uint8Array.prototype.set.call(owned, chunk);
-        sizeBytes += owned.byteLength;
-        hash.update(owned);
-        yield owned;
-      }
-      digest = normalizeIngestionSha256Digest(`sha256:${hash.digest("hex")}`);
-      // Generator EOF precedes the contained writer's target link/rename.
-      if (sizeBytes !== input.expectedSizeBytes || (expected && expected !== digest)) throw new Error("Content verification failed.");
-    };
-    return { content: content(), result: () => {
-      if (!digest || sizeBytes !== input.expectedSizeBytes) throw new Error("Incomplete content.");
-      return { sizeBytes, digest };
+    const verified = verifiedPublicationStream({...input, expectedSha256: expected}, INGESTION_TASK_MAXIMUM_FILE_BYTES);
+    return {content: verified.content, result: () => {
+      const result = verified.result();
+      return {sizeBytes: result.sizeBytes, digest: normalizeIngestionSha256Digest(result.digest)};
     } };
   };
   return {

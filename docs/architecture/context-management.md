@@ -556,3 +556,20 @@ RAG task review exposes finite counts/size/fingerprint, never paths or vectors.
 The existing Context owner still checks installed runtime/files and safe loading.
 Physical retrieval/resources, saving/query/rebuild and revocable presentation
 remain separate implementation or qualification work.
+
+### Private result-byte publication component
+
+The internal `ContextResultByteStoragePort` separates exclusive byte publication
+from catalog activation. Its filesystem adapter derives an opaque workspace key,
+captures optional organization scope before awaits and accepts only the two
+Context archive media types, exact SHA-256 and nonempty bytes within the existing
+64 MiB limit. It shares the ingestion adapter's private verified-stream mechanism:
+intrinsic chunk bounds and a private copy precede hash/write, and complete EOF
+verification precedes final target publication. No catalog, binding, overwrite,
+delete or existing-file adoption capability is composed into this adapter.
+
+This component is not task ownership or approval. The result-save owner still
+must bind an accepted task and exact reviewed output, issue one save effect and
+atomically commit catalog, primary binding and causal receipt after the byte
+acknowledgement. An unknown write remains retained. Public save/query/rebuild,
+host wiring and native/crash qualification remain pending at this boundary.

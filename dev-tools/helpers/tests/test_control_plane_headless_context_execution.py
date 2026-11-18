@@ -12,6 +12,22 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_result_byte_checks_cover_only_exact_publication_sources_and_existing_ingestion(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-result-bytes']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['architecture'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertEqual(selected['headless-context-result-bytes']['argv'][1:], [
+            '--import', 'tsx', '--test', '--',
+            'modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts',
+            'modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts'])
+        self.assertIn('focused-tests', self.selected(paths + [
+            'modules/adapters/storage/filesystem/artifact-store/unmapped-context-publication.ts'], ['architecture']))
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        index_only = self.selected(['modules/adapters/storage/filesystem/artifact-store/index.ts'], ['architecture'])
+        self.assertNotIn('headless-context-result-bytes', index_only)
+        self.assertIn('focused-tests', index_only)
+
     def test_explicit_desktop_approval_owner_executes_existing_connection_and_scope_regressions(self):
         path = 'modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals.ts'
         selected = self.selected([path], ['headless-data-task-status'])

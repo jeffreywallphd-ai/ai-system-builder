@@ -178,3 +178,10 @@ the list or report deletion. A different key leaves the selected view intact.
   Approval states local embedding work, selected device/policy and separate save.
   Accepted-task replies stay bounded. Physical retrieval/resources and later
   save/query/rebuild/display remain separate from the plan-connection checks.
+
+- The private Context result-byte publisher shares ingestion's bounded verified
+  stream mechanism. It derives an opaque scoped key and checks complete EOF/SHA
+  before exclusive publication, without catalog/binding writes or deletion.
+  Byte acknowledgement alone grants no task ownership or save approval. The
+  owning save admission, atomic causal metadata, public operations and native
+  qualification remain separate work.
