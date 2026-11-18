@@ -164,6 +164,30 @@ do not substitute a newer source or model to call it the same recorded build.
 This is metadata only: `byteAvailability: not-checked` and runtime readiness
 remain unchanged. No source bytes, model paths, embeddings, old actor/client
 identity, installation or processing are exposed. It does not adopt the old
-task. Approved parent-bound rebuild execution, queries and window display still
-need their own implementation and qualification. Do not report this preview as
-a rebuild run, a new approval or physical readiness.
+task. Do not report this preview as a rebuild run, a new approval or physical
+readiness. Queries and window display remain separate work.
+
+## Rebuild with new approval
+
+1. Get the recorded preview above. Keep its exact source references and settings.
+   Select a safe name for the new result. Do not substitute a newer source or model.
+2. Use the matching `context.generate-pack` or `context.generate-rag` plan step.
+   Add `rebuildOf` with the exact saved reference. Use a new idempotency key for
+   this new requested effect. `aisb_preview_build_plan` returns version 9 and
+   identifies the saved parent, original inputs and existing generation limits.
+3. Submit that exact plan for a new whole-plan or each-change approval through
+   the existing app popup or authenticated chat. An earlier approval and the
+   passive recorded preview grant no permission to run it.
+4. Run the approved step. The host rechecks the parent, original source facts
+   and saved model before admitting the existing installed-only Context owner,
+   including at final issue after staging. Missing or changed inputs deny; they
+   do not authorize a replacement model, source, installation or fresh retry.
+5. Poll only the accepted task. Review its new result, then request a separate
+   exact save approval. The saved parent stays unchanged. Reconcile uncertain
+   replies using the original plan, step and key; do not start another attempt.
+
+A rebuilt result records its own producing definition. A later metadata preview
+does not adopt an ancestor's task or require that ancestor's point index. Current
+permission and the rebuilt result's own accepted source/model lineage still apply.
+Focused host and SDK checks are separate from physical retrieval, resource,
+native, real-app and whole-roadmap qualification.

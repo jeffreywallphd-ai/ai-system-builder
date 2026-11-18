@@ -28,7 +28,7 @@ import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createTenantPlacementConfig} from "../../../../contracts/config";
 import {HEADLESS_CONTRACT_VERSION as version, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentRequest, type HeadlessPlanStepRequest} from "../../../../contracts/headless";
-import {composeHeadlessContextRebuildPreview} from "../headlessContextRebuild";
+import {composeHeadlessContextRebuildPreview, compileRecordedHeadlessContextInputs} from "../headlessContextRebuild";
 import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeDesktopHeadlessReads";
 import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
 import {HEADLESS_READ_OPERATIONS} from "../../../../contracts/headless";
@@ -39,7 +39,7 @@ for (const host of ["Desktop", "Managed"] as const)
 for (const channel of ["app-popup", "authenticated-chat"] as const)
 for (const mode of ["whole-plan", "each-change"] as const)
 for (const kind of ["pack", "rag"] as const)
-test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual owned Context result once`, async () => {
+test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds Context with exact replay and late-parent denial`, async () => {
   const originalTemp = process.env.TEMP, originalTmp = process.env.TMP;
   const directory = await realpath(await mkdtemp(join(await realpath(tmpdir()), "headless-context-result-")));
   process.env.TEMP = directory; process.env.TMP = directory;
@@ -83,6 +83,8 @@ test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual
     if (kind === "rag") await models.registerDownloadedModel(model);
     const mediaType = kind === "rag" ? CONTEXT_RAG_DATABASE_MEDIA_TYPE : CONTEXT_MARKDOWN_PACK_MEDIA_TYPE;
     let starts = 0, writes = 0, current = true, ownerAvailable = true, peeks = 0;
+    let resolutions = 0, hideParentAtStaging = false, parentKey = "";
+    let hiddenParent: {key: string; value: unknown} | undefined;
     let payload: ContextGenerationTaskRequest | undefined;
     const resultStorage = createFilesystemContextResultByteStorageAdapter({rootDirectory: directory});
     const core = new ContextGenerationUseCase({taskReconciler: reconciler,
@@ -117,6 +119,16 @@ test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual
         async listTasks() {assert.fail("No task discovery or adoption.");},
       },
       storage: {async retrieveArtifact(request) {
+        if (hideParentAtStaging) {
+          hideParentAtStaging = false;
+          // Fault injection only in this fresh synthetic database: remove the
+          // known test parent's point index after staging starts, then restore
+          // the exact test row after the denied attempt. No retained data/file.
+          const row = await documents.readDocument("headless/context/saved-contexts", parentKey);
+          assert.ok(row); assert.equal(row.revision, 1);
+          hiddenParent = {key: parentKey, value: row.value};
+          assert.equal(await documents.deleteDocument("headless/context/saved-contexts", parentKey, 1), true);
+        }
         assert.equal(request.key, sourceKey); return {ok: true, value: {descriptor: {key: sourceKey, mediaType: "text/csv", sizeBytes: sourceBytes.length,
           metadata: {originalFileName: "synthetic.csv"}}, content: sourceBytes}} as never;
       }, async storeArtifact() {assert.fail("Use only the admitted byte publisher.");},
@@ -136,15 +148,16 @@ test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual
     const registration = {...scope, purpose: "plan-review" as const, isCurrent: () => current};
     const systems = {composeHeadlessAuthoring() {throw new Error("No system commands.");}} as never;
     const peekContextResults = () => {peeks++; return ownerAvailable ? core : undefined;};
+    const getContextStart = async () => {resolutions++; return core.startAdmittedContext.bind(core);};
     const desktop = composeDesktopHeadlessPlanReview({hostIncarnationId, identity, platform, rootDirectory: directory,
-      workspaces, authorization, isOpen: () => current, systems, getContextStart: async () => core.startAdmittedContext.bind(core), peekContextResults});
+      workspaces, authorization, isOpen: () => current, systems, getContextStart, peekContextResults});
     // A real SQLite transaction exercises the composed Managed application. It
     // does not claim physical PostgreSQL, browser or model qualification.
     const managedPlatform: StructuredDocumentStore = {...platform, async publishWithStableReads(check, publish) {
       return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
     }};
     const managed = composeManagedHeadlessPlanReview({hostIncarnationId, platform: managedPlatform, rootDirectory: directory, workspaces,
-      contexts, authorization, placement, systems, getContextStart: async () => core.startAdmittedContext.bind(core), peekContextResults});
+      contexts, authorization, placement, systems, getContextStart, peekContextResults});
     const capability = {allowLocalFileSave: false, allowContextPackGeneration: true, allowContextRagGeneration: true, allowContextResultSave: true};
     const reviews = new HeadlessBuildPlanReviewUseCase(createStructuredHeadlessPlanReviewRepository(platform, async () => current), Date.now);
     async function propose(steps: unknown[], client = registeredClientId) {
@@ -255,6 +268,60 @@ test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual
       {...metadata.value.reference, contextId: randomUUID()}]) {
       assert.equal((await rebuild.execute({...rebuildRequest, input: {...rebuildRequest.input, reference: changed}}, rebuildAuthority)).ok, false);
     }
+    const rebuildStep = {operation: kind === "rag" ? "context.generate-rag" : "context.generate-pack",
+      idempotencyKey: randomUUID(), name: "Rebuilt context", rebuildOf: metadata.value.reference,
+      sources: rebuilt.value.preview.sources.map(source => source.reference), settings: rebuilt.value.preview.settings};
+    const beforeRebuildResolutions = resolutions;
+    for (const changed of [{...rebuildStep, rebuildOf: {...metadata.value.reference, contextId: randomUUID()}},
+      {...rebuildStep, rebuildOf: {...metadata.value.reference, taskId: randomUUID()}},
+      {...rebuildStep, rebuildOf: {...metadata.value.reference, artifactDigest: "sha256:" + "f".repeat(64)}},
+      {...rebuildStep, settings: {...rebuildStep.settings, chunkCharacters: 600}},
+      {...rebuildStep, sources: [{kind: "ingestion-file", taskId: "source.task", fileId: "source.file", taskRevision: 2}]}])
+      assert.equal((await propose([changed])).result.ok, false, "A rebuild cannot replace the exact original input definition.");
+    assert.equal(resolutions, beforeRebuildResolutions, "Invalid parent metadata must deny before a runtime owner is resolved.");
+    const regenerate = await propose([rebuildStep]); assert.ok(regenerate.result.ok, JSON.stringify(regenerate.result));
+    assert.equal((await run(regenerate.fingerprint)).result.ok, false, "A saved parent and revoked old approval do not approve a new task.");
+    assert.equal(starts, 1); assert.equal(resolutions, beforeRebuildResolutions);
+    await approve(regenerate.fingerprint);
+    const restarted = await run(regenerate.fingerprint); assert.ok(restarted.result.ok, JSON.stringify(restarted.result));
+    assert.equal(starts, 2); assert.equal(writes, 1);
+    const rebuiltTask = (restarted.result.value.reference as {taskId: string}).taskId;
+    assert.notEqual(rebuiltTask, taskId);
+    const exactReplay = await run(regenerate.fingerprint); assert.ok(exactReplay.result.ok);
+    assert.deepEqual(exactReplay.result.value, {...restarted.result.value, kind: "replayed"});
+    assert.equal(starts, 2); assert.equal(resolutions, beforeRebuildResolutions + 1);
+    const newReview = await core.readAdmittedContextTask(rebuiltTask, context); assert.ok(newReview?.review);
+    const newSave = await propose([{operation: "context.save-result", idempotencyKey: randomUUID(), taskId: rebuiltTask,
+      reportFingerprint: newReview.review.reportFingerprint, name: "Rebuilt context"}]); assert.ok(newSave.result.ok);
+    await approve(newSave.fingerprint);
+    const savedRebuild = await run(newSave.fingerprint); assert.ok(savedRebuild.result.ok, JSON.stringify(savedRebuild.result));
+    const rebuiltReference = savedRebuild.result.value.reference;
+    assert.ok("contextId" in rebuiltReference); assert.notEqual(rebuiltReference.contextId, reference.contextId);
+    assert.equal(writes, 2);
+    parentKey = `${workspaceId}/${reference.contextId}`;
+    await platform.runInOwnedTransaction!(async tx => {
+      const partition = tx.forOrganization(organizationId);
+      const withoutAncestor: StructuredDocumentStore = {...partition, async readDocument(namespace, key) {
+        assert.ok(namespace !== "headless/context/saved-contexts" || key !== parentKey,
+          "Reading a rebuilt artifact's own definition must not require its ancestor's point index.");
+        return partition.readDocument(namespace, key);
+      }};
+      const ownDefinition = await compileRecordedHeadlessContextInputs(withoutAncestor, directory,
+        {...rebuildRequest, input: {...rebuildRequest.input, reference: rebuiltReference}}, context, async () => current);
+      assert.ok(ownDefinition); assert.equal(ownDefinition.prepared.preview.name, "Rebuilt context");
+    }, () => {});
+    const lateParent = await propose([{...rebuildStep, idempotencyKey: randomUUID(), name: "Late parent check"}]);
+    assert.ok(lateParent.result.ok); await approve(lateParent.fingerprint);
+    hideParentAtStaging = true;
+    const deniedLate = await run(lateParent.fingerprint);
+    assert.equal(deniedLate.result.ok, false, "A missing parent after staging cannot issue under the earlier preview.");
+    assert.ok(hiddenParent, "The fault must run between input admission and final issue.");
+    assert.equal(starts, 2); assert.equal(writes, 2);
+    await documents.writeDocument("headless/context/saved-contexts", hiddenParent.key, hiddenParent.value, {expectedRevision: 0});
+    hiddenParent = undefined;
+    assert.equal((await run(lateParent.fingerprint)).result.ok, false, "A denied admitted attempt must not become a fresh dispatch after restoration.");
+    assert.equal(starts, 2);
+    assert.deepEqual(await readFile(join(directory, `workspaces/${workspaceId}/artifacts/context/${reference.contextId.replace(/-/g, "")}`)), resultBytes);
     const priorSource = await sources.readTask(workspaceId, "source.task" as never);
     assert.ok(priorSource);
     await assert.rejects(sources.saveTask({...priorSource, revision: priorSource.revision + 1}, priorSource.revision), /immutable/);
@@ -263,10 +330,10 @@ test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual
     await documents.writeDocument(INGESTION_TASK_NAMESPACE, `${workspaceId}/${priorSource.taskId}`,
       {...priorSource, revision: priorSource.revision + 1}, {expectedRevision: priorSource.revision});
     assert.equal((await viaHost()).ok, false, "A later source revision cannot silently replace the recorded input.");
-    assert.equal(starts, 1); assert.equal(writes, 1); assert.equal(peeks, before);
+    assert.equal(starts, 2); assert.equal(writes, 2);
     ownerAvailable = false;
     const replay = await run(save.fingerprint); assert.ok(replay.result.ok, JSON.stringify(replay.result));
-    assert.deepEqual(replay.result.value, {...saved.result.value, kind: "replayed"}); assert.equal(writes, 1); assert.equal(starts, 1);
+    assert.deepEqual(replay.result.value, {...saved.result.value, kind: "replayed"}); assert.equal(writes, 2); assert.equal(starts, 2);
     assert.equal(await replay.publishIfCurrent?.(() => true), true);
     current = false;
     assert.equal((await run(save.fingerprint)).result.ok, false);
@@ -274,7 +341,7 @@ test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual
     current = true;
     await repositories.memberships.saveMembership({...membership, status: "removed"});
     assert.equal(await replay.publishIfCurrent?.(() => true), false); assert.equal((await run(save.fingerprint)).result.ok, false);
-    assert.equal(writes, 1); assert.equal(starts, 1);
+    assert.equal(writes, 2); assert.equal(starts, 2);
   } finally {
     await reconciler.settleAfterRuntimeStop(["python"]); await db.close();
     if (originalTemp === undefined) delete process.env.TEMP; else process.env.TEMP = originalTemp;

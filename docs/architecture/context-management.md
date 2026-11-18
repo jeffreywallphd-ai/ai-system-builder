@@ -22,7 +22,27 @@ bounded public source references/settings and the saved reference, never private
 actor/client/plan fields, storage keys, bytes or model paths. Current artifact and
 model read authority and outward liveness are required in both hosts. Historic
 approval is data, not new execution permission. Archive bytes and physical runtime
-readiness remain not checked; approved rebuild issuance is separate work.
+readiness remain not checked. Rebuild execution requires the separate version-9
+approval described below.
+
+### Approved Headless rebuilds
+
+The existing generation requests accept an optional exact `rebuildOf` reference.
+Version 9 identifies that parent in the approval; ordinary versions 1 through 8
+retain their fingerprints. Both approval channels/modes show the original sources,
+settings and existing generation limits. A separately approved step creates a new
+task and review-required result. It overwrites no parent and grants no save,
+query, installation or presentation authority.
+
+`compileRecordedHeadlessContextInputs` reuses the indexed saved-result, accepted
+task and producing definition checks inside the caller-owned metadata transaction.
+The normal generation compiler compares exact sources/settings and full original
+model identity before resolving the runtime owner, at reservation and at atomic
+issue after staging. The full mutation input binds the parent while the existing
+source-digest algorithm stays unchanged. Later passive reads of a rebuilt result
+validate its own producing request and do not recursively depend on an ancestor's
+point index. Actual retrieval/resource, native, real-host and parent qualification
+remain separate from the synthetic Core and SDK fixtures.
 
 Context Management turns explicitly selected workspace artifacts and bounded
 manual entries into portable context artifacts. It does not introduce a second

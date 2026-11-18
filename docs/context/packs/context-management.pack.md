@@ -45,11 +45,11 @@
   supports source-only rebuild and registered-artifact deletion, and runs RAG
   test queries without returning vectors.
 - Source inspection returns typed `textFields`; document sources use an empty array.
-- `context.preview-rebuild` verifies indexed recorded inputs; it grants no rebuild or old task authority and checks no bytes/runtime.
+- `context.preview-rebuild` is passive. A new v9 generation approval binds `rebuildOf`, exact recorded inputs and a new review-required result; it overwrites no parent.
 - Inspection/query inputs use a private hashed byte snapshot and the existing
   host task lease. Exact terminal status or successful owned worker stop permits
   cleanup; uncertain replies/cancellation and cleanup failures retain ownership.
-  Ordinary preparation remains; headless query/rebuild admission is separate.
+  Ordinary preparation remains; queries and physical/native qualification are separate from approved installed-only rebuilds.
 - Saved RAG validation scans every vector in bounded 256-row Arrow batches,
   retains metadata only and checks cancellation throughout. Exact query ranking,
   citations, package limits and private materialization cleanup remain required;

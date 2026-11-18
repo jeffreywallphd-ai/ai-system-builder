@@ -161,3 +161,44 @@ test("RAG receipts expose only accepted task identity under their own capability
     {reference: {...value.reference, workspaceId: "foreign"}}, {reference: {...value.reference, artifactId: "not-saved"}}])
     assert.equal(readHeadlessPlanStepResult({ok: true, value: {...value, ...patch}}, exact, ragCapabilities).ok, false);
 });
+
+test("saved-parent rebuilds bind a distinct v9 preview in both approval channels without changing earlier previews", () => {
+  for (const kind of ["markdown-context-pack", "rag-database"] as const) {
+    const base = kind === "rag-database" ? ragWire : wire;
+    const parent = {workspaceId: input.workspaceId, contextId: randomUUID(), taskId: randomUUID(), kind,
+      artifactDigest: "sha256:" + "e".repeat(64)};
+    const request = {...base, input: {...base.input, rebuildOf: parent}};
+    const decoded = readHeadlessContextGenerationPlanRequest(request, host); assert.ok(decoded.ok);
+    assert.deepEqual(decoded.request, request); assert.notEqual(decoded.request.input.rebuildOf, parent);
+    const {hostIncarnationId: _h, workspaceId: _w, ...step} = request.input;
+    const built = parseHeadlessBuildPlanProposal({...proposal, steps: [{operation: base.operation, ...step}]}, host, ragCapabilities);
+    assert.ok(built.ok); assert.equal(built.preview.version, "aisb-build-plan-preview-v9");
+    assert.ok("rebuildOf" in built.preview.steps[0].input);
+    assert.deepEqual(built.preview.steps[0].input.rebuildOf, parent);
+    const selection = {workspaceId: input.workspaceId, fingerprint: "e".repeat(64), registeredClientId: randomUUID()};
+    const value = {selection, viewId: randomUUID(), preview: built.preview, state: {fingerprint: selection.fingerprint,
+      revision: 1, stepCount: 1, approvedSteps: 0, expiresAt: Date.now() + 60000, status: "pending"}};
+    const open = {operation: "open" as const, selection, document: {hostIncarnationId: host, workspaceId: input.workspaceId,
+      windowId: randomUUID(), uiIncarnationId: randomUUID()}};
+    assert.deepEqual(readDesktopPlanApprovalView(value, selection, ragCapabilities), value);
+    assert.deepEqual(readManagedBrowserPlanApprovalValue(open, value, ragCapabilities), value);
+    for (const version of ["aisb-build-plan-preview-v6", "aisb-build-plan-preview-v7", "aisb-build-plan-preview-v8"]) {
+      const old = {...value, preview: {...value.preview, version}};
+      assert.equal(readDesktopPlanApprovalView(old, selection, ragCapabilities), undefined);
+      assert.equal(readManagedBrowserPlanApprovalValue(open, old, ragCapabilities), undefined);
+    }
+    for (const changed of [{...parent, workspaceId: "workspace.foreign"}, {...parent, kind: kind === "rag-database" ? "markdown-context-pack" : "rag-database"},
+      {...parent, artifactDigest: "bad"}, {...parent, path: "private/archive"}, undefined, null])
+      assert.equal(readHeadlessContextGenerationPlanRequest({...request, input: {...request.input, rebuildOf: changed}}, host).ok, false);
+    const ordinary = parseHeadlessBuildPlanProposal({...proposal, steps: [{operation: base.operation, ...step, rebuildOf: undefined}]}, host, ragCapabilities);
+    assert.equal(ordinary.ok, false);
+    let reads = 0; const accessor = {...parent};
+    Object.defineProperty(accessor, "taskId", {enumerable: true, get() {reads++; return parent.taskId;}});
+    assert.equal(readHeadlessContextGenerationPlanRequest({...request, input: {...request.input, rebuildOf: accessor}}, host).ok, false);
+    assert.equal(reads, 0);
+  }
+  const pack = parseHeadlessBuildPlanProposal(proposal, host, ragCapabilities); assert.ok(pack.ok);
+  assert.equal(pack.preview.version, "aisb-build-plan-preview-v6");
+  const rag = parseHeadlessBuildPlanProposal(ragProposal, host, ragCapabilities); assert.ok(rag.ok);
+  assert.equal(rag.preview.version, "aisb-build-plan-preview-v7");
+});

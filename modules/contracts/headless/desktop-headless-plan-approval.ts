@@ -133,7 +133,7 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
           externalProviderCalls !== (providerFile ? "required" : 0))
         throw new Error("Invalid approval effects.");
       const fields = readStrictPassiveRecord(input, contextSave ? ["idempotencyKey", "taskId", "reportFingerprint", "name"] :
-        contextGeneration ? ["idempotencyKey", "name", "sources", "settings"] :
+        contextGeneration ? ["idempotencyKey", "name", "sources", "settings", "rebuildOf"] :
         dataset ? ["idempotencyKey", "sources", "recipe", "split", "qualityPreset"] :
         resultSave ? ["idempotencyKey", "taskId", "reportFingerprint", "outputBaseName"] :
         savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :

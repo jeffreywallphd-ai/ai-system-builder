@@ -99,9 +99,15 @@ test("portable Context guidance and discovery separate metadata from execution a
     "headless.operation-unconfirmed", "Do not start again with a new key"])
     assert.ok(guide.includes(text), `Missing Context non-start versus uncertainty guidance: ${text}`);
   for (const text of ["aisb_preview_context_rebuild", "exact saved Context `reference`", "Current",
-    "same model ID and timestamp", "revoked old build approval", "metadata only", "parent-bound rebuild execution",
+    "same model ID and timestamp", "revoked old build approval", "metadata only", "Do not report this preview",
     "does not adopt the old", "not-checked"])
     assert.ok(guide.includes(text), `Missing passive rebuild lineage or scope boundary: ${text}`);
+  const normalized = guide.replace(/\s+/g, " ");
+  for (const text of ["Rebuild with new approval", "`rebuildOf`", "`aisb_preview_build_plan` returns version 9",
+    "exact saved reference", "earlier approval and the passive recorded preview grant no permission",
+    "at final issue after staging", "request a separate exact save approval", "saved parent stays unchanged",
+    "do not start another attempt", "does not adopt an ancestor's task or require that ancestor's point index"])
+    assert.ok(normalized.includes(text), `Missing separately approved recorded rebuild boundary: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

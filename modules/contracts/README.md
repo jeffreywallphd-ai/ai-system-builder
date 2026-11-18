@@ -5,6 +5,12 @@ returns only verified recorded source/settings metadata. Strict codecs retain
 new-approval and not-checked readiness facts and reject private/unknown fields.
 It grants no old task control or rebuild execution.
 
+An optional strict `rebuildOf` on Context generation creates a version-9 plan
+preview with exact saved-parent identity. Both approval codecs bind it and reject
+older preview versions carrying that field. Existing versions 1 through 8 retain
+their projections. The reference grants no old task or parent mutation authority;
+the host still verifies current original inputs and a new approval before effects.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 This module contains shared boundary contracts used across application, hosts,

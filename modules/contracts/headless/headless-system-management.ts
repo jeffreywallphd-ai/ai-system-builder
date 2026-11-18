@@ -75,9 +75,10 @@ const DATASET_RESULT_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v5";
 const CONTEXT_PACK_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v6";
 const CONTEXT_RAG_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v7";
 const CONTEXT_RESULT_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v8";
+const CONTEXT_REBUILD_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v9";
 const proposalFields = ["operation", "idempotencyKey", "name", "templateId", "systemId",
   "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision", "sources", "recipe", "split", "qualityPreset",
-  "reportFingerprint", "outputBaseName", "settings"];
+  "reportFingerprint", "outputBaseName", "settings", "rebuildOf"];
 
 /** A decoded request carries data only. The running host supplies and checks identity. */
 export function parseHeadlessSystemManagementRequest(value: unknown, host: HeadlessHostIncarnationId):
@@ -206,7 +207,8 @@ type MixedPreview = PlanPreview<typeof LOCAL_FILE_PLAN_PREVIEW_VERSION, SystemSt
   PlanPreview<typeof DATASET_RESULT_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep> |
   PlanPreview<typeof CONTEXT_PACK_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep | ContextPackStep> |
   PlanPreview<typeof CONTEXT_RAG_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep | ContextPackStep | ContextRagStep> |
-  PlanPreview<typeof CONTEXT_RESULT_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep>>;
+  PlanPreview<typeof CONTEXT_RESULT_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep>> |
+  PlanPreview<typeof CONTEXT_REBUILD_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep>>;
 type PlanSuccess<Request, Preview> = { readonly ok: true; readonly scope: PlanScope; readonly requests: readonly Request[];
   readonly preview: Preview };
 type PlanFailure = typeof invalid | { readonly ok: false; readonly code: "headless.host-changed" };
@@ -287,6 +289,9 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       allRequests.push(request);
     }
     const previewScope = { ...scope, approval: "required" as const };
+    if (allRequests.some(request => (request.operation === "context.generate-pack" || request.operation === "context.generate-rag") && request.input.rebuildOf))
+      return {ok: true, scope, requests: allRequests, preview: {version: CONTEXT_REBUILD_PLAN_PREVIEW_VERSION,
+        ...previewScope, steps: allRequests.map(projectBuildPlanStep)}};
     if (savedContexts.size) return {ok: true, scope, requests: allRequests, preview: {version: CONTEXT_RESULT_PLAN_PREVIEW_VERSION,
       ...previewScope, steps: allRequests.map(projectBuildPlanStep)}};
     const requests = allRequests.filter((request): request is PreContextResultBuildPlanRequest => request.operation !== "context.save-result");

@@ -324,5 +324,25 @@ Historical approval, including a revoked approval, is lineage only. It cannot
 authorize another effect or adopt the old task. No record schema, retention,
 engine, provider or native policy changes. Both hosts and finite MCP modes return
 only public references/settings with bytes/runtime not checked. Parent-bound
-rebuild issuance, query, presentation and physical/parent qualification remain
-separate work.
+rebuild issuance requires the separate current approval below. Query, presentation
+and physical/parent qualification remain separate work.
+
+### Separately approved recorded Context rebuilds
+
+The same generation effects accept an optional exact `rebuildOf` saved reference.
+Preview version 9 binds that reference and the original normalized source/settings
+definition; versions 1 through 8 retain their shapes and fingerprints. The effect
+still creates a new task/result through the existing installed-only Context owner.
+It overwrites no parent and requires new approval, result review and separate save.
+No new execution owner, engine, retention, recovery or provider policy is selected.
+
+Metadata compilation verifies the parent's indexed committed origin and producing
+accepted definition under current workspace/artifact/model authority. The same
+compiler runs before lazy-owner resolution, at reservation and at final issue
+after staging. Source/settings and full model identity cannot be substituted.
+The full mutation input and plan fingerprint bind the parent; the established
+source-digest algorithm is unchanged. A producing rebuild's own saved definition
+can later be read without recursively adopting an ancestor or requiring its index.
+Both approval channels disclose parent identity and the unchanged generation limits.
+Focused synthetic Core/host and SDK tests are not physical retrieval/resource,
+native, real-app or parent qualification. Queries and display remain pending.

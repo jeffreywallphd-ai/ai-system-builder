@@ -267,7 +267,13 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
           <div>Context task: {step.input.taskId}</div>
           <div>Reviewed result: {step.input.reportFingerprint}</div>
         </> : step.operation === "context.generate-pack" || step.operation === "context.generate-rag" ? <>
-          <strong>{step.operation === "context.generate-rag" ? "Build RAG database" : "Prepare Context pack"}: {step.input.name}</strong>
+          <strong>{step.input.rebuildOf ? step.operation === "context.generate-rag" ? "Rebuild RAG database" : "Rebuild Context pack"
+            : step.operation === "context.generate-rag" ? "Build RAG database" : "Prepare Context pack"}: {step.input.name}</strong>
+          {step.input.rebuildOf ? <>
+            <div>Saved Context: {step.input.rebuildOf.contextId}. Original task: {step.input.rebuildOf.taskId}.</div>
+            <div>Saved artifact digest: {step.input.rebuildOf.artifactDigest}.</div>
+            <div>Create a new result with the original sources and settings. Keep the saved Context unchanged.</div>
+          </> : null}
           <ul>{step.input.sources.map(source => <li key={JSON.stringify(source)}>
             {source.kind === "ingestion-file" ? <>
               File reference {source.fileId}. Upload {source.taskId}, version {source.taskRevision}.

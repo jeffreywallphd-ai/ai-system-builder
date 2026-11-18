@@ -1,4 +1,5 @@
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
+import {isDeepStrictEqual} from "node:util";
 import type {prepareStructuredHeadlessPlanStep} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan}
   from "../../../adapters/persistence/system-builder/createStructuredHeadlessContextPlanTaskStore";
@@ -10,6 +11,7 @@ import {readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type Headless
   from "../../../contracts/headless";
 import type {ContextPlanModelBinding} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {composeHeadlessContextPreview} from "./headlessContextPreview";
+import {compileRecordedHeadlessContextInputs} from "./headlessContextRebuild";
 
 type PreparedContextStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, {kind: "context-pack"}>;
 export type StartHeadlessContext = ContextGenerationUseCase["startAdmittedContext"];
@@ -17,12 +19,22 @@ export type StartHeadlessContext = ContextGenerationUseCase["startAdmittedContex
 /** Saved metadata only. The transaction performs no runtime, source-byte or provider operation. */
 export async function compileHeadlessContextPlanInputs(rootDirectory: string, documents: StructuredDocumentStore,
   request: HeadlessContextGenerationPlanRequest, context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) {
-  const {idempotencyKey: _key, ...input} = request.input;
+  const {idempotencyKey: _key, rebuildOf, ...input} = request.input;
+  const original = rebuildOf ? await compileRecordedHeadlessContextInputs(documents, rootDirectory, {version: request.version,
+    operation: "context.preview-rebuild", input: {hostIncarnationId: input.hostIncarnationId,
+      workspaceId: input.workspaceId, reference: rebuildOf}}, context, stillAllowed) : undefined;
+  if (rebuildOf && (!original || !await stillAllowed() ||
+      !isDeepStrictEqual(input.sources, original.prepared.preview.sources.map(source => source.reference)) ||
+      !isDeepStrictEqual(input.settings, original.prepared.preview.settings)))
+    return {ok: false, code: "headless.source-not-ready"} as const;
   const compiled = await composeHeadlessContextPreview(documents, rootDirectory).execute({version: request.version,
     operation: "context.preview-generation", input}, {hostIncarnationId: input.hostIncarnationId, context, stillAllowed});
   if (compiled.ok && compiled.operation === "context.preview-generation") {
     const expected = request.operation === "context.generate-rag" ? "rag-database" : "markdown-context-pack";
     if (compiled.prepared.command.kind !== expected || (expected === "rag-database" && !compiled.prepared.embeddingModel))
+      return {ok: false, code: "headless.source-not-ready"} as const;
+    if (original && (!isDeepStrictEqual(compiled.prepared.admissionSources, original.prepared.admissionSources) ||
+        !isDeepStrictEqual(compiled.prepared.embeddingModel, original.prepared.embeddingModel)))
       return {ok: false, code: "headless.source-not-ready"} as const;
   }
   return compiled;

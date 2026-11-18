@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import {isDeepStrictEqual} from "node:util";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
@@ -200,6 +201,9 @@ function addSystemBuilderTools(server: McpServer) {
     modelUpdatedAt: z.string().refine(headless.isHeadlessContextTimestamp), batchSize: z.number().int().min(1).max(32), device: z.enum(["cpu", "cuda"]),
     sourceChecks: z.strictObject({preset: z.enum(["recommended", "strict"]), allowedLanguages: z.array(z.string().min(2).max(16)).min(1).max(16),
       requireLicenseMetadata: z.boolean(), requireConsentMetadata: z.boolean(), includeSourceAttribution: z.boolean()})});
+  const savedContextReference = z.strictObject({workspaceId: z.string().min(1).max(128),
+    contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
+    artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)});
   if (enablePlanReview) {
     const contextSettings = z.discriminatedUnion("kind", [
       contextPackSettings,
@@ -233,9 +237,7 @@ function addSystemBuilderTools(server: McpServer) {
     });
     server.registerTool("aisb_preview_context_rebuild", {
       description: "Preview the original recorded sources, settings and model for one exact saved Context reference. Revalidates current workspace/artifact/model permission and recorded source/model identity. Reads no artifact bytes, paths, source text or embeddings and starts no model/runtime. Missing or changed lineage is unavailable. This metadata does not approve rebuilding, adopt the old task or verify physical readiness.",
-      inputSchema: z.strictObject({...workspaceTarget, reference: z.strictObject({workspaceId: z.string().min(1).max(128),
-        contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
-        artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)})}), annotations: queryHints,
+      inputSchema: z.strictObject({...workspaceTarget, reference: savedContextReference}), annotations: queryHints,
     }, (input, context) => {
       const parsed = headless.readHeadlessContextRebuildRequest({version, operation: "context.preview-rebuild", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
@@ -296,9 +298,11 @@ function addSystemBuilderTools(server: McpServer) {
     z.strictObject({operation: z.literal("context.save-result"), idempotencyKey, taskId: z.string().uuid(),
       reportFingerprint: z.string().regex(/^[a-f0-9]{64}$/), name: z.string().min(1).max(120)}),
     z.strictObject({operation: z.literal("context.generate-rag"), idempotencyKey, name: z.string().min(1).max(120),
-      sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextRagSettings}),
+      sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextRagSettings,
+      rebuildOf: savedContextReference.optional()}),
     z.strictObject({operation: z.literal("context.generate-pack"), idempotencyKey, name: z.string().min(1).max(120),
-      sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextPackSettings}),
+      sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextPackSettings,
+      rebuildOf: savedContextReference.optional()}),
     z.strictObject({ operation: z.literal("systems.create"), ...create }),
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
     z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
@@ -320,7 +324,7 @@ function addSystemBuilderTools(server: McpServer) {
   });
   server.registerTool("aisb_preview_build_plan", {
     description: allowLocalFileSave
-      ? "Check proposed system changes, selected file saves, provided-row dataset preparation, reviewed dataset saves, Context generation and separately reviewed Context saves. Sources must already be saved. RAG generation requires an approved installed embedding model; deterministic packs and result saves call no model. The preview identifies exact permissions and limits. Execution requires separate approval."
+      ? "Check proposed system changes, selected file saves, provided-row dataset preparation, reviewed dataset saves, Context generation/rebuild and separately reviewed Context saves. Sources must already be saved. A rebuildOf reference binds the original saved Context sources/settings/model and needs new approval; it replaces no saved artifact. RAG requires an approved installed embedding model. The preview identifies exact permissions and limits. Execution requires separate approval."
       : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
@@ -347,7 +351,16 @@ function addSystemBuilderTools(server: McpServer) {
         continue;
       }
       if (request.operation === "context.generate-pack" || request.operation === "context.generate-rag") {
-        const {idempotencyKey: _key, ...selected} = request.input;
+        const {idempotencyKey: _key, rebuildOf, ...selected} = request.input;
+        if (rebuildOf) {
+          const target = {hostIncarnationId: selected.hostIncarnationId, workspaceId: selected.workspaceId, reference: rebuildOf};
+          const prior = await forward?.({version, operation: "context.preview-rebuild", input: target}, signal);
+          if (!prior?.ok) return toolResult(prior ?? unavailable);
+          const recorded = "operation" in prior && prior.operation === "context.preview-rebuild"
+            ? headless.readHeadlessContextRebuildValue(prior.value, target) : undefined;
+          if (!recorded || !isDeepStrictEqual(selected.sources, recorded.preview.sources.map(source => source.reference)) ||
+              !isDeepStrictEqual(selected.settings, recorded.preview.settings)) return toolResult(unavailable);
+        }
         const preview = await forward?.({version, operation: "context.preview-generation", input: selected}, signal);
         if (!preview?.ok) return toolResult(preview ?? unavailable);
         if (!("operation" in preview) || preview.operation !== "context.preview-generation" ||

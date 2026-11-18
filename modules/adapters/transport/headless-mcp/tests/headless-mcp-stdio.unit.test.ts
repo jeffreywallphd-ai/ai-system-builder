@@ -382,7 +382,19 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     const contextRebuildQuery = {...planBase, reference: contextSavedValue.reference};
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_rebuild", arguments: contextRebuildQuery})),
       {ok: true, operation: "context.preview-rebuild", value: contextRebuildValue});
+    const rebuildStep = {operation: "context.generate-pack", idempotencyKey: randomUUID(), name: "Rebuilt context",
+      rebuildOf: contextSavedValue.reference, sources: contextRebuildValue.preview.sources.map(source => source.reference), settings: contextSettings};
+    const rebuildPlan = checkedPlan(resultText(await planner.callTool({name: "aisb_preview_build_plan",
+      arguments: {...planBase, steps: [rebuildStep]}})));
+    assert.equal(rebuildPlan.plan.version, "aisb-build-plan-preview-v9");
+    assert.deepEqual(rebuildPlan.plan.steps[0].input.rebuildOf, contextSavedValue.reference);
+    for (const changed of [{...rebuildStep, settings: {...contextSettings, chunkCharacters: 600}},
+      {...rebuildStep, rebuildOf: {...contextSavedValue.reference, contextId: randomUUID()}}])
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_build_plan",
+        arguments: {...planBase, steps: [changed]}})), {ok: false, code: "headless.unavailable"});
     invalidStatusReply = true;
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_build_plan",
+      arguments: {...planBase, steps: [rebuildStep]}})), {ok: false, code: "headless.unavailable"});
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_rebuild", arguments: contextRebuildQuery})),
       {ok: false, code: "headless.unavailable"});
     invalidStatusReply = false;
@@ -669,7 +681,18 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     const contextRebuildQuery = {hostIncarnationId, workspaceId, reference: contextSavedValue.reference};
     assert.deepEqual(await call("aisb_preview_context_rebuild", contextRebuildQuery),
       {ok: true, operation: "context.preview-rebuild", value: contextRebuildValue});
+    const rebuildStep = {operation: "context.generate-pack", idempotencyKey: randomUUID(), name: "Rebuilt context",
+      rebuildOf: contextSavedValue.reference, sources: contextRebuildValue.preview.sources.map(source => source.reference), settings: contextSettings};
+    const rebuildPlan = checkedPlan(await call("aisb_preview_build_plan", {hostIncarnationId, workspaceId, steps: [rebuildStep]}));
+    assert.equal(rebuildPlan.plan.version, "aisb-build-plan-preview-v9");
+    assert.deepEqual(rebuildPlan.plan.steps[0].input.rebuildOf, contextSavedValue.reference);
+    for (const changed of [{...rebuildStep, settings: {...contextSettings, chunkCharacters: 600}},
+      {...rebuildStep, rebuildOf: {...contextSavedValue.reference, contextId: randomUUID()}}])
+      assert.deepEqual(await call("aisb_preview_build_plan", {hostIncarnationId, workspaceId, steps: [changed]}),
+        {ok: false, code: "headless.unavailable"});
     statusExtra = true;
+    assert.deepEqual(await call("aisb_preview_build_plan", {hostIncarnationId, workspaceId, steps: [rebuildStep]}),
+      {ok: false, code: "headless.unavailable"});
     assert.deepEqual(await call("aisb_preview_context_rebuild", contextRebuildQuery), {ok: false, code: "headless.unavailable"});
     statusExtra = false; wrongStatusTask = true;
     assert.deepEqual(await call("aisb_preview_context_rebuild", contextRebuildQuery), {ok: false, code: "headless.unavailable"});

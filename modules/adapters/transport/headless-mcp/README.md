@@ -240,5 +240,14 @@ witness before returning bounded metadata. Historical approval grants no new
 permission. Changed source or model facts are not silently substituted.
 This read opens no archive or runtime. Byte availability and runtime readiness
 remain not checked. It starts no rebuild and grants no query or window control.
-Approved rebuild execution, queries, result display and physical retrieval
-qualification remain separate work.
+Queries, result display and physical retrieval qualification remain separate work.
+
+To rebuild, include that exact reference as `rebuildOf` in a new
+`context.generate-pack` or `context.generate-rag` plan step. Keep the original
+sources and settings; choose the new result's name explicitly. Preview version 9
+identifies the parent, and both approval channels require a new approval. The
+host rechecks the parent and original source/model facts before runtime-owner
+resolution and again at final issue after staging. It uses the existing
+installed-only generation owner and accepted-task receipts. Review and separately
+approve saving the new result. The saved parent is not replaced. A preview,
+old approval or uncertain reply cannot start another attempt.

@@ -5,6 +5,13 @@ actor/client/workspace/resource authority surrounds the indexed metadata lookup
 and its strict result. An old approval supplies lineage only, never permission.
 It cannot load the generation owner, read bytes or start a rebuild/model/runtime.
 
+The public hosts separately compile a version-9 approved rebuild through the
+same `startAdmittedContext` owner. Its `rebuildOf` parent and exact original
+source/settings/model are checked before runtime resolution and at final issue
+after staging. It creates a new review-required task/result, with exact accepted
+replay and separate save authority. Ordinary generation remains unchanged; this
+connection supplies no query, display or physical retrieval qualification.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 This area owns the workspace-scoped lifecycle for generating RAG databases and

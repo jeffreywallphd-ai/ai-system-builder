@@ -4,7 +4,12 @@
 It requires current artifact/model permission and verifies immutable recorded
 inputs through the platform owner. It never initializes the Context execution
 owner or turns historical approval into a new grant. Physical readiness remains
-not checked; approved rebuild execution is separate work.
+not checked. A new version-9 generation approval can separately bind `rebuildOf`.
+The shared compiler verifies exact current parent/source/settings/model facts
+before lazy owner resolution and at final issue after staging. It uses the same
+installed-only owner and accepted-task receipts, creates a new review-required
+result and overwrites no parent. Query, display and physical qualification remain
+separate. Original generation and save previews retain their fingerprints.
 
 The Context artifact adapter shares the host's existing Python task reconciler
 with generation. Fresh inspection/query inputs remain owned through uncertain

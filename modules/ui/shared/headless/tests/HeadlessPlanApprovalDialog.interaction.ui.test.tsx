@@ -13,7 +13,9 @@ import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalVa
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient } from "../HeadlessPlanApprovalDialog";
 
-for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context", "context-save", "mixed-save"]) test(variant === "context-save" || variant === "mixed-save"
+for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context", "context-save", "mixed-save", "context-rebuild", "rag-rebuild"]) test(variant.endsWith("rebuild")
+  ? `${variant} approval in both channels and modes identifies the saved parent and a new separately reviewed result`
+  : variant === "context-save" || variant === "mixed-save"
   ? `${variant} approval in both channels and modes discloses separate reviewed Context saving permissions`
   : variant === "mixed-context"
   ? "mixed RAG and pack plans scope model permissions to their own actions in both channels and modes"
@@ -30,7 +32,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   : "both app channels identify the exact file save and approve through the same scoped view", async () => {
   const mixed = variant === "mixed-context" || variant === "mixed-save";
   const contextSave = variant === "context-save" || variant === "mixed-save";
-  const provider = variant === "provider", dataset = variant === "dataset", result = variant === "result", context = variant === "context" || mixed, rag = variant === "rag" || mixed;
+  const rebuild = variant.endsWith("rebuild");
+  const provider = variant === "provider", dataset = variant === "dataset", result = variant === "result", context = variant === "context" || variant === "context-rebuild" || mixed, rag = variant === "rag" || variant === "rag-rebuild" || mixed;
   const hostIncarnationId = "d52c0a60-3384-48ce-80e4-6102898ad428";
   assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
   const workspaceId = createWorkspaceId("workspace.synthetic");
@@ -52,6 +55,9 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
       : {operation: provider ? "data.save-provider-source" : "data.save-local-source", taskId: "ingestion.synthetic", fileId: "file.synthetic", taskRevision: 4}),
     idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086da",
   }];
+  if (rebuild) steps[0].rebuildOf = {workspaceId, contextId: "4de870ce-e5e0-4e48-99c8-bc77026d64d8",
+    taskId: "e5e875d7-55db-42e8-93ad-e58fd33bc317", kind: rag ? "rag-database" : "markdown-context-pack",
+    artifactDigest: "sha256:" + "f".repeat(64)};
   if (mixed) steps.push({operation: "context.generate-pack", name: "Support reference", sources: steps[0].sources,
     idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086db", settings: {kind: "markdown-context-pack", cleaningPreset: "strict",
       chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["question", "answer"]}});
@@ -104,8 +110,14 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
         const changes = dom.window.document.querySelector('[aria-label="Requested changes"]');
         const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]');
         assert.match(permissions?.textContent ?? "", rag ? /Build a RAG database/ : context ? /Prepare a Markdown Context pack/ : contextSave ? /Save only the reviewed Context result/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
-        assert.match(changes?.textContent ?? "", rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : contextSave ? /Save reviewed Context: Reviewed support context/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
+        assert.match(changes?.textContent ?? "", rebuild ? rag ? /Rebuild RAG database: Support reference/ : /Rebuild Context pack: Support reference/ : rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : contextSave ? /Save reviewed Context: Reviewed support context/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
           ? /Save the selected Hugging Face source in Data/ : /Save the selected file in Data/);
+        if (rebuild) {
+          assert.match(changes?.textContent ?? "", /Saved Context: 4de870ce-e5e0-4e48-99c8-bc77026d64d8/);
+          assert.match(changes?.textContent ?? "", /Original task: e5e875d7-55db-42e8-93ad-e58fd33bc317/);
+          assert.match(changes?.textContent ?? "", /Create a new result with the original sources and settings/);
+          assert.match(changes?.textContent ?? "", /Keep the saved Context unchanged/);
+        }
         if (provider) {
           assert.match(permissions?.textContent ?? "", /using your saved provider access/);
           assert.doesNotMatch(permissions?.textContent ?? "", /No outside service calls/);

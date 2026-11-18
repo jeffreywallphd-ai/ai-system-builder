@@ -795,6 +795,19 @@ Durable reserved/issued/accepted records bind the exact organization partition, 
 
 ### Context input metadata
 
+Version-9 Context generation proposals can bind `rebuildOf` to one exact saved
+reference. This is a new approval for the existing generation effect, not old
+task or parent mutation authority. Current artifact/model/source and plan policy
+is checked before lazy owner resolution, at reservation and again at issue after
+staging. Parent and original source/settings/model substitution deny. The parent
+is in the full input and plan fingerprint without changing the established source
+digest. Both approval channels/modes disclose it. Accepted replay performs no new
+dispatch; the new result needs review and separate save. Original previews and
+ordinary Context behavior remain. A rebuilt result's metadata read proves its own
+producing definition without adopting or recursively requiring an ancestor.
+Synthetic Core/host/SDK fixtures do not supply query, display, physical retrieval,
+resource/native, real-app or parent qualification.
+
 `context.preview-rebuild` is available only in plan-review mode with current
 workspace/artifact/model read permission. Its saved Context reference must agree
 with the indexed committed origin. Accepted task indexes bind the original

@@ -6,6 +6,13 @@ platform owner validates the original saved/build/source/model lineage without
 runtime access, historic permission reuse or private-field disclosure. It supplies
 no approved rebuild execution or physical readiness.
 
+A separate version-9 generation approval binds `rebuildOf` to that saved parent.
+The shared partition-owned compiler verifies original inputs/model and current
+permissions before lazy owner resolution, at reservation and at issue after
+staging. The installed-only owner creates a new task/result; exact replay does
+not dispatch again, and saving needs its own review/approval. No parent overwrite,
+historic task adoption, query, display or physical qualification is implied.
+
 Context artifact inspection/query uses the same organization-bound owned-task
 reconciler as generation. Uncertain replies keep fresh inputs until exact terminal
 status or successful owned Python stop; cleanup failure retries without adopting

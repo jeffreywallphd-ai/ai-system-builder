@@ -8,6 +8,27 @@
   `docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md`,
   `docs/architecture/context-management.md`
 
+## Approved saved-parent rebuild boundary
+
+An optional `rebuildOf` reference is strict workspace/kind/UUID/digest data, not
+execution authority. A new version-9 preview and current approval bind it with
+the original normalized sources/settings. Both approval channels disclose the
+parent and new generation effect; versions 1 through 8 retain their fingerprints.
+The existing host authorizer and partition-owned compiler verify current
+artifact/model access, indexed committed origin and accepted producing definition
+before lazy runtime resolution, at reservation and at final issue after staging.
+Missing or changed parent/source/model facts deny without replacement or adoption.
+Historic approval is never reused. The established source digest is unchanged;
+the full input digest and plan fingerprint bind the parent reference.
+
+Rebuilds use the same installed-only Context owner, limits and one-use accepted
+task receipts. They overwrite no parent and need separate result review/save.
+A producing rebuild's later input preview verifies its own indexed definition
+without recursively requiring an ancestor's index. Synthetic two-host tests cover
+new approval, exact replay, substitutions and parent loss after staging. No
+runtime/model installation, raw-content disclosure, native recovery or resource
+qualification follows. Actual query, display and parent qualification remain open.
+
 ## Protected assets
 
 - Workspace-owned source bytes and exact source identity
