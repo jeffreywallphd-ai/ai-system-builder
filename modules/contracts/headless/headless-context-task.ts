@@ -4,6 +4,7 @@ import {CONTEXT_GENERATION_LIMITS} from "../context-management";
 import {HEADLESS_MAX_BUILD_PLAN_STEPS} from "./headless-system-management";
 import {HEADLESS_CONTEXT_MAX_SOURCES} from "./headless-context-preview";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
+import {readHeadlessContextQuerySummary, type HeadlessContextQuerySummary} from "./headless-context-query-plan";
 
 export type HeadlessContextTaskSelection = {readonly kind: "task"; readonly taskId: string} |
   {readonly kind: "plan-step"; readonly fingerprint: string; readonly step: number};
@@ -21,11 +22,19 @@ export interface HeadlessContextTaskReview {
   readonly sizeBytes: number;
   readonly requiresExplicitSave: true;
 }
-export interface HeadlessContextTaskValue {
+export interface HeadlessContextGenerationTaskValue {
   readonly taskId: string;
   readonly state: "queued" | "running" | "review-required" | "saved" | "discarded" | "cancelled" | "failed";
   readonly review: HeadlessContextTaskReview | null;
 }
+export interface HeadlessContextQueryTaskValue {
+  readonly taskId: string;
+  /** In-progress query workflow, including runtime queueing; no worker phase claim. */
+  readonly state: "running" | "succeeded" | "failed" | "unconfirmed";
+  readonly review: null;
+  readonly query: HeadlessContextQuerySummary;
+}
+export type HeadlessContextTaskValue = HeadlessContextGenerationTaskValue | HeadlessContextQueryTaskValue;
 const isDigest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value);
 const bounded = (value: unknown, maximum: number): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= maximum;
 
@@ -53,10 +62,17 @@ export function readHeadlessContextTaskRequest(value: unknown, host: HeadlessHos
 /** Reconstruct only finite metadata. Never forward the owning processor result. */
 export function readHeadlessContextTaskValue(value: unknown, selection: HeadlessContextTaskSelection): HeadlessContextTaskValue | undefined {
   try {
-    const outer = readStrictPassiveRecord(copyBoundedPassiveData(value), ["taskId", "state", "review"]);
+    const outer = readStrictPassiveRecord(copyBoundedPassiveData(value), ["taskId", "state", "review", "query"]);
+    if ("query" in outer) {
+      if (!isHeadlessHostIncarnationId(outer.taskId) || (selection.kind === "task" && outer.taskId !== selection.taskId) ||
+          !["running", "succeeded", "failed", "unconfirmed"].includes(outer.state as string) || outer.review !== null) return;
+      const query = readHeadlessContextQuerySummary(outer.query);
+      if (!query || (outer.state !== "succeeded" && query.matches.length)) return;
+      return {taskId: outer.taskId, state: outer.state as HeadlessContextQueryTaskValue["state"], review: null, query};
+    }
     if (!isHeadlessHostIncarnationId(outer.taskId) || (selection.kind === "task" && outer.taskId !== selection.taskId) ||
         !["queued", "running", "review-required", "saved", "discarded", "cancelled", "failed"].includes(outer.state as string)) return;
-    const task = {taskId: outer.taskId, state: outer.state as HeadlessContextTaskValue["state"]};
+    const task = {taskId: outer.taskId, state: outer.state as HeadlessContextGenerationTaskValue["state"]};
     if (outer.review === null) return task.state === "review-required" ? undefined : {...task, review: null};
     if (task.state !== "review-required") return;
     const review = readStrictPassiveRecord(outer.review, ["reportFingerprint", "kind", "sourceCount", "chunkCount", "sizeBytes", "requiresExplicitSave"]);

@@ -72,3 +72,12 @@ explicitly injected organization-scoped store as well as to PostgreSQL storage.
 The store's organization name does not authorize a request. Middleware and the
 owning application still enforce organization, workspace, task and file access.
 Raw or global document stores do not provide an ingestion fallback.
+
+The opt-in version-10 `context.query` plan binds a saved RAG, original model,
+question hash and explicit query bounds. Approved execution carries text only
+in its transient envelope. Passive preview separately hashes its input; neither
+stores the question in the plan. The retained query owner records exact acceptance once; fresh task
+reads require current artifact and model permission and return citation-only
+summaries. Query tasks cannot grant a generation save. See
+`docs/architecture/context-management.md` and the portable Context skill guide
+for request lifetime, owned policy, uncertainty and pending qualification limits.

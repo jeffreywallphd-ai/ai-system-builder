@@ -103,7 +103,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   };
 
   async function authorizedWorkspace(workspaceId: WorkspaceId,
-    operation: HeadlessReadOperation | HeadlessSystemManagementRequest["operation"], requiresEdit = false) {
+    operation: HeadlessReadOperation | HeadlessSystemManagementRequest["operation"], requiresEdit = false, queryModel = false) {
     const workspace = await workspaceRepository.readWorkspace(workspaceId);
     if (workspace?.workspaceId !== workspaceId || workspace.status !== "active" ||
         workspace.organizationId !== identity.organizationId) return undefined;
@@ -111,7 +111,7 @@ export function composeDesktopHeadlessReads(dependencies: {
       await authorization.authorizeWorkspaceOperation({
         workspace,
         operation: `headless.${operation}`,
-        requiredScopes: requiresEdit
+        requiredScopes: queryModel ? ["workspace:read", "artifact:read", "model:read"] : requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
           : operation === "context.models" ? ["workspace:read", "model:read"]
           : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
@@ -219,8 +219,12 @@ export function composeDesktopHeadlessReads(dependencies: {
           if (!await currentScopedGrant([workspaceId]) || !await authorizedWorkspace(workspaceId, operation)) return forbidden;
           const result = await task.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {
             organizationId: identity.organizationId, principalId: identity.principalId, workspaceId}, clientId,
+            isCurrent: () => isOpen() && grant.isCurrent?.() !== false,
+            queryStillAllowed: async () => Boolean(await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation, false, true)),
             stillAllowed: async () => Boolean(await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation))});
-          return await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation) ? result : forbidden;
+          const queryResult = result.ok && "query" in result.value;
+          return await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation, false, queryResult) &&
+            isOpen() && grant.isCurrent?.() !== false ? result : forbidden;
         }
         case "context.models":
         case "context.preview-generation": {

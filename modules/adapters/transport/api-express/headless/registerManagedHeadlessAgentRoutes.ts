@@ -63,6 +63,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly allowContextPackGeneration?: boolean;
   readonly allowContextRagGeneration?: boolean;
   readonly allowContextResultSave?: boolean;
+  readonly allowContextQuery?: boolean;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -142,7 +143,7 @@ async function respond<Agent>(
   current: () => boolean,
 ) {
   if (!current()) return failure(response, 403, "headless.forbidden");
-  const value = parseBody(incoming.body, kind === "plan-review" ? HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES : MAX_REQUEST_BYTES);
+  const value = parseBody(incoming.body, kind === "plan-review" ? HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES : MAX_REQUEST_BYTES, kind === "plan-step");
   if (!value) return failure(response, 400, "headless.invalid-request");
   if (kind === "plan-review") {
     const parsed = readHeadlessPlanReviewAgentRequest(value, handlers.hostIncarnationId,
@@ -151,7 +152,7 @@ async function respond<Agent>(
         allowDatasetResultSave: handlers.allowDatasetResultSave === true,
         allowContextPackGeneration: handlers.allowContextPackGeneration === true,
         allowContextRagGeneration: handlers.allowContextRagGeneration === true,
-        allowContextResultSave: handlers.allowContextResultSave === true });
+        allowContextResultSave: handlers.allowContextResultSave === true, allowContextQuery: handlers.allowContextQuery === true });
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
     const input = parsed.request;
@@ -175,7 +176,7 @@ async function respond<Agent>(
         allowDatasetResultSave: handlers.allowDatasetResultSave === true,
         allowContextPackGeneration: handlers.allowContextPackGeneration === true,
         allowContextRagGeneration: handlers.allowContextRagGeneration === true,
-        allowContextResultSave: handlers.allowContextResultSave === true });
+        allowContextResultSave: handlers.allowContextResultSave === true, allowContextQuery: handlers.allowContextQuery === true });
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;
@@ -361,13 +362,13 @@ function safeLabel(value: unknown): value is string {
     !/[\u0000-\u001f\u007f]/.test(value) && !hasKnownPassiveCredential(value);
 }
 
-function parseBody(body: unknown, maxBytes: number) {
+function parseBody(body: unknown, maxBytes: number, planStep = false) {
   if (!Buffer.isBuffer(body) || !body.length || body.length > maxBytes) return undefined;
   try {
     const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(body);
     const value = JSON.parse(text);
     if (JSON.stringify(value) !== text) return undefined;
-    return readStrictPassiveRecord(value, ["version", "operation", "input"]);
+    return readStrictPassiveRecord(value, planStep ? ["version", "operation", "input", "transient"] : ["version", "operation", "input"]);
   } catch { return undefined; }
 }
 

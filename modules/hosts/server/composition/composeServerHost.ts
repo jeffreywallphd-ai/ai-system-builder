@@ -1706,7 +1706,8 @@ export function composeServerHost(
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks,
             getContextTask: async () => {
               const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
-              return composeHeadlessContextTask(managedDocuments, async () => contextGenerationUseCase);
+              return composeHeadlessContextTask(managedDocuments, async () => contextGenerationUseCase,
+                {rootDirectory: registerOptions.storageRootDirectory, peekOwner: () => contextBrowserUseCases});
             },
             getContextSaved: async () => {
               const {composeHeadlessContextSaved} = await import("../../shared/composition/headlessContextResults");
@@ -1754,6 +1755,7 @@ export function composeServerHost(
             getDatasetResults: async () => prepareTrainingDatasetUseCase,
             getContextStart: async () => contextGenerationUseCase.startAdmittedContext.bind(contextGenerationUseCase),
             peekContextResults: () => contextGenerationUseCase,
+            getContextQueryOwner: async () => contextBrowserUseCases,
           }) } : {}),
         };
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {
@@ -1785,7 +1787,8 @@ export function composeServerHost(
             allowDatasetResultSave: Boolean(managedDocuments.publishWithStableReads),
             allowContextPackGeneration: Boolean(managedDocuments.publishWithStableReads),
             allowContextRagGeneration: Boolean(managedDocuments.publishWithStableReads),
-            allowContextResultSave: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
+            allowContextResultSave: Boolean(managedDocuments.publishWithStableReads),
+            allowContextQuery: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),

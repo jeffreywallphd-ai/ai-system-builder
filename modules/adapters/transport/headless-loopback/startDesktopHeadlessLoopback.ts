@@ -75,6 +75,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     readonly allowContextPackGeneration?: true;
     readonly allowContextRagGeneration?: true;
     readonly allowContextResultSave?: true;
+    readonly allowContextQuery?: boolean;
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly execute: (request: HeadlessPlanReviewAgentRequest, grant: DesktopHeadlessAuthoringWireGrant,
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessPlanReviewAgentResult>;
@@ -325,7 +326,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
           allowDatasetResultSave: dependencies.planReview.allowDatasetResultSave === true,
           allowContextPackGeneration: dependencies.planReview.allowContextPackGeneration === true,
           allowContextRagGeneration: dependencies.planReview.allowContextRagGeneration === true,
-          allowContextResultSave: dependencies.planReview.allowContextResultSave === true });
+          allowContextResultSave: dependencies.planReview.allowContextResultSave === true, allowContextQuery: dependencies.planReview.allowContextQuery === true });
       if (!plan.ok) { fail(response, errorStatus(plan.code), plan.code); return; }
       const grant = await currentGrant();
       if (grant?.planReview !== true || !grantIsCurrent(grant, true) || !admitting() || response.destroyed ||
@@ -415,7 +416,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
           allowDatasetResultSave: dependencies.planReview.allowDatasetResultSave === true,
           allowContextPackGeneration: dependencies.planReview.allowContextPackGeneration === true,
           allowContextRagGeneration: dependencies.planReview.allowContextRagGeneration === true,
-          allowContextResultSave: dependencies.planReview.allowContextResultSave === true });
+          allowContextResultSave: dependencies.planReview.allowContextResultSave === true, allowContextQuery: dependencies.planReview.allowContextQuery === true });
       const finalGrant = await currentGrant();
       if (!admitting() || response.destroyed) return;
       if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {

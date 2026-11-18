@@ -185,6 +185,7 @@ function addSystemBuilderTools(server: McpServer) {
   const allowContextPackGeneration = enablePlanReview;
   const allowContextRagGeneration = enablePlanReview;
   const allowContextResultSave = enablePlanReview;
+  const allowContextQuery = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -309,6 +310,9 @@ function addSystemBuilderTools(server: McpServer) {
     return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
   });
   const step = z.discriminatedUnion("operation", [
+    z.strictObject({operation: z.literal("context.query"), idempotencyKey, reference: savedContextReference.extend({kind: z.literal("rag-database")}),
+      queryDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/), modelRecordId: z.string().min(1).max(160),
+      modelUpdatedAt: z.string().datetime({offset: true}), maximumResults: z.number().int().min(1).max(20), embeddingDevice: z.enum(["cpu", "cuda"])}),
     z.strictObject({operation: z.literal("context.save-result"), idempotencyKey, taskId: z.string().uuid(),
       reportFingerprint: z.string().regex(/^[a-f0-9]{64}$/), name: z.string().min(1).max(120)}),
     z.strictObject({operation: z.literal("context.generate-rag"), idempotencyKey, name: z.string().min(1).max(120),
@@ -344,7 +348,7 @@ function addSystemBuilderTools(server: McpServer) {
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -354,6 +358,17 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "context.query") {
+        const target = {hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId, reference: request.input.reference};
+        const prior = await forward?.({version, operation: "context.preview-rebuild", input: target}, signal);
+        if (!prior?.ok) return toolResult(prior ?? unavailable);
+        const recorded = "operation" in prior && prior.operation === "context.preview-rebuild"
+          ? headless.readHeadlessContextRebuildValue(prior.value, target) : undefined;
+        if (!recorded || recorded.preview.settings.kind !== "rag-database" ||
+            recorded.preview.settings.modelRecordId !== request.input.modelRecordId ||
+            recorded.preview.settings.modelUpdatedAt !== request.input.modelUpdatedAt) return toolResult(unavailable);
+        continue;
+      }
       if (request.operation === "context.save-result") {
         const selection = {kind: "task", taskId: request.input.taskId} as const;
         const reviewed = await forward?.({version, operation: "context.task", input: {
@@ -469,7 +484,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {
@@ -481,13 +496,16 @@ function addSystemBuilderTools(server: McpServer) {
       inputSchema: z.strictObject(reviewTarget), annotations: queryHints,
     }, (input, context) => reviewPlan("plan.status", input, context.mcpReq.signal));
     server.registerTool("aisb_run_approved_build_step", {
-      description: "Run the next exact approved change. Use the same step and revision to recover an uncertain reply while approval is current.",
+      description: "Run the next exact approved change. For a new Context query, supply the exact approved question as contextQuery. Accepted replay can omit it. The question is transient. Use the same step and revision to recover an uncertain reply while approval is current.",
       inputSchema: z.strictObject({ ...reviewTarget, approvalRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
-        step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
+        step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS),
+        contextQuery: z.string().min(1).max(headless.HEADLESS_CONTEXT_QUERY_MAX_CHARACTERS).optional() }),
       annotations: { ...writeHints, destructiveHint: false },
     }, (input, context) => {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-      const decoded = headless.readHeadlessPlanStepRequest({ version, operation: "plan.run-step", input }, input.hostIncarnationId);
+      const {contextQuery, ...target} = input;
+      const decoded = headless.readHeadlessPlanStepRequest({ version, operation: "plan.run-step", input: target,
+        ...(contextQuery === undefined ? {} : {transient: {contextQuery}}) }, target.hostIncarnationId);
       return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
     });
   }

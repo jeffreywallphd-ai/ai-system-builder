@@ -1,3 +1,5 @@
+import {compileHeadlessContextQueryInputs, runPreparedHeadlessContextQuery, composeOwnedHeadlessContextQueryPolicy,
+  type HeadlessContextQueryOwner} from "../../shared/composition/headlessContextQueryExecution";
 import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
@@ -32,6 +34,7 @@ const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" } as con
 const requiredScopes = ["workspace:read", "asset:read", "asset:write"] as const;
 const fileSaveScopes = [...requiredScopes, "artifact:read", "artifact:write"] as const;
 const ragScopes = [...fileSaveScopes, "model:read"] as const;
+const queryScopes = [...requiredScopes, "artifact:read", "model:read"] as const;
 
 export function composeDesktopHeadlessPlanReview(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -46,6 +49,7 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly getDatasetStart?: () => Promise<StartHeadlessDataset>;
   readonly getDatasetResults?: () => Promise<HeadlessDatasetResultOwner>;
   readonly getContextStart?: () => Promise<StartHeadlessContext>;
+  readonly getContextQueryOwner?: () => Promise<HeadlessContextQueryOwner>;
   /** Only an already loaded retained owner; never start dependencies in a proposal transaction. */
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
   readonly audit?: DesktopHeadlessAudit;
@@ -64,7 +68,7 @@ export function composeDesktopHeadlessPlanReview(options: {
       if (workspace?.organizationId !== identity.organizationId || workspace.workspaceId !== workspaceId ||
           workspace.status !== "active") return false;
       await policy.authorizeWorkspaceOperation({ workspace, operation: `headless.${operation}`,
-        requiredScopes: usesModel ? ragScopes : savesFile ? fileSaveScopes : requiredScopes });
+        requiredScopes: usesModel ? savesFile ? ragScopes : queryScopes : savesFile ? fileSaveScopes : requiredScopes });
       return isOpen();
     } catch { return false; }
   }
@@ -76,7 +80,9 @@ export function composeDesktopHeadlessPlanReview(options: {
       grant.principalId === identity.principalId && grant.workspaceIds.includes(workspaceId));
   }
 
-  const runStep: NonNullable<LoopbackPlanReview["runStep"]> = async (request, initial, currentGrant) => {
+  const runStep: NonNullable<LoopbackPlanReview["runStep"]> = async (incoming, initial, currentGrant) => {
+    const question = incoming.transient?.contextQuery;
+    const request = {version: incoming.version, operation: incoming.operation, input: {...incoming.input}};
     const { workspaceId, fingerprint, approvalRevision, step } = request.input;
     const { registeredClientId } = initial;
     if (!systems || request.input.hostIncarnationId !== hostIncarnationId ||
@@ -102,7 +108,7 @@ export function composeDesktopHeadlessPlanReview(options: {
           workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source" ||
             approvedRequest?.operation === "data.save-provider-source" || approvedRequest?.operation === "data.prepare-local-dataset" ||
             approvedRequest?.operation === "data.save-prepared-dataset" || approvedRequest?.operation === "context.generate-pack" ||
-            approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.save-result", approvedRequest?.operation === "context.generate-rag");
+            approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.save-result", (approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.query"));
       }, Date.now, "serialized-owner", Boolean(getIngestionTasks), getIngestionTasks
         ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
         : undefined, options.getDatasetStart ? async (owner, selected, taskScope) => {
@@ -121,8 +127,19 @@ export function composeDesktopHeadlessPlanReview(options: {
             taskScope, async () => isCurrent() && await authorize(repository, policy, workspaceId, request.operation, true,
               selected.operation === "context.generate-rag"));
           return compiled.ok && compiled.operation === "context.preview-generation" ? compiled.prepared : undefined;
-        } : undefined, options.peekContextResults ? rootDirectory : undefined);
-      if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
+        } : undefined, options.peekContextResults ? rootDirectory : undefined, options.getContextQueryOwner ? async (owner, selected, taskScope) => {
+          const repository = createLocalWorkspaceRepository({rootDirectory, documents: owner.forOrganization(organizationId)});
+          const policy = composeDesktopWorkspaceAuthorization({documents: owner, localIdentity: identity});
+          return compileHeadlessContextQueryInputs(owner.forOrganization(organizationId), rootDirectory, selected, taskScope,
+            async () => isCurrent() && await authorize(repository, policy, workspaceId, request.operation, false, true));
+        } : undefined);
+      if (!prepared || !await canUse() || !prepared.isCurrent() || question !== undefined && prepared.kind !== "context-query") return { result: forbidden };
+      if (prepared.kind === "context-query") {
+        return runPreparedHeadlessContextQuery({prepared, request, question, context: scope,
+          canUse: () => canUse(false, true), resolveOwner: async () => options.getContextQueryOwner?.(), isHostCurrent: isOpen,
+          ownedPolicy: compiled => composeOwnedHeadlessContextQueryPolicy({documents: platform, rootDirectory,
+            placement: {mode: "dedicated", organizationId}, context: scope, request: prepared.request, compiled, isCurrent: isOpen})});
+      }
       if (prepared.kind === "context-result") {
         savingFile = "context-result-save";
         if (!options.peekContextResults) return localFailure(forbidden);
@@ -226,6 +243,7 @@ export function composeDesktopHeadlessPlanReview(options: {
     ...(options.getDatasetResults ? {allowDatasetResultSave: true as const} : {}),
     ...(options.getContextStart ? {allowContextPackGeneration: true as const, allowContextRagGeneration: true as const} : {}),
     ...(options.peekContextResults ? {allowContextResultSave: true as const} : {}),
+    ...(options.getContextQueryOwner ? {allowContextQuery: true as const} : {}),
     ...(systems ? { runStep } : {}),
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
@@ -235,12 +253,13 @@ export function composeDesktopHeadlessPlanReview(options: {
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
             step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
             step.operation === "context.generate-pack" || step.operation === "context.generate-rag" || step.operation === "context.save-result");
-      const usesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "context.generate-rag");
+      const usesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "context.generate-rag" || step.operation === "context.query");
       const canUse = async () => isCurrent() && admits(await getCurrentGrant(), registeredClientId, workspaceId) &&
           await authorize(workspaces, authorization, workspaceId, request.operation, savesFile, usesModel) && isCurrent();
       if (request.target.hostIncarnationId !== hostIncarnationId || !isDesktopHeadlessClientId(registeredClientId)) return forbidden;
       try {
         if ((request.operation === "plan.submit" && request.proposal.requests.some(step =>
+          step.operation === "context.query" ? !options.getContextQueryOwner :
           step.operation === "context.save-result" ? !options.peekContextResults :
           step.operation === "context.generate-pack" || step.operation === "context.generate-rag" ? !options.getContextStart :
           step.operation === "data.save-prepared-dataset" ? !options.getDatasetResults :
@@ -296,10 +315,11 @@ export function composeDesktopHeadlessPlanReview(options: {
             const compiled = await compileHeadlessContextResultInputs(documents, target.scope, hostIncarnationId,
               selected.input.taskId, selected.input.reportFingerprint, processor, async () => isCurrent());
             return compiled?.prepared.name === selected.input.name;
-          }), Boolean(getIngestionTasks), Boolean(getIngestionTasks), Boolean(options.getDatasetStart), Boolean(options.getDatasetResults),
+          }, async selected => Boolean(options.getContextQueryOwner && await compileHeadlessContextQueryInputs(documents, rootDirectory,
+            selected, target.scope, async () => isCurrent()))), Boolean(getIngestionTasks), Boolean(getIngestionTasks), Boolean(options.getDatasetStart), Boolean(options.getDatasetResults),
           Boolean(options.getContextStart), Boolean(options.getContextStart), options.getContextStart
             ? (partition, requests) => compileHeadlessContextModelBindings(rootDirectory, partition, requests, target.scope, async () => isCurrent())
-            : undefined, Boolean(options.peekContextResults));
+            : undefined, Boolean(options.peekContextResults), Boolean(options.getContextQueryOwner));
         const result = request.operation === "plan.submit" ?
           await reviews.propose({ target, isCurrent, proposal: {
             ...request.proposal.scope,

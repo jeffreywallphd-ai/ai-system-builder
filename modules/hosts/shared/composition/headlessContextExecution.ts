@@ -1,16 +1,18 @@
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
 import {isDeepStrictEqual} from "node:util";
 import type {prepareStructuredHeadlessPlanStep} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
-import {readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan}
+import {readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan, readStructuredContextPlanTaskLineage}
   from "../../../adapters/persistence/system-builder/createStructuredHeadlessContextPlanTaskStore";
 import type {ApplicationRequestContext} from "../../../application/ports";
 import type {ContextGenerationUseCase} from "../../../application/use-cases/context-management";
 import {ReadHeadlessContextTaskUseCase} from "../../../application/use-cases/context-management";
 import {contextCommandDigest} from "../../../application/use-cases/context-management/approved-context-generation-admission";
-import {readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type HeadlessContextGenerationPlanRequest, type HeadlessPlanStepRequest}
+import {readHeadlessContextTaskValue, readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type HeadlessContextGenerationPlanRequest, type HeadlessPlanStepRequest}
   from "../../../contracts/headless";
 import type {ContextPlanModelBinding} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {composeHeadlessContextPreview} from "./headlessContextPreview";
+import {readStructuredRecordedContextQuery, readStructuredRecordedContextGeneration} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import {compileHeadlessContextQueryInputs, type HeadlessContextQueryOwner} from "./headlessContextQueryExecution";
 import {compileRecordedHeadlessContextInputs} from "./headlessContextRebuild";
 
 type PreparedContextStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, {kind: "context-pack"}>;
@@ -55,7 +57,8 @@ export async function compileHeadlessContextModelBindings(rootDirectory: string,
 }
 
 export function composeHeadlessContextTask(documents: StructuredDocumentStore,
-  getProcessor: () => Promise<Pick<ContextGenerationUseCase, "readAdmittedContextTask">>) {
+  getProcessor: () => Promise<Pick<ContextGenerationUseCase, "readAdmittedContextTask">>,
+  query?: {readonly rootDirectory: string; readonly peekOwner: () => HeadlessContextQueryOwner | undefined}) {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Context task status requires the platform owner.");
   const transaction = documents.runInOwnedTransaction.bind(documents);
@@ -66,12 +69,42 @@ export function composeHeadlessContextTask(documents: StructuredDocumentStore,
     const {hostIncarnationId, selection} = request.input;
     const receipt = await transaction(async owner => {
       const partition = owner.forOrganization(scope.organizationId);
-      return selection.kind === "task"
-        ? readStructuredOwnedContextPlanTask(partition, scope, hostIncarnationId, selection.taskId)
-        : readStructuredOwnedContextPlanTaskByPlan(partition, scope, hostIncarnationId, selection.fingerprint, selection.step);
+      const receipt = selection.kind === "task"
+        ? await readStructuredOwnedContextPlanTask(partition, scope, hostIncarnationId, selection.taskId)
+        : await readStructuredOwnedContextPlanTaskByPlan(partition, scope, hostIncarnationId, selection.fingerprint, selection.step);
+      if (!receipt) return;
+      const lineage = await readStructuredContextPlanTaskLineage(partition, scope, hostIncarnationId, receipt.taskId);
+      if (!lineage) return;
+      const request = await readStructuredRecordedContextQuery(partition, lineage.target, lineage.step, lineage.inputDigest);
+      if (request) return {family: "query" as const, taskId: receipt.taskId};
+      const generation = await readStructuredRecordedContextGeneration(partition, lineage.target, lineage.step, lineage.inputDigest);
+      return generation ? receipt.taskId : undefined;
     }, () => {});
-    return receipt?.taskId;
-  }, async (taskId, context, stillAllowed) => {
+    return receipt;
+  }, async (taskId, context, stillAllowed, family, isCurrent, acceptedRequest, registeredClientId) => {
+    if (family === "query") {
+      if (!query || !context.organizationId || !context.principalId || !context.workspaceId || !isCurrent() || !await stillAllowed() || !isCurrent()) return;
+      // The use case has already required fresh query/model permission. A status read never initializes runtime dependencies.
+      const owned = query.peekOwner();
+      if (!owned || !isCurrent()) return;
+      const metadata = await transaction(async owner => {
+        const partition = owner.forOrganization(context.organizationId!);
+        const lineage = await readStructuredContextPlanTaskLineage(partition,
+          {organizationId: context.organizationId!, principalId: context.principalId!, workspaceId: acceptedRequest.input.workspaceId, registeredClientId}, acceptedRequest.input.hostIncarnationId, taskId);
+        if (!lineage || !isCurrent()) return;
+        const request = await readStructuredRecordedContextQuery(partition, lineage.target, lineage.step, lineage.inputDigest);
+        if (!request || !isCurrent()) return;
+        const compiled = await compileHeadlessContextQueryInputs(partition, query.rootDirectory, request, context, async () => isCurrent());
+        return compiled && isCurrent() ? {request, compiled} : undefined;
+      }, () => {if (!isCurrent()) throw new Error("Context query status ended.");});
+      if (!metadata || !await stillAllowed() || !isCurrent()) return;
+      const snapshot = await owned.readAdmittedContextQueryTask(taskId, context);
+      if (!snapshot || !await stillAllowed() || !isCurrent()) return;
+      return readHeadlessContextTaskValue({taskId: snapshot.taskId, state: snapshot.state, review: null, query: {
+        queryDigest: metadata.request.input.queryDigest, maximumResults: metadata.request.input.maximumResults,
+        embeddingDevice: metadata.request.input.embeddingDevice, sources: metadata.compiled.publicSources,
+        matches: snapshot.matches, cleanupPending: snapshot.cleanupPending}}, {kind: "task", taskId});
+    }
     const processor = await getProcessor();
     if (!await stillAllowed()) return;
     return processor.readAdmittedContextTask(taskId, context);

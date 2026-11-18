@@ -31,7 +31,7 @@ ownership before observing an already-loaded owner. The reader cannot construct
 a lazy Context feature or grant a new business task/save. Accepted-task observation
 retains its owner's output validation and existing owned-worker recovery under
 the original lifecycle. Fixed display output contains no source bytes. Existing
-window consent owns display and revocation; query summaries remain separate work.
+window consent owns display and revocation; query-window summaries remain separate work.
 
 `ReadHeadlessContextRebuildUseCase` is a passive recorded-input projection. Current
 actor/client/workspace/resource authority surrounds the indexed metadata lookup
@@ -221,3 +221,12 @@ no-task-POST result, with no retained uncertain attempt. Duplicate/possibly star
 tasks, unknown issuance and arbitrary runtime fields never supply that proof.
 Ordinary generation responses are unchanged. The headless owner records the
 terminal non-start separately from current permission to disclose it.
+
+The opt-in version-10 `context.query` plan binds a saved RAG, original model,
+question hash and explicit query bounds. Approved execution carries text only
+in its transient envelope. Passive preview separately hashes its input; neither
+stores the question in the plan. The retained query owner records exact acceptance once; fresh task
+reads require current artifact and model permission and return citation-only
+summaries. Query tasks cannot grant a generation save. See
+`docs/architecture/context-management.md` and the portable Context skill guide
+for request lifetime, owned policy, uncertainty and pending qualification limits.

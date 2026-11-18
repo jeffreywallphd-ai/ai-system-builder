@@ -17,8 +17,8 @@ The app does not save or return the question or pass it to its asynchronous
 metadata dependency. It rechecks current saved/source/model authority without
 reading source bytes or loading a model. Both `runtimeReadiness` and
 `byteAvailability` remain `not-checked`. This preview grants no query execution,
-source/result sharing, installation or save permission. The public approved
-query step and query summaries remain unavailable until separately implemented.
+source/result sharing, installation or save permission. Use the separate approval
+procedure below before starting a query.
 
 ## Prepare saved inputs
 
@@ -232,8 +232,47 @@ plan approval does not approve window control.
 4. The window shows fixed status and counts with opaque identifiers. Display
    cannot create the Context feature or approve a new task. Checking an accepted
    task can validate its output and recover its existing worker under the
-   original task controls. A saved file's availability is not checked. Public query summaries remain unavailable
-   until their separate query connection is implemented.
+   original task controls. A saved file's availability is not checked. Window query summaries remain unavailable
+   until their separate consented display is implemented.
 5. Stop presenting after revoke or expiry. Ending display does not cancel
    independently approved Context work, delete a saved artifact or grant save
    approval. Report display and backend results separately.
+
+## Run an approved question
+
+1. First use `aisb_preview_context_query`. Keep its exact saved RAG reference,
+   `queryDigest`, `modelRecordId`, `modelUpdatedAt`, device and result limit.
+   Do not put the question in the build plan. Propose `context.query` with those
+   fields and a fresh idempotency key. The build-plan preview is version 10.
+2. Explain the permissions: one local query against that exact saved Context,
+   its original installed embedding model, CPU or CUDA, up to 20 results and a
+   64 MiB saved archive. Output contains citation coordinates and source
+   references, without excerpts. This grants no download, install, save,
+   publication, external transfer or window control.
+3. Ask for the full scoped plan or each change, using the app popup or approval
+   chat. Once the exact step is approved, call `aisb_run_approved_build_step`.
+   Supply the exact original question in the optional `contextQuery` field.
+   Its exact UTF8 hash must match the plan. The API carries it only in the
+   transient envelope; the plan, task ledger and receipts never store it.
+4. Keep the accepted task ID. Read it with `aisb_context_task` using the same
+   registered client, host, actor and workspace. A fresh authorized request can
+   read a job after its original request or token ends. Current model and
+   artifact read permissions are required. Missing definitions cannot become
+   generation tasks. Status reads use the existing cached query owner.
+5. Report `running`, `succeeded`, `failed` or `unconfirmed` accurately. Results
+   contain only the exact question hash, source references/digests, numeric
+   ranks, scores and citation coordinates. `cleanupPending` is separate from
+   the result. A query supplies no generation review or save authority.
+6. For an accepted replay, keep the original plan, step and approval revision;
+   the question can be omitted. An uncertain issue or acceptance never permits
+   a replacement attempt or task discovery. Preserve `headless.not-started`
+   as a terminal non-start. Do not start again with a new key.
+
+After exact runtime acceptance is durably recorded, the existing job uses its
+verified actor and current organization, membership, workspace, original sources
+and model checks. It does not depend on an expired token, closed request or old
+approval lifetime. These facts authorize no new run. The original request still
+governs its start reply. Model or source policy loss withholds output; it does
+not establish worker failure or restart authority. Existing model, memory and
+cleanup controls remain. Physical retrieval/resource and real-app qualification,
+query-window display and parent roadmap closure are separate checks.

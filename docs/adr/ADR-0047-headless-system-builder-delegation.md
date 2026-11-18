@@ -376,7 +376,7 @@ source-digest algorithm is unchanged. A producing rebuild's own saved definition
 can later be read without recursively adopting an ancestor or requiring its index.
 Both approval channels disclose parent identity and the unchanged generation limits.
 Focused synthetic Core/host and SDK tests are not physical retrieval/resource,
-native, real-app or parent qualification. Queries and display remain pending.
+native, real-app or parent qualification. Query-window display and physical/parent qualification remain separate.
 
 The same existing-owner extension adds optional private `queryAdmitted` support.
 It binds copied exact query/artifact/model data and current one-use issue to the
@@ -385,5 +385,43 @@ owned staging/reconciler. Unknown outcomes and cleanup failure retain custody.
 The worker's runtime-only approved embedding reference must match the verified
 manifest and cannot come from imported metadata. Ordinary query behavior remains.
 This selects no new engine, lifecycle topology, recovery or content-retention
-policy and advertises no public query. Public async plan/task composition, current
-source/citation/egress policy, display and physical qualification remain required.
+policy and advertises no public query. The public async plan/task boundary below adds current source/citation/egress
+policy. Query-window display and physical qualification remain required.
+
+### Approved local Context queries
+
+The separately opted-in `context.query` step uses build-plan preview version 10.
+Its durable definition binds the exact saved RAG reference, original model record
+and timestamp, question hash, explicit CPU/CUDA and 1–20 result limit. Versions
+1–9 retain their fingerprints. For approved execution, only `plan.run-step` can
+carry a copied transient question (maximum 2,000 characters) within the existing
+8 KiB envelope. Passive query preview separately receives text only to hash it. The SDK
+maps optional `contextQuery` to that envelope; other steps reject it before effects.
+Plans, task/effect records, receipts, audit and returned summaries retain no text.
+
+Metadata-only original-lineage compilation runs at proposal, reservation and
+atomic one-use issue after staging. Exact runtime ACK and acknowledged durable
+acceptance precede the owned phase. Original caller, client and approval gates
+protect preparation, new issue and the outward start reply. Recording a genuine
+already-issued ACK remains independent of caller closure or revocation. Only
+acknowledged durable acceptance enables owned background policy. Then the retained Browser/reconciler and
+captured verified actor reread current membership, role, workspace, saved/source
+and original model facts. Closed HTTP requests, old JWTs, ambient context and old
+approval lifetime cannot become background authority. Original request fences
+still control the start reply. Lost acceptance proof grants no phase switch,
+adoption, discovery, rerun or recovery authority.
+
+Fresh status proves the accepted client/host/actor and current artifact AND model
+read permission before cached query owner access and at final host publication.
+An unknown definition denies before either query or generation owner. Generation
+reads retain their original artifact-only policy. Results are closed numeric
+rank/score/citation coordinates with original public source references/digests,
+question hash, settings and separate cleanup state. They contain no question,
+excerpt, vector, private path, worker ID or instruction, and grant no save.
+
+Both approval modes/channels reuse the existing modal. No new engine, scheduler,
+retention, provider, model download or native/cleanup policy is introduced.
+Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
+Consented query-window display, physical retrieval/resources, actual app hosts and
+parent/chunk qualification remain separate. Rollback disables query/v10 admission
+and retains consumed history; it never restores a weaker execution path.

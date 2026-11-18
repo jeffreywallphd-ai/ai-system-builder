@@ -1,7 +1,7 @@
 import {createHash, randomUUID} from "node:crypto";
 import type {HeadlessPlanReviewTarget} from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import {isHeadlessHostIncarnationId, isDesktopHeadlessClientId, HEADLESS_MAX_BUILD_PLAN_STEPS,
-  serializeHeadlessMutationInput, type HeadlessContextGenerationPlanRequest} from "../../../contracts/headless";
+  serializeHeadlessMutationInput, type HeadlessContextGenerationPlanRequest, type HeadlessContextQueryPlanRequest} from "../../../contracts/headless";
 import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
 import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
@@ -21,13 +21,13 @@ export interface ContextPlanTaskEffect {
   readonly target: HeadlessPlanReviewTarget;
   readonly approvalRevision: number;
   readonly step: number;
-  readonly request: HeadlessContextGenerationPlanRequest;
+  readonly request: HeadlessContextGenerationPlanRequest | HeadlessContextQueryPlanRequest;
 }
 
 function identity(effect: ContextPlanTaskEffect) {
   const {target: {scope, hostIncarnationId, fingerprint}, approvalRevision, step, request} = effect;
   if (!isHeadlessHostIncarnationId(effect.key) ||
-      (request.operation !== "context.generate-pack" && request.operation !== "context.generate-rag") ||
+      (request.operation !== "context.generate-pack" && request.operation !== "context.generate-rag" && request.operation !== "context.query") ||
       !isHeadlessHostIncarnationId(hostIncarnationId) || !isOrganizationId(scope.organizationId) || !isWorkspaceId(scope.workspaceId) ||
       !isDesktopHeadlessClientId(scope.registeredClientId) || typeof scope.principalId !== "string" || scope.principalId.length < 1 ||
       scope.principalId.length > 160 || hasKnownPassiveCredential(scope.principalId) ||

@@ -521,13 +521,14 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   });
   const store = createStructuredHeadlessPlanReviewRepository(platform, async (_owner, target) =>
     target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
-    target.scope.workspaceId === workspaceId, Date.now, async () => true, true, true, true, true, true);
+    target.scope.workspaceId === workspaceId, Date.now, async () => true, true, true, true, true, true, false, undefined, false, true);
   let effectCount = 0;
   let fileEffectCount = 0;
   let providerEffectCount = 0;
   let datasetEffectCount = 0;
   let datasetSaveCount = 0;
-  let contextDenials = 0;
+  let contextDenials = 0, queryEffects = 0;
+  const transientQuestion = "Synthetic bounded query café 📄";
   const datasetTaskId = randomUUID();
   let requestCount = 0;
   let sourceReads = 0;
@@ -587,8 +588,10 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         value: {...contextQueryPreview(decoded.request.input), ...(wrongStatusTask ? {queryDigest: "sha256:" + "f".repeat(64)} : {}),
           ...(statusExtra ? {query: decoded.request.input.query} : {})} as never};
       if (decoded.request.operation === "context.preview-rebuild") return {ok: true, operation: decoded.request.operation,
-        value: {...contextRebuildValue, reference: {...contextRebuildValue.reference,
-          contextId: wrongStatusTask ? randomUUID() : contextRebuildValue.reference.contextId},
+        value: {...contextRebuildValue, preview: contextPreview({workspaceId, name: contextRebuildValue.preview.name,
+          sources: contextRebuildValue.preview.sources.map(source => source.reference),
+          settings: decoded.request.input.reference.kind === "rag-database" ? ragSettings : contextSettings}), reference: {...contextRebuildValue.reference,
+          kind: decoded.request.input.reference.kind, contextId: wrongStatusTask ? randomUUID() : contextRebuildValue.reference.contextId},
           ...(statusExtra ? {sourceText: "synthetic private source"} : {})} as never};
       if (decoded.request.operation === "context.saved") return {ok: true, operation: decoded.request.operation,
         value: {...contextSavedValue, reference: {...contextSavedValue.reference,
@@ -620,7 +623,7 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
     } },
     planReview: { hostIncarnationId, allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true,
-      allowDatasetResultSave: true, allowContextPackGeneration: true, async execute(input, grant) {
+      allowDatasetResultSave: true, allowContextPackGeneration: true, allowContextQuery: true, async execute(input, grant) {
       const { fingerprint, workspaceId } = input.target;
       const target = { hostIncarnationId, fingerprint, scope: { workspaceId, organizationId: grant.organizationId,
         principalId: grant.principalId, registeredClientId: grant.registeredClientId } };
@@ -640,6 +643,17 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       const review = await store.read({ target: { hostIncarnationId, fingerprint, scope }, isCurrent });
       if (!review.ok || review.snapshot.state.status !== "approved" || review.snapshot.state.revision !== approvalRevision || step !== 1)
         return { result: { ok: false, code: "headless.forbidden" } };
+      if (review.snapshot.preview.steps[0]?.operation === "context.query") {
+        const approved = review.snapshot.preview.steps[0];
+        if (!queryEffects && (request.transient?.contextQuery !== transientQuestion ||
+          approved.input.queryDigest !== "sha256:" + createHash("sha256").update(request.transient!.contextQuery).digest("hex")))
+          return {result: {ok: false, code: "headless.forbidden"}};
+        const kind = queryEffects ? "replayed" as const : "started" as const;
+        if (!queryEffects) queryEffects++;
+        return {result: {ok: true, value: {kind, operation: "context.query", fingerprint, approvalRevision, step,
+          expiresAt: review.snapshot.state.expiresAt, reference: {workspaceId, taskId: hostIncarnationId}}},
+          publishIfCurrent: async publish => isCurrent() && publish()};
+      }
       if (review.snapshot.preview.steps[0]?.operation === "context.generate-pack") {
         contextDenials++;
         return {result: {ok: false, code: "headless.not-started"}};
@@ -964,6 +978,25 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     assert.deepEqual(await call("aisb_run_approved_build_step", {...scope, fingerprint: contextPlan.fingerprint, approvalRevision: 2, step: 1}),
       {ok: false, code: "headless.not-started"});
     assert.equal(contextDenials, 1, "A declared non-start must traverse the actual loopback status and SDK without an automatic retry.");
+    const querySteps = [{operation: "context.query", idempotencyKey: randomUUID(), reference: {...contextSavedValue.reference, kind: "rag-database"},
+      queryDigest: "sha256:" + createHash("sha256").update(transientQuestion).digest("hex"), modelRecordId: "model.synthetic",
+      modelUpdatedAt: ragSettings.modelUpdatedAt, maximumResults: 3, embeddingDevice: "cpu"}];
+    const queryPlan = checkedPlan(await call("aisb_preview_build_plan", {...scope, steps: querySteps}));
+    assert.equal(queryPlan.plan.version, "aisb-build-plan-preview-v10");
+    assert.doesNotMatch(JSON.stringify(queryPlan), /Synthetic bounded query|café/);
+    assert.equal((await call("aisb_request_build_plan_approval", {...scope, fingerprint: queryPlan.fingerprint, steps: querySteps})).ok, true);
+    assert.ok((await new HeadlessBuildPlanReviewUseCase(store, Date.now).decide({fingerprint: queryPlan.fingerprint,
+      expectedRevision: 1, decision: {kind: "approve", mode: "whole-plan"}}, hostIncarnationId,
+      {workspaceId, organizationId, principalId: identity.principalId, registeredClientId: registered.registeredClientId},
+      {organizationId, principalId: identity.principalId, channel: "app-popup", isCurrent, canDecide: async () => isCurrent()})).ok);
+    const queryTarget = {...scope, fingerprint: queryPlan.fingerprint, approvalRevision: 2, step: 1};
+    const queryResult = await call("aisb_run_approved_build_step", {...queryTarget, contextQuery: transientQuestion});
+    assert.equal(queryResult.ok, true, JSON.stringify(queryResult)); assert.equal(queryResult.value.operation, "context.query");
+    assert.deepEqual(await call("aisb_run_approved_build_step", queryTarget), {ok: true, value: {...queryResult.value, kind: "replayed"}});
+    assert.equal(queryEffects, 1);
+    assert.doesNotMatch(JSON.stringify(await platform.forOrganization(organizationId).listDocuments("headless/system-builder/plan-reviews")),
+      /Synthetic bounded query|café|contextQuery/);
+
   } finally {
     await client.close();
     await connector.close();
@@ -1107,7 +1140,8 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_preview_build_plan", [...workspace, "steps"]);
   assertExactObject("aisb_request_build_plan_approval", [...workspace, "fingerprint", "steps"]);
   assertExactObject("aisb_build_plan_approval_status", [...workspace, "fingerprint"]);
-  assertExactObject("aisb_run_approved_build_step", [...workspace, "fingerprint", "approvalRevision", "step"]);
+  const queryStepSchema = assertExactObject("aisb_run_approved_build_step", [...workspace, "fingerprint", "approvalRevision", "step"], ["contextQuery"]);
+  assert.deepEqual(queryStepSchema.properties?.contextQuery, {type: "string", minLength: 1, maxLength: 2000});
   assertExactObject(desktopDataPreviewTool, [...workspace, "taskId", "fileId", "taskRevision"]);
   assertExactObject(desktopProviderPreviewTool, [...workspace, "taskId", "fileId", "taskRevision"]);
   assertExactObject("aisb_preview_edits", [...base, "edits"]);

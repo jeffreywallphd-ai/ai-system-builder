@@ -10,8 +10,9 @@ reserving bounded state before either. Runtime ACK and durable accept are distin
 from outward disclosure. Only original-source-checked numeric citation summaries
 remain in application history. Raw question/excerpt/path/model data cannot enter
 plans, status or window context through this component. Existing runtime custody
-retirement is separately observed, never inferred from task completion. Public
-query plan/SDK/display wiring and physical/parent qualification remain pending.
+retirement is separately observed, never inferred from task completion. This private
+component alone grants no public plan or SDK authority. The separate public query
+boundary below applies; window display and physical/parent qualification remain pending.
 
 One fixed plan-review read accepts transient question text and a saved RAG
 reference under current actor/client/workspace/artifact/model policy. Synchronous
@@ -874,3 +875,41 @@ The finite decoder removes no errors silently: extra fields, private paths,
 source contents and a claimed ready runtime make the complete reply unavailable.
 The private Context command is never a transport result. A metadata preview
 grants no execution, model install, save, publication or presentation authority.
+
+### Approved local Context queries
+
+The separately opted-in `context.query` step uses build-plan preview version 10.
+Its durable definition binds the exact saved RAG reference, original model record
+and timestamp, question hash, explicit CPU/CUDA and 1–20 result limit. Versions
+1–9 retain their fingerprints. For approved execution, only `plan.run-step` can
+carry a copied transient question (maximum 2,000 characters) within the existing
+8 KiB envelope. Passive query preview separately receives text only to hash it. The SDK
+maps optional `contextQuery` to that envelope; other steps reject it before effects.
+Plans, task/effect records, receipts, audit and returned summaries retain no text.
+
+Metadata-only original-lineage compilation runs at proposal, reservation and
+atomic one-use issue after staging. Exact runtime ACK and acknowledged durable
+acceptance precede the owned phase. Original caller, client and approval gates
+protect preparation, new issue and the outward start reply. Recording a genuine
+already-issued ACK remains independent of caller closure or revocation. Only
+acknowledged durable acceptance enables owned background policy. Then the retained Browser/reconciler and
+captured verified actor reread current membership, role, workspace, saved/source
+and original model facts. Closed HTTP requests, old JWTs, ambient context and old
+approval lifetime cannot become background authority. Original request fences
+still control the start reply. Lost acceptance proof grants no phase switch,
+adoption, discovery, rerun or recovery authority.
+
+Fresh status proves the accepted client/host/actor and current artifact AND model
+read permission before cached query owner access and at final host publication.
+An unknown definition denies before either query or generation owner. Generation
+reads retain their original artifact-only policy. Results are closed numeric
+rank/score/citation coordinates with original public source references/digests,
+question hash, settings and separate cleanup state. They contain no question,
+excerpt, vector, private path, worker ID or instruction, and grant no save.
+
+Both approval modes/channels reuse the existing modal. No new engine, scheduler,
+retention, provider, model download or native/cleanup policy is introduced.
+Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
+Consented query-window display, physical retrieval/resources, actual app hosts and
+parent/chunk qualification remain separate. Rollback disables query/v10 admission
+and retains consumed history; it never restores a weaker execution path.

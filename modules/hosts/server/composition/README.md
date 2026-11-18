@@ -22,7 +22,7 @@ same-host/actor proof before observation. Display constructs no lazy feature and
 grants no new business task. Accepted-task observation retains owned output
 validation and existing worker recovery under its original lifecycle. Fixed
 display output contains no source bytes or private runtime fields. Revocation preserves
-independently authorized work; public query summaries remain pending.
+independently authorized work; query-window summaries remain pending.
 
 Managed Data presentation routes exact source/version/accepted-task selections
 through the shared Data metadata reader under current request organization,
@@ -229,3 +229,12 @@ the transaction and confirms only the causal metadata receipt. Replay opens no
 runtime. `context.saved` reads a finite indexed saved resource under current
 workspace/artifact authority, without archive/model/provider access. Physical
 browser, PostgreSQL, model and native qualification remain separate evidence.
+
+The opt-in version-10 `context.query` plan binds a saved RAG, original model,
+question hash and explicit query bounds. Approved execution carries text only
+in its transient envelope. Passive preview separately hashes its input; neither
+stores the question in the plan. The retained query owner records exact acceptance once; fresh task
+reads require current artifact and model permission and return citation-only
+summaries. Query tasks cannot grant a generation save. See
+`docs/architecture/context-management.md` and the portable Context skill guide
+for request lifetime, owned policy, uncertainty and pending qualification limits.

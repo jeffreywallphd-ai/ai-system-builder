@@ -141,3 +141,12 @@ model, runtime-start or reference-preparation awaits. Nested reference collectio
 reference identities and hint data cannot change through caller-owned aliases after
 validation. Prompts retain their exact allowed content; display sanitization is not
 used to construct runtime input.
+
+The opt-in version-10 `context.query` plan binds a saved RAG, original model,
+question hash and explicit query bounds. Approved execution carries text only
+in its transient envelope. Passive preview separately hashes its input; neither
+stores the question in the plan. The retained query owner records exact acceptance once; fresh task
+reads require current artifact and model permission and return citation-only
+summaries. Query tasks cannot grant a generation save. See
+`docs/architecture/context-management.md` and the portable Context skill guide
+for request lifetime, owned policy, uncertainty and pending qualification limits.

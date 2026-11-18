@@ -13,11 +13,15 @@ import {createStructuredHeadlessPlanReviewRepository} from "../../../../adapters
 import {createFilesystemContextResultByteStorageAdapter, createFilesystemContextResultOutputSourceAdapter}
   from "../../../../adapters/storage/filesystem/artifact-store";
 import {HeadlessBuildPlanReviewUseCase} from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
-import {ContextGenerationUseCase} from "../../../../application/use-cases/context-management";
+import {ContextBrowserUseCases, ContextGenerationUseCase} from "../../../../application/use-cases/context-management";
 import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
 import {AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy} from "../../../../application/services/security";
 import {composeDesktopHeadlessPlanReview} from "../../../desktop/composition/composeDesktopHeadlessPlanReview";
 import {composeManagedHeadlessPlanReview} from "../../../server/composition/composeManagedHeadlessPlanReview";
+import {createLocalArtifactCatalogPersistenceAdapter} from "../../../../adapters/storage/filesystem/artifact-catalog/createLocalArtifactCatalogAdapter";
+import {createLocalArtifactStorageBindingAdapter} from "../../../../adapters/storage/filesystem/artifact-catalog/createLocalArtifactStorageBindingAdapter";
+import {composeHeadlessContextTask} from "../headlessContextExecution";
+import type {ApprovedContextQueryAdmission} from "../../../../application/ports/context-management";
 import {composeHeadlessContextSaved} from "../headlessContextResults";
 import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot} from "../../../../contracts/ingestion";
 import {CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, CONTEXT_RAG_DATABASE_MEDIA_TYPE} from "../../../../contracts/context-management";
@@ -144,6 +148,46 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
         return result;
       }},
     });
+    let queryStarts = 0, queryOwnerLoads = 0, queryReads = 0, queryRequestLive = true;
+    let queryMode: "success" | "not-started" | "unknown" = "success";
+    let hideQueryParentBeforeIssue = false, hiddenQueryParent: {key: string; value: unknown} | undefined;
+    const queryFinishes = new Map<string, () => void>();
+    const queryBrowser = new ContextBrowserUseCases({
+      isAcceptingQueries: () => current,
+      embeddingModels: {async resolveExistingModel(witness) {
+        assert.equal(witness.modelRecordId, model.modelRecordId); return {localModelReference: model.localPath};
+      }},
+      catalog: createLocalArtifactCatalogPersistenceAdapter({rootDirectory: directory, documents}),
+      storageBindings: createLocalArtifactStorageBindingAdapter({rootDirectory: directory, documents}),
+      storage: {async retrieveArtifact(request) {
+        queryReads++; assert.ok(request.key.startsWith(`workspaces/${workspaceId}/artifacts/context/`));
+        const bytes = await readFile(join(directory, request.key));
+        if (hideQueryParentBeforeIssue) {
+          hideQueryParentBeforeIssue = false;
+          // Exact point fault injection in this newly owned SQLite fixture only.
+          const row = await documents.readDocument("headless/context/saved-contexts", parentKey);
+          assert.ok(row); assert.equal(row.revision, 1); hiddenQueryParent = {key: parentKey, value: row.value};
+          assert.equal(await documents.deleteDocument("headless/context/saved-contexts", parentKey, 1), true);
+        }
+        return {ok: true, value: {content: bytes, descriptor: {key: request.key, sizeBytes: bytes.length}}} as never;
+      }},
+      runtime: {async query() {assert.fail("No ordinary query or new authority.");}, async inspectArtifact() {assert.fail("No ordinary inspection.");},
+        async queryAdmitted(input: {query: string}, admission: ApprovedContextQueryAdmission) {
+          queryStarts++;
+          assert.equal(input.query, "What does the synthetic corpus contain? café 📄");
+          if (queryMode === "not-started") return {kind: "not-started"} as const;
+          const issued = await admission.issue();
+          if (issued !== "issued") return issued === "denied" ? {kind: "not-started"} as const : {kind: "unconfirmed", cleanupPending: true} as const;
+          if (queryMode === "unknown") return {kind: "unconfirmed", cleanupPending: true} as const;
+          assert.equal(await admission.accept(admission.taskId), true);
+          await new Promise<void>(resolve => {queryFinishes.set(admission.taskId, resolve);});
+          admission.cleanupRetired?.(admission.taskId);
+          return {kind: "succeeded", cleanupPending: false, matches: [{id: "private.runtime.chunk", excerpt: "Private source excerpt",
+            score: 0.8, citation: {sourceArtifactId: sourceKey, sourceDigest, chunkIndex: 0, rowIndex: 0, field: "text"}}]} as const;
+        }},
+      generation: core, deleteArtifact: {async execute() {assert.fail("No query deletes.");}},
+    });
+    const getContextQueryOwner = async () => {queryOwnerLoads++; return queryBrowser;};
     const scope = {organizationId, principalId, workspaceId, registeredClientId};
     const grant = {...scope, planReview: true as const, workspaceIds: [workspaceId], isCurrent: () => current};
     const registration = {...scope, purpose: "plan-review" as const, isCurrent: () => current};
@@ -151,15 +195,15 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
     const peekContextResults = () => {peeks++; return ownerAvailable ? core : undefined;};
     const getContextStart = async () => {resolutions++; return core.startAdmittedContext.bind(core);};
     const desktop = composeDesktopHeadlessPlanReview({hostIncarnationId, identity, platform, rootDirectory: directory,
-      workspaces, authorization, isOpen: () => current, systems, getContextStart, peekContextResults});
+      workspaces, authorization, isOpen: () => current, systems, getContextStart, peekContextResults, getContextQueryOwner});
     // A real SQLite transaction exercises the composed Managed application. It
     // does not claim physical PostgreSQL, browser or model qualification.
     const managedPlatform: StructuredDocumentStore = {...platform, async publishWithStableReads(check, publish) {
       return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
     }};
     const managed = composeManagedHeadlessPlanReview({hostIncarnationId, platform: managedPlatform, rootDirectory: directory, workspaces,
-      contexts, authorization, placement, systems, getContextStart, peekContextResults});
-    const capability = {allowLocalFileSave: false, allowContextPackGeneration: true, allowContextRagGeneration: true, allowContextResultSave: true};
+      contexts, authorization, placement, systems, getContextStart, peekContextResults, getContextQueryOwner});
+    const capability = {allowLocalFileSave: false, allowContextPackGeneration: true, allowContextRagGeneration: true, allowContextResultSave: true, allowContextQuery: true};
     const reviews = new HeadlessBuildPlanReviewUseCase(createStructuredHeadlessPlanReviewRepository(platform, async () => current), Date.now);
     async function propose(steps: unknown[], client = registeredClientId) {
       const input = {hostIncarnationId, workspaceId, steps}, plan = parseHeadlessBuildPlanProposal(input, hostIncarnationId, capability);
@@ -236,12 +280,21 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
     const getContextRebuildInputs = async () => {metadataLoads++; return rebuild;};
     const queryPreview = composeHeadlessContextQueryPreview(platform, directory);
     const getContextQueryPreview = async () => {metadataLoads++; return queryPreview;};
+    let hideDefinition = false, generationTaskLoads = 0, queryTaskPeeks = 0;
+    const taskDocuments = {...platform, runInOwnedTransaction: (visit: any, protect: any) => platform.runInOwnedTransaction!(owner => visit({
+      ...owner, forOrganization: (organization: typeof organizationId) => {
+        const partition = owner.forOrganization(organization);
+        return {...partition, readDocument: (namespace: string, key: string) =>
+          hideDefinition && namespace === "headless/system-builder/plan-reviews" ? Promise.resolve(undefined) : partition.readDocument(namespace, key)};
+      }}), protect)} as StructuredDocumentStore;
+    const taskReader = composeHeadlessContextTask(taskDocuments, async () => {generationTaskLoads++; return core;},
+      {rootDirectory: directory, peekOwner: () => {queryTaskPeeks++; return queryBrowser;}});
     const desktopReads = composeDesktopHeadlessReads({hostIncarnationId, identity, workspaceRepository: workspaces,
       authorization: readAuthorization, getUseCases() {assert.fail("Rebuild metadata cannot load System Builder.");},
-      getContextRebuildInputs, getContextQueryPreview, isOpen: () => current});
+      getContextTask: async () => taskReader, getContextRebuildInputs, getContextQueryPreview, isOpen: () => current});
     const managedReads = composeManagedAgentReads({hostIncarnationId, workspaces, contexts, authorization: readAuthorization,
       systems: {listTemplates() {assert.fail("No System Builder lookup.");}, read() {assert.fail("No System Builder lookup.");}},
-      getContextRebuildInputs, getContextQueryPreview});
+      getContextTask: async () => taskReader, getContextRebuildInputs, getContextQueryPreview});
     const readGrant = {...grant, operations: HEADLESS_READ_OPERATIONS};
     const viaHost = () => host === "Desktop" ? desktopReads(rebuildRequest, async () => readGrant)
       : managedReads(rebuildRequest, registration, () => current);
@@ -257,6 +310,86 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
       assert.equal(ready.value.runtimeReadiness, "not-checked"); assert.equal(ready.value.byteAvailability, "not-checked");
       assert.doesNotMatch(JSON.stringify(ready), /What does the synthetic|café|private\/model|localPath|storageKey|"query":/);
       assert.equal(peeks, before); assert.equal(starts, 1); assert.equal(writes, 1);
+      // Actual Core + SQLite saved bytes, both real host applications, both approval modes/channels.
+      const queryStep = {operation: "context.query", idempotencyKey: randomUUID(), reference: metadata.value.reference,
+        queryDigest: ready.value.queryDigest, modelRecordId: ready.value.modelRecordId, modelUpdatedAt: ready.value.modelUpdatedAt,
+        maximumResults: ready.value.maximumResults, embeddingDevice: ready.value.embeddingDevice};
+      const queryPlan = await propose([queryStep]); assert.ok(queryPlan.result.ok, JSON.stringify(queryPlan));
+      assert.equal(queryOwnerLoads + queryStarts + queryReads, 0, "Proposal must not initialize any execution owner.");
+      await approve(queryPlan.fingerprint);
+      const queryRun = (fingerprint: string, question?: string) => {
+        const request: HeadlessPlanStepRequest = {version, operation: "plan.run-step", input: {hostIncarnationId, workspaceId,
+          fingerprint, approvalRevision: 2, step: 1}, ...(question === undefined ? {} : {transient: {contextQuery: question}})};
+        const queryGrant = {...grant, isCurrent: () => current && queryRequestLive};
+        return host === "Desktop" ? desktop.runStep!(request, queryGrant, async () => queryGrant)
+          : managed.runStep!(request, {...registration, isCurrent: () => current && queryRequestLive}, () => current && queryRequestLive);
+      };
+      assert.equal((await queryRun(queryPlan.fingerprint)).result.ok, false);
+      assert.equal((await queryRun(queryPlan.fingerprint, "Substituted question")).result.ok, false);
+      assert.equal(queryOwnerLoads + queryStarts + queryReads, 0, "Missing/mismatched question must deny before model or runtime initialization.");
+      assert.equal((await queryRun(generation.fingerprint, queryRequest.input.query)).result.ok, false);
+      assert.equal((await queryRun(save.fingerprint, queryRequest.input.query)).result.ok, false);
+      assert.equal(starts, 1); assert.equal(writes, 1, "Transient text on nonquery steps must deny before effects.");
+      const queried = await queryRun(queryPlan.fingerprint, queryRequest.input.query);
+      assert.ok(queried.result.ok, JSON.stringify(queried)); assert.equal(queried.result.value.operation, "context.query");
+      const queryTaskId = (queried.result.value.reference as {taskId: string}).taskId;
+      assert.equal(queryStarts, 1);
+      const statusRequest = {version, operation: "context.task" as const, input: {hostIncarnationId, workspaceId,
+        selection: {kind: "task" as const, taskId: queryTaskId}}};
+      const queryStatus = () => host === "Desktop" ? desktopReads(statusRequest, async () => ({...readGrant, isCurrent: () => current}))
+        : managedReads(statusRequest, {...registration, isCurrent: () => current}, () => current);
+      const running = await queryStatus(); assert.ok(running.ok, JSON.stringify(running)); assert.equal(running.value.state, "running");
+      queryRequestLive = false; // Retire the original request/token while its accepted job is running.
+      queryFinishes.get(queryTaskId)!();
+      await new Promise<void>(resolve => setImmediate(resolve));
+      const completed = await queryStatus(); assert.ok(completed.ok, JSON.stringify(completed));
+      assert.equal(completed.value.state, "succeeded"); assert.ok("query" in completed.value);
+      assert.equal(completed.value.query.matches.length, 1); assert.equal(completed.value.query.cleanupPending, false);
+      assert.deepEqual(completed.value.query.sources[0], {reference: rebuilt.value.preview.sources[0].reference, digest: sourceDigest});
+      assert.doesNotMatch(JSON.stringify(completed), /Private source excerpt|private.runtime|What does the synthetic|café|storageKey|outputHandle|localPath|principalId|registeredClientId/);
+      const beforeMissing = {generationTaskLoads, queryTaskPeeks};
+      hideDefinition = true; assert.equal((await queryStatus()).ok, false, "A missing exact definition cannot become generation status.");
+      assert.deepEqual({generationTaskLoads, queryTaskPeeks}, beforeMissing, "Missing definitions deny before either owner."); hideDefinition = false;
+      denyModelRead = true; assert.equal((await queryStatus()).ok, false, "Fresh query reads require ModelRead independently of generation reads.");
+      denyModelRead = false; assert.deepEqual(await queryStatus(), completed);
+      queryRequestLive = true;
+      const replay = await queryRun(queryPlan.fingerprint); assert.ok(replay.result.ok, JSON.stringify(replay));
+      assert.equal(replay.result.value.kind, "replayed"); assert.equal(queryStarts, 1);
+      assert.equal(queryOwnerLoads, 1, "Accepted replay must not resolve an owner or rerun a query.");
+      assert.equal(await replay.publishIfCurrent?.(() => true), true);
+      const wrongClient = host === "Desktop" ? await desktopReads(statusRequest, async () => ({...readGrant, registeredClientId: randomUUID()}))
+        : await managedReads(statusRequest, {...registration, registeredClientId: randomUUID()}, () => current);
+      assert.equal(wrongClient.ok, false);
+      // Query tasks cannot gain generation review or save authority.
+      assert.equal(await core.readAdmittedContextTask(queryTaskId, context), undefined);
+      const querySave = await propose([{...saveStep, taskId: queryTaskId, idempotencyKey: randomUUID()}]);
+      assert.equal(querySave.result.ok, false); assert.equal(writes, 1);
+      for (const fault of ["not-started", "unknown"] as const) {
+        queryMode = fault;
+        const plan = await propose([{...queryStep, idempotencyKey: randomUUID()}]); assert.ok(plan.result.ok);
+        await approve(plan.fingerprint);
+        const initial = queryStarts;
+        const failed = await queryRun(plan.fingerprint, queryRequest.input.query); assert.equal(failed.result.ok, false);
+        assert.equal(queryStarts, initial + 1);
+        const repeated = await queryRun(plan.fingerprint); assert.equal(repeated.result.ok, false);
+        assert.equal(queryStarts, initial + 1, "Unknown and terminal non-start outcomes never authorize another run.");
+      }
+      const savedQueryPlan = await platform.forOrganization(organizationId).listDocuments("headless/system-builder/plan-reviews");
+      assert.doesNotMatch(JSON.stringify(savedQueryPlan), /What does the synthetic|Private source excerpt|café/);
+      queryMode = "success";
+      const lateQuery = await propose([{...queryStep, idempotencyKey: randomUUID()}]); assert.ok(lateQuery.result.ok);
+      await approve(lateQuery.fingerprint); parentKey = `${workspaceId}/${reference.contextId}`; hideQueryParentBeforeIssue = true;
+      const beforeLate = queryStarts;
+      const changed = await queryRun(lateQuery.fingerprint, queryRequest.input.query); assert.equal(changed.result.ok, false);
+      assert.ok(hiddenQueryParent, "The saved parent must disappear after staging, before atomic issue.");
+      await documents.writeDocument("headless/context/saved-contexts", hiddenQueryParent.key, hiddenQueryParent.value, {expectedRevision: 0});
+      hiddenQueryParent = undefined;
+      assert.equal((await queryRun(lateQuery.fingerprint)).result.ok, false); assert.equal(queryStarts, beforeLate + 1);
+      await repositories.memberships.saveMembership({...membership, status: "removed"});
+      assert.equal(await queryBrowser.readAdmittedContextQueryTask(queryTaskId, context), undefined, "Accepted jobs reread actual current membership independently of old request authority.");
+      assert.equal((await queryStatus()).ok, false);
+      await repositories.memberships.saveMembership(membership);
+      assert.deepEqual(await queryStatus(), completed);
     } else assert.equal((await viaQuery()).ok, false, "A context pack cannot become a queryable RAG artifact.");
     assert.deepEqual(await viaHost(), rebuilt);
     const retiredBuildApproval = await reviews.decide({fingerprint: generation.fingerprint, expectedRevision: 2,

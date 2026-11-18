@@ -514,6 +514,7 @@ export async function createServer(
           allowContextPackGeneration: planReview.allowContextPackGeneration,
           allowContextRagGeneration: planReview.allowContextRagGeneration,
           allowContextResultSave: planReview.allowContextResultSave,
+          allowContextQuery: planReview.allowContextQuery,
           planReview: async (input, agent, current) =>
             agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(runPlanStep ? { planStep: async (input, agent, current) =>

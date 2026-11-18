@@ -13,7 +13,7 @@ It hashes transient question text and compiles the exact saved Context's origina
 source/model metadata through the platform owner. It never resolves the lazy
 Context/model runtime, reads source bytes or creates an execution grant. The
 question stays out of records/results; transport request buffers retain their
-existing bounded lifetime. Public query execution and summaries remain pending.
+existing bounded lifetime. Separate version-10 approval below permits queries. Query-window and physical qualification remain pending.
 
 Context window intents use current artifact-read permission and the existing
 separate window consent. The shared Context presentation reader verifies an exact
@@ -229,3 +229,12 @@ it never initializes the runtime inside the transaction. Confirmed receipt repla
 does not require the owner to remain loaded. `context.saved` is a separate passive
 indexed metadata read with current workspace/artifact permissions. It provides
 no archive-readiness, query, rebuild, model or window qualification.
+
+The opt-in version-10 `context.query` plan binds a saved RAG, original model,
+question hash and explicit query bounds. Approved execution carries text only
+in its transient envelope. Passive preview separately hashes its input; neither
+stores the question in the plan. The retained query owner records exact acceptance once; fresh task
+reads require current artifact and model permission and return citation-only
+summaries. Query tasks cannot grant a generation save. See
+`docs/architecture/context-management.md` and the portable Context skill guide
+for request lifetime, owned policy, uncertainty and pending qualification limits.

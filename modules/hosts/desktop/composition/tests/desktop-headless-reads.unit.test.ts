@@ -487,3 +487,24 @@ test("withholds prepared session identifiers if conversation permission is lost 
   assert.deepEqual(await handler(request("workflows.prepare", { hostIncarnationId, workspaceId, profileId, source }), async () => granted),
     forbidden);
 });
+
+test("Desktop query task publication rechecks ModelRead after the task result returns", async () => {
+  let modelAllowed = true, modelChecks = 0, opens = 0;
+  const taskId = "3bed6953-7df5-4e0b-a0db-2b4a2a02ac41";
+  const read = composeDesktopHeadlessReads({hostIncarnationId, identity: grant,
+    workspaceRepository: {async readWorkspace() {return {workspaceId, organizationId, status: "active", displayName: "Synthetic", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      if (requiredScopes.includes("model:read")) {modelChecks++; if (!modelAllowed) throw new Error("Model access ended.");}
+    }}, getUseCases() {assert.fail("No System Builder access.");}, isOpen: () => true,
+    async getContextTask() {return {async execute(_request, authority) {
+      opens++; assert.equal(await authority.queryStillAllowed?.(), true);
+      modelAllowed = false;
+      return {ok: true, operation: "context.task", value: {taskId, state: "succeeded", review: null,
+        query: {queryDigest: "sha256:" + "a".repeat(64), maximumResults: 1, embeddingDevice: "cpu", cleanupPending: false,
+          sources: [{reference: {kind: "ingestion-file", taskId: "task.one", fileId: "file.one", taskRevision: 1}, digest: "sha256:" + "b".repeat(64)}], matches: []}}} as never;
+    }};},
+  });
+  const value = await read(request("context.task", {hostIncarnationId, workspaceId, selection: {kind: "task", taskId}}),
+    async () => ({...grant, registeredClientId: taskId, planReview: true, isCurrent: () => true}));
+  assert.deepEqual(value, forbidden); assert.equal(opens, 1); assert.equal(modelChecks, 2);
+});

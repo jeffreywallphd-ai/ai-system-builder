@@ -1,3 +1,12 @@
+The exact `headless-context-rebuild-inputs` check also covers version-10 query
+contracts, transient input, original recorded metadata, one-use ACK/accept and
+captured-actor lifecycle, with both real host compositions using Core/SQLite.
+Fresh task reads deny missing definitions and require ModelRead at final egress.
+The existing API bootstrap, approval UI and SDK checks verify capability/input
+forwarding. These are focused controlled fixtures, not physical model/resource,
+actual-host, query-window or parent/chunk qualification. Unknown neighbors and
+explicit generic requirements retain their fallback checks.
+
 # Contributor Control Plane
 
 The exact `headless-context-artifact-lifecycle` check also runs the admitted
@@ -100,7 +109,7 @@ The fixed `headless-context-rebuild-inputs` profile covers strict rebuild metada
 current resource/liveness checks, accepted lineage and composed two-host reads with
 real Core/SQLite and controlled runtime bytes. Earlier Context preview/save and
 official MCP/route checks remain selected for their declared sources. It grants
-no actual rebuild/query, physical model/resource/host or parent qualification;
+no physical model/resource/host or parent qualification; composed rebuild/query evidence stays controlled;
 unmapped neighbors and explicit generic tests keep the normal focused fallback.
 Its AST-only host-catalog regression compares the two literal real-app fixture
 expectations with generated mode catalogs. It does not import or launch those

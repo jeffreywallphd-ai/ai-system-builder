@@ -71,7 +71,7 @@ export function composeManagedAgentReads(options: {
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
     const authorized = async (workspaceId: WorkspaceId,
       requestedOperation: HeadlessReadRequest["operation"] | HeadlessSystemManagementRequest["operation"] = operation,
-      requiresEdit = false) => {
+      requiresEdit = false, queryModel = false) => {
       if (!current()) return false;
       const workspace = await options.workspaces.readWorkspace(workspaceId);
       if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== identity.organizationId || workspace.status !== "active")
@@ -79,7 +79,7 @@ export function composeManagedAgentReads(options: {
       try {
         await options.authorization.authorizeWorkspaceOperation({
           workspace, operation: `headless.${requestedOperation}`,
-          requiredScopes: requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
+          requiredScopes: queryModel ? ["workspace:read", "artifact:read", "model:read"] : requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
             : operation === "context.models" ? ["workspace:read", "model:read"]
             : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
             : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
@@ -129,8 +129,10 @@ export function composeManagedAgentReads(options: {
         if (!current() || !await authorized(input.workspaceId)) return denied;
         const result = await task.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {
           workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
-          clientId: identity.registeredClientId, stillAllowed: async () => current() && await authorized(input.workspaceId)});
-        return current() && await authorized(input.workspaceId) ? result : denied;
+          clientId: identity.registeredClientId, isCurrent: current,
+          queryStillAllowed: async () => current() && await authorized(input.workspaceId, operation, false, true), stillAllowed: async () => current() && await authorized(input.workspaceId)});
+        const queryResult = result.ok && "query" in result.value;
+        return current() && await authorized(input.workspaceId, operation, false, queryResult) && current() ? result : denied;
       }
       if (operation === "context.models" || operation === "context.preview-generation") {
         if (!options.getContextInputs) return {ok: false, code: "headless.unsupported-operation"};

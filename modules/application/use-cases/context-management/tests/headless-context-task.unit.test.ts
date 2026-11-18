@@ -15,6 +15,57 @@ function fixture() {
   return {context, taskId, clientId, request};
 }
 
+function queryValue(taskId: string) {
+  return {taskId, state: "succeeded", review: null, query: {queryDigest: "sha256:" + "a".repeat(64), maximumResults: 3,
+    embeddingDevice: "cpu", sources: [{reference: {kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1},
+      digest: "sha256:" + "b".repeat(64)}], matches: [{rank: 1, score: 0.9, sourceOrdinal: 1, chunkIndex: 0}], cleanupPending: false}};
+}
+
+test("query association requires fresh model permission before processor access, without narrowing generation reads", async () => {
+  const f = fixture(), value = queryValue(f.taskId); let reads = 0, modelAllowed = false;
+  const app = new ReadHeadlessContextTaskUseCase(async () => ({family: "query", taskId: f.taskId}), async (id, actor, policy, family, live) => {
+    reads++; assert.equal(id, f.taskId); assert.deepEqual(actor, f.context); assert.equal(family, "query");
+    assert.equal(await policy(), true); assert.equal(live(), true); return value;
+  });
+  const authority = {context: f.context, clientId: f.clientId, stillAllowed: async () => true};
+  assert.deepEqual(await app.execute(f.request, authority), {ok: false, code: "headless.forbidden"});
+  assert.deepEqual(await app.execute(f.request, {...authority, queryStillAllowed: async () => modelAllowed}), {ok: false, code: "headless.forbidden"});
+  assert.equal(reads, 0); modelAllowed = true;
+  assert.deepEqual(await app.execute(f.request, {...authority, queryStillAllowed: async () => modelAllowed}),
+    {ok: true, operation: "context.task", value}); assert.equal(reads, 1);
+  const generation = new ReadHeadlessContextTaskUseCase(async () => f.taskId, async () => ({taskId: f.taskId, state: "running", review: null}));
+  assert.equal((await generation.execute(f.request, authority)).ok, true);
+  const forged = new ReadHeadlessContextTaskUseCase(async () => f.taskId, async () => value);
+  assert.deepEqual(await forged.execute(f.request, {...authority, queryStillAllowed: async () => true}), {ok: false, code: "headless.unavailable"});
+});
+
+test("new query requests use fresh registration policy instead of retaining an earlier failed request", async () => {
+  const f = fixture(), value = queryValue(f.taskId); let reads = 0;
+  const app = new ReadHeadlessContextTaskUseCase(async () => ({family: "query", taskId: f.taskId}), async () => {reads++; return value;});
+  assert.equal((await app.execute(f.request, {context: f.context, clientId: f.clientId, stillAllowed: async () => false,
+    queryStillAllowed: async () => false, isCurrent: () => false})).ok, false);
+  assert.equal(reads, 0);
+  assert.deepEqual(await app.execute(f.request, {context: f.context, clientId: f.clientId, stillAllowed: async () => true,
+    queryStillAllowed: async () => true, isCurrent: () => true}), {ok: true, operation: "context.task", value});
+  assert.equal(reads, 1);
+});
+
+test("query permission retirement after helper resolution fences provider and final publication", async () => {
+  for (const boundary of ["before-read", "after-read"]) {
+    const f = fixture(); let live = true, reads = 0, checks = 0;
+    const app = new ReadHeadlessContextTaskUseCase(async () => ({family: "query", taskId: f.taskId}), async () => {
+      reads++; return queryValue(f.taskId);
+    });
+    const result = await app.execute(f.request, {context: f.context, clientId: f.clientId, stillAllowed: async () => true,
+      isCurrent: () => live, queryStillAllowed: async () => {
+        if (++checks === (boundary === "before-read" ? 1 : 2)) queueMicrotask(() => queueMicrotask(() => {live = false;}));
+        return true;
+      }});
+    assert.deepEqual(result, {ok: false, code: "headless.forbidden"});
+    assert.equal(reads, boundary === "before-read" ? 0 : 1);
+  }
+});
+
 test("Context task lookup proves accepted ownership before processor access and rechecks authority at each boundary", async () => {
   const {context, taskId, clientId, request} = fixture();
   let accepted: string | undefined = taskId, current = true, retireAfterLookup = false, retireAfterRead = false;

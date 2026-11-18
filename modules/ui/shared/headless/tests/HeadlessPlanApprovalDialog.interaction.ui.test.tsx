@@ -13,7 +13,11 @@ import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalVa
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient } from "../HeadlessPlanApprovalDialog";
 
-for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context", "context-save", "mixed-save", "context-rebuild", "rag-rebuild"]) test(variant.endsWith("rebuild")
+for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context", "context-save", "mixed-save", "context-rebuild", "rag-rebuild", "query", "query-alternate"]) test(variant === "query-alternate"
+  ? "changing only the question hash changes its displayed approved identity in both channels and modes"
+  : variant === "query"
+  ? "both approval channels and modes disclose the exact local query, citation-only output and separate permissions"
+  : variant.endsWith("rebuild")
   ? `${variant} approval in both channels and modes identifies the saved parent and a new separately reviewed result`
   : variant === "context-save" || variant === "mixed-save"
   ? `${variant} approval in both channels and modes discloses separate reviewed Context saving permissions`
@@ -32,13 +36,18 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   : "both app channels identify the exact file save and approve through the same scoped view", async () => {
   const mixed = variant === "mixed-context" || variant === "mixed-save";
   const contextSave = variant === "context-save" || variant === "mixed-save";
+  const query = variant === "query" || variant === "query-alternate";
+  const queryDigest = "sha256:" + (variant === "query-alternate" ? "b" : "a").repeat(64);
   const rebuild = variant.endsWith("rebuild");
   const provider = variant === "provider", dataset = variant === "dataset", result = variant === "result", context = variant === "context" || variant === "context-rebuild" || mixed, rag = variant === "rag" || variant === "rag-rebuild" || mixed;
   const hostIncarnationId = "d52c0a60-3384-48ce-80e4-6102898ad428";
   assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
   const workspaceId = createWorkspaceId("workspace.synthetic");
   const steps: Record<string, unknown>[] = [{
-    ...(context || rag ? {operation: rag ? "context.generate-rag" : "context.generate-pack", name: "Support reference", sources: [
+    ...(query ? {operation: "context.query", reference: {workspaceId, contextId: "4de870ce-e5e0-4e48-99c8-bc77026d64d8",
+      taskId: "e5e875d7-55db-42e8-93ad-e58fd33bc317", kind: "rag-database", artifactDigest: "sha256:" + "f".repeat(64)},
+      queryDigest, modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z",
+      maximumResults: 3, embeddingDevice: "cpu"} : context || rag ? {operation: rag ? "context.generate-rag" : "context.generate-pack", name: "Support reference", sources: [
       {kind: "ingestion-file", taskId: "ingestion.synthetic", fileId: "file.synthetic", taskRevision: 4},
       {kind: "dataset-version", datasetId: "support", versionId: "support:1234", versionDigest: "sha256:" + "c".repeat(64), role: "train"}],
       settings: {chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["question", "answer"],
@@ -64,7 +73,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   if (variant === "mixed-save") steps.push({operation: "context.save-result", taskId: "26a7ce63-a472-4779-876a-58500d26b971",
     reportFingerprint: "a".repeat(64), name: "Reviewed support context", idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086dc"});
   const parsed = parseHeadlessBuildPlanProposal({hostIncarnationId, workspaceId, steps}, hostIncarnationId, { allowLocalFileSave: true, allowProviderFileSave: provider, allowLocalDatasetPreparation: dataset,
-    allowDatasetResultSave: result, allowContextPackGeneration: context, allowContextRagGeneration: rag, allowContextResultSave: contextSave });
+    allowDatasetResultSave: result, allowContextPackGeneration: context, allowContextRagGeneration: rag, allowContextResultSave: contextSave,
+    allowContextQuery: query });
   assert.ok(parsed.ok);
   const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
   const selection = { workspaceId, fingerprint, registeredClientId: "83739bf2-c08e-4d9d-ad84-da05ae2d17f3" };
@@ -86,7 +96,7 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   const original = Object.fromEntries(Object.keys(globals).map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   Object.assign(globalThis, globals);
   try {
-    for (const surface of ["popup", "chat"] as const) for (const mode of (context || rag || contextSave ? ["each-change", "whole-plan"] : ["each-change"]) as ("each-change" | "whole-plan")[]) {
+    for (const surface of ["popup", "chat"] as const) for (const mode of (context || rag || contextSave || query ? ["each-change", "whole-plan"] : ["each-change"]) as ("each-change" | "whole-plan")[]) {
       const decisions: DesktopPlanApprovalDecision[] = [];
       const client: HeadlessPlanApprovalClient = {
         async list(workspace) { assert.equal(workspace, workspaceId); return [{ ...selection, expiresAt }]; },
@@ -109,8 +119,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
         await act(async () => button("Review request " + fingerprint.slice(0, 8), false).click());
         const changes = dom.window.document.querySelector('[aria-label="Requested changes"]');
         const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]');
-        assert.match(permissions?.textContent ?? "", rag ? /Build a RAG database/ : context ? /Prepare a Markdown Context pack/ : contextSave ? /Save only the reviewed Context result/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
-        assert.match(changes?.textContent ?? "", rebuild ? rag ? /Rebuild RAG database: Support reference/ : /Rebuild Context pack: Support reference/ : rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : contextSave ? /Save reviewed Context: Reviewed support context/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
+        assert.match(permissions?.textContent ?? "", query ? /Search the exact saved RAG database/ : rag ? /Build a RAG database/ : context ? /Prepare a Markdown Context pack/ : contextSave ? /Save only the reviewed Context result/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
+        assert.match(changes?.textContent ?? "", query ? /Search a saved RAG database/ : rebuild ? rag ? /Rebuild RAG database: Support reference/ : /Rebuild Context pack: Support reference/ : rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : contextSave ? /Save reviewed Context: Reviewed support context/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
           ? /Save the selected Hugging Face source in Data/ : /Save the selected file in Data/);
         if (rebuild) {
           assert.match(changes?.textContent ?? "", /Saved Context: 4de870ce-e5e0-4e48-99c8-bc77026d64d8/);
@@ -128,7 +138,7 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
           assert.match(permissions?.textContent ?? "", /immutable dataset version/);
           assert.match(permissions?.textContent ?? "", /Saving this dataset makes no model calls\. No outside publication\. No second processing run/);
           assert.doesNotMatch(permissions?.textContent ?? "", /Process the listed|Save the listed files/);
-        } else if (!contextSave || mixed) {
+        } else if (!query && (!contextSave || mixed)) {
           assert.match(changes?.textContent ?? "", /File reference file\.synthetic/);
           assert.match(changes?.textContent ?? "", /Upload ingestion\.synthetic, version 4/);
         }
@@ -138,6 +148,18 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
           assert.match(permissions?.textContent ?? "", /64 MiB/);
           assert.match(permissions?.textContent ?? "", /This save starts no model or processing task/);
           assert.doesNotMatch(permissions?.textContent ?? "", /Save the listed files|immutable dataset version/);
+        }
+        if (query) {
+          assert.ok(changes?.textContent?.includes(`Question fingerprint: ${queryDigest}`));
+          assert.ok(!changes?.textContent?.includes("sha256:" + (variant === "query-alternate" ? "a" : "b").repeat(64)), "Different questions must not share a displayed fingerprint.");
+          assert.match(permissions?.textContent ?? "", /64 MiB of saved data and 2,000 question characters/);
+          assert.match(permissions?.textContent ?? "", /app does not save its text/);
+          assert.match(permissions?.textContent ?? "", /only source references, scores and citation locations/);
+          assert.match(permissions?.textContent ?? "", /Model downloads, installation and window control need separate permission/);
+          assert.match(changes?.textContent ?? "", /Saved Context: 4de870ce-e5e0-4e48-99c8-bc77026d64d8/);
+          assert.match(changes?.textContent ?? "", /Model record: model.synthetic/);
+          assert.match(changes?.textContent ?? "", /Device: cpu\. Return at most 3 citation results/);
+          assert.doesNotMatch(changes?.textContent ?? "", /excerpt|localModelReference|private\/model|Synthetic private question/);
         }
         if (dataset) {
           assert.match(permissions?.textContent ?? "", /4 files, 4 MiB per file, 16 MiB total and 1,000 rows per file/);

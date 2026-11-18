@@ -6,7 +6,7 @@ import type {
 } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId,
   parseHeadlessBuildPlanProposal, type HeadlessBuildPlanRequest } from "../../../contracts/headless";
-import {serializeHeadlessMutationInput, type HeadlessContextGenerationPlanRequest} from "../../../contracts/headless";
+import {serializeHeadlessMutationInput, type HeadlessContextGenerationPlanRequest, type HeadlessContextQueryPlanRequest} from "../../../contracts/headless";
 import type {ApprovedContextEmbeddingModelWitness} from "../../../application/ports/context-management";
 import {readApprovedContextEmbeddingModelWitness} from "../../../application/use-cases/context-management/approved-context-embedding-model";
 import { isOrganizationId } from "../../../contracts/organization";
@@ -63,6 +63,7 @@ export function createStructuredHeadlessPlanReviewRepository(
   bindContextModels?: (partition: StructuredDocumentStore, requests: readonly HeadlessBuildPlanRequest[]) =>
     Promise<readonly ContextPlanModelBinding[] | undefined>,
   allowContextResultSave = false,
+  allowContextQuery = false,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -110,7 +111,8 @@ export function createStructuredHeadlessPlanReviewRepository(
       const proposal = decodeProposal(input.proposal, input.target, allowLocalFileSave && Boolean(validateNewProposal),
         allowProviderFileSave && Boolean(validateNewProposal), allowLocalDatasetPreparation && Boolean(validateNewProposal),
         allowDatasetResultSave && Boolean(validateNewProposal), allowContextPackGeneration && Boolean(validateNewProposal),
-        allowContextRagGeneration && Boolean(validateNewProposal), allowContextResultSave && Boolean(validateNewProposal));
+        allowContextRagGeneration && Boolean(validateNewProposal), allowContextResultSave && Boolean(validateNewProposal),
+        allowContextQuery && Boolean(validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
       return run(input, "propose", async (store, target, key, requireFresh) => {
         const existing = await readReview(store, target, key);
@@ -196,10 +198,10 @@ function sha256(value: string) { return createHash("sha256").update(value, "utf8
 
 function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowLocalFileSave: boolean, allowProviderFileSave = false,
   allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false, allowContextRagGeneration = false,
-  allowContextResultSave = false) {
+  allowContextResultSave = false, allowContextQuery = false) {
   const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId,
     { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration,
-      allowContextResultSave });
+      allowContextResultSave, allowContextQuery });
   if (proposal.ok && proposal.scope.workspaceId === target.scope.workspaceId &&
       sha256(JSON.stringify(proposal.preview)) === target.fingerprint) return proposal;
 }
@@ -209,7 +211,7 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
   if (!document) return;
   const raw = readStrictPassiveRecord(document.value, ["version", "proposal", "state", "contextModels"]);
   const {version, proposal, state} = raw;
-  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true);
+  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true, true);
   if (!parsed) throw new Error("Stored plan review is unavailable.");
   const normalizedState = readState(state, document.revision, parsed.requests.length);
   const contextModels = version === 2 ? readContextModels(raw.contextModels, parsed.requests) : undefined;
@@ -225,7 +227,7 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
 export async function readStructuredHeadlessPlanModelPermission(partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget) {
   if (!validTarget(target) || partition.organizationId !== target.scope.organizationId) return;
   const review = await readReview(partition, target, planKey(target));
-  return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag"),
+  return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag" || request.operation === "context.query"),
     requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result")} : undefined;
 }
 
@@ -244,6 +246,18 @@ export async function readStructuredRecordedContextGeneration(partition: Structu
   if (request.operation === "context.generate-rag" && !model) return;
   return {request: structuredClone(request) as HeadlessContextGenerationPlanRequest,
     ...(model ? {embeddingModel: structuredClone(model)} : {})};
+}
+
+/** An accepted query identity supplies lineage, never renewed permission. No question text is stored. */
+export async function readStructuredRecordedContextQuery(partition: StructuredDocumentStore,
+  target: HeadlessPlanReviewTarget, step: number, expectedInputDigest: string) {
+  if (!validTarget(target) || partition.organizationId !== target.scope.organizationId ||
+      !Number.isSafeInteger(step) || step < 1 || step > HEADLESS_MAX_BUILD_PLAN_STEPS ||
+      !/^[a-f0-9]{64}$/.test(expectedInputDigest)) return;
+  const review = await readReview(partition, target, planKey(target));
+  const request = review?.requests[step - 1];
+  return request?.operation === "context.query" && sha256(serializeHeadlessMutationInput(request)) === expectedInputDigest
+    ? structuredClone(request) as HeadlessContextQueryPlanRequest : undefined;
 }
 
 /** Used by the execution adapter after current authorization in the same transaction. */

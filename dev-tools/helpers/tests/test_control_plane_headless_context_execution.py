@@ -12,6 +12,23 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_public_query_routes_to_contract_app_owner_and_real_host_checks_without_hiding_unknowns(self):
+        paths = ['modules/contracts/headless/headless-context-query-plan.ts',
+                 'modules/hosts/shared/composition/headlessContextQueryExecution.ts',
+                 'modules/application/use-cases/context-management/headless-context-task.use-case.ts']
+        selected = self.selected(paths, ['architecture'])
+        check = selected['headless-context-rebuild-inputs']
+        for test in ['modules/contracts/headless/tests/headless-context-query-contract.unit.test.ts',
+                     'modules/application/use-cases/context-management/tests/headless-context-task.unit.test.ts',
+                     'modules/hosts/shared/composition/tests/headless-context-query-execution.unit.test.ts',
+                     'modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts',
+                     'modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts',
+                     'modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts']:
+            self.assertIn(test, check['argv'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(paths + ['modules/hosts/shared/composition/unmapped-query.ts'], ['architecture']))
+
     def test_admitted_query_owner_uses_actual_lifecycle_cases_and_preserves_unknown_fallback(self):
         name = 'headless-context-artifact-lifecycle'
         paths = ['modules/application/use-cases/context-management/approved-context-query-owner.ts',
@@ -78,6 +95,9 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         self.assertNotIn('focused-tests', selected)
         self.assertEqual(selected['headless-context-rebuild-inputs']['argv'][1:], [
             '--import', 'tsx', '--test', '--',
+            'modules/contracts/headless/tests/headless-context-query-contract.unit.test.ts',
+            'modules/hosts/shared/composition/tests/headless-context-query-execution.unit.test.ts',
+            'modules/application/use-cases/context-management/tests/headless-context-task.unit.test.ts',
             'modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts',
             'modules/application/use-cases/context-management/tests/headless-context-query-preview.unit.test.ts',
             'modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts',

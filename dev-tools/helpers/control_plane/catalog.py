@@ -347,6 +347,12 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-context-rebuild-inputs": {
         "automatic_sources": (
+            "modules/contracts/headless/headless-context-query-plan.ts",
+            "modules/contracts/headless/tests/headless-context-query-contract.unit.test.ts",
+            "modules/hosts/shared/composition/headlessContextQueryExecution.ts",
+            "modules/hosts/shared/composition/tests/headless-context-query-execution.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-task.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-task.unit.test.ts",
             "modules/contracts/headless/headless-context-query-preview.ts",
             "modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts",
             "modules/application/use-cases/context-management/headless-context-query-preview.use-case.ts",
@@ -359,6 +365,12 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/shared/composition/headlessContextRebuild.ts",
         ),
         "sources": (
+            "modules/contracts/headless/headless-context-query-plan.ts",
+            "modules/contracts/headless/tests/headless-context-query-contract.unit.test.ts",
+            "modules/hosts/shared/composition/headlessContextQueryExecution.ts",
+            "modules/hosts/shared/composition/tests/headless-context-query-execution.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-task.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-task.unit.test.ts",
             "modules/contracts/headless/headless-context-query-preview.ts",
             "modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts",
             "modules/application/use-cases/context-management/headless-context-query-preview.use-case.ts",
@@ -395,6 +407,9 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": (
             "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-context-query-contract.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-query-execution.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-task.unit.test.ts",
             "modules/contracts/headless/tests/headless-context-query-preview.unit.test.ts",
             "modules/application/use-cases/context-management/tests/headless-context-query-preview.unit.test.ts",
             "modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts",

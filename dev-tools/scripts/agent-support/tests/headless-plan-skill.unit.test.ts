@@ -113,8 +113,17 @@ test("portable Context guidance and discovery separate metadata from execution a
     "original task controls", "query summaries remain unavailable", "Ending display does not cancel"])
     assert.ok(normalized.includes(text), `Missing separately consented Context display boundary: ${text}`);
   for (const text of ["aisb_preview_context_query", "2,000 characters", "exact UTF8 text", "queryDigest", "A changed question needs a new preview",
-    "does not save or return the question", "asynchronous metadata dependency", "query step and query summaries remain unavailable"])
+    "does not save or return the question", "asynchronous metadata dependency", "Use the separate approval procedure below"])
     assert.ok(normalized.includes(text), `Missing private passive question boundary: ${text}`);
+});
+test("portable approved-query guidance separates transient input, owned lifetime and fresh result permission", () => {
+  const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8").replace(/\s+/g, " ");
+  for (const text of ["context.query", "version 10", "optional `contextQuery`", "Do not put the question in the build plan",
+    "same registered client, host, actor and workspace", "Current model and artifact read permissions",
+    "Missing definitions cannot become generation tasks", "existing cached query owner", "cleanupPending",
+    "question can be omitted", "uncertain issue or acceptance never permits", "closed request or old approval lifetime",
+    "does not establish worker failure or restart authority", "Physical retrieval/resource and real-app qualification"])
+    assert.ok(guide.includes(text), `Missing approved-query limit: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

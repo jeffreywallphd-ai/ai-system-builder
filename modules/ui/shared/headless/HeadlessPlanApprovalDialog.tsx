@@ -198,13 +198,14 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const contextProcessing = view.preview.steps.some(step => step.operation === "context.generate-pack");
   const ragProcessing = view.preview.steps.some(step => step.operation === "context.generate-rag");
   const contextSaving = view.preview.steps.some(step => step.operation === "context.save-result");
-  const processing = datasetProcessing || contextProcessing || ragProcessing;
+  const contextQuerying = view.preview.steps.some(step => step.operation === "context.query");
+  const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
     <p>Requested by Client {view.selection.registeredClientId.slice(0, 8)}</p>
     <ul aria-label="Permissions and limits">
-      <li>{processing ? "Perform" : "Save"} only the changes shown below in this workspace.</li>
+      <li>{contextQuerying ? "Run only the work shown below in this workspace." : `${processing ? "Perform" : "Save"} only the changes shown below in this workspace.`}</li>
       {view.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source") ? (
         <li>Save the listed files in this workspace’s Data area.</li>
       ) : null}
@@ -234,7 +235,13 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Use the exact review fingerprint. Add the result to this workspace's Context collection.</li>
         <li>This save starts no model or processing task. Queries, rebuilding, outside publication and window control need separate permission.</li>
       </> : null}
-      <li>Limit of {state.stepCount} {processing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
+      {contextQuerying ? <>
+        <li>Search the exact saved RAG database with its original local model on the selected device. Limit: 64 MiB of saved data and 2,000 question characters.</li>
+        <li>Review the question in your connected chat. The app does not save its text. Each listed search has a fixed result limit.</li>
+        <li>Return only source references, scores and citation locations. Source excerpts and question text are not returned.</li>
+        <li>This search does not save or publish data. Model downloads, installation and window control need separate permission.</li>
+      </> : null}
+      <li>Limit of {state.stepCount} {contextQuerying ? state.stepCount === 1 ? "work item" : "work items" : `${processing ? "" : "saved "}${state.stepCount === 1 ? "change" : "changes"}`} for this plan.</li>
       {providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
         : <li>No outside service calls or provider charges.</li>}
@@ -262,6 +269,13 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
           <strong>Save reviewed dataset: {step.input.outputBaseName}</strong>
           <div>Preparation task: {step.input.taskId}</div>
           <div>Approved quality report: {step.input.reportFingerprint}</div>
+        </> : step.operation === "context.query" ? <>
+          <strong>Search a saved RAG database</strong>
+          <div style={{overflowWrap: "anywhere"}}>Question fingerprint: <code>{step.input.queryDigest}</code></div>
+          <div>Saved Context: {step.input.reference.contextId}. Original task: {step.input.reference.taskId}.</div>
+          <div>Saved data digest: {step.input.reference.artifactDigest}.</div>
+          <div>Model record: {step.input.modelRecordId}. Saved at {step.input.modelUpdatedAt}.</div>
+          <div>Device: {step.input.embeddingDevice}. Return at most {step.input.maximumResults} citation results.</div>
         </> : step.operation === "context.save-result" ? <>
           <strong>Save reviewed Context: {step.input.name}</strong>
           <div>Context task: {step.input.taskId}</div>

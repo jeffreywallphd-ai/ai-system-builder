@@ -1092,6 +1092,7 @@ export function composeDesktopHost(
       // already loaded owner, but must never create runtime dependencies.
       let contextResultOwner: (import("../../shared/composition/headlessContextResults").HeadlessContextResultOwner &
         Pick<import("../../../application/use-cases/context-management").ContextGenerationUseCase, "readAdmittedContextTask">) | undefined;
+      let contextQueryOwner: import("../../shared/composition/headlessContextQueryExecution").HeadlessContextQueryOwner | undefined;
       const getContextManagementFeatures =
         featureLifecycle.registerAsyncFeature({
           featureKey: "context-management",
@@ -1115,6 +1116,7 @@ export function composeDesktopHost(
                 now: options.now,
               });
               contextResultOwner = feature.generation;
+              contextQueryOwner = feature.browser;
               return feature;
             };
           },
@@ -2274,7 +2276,8 @@ export function composeDesktopHost(
             getUseCases: () => systemBuilder.useCases,
             getContextTask: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
-              return composeHeadlessContextTask(platformDocuments, async () => (await getContextManagementFeatures()).generation);
+              return composeHeadlessContextTask(platformDocuments, async () => (await getContextManagementFeatures()).generation,
+                {rootDirectory: registerOptions.storageRootDirectory, peekOwner: () => contextQueryOwner});
             } : undefined,
             getContextSaved: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessContextSaved} = await import("../../shared/composition/headlessContextResults");
@@ -2433,6 +2436,7 @@ export function composeDesktopHost(
                   return generation.startAdmittedContext.bind(generation);
                 },
                 peekContextResults: () => contextResultOwner,
+                getContextQueryOwner: async () => (await getContextManagementFeatures()).browser,
                 systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
               dataPreview: planReviewOwner ? {

@@ -7,6 +7,7 @@ import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHo
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
 import {readHeadlessSavedDatasetReference, type HeadlessSavedDatasetReference} from "./headless-dataset-result-plan";
 import {readHeadlessSavedContextReference, type HeadlessSavedContextReference} from "./headless-context-result-plan";
+import {isHeadlessContextQuestion} from "./headless-context-query-preview";
 
 export const HEADLESS_PLAN_STEP_PATH = "/aisb-headless/v1/plan-step";
 export const MANAGED_HEADLESS_PLAN_STEP_PATH = "/api/headless/agent/plan-step";
@@ -21,6 +22,8 @@ export type HeadlessPlanStepRequest = {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
   readonly operation: "plan.run-step";
   readonly input: HeadlessPlanStepTarget;
+  /** Request-lifetime only. Never include in an effect, saved plan or diagnostic. */
+  readonly transient?: {readonly contextQuery: string};
 };
 type SavedEffect = Extract<Extract<HeadlessAuthoringWireResult, { ok: true }>["value"], { kind: "committed" | "replayed" }>;
 type LocalFileReference = Pick<HeadlessLocalFileImportRequest["input"], "workspaceId" | "taskId" | "fileId" | "taskRevision">;
@@ -32,7 +35,7 @@ type SavedDatasetEffect = {readonly kind: "committed" | "replayed"; readonly ope
   readonly reference: HeadlessSavedDatasetReference};
 type SavedContextEffect = {readonly kind: "committed" | "replayed"; readonly operation: "context.save-result";
   readonly reference: HeadlessSavedContextReference};
-type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly operation: "context.generate-pack" | "context.generate-rag";
+type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly operation: "context.generate-pack" | "context.generate-rag" | "context.query";
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
   {readonly ok: false; readonly code: "headless.not-started"} |
@@ -46,7 +49,8 @@ export function readHeadlessPlanStepRequest(value: unknown, expectedHost: Headle
   { readonly ok: true; readonly request: HeadlessPlanStepRequest } |
   { readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" } {
   try {
-    const { version, operation, input } = readStrictPassiveRecord(copyBoundedPassiveData(value), ["version", "operation", "input"]);
+    const outer = readStrictPassiveRecord(copyBoundedPassiveData(value), ["version", "operation", "input", "transient"]);
+    const {version, operation, input} = outer;
     if (version !== HEADLESS_CONTRACT_VERSION || operation !== "plan.run-step") return invalid;
     const { hostIncarnationId, workspaceId, fingerprint, approvalRevision, step } = readStrictPassiveRecord(
       input, ["hostIncarnationId", "workspaceId", "fingerprint", "approvalRevision", "step"],
@@ -54,7 +58,14 @@ export function readHeadlessPlanStepRequest(value: unknown, expectedHost: Headle
     if (!isHeadlessHostIncarnationId(hostIncarnationId) || !isWorkspaceId(workspaceId) || !isDesktopHeadlessFingerprint(fingerprint) ||
         !strictPositiveInteger(approvalRevision) || !strictPositiveInteger(step) || step > HEADLESS_MAX_BUILD_PLAN_STEPS) return invalid;
     if (hostIncarnationId !== expectedHost) return { ok: false, code: "headless.host-changed" };
-    return { ok: true, request: { version, operation, input: { hostIncarnationId, workspaceId, fingerprint, approvalRevision, step } } };
+    let transient: HeadlessPlanStepRequest["transient"];
+    if ("transient" in outer) {
+      const data = readStrictPassiveRecord(outer.transient, ["contextQuery"]);
+      if (!isHeadlessContextQuestion(data.contextQuery)) return invalid;
+      transient = {contextQuery: data.contextQuery};
+    }
+    return { ok: true, request: { version, operation, input: { hostIncarnationId, workspaceId, fingerprint, approvalRevision, step },
+      ...(transient ? {transient} : {}) } };
   } catch { return invalid; }
 }
 
@@ -64,7 +75,7 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "code", "value"]);
     if (raw.ok === false && !("value" in raw)) {
       if (raw.code === "headless.not-started" && Object.keys(raw).length === 2 &&
-          (options?.allowContextPackGeneration === true || options?.allowContextRagGeneration === true))
+          (options?.allowContextPackGeneration === true || options?.allowContextRagGeneration === true || options?.allowContextQuery === true))
         return {ok: false, code: "headless.not-started"};
       const fault = readHeadlessAuthoringWireResult({ ok: false, code: raw.code });
       return fault.ok ? unavailable : fault;
@@ -83,8 +94,8 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
         return exactReference ? {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt,
           reference: exactReference}} : unavailable;
       }
-      if (operation === "context.generate-pack" || operation === "context.generate-rag") {
-        if ((operation === "context.generate-pack" ? !options?.allowContextPackGeneration : !options?.allowContextRagGeneration) ||
+      if (operation === "context.generate-pack" || operation === "context.generate-rag" || operation === "context.query") {
+        if ((operation === "context.query" ? !options?.allowContextQuery : operation === "context.generate-pack" ? !options?.allowContextPackGeneration : !options?.allowContextRagGeneration) ||
             (kind !== "started" && kind !== "replayed")) return unavailable;
         const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId"]);
         if (fields.workspaceId !== exact.workspaceId || !isHeadlessHostIncarnationId(fields.taskId)) return unavailable;

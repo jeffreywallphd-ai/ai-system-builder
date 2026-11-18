@@ -264,11 +264,18 @@ export async function validateHeadlessPlanSavedSources(
   validateDatasetResult?: (request: HeadlessDatasetResultSavePlanRequest) => Promise<true | false | "stale">,
   validateContext?: (request: HeadlessContextGenerationPlanRequest) => Promise<true | false | "stale">,
   validateContextResult?: (request: HeadlessContextResultSavePlanRequest) => Promise<true | false | "stale">,
+  validateContextQuery?: (request: import("../../../contracts/headless").HeadlessContextQueryPlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
+    if (operation === "context.query") {
+      if (!validateContextQuery) return false;
+      const eligible = await validateContextQuery(request);
+      if (eligible !== true) return eligible;
+      continue;
+    }
     if (operation === "context.save-result") {
       if (!validateContextResult) return false;
       const eligible = await validateContextResult(request);

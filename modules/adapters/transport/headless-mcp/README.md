@@ -6,7 +6,7 @@ at most 20 results. The app returns only the exact question hash, recorded model
 metadata, source count and not-checked readiness. The SDK verifies that hash from
 the original UTF8 text and rejects echoed text/private fields. The app does not
 save question text or start any model/task. This is preparation for a separately
-approved query; public execution and query summaries remain pending.
+approved query through the version-10 procedure below. This passive read grants no execution permission.
 
 `aisb_present_in_window` also accepts strict `show-context-artifact` and
 `show-context-task` intents. The saved selector contains the complete Context
@@ -17,7 +17,7 @@ without constructing a lazy Context feature or granting new business work.
 Accepted-task observation retains owned output validation and existing worker
 recovery under its original lifecycle. Only fixed summaries
 and opaque selectors cross the window boundary. Backend execution/save approval,
-public query summaries and physical/host qualification remain separate.
+query-window summaries and physical/host qualification remain separate.
 
 In plan-review mode, `aisb_ingestion_status` reads the state, revision and
 progress counts for one known task in the approved workspace. It returns no
@@ -270,3 +270,12 @@ resolution and again at final issue after staging. It uses the existing
 installed-only generation owner and accepted-task receipts. Review and separately
 approve saving the new result. The saved parent is not replaced. A preview,
 old approval or uncertain reply cannot start another attempt.
+
+The opt-in version-10 `context.query` plan binds a saved RAG, original model,
+question hash and explicit query bounds. Approved execution carries text only
+in its transient envelope. Passive preview separately hashes its input; neither
+stores the question in the plan. The retained query owner records exact acceptance once; fresh task
+reads require current artifact and model permission and return citation-only
+summaries. Query tasks cannot grant a generation save. See
+`docs/architecture/context-management.md` and the portable Context skill guide
+for request lifetime, owned policy, uncertainty and pending qualification limits.

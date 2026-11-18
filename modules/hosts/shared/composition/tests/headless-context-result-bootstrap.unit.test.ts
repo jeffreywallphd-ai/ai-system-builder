@@ -11,7 +11,7 @@ import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId} from "../../../../contracts/headless";
 
-const fixture = vi.hoisted(() => ({enabled: undefined as boolean | undefined, proposals: 0, steps: 0,
+const fixture = vi.hoisted(() => ({operation: "save" as "save" | "query", enabled: undefined as boolean | undefined, proposals: 0, steps: 0,
   factory: undefined as (() => any) | undefined,
   host: "ae175d67-e28e-425c-9661-cc98924c39aa", contextId: "492b7803-29ce-4df7-97ee-f0d0ee8198e9"}));
 
@@ -26,8 +26,14 @@ vi.mock("../../../server", () => ({composeServerHost: () => ({
       fixture.proposals++;
       return {ok: true, value: {fingerprint: request.target.fingerprint, revision: 1, stepCount: 1,
         status: "pending", approvedSteps: 0, expiresAt: Date.now() + 60_000}};
-    }, {allowContextResultSave: fixture.enabled, async runStep(request: any) {
+    }, {allowContextResultSave: fixture.enabled, allowContextQuery: fixture.enabled, async runStep(request: any) {
       fixture.steps++;
+      if (fixture.operation === "query") {
+        assert.equal(request.transient?.contextQuery, "Synthetic transient query");
+        return {result: {ok: true, value: {fingerprint: request.input.fingerprint, approvalRevision: request.input.approvalRevision,
+          step: request.input.step, operation: "context.query", kind: "started", expiresAt: Date.now() + 60_000,
+          reference: {workspaceId: request.input.workspaceId, taskId: fixture.host}}}, publishIfCurrent: async (publish: () => boolean) => publish()};
+      }
       return {result: {ok: true, value: {fingerprint: request.input.fingerprint, approvalRevision: request.input.approvalRevision,
         step: request.input.step, operation: "context.save-result", kind: "committed",
         expiresAt: Date.now() + 60_000, reference: {workspaceId: request.input.workspaceId, contextId: fixture.contextId,
@@ -44,8 +50,9 @@ vi.mock("../../../../adapters/transport/api-express/headless/registerManagedHead
   }};
 });
 
-for (const enabled of [true, false, undefined]) test(`real Server bootstrap preserves Context-save capability ${enabled}`, async () => {
-  fixture.enabled = enabled; fixture.factory = undefined; fixture.proposals = fixture.steps = 0;
+for (const operation of ["save", "query"] as const)
+for (const enabled of [true, false, undefined]) test(`real Server bootstrap preserves Context-${operation} capability ${enabled}`, async () => {
+  fixture.operation = operation; fixture.enabled = enabled; fixture.factory = undefined; fixture.proposals = fixture.steps = 0;
   const directory = await realpath(await mkdtemp(join(await realpath(tmpdir()), "context-save-bootstrap-")));
   const {createServer} = await import("../../../../../apps/server/src/createServer");
   const {registerManagedHeadlessAgentRoutes} = await vi.importActual<typeof import("../../../../adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes")>(
@@ -63,7 +70,7 @@ for (const enabled of [true, false, undefined]) test(`real Server bootstrap pres
       postgresDatabase: {documents, async listActiveSystemSummaries() {return [];}, async checkHealth() {return {healthy: true};}, async close() {}} as never,
     });
     assert.ok(fixture.factory); const captured = fixture.factory(); assert.ok(captured);
-    assert.equal(captured.allowContextResultSave, enabled);
+    assert.equal(captured.allowContextResultSave, enabled); assert.equal(captured.allowContextQuery, enabled);
     const organizationId = createOrganizationId("org.synthetic"), workspaceId = createWorkspaceId("workspace.synthetic");
     const agent = {organizationId, workspaceId, registeredClientId: randomUUID(), principalId: "principal.synthetic",
       purpose: "plan-review", isCurrent: () => true};
@@ -75,9 +82,12 @@ for (const enabled of [true, false, undefined]) test(`real Server bootstrap pres
     await new Promise<void>(resolve => listener.once("listening", resolve));
     try {
       const address = listener.address(); assert.ok(address && typeof address !== "string");
-      const input = {hostIncarnationId: fixture.host as HeadlessHostIncarnationId, workspaceId, steps: [{operation: "context.save-result",
+      const input = {hostIncarnationId: fixture.host as HeadlessHostIncarnationId, workspaceId, steps: operation === "query" ? [{operation: "context.query",
+        idempotencyKey: randomUUID(), reference: {workspaceId, contextId: fixture.contextId, taskId: fixture.host, kind: "rag-database", artifactDigest: "sha256:" + "a".repeat(64)},
+        queryDigest: "sha256:" + createHash("sha256").update("Synthetic transient query").digest("hex"), modelRecordId: "model.synthetic",
+        modelUpdatedAt: "2026-11-18T00:00:00.000Z", maximumResults: 3, embeddingDevice: "cpu"}] : [{operation: "context.save-result",
         taskId: fixture.host, reportFingerprint: "b".repeat(64), name: "Synthetic context", idempotencyKey: randomUUID()}]};
-      const parsed = parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, {allowLocalFileSave: false, allowContextResultSave: true}); assert.ok(parsed.ok);
+      const parsed = parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, {allowLocalFileSave: false, allowContextResultSave: true, allowContextQuery: true}); assert.ok(parsed.ok);
       const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
       const post = (route: string, body: object) => fetch(`http://127.0.0.1:${address.port}/api/headless/agent/${route}`, {
         method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body)});
@@ -86,9 +96,12 @@ for (const enabled of [true, false, undefined]) test(`real Server bootstrap pres
       assert.equal(fixture.proposals, enabled ? 1 : 0);
       if (enabled) {
         const saved = await post("plan-step", {version: "aisb-headless-v1", operation: "plan.run-step", input: {
-          hostIncarnationId: fixture.host, workspaceId, fingerprint, approvalRevision: 2, step: 1}});
+          hostIncarnationId: fixture.host, workspaceId, fingerprint, approvalRevision: 2, step: 1},
+          ...(operation === "query" ? {transient: {contextQuery: "Synthetic transient query"}} : {})});
         assert.equal(saved.status, 200, await saved.clone().text());
-        assert.equal((await saved.json()).value.reference.contextId, fixture.contextId); assert.equal(fixture.steps, 1);
+        const result = await saved.json();
+        assert.equal(operation === "query" ? result.value.reference.taskId : result.value.reference.contextId, operation === "query" ? fixture.host : fixture.contextId);
+        assert.doesNotMatch(JSON.stringify(result), /Synthetic transient query|contextQuery/); assert.equal(fixture.steps, 1);
       }
     } finally {listener.closeAllConnections(); await new Promise<void>(resolve => listener.close(() => resolve()));}
   } finally {

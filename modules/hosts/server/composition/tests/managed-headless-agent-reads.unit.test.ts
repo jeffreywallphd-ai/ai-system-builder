@@ -238,3 +238,26 @@ test("managed discovery and saved reads remain scoped to the same host, principa
   release.resolve();
   assert.deepEqual(await pending, {ok: false, code: "headless.forbidden"});
 });
+
+test("Managed query task publication rechecks ModelRead after the task result returns", async () => {
+  let modelAllowed = true, modelChecks = 0, opens = 0;
+  const organizationId = createOrganizationId("org.synthetic"), workspaceId = createWorkspaceId("workspace.synthetic"), principalId = "principal.synthetic";
+  const hostIncarnationId = "a1242a53-b265-4338-a2e2-bc24b65cd381" as HeadlessHostIncarnationId, taskId = randomUUID();
+  const at = "2026-11-18T00:00:00.000Z";
+  const read = composeManagedAgentReads({hostIncarnationId, contexts: {getCurrentOrganizationContext: () => ({organizationId, principalId})},
+    workspaces: {async readWorkspace() {return {workspaceId, organizationId, status: "active", displayName: "Synthetic", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      if (requiredScopes.includes("model:read")) {modelChecks++; if (!modelAllowed) throw new Error("Model access ended.");}
+    }}, systems: {listTemplates() {assert.fail("No System Builder access.");}, read() {assert.fail("No System Builder access.");}},
+    async getContextTask() {return {async execute(_request, authority) {
+      opens++; assert.equal(await authority.queryStillAllowed?.(), true);
+      modelAllowed = false;
+      return {ok: true, operation: "context.task", value: {taskId, state: "succeeded", review: null,
+        query: {queryDigest: "sha256:" + "a".repeat(64), maximumResults: 1, embeddingDevice: "cpu", cleanupPending: false,
+          sources: [{reference: {kind: "ingestion-file", taskId: "task.one", fileId: "file.one", taskRevision: 1}, digest: "sha256:" + "b".repeat(64)}], matches: []}}} as never;
+    }};},
+  });
+  const value = await read({version: HEADLESS_CONTRACT_VERSION, operation: "context.task", input: {hostIncarnationId, workspaceId,
+    selection: {kind: "task", taskId}}}, {organizationId, principalId, registeredClientId: taskId, purpose: "plan-review", isCurrent: () => true}, () => true);
+  assert.deepEqual(value, {ok: false, code: "headless.forbidden"}); assert.equal(opens, 1); assert.equal(modelChecks, 2);
+});
