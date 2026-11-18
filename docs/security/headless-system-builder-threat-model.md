@@ -795,6 +795,17 @@ Durable reserved/issued/accepted records bind the exact organization partition, 
 
 ### Context input metadata
 
+`context.preview-rebuild` is available only in plan-review mode with current
+workspace/artifact/model read permission. Its saved Context reference must agree
+with the indexed committed origin. Accepted task indexes bind the original
+proposal and request/source digests; current metadata and full model witness must
+still match. No historic approval becomes authority, even after revocation. Both
+hosts fence output on current permission/liveness. Strict API/MCP codecs reject
+changed references and private extras. Output is bounded public settings/source
+references with byte/runtime readiness not checked. The read has no source-byte,
+runtime, task-adoption, new rebuild or window effect. Physical qualification and
+parent completion require their own evidence.
+
 The dedicated plan-review client can read bounded recorded model metadata and
 preview exact saved Context inputs. Ordinary read/edit/conversation/window
 registrations cannot use these reads. Both hosts recheck current artifact/model

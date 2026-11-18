@@ -60,6 +60,17 @@ current automated security checks and a separate review for Asset closure.
 
 ## Start a work request
 
+The fixed `headless-context-rebuild-inputs` profile covers strict rebuild metadata,
+current resource/liveness checks, accepted lineage and composed two-host reads with
+real Core/SQLite and controlled runtime bytes. Earlier Context preview/save and
+official MCP/route checks remain selected for their declared sources. It grants
+no actual rebuild/query, physical model/resource/host or parent qualification;
+unmapped neighbors and explicit generic tests keep the normal focused fallback.
+Its AST-only host-catalog regression compares the two literal real-app fixture
+expectations with generated mode catalogs. It does not import or launch those
+apps. Separate exact census/definition guards retain earlier pins and pending
+execution evidence when only those tool names change.
+
 The exact `headless-context-artifact-lifecycle` profile covers private byte staging,
 uncertain inspection/query replies, exact terminal identity and retryable cleanup.
 It runs the adapter, shared owned-task lifecycle and existing Context Browser

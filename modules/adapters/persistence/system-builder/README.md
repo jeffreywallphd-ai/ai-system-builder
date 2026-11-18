@@ -1,5 +1,11 @@
 # Saved System Builder and Headless plan persistence
 
+Private Context rebuild lineage uses the committed saved-resource index, accepted
+task point/plan indexes and exact historical proposal input digest. Historical
+definitions and model witnesses are data only; no original approval or task
+authority is revived. Current resource authorization remains the host's duty.
+No history enumeration, row rewrite or unindexed adoption is provided.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 Headless plans use the platform transaction owner and exact organization

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { isDeepStrictEqual } from "node:util";
+import ts from "typescript";
 
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentResult,
@@ -17,6 +18,61 @@ const catalog = JSON.parse(readFileSync("skills/control-ai-system-builder/refere
 const hostIncarnationId = "130707f1-04a5-43ca-9bed-d750a674fe53" as HeadlessHostIncarnationId;
 const workspaceId = createWorkspaceId("workspace.facilities");
 const scope = { hostIncarnationId, workspaceId };
+
+function literalHostPlanTools(sourcePath: string, mode: "plan-review" | "managed-plan-review", suppliedSource?: string) {
+  const source = ts.createSourceFile(sourcePath, suppliedSource ?? readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const arrays: ts.ArrayLiteralExpression[] = [];
+  function visit(node: ts.Node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const expression = node.expression;
+      const desktop = mode === "plan-review" && expression.name.text === "toEqual" && ts.isCallExpression(expression.expression) &&
+        ts.isIdentifier(expression.expression.expression) && expression.expression.expression.text === "expect" &&
+        expression.expression.arguments.length === 1 && ts.isIdentifier(expression.expression.arguments[0]!) &&
+        expression.expression.arguments[0]!.text === "names";
+      const managed = mode === "managed-plan-review" && expression.name.text === "deepEqual" &&
+        ts.isIdentifier(expression.expression) && expression.expression.text === "assert" &&
+        node.arguments[0]?.getText(source).replace(/\s+/g, "") === "toolList.tools.map(tool=>tool.name).sort()";
+      if (desktop || managed) {
+        const expected = node.arguments[managed ? 1 : 0];
+        assert.ok(expected && ts.isArrayLiteralExpression(expected), "The host tool expectation must remain a literal array.");
+        arrays.push(expected);
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  assert.equal(arrays.length, 1, "Select exactly one real-host plan tool assertion.");
+  const names = arrays[0]!.elements.map(element => {
+    assert.ok(ts.isStringLiteral(element), "Expected host tool names must be literal strings.");
+    assert.match(element.text, /^aisb_[a-z_]{1,64}$/);
+    return element.text;
+  });
+  assert.ok(names.length > 0 && names.length <= 32);
+  assert.equal(new Set(names).size, names.length, "Expected host tools must be unique.");
+  assert.deepEqual(names, [...names].sort(), "Expected host tools must be sorted.");
+  return names;
+}
+
+test("real-host plan-review fixtures keep exact literal tool catalogs", () => {
+  for (const [sourcePath, mode] of [
+    ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts", "plan-review"],
+    ["dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts", "managed-plan-review"],
+  ] as const) {
+    const expected = catalog.modes.filter(row => row.mode === mode);
+    assert.equal(expected.length, 1);
+    assert.deepEqual(literalHostPlanTools(sourcePath, mode), expected[0]!.tools, sourcePath);
+  }
+});
+
+test("literal host catalog checks reject computed, duplicate, unsorted or ambiguous expectations", () => {
+  for (const value of [
+    'expect(names).toEqual(dynamicNames);',
+    'expect(names).toEqual(["aisb_a", ...otherNames]);',
+    'expect(names).toEqual(["aisb_a", "aisb_a"]);',
+    'expect(names).toEqual(["aisb_b", "aisb_a"]);',
+    'expect(names).toEqual(["aisb_a"]); expect(names).toEqual(["aisb_b"]);',
+  ]) assert.throws(() => literalHostPlanTools("synthetic.expected.ts", "plan-review", value));
+});
 test("portable Context guidance and discovery separate metadata from execution and model readiness", () => {
   const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
   const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");
@@ -24,7 +80,7 @@ test("portable Context guidance and discovery separate metadata from execution a
   for (const instruction of ["entire `control-ai-system-builder` directory", "every file in",
     "same repository revision", "does not install an MCP server or", "pair it separately"])
     assert.ok(skill.replace(/\s+/g, " ").includes(instruction), `Missing portable skill installation boundary: ${instruction}`);
-  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation", "aisb_context_task", "aisb_read_context"])
+  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_context_task", "aisb_read_context"])
     assert.equal(mode.tools.includes(tool), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
   for (const text of ["taskRevision", "versionDigest", "modelRecordId", "updatedAt", "not-checked", "license rights", "four sources", "1,000", "32 recorded"])
     assert.ok(guide.includes(text), `Missing Context client limit or authority guidance: ${text}`);
@@ -42,6 +98,10 @@ test("portable Context guidance and discovery separate metadata from execution a
   for (const text of ["headless.not-started", "owning app proved that no task started", "original approved step remains terminal",
     "headless.operation-unconfirmed", "Do not start again with a new key"])
     assert.ok(guide.includes(text), `Missing Context non-start versus uncertainty guidance: ${text}`);
+  for (const text of ["aisb_preview_context_rebuild", "exact saved Context `reference`", "Current",
+    "same model ID and timestamp", "revoked old build approval", "metadata only", "parent-bound rebuild execution",
+    "does not adopt the old", "not-checked"])
+    assert.ok(guide.includes(text), `Missing passive rebuild lineage or scope boundary: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

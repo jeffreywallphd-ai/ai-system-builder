@@ -2278,6 +2278,10 @@ export function composeDesktopHost(
               const {composeHeadlessContextSaved} = await import("../../shared/composition/headlessContextResults");
               return composeHeadlessContextSaved(platformDocuments, registerOptions.storageRootDirectory);
             } : undefined,
+            getContextRebuildInputs: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
+              const {composeHeadlessContextRebuildPreview} = await import("../../shared/composition/headlessContextRebuild");
+              return composeHeadlessContextRebuildPreview(platformDocuments, registerOptions.storageRootDirectory);
+            } : undefined,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
             getDatasetTaskStatus: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");

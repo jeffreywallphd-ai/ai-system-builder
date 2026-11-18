@@ -119,3 +119,4 @@ export * from "./headless-context-preview";
 export * from "./headless-context-plan";
 export * from "./headless-context-task";
 export * from "./headless-context-result-plan";
+export * from "./headless-context-rebuild";

@@ -147,3 +147,23 @@ download, provider change or other permission.
 the original plan and key. Do not start again with a new key to bypass it. A lost
 reply, unknown issue or malformed result must never be reported as a non-start.
 Neither outcome is proof of an accepted background task, saved Context or qualification.
+
+## Preview an existing build for rebuilding
+
+Use `aisb_preview_context_rebuild` with the exact saved Context `reference`
+from `aisb_read_context`. It is available only to plan-review clients. Current
+workspace, artifact and model read permission is required. The host verifies the
+committed save, accepted build and original source/settings/model definition by
+indexed reads. A revoked old build approval is history, not new permission.
+
+The result contains the exact saved reference, bounded public source references
+and original settings. A changed source or model stays unavailable, including a
+replacement with the same model ID and timestamp. Keep the original reference;
+do not substitute a newer source or model to call it the same recorded build.
+
+This is metadata only: `byteAvailability: not-checked` and runtime readiness
+remain unchanged. No source bytes, model paths, embeddings, old actor/client
+identity, installation or processing are exposed. It does not adopt the old
+task. Approved parent-bound rebuild execution, queries and window display still
+need their own implementation and qualification. Do not report this preview as
+a rebuild run, a new approval or physical readiness.

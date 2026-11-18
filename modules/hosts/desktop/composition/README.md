@@ -1,5 +1,11 @@
 # Desktop host composition
 
+`context.preview-rebuild` is a separate optional plan-review metadata provider.
+It requires current artifact/model permission and verifies immutable recorded
+inputs through the platform owner. It never initializes the Context execution
+owner or turns historical approval into a new grant. Physical readiness remains
+not checked; approved rebuild execution is separate work.
+
 The Context artifact adapter shares the host's existing Python task reconciler
 with generation. Fresh inspection/query inputs remain owned through uncertain
 replies and cleanup failures. Only exact terminal status or successful owned

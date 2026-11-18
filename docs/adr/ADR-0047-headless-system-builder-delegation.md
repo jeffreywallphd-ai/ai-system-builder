@@ -312,3 +312,17 @@ identity and consumed indexes. It grants no repeat issue, accepted-task access,
 adoption or recovery. Public `headless.not-started` and exact replay retain
 current policy; unknown, duplicated or possibly started work remains unconfirmed.
 Earlier previews, version-1 task history and ordinary Context behavior stay intact.
+
+### Recorded Context rebuild input preview
+
+The same approved Context extension adds passive `context.preview-rebuild`.
+Current plan-review, artifact and model read authority selects one exact saved
+reference. Indexed committed-save and accepted-task records bind the historical
+generation proposal/input digest and original model witness. Recompiling existing
+metadata must preserve its exact source/model digest before public projection.
+Historical approval, including a revoked approval, is lineage only. It cannot
+authorize another effect or adopt the old task. No record schema, retention,
+engine, provider or native policy changes. Both hosts and finite MCP modes return
+only public references/settings with bytes/runtime not checked. Parent-bound
+rebuild issuance, query, presentation and physical/parent qualification remain
+separate work.

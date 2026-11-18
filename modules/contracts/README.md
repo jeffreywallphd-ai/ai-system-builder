@@ -1,5 +1,10 @@
 # Contracts
 
+Headless `context.preview-rebuild` accepts one exact saved Context reference and
+returns only verified recorded source/settings metadata. Strict codecs retain
+new-approval and not-checked readiness facts and reject private/unknown fields.
+It grants no old task control or rebuild execution.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 This module contains shared boundary contracts used across application, hosts,

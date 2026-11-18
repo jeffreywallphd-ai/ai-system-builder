@@ -6,6 +6,7 @@ import type {
 } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId,
   parseHeadlessBuildPlanProposal, type HeadlessBuildPlanRequest } from "../../../contracts/headless";
+import {serializeHeadlessMutationInput, type HeadlessContextGenerationPlanRequest} from "../../../contracts/headless";
 import type {ApprovedContextEmbeddingModelWitness} from "../../../application/ports/context-management";
 import {readApprovedContextEmbeddingModelWitness} from "../../../application/use-cases/context-management/approved-context-embedding-model";
 import { isOrganizationId } from "../../../contracts/organization";
@@ -226,6 +227,23 @@ export async function readStructuredHeadlessPlanModelPermission(partition: Struc
   const review = await readReview(partition, target, planKey(target));
   return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag"),
     requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result")} : undefined;
+}
+
+/** Historic definition, never historic permission. The caller must first prove
+ * an indexed saved-result/accepted-task chain and current resource authority. */
+export async function readStructuredRecordedContextGeneration(partition: StructuredDocumentStore,
+  target: HeadlessPlanReviewTarget, step: number, expectedInputDigest: string) {
+  if (!validTarget(target) || partition.organizationId !== target.scope.organizationId ||
+      !Number.isSafeInteger(step) || step < 1 || step > HEADLESS_MAX_BUILD_PLAN_STEPS ||
+      !/^[a-f0-9]{64}$/.test(expectedInputDigest)) return;
+  const review = await readReview(partition, target, planKey(target));
+  const request = review?.requests[step - 1];
+  if (!request || (request.operation !== "context.generate-pack" && request.operation !== "context.generate-rag") ||
+      sha256(serializeHeadlessMutationInput(request)) !== expectedInputDigest) return;
+  const model = review!.record.version === 2 ? review!.record.contextModels.find(binding => binding.step === step)?.model : undefined;
+  if (request.operation === "context.generate-rag" && !model) return;
+  return {request: structuredClone(request) as HeadlessContextGenerationPlanRequest,
+    ...(model ? {embeddingModel: structuredClone(model)} : {})};
 }
 
 /** Used by the execution adapter after current authorization in the same transaction. */

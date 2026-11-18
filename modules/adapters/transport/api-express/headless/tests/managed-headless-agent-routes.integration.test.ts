@@ -88,6 +88,18 @@ test("managed plan routes admit only exact proposals, status and an approved ste
           ...(statusExtra ? {outputPath: "private"} : {}),
         }};
       }
+      if (request.operation === "context.preview-rebuild") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {reference: {...request.input.reference,
+          contextId: statusMismatch ? randomUUID() : request.input.reference.contextId}, byteAvailability: "not-checked",
+          preview: {workspaceId: request.input.workspaceId, name: "Synthetic Context",
+            sources: [{reference: {kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1},
+              sizeBytes: 32, digest: "sha256:" + "a".repeat(64), format: "csv", licenseStatus: "unknown"}],
+            settings: {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
+              overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]},
+            totalBytes: 32, runtimeReadiness: "not-checked", approvalRequired: true, reviewRequired: true, modelCalls: 0, externalProviderCalls: 0},
+          ...(statusExtra ? {privatePath: "synthetic-private-path"} : {})}} as never;
+      }
       if (request.operation === "context.models") {
         if (withdrawStatus) current = false;
         return {ok: true, operation: request.operation, value: {workspaceId: statusMismatch ? "foreign" as never : request.input.workspaceId,
@@ -261,7 +273,9 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     enabled = false;
     assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 400);
     enabled = true;
-    for (const [operation, target] of [["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
+    for (const [operation, target] of [["context.preview-rebuild", {reference: {workspaceId, contextId: hostIncarnationId,
+      taskId: hostIncarnationId, kind: "markdown-context-pack", artifactDigest: "sha256:" + "a".repeat(64)}}],
+      ["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
       sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
       settings: {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
         overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]}}]] as const) {

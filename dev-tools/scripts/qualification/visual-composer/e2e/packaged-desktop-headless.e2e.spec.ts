@@ -371,8 +371,8 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     expect(names).toEqual([
       "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_context_task", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
-      "aisb_preview_build_plan", "aisb_preview_context_generation", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
-      "aisb_read_conversation_task", "aisb_read_system",
+      "aisb_preview_build_plan", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
+      "aisb_read_context", "aisb_read_conversation_task", "aisb_read_system",
       "aisb_request_build_plan_approval",
       "aisb_run_approved_build_step", "aisb_saved_system_changes", "aisb_saved_system_snapshot",
     ]);

@@ -12,6 +12,26 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_rebuild_inputs_bind_exact_metadata_and_real_composed_consumers_without_generic_coverage_loss(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-rebuild-inputs']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['architecture'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertEqual(selected['headless-context-rebuild-inputs']['argv'][1:], [
+            '--import', 'tsx', '--test', '--',
+            'modules/contracts/headless/tests/headless-context-rebuild.unit.test.ts',
+            'modules/application/use-cases/context-management/tests/headless-context-rebuild.unit.test.ts',
+            'modules/adapters/persistence/system-builder/tests/structured-headless-context-plan-task-store.unit.test.ts',
+            'modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts',
+            'dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts'])
+        self.assertNotIn('headless-data-desktop-plan-qualification', selected)
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(paths + [
+            'modules/hosts/shared/composition/unmapped-rebuild-inputs.ts'], ['architecture']))
+        host_only = self.selected(['modules/hosts/desktop/composition/composeDesktopHost.ts'], ['architecture'])
+        self.assertNotIn('headless-context-rebuild-inputs', host_only)
+        self.assertIn('focused-tests', host_only)
+
     def test_artifact_lifecycle_checks_exact_adapter_and_existing_consumer_without_masking_unknown_sources(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-artifact-lifecycle']
         paths = list(definition['sources'])

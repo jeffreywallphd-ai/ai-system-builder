@@ -14,6 +14,16 @@
 
 ## Purpose
 
+Headless `context.preview-rebuild` resolves an exact indexed saved resource to
+its accepted original build and immutable proposal/model witness. The same
+metadata-only input preview revalidates source revisions and full model facts;
+its digest must match the accepted build and saved receipt. The result contains
+bounded public source references/settings and the saved reference, never private
+actor/client/plan fields, storage keys, bytes or model paths. Current artifact and
+model read authority and outward liveness are required in both hosts. Historic
+approval is data, not new execution permission. Archive bytes and physical runtime
+readiness remain not checked; approved rebuild issuance is separate work.
+
 Context Management turns explicitly selected workspace artifacts and bounded
 manual entries into portable context artifacts. It does not introduce a second
 upload, acquisition, or dataset system. Data Management remains the authority

@@ -1,5 +1,11 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Managed `context.preview-rebuild` is plan-review-only indexed metadata. Current
+organization/workspace/artifact/model authorization surrounds its result. The
+platform owner validates the original saved/build/source/model lineage without
+runtime access, historic permission reuse or private-field disclosure. It supplies
+no approved rebuild execution or physical readiness.
+
 Context artifact inspection/query uses the same organization-bound owned-task
 reconciler as generation. Uncertain replies keep fresh inputs until exact terminal
 status or successful owned Python stop; cleanup failure retries without adopting

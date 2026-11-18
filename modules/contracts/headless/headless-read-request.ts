@@ -15,6 +15,7 @@ export {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHos
 import {readHeadlessContextReadRequest, type HeadlessContextReadRequest} from "./headless-context-preview";
 import {readHeadlessContextTaskRequest, type HeadlessContextTaskRequest} from "./headless-context-task";
 import {readHeadlessContextSavedRequest, type HeadlessContextSavedRequest} from "./headless-context-result-plan";
+import {readHeadlessContextRebuildRequest, type HeadlessContextRebuildRequest} from "./headless-context-rebuild";
 
 export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
   "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation", "data.dataset-task-status", "data.dataset-task-review",
@@ -36,7 +37,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "conversation-tasks.read",
   "plan.capabilities",
   ...HEADLESS_DATA_READ_OPERATIONS,
-  "context.models", "context.preview-generation", "context.task", "context.saved",
+  "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild",
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -67,6 +68,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 };
 
 export type HeadlessReadRequest =
+  | HeadlessContextRebuildRequest
   | HeadlessContextSavedRequest
   | HeadlessContextReadRequest
   | HeadlessContextTaskRequest
@@ -171,6 +173,7 @@ export function parseHeadlessReadRequest(
   const version = HEADLESS_CONTRACT_VERSION;
   if (operation === "context.task") return readHeadlessContextTaskRequest(value, currentHost);
   if (operation === "context.saved") return readHeadlessContextSavedRequest(value, currentHost);
+  if (operation === "context.preview-rebuild") return readHeadlessContextRebuildRequest(value, currentHost);
   if (operation === "context.models" || operation === "context.preview-generation") return readHeadlessContextReadRequest(value, currentHost);
   if (operation === "data.dataset-task-status") return readHeadlessDatasetTaskStatusRequest(value, currentHost);
   if (operation === "data.dataset-task-review") return readHeadlessDatasetTaskReviewRequest(value, currentHost);

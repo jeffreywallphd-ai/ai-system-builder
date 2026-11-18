@@ -8,7 +8,7 @@ import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../.
 import type {StructuredDocumentStore} from "../../../../adapters/persistence/shared";
 import {createStructuredOrganizationRepositories} from "../../../../adapters/persistence/organization";
 import {createLocalWorkspaceRepository} from "../../../../adapters/persistence/workspace";
-import {createStructuredIngestionAcquisitionRepository} from "../../../../adapters/persistence/ingestion/createStructuredIngestionAcquisitionRepository";
+import {createStructuredIngestionAcquisitionRepository, INGESTION_TASK_NAMESPACE} from "../../../../adapters/persistence/ingestion/createStructuredIngestionAcquisitionRepository";
 import {createStructuredHeadlessPlanReviewRepository} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {createFilesystemContextResultByteStorageAdapter, createFilesystemContextResultOutputSourceAdapter}
   from "../../../../adapters/storage/filesystem/artifact-store";
@@ -20,20 +20,26 @@ import {composeDesktopHeadlessPlanReview} from "../../../desktop/composition/com
 import {composeManagedHeadlessPlanReview} from "../../../server/composition/composeManagedHeadlessPlanReview";
 import {composeHeadlessContextSaved} from "../headlessContextResults";
 import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot} from "../../../../contracts/ingestion";
-import {CONTEXT_MARKDOWN_PACK_MEDIA_TYPE} from "../../../../contracts/context-management";
+import {CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, CONTEXT_RAG_DATABASE_MEDIA_TYPE} from "../../../../contracts/context-management";
+import {createLocalModelRegistryAdapter} from "../../../../adapters/persistence/model";
 import {TaskType, type ContextGenerationTaskRequest} from "../../../../contracts/runtime";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createTenantPlacementConfig} from "../../../../contracts/config";
 import {HEADLESS_CONTRACT_VERSION as version, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentRequest, type HeadlessPlanStepRequest} from "../../../../contracts/headless";
+import {composeHeadlessContextRebuildPreview} from "../headlessContextRebuild";
+import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeDesktopHeadlessReads";
+import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
+import {HEADLESS_READ_OPERATIONS} from "../../../../contracts/headless";
 
 const sha = (bytes: Uint8Array) => "sha256:" + createHash("sha256").update(bytes).digest("hex");
 
 for (const host of ["Desktop", "Managed"] as const)
 for (const channel of ["app-popup", "authenticated-chat"] as const)
 for (const mode of ["whole-plan", "each-change"] as const)
-test(`${host} ${channel} ${mode} separately approves and saves an actual owned Context result once`, async () => {
+for (const kind of ["pack", "rag"] as const)
+test(`${host} ${channel} ${mode} ${kind} separately approves and saves an actual owned Context result once`, async () => {
   const originalTemp = process.env.TEMP, originalTmp = process.env.TMP;
   const directory = await realpath(await mkdtemp(join(await realpath(tmpdir()), "headless-context-result-")));
   process.env.TEMP = directory; process.env.TMP = directory;
@@ -69,10 +75,22 @@ test(`${host} ${channel} ${mode} separately approves and saves an actual owned C
     await sources.createSourceSnapshot(normalizeIngestionSourceSnapshot({schemaVersion: "1.0", organizationId, workspaceId,
       sourceId: "source.one", snapshotId: "snapshot.one", locator: {kind: "file", displayName: "private-source.csv"},
       contentDigest: sourceDigest, sizeBytes: sourceBytes.length, mediaType: "text/csv", rawArtifactKey: sourceKey, capturedAt: at}));
+    const models = createLocalModelRegistryAdapter({rootDirectory: directory, filePath: join(directory, "model-registry/models.json"),
+      documents, discovery: {enabled: false}, now: () => at});
+    const model = {workspaceId, modelRecordId: "model.embedding", displayName: "Synthetic embedding", source: "local" as const,
+      provider: "huggingface" as const, artifactForm: "full-model" as const, modelId: "synthetic/embedding",
+      localPath: join(directory, "private/model"), taskTags: ["embeddings" as const], serializationFormat: "safetensors" as const};
+    if (kind === "rag") await models.registerDownloadedModel(model);
+    const mediaType = kind === "rag" ? CONTEXT_RAG_DATABASE_MEDIA_TYPE : CONTEXT_MARKDOWN_PACK_MEDIA_TYPE;
     let starts = 0, writes = 0, current = true, ownerAvailable = true, peeks = 0;
     let payload: ContextGenerationTaskRequest | undefined;
     const resultStorage = createFilesystemContextResultByteStorageAdapter({rootDirectory: directory});
     const core = new ContextGenerationUseCase({taskReconciler: reconciler,
+      embeddingModels: {async resolveExistingModel(witness) {
+        assert.equal(kind, "rag"); assert.equal(witness.modelRecordId, model.modelRecordId);
+        // Controlled runtime metadata test, not physical model-file evidence.
+        return {localModelReference: model.localPath};
+      }},
       taskPowerLifecycle: {async startTask() {}, async completeTask() {}},
       runtimeTaskRegistry: {
         async startTask() {assert.fail("The installed-only admission must be used.");},
@@ -85,14 +103,15 @@ test(`${host} ${channel} ${mode} separately approves and saves an actual owned C
           assert.ok(payload); const source = payload.sources[0];
           const common = {artifactId: source.artifactId, digest: source.sourceDigest, mediaType: source.mediaType, sizeBytes: source.sizeBytes};
           return {requestId, workspaceId, taskType: TaskType.CONTEXT_GENERATION, status: "succeeded", concurrencyClass: "cpu-heavy",
-            data: {output: {name: handle, outputHandle: handle, mediaType: CONTEXT_MARKDOWN_PACK_MEDIA_TYPE,
+            data: {output: {name: handle, outputHandle: handle, mediaType,
               sizeBytes: resultBytes.length, digest: sha(resultBytes)},
             sourceInspections: [{...common, ready: true, sourceKind: "structured", format: "csv", textFields: ["text"], alreadyChunked: false, chunkCount: 1}],
-            preview: {kind: "markdown-context-pack", name: payload.name, sourceCount: 1, manualEntryCount: 0, chunkCount: 1,
-              items: [{id: "synthetic.topic", kind: "topic", text: "Synthetic reviewed content", citations: [{sourceArtifactId: source.artifactId, chunkIndex: 0}]}]},
-            manifest: {schemaVersion: "1", kind: "markdown-context-pack", name: payload.name, mediaType: CONTEXT_MARKDOWN_PACK_MEDIA_TYPE,
+            preview: {kind: payload.kind, name: payload.name, sourceCount: 1, manualEntryCount: 0, chunkCount: 1,
+              items: [{id: "synthetic.topic", kind: kind === "rag" ? "chunk" : "topic", text: "Synthetic reviewed content", citations: [{sourceArtifactId: source.artifactId, chunkIndex: 0}]}]},
+            manifest: {schemaVersion: "1", kind: payload.kind, name: payload.name, mediaType,
               createdAt: at, sources: [{...common, chunkCount: 1, chunkingMode: "extracted"}], manualEntries: [],
-              chunking: payload.chunking, contextPack: payload.contextPack}}} as never;
+              chunking: payload.chunking, ...(payload.embedding ? {embedding: {provider: "transformers", modelId: payload.embedding.modelId, dimensions: 3},
+                sourceChecks: payload.sourceChecks} : {contextPack: payload.contextPack})}}} as never;
         },
         async cancelTask() {assert.fail("A successful save cannot cancel the source task.");},
         async listTasks() {assert.fail("No task discovery or adoption.");},
@@ -126,7 +145,7 @@ test(`${host} ${channel} ${mode} separately approves and saves an actual owned C
     }};
     const managed = composeManagedHeadlessPlanReview({hostIncarnationId, platform: managedPlatform, rootDirectory: directory, workspaces,
       contexts, authorization, placement, systems, getContextStart: async () => core.startAdmittedContext.bind(core), peekContextResults});
-    const capability = {allowLocalFileSave: false, allowContextPackGeneration: true, allowContextResultSave: true};
+    const capability = {allowLocalFileSave: false, allowContextPackGeneration: true, allowContextRagGeneration: true, allowContextResultSave: true};
     const reviews = new HeadlessBuildPlanReviewUseCase(createStructuredHeadlessPlanReviewRepository(platform, async () => current), Date.now);
     async function propose(steps: unknown[], client = registeredClientId) {
       const input = {hostIncarnationId, workspaceId, steps}, plan = parseHeadlessBuildPlanProposal(input, hostIncarnationId, capability);
@@ -147,9 +166,11 @@ test(`${host} ${channel} ${mode} separately approves and saves an actual owned C
       const request: HeadlessPlanStepRequest = {version, operation: "plan.run-step", input: {hostIncarnationId, workspaceId, fingerprint, approvalRevision: 2, step: 1}};
       return host === "Desktop" ? desktop.runStep!(request, grant, async () => grant) : managed.runStep!(request, registration, () => current);
     };
-    const settings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500, overlapCharacters: 50,
-      maximumChunks: 100, textFields: ["text"]};
-    const generation = await propose([{operation: "context.generate-pack", idempotencyKey: randomUUID(), name: "Synthetic context",
+    const settings = {chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"],
+      ...(kind === "rag" ? {kind: "rag-database", modelRecordId: model.modelRecordId, modelUpdatedAt: at, batchSize: 4, device: "cpu",
+        sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false, requireConsentMetadata: false, includeSourceAttribution: true}}
+        : {kind: "markdown-context-pack", cleaningPreset: "standard"})};
+    const generation = await propose([{operation: kind === "rag" ? "context.generate-rag" : "context.generate-pack", idempotencyKey: randomUUID(), name: "Synthetic context",
       sources: [{kind: "ingestion-file", taskId: "source.task", fileId: "source.file", taskRevision: 1}], settings}]);
     assert.ok(generation.result.ok, JSON.stringify(generation.result)); await approve(generation.fingerprint);
     const started = await run(generation.fingerprint); assert.ok(started.result.ok, JSON.stringify(started.result));
@@ -178,6 +199,71 @@ test(`${host} ${channel} ${mode} separately approves and saves an actual owned C
     const metadata = await reads.execute(request, {context, clientId: randomUUID(), stillAllowed: async () => current});
     assert.ok(metadata.ok); assert.deepEqual(metadata.value.reference, saved.result.value.reference);
     assert.equal(metadata.value.byteAvailability, "not-checked"); assert.equal(peeks, before, "Saved workspace reads cannot initialize or inspect the task owner.");
+    const rebuild = composeHeadlessContextRebuildPreview(platform, directory);
+    const rebuildRequest = {version, operation: "context.preview-rebuild" as const,
+      input: {hostIncarnationId, workspaceId, reference: metadata.value.reference}};
+    const rebuildAuthority = {context, clientId: randomUUID(), isCurrent: () => current, stillAllowed: async () => current};
+    const rebuilt = await rebuild.execute(rebuildRequest, rebuildAuthority);
+    assert.ok(rebuilt.ok, JSON.stringify(rebuilt));
+    assert.deepEqual(rebuilt.value.reference, metadata.value.reference);
+    assert.equal(rebuilt.value.preview.settings.kind, kind === "rag" ? "rag-database" : "markdown-context-pack");
+    assert.equal(rebuilt.value.preview.sources[0].digest, sourceDigest);
+    assert.equal(rebuilt.value.byteAvailability, "not-checked");
+    assert.equal(rebuilt.value.preview.runtimeReadiness, "not-checked");
+    assert.equal(rebuilt.value.preview.approvalRequired, true);
+    assert.doesNotMatch(JSON.stringify(rebuilt), /storageKey|private-source|outputHandle|runtimeWorkingDirectory|Synthetic reviewed content|principalId|registeredClientId|contextModels/);
+    assert.equal(peeks, before, "Rebuild preview must not inspect or resolve an execution owner.");
+    assert.equal(starts, 1); assert.equal(writes, 1);
+    let denyModelRead = false, metadataLoads = 0;
+    const readAuthorization = {async authorizeWorkspaceOperation(input: Parameters<typeof authorization.authorizeWorkspaceOperation>[0]) {
+      if (denyModelRead && input.requiredScopes.includes("model:read")) throw new Error("Synthetic model permission ended.");
+      return authorization.authorizeWorkspaceOperation(input);
+    }};
+    const getContextRebuildInputs = async () => {metadataLoads++; return rebuild;};
+    const desktopReads = composeDesktopHeadlessReads({hostIncarnationId, identity, workspaceRepository: workspaces,
+      authorization: readAuthorization, getUseCases() {assert.fail("Rebuild metadata cannot load System Builder.");},
+      getContextRebuildInputs, isOpen: () => current});
+    const managedReads = composeManagedAgentReads({hostIncarnationId, workspaces, contexts, authorization: readAuthorization,
+      systems: {listTemplates() {assert.fail("No System Builder lookup.");}, read() {assert.fail("No System Builder lookup.");}},
+      getContextRebuildInputs});
+    const readGrant = {...grant, operations: HEADLESS_READ_OPERATIONS};
+    const viaHost = () => host === "Desktop" ? desktopReads(rebuildRequest, async () => readGrant)
+      : managedReads(rebuildRequest, registration, () => current);
+    assert.deepEqual(await viaHost(), rebuilt);
+    const retiredBuildApproval = await reviews.decide({fingerprint: generation.fingerprint, expectedRevision: 2,
+      decision: {kind: "revoke"}}, hostIncarnationId, scope,
+      {...identity, channel, isCurrent: () => current, canDecide: async () => current});
+    assert.ok(retiredBuildApproval.ok, JSON.stringify(retiredBuildApproval));
+    assert.equal((await run(generation.fingerprint)).result.ok, false, "Old build permission is no longer executable.");
+    assert.deepEqual(await viaHost(), rebuilt, "Current saved-resource authority can read immutable lineage without reusing old permission.");
+    if (kind === "rag") {
+      await models.registerDownloadedModel({...model, localPath: join(directory, "private/replaced-model")});
+      assert.equal((await viaHost()).ok, false, "The same logical model ID and timestamp cannot hide a different saved model.");
+      await models.registerDownloadedModel(model);
+      assert.equal((await viaHost()).ok, true);
+    }
+    const loaded = metadataLoads;
+    denyModelRead = true;
+    assert.deepEqual(await viaHost(), {ok: false, code: "headless.forbidden"});
+    assert.equal(metadataLoads, loaded, "Current model permission is checked before the metadata provider.");
+    denyModelRead = false;
+    const nonPlanner = host === "Desktop" ? await desktopReads(rebuildRequest, async () => ({...readGrant, planReview: undefined}))
+      : await managedReads(rebuildRequest, {...registration, purpose: "read"} as never, () => current);
+    assert.deepEqual(nonPlanner, {ok: false, code: "headless.forbidden"});
+    for (const changed of [{...metadata.value.reference, taskId: randomUUID()},
+      {...metadata.value.reference, artifactDigest: "sha256:" + "f".repeat(64)},
+      {...metadata.value.reference, contextId: randomUUID()}]) {
+      assert.equal((await rebuild.execute({...rebuildRequest, input: {...rebuildRequest.input, reference: changed}}, rebuildAuthority)).ok, false);
+    }
+    const priorSource = await sources.readTask(workspaceId, "source.task" as never);
+    assert.ok(priorSource);
+    await assert.rejects(sources.saveTask({...priorSource, revision: priorSource.revision + 1}, priorSource.revision), /immutable/);
+    // Fault injection only in this newly owned synthetic database. The ordinary
+    // repository correctly refuses to rewrite a completed source task.
+    await documents.writeDocument(INGESTION_TASK_NAMESPACE, `${workspaceId}/${priorSource.taskId}`,
+      {...priorSource, revision: priorSource.revision + 1}, {expectedRevision: priorSource.revision});
+    assert.equal((await viaHost()).ok, false, "A later source revision cannot silently replace the recorded input.");
+    assert.equal(starts, 1); assert.equal(writes, 1); assert.equal(peeks, before);
     ownerAvailable = false;
     const replay = await run(save.fingerprint); assert.ok(replay.result.ok, JSON.stringify(replay.result));
     assert.deepEqual(replay.result.value, {...saved.result.value, kind: "replayed"}); assert.equal(writes, 1); assert.equal(starts, 1);

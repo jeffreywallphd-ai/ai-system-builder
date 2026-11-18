@@ -102,6 +102,17 @@ Focused tests cover:
 
 ## Residual risk and qualification
 
+Recorded rebuild preview uses current saved-resource authority, exact committed
+save/catalog/binding descriptors and accepted-task point/plan indexes. The original
+proposal fingerprint/input digest and source/model digest bind its definition.
+Current metadata is recompiled and must match; a same-ID/same-time replacement
+cannot substitute for the original model. Revoked historical approval supplies no
+new permission. The finite output excludes private ancestry, storage keys, paths,
+source bytes and embeddings; current permission/liveness surrounds release. It
+cannot discover or adopt legacy/unindexed work, initialize the runtime or issue a
+rebuild. Real Core/SQLite tests use controlled runtime bytes/model references;
+physical model/file/native, PostgreSQL and parent qualification remain separate.
+
 Artifact-operation lifecycle delta: mutable caller bytes are copied using intrinsic
 view length/copying before the first await; the exact private copy is hashed and
 written. The existing host lease bounds outstanding operations and precedes staging.

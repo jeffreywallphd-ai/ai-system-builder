@@ -1,5 +1,6 @@
 import { raw, type Application, type Request, type Response } from "express";
 
+import {readHeadlessContextRebuildValue} from "../../../../contracts/headless";
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
   readHeadlessIngestionStatusValue,
@@ -227,7 +228,7 @@ async function respond<Agent>(
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     const dataRead = (isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
-      parsed.request.operation === "context.task" || parsed.request.operation === "context.saved") && Boolean(handlers.planReview);
+      parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
     const result = await handlers.read(parsed.request, agent, current);
@@ -246,7 +247,12 @@ async function respond<Agent>(
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
           ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessDataReadOperation(operation) ||
-            isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved") : [])]}});
+            isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-rebuild") : [])]}});
+    }
+    if (result.operation === "context.preview-rebuild") {
+      if (parsed.request.operation !== "context.preview-rebuild") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessContextRebuildValue(result.value, parsed.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "context.saved") {
       if (parsed.request.operation !== "context.saved") return failure(response, 503, "headless.unavailable");

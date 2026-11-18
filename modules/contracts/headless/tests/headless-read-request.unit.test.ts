@@ -36,6 +36,8 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "context.models": scope,
     "context.task": {...scope, selection: {kind: "task", taskId: host}},
     "context.saved": {...scope, contextId: host},
+    "context.preview-rebuild": {...scope, reference: {workspaceId: scope.workspaceId, contextId: host, taskId: host,
+      kind: "markdown-context-pack", artifactDigest: "sha256:" + "a".repeat(64)}},
     "context.preview-generation": {...scope, name: "Synthetic context", sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
       settings: {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]}},
     "data.ingestion-status": { ...scope, taskId: "intake.fixture" },

@@ -17,8 +17,7 @@
 ## Implemented architecture
 
 - Context uses the Dataset Preparation textual capability authority, not a separate format list.
-- Data Management handoff is identifier-only: workspace id, artifact id, and
-  target tab. The host resolves bytes, metadata, scope, and readiness again.
+- Data handoffs carry workspace/artifact IDs and a target tab; hosts recheck bytes, metadata, scope and readiness.
 - An existing structured artifact is already chunked only when every usable row
   carries persisted `chunkIndex` and `sourceLineage` evidence.
 - `ContextGenerationUseCase` owns workspace authorization, bounded staging,
@@ -46,6 +45,7 @@
   supports source-only rebuild and registered-artifact deletion, and runs RAG
   test queries without returning vectors.
 - Source inspection returns typed `textFields`; document sources use an empty array.
+- `context.preview-rebuild` verifies indexed recorded inputs; it grants no rebuild or old task authority and checks no bytes/runtime.
 - Inspection/query inputs use a private hashed byte snapshot and the existing
   host task lease. Exact terminal status or successful owned worker stop permits
   cleanup; uncertain replies/cancellation and cleanup failures retain ownership.

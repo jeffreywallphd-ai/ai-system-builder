@@ -231,6 +231,15 @@ function addSystemBuilderTools(server: McpServer) {
         input.hostIncarnationId as HeadlessHostIncarnationId);
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
+    server.registerTool("aisb_preview_context_rebuild", {
+      description: "Preview the original recorded sources, settings and model for one exact saved Context reference. Revalidates current workspace/artifact/model permission and recorded source/model identity. Reads no artifact bytes, paths, source text or embeddings and starts no model/runtime. Missing or changed lineage is unavailable. This metadata does not approve rebuilding, adopt the old task or verify physical readiness.",
+      inputSchema: z.strictObject({...workspaceTarget, reference: z.strictObject({workspaceId: z.string().min(1).max(128),
+        contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
+        artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)})}), annotations: queryHints,
+    }, (input, context) => {
+      const parsed = headless.readHeadlessContextRebuildRequest({version, operation: "context.preview-rebuild", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     server.registerTool("aisb_read_context", {
       description: "Read bounded metadata for one exact saved Context ID in this workspace. Returns its causal saved reference, name, digest and counts. Reads no artifact bytes, source text, private paths or embeddings and starts no model/runtime. Byte availability remains not checked; this read grants no query, rebuild or window permission.",
       inputSchema: z.strictObject({...workspaceTarget, contextId: z.string().uuid()}), annotations: queryHints,

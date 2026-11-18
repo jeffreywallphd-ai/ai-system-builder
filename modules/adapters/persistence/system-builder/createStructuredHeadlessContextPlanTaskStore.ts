@@ -210,6 +210,17 @@ export async function readStructuredOwnedContextPlanTaskSourceDigest(owner: Stru
   return record?.owner.registeredClientId === scope.registeredClientId ? record.sourceDigest : undefined;
 }
 
+/** Private immutable lineage only, after current authority over the saved result.
+ * Original actor/client fields never leave the host or grant task execution. */
+export async function readStructuredContextPlanTaskLineage(owner: StructuredDocumentStore,
+  scope: HeadlessPlanReviewTarget["scope"], hostIncarnationId: string, taskId: string) {
+  if (!isDesktopHeadlessClientId(scope.registeredClientId) || !isHeadlessHostIncarnationId(hostIncarnationId)) return;
+  const record = await readOwnedContextPlanTaskRecord(owner, scope, hostIncarnationId, taskId);
+  if (!record || record.owner.registeredClientId !== scope.registeredClientId) return;
+  return {target: {hostIncarnationId, scope: {...scope}, fingerprint: record.owner.fingerprint},
+    step: record.owner.step, inputDigest: record.owner.inputDigest, sourceDigest: record.sourceDigest};
+}
+
 /** Recover an acknowledged business receipt from a known plan step, without rerunning it. */
 export async function readStructuredOwnedContextPlanTaskByPlan(owner: StructuredDocumentStore,
   scope: HeadlessPlanReviewTarget["scope"], hostIncarnationId: string, fingerprint: string, step: number) {

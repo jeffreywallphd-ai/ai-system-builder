@@ -4,13 +4,15 @@ import test from "node:test";
 import {createInMemoryStructuredDocumentStore} from "../../shared";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
-import {isHeadlessHostIncarnationId, readHeadlessContextPackPlanRequest, parseHeadlessBuildPlanProposal} from "../../../../contracts/headless";
+import {isHeadlessHostIncarnationId, readHeadlessContextPackPlanRequest, parseHeadlessBuildPlanProposal,
+  serializeHeadlessMutationInput} from "../../../../contracts/headless";
 import {createStructuredHeadlessPlanReviewRepository} from "../createStructuredHeadlessPlanReviewRepository";
 import {HeadlessBuildPlanReviewUseCase} from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import {readStructuredOwnedDatasetPlanTask} from "../../ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import {inspectStructuredContextPlanTask, reserveStructuredContextPlanTask, issueStructuredContextPlanTask,
   acceptStructuredContextPlanTask, recordStructuredContextTaskNotStarted, readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan,
   readStructuredPresentableContextPlanTask, readStructuredOwnedContextPlanTaskSourceDigest,
+  readStructuredContextPlanTaskLineage,
   type ContextPlanTaskEffect} from "../createStructuredHeadlessContextPlanTaskStore";
 
 function fixture() {
@@ -29,6 +31,34 @@ function fixture() {
     root.runInOwnedTransaction!(part => work(part.forOrganization(organizationId)), fence);
   return {root, owner, target, effect, sourceDigest, transaction};
 }
+
+test("private build lineage requires accepted exact ownership and both intact point indexes", async () => {
+  const f = fixture(), first = await f.transaction(owner => reserveStructuredContextPlanTask(owner, f.effect, f.sourceDigest, 1));
+  assert.ok("taskId" in first);
+  const read = (owner = f.owner, scope = f.target.scope, host = f.target.hostIncarnationId) =>
+    readStructuredContextPlanTaskLineage(owner, scope, host, first.taskId);
+  assert.equal(await read(), undefined);
+  assert.ok(await f.transaction(owner => issueStructuredContextPlanTask(owner, f.effect, first.taskId, f.sourceDigest, 2)));
+  assert.equal(await read(), undefined, "Issued work is not adopted as accepted ancestry.");
+  assert.ok(await f.transaction(owner => acceptStructuredContextPlanTask(owner, f.effect, first.taskId, 3)));
+  assert.deepEqual(await read(), {target: f.target, step: 1, sourceDigest: f.sourceDigest,
+    inputDigest: createHash("sha256").update(serializeHeadlessMutationInput(f.effect.request), "utf8").digest("hex")});
+  for (const scope of [{...f.target.scope, registeredClientId: randomUUID()}, {...f.target.scope, principalId: "another.actor"},
+    {...f.target.scope, organizationId: createOrganizationId("another.organization")},
+    {...f.target.scope, workspaceId: createWorkspaceId("another.workspace")}]) assert.equal(await read(f.owner, scope), undefined);
+  assert.equal(await read(f.owner, f.target.scope, randomUUID() as typeof f.target.hostIncarnationId), undefined);
+  for (const namespace of ["headless/context/pack-plan-task-index", "headless/context/pack-plan-task-plan-index"]) {
+    const missing = {...f.owner, async readDocument(selected: string, key: string) {
+      return selected === namespace ? undefined : f.owner.readDocument(selected, key);
+    }} as typeof f.owner;
+    assert.equal(await read(missing), undefined);
+    const changed = {...f.owner, async readDocument(selected: string, key: string) {
+      const document = await f.owner.readDocument(selected, key);
+      return document && selected === namespace ? {...document, value: {...document.value as object, identityDigest: "f".repeat(64)}} : document;
+    }} as typeof f.owner;
+    assert.equal(await read(changed), undefined);
+  }
+});
 
 test("new RAG proposals require a closed private witness for every exact model step and never publish it", async () => {
   const at = "2026-11-18T00:00:00.000Z";
