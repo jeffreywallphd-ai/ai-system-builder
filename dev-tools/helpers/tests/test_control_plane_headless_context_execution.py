@@ -12,6 +12,24 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_dedicated_desktop_context_runs_one_actual_case_and_preserves_unknown_fallback(self):
+        path = 'dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts'
+        selected = self.selected([path], ['documentation'])
+        check = selected['headless-context-desktop-journey']
+        self.assertEqual(check['timeout'], 720)
+        self.assertEqual(check['argv'][-1], 'packaged-desktop-headless.e2e.spec.ts')
+        self.assertIn('--workers=1', check['argv'])
+        self.assertNotIn('headless-packaged-desktop-journey', selected)
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('focused-tests', self.selected([path], ['documentation', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected([path, path.replace('headless-context', 'unknown-context')], ['documentation']))
+        fixture = catalog.PUBLISHED_FORM_CHECKS['headless-context-desktop-fixture']
+        paths = list(fixture['automatic_sources'])
+        fixture_plan = self.selected(paths, ['documentation'])
+        self.assertIn('headless-context-desktop-fixture', fixture_plan)
+        self.assertNotIn('focused-tests', fixture_plan)
+        self.assertNotIn('headless-context-desktop-journey', fixture_plan)
+
     def test_query_window_keeps_actual_selector_reader_and_both_scope_source_guards(self):
         paths = ['modules/hosts/shared/composition/headlessContextPresentation.ts',
                  'modules/application/use-cases/context-management/headless-context-presentation.use-case.ts']

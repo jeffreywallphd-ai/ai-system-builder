@@ -1,5 +1,13 @@
 # Context Management Threat Model
 
+The minimized query summary distinguishes full numeric citation locations, not
+only a source-wide chunk number. Structured rows can share chunk zero. Exact
+duplicate locations still deny even when rank or score differs; invalid numeric
+coordinates, unknown/private fields and foreign source ordinals still deny.
+This correction retains worker coordinates and all original source/digest,
+approval, current-policy, model, size and result limits. The real Desktop
+observation is feature evidence; Managed and parent qualification stay separate.
+
 - Status: current
 - Scope: Context source selection, private staging, local generation, review,
   save/discard, Data Management handoff, and saved context artifacts

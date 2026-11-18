@@ -18,6 +18,30 @@ explicit generic requirements retain their fallback checks.
 
 # Contributor Control Plane
 
+The fixed `headless-context-desktop-journey` check runs one serial packaged
+Desktop Context case with a 720-second runner bound and a 240-second test bound.
+It uses real native pairing, app approval, official MCP, the production worker,
+saved Context bytes and an already verified local MiniLM fixture. It checks
+pack/RAG review and separate save, both structured-row query citations, recorded
+rebuild, exact replay, current permission text, card/count correlation, separate
+window consent and revocation, and owned native shutdown. Capture stays off.
+Its body has a separate helper and one registration in the existing Headless
+spec. Supply `VISUAL_COMPOSER_CONTEXT_MODEL_ACQUISITION` with the exact verified
+local acquisition reference. Default Headless runs retain their original cases
+and start no model. The dedicated profile fails with zero matches if that input
+is absent; it cannot turn missing prerequisites into a skip or pass. The census
+keeps all 33 host files and authenticates only the changed registration facts
+against the complete previous Git map. No scenario, baseline or result changes.
+The installed-model fixture check is model-free. It rejects unknown acquisition
+paths, changed revisions/hashes, extra files and oversized metadata. Unknown
+source paths and explicit generic requirements keep the normal fallback.
+The [Desktop observations](../operations/headless-context-desktop-qualification.json)
+retain the initial selection-order failure and the actual query-status failures.
+The latter exposed a source-wide duplicate key where extraction uses per-row
+chunk indices. The corrected decoder keeps distinct full numeric locations and
+still rejects identical, invalid, private or foreign citations. Managed Context,
+physical failed-build profiles and final parent qualification remain separate.
+
 The exact `headless-context-artifact-lifecycle` check also runs the admitted
 Context Browser query tests alongside the actual adapter, reconciler and ordinary
 Browser regressions. It covers exact private saved-byte admission, source-checked

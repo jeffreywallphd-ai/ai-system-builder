@@ -167,6 +167,37 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-desktop-journey": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+            # The former standalone registration is removed by this same move.
+            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless-context.e2e.spec.ts",
+            "dev-tools/scripts/qualification/visual-composer/headless-context-fixture.ts",
+            "dev-tools/scripts/qualification/visual-composer/headless-context-model-seed.ts",
+        ),
+        "command": ("--preserve-symlinks", "--preserve-symlinks-main", "node_modules/@playwright/test/cli.js", "test",
+            "--config=dev-tools/config/playwright.visual-composer.config.ts", "--project=packaged-desktop", "--workers=1",
+            "--grep", "approves saves queries rebuilds and reveals real Context through MCP", "packaged-desktop-headless.e2e.spec.ts"),
+        "timeout": 720,
+    },
+    "headless-context-desktop-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/headless-context-fixture.ts",
+            "dev-tools/scripts/qualification/visual-composer/headless-context-model-seed.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-fixture.unit.test.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/headless-context-fixture.ts",
+            "dev-tools/scripts/qualification/visual-composer/headless-context-model-seed.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-fixture.unit.test.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--", "dev-tools/scripts/qualification/tests/headless-context-fixture.unit.test.ts"),
+    },
     "headless-context-model-reference": {
         "automatic_sources": (
             "modules/application/ports/context-management/approved-context-embedding-model.port.ts",

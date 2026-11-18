@@ -86,7 +86,12 @@ export function readHeadlessContextQuerySummary(value: unknown): HeadlessContext
         ...("normalizedStart" in match ? {normalizedStart: match.normalizedStart as number, normalizedEnd: match.normalizedEnd as number} : {}),
         ...("pageNumber" in match ? {pageNumber: match.pageNumber as number} : {})};
     });
-    if (new Set(matches.map(match => JSON.stringify([match.sourceOrdinal, match.chunkIndex]))).size !== matches.length) return;
+    // Structured extraction restarts chunkIndex within each row. Document
+    // extractors also retain page/span coordinates. Use the entire public
+    // citation location, not a source-wide chunk index that the worker never
+    // promised. Rank/score cannot make an identical location distinct.
+    if (new Set(matches.map(match => JSON.stringify([match.sourceOrdinal, match.chunkIndex, match.rowIndex,
+      match.normalizedStart, match.normalizedEnd, match.pageNumber]))).size !== matches.length) return;
     return {queryDigest: raw.queryDigest, maximumResults: raw.maximumResults, embeddingDevice: raw.embeddingDevice,
       sources, matches, cleanupPending: raw.cleanupPending};
   } catch {return;}

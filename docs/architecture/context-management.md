@@ -830,6 +830,13 @@ and retains consumed history; it never restores a weaker execution path.
 
 ### Query results under separate window consent
 
+Query-summary identity uses the complete existing numeric citation location:
+source ordinal, chunk index, optional row index, normalized start/end and page.
+Structured extraction can restart the chunk index within each row. Distinct
+rows or document locations must survive the summary decoder; rank or score
+changes cannot make an identical location distinct. Request/result bounds,
+original source admission and private-field refusal remain unchanged.
+
 `show-context-query` is distinct from generation's `show-context-task`. Desktop
 and Managed selectors require current artifact and model read before metadata,
 at final display and during fresh observation. The original query plan is history,

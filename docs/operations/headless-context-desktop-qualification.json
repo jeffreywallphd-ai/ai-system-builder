@@ -1,0 +1,176 @@
+{
+  "schema_version": "headless-context-desktop-qualification-v1",
+  "status": "desktop-feature-targets-met",
+  "parent_qualification_complete": false,
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "rag-and-context",
+  "scope": "One serial current packaged Desktop journey through the official stdio MCP client, native pairing, real app approvals, unchanged packaged Python worker and already installed pinned MiniLM. Initial model metadata alone is seeded. Context source/result/save/query/rebuild and window effects are not seeded or simulated.",
+  "model": {
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "safe_weights_sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db",
+    "new_downloads": false,
+    "placement": "cpu",
+    "input_bytes": 91567205
+  },
+  "observations": [
+    {
+      "run_id": "2026-11-18t21-46-32-153z-fa16cc5e",
+      "disposition": "fixture-selection-order",
+      "status": "failed",
+      "source_revision": "source.6d93dbca71fb0769965be411fdb834c179e91224e0eed70bd2c318633c0e1db4",
+      "execution_sha256": "571ff2188207f4d381a7bc43c4ba547919440c35771960ade5c0322db6979912",
+      "executed_cases": 1,
+      "duration_ms": 27199,
+      "global_errors": 0,
+      "owned_shutdown": {
+        "main": "existing-lifetime-close-completed",
+        "worker": "not-started",
+        "native_worker_check": "not-applicable"
+      }
+    },
+    {
+      "run_id": "2026-11-18t21-49-19-397z-d5e92415",
+      "disposition": "row-citation-identity",
+      "status": "failed",
+      "source_revision": "source.e888692a02c09af18e5b5d404a8f35d8951802d28dedda3d5f43d8ce1a4546a5",
+      "execution_sha256": "71cd822c8a331a8ebd534dd2d766c0bb027cfe20f56e20db57870faa13379cf6",
+      "executed_cases": 1,
+      "duration_ms": 95621,
+      "global_errors": 0,
+      "journey_passed": false,
+      "cleanup_passed": true,
+      "phase": "query",
+      "facts": {
+        "packSaved": true,
+        "ragSaved": true,
+        "queryCitations": 0,
+        "rebuildSaved": false,
+        "replayChecks": 4,
+        "denialChecks": 10,
+        "presentations": 0,
+        "revoked": false
+      },
+      "observation_sha256": "7c61445dd9ccfebf2c1d03192f2de5ea326b0e3534e95d75bfcdd90852c84a96",
+      "owned_shutdown": {
+        "main_exit_code": 0,
+        "will_quit_acknowledged": true,
+        "workers_observed": 1,
+        "workers_remaining": 0,
+        "failures": 0,
+        "cleanup_ms": 415.44719999999506,
+        "report_sha256": "0c556048ecbd7c8aefd222bd40a42ba11bb0c75a44d5a363fc196d61db510453"
+      }
+    },
+    {
+      "run_id": "2026-11-18t21-56-24-172z-9ee92417",
+      "disposition": "temporary-diagnostic-row-citation-identity",
+      "status": "failed",
+      "source_revision": "source.e8b69ca9930827b87c31cca1d941855371fc195fbab85bf29161d8ff30405915",
+      "execution_sha256": "66f9fa6038be48cc0d49c6c631b41caa9d0090e90c77b7642097c3da712f18f3",
+      "executed_cases": 1,
+      "duration_ms": 93918,
+      "global_errors": 0,
+      "journey_passed": false,
+      "cleanup_passed": true,
+      "phase": "query",
+      "facts": {
+        "packSaved": true,
+        "ragSaved": true,
+        "queryCitations": 0,
+        "rebuildSaved": false,
+        "replayChecks": 4,
+        "denialChecks": 10,
+        "presentations": 0,
+        "revoked": false
+      },
+      "observation_sha256": "b396fbf8e77d0f9423649a7648beb272ecf75c2bd12e177a3e2162fa4ac7fdb8",
+      "owned_shutdown": {
+        "main_exit_code": 0,
+        "will_quit_acknowledged": true,
+        "workers_observed": 1,
+        "workers_remaining": 0,
+        "failures": 0,
+        "cleanup_ms": 285.24809999999707,
+        "report_sha256": "5900b59125ebfd7db35d95be5fee3f2a080f0a7be20b6ebac80eb8c4e002b7c3"
+      }
+    },
+    {
+      "run_id": "2026-11-18t22-00-55-251z-4da6bc03",
+      "disposition": "corrected-real-desktop-journey",
+      "status": "passed",
+      "source_revision": "source.23516cced2c6ee0c50a5fc7a4820a78d765ac68440ff81a8f4fdb40cbef8e85e",
+      "execution_sha256": "01223b2b54aabba61fb95d187cc9b03c428de5e865303ac0ba42a4d5af65157e",
+      "executed_cases": 1,
+      "duration_ms": 41946,
+      "global_errors": 0,
+      "journey_passed": true,
+      "cleanup_passed": true,
+      "phase": "complete",
+      "facts": {
+        "packSaved": true,
+        "ragSaved": true,
+        "queryCitations": 2,
+        "rebuildSaved": true,
+        "replayChecks": 7,
+        "denialChecks": 16,
+        "presentations": 4,
+        "revoked": true
+      },
+      "observation_sha256": "0901a583e5012ccc412caa1919787797a0467113cb62ddd66e9372c6e5e43928",
+      "owned_shutdown": {
+        "main_exit_code": 0,
+        "will_quit_acknowledged": true,
+        "workers_observed": 1,
+        "workers_remaining": 0,
+        "failures": 0,
+        "cleanup_ms": 285.3845999999976,
+        "report_sha256": "e08d556b259e841c05812246f5f09146ff2cbb67b021ebe22813bc158ff81733"
+      }
+    }
+  ],
+  "causal_repair": {
+    "problem": "The summary decoder treated distinct rows with per-row chunk index zero as duplicate locations. The accepted physical worker completed, but its status reply was unavailable.",
+    "correction": "Use the existing public source ordinal, chunk index, row index, normalized start/end and page number as the duplicate identity. Rank/score do not distinguish the same location. Worker coordinates and all request, policy, content, size and resource bounds are unchanged.",
+    "regressions": "The model-free production extractor yields row0/chunk0 and row1/chunk0. Six strict contract cases and four installed-fixture cases passed; the actual Desktop query must return both rows. Exact duplicate, invalid-coordinate, private-field and foreign-source denials remain."
+  },
+  "coverage": {
+    "approval_channels": [
+      "popup",
+      "chat"
+    ],
+    "approval_mode": "each-change",
+    "source_import_and_save": true,
+    "markdown_pack_generation_review_save": true,
+    "rag_generation_review_save": true,
+    "query_actual_model_citations": true,
+    "recorded_source_rebuild_and_separate_save": true,
+    "original_saved_record_unchanged": true,
+    "window_presentations": [
+      "saved-pack",
+      "saved-rag",
+      "accepted-generation-task",
+      "accepted-query"
+    ],
+    "exact_replays": 7,
+    "denial_checks": 16,
+    "revocation_preserves_backend": true,
+    "owned_native_shutdown": true,
+    "trace_screenshot_video": "off"
+  },
+  "limits": [
+    "This is feature-level Desktop qualification, not final increment or roadmap qualification.",
+    "The authenticated Managed browser Context journey and physical failed/interrupted-build/replay profiles remain pending.",
+    "Existing worker CPU/CUDA/constrained resource observations are separate evidence; this two-row UI journey establishes no scale or GPU performance target.",
+    "Previously accepted model accuracy checks and whole-software tests were not rerun. Earlier failed/diagnostic observations are preserved.",
+    "Fixture path/hash checks are cooperative local test controls, not new native filesystem or production lifecycle guarantees. No credentials, question text, excerpts, private paths or raw logs are in this report.",
+    "The historical standalone case body is now registered through the existing Headless spec and a dedicated helper. Original observation pins remain historical; current-candidate execution and review are separate."
+  ],
+  "successful_observation_source_pins_lf_sha256": {
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless-context.e2e.spec.ts": "089670a9b93d23145355841e2dfe0add193ad24fb4b1da99e49fb6229043bbb4",
+    "dev-tools/scripts/qualification/visual-composer/headless-context-fixture.ts": "525416af08fe41cad2432359540790caa07ee7b340b194910072b24771a76e42",
+    "dev-tools/scripts/qualification/visual-composer/headless-context-model-seed.ts": "f505abebd05b971ad3ab2ac2b7bae30ccba90e5bf3db596407795449146f6c61",
+    "modules/contracts/headless/headless-context-query-plan.ts": "7e03ca1b8340d077bd8ac32edfdfe79e54ca2aa9ba0c5376e412f35666b4b832",
+    "modules/contracts/headless/tests/headless-context-query-contract.unit.test.ts": "ed0426f0df3e05947b71e6d51124dbd9282ebb8d00acacc3efef65b208d6373e"
+  }
+}

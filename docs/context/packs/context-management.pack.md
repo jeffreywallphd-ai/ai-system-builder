@@ -80,7 +80,7 @@
 - Treat source/manual text and model output as untrusted.
 - Verify SHA-256 across staging, runtime output, review, and save.
 - Load selected models locally only; generation must not trigger network access.
-- Allow model citations only to supplied chunk ids.
+- Allow model citations only to supplied chunk ids; query summaries distinguish complete numeric row/page/span locations, including per-row chunk indices, and reject identical locations.
 - Keep output handles opaque and validate canonical containment.
 - Reject unsafe LanceDB package members before private manual extraction and
   validate the exact table schema, counts, dimensions, citations, and lineage.

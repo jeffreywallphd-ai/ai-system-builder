@@ -8,9 +8,14 @@ import { parseHeadlessChangeCursor } from "../../../../../modules/contracts/head
 import { assetApplicationLifetime } from "../asset-experience-oracles";
 import { createFormWorkspace } from "./form-composer-authoring-journey";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
+import { runHeadlessContextDesktopJourney } from "./headless-context-journey";
 import { connectMcp, exchangePairing, installPairingDialogDriver, prepareHeadlessDesktopProfile, seedApprovedHeadlessConversation, takePairingCode } from "./headless-desktop-fixture";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
+// Existing Headless defaults start no model. The dedicated required profile
+// selects this exact case; an absent fixture gives it zero matches and fails.
+if (process.env.VISUAL_COMPOSER_CONTEXT_MODEL_ACQUISITION)
+  test("packaged Desktop approves saves queries rebuilds and reveals real Context through MCP", runHeadlessContextDesktopJourney);
 type Client = Awaited<ReturnType<typeof connectMcp>>;
 type WireValue = { ok?: boolean; operation?: string; code?: string; value?: unknown };
 

@@ -1279,6 +1279,45 @@
           "These observations do not close the parent roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6db3b787040c4cca1eca06455237a24fc812710ab2e2a0882a2b8f1c8df02493",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Five fixed CPU and GPU query checks passed with the installed MiniLM model.",
+          "The checks met the retrieval, exact-result, memory and denial targets.",
+          "All six owned processes stopped, and temporary copies were removed.",
+          "Independent review accepted the component, which is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ef562b5005e2cf1ed2a5bb471889793d59f8c9c86355bda8d42b3edc53d6191d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The real Desktop and Managed app journeys and the physical failure and replay checks still need qualification.",
+          "These worker results do not complete the parent increment or final roadmap testing.",
+          "Earlier failed results stay recorded."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "79b91c3d44d7ca952a11aa276214363cbd24ae56a008e877e4f21cdc25df6a32",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model accuracy checks and whole-software testing were not repeated.",
+          "The GPU measurement covers the declared Torch query allocation.",
+          "Cleanup affected only verified files and processes from this test.",
+          "Older staging and offload files remain unchanged."
+        ]
+      }
     }
   ]
 }

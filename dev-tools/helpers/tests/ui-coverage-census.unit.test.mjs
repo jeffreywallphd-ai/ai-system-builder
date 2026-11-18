@@ -1105,6 +1105,21 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "b1cae51bb8cedb8f5fdb61b1708cc94f02397f2dd2f5ecde277bf5a60d679223") {
+    // One additional declared Context case, with its body in a separate helper.
+    // Keep the authentic baseline, all earlier facts, pins and execution gaps.
+    const saved = JSON.parse(historicalSource("15bf2f65d8ffe8f42db85a5304f6b39b17c4aa00", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "d665f249a4b27e8408171a9a6250e2f8407cf2ec7db3acf7a43806599e102f20");
+    const expected = structuredClone(saved), changed = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(changed.facts.sha256, "646425ca130ed60578afb105e35d7250bd8c74d99552bdf35a2c55eab42309b2");
+    assert.equal(sha(JSON.stringify(changed.facts)), "1c378518c12191c93b1a7783d5efa9bb3809946ad80597b388435371e5d93a80");
+    expected.sources.find(row => row.path === headlessPackagedSpec).facts = changed.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(saved, {...result,
+      gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "d665f249a4b27e8408171a9a6250e2f8407cf2ec7db3acf7a43806599e102f20") {
     // Exact query-preview catalog definition only; retain every execution pin/gap.
     const saved = JSON.parse(historicalSource("1e888b467430140cfb970bfb599c65f731178a79", censusDocument));
@@ -2706,4 +2721,26 @@ test("the reviewed Desktop step definitions keep the same scope and qualificatio
     assert.equal(result.gaps.filter(row => row.source === source).length, 1);
     assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps:result.gaps.filter(row => row.source !== source)}));
   }
+});
+
+test("the dedicated Context registration preserves the entire prior census and its qualification gaps", () => {
+  const map = JSON.parse(fs.readFileSync(censusDocument, "utf8")), result = {gaps: sourceDrift(map)};
+  const serialized = JSON.stringify({map, result});
+  assert.doesNotThrow(() => assertCompleteCurrentSourceDrift(map, result));
+  assert.equal(map.host_spec_files.length, 33);
+  assert.equal(map.scenarios.length, 39);
+  assert.equal(map.scenarios.reduce((count, row) => count + row.behavior_links.length, 0), 131);
+  assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: result.gaps.filter(row => row.source !== headlessPackagedSpec)}));
+  assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: [...result.gaps, {kind: "unreviewed-source-drift", source: "dev-tools/unrelated.unit.test.ts"}]}));
+  for (const mutate of [
+    copy => {copy.sources.find(row => row.path === headlessPackagedSpec).facts.assertionCount++;},
+    copy => {copy.sources.find(row => row.path === headlessPackagedSpec).committed_sha256 = "0".repeat(64);},
+    copy => {copy.scenarios[0].execution_status = "passed";},
+    copy => {copy.source_baseline = "0".repeat(40);},
+    copy => {copy.full_testing_status = "passed";},
+  ]) {
+    const changed = structuredClone(map); mutate(changed);
+    assert.throws(() => assertCompleteCurrentSourceDrift(changed, result));
+  }
+  assert.equal(JSON.stringify({map, result}), serialized);
 });

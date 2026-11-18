@@ -1,5 +1,17 @@
 # Headless client skill
 
+Context citation locations include the source, chunk, row, span and page when
+available. A chunk index can restart in each structured row. Keep those location
+fields together; different rows with chunk zero are distinct results. Exact
+duplicate locations remain invalid. Query status and the consented query card
+must agree on the result count and independent cleanup state.
+
+The [packaged Desktop feature observations](../operations/headless-context-desktop-qualification.json)
+cover real pack/RAG generation, review/save, two-row local-model queries,
+recorded rebuild and separately consented presentation/revocation through MCP.
+They retain earlier failures. This component does not complete Managed browser,
+physical failure/recovery or final roadmap qualification.
+
 ## Prepare a Context question
 
 Use `aisb_preview_context_query` on a plan-review connection. Supply the exact

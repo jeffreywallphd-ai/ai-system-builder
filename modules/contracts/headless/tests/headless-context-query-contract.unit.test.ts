@@ -92,3 +92,24 @@ test("query status is a separate citation-only family and cannot masquerade as g
     assert.equal(readHeadlessContextTaskValue({...task, ...change}, {kind: "task", taskId}), undefined);
   assert.ok(readHeadlessContextTaskValue({...task, state: "running", query: {...f.summary, matches: [], cleanupPending: true}}, {kind: "task", taskId}));
 });
+
+test("query status preserves distinct structured rows and document locations sharing a per-row chunk index", () => {
+  const f = fixture(), taskId = randomUUID(), first = f.summary.matches[0];
+  for (const location of [{rowIndex: first.rowIndex + 1}, {pageNumber: first.pageNumber + 1},
+    {normalizedStart: 12, normalizedEnd: 24}]) {
+    const summary = {...f.summary, matches: [first, {...first, ...location, rank: 2, score: 0.8}]};
+    assert.deepEqual(readHeadlessContextQuerySummary(summary), summary);
+    const task = {taskId, state: "succeeded", review: null, query: summary};
+    assert.deepEqual(readHeadlessContextTaskValue(task, {kind: "task", taskId}), task);
+  }
+  // Changing ranking or score does not make the same location a new citation.
+  for (const location of [{}, {rowIndex: first.rowIndex}, {pageNumber: first.pageNumber}]) {
+    assert.equal(readHeadlessContextQuerySummary({...f.summary,
+      matches: [first, {...first, ...location, rank: 2, score: 0.7}]}), undefined);
+  }
+  for (const invalid of [{rowIndex: -1}, {rowIndex: 0.5}, {pageNumber: 0}, {sourceOrdinal: 2},
+    {normalizedStart: 12, normalizedEnd: 12}, {excerpt: "private"}, {field: "untrusted"}]) {
+    assert.equal(readHeadlessContextQuerySummary({...f.summary,
+      matches: [first, {...first, rowIndex: 3, ...invalid, rank: 2}]}), undefined);
+  }
+});
