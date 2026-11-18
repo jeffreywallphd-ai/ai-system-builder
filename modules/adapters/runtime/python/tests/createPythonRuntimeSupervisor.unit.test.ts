@@ -28,6 +28,75 @@ function createMockChildProcess() {
   return emitter;
 }
 
+describe("installed-only Python runtime admission", () => {
+  function harness(verify?: () => Promise<boolean>, prepare?: () => Promise<void>) {
+    const child = createMockChildProcess(); let spawned = 0, installs = 0, launchPreparations = 0;
+    const options = {
+      command: "python", args: ["main.py"], env: {PRIVATE_SYNTHETIC: "original"},
+      verifyRuntimeEnvironment: verify,
+      async prepareRuntimeEnvironment() {installs++; await prepare?.();},
+      async prepareLaunchEnvironment() {launchPreparations++;},
+      runtimeClient: {async getHealthStatus() {
+        if (!spawned) throw new Error("unavailable");
+        return {healthy: true, status: {runtimeId: "python-sidecar", status: "ready" as const}};
+      }},
+      spawnImplementation: (() => {spawned++; return child as any;}) as any,
+      startupTimeoutMs: 100, healthCheckIntervalMs: 1,
+    };
+    return {supervisor: createPythonRuntimeSupervisor(options), options, counts: () => ({spawned, installs, launchPreparations})};
+  }
+
+  it("requires an explicit successful verifier before attach/spawn and never runs the installer", async () => {
+    for (const verify of [undefined, async () => false, async () => {throw new Error("private/path token=secret");}]) {
+      const h = harness(verify);
+      await expect(h.supervisor.startWithoutInstalling!()).rejects.toThrow("verification is unavailable");
+      expect(h.counts()).toEqual({spawned: 0, installs: 0, launchPreparations: 0});
+    }
+    let probes = 0;
+    const h = harness(async () => {probes++; return true;});
+    h.options.verifyRuntimeEnvironment = async () => false;
+    await h.supervisor.startWithoutInstalling!();
+    await h.supervisor.startWithoutInstalling!();
+    expect(h.counts()).toEqual({spawned: 1, installs: 0, launchPreparations: 1});
+    expect(probes).toBe(2); expect(h.supervisor.getStatus()).toBe("ready");
+    await h.supervisor.stop();
+  });
+
+  it("coalesces the same policy and refuses both directions of mixed startup authority", async () => {
+    let release!: () => void, probes = 0;
+    const gate = new Promise<void>(resolve => {release = resolve;});
+    const h = harness(async () => {probes++; await gate; return true;});
+    const one = h.supervisor.startWithoutInstalling!(), two = h.supervisor.startWithoutInstalling!();
+    await expect(h.supervisor.start()).rejects.toThrow("authority differs");
+    release(); await Promise.all([one, two]);
+    expect(probes).toBe(1); expect(h.counts().installs).toBe(0);
+    await h.supervisor.stop();
+
+    let releaseInstall!: () => void, entered!: () => void;
+    const installing = new Promise<void>(resolve => {entered = resolve;});
+    const ordinary = harness(async () => true, async () => {
+      entered(); await new Promise<void>(resolve => {releaseInstall = resolve;});
+    });
+    const start = ordinary.supervisor.start(); await installing;
+    await expect(ordinary.supervisor.startWithoutInstalling!()).rejects.toThrow("authority differs");
+    releaseInstall(); await start;
+    expect(ordinary.counts().installs).toBe(1); await ordinary.supervisor.stop();
+  });
+
+  it("preserves stop-generation fences while an installed-only probe is pending", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => {release = resolve;});
+    const h = harness(async () => {await gate; return true;});
+    const start = h.supervisor.startWithoutInstalling!();
+    await h.supervisor.stop(); release();
+    await expect(start).rejects.toThrow("startup was stopped");
+    expect(h.counts()).toEqual({spawned: 0, installs: 0, launchPreparations: 0});
+    expect(h.supervisor.getStatus()).toBe("stopped");
+    await h.supervisor.startWithoutInstalling!();
+    expect(h.counts().spawned).toBe(1); await h.supervisor.stop();
+  });
+});
+
 describe("createPythonRuntimeSupervisor", () => {
   it("retains failed startup diagnostics after asynchronous error and confirmed close", async () => {
     const child = createMockChildProcess();

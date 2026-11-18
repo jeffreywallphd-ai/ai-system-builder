@@ -33,6 +33,7 @@ export function createRuntimeTaskRegistryRouter(delegates: {
   };
 
   const requestToTaskType = new Map<string, TaskType>();
+  const installedContextIds = new Set<string>();
   const unknown = (
     requestId: string,
     reason: string,
@@ -103,11 +104,34 @@ export function createRuntimeTaskRegistryRouter(delegates: {
   ): record is RuntimeTaskRecord => "taskType" in record;
 
   return {
+    async startTaskWithoutInstalling(request) {
+      const {requestId, workspaceId, taskType} = request;
+      if (!isWorkspaceId(workspaceId) || !requestId ||
+          ![TaskType.CONTEXT_GENERATION, TaskType.CONTEXT_RETRIEVAL].includes(taskType) ||
+          requestToTaskType.has(requestId) || installedContextIds.has(requestId) || installedContextIds.size >= 256) return {kind: "unavailable"};
+      const delegate = taskTypeDelegates[taskType];
+      if (!delegate.startTaskWithoutInstalling) return {kind: "unavailable"};
+      installedContextIds.add(requestId);
+      // Delegation may dispatch before failing. Exceptions cannot prove nonstart.
+      try {
+        const result = await delegate.startTaskWithoutInstalling(request);
+        if (result?.kind === "unavailable" && Object.keys(result).length === 1) {
+          installedContextIds.delete(requestId);
+          return {kind: "unavailable"};
+        }
+        if (result?.kind !== "accepted" || Object.keys(result).length !== 2 || !result.value ||
+            result.value.requestId !== requestId || !["queued", "running"].includes(result.value.status ?? ""))
+          return {kind: "unconfirmed"};
+        requestToTaskType.set(requestId, taskType);
+        return {kind: "accepted", value: {requestId, status: result.value.status}};
+      } catch { return {kind: "unconfirmed"}; }
+    },
     async startTask(
       request: StartRuntimeTaskRequest,
     ): Promise<StartRuntimeTaskResult> {
       if (!isWorkspaceId(request.workspaceId))
         throw new Error("Workspace id is required for runtime task start.");
+      if (request.requestId && installedContextIds.has(request.requestId)) throw new Error("Context task identity is already reserved.");
       const delegate = taskTypeDelegates[request.taskType];
       const result = await delegate.startTask(request);
       requestToTaskType.set(result.requestId, request.taskType);
@@ -115,6 +139,7 @@ export function createRuntimeTaskRegistryRouter(delegates: {
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
       const taskType = requestToTaskType.get(requestId);
+      if (!taskType && installedContextIds.has(requestId)) return unknown(requestId, "unconfirmed-owned-start");
       if (taskType) {
         return taskTypeDelegates[taskType].getTaskStatus(requestId);
       }
@@ -143,6 +168,7 @@ export function createRuntimeTaskRegistryRouter(delegates: {
     },
     async cancelTask(requestId: string): Promise<CancelRuntimeTaskResult> {
       const taskType = requestToTaskType.get(requestId);
+      if (!taskType && installedContextIds.has(requestId)) return unknownCancel(requestId);
       if (taskType) {
         return taskTypeDelegates[taskType].cancelTask(requestId);
       }

@@ -5,6 +5,7 @@ import type {
   ModelDownloadCompletionPort,
 } from "../../../application/ports/model";
 import { randomUUID } from "node:crypto";
+import { types } from "node:util";
 import type {
   CancelRuntimeTaskResult,
   RuntimeTaskRecord,
@@ -169,6 +170,8 @@ function mapProgress(
 }
 
 export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
+  /** Explicit noninstalling preparation; no fallback to ensureRuntimeReady. */
+  ensureRuntimeReadyWithoutInstalling?: (request: StartRuntimeTaskRequest) => Promise<void>;
   ensureRuntimeReady?: (
     request: StartRuntimeTaskRequest,
     control: {
@@ -180,15 +183,61 @@ export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
 export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
   ModelDownloadCompletionPort;
 
+function snapshotInstalledContextRequest(raw: StartRuntimeTaskRequest): StartRuntimeTaskRequest {
+  let nodes = 0, bytes = 0;
+  const copy = (value: unknown, depth = 0): unknown => {
+    if (++nodes > 20_000 || depth > 20) throw new Error("Context request exceeds its bound.");
+    if (typeof value === "string") {
+      bytes += Buffer.byteLength(value, "utf8");
+      if (bytes > 1024 * 1024) throw new Error("Context request exceeds its bound.");
+      return value;
+    }
+    if (value === null || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value))) return value;
+    if (!value || typeof value !== "object" || types.isProxy(value)) throw new Error("Context request is not passive data.");
+    const array = Array.isArray(value), prototype = Object.getPrototypeOf(value);
+    if (prototype !== (array ? Array.prototype : Object.prototype) && prototype !== null) throw new Error("Context request is not passive data.");
+    const keys = Reflect.ownKeys(value);
+    if (keys.length > 20_000 || (array && value.length > 20_000)) throw new Error("Context request exceeds its bound.");
+    const result: Record<string, unknown> | unknown[] = array ? [] : {};
+    for (const key of keys) {
+      if (array && key === "length") continue;
+      if (typeof key !== "string" || ["__proto__", "constructor", "prototype"].includes(key)) throw new Error("Context request has an invalid key.");
+      if (array && (!/^(0|[1-9][0-9]*)$/u.test(key) || Number(key) >= value.length)) throw new Error("Context request has an invalid index.");
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+      if (!("value" in descriptor) || !descriptor.enumerable) throw new Error("Context request has an accessor.");
+      if (descriptor.value === undefined && !array) continue;
+      bytes += Buffer.byteLength(key, "utf8");
+      if (bytes > 1024 * 1024) throw new Error("Context request exceeds its bound.");
+      Object.defineProperty(result, key, {value: copy(descriptor.value, depth + 1), enumerable: true});
+    }
+    if (array && (result.length !== value.length || keys.length !== value.length + 1))
+      throw new Error("Context request has sparse data.");
+    return Object.freeze(result);
+  };
+  const request = copy(raw) as StartRuntimeTaskRequest;
+  const allowed = ["requestId", "workspaceId", "taskType", "payload", "metadata", "concurrencyClass"];
+  if (Object.keys(request).some(key => !allowed.includes(key)) || !isWorkspaceId(request.workspaceId) ||
+      typeof request.requestId !== "string" || !/^[A-Za-z0-9._-]{1,128}$/u.test(request.requestId) ||
+      ![TaskType.CONTEXT_GENERATION, TaskType.CONTEXT_RETRIEVAL].includes(request.taskType) ||
+      !request.payload || typeof request.payload !== "object" || Array.isArray(request.payload) ||
+      (request.metadata !== undefined && (!request.metadata || typeof request.metadata !== "object" || Array.isArray(request.metadata))) ||
+      (request.metadata?.workspaceId !== undefined && request.metadata.workspaceId !== request.workspaceId) ||
+      (request.concurrencyClass !== undefined && !["io", "cpu-light", "cpu-heavy", "gpu-exclusive", "unknown"].includes(request.concurrencyClass)))
+    throw new Error("Installed Context request is invalid.");
+  return request;
+}
+
 export function createPythonRuntimeTaskRegistryAdapter(
   runtimePort: PythonRuntimePort,
   options: CreatePythonRuntimeTaskRegistryAdapterOptions = {},
 ): PythonRuntimeTaskRegistryAdapter {
+  const ensureWithoutInstalling = options.ensureRuntimeReadyWithoutInstalling;
   const trackedTasks = new Map<string, RuntimeTaskRecord>();
   // Status records are replaceable. This owner identifies one accepted start.
   const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId }>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
   const preparingTasks = new Set<string>();
+  const installedContextIds = new Set<string>();
   const pendingStarts = new Map<string, { readonly taskType: RuntimeTaskRecord["taskType"] }>();
   const isModelDownloadId = (requestId: string): boolean =>
     acceptedModelDownloads.has(requestId) ||
@@ -216,6 +265,39 @@ export function createPythonRuntimeTaskRegistryAdapter(
   };
 
   const adapter: PythonRuntimeTaskRegistryAdapter = {
+    async startTaskWithoutInstalling(rawRequest) {
+      // Snapshot before any await or preparation. This is an internal transport
+      // restriction, not approval of the application command or local model.
+      let request: StartRuntimeTaskRequest;
+      try { request = snapshotInstalledContextRequest(rawRequest); } catch { return {kind: "unavailable"}; }
+      const requestId = request.requestId!;
+      if (!ensureWithoutInstalling || trackedTasks.has(requestId) || pendingStarts.has(requestId) || installedContextIds.has(requestId) ||
+          pendingStarts.size >= maximumTrackedTasks || installedContextIds.size >= maximumTrackedTasks) return {kind: "unavailable"};
+      const admission = {taskType: request.taskType};
+      pendingStarts.set(requestId, admission);
+      try { await ensureWithoutInstalling(request); }
+      catch { pendingStarts.delete(requestId); return {kind: "unavailable"}; }
+      // From here, a lost/contradictory acknowledgement cannot prove nonstart.
+      // Keep the reservation; never discover, adopt or dispatch this ID again.
+      try {
+        const pythonTaskType = toPythonTaskType(request.taskType);
+        installedContextIds.add(requestId);
+        const result = await runtimePort.startTask({requestId, taskType: pythonTaskType,
+          payload: request.payload, metadata: {...request.metadata, workspaceId: request.workspaceId},
+          timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType)});
+        if (result?.requestId !== requestId || result.taskType !== pythonTaskType || result.accepted !== true ||
+            (result.status !== "queued" && result.status !== "running") ||
+            (result.metadata?.workspaceId !== undefined && result.metadata.workspaceId !== request.workspaceId))
+          return {kind: "unconfirmed"};
+        // Return a closed copied acknowledgement, never worker extras or aliases.
+        const value: StartRuntimeTaskResult = {requestId, status: result.status};
+        rememberTask({requestId, workspaceId: request.workspaceId, taskType: request.taskType, status: result.status,
+          concurrencyClass: request.concurrencyClass ?? "unknown", metadata: {...request.metadata, workspaceId: request.workspaceId},
+          queuedAt: new Date().toISOString()});
+        pendingStarts.delete(requestId);
+        return {kind: "accepted", value};
+      } catch { return {kind: "unconfirmed"}; }
+    },
     async startTask(
       request: StartRuntimeTaskRequest,
     ): Promise<StartRuntimeTaskResult> {
@@ -227,6 +309,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
         throw new Error("model publishing runtime task is not implemented");
       }
       const requestId = request.requestId ?? randomUUID();
+      if (installedContextIds.has(requestId)) throw new Error("Context task identity is already reserved.");
       const modelTraining = taskType === TaskType.MODEL_TRAINING;
       if (isModelTrainingId(requestId) || (modelTraining && (trackedTasks.has(requestId) || pendingStarts.has(requestId)))) {
         throw new Error(trainingStartIdentityError);

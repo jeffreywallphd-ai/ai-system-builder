@@ -16,6 +16,9 @@ import type {StartContextGenerationCommand} from "../../../../contracts/context-
 import {TaskType, type ContextGenerationTaskRequest} from "../../../../contracts/runtime";
 import {createFilesystemArtifactObjectStorageAdapter} from "../../../../adapters/storage/filesystem/artifact-store";
 import type {ArtifactObjectStoragePort} from "../../../ports/storage";
+import type {RuntimeTaskRegistryPort} from "../../../ports/runtime";
+import {createPythonRuntimeTaskRegistryAdapter} from "../../../../adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter";
+import {createRuntimeTaskRegistryRouter} from "../../../../adapters/runtime/createRuntimeTaskRegistryRouter";
 
 const workspaceId = createWorkspaceId("workspace.context-admission"), organizationId = createOrganizationId("org.context-admission");
 const originalBytes = new TextEncoder().encode("text\nSynthetic release documentation.\n");
@@ -57,8 +60,17 @@ async function harness(base: string, withoutOwner: boolean) {
   let statusPatch: Record<string, unknown> = {}, cancelPatch: Record<string, unknown> = {}, powerCompletions = 0;
   let powerLifecycle: TaskPowerLifecyclePort | undefined;
   let sourceReader: ArtifactObjectStoragePort["retrieveArtifact"] | undefined;
+  let installedStart: "accepted" | "unavailable" | "unconfirmed" = "accepted", installedSupported = true;
+  let installedBridge: RuntimeTaskRegistryPort["startTaskWithoutInstalling"];
   const useCase = new ContextGenerationUseCase({taskReconciler: withoutOwner ? undefined : reconciler,
     runtimeTaskRegistry: {
+      get startTaskWithoutInstalling() {return installedSupported ? async (request: never) => {
+        if (installedBridge) return installedBridge(request);
+        if (installedStart !== "accepted") return {kind: installedStart};
+        dispatchCount++; lastRequest = request as typeof lastRequest;
+        assert.deepEqual(await readFile((lastRequest!.payload).sources[0].localPath), Buffer.from(originalBytes));
+        return {kind: "accepted", value: await dispatch()};
+      } : undefined;},
       async startTask(request) {
         dispatchCount++; lastRequest = request as typeof lastRequest;
         assert.deepEqual(await readFile((request.payload as ContextGenerationTaskRequest).sources[0].localPath), Buffer.from(originalBytes));
@@ -101,6 +113,8 @@ async function harness(base: string, withoutOwner: boolean) {
     setDescriptor(value: Record<string, unknown>) {descriptorPatch = value;}, setBinding(value: string) {bindingKey = value;},
     setSourceReader(value: ArtifactObjectStoragePort["retrieveArtifact"]) {sourceReader = value;},
     setIssue(value: typeof issue) {issue = value;}, setDispatch(value: typeof dispatch) {dispatch = value;},
+    setInstalledStart(value: typeof installedStart) {installedStart = value;}, setInstalledSupported(value: boolean) {installedSupported = value;},
+    setInstalledBridge(value: typeof installedBridge) {installedBridge = value;},
     setAfterRead(value: typeof afterRead) {afterRead = value;}, setPowerFails(value: boolean) {powerFails = value;},
     setAfterCatalog(value: typeof afterCatalog) {afterCatalog = value;}, mutateReturnedBytes() {bytes.fill(120);},
     setStatus(value: Record<string, unknown>) {statusPatch = value;}, setCancel(value: Record<string, unknown>) {cancelPatch = value;},
@@ -122,6 +136,47 @@ test("approved Context dispatch uses exact staged bytes and reserved identity on
   assert.equal((await h.roots()).length, 1);
   assert.equal((await h.useCase.startAdmittedContext(selected, h.context, admission)).ok, false);
   assert.deepEqual(h.counts(), {issueCount: 1, readCount: 1, dispatchCount: 1, statusCount: 0, cancelCount: 0});
+  await h.stop(); assert.deepEqual(await h.roots(), []);
+}));
+
+test("installed-only support is required before bytes, proven refusals clean staging and uncertain starts retain it", async () => {
+  await withHarness(async h => {
+    h.setInstalledSupported(false);
+    assert.equal((await h.useCase.startAdmittedContext(command(), h.context, h.admission())).ok, false);
+    assert.equal(h.counts().readCount, 0); assert.equal(h.counts().issueCount, 0); assert.deepEqual(await h.roots(), []);
+  });
+  await withHarness(async h => {
+    h.setInstalledStart("unavailable");
+    const admission = h.admission();
+    assert.equal((await h.useCase.startAdmittedContext(command(), h.context, admission)).ok, false);
+    assert.equal(h.counts().issueCount, 1); assert.equal(h.counts().dispatchCount, 0); assert.deepEqual(await h.roots(), []);
+    h.setInstalledStart("accepted");
+    assert.equal((await h.useCase.startAdmittedContext(command(), h.context, admission)).ok, false);
+    assert.equal(h.counts().readCount, 1); assert.equal(h.counts().dispatchCount, 0);
+  });
+  await withHarness(async h => {
+    h.setInstalledStart("unconfirmed");
+    assert.equal((await h.useCase.startAdmittedContext(command(), h.context, h.admission())).ok, false);
+    assert.equal((await h.roots()).length, 1); assert.equal(h.counts().statusCount, 0);
+    await h.stop(); assert.deepEqual(await h.roots(), []);
+  });
+});
+
+test("actual Context owner, router and Python registry carry the staged command through installed-only dispatch", async () => withHarness(async h => {
+  let installs = 0, verifications = 0, dispatches = 0;
+  const python = createPythonRuntimeTaskRegistryAdapter({async startTask(request) {
+    dispatches++;
+    assert.equal(request.taskType, "generate-context-artifact"); assert.equal(request.requestId, h.taskId());
+    const payload = request.payload as ContextGenerationTaskRequest;
+    assert.equal(payload.contextPack?.method, "none");
+    assert.deepEqual(await readFile(payload.sources[0].localPath), Buffer.from(originalBytes));
+    return {requestId: request.requestId, taskType: request.taskType, accepted: true, status: "queued"};
+  }} as never, {async ensureRuntimeReady() {installs++;}, async ensureRuntimeReadyWithoutInstalling() {verifications++;}});
+  const router = createRuntimeTaskRegistryRouter({python, image: {} as never});
+  h.setInstalledBridge(router.startTaskWithoutInstalling);
+  const result = await h.useCase.startAdmittedContext(command(), h.context, h.admission());
+  assert.ok(result.ok); assert.equal(installs, 0); assert.equal(verifications, 1); assert.equal(dispatches, 1);
+  assert.equal((await h.roots()).length, 1);
   await h.stop(); assert.deepEqual(await h.roots(), []);
 }));
 

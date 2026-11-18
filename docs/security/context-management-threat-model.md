@@ -315,3 +315,17 @@ Known accepted tasks keep reconciliation if later bookkeeping fails. Focused
 unit and actual filesystem-adapter evidence uses synthetic sources and simulated
 runtime/stop replies; it does not qualify physical model readiness, actual
 Python stop, durable plan issuance, native recovery or public execution.
+
+### Installation authority at approved start
+
+Routine approved Context processing must not inherit ordinary runtime repair
+permission. The controlled owner requires a separate internal installed-only
+capability before reading source bytes. The registry has an explicit noninstalling
+preparer, passive bounded snapshots and exact worker acknowledgements. Its
+supervisor mode requires a successful read-only verifier and cannot join an
+installing startup flight. The router never substitutes ordinary start. A fixed
+bounded asynchronous probe returns no private output. Only a closed pre-dispatch
+refusal releases new staging; unknown dispatch preserves custody and one-use IDs.
+Focused negative tests cover policy mixing, stop during verification, missing
+support, mutated requests, wrong identities and uncertain starts. Public host
+composition, durable issuance and physical model/runtime proof remain pending.

@@ -438,7 +438,7 @@ export class ContextGenerationUseCase {
     rawAdmission: ApprovedContextGenerationAdmission): Promise<ContractResult<StartContextGenerationValue>> {
     const context = {...rawContext};
     const parsed = readApprovedContextAdmission(rawCommand, context, rawAdmission);
-    if (!parsed || !this.taskReconciler || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
+    if (!parsed || !this.taskReconciler || !this.runtime.startTaskWithoutInstalling || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
         this.admittedStarts.has(parsed.admission.taskId) || this.issuedTaskIds.has(parsed.admission.taskId) ||
         this.scopes.has(parsed.admission.taskId) || [...this.uncertainStarts].some(attempt => attempt.requestedId === parsed.admission.taskId))
       return this.startUnavailable(context);
@@ -572,7 +572,7 @@ export class ContextGenerationUseCase {
       this.taskReconciler?.assertAccepting();
       attempt.requestedId = attempt.admission?.taskId ?? context?.requestId;
       attempt.dispatchAttempted = true;
-      const started = await this.runtime.startTask({
+      const request = {
         requestId: attempt.requestedId,
         taskType: TaskType.CONTEXT_GENERATION,
         payload: runtimeRequest,
@@ -583,7 +583,20 @@ export class ContextGenerationUseCase {
             ? { organizationId: String(context.organizationId) }
             : {}),
         },
-      });
+      };
+      let started;
+      if (attempt.admission) {
+        const outcome = await this.runtime.startTaskWithoutInstalling!(request);
+        if (outcome?.kind === "unavailable" && Object.keys(outcome).length === 1) {
+          // The internal port proves no task POST. Issuance stays consumed, but
+          // this fresh staging no longer has a possible business-task reader.
+          attempt.dispatchAttempted = false;
+          return this.startUnavailable(context);
+        }
+        if (outcome?.kind !== "accepted" || Object.keys(outcome).length !== 2 || !outcome.value)
+          throw new Error("Context generation start was not confirmed.");
+        started = outcome.value;
+      } else started = await this.runtime.startTask(request);
       if (typeof started.requestId !== "string" || !started.requestId.trim() ||
           (attempt.admission && (started.requestId !== attempt.admission.taskId || (started.status !== "queued" && started.status !== "running")))) {
         throw new Error("Context generation start response is incomplete.");

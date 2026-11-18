@@ -149,3 +149,8 @@ the list or report deletion. A different key leaves the selected view intact.
   reserved task to trusted current checks and atomic one-use issuance. Unknown
   starts retain only new staging; exact task/terminal/cancel identity is required
   for cleanup. Runtime/model readiness and public plan wiring remain separate.
+
+- Internal approved start requires the installed-only runtime capability before
+  source bytes. A proven no-dispatch refusal cleans fresh staging while consuming
+  the task ID; unknown replies retain custody. There is no ordinary-start/install
+  fallback. Public host composition and real model/runtime proof remain pending.

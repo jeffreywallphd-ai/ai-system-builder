@@ -226,3 +226,12 @@ atomic one-use issue callbacks; no client command can supply those functions.
 Unknown dispatch preserves new owned staging without task adoption or retries.
 This seam alone neither advertises a new operation nor proves readiness, durable
 issuance or actual model execution. Those remain required before public use.
+
+Context processing uses an additive installed-only internal registry/supervisor
+path. It reuses existing installation predicates, authentication and owned
+lifecycle without invoking ordinary dependency preparation. Missing support or a
+failed verifier refuses without an installer fallback. A bounded passive request
+snapshot and exact acknowledgement distinguish nonstart from uncertainty. This
+implements the existing separation of routine processing and install/download
+authority; it selects no new provider, dependency, engine or topology. Production
+composition and actual Context/model qualification remain subsequent work.

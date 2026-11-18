@@ -40,3 +40,15 @@ class ContextPreviewRoutingTests(unittest.TestCase):
         self.assertNotIn('--suite=all', command)
         self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']) + ['modules/application/use-cases/context-management/unmapped-start.ts']))
         self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']), ['focused-tests']))
+
+    def test_existing_runtime_routes_exact_probe_supervisor_registry_and_router_checks(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-existing-runtime']
+        selected = self.selected(list(definition['automatic_sources']))
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-existing-runtime']['argv']
+        for path in definition['automatic_sources']:
+            if '/tests/' in path:
+                self.assertIn(path, command)
+        self.assertNotIn('--suite=all', command)
+        self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']) + ['modules/adapters/runtime/python/unknown-admission.ts']))
+        self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']), ['focused-tests']))

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 
 import { CONTEXT_DEPENDENCY_PROBE_SCRIPT } from "./ensurePythonRuntimeContextDependencies";
 import { WORKER_DEPENDENCY_PROBE_SCRIPT } from "./ensurePythonRuntimeWorkerDependencies";
@@ -34,4 +34,25 @@ export function checkPythonRuntimeInstallation(
   const lines = result.stdout?.trim().split(/\r?\n/u);
   if (result.status === 0 && !result.error && lines?.[lines.length - 1] === INSTALLATION_READY) return "ready";
   return "incomplete";
+}
+
+/** The same read-only probe for active hosts; never blocks their event loop. */
+export function checkPythonRuntimeInstallationAsync(
+  options: { command: string; cwd: string; env?: NodeJS.ProcessEnv },
+  run: typeof execFile = execFile,
+): Promise<PythonRuntimeInstallation> {
+  const command = options.command, cwd = options.cwd;
+  const env = options.env ? { ...options.env } : undefined;
+  return new Promise(resolve => {
+    try {
+      run(command, ["-I", "-B", "-c", INSTALLATION_PROBE], {
+        cwd, env, encoding: "utf8", timeout: 12_000, maxBuffer: 32_768, windowsHide: true,
+      }, (error, stdout) => {
+        if (error?.code === "ENOENT") return resolve("missing");
+        if (error?.code === 11 && !error.killed && !error.signal) return resolve("unsupported");
+        const lines = typeof stdout === "string" ? stdout.trim().split(/\r?\n/u) : [];
+        resolve(!error && lines[lines.length - 1] === INSTALLATION_READY ? "ready" : "incomplete");
+      });
+    } catch { resolve("incomplete"); }
+  });
 }

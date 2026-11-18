@@ -16,6 +16,92 @@ import {
 import { createPythonRuntimeTaskRegistryAdapter } from "../createPythonRuntimeTaskRegistryAdapter";
 import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
 
+describe("installed-only Context task dispatch", () => {
+  const workspaceId = createWorkspaceId("workspace.installed-context");
+  const request = (requestId = "context-exact") => ({requestId, workspaceId, taskType: TaskType.CONTEXT_GENERATION,
+    payload: {kind: "markdown-context-pack", contextPack: {method: "none"}, sources: [{localPath: "private/synthetic.csv"}]},
+    metadata: {workspaceId, organizationId: "org.synthetic"}});
+  const accept = async (r: StartPythonRuntimeTaskRequest) => ({requestId: r.requestId, taskType: r.taskType,
+    accepted: true, status: "queued" as const, metadata: {workspaceId}});
+
+  it("denies missing readiness support, unsafe/unsupported data and failed probes without installation or task dispatch", async () => {
+    let getters = 0;
+    const accessor = request(); Object.defineProperty(accessor.payload, "unsafe", {enumerable: true, get() {getters++; return true;}});
+    const cyclic = request(); (cyclic.payload as any).self = cyclic;
+    const sparse = [{localPath: "first"}, , {localPath: "last"}];
+    const malformed = [accessor, cyclic, {...request(), taskType: TaskType.MODEL_DOWNLOAD}, {...request(), workspaceId: ""},
+      {...request(), requestId: undefined}, {...request(), install: true}, {...request(), payload: {infinite: Infinity}},
+      {...request(), payload: new Proxy({}, {})}, {...request(), payload: {large: "x".repeat(1024 * 1024 + 1)}},
+      {...request(), payload: {sources: sparse}}, {...request(), payload: {sources: [undefined]}},
+      {...request(), metadata: {workspaceId: "foreign"}}];
+    const worker = {startTask: testDouble.fn(accept)} as unknown as PythonRuntimePort;
+    const installer = testDouble.fn(async () => {}), verify = testDouble.fn(async () => {throw new Error("private failure");});
+    const missing = createPythonRuntimeTaskRegistryAdapter(worker, {ensureRuntimeReady: installer});
+    expect(await missing.startTaskWithoutInstalling!(request())).toEqual({kind: "unavailable"});
+    const adapter = createPythonRuntimeTaskRegistryAdapter(worker, {ensureRuntimeReady: installer, ensureRuntimeReadyWithoutInstalling: verify});
+    for (const raw of malformed) expect(await adapter.startTaskWithoutInstalling!(raw as any)).toEqual({kind: "unavailable"});
+    expect(verify).not.toHaveBeenCalled(); expect(getters).toBe(0);
+    expect(await adapter.startTaskWithoutInstalling!(request())).toEqual({kind: "unavailable"});
+    expect(verify).toHaveBeenCalledTimes(1); expect(installer).not.toHaveBeenCalled(); expect(worker.startTask).not.toHaveBeenCalled();
+  });
+
+  it("snapshots immutable nested data before readiness and dispatches the exact Context identity once", async () => {
+    let release!: () => void, entered!: () => void;
+    const waiting = new Promise<void>(resolve => {entered = resolve;});
+    const worker = {startTask: testDouble.fn(accept)} as unknown as PythonRuntimePort;
+    const installer = testDouble.fn(async () => {}), input = request();
+    const options = {ensureRuntimeReady: installer, async ensureRuntimeReadyWithoutInstalling(snapshot: any) {
+      expect(Object.isFrozen(snapshot.payload.sources[0])).toBe(true); entered();
+      await new Promise<void>(resolve => {release = resolve;});
+    }};
+    const adapter = createPythonRuntimeTaskRegistryAdapter(worker, options);
+    const start = adapter.startTaskWithoutInstalling!(input); await waiting;
+    input.payload.contextPack.method = "changed"; input.payload.sources[0].localPath = "changed";
+    input.requestId = "changed"; options.ensureRuntimeReadyWithoutInstalling = async () => {throw new Error("replaced");};
+    release(); expect(await start).toEqual({kind: "accepted", value: {requestId: "context-exact", status: "queued"}});
+    expect(worker.startTask).toHaveBeenCalledWith(expect.objectContaining({requestId: "context-exact", taskType: "generate-context-artifact",
+      timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.contextGeneration, payload: expect.objectContaining({contextPack: {method: "none"},
+        sources: [{localPath: "private/synthetic.csv"}]})}));
+    expect(await adapter.startTaskWithoutInstalling!(request())).toEqual({kind: "unavailable"});
+    await expect(adapter.startTask(request())).rejects.toThrow("already reserved");
+    expect(worker.startTask).toHaveBeenCalledTimes(1); expect(installer).not.toHaveBeenCalled();
+  });
+
+  it("retains lost and contradictory dispatch outcomes without task discovery or same-ID retry", async () => {
+    for (const reply of [undefined, {requestId: "foreign"}, {status: "succeeded"}, {accepted: false},
+      {taskType: "train-model"}, {metadata: {workspaceId: "foreign"}}]) {
+      const worker = {startTask: testDouble.fn(async (r: StartPythonRuntimeTaskRequest) => {
+        if (!reply) throw new Error("lost response"); return {...await accept(r), ...reply};
+      }), readTaskStatus: testDouble.fn(), cancelTask: testDouble.fn()} as unknown as PythonRuntimePort;
+      const adapter = createPythonRuntimeTaskRegistryAdapter(worker, {async ensureRuntimeReadyWithoutInstalling() {}});
+      expect(await adapter.startTaskWithoutInstalling!(request())).toEqual({kind: "unconfirmed"});
+      expect(await adapter.startTaskWithoutInstalling!(request())).toEqual({kind: "unavailable"});
+      await expect(adapter.startTask(request())).rejects.toThrow("already reserved");
+      expect(worker.startTask).toHaveBeenCalledTimes(1); expect(worker.readTaskStatus).not.toHaveBeenCalled();
+      expect(worker.cancelTask).not.toHaveBeenCalled();
+    }
+  });
+
+  it("coalesces no duplicate dispatch, bounds retained identities and preserves ordinary installation", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => {release = resolve;});
+    const worker = {startTask: testDouble.fn(accept)} as unknown as PythonRuntimePort;
+    const installer = testDouble.fn(async () => {});
+    const adapter = createPythonRuntimeTaskRegistryAdapter(worker, {ensureRuntimeReady: installer,
+      async ensureRuntimeReadyWithoutInstalling() {await gate;}});
+    const first = adapter.startTaskWithoutInstalling!(request());
+    expect(await adapter.startTaskWithoutInstalling!(request())).toEqual({kind: "unavailable"});
+    await expect(adapter.startTask(request())).rejects.toThrow("did not match");
+    expect(installer).not.toHaveBeenCalled(); expect(worker.startTask).not.toHaveBeenCalled();
+    release(); await first;
+    for (let i = 1; i < 256; i++) expect((await adapter.startTaskWithoutInstalling!(request("context-" + i))).kind).toBe("accepted");
+    expect(await adapter.startTaskWithoutInstalling!(request("over-capacity"))).toEqual({kind: "unavailable"});
+    expect(worker.startTask).toHaveBeenCalledTimes(256); expect(installer).not.toHaveBeenCalled();
+    await adapter.startTask({...request("ordinary"), taskType: TaskType.CONTEXT_RETRIEVAL});
+    expect(installer).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("createPythonRuntimeTaskRegistryAdapter", () => {
   const workspaceId = createWorkspaceId("workspace.test");
   const acceptWorkerStart = async (request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult> => ({

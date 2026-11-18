@@ -2248,3 +2248,10 @@ and exact terminal/cancel identity. Real filesystem metadata omission is a
 separate causal case. These simulated runtime tests do not qualify physical
 readiness, public plan execution, native stop or restart recovery. Unmapped source
 neighbors and an explicit generic focused-test request retain their fallback.
+
+The `headless-context-existing-runtime` check covers the exact asynchronous
+installed probe, restrictive supervisor, Python task registry and no-fallback
+router, including ordinary compatibility. The separate owned-start check covers
+Context staging and lifecycle. Simulated process/worker tests qualify those
+internal controls only; they do not prove public execution, installed model
+availability, native recovery or parent increment completion.

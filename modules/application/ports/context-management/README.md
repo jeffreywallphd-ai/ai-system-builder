@@ -24,3 +24,9 @@ Reconciliation must not discover or adopt an unknown task. Retirement requires
 the existing owning runtime's successful stop proof. Native/offload and process
 restart recovery remain separate qualification. See the
 [Context architecture](../../../../docs/architecture/context-management.md).
+
+Approved Context start also requires the explicit installed-only runtime task
+capability before source reads. A proven pre-dispatch refusal releases only its
+new staging; the approved attempt ID stays consumed. Exceptions, malformed
+proofs and uncertain starts keep their owned staging. The host must compose the
+noninstalling registry and supervisor path; ordinary start is not a substitute.

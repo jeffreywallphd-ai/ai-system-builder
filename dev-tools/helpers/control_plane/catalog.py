@@ -167,6 +167,40 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-existing-runtime": {
+        # Registry-only edits retain the primary ownership profile's coverage
+        # contract, including fallback when its declared source map is damaged.
+        "automatic_sources": (
+            "modules/application/ports/runtime/runtime-task-registry.port.ts",
+            "modules/adapters/runtime/createRuntimeTaskRegistryRouter.ts",
+            "modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts",
+            "modules/adapters/runtime/python/checkPythonRuntimeInstallation.ts",
+            "modules/adapters/runtime/python/tests/checkPythonRuntimeInstallation.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",
+            "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts",
+        ),
+        "sources": (
+            "modules/application/ports/runtime/runtime-task-registry.port.ts",
+            "modules/application/ports/runtime/README.md",
+            "modules/adapters/runtime/createRuntimeTaskRegistryRouter.ts",
+            "modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts",
+            "modules/adapters/runtime/python/checkPythonRuntimeInstallation.ts",
+            "modules/adapters/runtime/python/tests/checkPythonRuntimeInstallation.unit.test.ts",
+            "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",
+            "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts",
+            "modules/adapters/runtime/python/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/runtime/python/tests/checkPythonRuntimeInstallation.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",
+            "modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts",
+        ),
+    },
     "headless-context-owned-start": {
         "automatic_sources": (
             "modules/application/use-cases/context-management/context-generation.use-case.ts",

@@ -26,3 +26,11 @@ The profile verifies at most four 4 MiB structured sources, requires local JSONL
 and quality review, and retains at most four pending attempts. Runtime-stop proof
 and confirmed cleanup release unknown staging; timeout, lost permission and a
 missing task record do not. Public Headless execution is not composed by this port.
+
+`RuntimeTaskRegistryPort.startTaskWithoutInstalling` is an optional internal
+Context-only capability. Missing support must not fall back to `startTask`.
+Its closed result distinguishes accepted work, a proven absence of business task
+dispatch (`unavailable`), and an uncertain start (`unconfirmed`). A throw is
+uncertain, not a nonstart proof. This port grants no model download, dependency
+installation, physical readiness or user approval. Ordinary starts keep their
+existing preparation policy.

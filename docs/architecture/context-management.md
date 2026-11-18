@@ -456,3 +456,12 @@ Pending power registration gates task observation and cancellation cleanup.
 Runtime-stop reconciliation waits for registration to settle before release,
 so a late blocker cannot be created after terminal cleanup. Focused tests use
 the actual power-lifecycle service with a delayed simulated blocker.
+
+Approved start requires the installed-only task capability before source reads.
+Routine processing approval cannot implicitly repair an environment. A fixed
+nonblocking installed probe and separate supervisor/registry path support later
+host composition; there is no fallback to ordinary installation preparation.
+Only an explicit proven nonstart can remove this attempt's new staging after
+issuance. The task ID remains consumed. Uncertainty, malformed acknowledgements
+and exceptions preserve custody. Public plan issuance, model readiness and actual
+Context execution remain subsequent qualification, not a consequence of this seam.

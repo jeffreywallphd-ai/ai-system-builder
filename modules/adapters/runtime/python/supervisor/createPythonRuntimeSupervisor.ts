@@ -31,6 +31,8 @@ export interface PythonRuntimeSupervisorEvent {
 
 export interface PythonRuntimeSupervisor {
   start(): Promise<void>;
+  /** Host-only restrictive path. Absence is not permission to call start(). */
+  startWithoutInstalling?(): Promise<void>;
   stop(): Promise<void>;
   restart(): Promise<void>;
   getStatus(): PythonRuntimeSupervisorStatus;
@@ -48,6 +50,12 @@ export interface CreatePythonRuntimeSupervisorOptions {
     env?: NodeJS.ProcessEnv;
     startupToken?: object;
   }) => void | Promise<void>;
+  verifyRuntimeEnvironment?: (context: {
+    command: string;
+    args: readonly string[];
+    cwd?: string;
+    env: NodeJS.ProcessEnv;
+  }) => Promise<boolean>;
   prepareLaunchEnvironment?: (context: {
     command: string;
     args: readonly string[];
@@ -82,6 +90,7 @@ export function createPythonRuntimeSupervisor(
   const configuredArgs = options.args ? [...options.args] : undefined;
   const workingDirectory = options.cwd;
   const prepareRuntimeEnvironment = options.prepareRuntimeEnvironment;
+  const verifyRuntimeEnvironment = options.verifyRuntimeEnvironment;
   const prepareLaunchEnvironment = options.prepareLaunchEnvironment;
   const runtimeClient = {
     getHealthStatus: options.runtimeClient.getHealthStatus.bind(options.runtimeClient),
@@ -99,6 +108,7 @@ export function createPythonRuntimeSupervisor(
   };
   let startFlight: Promise<void> | undefined;
   let startGeneration: number | undefined;
+  let startPolicy: "ordinary" | "installed-only" | undefined;
   let stopFlight: Promise<void> | undefined;
   let lifecycleGeneration = 0;
   let status: PythonRuntimeSupervisorStatus = "stopped";
@@ -426,17 +436,26 @@ export function createPythonRuntimeSupervisor(
     );
   };
 
-  return {
-    async start() {
+  const start = async (policy: "ordinary" | "installed-only") => {
+      if (policy === "installed-only" && !verifyRuntimeEnvironment)
+        throw new Error("Installed Python runtime verification is unavailable.");
       if (stopFlight) throw new Error("Python runtime is stopping; retry after confirmed termination.");
       if (startFlight) {
         if (startGeneration !== lifecycleGeneration) throw new Error("Previous Python runtime startup is still stopping.");
+        if (startPolicy !== policy) throw new Error("Python runtime startup authority differs from the active attempt.");
         return startFlight;
       }
       const generation = lifecycleGeneration;
       let operationToken: object | undefined;
       const assertCurrent = () => { if (generation !== lifecycleGeneration) throw new Error("Python runtime startup was stopped."); };
       const operation = (async () => {
+      if (policy === "installed-only") {
+        let verified = false;
+        try { verified = await verifyRuntimeEnvironment!({command: resolveCommand(), args: Object.freeze(resolveArgs()),
+          cwd: workingDirectory, env: { ...runtimeEnvironment }}); } catch { /* Closed refusal, without private probe output. */ }
+        assertCurrent();
+        if (verified !== true) throw new Error("Installed Python runtime verification is unavailable.");
+      }
       if (childProcess && status === "failed") throw new Error("Python runtime startup failed; stop the owned process before retrying.");
       if (childProcess && status !== "stopped") {
         emitEvent(
@@ -494,7 +513,7 @@ export function createPythonRuntimeSupervisor(
         );
       }
 
-      if (prepareRuntimeEnvironment) {
+      if (policy === "ordinary" && prepareRuntimeEnvironment) {
         try {
           await prepareRuntimeEnvironment({
             command,
@@ -568,9 +587,14 @@ export function createPythonRuntimeSupervisor(
       })();
       startFlight = operation;
       startGeneration = generation;
+      startPolicy = policy;
       try { await operation; } catch (error) { if (operationToken) observeStartup("failed", operationToken); throw error; }
-      finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; } }
-    },
+      finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; startPolicy = undefined; } }
+  };
+
+  return {
+    start: () => start("ordinary"),
+    startWithoutInstalling: () => start("installed-only"),
 
     async stop() {
       if (stopFlight) return stopFlight;

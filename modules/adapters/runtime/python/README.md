@@ -363,3 +363,31 @@ or replay entered stages. Observed Hub/Transformers versions are compared with t
 unchanged requirements pins without new repair triggers or compatibility claims.
 The report retains the latest 64 stage observations and marks truncation. Retired
 means the attempt observer was retired, not that a worker process exited.
+
+## Installed-only Context admission
+
+`checkPythonRuntimeInstallationAsync` reuses the existing installed-environment
+probe without blocking the host event loop. It runs the same fixed isolated
+script with a 12-second and 32-KiB bound, and returns only closed installation
+statuses. It never calls pip or reports private process output.
+
+The supervisor has a separate internal `startWithoutInstalling` path. An explicit
+read-only verifier must succeed before attach or launch. It skips normal
+environment preparation, refuses joining a startup with another policy, and
+retains authenticated health, capability, launch-token and stop-generation
+controls. Ordinary start and restart retain their existing preparation behavior.
+
+The Python registry's matching optional method requires a separately configured
+noninstalling preparation callback. It accepts only bounded passive Context
+requests, snapshots them before preparation, and validates the exact worker
+acknowledgement. Missing/failed preparation proves no task dispatch. A lost or
+contradictory dispatch reply remains unconfirmed. A maximum of 256 dispatched
+identities stays reserved for that registry instance; neither ordinary starts nor
+retries can reuse them. Unknown outcomes do not authorize discovery or cleanup.
+The generic router preserves this restriction without ordinary-start fallback.
+
+These are internal adapter components, not public host execution or physical
+model qualification. The production host must still compose the installed-only
+path, exact current durable plan authority and model/source validation. Focused
+source tests use simulated process and worker responses. No model accuracy test,
+installation, download or native/offload recovery is qualified by them.

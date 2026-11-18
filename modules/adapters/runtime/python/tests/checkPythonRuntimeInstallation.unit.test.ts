@@ -1,8 +1,8 @@
 import { strict as assert } from "node:assert";
-import type { spawnSync } from "node:child_process";
+import type { execFile, spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-import { checkPythonRuntimeInstallation } from "../checkPythonRuntimeInstallation";
+import { checkPythonRuntimeInstallation, checkPythonRuntimeInstallationAsync } from "../checkPythonRuntimeInstallation";
 
 test("uses a bounded, isolated Python dependency probe with a fixed success marker", () => {
   const run = ((command: string, args: readonly string[], options: Record<string, unknown>) => {
@@ -19,6 +19,37 @@ test("uses a bounded, isolated Python dependency probe with a fixed success mark
     return { status: 0, stdout: "ASB_CONTEXT_DEPENDENCY_READY\nASB_WORKER_INSTALLATION_READY\n" };
   }) as typeof spawnSync;
   assert.equal(checkPythonRuntimeInstallation({ command: "python", cwd: "worker" }, run), "ready");
+});
+
+test("async installed probe uses the identical fixed script and private bounded process options", async () => {
+  let syncScript = "", callback!: (...args: unknown[]) => void, observed: Record<string, unknown> = {};
+  checkPythonRuntimeInstallation({command: "python", cwd: "worker"}, ((_c: unknown, args: string[]) => {
+    syncScript = args[3]; return {status: 0, stdout: "ASB_WORKER_INSTALLATION_READY"};
+  }) as typeof spawnSync);
+  const env = {SYNTHETIC_PRIVATE: "original"};
+  const pending = checkPythonRuntimeInstallationAsync({command: "python", cwd: "worker", env}, ((command, args, options, done) => {
+    assert.equal(command, "python"); assert.deepEqual(args, ["-I", "-B", "-c", syncScript]);
+    observed = options; callback = done; return {};
+  }) as unknown as typeof execFile);
+  env.SYNTHETIC_PRIVATE = "changed";
+  assert.deepEqual(observed, {cwd: "worker", env: {SYNTHETIC_PRIVATE: "original"}, encoding: "utf8",
+    timeout: 12000, maxBuffer: 32768, windowsHide: true});
+  callback(null, "private probe detail\nASB_WORKER_INSTALLATION_READY\n", "ignored");
+  assert.equal(await pending, "ready");
+});
+
+test("async probe closes OS, version, timeout, overflow and malformed responses without raw errors", async () => {
+  for (const [error, stdout, expected] of [
+    [{code: "ENOENT", message: "private path"}, "", "missing"],
+    [{code: 11}, "", "unsupported"], [{code: 11, killed: true}, "", "incomplete"],
+    [{code: "ETIMEDOUT"}, "ASB_WORKER_INSTALLATION_READY", "incomplete"],
+    [{code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER"}, "ASB_WORKER_INSTALLATION_READY", "incomplete"],
+    [null, "ASB_WORKER_INSTALLATION_READY\nunrecognized", "incomplete"],
+    [null, null, "incomplete"],
+  ]) assert.equal(await checkPythonRuntimeInstallationAsync({command: "python", cwd: "worker"},
+    ((_c, _a, _o, done) => {done(error, stdout, "private error"); return {};}) as unknown as typeof execFile), expected);
+  assert.equal(await checkPythonRuntimeInstallationAsync({command: "python", cwd: "worker"},
+    (() => {throw new Error("private error");}) as typeof execFile), "incomplete");
 });
 
 test("refuses missing, unsupported, unsuccessful and ambiguous runtime probes", () => {

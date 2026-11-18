@@ -1438,3 +1438,23 @@ Startup history retains its latest 64 observations with an explicit truncation
 fact. Attempt retirement is separate from confirmed worker termination. Effective
 launch controls are captured before optional observers, while the trusted launch
 preparation writes authentication into the private attempt-local child environment.
+
+### Explicit installed-only Context tasks
+
+The optional internal registry method `startTaskWithoutInstalling` is distinct
+from ordinary start. The Python implementation requires an explicit noninstalling
+preparer and snapshots bounded passive Context input before awaiting it. It never
+substitutes ordinary readiness. Exact ID, worker type, acceptance, queued/running
+state and any reported workspace must match. Nonstarts before dispatch return
+unavailable; possible dispatch remains unconfirmed. Dispatched IDs remain reserved
+within the existing finite instance limit. The router records only accepted exact
+correlation and refuses discovery/cancellation of uncertain restricted starts.
+
+A separate supervisor start mode requires an installed-environment verifier even
+when a worker is already active. It skips installation preparation and refuses
+mixed-policy startup flights. The async installed probe uses the same predicates,
+fixed isolated arguments, 12-second timeout and 32-KiB output cap as the startup
+probe. Closed statuses hide command output. Stop-generation, private launch token,
+required capabilities and authenticated health remain authoritative. Ordinary
+start/restart behavior is unchanged. These components require explicit production
+host composition and do not prove physical model readiness or native recovery.

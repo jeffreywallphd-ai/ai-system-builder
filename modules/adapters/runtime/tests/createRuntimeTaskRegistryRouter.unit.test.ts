@@ -46,6 +46,45 @@ function createRegistryStub(
 }
 
 describe("createRuntimeTaskRegistryRouter", () => {
+  it("never falls back to ordinary start for installed-only work and keeps uncertain identities private", async () => {
+    const image = createRegistryStub(), python = createRegistryStub();
+    const router = createRuntimeTaskRegistryRouter({image, python});
+    const request = {workspaceId, requestId: "owned-context", taskType: TaskType.CONTEXT_GENERATION, payload: {}};
+    expect(await router.startTaskWithoutInstalling!(request)).toEqual({kind: "unavailable"});
+    expect(python.startTask).not.toHaveBeenCalled(); expect(image.startTask).not.toHaveBeenCalled();
+    python.startTaskWithoutInstalling = async () => {throw new Error("lost response");};
+    expect(await router.startTaskWithoutInstalling!(request)).toEqual({kind: "unconfirmed"});
+    expect(await router.startTaskWithoutInstalling!(request)).toEqual({kind: "unavailable"});
+    await expect(router.startTask(request)).rejects.toThrow("already reserved");
+    expect((await router.getTaskStatus(request.requestId)).status).toBe("unknown");
+    expect((await router.cancelTask(request.requestId)).cancelled).toBe(false);
+    expect(python.getTaskStatus).not.toHaveBeenCalled(); expect(image.getTaskStatus).not.toHaveBeenCalled();
+    expect(python.cancelTask).not.toHaveBeenCalled(); expect(image.cancelTask).not.toHaveBeenCalled();
+  });
+
+  it("accepts only exact acknowledgements and captures routing identity before asynchronous replies", async () => {
+    const image = createRegistryStub(); let release!: () => void;
+    const python = createRegistryStub({async startTaskWithoutInstalling() {
+      await new Promise<void>(resolve => {release = resolve;});
+      return {kind: "accepted", value: {requestId: "exact-context", status: "running"}};
+    }});
+    const router = createRuntimeTaskRegistryRouter({image, python});
+    const request = {workspaceId, requestId: "exact-context", taskType: TaskType.CONTEXT_GENERATION, payload: {}};
+    const result = router.startTaskWithoutInstalling!(request);
+    request.requestId = "changed"; request.taskType = TaskType.IMAGE_GENERATION;
+    release(); expect(await result).toEqual({kind: "accepted", value: {requestId: "exact-context", status: "running"}});
+    await router.getTaskStatus("exact-context");
+    expect(python.getTaskStatus).toHaveBeenCalledWith("exact-context"); expect(image.getTaskStatus).not.toHaveBeenCalled();
+    for (const value of [{kind: "accepted", value: {requestId: "foreign", status: "queued"}},
+      {kind: "accepted", value: {requestId: "malformed", status: "succeeded"}},
+      {kind: "unavailable", value: {requestId: "malformed", status: "queued"}}]) {
+      const malformed = createRuntimeTaskRegistryRouter({image: createRegistryStub(), python: createRegistryStub({
+        async startTaskWithoutInstalling() {return value as never;},
+      })});
+      expect(await malformed.startTaskWithoutInstalling!({...request, taskType: TaskType.CONTEXT_GENERATION, requestId: "malformed"})).toEqual({kind: "unconfirmed"});
+    }
+  });
+
   it("startTask records task correlation for successful starts", async () => {
     const image = createRegistryStub({
       startTask: testDouble.fn(async () => ({

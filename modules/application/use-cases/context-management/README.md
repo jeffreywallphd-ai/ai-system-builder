@@ -120,3 +120,10 @@ terminal cleanup. An unknown or mismatched status is unavailable, not a queued
 or terminal proof. Invalid replies leave staging and power ownership intact.
 Tests use fresh owned storage and simulated runtime/stop evidence. The internal
 entry is not yet a public Headless action or physical model/runtime qualification.
+
+The internal approved entry now requires `startTaskWithoutInstalling` before
+source access. It never calls ordinary runtime start. Only the closed unavailable
+result proves no business dispatch and permits fresh staging cleanup. The issued
+ID remains consumed. Lost or contradictory responses retain the exact owned
+lease. This additive path does not alter ordinary Context preparation and is not
+yet advertised through public Headless host composition.

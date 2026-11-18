@@ -110,3 +110,9 @@ Include this pack when prompts involve:
 - Installer contracts may include install roots and metadata where appropriate; shared readiness contracts must not require filesystem paths or installer implementation details.
 - `installed` is not automatically runtime `ready`; process readiness still comes from runtime supervisors.
 - `update-available` plus a ready supervisor is reported as `degraded`, and `unknown` installer status plus a ready supervisor is also reported as `degraded` so availability remains visible while unresolved install state is not hidden.
+
+- Routine approved Context processing has a separate installed-only runtime seam.
+  Its explicit read-only verifier and bounded asynchronous installed probe do not
+  install, repair or replace dependencies. Missing support refuses. The registry
+  cannot fall back to ordinary setup. Production composition and physical model
+  qualification remain separate; ordinary explicit installation policy is unchanged.
