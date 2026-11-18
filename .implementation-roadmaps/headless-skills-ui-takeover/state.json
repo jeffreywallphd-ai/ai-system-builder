@@ -426,6 +426,62 @@
         "Checked for out-of-order steps, expired approval, changed access, stale decisions and repeated saves."
       ],
       "title": "Approve, run, and resume the exact plan"
+    },
+    {
+      "areas": [
+        "Typed Headless Data tools",
+        "Existing Data owner and current host authority"
+      ],
+      "chunkId": "acquire-data",
+      "completedAt": "2026-11-18T00:58:16Z",
+      "criteriaIds": [
+        "source-admission",
+        "security-data-boundaries",
+        "real-data-handoff"
+      ],
+      "documentation": [
+        "docs/architecture/data-management.md",
+        "docs/security/headless-system-builder-threat-model.md",
+        "docs/diagnostics/headless-client-skill.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "data-acquisition-and-datasets-acquire-data",
+      "incrementId": "data-acquisition-and-datasets",
+      "summary": "Delivered scoped app-selected local and supported provider-source import, current task status, exact saved references and private-field exclusion. Actual Desktop/Managed journeys exercise local import; provider-plan/store/SDK tests use simulated immutable provider replies. Unsupported inputs retain fixed refusal and existing limits.",
+      "tests": [
+        "Accepted provider checkpoint f6f903f4677d4148fbd934b2f122d2bc52fdff81343d2f5289b3ca7f85370186 with review 0c5b2b961dbffe741dd3c1c83841022e13315b7d40761d31351a6d49b4917333.",
+        "Completed result work headless-reviewed-dataset-results-mapped: receipt af15d79369b6b71af2e21cfefb1b2f918f5484ba74b7974777eafb38776338bf and review 38622881b9b8422f7f081a526c22e35b026cd610dc94456db12ecc51f48a83b3; 19 focused groups passed.",
+        "Controlled Desktop and Managed local import/status paths passed on the reviewed product source. No live private-provider transfer or parent qualification is claimed."
+      ],
+      "title": "Find and import approved source data"
+    },
+    {
+      "areas": [
+        "Typed Headless Data tools",
+        "Existing Data owner and current host authority"
+      ],
+      "chunkId": "prepare-review-data",
+      "completedAt": "2026-11-18T00:58:17Z",
+      "criteriaIds": [
+        "dataset-quality",
+        "security-data-boundaries",
+        "real-data-handoff"
+      ],
+      "documentation": [
+        "docs/architecture/data-management.md",
+        "docs/security/headless-system-builder-threat-model.md",
+        "docs/diagnostics/headless-client-skill.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "data-acquisition-and-datasets-prepare-review-data",
+      "incrementId": "data-acquisition-and-datasets",
+      "summary": "Delivered bounded saved-local provided-row preparation: exact source/recipe/split preview, one approved processing task, minimized result review, separate exact save approval, immutable version with causal receipt and readback. Explicit column mapping preserves selected text and legacy no-map behavior. OCR, generation, provider-file preparation and Data takeover are outside this delivered profile.",
+      "tests": [
+        "Completed headless-reviewed-dataset-results-mapped at commit 5183c1bfa2adad237360684d17a922ffc61450ac; receipt af15d79369b6b71af2e21cfefb1b2f918f5484ba74b7974777eafb38776338bf; independent review 38622881b9b8422f7f081a526c22e35b026cd610dc94456db12ecc51f48a83b3.",
+        "All 19 focused groups passed; packaged Desktop and authenticated Managed browser approved, saved, replayed and inspected a usable two-row synthetic dataset. No model ran.",
+        "Tests preserve role/report/deadline fences, atomic rollback, exact receipt reconciliation, uncertain-effect evidence and immutable lineage. Earlier failures and independent native/offload gaps remain retained."
+      ],
+      "title": "Prepare and validate a dataset"
     }
   ],
   "completion": null,
@@ -1746,6 +1802,18 @@
       "recordedAt": "2026-11-17T04:02:54Z",
       "sequence": 91,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "840d0b7f2445d33a6ef308f0c4b45a5ac4f92d24267bc906851581deeee45ae1",
+      "recordedAt": "2026-11-18T00:58:16Z",
+      "sequence": 92,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6413a70d94592e373d8332b36297f2f4f9fae762cbd9fc18009fb8583eef37fa",
+      "recordedAt": "2026-11-18T00:58:17Z",
+      "sequence": 93,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -2597,7 +2665,10 @@
       ],
       "allowPendingQualification": false,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "acquire-data",
+        "prepare-review-data"
+      ],
       "deliverables": [
         "Typed acquisition, recipe, validation, review and dataset-version tools",
         "Data presentation intents and synthetic local/provider qualification evidence"
@@ -3088,5 +3159,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-17T04:02:54Z"
+  "updatedAt": "2026-11-18T00:58:17Z"
 }
