@@ -2282,3 +2282,19 @@ and an explicit generic request keep the fallback. Use a provisioned local test
 interpreter consistently for work planning, verification and separate review;
 the controller never installs missing dependencies. Broader RAG database and
 model qualification remains separate from these attribution checks.
+
+The fixed `headless-context-model-reference` check covers the exact saved-model
+witness, application resolver, existing-file adapter and related Context
+compatibility tests. Its source declaration does not apply to unrelated worker
+DTO changes. `headless-context-model-worker` runs only the Context worker unit
+class, with synthetic model/embedding replies and real bounded archive storage.
+It does not run model accuracy or the whole software suite. Unknown sources and
+an explicit generic request preserve the fallback.
+
+On Windows, LanceDB initializes an internal Python socket pair. Restricted
+loopback execution can stall that setup before a RAG test reaches its storage
+assertions. The bounded diagnostic retained the socket accept traceback; the
+identical permitted run passed, followed by all twelve baseline Context worker
+cases in about two seconds. Use the permitted local test environment. Do not
+change application guards or replace the database to turn that environment
+failure into a pass. The later model-reference cases still require fresh checks.

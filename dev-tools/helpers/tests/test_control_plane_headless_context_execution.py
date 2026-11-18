@@ -12,6 +12,24 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_model_reference_checks_cover_exact_internal_sources_without_masking_unknown_work(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-model-reference']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['headless-context-owned-start'])
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-model-reference']['argv']
+        self.assertTrue(any(value.endswith('/approved-context-model-reference.unit.test.ts') for value in command))
+        self.assertTrue(any(value.endswith('/context-embedding-model-files.unit.test.ts') for value in command))
+        self.assertEqual(selected['headless-context-model-worker']['argv'], [sys.executable, '-B', '-m', 'unittest', '-v',
+            'modules.adapters.runtime.python.worker.tests.test_context_generation.ContextGenerationTests'])
+        self.assertIn('focused-tests', self.selected(paths + ['modules/adapters/model/local/unknown-context-model.ts'],
+            ['headless-context-owned-start']))
+        self.assertIn('focused-tests', self.selected(paths, ['headless-context-owned-start', 'focused-tests']))
+        # A shared worker DTO edit alone cannot borrow this model feature's source declaration.
+        worker_only = self.selected(['modules/adapters/runtime/python/worker/models.py'], ['architecture'])
+        self.assertNotIn('headless-context-model-reference', worker_only)
+        self.assertIn('focused-tests', worker_only)
+
     def test_required_pack_contract_executes_accepted_task_store_owner_and_approval_regressions(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-pack-contract']
         selected = self.selected(list(definition['sources']), ['headless-context-pack-contract'])

@@ -24,6 +24,7 @@ import {
   CONTEXT_RAG_DATABASE_MEDIA_TYPE,
   evaluateContextSourceCapability,
   normalizeContextSaveName,
+  normalizeContextSourceChecks,
   validateStartContextGenerationCommand,
   type ContextArtifactManifest,
   type ContextGenerationPreview,
@@ -70,7 +71,7 @@ import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import { projectContextSourceInformation } from "./context-source-information";
 import {APPROVED_CONTEXT_MAX_PENDING, APPROVED_CONTEXT_MAX_SOURCE_BYTES, APPROVED_CONTEXT_MAX_TASK_HISTORY,
-  type ApprovedContextGenerationAdmission} from "../../ports/context-management";
+  type ApprovedContextGenerationAdmission, type ApprovedContextEmbeddingModelResolverPort} from "../../ports/context-management";
 import {approvedContextAdmissionCurrent, contextCommandDigest, readApprovedContextAdmission} from "./approved-context-generation-admission";
 import {readHeadlessContextTaskValue, type HeadlessContextTaskReview, type HeadlessContextTaskValue} from "../../../contracts/headless/headless-context-task";
 
@@ -105,6 +106,7 @@ interface ContextStartAttempt {
 }
 
 export interface ContextGenerationUseCaseDependencies {
+  readonly embeddingModels?: ApprovedContextEmbeddingModelResolverPort;
   readonly runtimeTaskRegistry: RuntimeTaskRegistryPort;
   readonly taskReconciler?: OwnedTaskReconcilerService;
   readonly storageBindings: ArtifactStorageBindingPort;
@@ -257,9 +259,24 @@ function validateRuntimeResult(
     ) {
       throw new Error("Context generation source evidence is incomplete.");
     }
-    if (boundSourceLicenses && (result.sourceInspections[index]?.sourceInformation?.license !== expected.sourceInformation?.license ||
-        result.manifest.sources[index]?.sourceInformation?.license !== expected.sourceInformation?.license))
-      throw new Error("Context generation declared source license changed.");
+    if (boundSourceLicenses) {
+      const includeAttribution = command.kind !== "rag-database" || command.sourceChecks?.includeSourceAttribution === true;
+      if (result.sourceInspections[index]?.sourceInformation?.license !== expected.sourceInformation?.license ||
+          (includeAttribution ? result.manifest.sources[index]?.sourceInformation?.license !== expected.sourceInformation?.license
+            : result.manifest.sources[index]?.sourceInformation !== undefined))
+        throw new Error("Context generation declared source license changed.");
+    }
+  }
+  if (boundSourceLicenses && command.embedding) {
+    const embedding = result.manifest.embedding;
+    if (!embedding || embedding.provider !== command.embedding.provider || embedding.modelId !== command.embedding.modelId ||
+        Object.keys(embedding).some(key => !["provider", "modelId", "dimensions"].includes(key)) ||
+        (embedding.dimensions !== undefined && (!Number.isSafeInteger(embedding.dimensions) || embedding.dimensions < 1 || embedding.dimensions > 8192)) ||
+        (command.embedding.dimensions !== undefined && embedding.dimensions !== command.embedding.dimensions) ||
+        !result.manifest.sourceChecks || Object.keys(result.manifest.sourceChecks).some(key =>
+          !["preset", "allowedLanguages", "requireLicenseMetadata", "requireConsentMetadata", "includeSourceAttribution"].includes(key)) ||
+        JSON.stringify(normalizeContextSourceChecks(result.manifest.sourceChecks)) !== JSON.stringify(normalizeContextSourceChecks(command.sourceChecks!)))
+      throw new Error("Context generation returned mismatched embedding evidence.");
   }
   if (command.contextPack) {
     const actual = result.manifest.contextPack;
@@ -378,6 +395,7 @@ export class ContextGenerationUseCase {
   private readonly reads = new Map<string, Promise<ContractResult<ContextGenerationStatus>>>();
   private readonly taskReconciler?: OwnedTaskReconcilerService;
   private readonly runtime: RuntimeTaskRegistryPort;
+  private readonly embeddingModels?: ApprovedContextEmbeddingModelResolverPort;
   private readonly bindings: ArtifactStorageBindingPort;
   private readonly storage: ArtifactObjectStoragePort;
   private readonly catalog: ContextArtifactCatalogPort;
@@ -407,6 +425,7 @@ export class ContextGenerationUseCase {
 
   public constructor(dependencies: ContextGenerationUseCaseDependencies) {
     this.runtime = dependencies.runtimeTaskRegistry;
+    this.embeddingModels = dependencies.embeddingModels;
     this.taskReconciler = dependencies.taskReconciler;
     this.bindings = dependencies.storageBindings;
     this.storage = dependencies.storage;
@@ -445,7 +464,8 @@ export class ContextGenerationUseCase {
     rawAdmission: ApprovedContextGenerationAdmission): Promise<ContractResult<StartContextGenerationValue>> {
     const context = {...rawContext};
     const parsed = readApprovedContextAdmission(rawCommand, context, rawAdmission);
-    if (!parsed || !this.taskReconciler || !this.runtime.startTaskWithoutInstalling || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
+    if (!parsed || !this.taskReconciler || !this.runtime.startTaskWithoutInstalling ||
+        (parsed.command.kind === "rag-database" && !this.embeddingModels) || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
         this.issuedTaskIds.size >= APPROVED_CONTEXT_MAX_TASK_HISTORY ||
         this.admittedStarts.has(parsed.admission.taskId) || this.issuedTaskIds.has(parsed.admission.taskId) ||
         this.scopes.has(parsed.admission.taskId) || [...this.uncertainStarts].some(attempt => attempt.requestedId === parsed.admission.taskId))
@@ -521,6 +541,8 @@ export class ContextGenerationUseCase {
     let normalized: StartContextGenerationCommand;
     try {
       normalized = validateStartContextGenerationCommand(command);
+      if (normalized.embedding && Object.prototype.hasOwnProperty.call(normalized.embedding, "localModelReference"))
+        throw new Error("RAG embedding settings contain an internal-only model reference.");
     } catch (error) {
       return createFailureResult(
         createContractError(
@@ -531,6 +553,16 @@ export class ContextGenerationUseCase {
         ),
         context,
       );
+    }
+    let localModelReference: string | undefined;
+    if (attempt.admission?.embeddingModel) {
+      if (!context || !this.embeddingModels || !await approvedContextAdmissionCurrent(attempt.admission)) return this.startUnavailable(context);
+      const resolved = await this.embeddingModels.resolveExistingModel(attempt.admission.embeddingModel, context,
+        () => approvedContextAdmissionCurrent(attempt.admission!));
+      if (!await approvedContextAdmissionCurrent(attempt.admission) || !resolved || typeof resolved.localModelReference !== "string" ||
+          !isAbsolute(resolved.localModelReference) || resolved.localModelReference.length > 4096 ||
+          /^[\\/]{2}/u.test(resolved.localModelReference) || /[\u0000-\u001f\u007f]/u.test(resolved.localModelReference)) return this.startUnavailable(context);
+      localModelReference = resolved.localModelReference;
     }
     const staged = await this.stageSources(normalized, context, attempt);
     if (!staged.ok) {
@@ -549,7 +581,11 @@ export class ContextGenerationUseCase {
       ...(normalized.sourceChecks
         ? { sourceChecks: normalized.sourceChecks }
         : {}),
-      ...(normalized.embedding ? { embedding: normalized.embedding } : {}),
+      ...(normalized.embedding ? { embedding: {provider: normalized.embedding.provider, modelId: normalized.embedding.modelId,
+        ...(normalized.embedding.dimensions === undefined ? {} : {dimensions: normalized.embedding.dimensions}),
+        ...(normalized.embedding.batchSize === undefined ? {} : {batchSize: normalized.embedding.batchSize}),
+        ...(normalized.embedding.device === undefined ? {} : {device: normalized.embedding.device}),
+        ...(localModelReference ? {localModelReference} : {})} } : {}),
       ...(normalized.contextPack
         ? { contextPack: normalized.contextPack }
         : {}),

@@ -6,6 +6,7 @@ import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveReco
 import {validateStartContextGenerationCommand, type StartContextGenerationCommand} from "../../../contracts/context-management";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {normalizeStorageArtifactKey} from "../../../contracts/storage";
+import {readApprovedContextEmbeddingModelWitness} from "./approved-context-embedding-model";
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const digest = /^sha256:[a-f0-9]{64}$/;
@@ -18,7 +19,7 @@ export function readApprovedContextAdmission(rawCommand: StartContextGenerationC
   admission: ApprovedContextGenerationAdmission): {command: StartContextGenerationCommand; admission: ApprovedContextGenerationAdmission} | undefined {
   try {
     const raw = readStrictPassiveRecord(admission, ["taskId", "organizationId", "principalId", "workspaceId", "commandDigest", "sources",
-      "isCurrent", "stillAllowed", "issue"]);
+      "embeddingModel", "isCurrent", "stillAllowed", "issue"]);
     if (!isWorkspaceId(context.workspaceId) || !context.organizationId || !context.principalId ||
         raw.organizationId !== context.organizationId || raw.principalId !== context.principalId || raw.workspaceId !== context.workspaceId ||
         typeof raw.taskId !== "string" || !uuid.test(raw.taskId) || typeof raw.commandDigest !== "string" || !digest.test(raw.commandDigest) ||
@@ -35,14 +36,18 @@ export function readApprovedContextAdmission(rawCommand: StartContextGenerationC
         command.sources.length < 1 || command.sources.length > APPROVED_CONTEXT_MAX_SOURCES || command.manualEntries?.length ||
         !Number.isSafeInteger(command.chunking.maximumChunks) || command.chunking.maximumChunks! < 1 || command.chunking.maximumChunks! > 1000) return;
     readStrictPassiveRecord(command.chunking, ["strategy", "chunkCharacters", "overlapCharacters", "maximumChunks", "textFields"]);
+    const embeddingModel = raw.embeddingModel === undefined ? undefined : readApprovedContextEmbeddingModelWitness(raw.embeddingModel);
+    if (raw.embeddingModel !== undefined && !embeddingModel) return;
     if (command.kind === "rag-database") {
       const embedding = command.embedding;
       if (!embedding || command.chunking.strategy !== "fixed-length" || embedding.provider !== "transformers" || hasKnownPassiveCredential(embedding.modelId) ||
           (embedding.device !== "cpu" && embedding.device !== "cuda") || !Number.isSafeInteger(embedding.batchSize) ||
-          embedding.batchSize! < 1 || embedding.batchSize! > 32 || !command.sourceChecks) return;
+          embedding.batchSize! < 1 || embedding.batchSize! > 32 || !command.sourceChecks ||
+          !embeddingModel || embeddingModel.modelId !== embedding.modelId) return;
       readStrictPassiveRecord(embedding, ["provider", "modelId", "batchSize", "device"]);
       readStrictPassiveRecord(command.sourceChecks, ["preset", "allowedLanguages", "requireLicenseMetadata", "requireConsentMetadata", "includeSourceAttribution"]);
     } else {
+      if (embeddingModel) return;
       const pack = command.contextPack;
       if (!pack || command.chunking.strategy !== "topic-aware" || pack.inputMode !== "source-materials" || pack.method !== "none") return;
       readStrictPassiveRecord(pack, ["inputMode", "method", "cleaningPreset"]);
@@ -65,6 +70,7 @@ export function readApprovedContextAdmission(rawCommand: StartContextGenerationC
     if (new Set(sources.map(source => source.storageKey)).size !== sources.length) return;
     return {command, admission: {taskId: raw.taskId, organizationId: context.organizationId, principalId: context.principalId,
       workspaceId: context.workspaceId, commandDigest: raw.commandDigest, sources,
+      ...(embeddingModel ? {embeddingModel} : {}),
       isCurrent: raw.isCurrent as ApprovedContextGenerationAdmission["isCurrent"],
       stillAllowed: raw.stillAllowed as ApprovedContextGenerationAdmission["stillAllowed"],
       issue: raw.issue as ApprovedContextGenerationAdmission["issue"]}};

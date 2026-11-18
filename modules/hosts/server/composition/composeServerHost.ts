@@ -50,6 +50,7 @@ import { createLocalImageAssetRegistryAdapter, createStructuredImageResourceIden
 import {
   createLocalModelCheckpointResolverAdapter,
   createLocalModelFileListerAdapter,
+  createLocalContextEmbeddingModelFilesAdapter,
 } from "../../../adapters/model/local";
 import {
   createLocalUserLibraryAssetRepositoryAdapter,
@@ -159,6 +160,7 @@ import {
   PrepareTrainingDatasetFromArtifactsUseCase,
   ContextBrowserUseCases,
   ContextGenerationUseCase,
+  ResolveApprovedContextEmbeddingModelUseCase,
   ContextManagementCommandUseCase,
   PublishDatasetVersionUseCase,
   ReadDatasetVersionReproductionUseCase,
@@ -2359,6 +2361,8 @@ export function composeServerHost(
           now: options.now,
         });
       const contextGenerationUseCase = new ContextGenerationUseCase({
+        embeddingModels: new ResolveApprovedContextEmbeddingModelUseCase(modelRegistry,
+          createLocalContextEmbeddingModelFilesAdapter({allowedRootDirectories: [hfHome, transformersCache]})),
         taskReconciler,
         runtimeTaskRegistry,
         storageBindings: artifactBindings,

@@ -1,3 +1,5 @@
+import type {ApprovedContextEmbeddingModelWitness} from "./approved-context-embedding-model.port";
+
 /** Trusted host wiring only. Never serialize this capability into a client command or context. */
 export interface ApprovedContextGenerationAdmission {
   readonly taskId: string;
@@ -6,6 +8,8 @@ export interface ApprovedContextGenerationAdmission {
   readonly workspaceId: string;
   /** Hash of the canonical private command, including the exact selected model/settings. */
   readonly commandDigest: string;
+  /** Required for admitted RAG; absence remains valid for source-derived no-model packs. */
+  readonly embeddingModel?: ApprovedContextEmbeddingModelWitness;
   readonly sources: readonly {
     readonly artifactId: string;
     readonly storageKey: string;

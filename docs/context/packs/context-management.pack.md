@@ -167,3 +167,8 @@ the list or report deletion. A different key leaves the selected view intact.
   Replies contain state/counts/review fingerprint and require separate save.
   See the canonical architecture and threat model. Active RAG, Context saving,
   query/rebuild/presentation and parent qualification remain separate work.
+
+- Internal RAG admission also binds selected saved-model facts and checked existing
+  safe-weight files. The runtime-only local reference is excluded from public
+  commands and portable manifests. File checks are cooperative; public RAG,
+  actual model resources and native custody remain separate qualification.

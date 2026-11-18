@@ -21,6 +21,13 @@ RAG manifests still follow `includeSourceAttribution`. Focused tests generate
 actual no-model archives with open, non-open and absent declarations and check
 that the RAG attribution opt-out still applies.
 
+The internal embedding request can carry a host-checked `localModelReference`.
+That path bypasses mutable alias lookup and forces `local_files_only=True`,
+`trust_remote_code=False` and safe-weight loading. Ordinary embedding calls keep
+their existing behavior. The path is not a public Context command or a saved
+manifest field. Manifest inspection reconstructs the permitted embedding fields
+before queries. File presence alone does not qualify model quality or resources.
+
 Provided instruction datasets can carry an explicit `providedRowMapping` with
 two distinct bounded source columns. This map requires provided mode and omitted
 source context. It derives instruction/prompt and output/completion only from the

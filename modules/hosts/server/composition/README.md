@@ -175,3 +175,11 @@ shared installed-only owner runs outside the database transaction. Accepted-only
 `context.task` lookup precedes lazy processor access and rechecks current policy.
 HTTP/MCP and browser approval readers reconstruct exact v6 permissions. No raw
 source, path, prompt or embedding is returned; review and save remain separate.
+
+The internal Context owner composes the same saved-model application resolver
+with the existing configured Hugging Face and Transformers cache roots. It uses
+recorded metadata and bounded existing-file inspection after approval; there is
+no discovery, installation or network download fallback. Current model/actor
+authority surrounds resolution. Private runtime references are excluded from
+portable manifests. These cooperative checks do not qualify a public RAG effect,
+physical model resources or native custody.

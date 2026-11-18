@@ -251,3 +251,15 @@ work is never adopted or redispatched. Recorded non-open and unknown license
 terms keep their meanings. Initial active support is source-derived Markdown;
 active RAG, Context save/query/rebuild/presentation and parent qualification
 remain later work. This adds no installer, provider or model-download authority.
+
+### Recorded Context embedding model references
+
+The approved existing-Context-owner extension also permits an internal saved-
+model witness and existing-file resolver. Application code owns current model
+and actor checks; the filesystem adapter owns bounded configured-root inspection.
+Only trusted host composition supplies a runtime-only local model reference.
+The existing embedding engine loads local safe weights without remote code or
+installer fallback, while portable manifests retain the logical model id only.
+Ordinary UI loading is unchanged. This adds no provider, engine, topology,
+native custody or memory guarantee. Public RAG plan wiring and actual model
+qualification still require their own implementation and evidence.

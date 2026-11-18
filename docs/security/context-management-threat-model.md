@@ -374,3 +374,24 @@ wrong namespace/identity, passive parsing, bounds, private-field rejection and
 ordinary Data compatibility. Actual two-host pack journeys qualify only their
 measured scenario. RAG/model readiness, explicit Context save/query/rebuild and
 revocable presentation, native/offload and host-exit recovery remain pending.
+
+### Admitted model references
+
+Treat model metadata and files as untrusted data. Bind only selected exact
+saved-record facts; public metadata editing cannot change host paths, ownership
+or lifecycle. The application checks the current record and authorization before
+and after bounded existing-file inspection. Explicit network references,
+outside-root paths, missing safe weights and unsupported layouts deny admission.
+The current callback must include model-read and exact approved-plan authority.
+
+Only trusted composition supplies the private runtime reference. Public Context
+start rejects it; the admitted parser copies a closed witness. Local-only safe
+loading ignores mutable aliases and disables remote code. The worker excludes
+the path from manifests, and the artifact reader reconstructs permitted model
+fields before query. Admitted result validation rejects changed model/policy,
+private fields and unselected attribution while retaining source license checks.
+
+Root containment and file presence are cooperative checks. They do not establish
+native custody, physical volume type, immutable file bytes or memory bounds.
+They do not relax model-location mutation, offload or retained-tree safeguards.
+Actual model/resource and public RAG qualification remain separate.

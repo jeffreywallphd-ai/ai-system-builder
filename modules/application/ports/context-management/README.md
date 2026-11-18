@@ -14,10 +14,12 @@ authority. The issuer must atomically revalidate that authority and issue the
 exact attempt once. A timestamp or this data interface alone is no authority.
 
 The controlled profile accepts up to four sources of 4 MiB each and 1,000 chunks.
-It supports source-derived packs without summarization and explicit CPU/CUDA
-RAG embedding settings. It does not validate physical model availability, install
-dependencies, grant provider transfers or expose a new public execution tool.
-The future host composition must prove readiness and compose durable issuance.
+It supports source-derived packs without summarization and the bounded CPU/CUDA
+RAG command shape. Admitted RAG also requires a copied saved-model witness and
+the optional installed-model resolver. The host's current-authority callback
+must cover model read, exact plan/client/actor and saved-record permission.
+Resolution inspects existing files after approval and before source staging or
+issue. It neither installs dependencies nor grants provider transfers.
 
 Unknown start replies retain only the new attempt's own staging and lease.
 Reconciliation must not discover or adopt an unknown task. Retirement requires
@@ -30,3 +32,9 @@ capability before source reads. A proven pre-dispatch refusal releases only its
 new staging; the approved attempt ID stays consumed. Exceptions, malformed
 proofs and uncertain starts keep their owned staging. The host must compose the
 noninstalling registry and supervisor path; ordinary start is not a substitute.
+
+`ContextInstalledEmbeddingModelFilesPort` has only cooperative file inspection.
+`ResolveApprovedContextEmbeddingModelUseCase` owns exact metadata and authority
+checks around that port. A private runtime reference does not prove valid
+weights, native custody, immutable bytes, resource capacity or model quality.
+Public RAG plan wiring and actual model qualification remain separate work.

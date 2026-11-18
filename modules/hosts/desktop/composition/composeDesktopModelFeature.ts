@@ -1,6 +1,7 @@
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter, createHuggingFaceModelPublisherAdapter } from "../../../adapters/model/huggingface";
-import { createLocalGeneratedModelStorageAdapter, createLocalModelLocationAuthorityAdapter, resolveLocalGeneratedModelStorageRoot } from "../../../adapters/model/local";
+import { createLocalGeneratedModelStorageAdapter, createLocalModelLocationAuthorityAdapter, resolveLocalGeneratedModelStorageRoot,
+  createLocalContextEmbeddingModelFilesAdapter } from "../../../adapters/model/local";
 import { resolveConfiguredModelCacheRoot } from "../../../adapters/runtime/python";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import {
@@ -16,6 +17,7 @@ import {
   TrainModelUseCase,
   UpdateModelRecordUseCase,
   ValidateModelUseCase,
+  ResolveApprovedContextEmbeddingModelUseCase,
 } from "../../../application/use-cases";
 import { asyncLazyObject } from "./lazyProxy";
 
@@ -62,6 +64,9 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
   });
   return {
     modelRegistry,
+    contextEmbeddingModels: new ResolveApprovedContextEmbeddingModelUseCase(modelRegistry,
+      createLocalContextEmbeddingModelFilesAdapter({allowedRootDirectories: [
+        resolveLocalGeneratedModelStorageRoot({env: process.env}), resolveConfiguredModelCacheRoot(process.env)]})),
     browseModelsUseCase: new BrowseModelsUseCase({ providers: { huggingface: huggingFaceModelBrowseDetails } }),
     getModelDetailsUseCase: new GetModelDetailsUseCase({ providers: { huggingface: huggingFaceModelBrowseDetails } }),
     listModelsUseCase: new ListModelsUseCase({ modelRegistry }),

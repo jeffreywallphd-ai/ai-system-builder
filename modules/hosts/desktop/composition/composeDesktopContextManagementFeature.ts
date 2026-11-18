@@ -4,6 +4,7 @@ import {
   ContextManagementCommandUseCase,
 } from "../../../application/use-cases";
 import { createPythonContextArtifactRuntimeAdapter } from "../../../adapters/runtime/python";
+import type {ApprovedContextEmbeddingModelResolverPort} from "../../../application/ports/context-management";
 
 export interface ComposeDesktopContextManagementFeatureOptions {
   readonly artifacts: any;
@@ -11,12 +12,14 @@ export interface ComposeDesktopContextManagementFeatureOptions {
   readonly workspaceRepository?: any;
   readonly workspaceAuthorization?: any;
   readonly now?: () => string;
+  readonly embeddingModels?: ApprovedContextEmbeddingModelResolverPort;
 }
 
 export function composeDesktopContextManagementFeature(
   options: ComposeDesktopContextManagementFeatureOptions,
 ): any {
   const generation = new ContextGenerationUseCase({
+    embeddingModels: options.embeddingModels,
     runtimeTaskRegistry: options.runtime.runtimeTaskRegistry,
     taskReconciler: options.runtime.taskReconciler,
     storageBindings: options.artifacts.artifactBindings,

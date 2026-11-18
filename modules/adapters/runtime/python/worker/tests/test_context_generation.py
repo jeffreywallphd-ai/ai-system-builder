@@ -137,6 +137,31 @@ class ContextGenerationTests(unittest.TestCase):
                     auto_model.from_pretrained.assert_not_called()
                     auto_tokenizer.from_pretrained.assert_not_called()
 
+    def test_admitted_embedding_reference_is_local_safe_weights_and_never_uses_alias_lookup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            reference = str(Path(directory).resolve())
+            settings = ContextEmbeddingSettings.model_validate({"provider": "transformers", "modelId": "local/test-model",
+                "localModelReference": reference, "device": "cpu"})
+            model, tokenizer, auto_model, auto_tokenizer = [MagicMock() for _ in range(4)]
+            model.to.return_value = model
+            auto_model.from_pretrained.return_value = model
+            auto_tokenizer.from_pretrained.return_value = tokenizer
+            tokenizer.return_value = {"input_ids": MagicMock(), "attention_mask": MagicMock()}
+            normalized = MagicMock()
+            normalized.detach.return_value.cpu.return_value.tolist.return_value = [[0.2, 0.4]]
+            torch = SimpleNamespace(cuda=SimpleNamespace(OutOfMemoryError=MemoryError), no_grad=nullcontext,
+                nn=SimpleNamespace(functional=SimpleNamespace(normalize=MagicMock(return_value=normalized))))
+            with patch.dict("sys.modules", {"torch": torch, "transformers": SimpleNamespace(AutoModel=auto_model, AutoTokenizer=auto_tokenizer)}), patch(
+                "modules.adapters.runtime.python.worker.tasks.context_generation._resolved_model_reference_for",
+                side_effect=AssertionError("An admitted model must not use another cached alias."),
+            ):
+                self.assertEqual(_embed_with_transformers(["Synthetic input"], settings), [[0.2, 0.4]])
+            auto_tokenizer.from_pretrained.assert_called_once_with(reference, local_files_only=True, trust_remote_code=False)
+            auto_model.from_pretrained.assert_called_once_with(reference, local_files_only=True, trust_remote_code=False, use_safetensors=True)
+            for invalid in ["relative/model", "https://example.test/model", "\\\\example.test\\model", reference + "\x00"]:
+                with self.subTest(reference_kind="invalid"), self.assertRaises(ValueError):
+                    ContextEmbeddingSettings.model_validate({"provider": "transformers", "modelId": "local/test-model", "localModelReference": invalid})
+
     def test_manual_context_pack_preserves_entered_markdown_without_summarizing(
         self,
     ) -> None:
@@ -261,6 +286,7 @@ class ContextGenerationTests(unittest.TestCase):
                     "provider": "transformers",
                     "modelId": "local/test-embedding",
                     "dimensions": 2,
+                    "localModelReference": str(root),
                 },
                 "runtime": {"runtimeWorkingDirectory": str(root)},
             }
@@ -282,6 +308,16 @@ class ContextGenerationTests(unittest.TestCase):
                 result["manifest"]["sourceChecks"]["preset"],
                 "recommended",
             )
+            self.assertNotIn("localModelReference", result["manifest"]["embedding"])
+            self.assertNotIn(str(root), json.dumps(result["manifest"]))
+            with ZipFile(root / result["output"]["outputHandle"]) as archive:
+                saved_manifest = json.loads(archive.read("manifest.json"))
+                self.assertNotIn("localModelReference", saved_manifest["embedding"])
+                self.assertNotIn(str(root), json.dumps(saved_manifest))
+            from modules.adapters.runtime.python.worker.tasks.context_artifact_operation import _validated_manifest
+            saved_manifest["embedding"]["localModelReference"] = str(root)
+            inspected = _validated_manifest(saved_manifest, RAG_MEDIA_TYPE)
+            self.assertNotIn("localModelReference", inspected["embedding"], "Imported metadata cannot supply model-path authority to queries.")
 
             unsafe_bytes = b"Use api_key=abcdefghijklmnopqrstuvwxyz123456 for retrieval."
             source.write_bytes(unsafe_bytes)

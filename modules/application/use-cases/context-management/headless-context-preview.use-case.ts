@@ -3,6 +3,7 @@ import type {ModelRegistryPort} from "../../ports/model/model-registry.port";
 import type {IngestionAcquisitionRepositoryPort} from "../../ports/ingestion";
 import type {DatasetVersionRepositoryPort} from "../../ports/dataset-version";
 import {APPROVED_CONTEXT_MAX_LICENSE_CHARACTERS, type ApprovedContextGenerationAdmission} from "../../ports/context-management";
+import {compileApprovedContextEmbeddingModel} from "./approved-context-embedding-model";
 import {hasKnownPassiveCredential} from "../../../contracts/shared";
 import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot, normalizeIngestionSourceSnapshotId,
   normalizeIngestionTaskId} from "../../../contracts/ingestion";
@@ -108,6 +109,7 @@ export class PreviewHeadlessContextInputsUseCase {
       if (totalBytes > HEADLESS_CONTEXT_MAX_SOURCES * HEADLESS_CONTEXT_MAX_SOURCE_BYTES) return notReady;
       if (!await stillAllowed()) return forbidden;
       let modelId: string | undefined;
+      let embeddingModel: ApprovedContextGenerationAdmission["embeddingModel"];
       if (settings.kind === "rag-database") {
         if (!this.dependencies.models.readRecordedModel) return unavailable;
         const model = await this.dependencies.models.readRecordedModel(input.workspaceId, settings.modelRecordId);
@@ -118,7 +120,9 @@ export class PreviewHeadlessContextInputsUseCase {
         if (!model.taskTags?.includes("embeddings") || !["downloaded", "generated", "validated"].includes(model.lifecycleStatus) ||
             model.artifactForm === "adapter" || model.validationStatus === "invalid" ||
             typeof model.modelId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(model.modelId)) return notReady;
-        modelId = model.modelId;
+        embeddingModel = compileApprovedContextEmbeddingModel(model, input.workspaceId);
+        if (!embeddingModel) return notReady;
+        modelId = embeddingModel.modelId;
       }
       const command: StartContextGenerationCommand = validateStartContextGenerationCommand({kind: settings.kind, name: input.name,
         sources: bindings.map(({artifactId}) => ({artifactId})), chunking: {strategy: settings.kind === "rag-database" ? "fixed-length" : "topic-aware",
@@ -130,7 +134,8 @@ export class PreviewHeadlessContextInputsUseCase {
       if (!await stillAllowed()) return forbidden;
       const preview = readHeadlessContextPreview({workspaceId: input.workspaceId, name: input.name, sources: previewSources, settings, totalBytes,
         runtimeReadiness: "not-checked", approvalRequired: true, reviewRequired: true, modelCalls: 0, externalProviderCalls: 0}, input);
-      return preview ? {ok: true, operation, prepared: {command, bindings, admissionSources, preview}} as const : unavailable;
+      return preview ? {ok: true, operation, prepared: {command, bindings, admissionSources, preview,
+        ...(embeddingModel ? {embeddingModel} : {})}} as const : unavailable;
     } catch {
       try {return await stillAllowed() ? unavailable : forbidden;} catch {return forbidden;}
     }

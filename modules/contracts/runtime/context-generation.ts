@@ -33,7 +33,8 @@ export interface ContextGenerationTaskRequest {
   readonly manualEntries: readonly ContextRuntimeManualInput[];
   readonly chunking: ContextChunkingSettings;
   readonly sourceChecks?: ContextSourceCheckSettings;
-  readonly embedding?: ContextEmbeddingSettings;
+  /** Private installed-model reference is host-owned and is never a public Context command or manifest field. */
+  readonly embedding?: ContextEmbeddingSettings & {readonly localModelReference?: string};
   readonly contextPack?: ContextPackSettings;
   readonly runtime: {
     readonly runtimeWorkingDirectory: string;

@@ -1099,6 +1099,11 @@ export function composeDesktopHost(
               module.composeDesktopContextManagementFeature({
                 artifacts: await getArtifactFeatures(),
                 runtime: await getRuntimeTaskFeatures(),
+                embeddingModels: {async resolveExistingModel(witness, context, stillAllowed) {
+                  const models = await getModelFeatures();
+                  if (!await stillAllowed()) return;
+                  return models.contextEmbeddingModels.resolveExistingModel(witness, context, stillAllowed);
+                }},
                 workspaceRepository:
                   startupWorkspaceShell.workspaceRepository,
                 workspaceAuthorization,

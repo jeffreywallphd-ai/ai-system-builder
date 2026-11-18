@@ -157,3 +157,11 @@ records one accepted task. `context.task` proves actor/client/host ownership
 before the lazy Context feature is resolved. Both approval views list fixed
 limits and separate review/save requirements. Source text and paths stay private;
 ordinary Context UI and Data behavior keep their existing owners.
+
+The internal RAG owner also receives a lazy saved-model resolver. It checks the
+current record and existing safe-weight layout under the configured model roots
+before source staging or issue. No-model packs never open model features for
+this seam. Private model references stay within the runtime request; ordinary
+Context generation cannot supply them. File inspection is cooperative and grants
+no native mutation or offload authority. Public RAG and actual model execution
+remain separate qualification.

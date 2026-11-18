@@ -439,9 +439,22 @@ class ContextEmbeddingSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider: Literal["transformers"]
     modelId: str = Field(min_length=3, max_length=193)
+    # Runtime-only host reference. Public commands and portable manifests omit it.
+    localModelReference: str | None = Field(default=None, min_length=1, max_length=4096)
     dimensions: int | None = Field(default=None, ge=1, le=8_192)
     batchSize: int = Field(default=16, ge=1, le=128)
     device: Literal["cpu", "cuda", "auto"] = "cpu"
+
+    @field_validator("localModelReference")
+    @classmethod
+    def validate_local_model_reference(cls, value: str | None) -> str | None:
+        if value is not None:
+            from pathlib import Path
+            if (value != value.strip() or not Path(value).is_absolute()
+                    or value.startswith(("\\\\", "//"))
+                    or any(ord(character) < 32 or ord(character) == 127 for character in value)):
+                raise ValueError("The existing local embedding model reference is invalid.")
+        return value
 
 
 class ContextPackLocalModelSettings(BaseModel):

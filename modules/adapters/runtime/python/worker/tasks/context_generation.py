@@ -736,14 +736,16 @@ def _embed_with_transformers(
         device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("The selected embedding device is unavailable.")
-    reference = _resolved_model_reference_for(settings.modelId)
+    # A host-admitted reference never falls back to cache discovery or another model.
+    reference = settings.localModelReference or _resolved_model_reference_for(settings.modelId)
     tokenizer = AutoTokenizer.from_pretrained(
         reference, local_files_only=True, trust_remote_code=False
     )
     model = encoded = output = mask = pooled = None
     try:
         model = AutoModel.from_pretrained(
-            reference, local_files_only=True, trust_remote_code=False
+            reference, local_files_only=True, trust_remote_code=False,
+            **({"use_safetensors": True} if settings.localModelReference else {}),
         )
         model = model.to(device)
         model.eval()
@@ -809,7 +811,7 @@ def _build_manifest(
         manifest["sourceChecks"] = payload.sourceChecks.model_dump(mode="json")
     if payload.embedding is not None:
         manifest["embedding"] = payload.embedding.model_dump(
-            mode="json", exclude={"batchSize", "device"}, exclude_none=True
+            mode="json", exclude={"batchSize", "device", "localModelReference"}, exclude_none=True
         )
     if payload.contextPack is not None:
         manifest["contextPack"] = {

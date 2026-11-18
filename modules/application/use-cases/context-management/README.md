@@ -46,6 +46,23 @@ runtime paths remain outside public application state.
 See `docs/architecture/context-management.md`, ADR-0041, and
 `docs/security/context-management-threat-model.md`.
 
+## Approved existing embedding models
+
+The internal RAG path binds a selected saved-model witness to existing local
+files through `ResolveApprovedContextEmbeddingModelUseCase`. It reads only
+recorded metadata, checks the exact selected facts before and after filesystem
+inspection, and rechecks current actor authority. Model discovery, installation
+and network model downloads are outside this operation. Unsupported formats or
+layouts stay unavailable; a missing resolver denies before source staging.
+
+Only this admitted path can add `localModelReference` to the runtime request.
+Public generation rejects that field. The runtime uses the checked local
+reference with safe weights and disabled remote code, then omits the reference
+from portable manifests. Admitted result review binds the logical model and
+source-check settings. It preserves declared licenses in inspection and follows
+the selected RAG attribution setting in the manifest. These controls do not
+expose a public RAG plan or qualify physical model execution and retrieval.
+
 ## Acknowledged save compensation
 
 Saving first requires an unused catalog identity. A refused or mismatched storage

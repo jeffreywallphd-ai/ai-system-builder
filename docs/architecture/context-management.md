@@ -508,3 +508,27 @@ The initial active profile is source-derived Markdown without summarization.
 Active RAG/model admission, immutable Context saving, query/rebuild, revocable
 Context presentation and parent qualification remain separate Increment 6 work.
 No model readiness, native/offload or host-exit proof follows from these tasks.
+
+### Recorded embedding model admission
+
+The internal admitted RAG path also binds exact saved model facts: record id,
+update time, logical model id and a private metadata digest. Passive compilation
+reads recorded metadata only. After approval, the application resolver rechecks
+that witness and current actor authority around the existing-file adapter.
+Configured model roots and the bounded file lister constrain inspection. The
+initial profile supports an existing unsharded safe-weight directory; unsupported
+formats and layouts remain unavailable. Source staging and task issue follow
+this check. No installer, model download or alias discovery fallback is allowed.
+
+The trusted runtime request carries the checked local reference separately from
+the logical model id. Public generation cannot supply it. The worker loads local
+safe weights without remote code and omits the private reference from portable
+manifests. Admitted output must retain the logical model and source-check policy.
+RAG attribution can be omitted as selected; inspection still retains the exact
+declared license. Unexpected attribution or private model fields deny review.
+
+Desktop resolves model features lazily only for admitted model work. Managed
+composition uses its existing configured model roots. These are cooperative
+record/file checks, not native custody, immutable-byte or memory guarantees.
+Actual model execution, public RAG effects, retrieval and parent qualification
+remain separate. Existing Context UI and no-model packs keep their owners.

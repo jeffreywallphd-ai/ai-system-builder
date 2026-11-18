@@ -33,11 +33,11 @@ function ragCommand(): StartContextGenerationCommand {return {kind: "rag-databas
   sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
     requireConsentMetadata: false, includeSourceAttribution: true}};}
 
-async function withHarness(run: (h: Awaited<ReturnType<typeof harness>>) => Promise<void>, withoutOwner = false) {
+async function withHarness(run: (h: Awaited<ReturnType<typeof harness>>) => Promise<void>, withoutOwner = false, withoutModels = false) {
   const originalTemp = process.env.TEMP, originalTmp = process.env.TMP;
   const base = await realpath(await mkdtemp(path.join(tmpdir(), "context-admission-test-")));
   process.env.TEMP = base; process.env.TMP = base;
-  const h = await harness(base, withoutOwner);
+  const h = await harness(base, withoutOwner, withoutModels);
   try {await run(h);} finally {
     await h.stop();
     if (originalTemp === undefined) delete process.env.TEMP; else process.env.TEMP = originalTemp;
@@ -48,7 +48,7 @@ async function withHarness(run: (h: Awaited<ReturnType<typeof harness>>) => Prom
     await rm(base, {recursive: true, force: true});
   }
 }
-async function harness(base: string, withoutOwner: boolean) {
+async function harness(base: string, withoutOwner: boolean, withoutModels = false) {
   const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
   const context = {workspaceId, organizationId, principalId: "principal.synthetic", requestId: "caller-correlation"};
   let allowed = true, issueCount = 0, readCount = 0, dispatchCount = 0, statusCount = 0, cancelCount = 0, maximumReadBytes = 0;
@@ -62,7 +62,14 @@ async function harness(base: string, withoutOwner: boolean) {
   let sourceReader: ArtifactObjectStoragePort["retrieveArtifact"] | undefined;
   let installedStart: "accepted" | "unavailable" | "unconfirmed" = "accepted", installedSupported = true;
   let installedBridge: RuntimeTaskRegistryPort["startTaskWithoutInstalling"];
+  let modelReference: string | undefined = path.join(base, "synthetic-installed-model"), modelChecks = 0;
+  let afterModel = () => {};
   const useCase = new ContextGenerationUseCase({taskReconciler: withoutOwner ? undefined : reconciler,
+    ...(withoutModels ? {} : {embeddingModels: {async resolveExistingModel(witness, modelContext, stillAllowed) {
+      modelChecks++; assert.equal(witness.modelId, ragCommand().embedding!.modelId);
+      assert.equal(modelContext.workspaceId, workspaceId); assert.ok(await stillAllowed()); afterModel();
+      return modelReference ? {localModelReference: modelReference} : undefined;
+    }}}),
     runtimeTaskRegistry: {
       get startTaskWithoutInstalling() {return installedSupported ? async (request: never) => {
         if (installedBridge) return installedBridge(request);
@@ -104,6 +111,8 @@ async function harness(base: string, withoutOwner: boolean) {
   const admission = (selectedCommand = command()): ApprovedContextGenerationAdmission => ({taskId, organizationId, workspaceId,
     principalId: context.principalId, commandDigest: contextCommandDigest(selectedCommand), sources: [{artifactId, storageKey: artifactId,
       digest: hash(originalBytes), sizeBytes: originalBytes.length, mediaType: "text/csv", format: "csv"}],
+    ...(selectedCommand.kind === "rag-database" ? {embeddingModel: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z",
+      modelId: selectedCommand.embedding!.modelId, recordDigest: "sha256:" + "a".repeat(64)}} : {}),
     isCurrent: () => allowed, stillAllowed: async () => allowed,
     async issue() {issueCount++; return issue();}});
   return {base, useCase, context, reconciler, admission,
@@ -120,6 +129,8 @@ async function harness(base: string, withoutOwner: boolean) {
     setStatus(value: Record<string, unknown>) {statusPatch = value;}, setCancel(value: Record<string, unknown>) {cancelPatch = value;},
     powerCompletions: () => powerCompletions,
     setPowerLifecycle(value: TaskPowerLifecyclePort) {powerLifecycle = value;},
+    setModelReference(value: string | undefined) {modelReference = value;}, modelChecks: () => modelChecks,
+    setAfterModel(value: typeof afterModel) {afterModel = value;},
     async roots() {return await readdir(base);},
     async stop() {await reconciler.settleAfterRuntimeStop(["python"]);},
   };
@@ -233,7 +244,7 @@ test("private RAG command witnesses bind exact model, device and source checks w
   await withHarness(async h => {
     const selected = ragCommand();
     assert.equal((await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected))).ok, true);
-    assert.deepEqual(h.lastRequest()?.payload.embedding, selected.embedding);
+    assert.deepEqual(h.lastRequest()?.payload.embedding, {...selected.embedding, localModelReference: path.join(h.base, "synthetic-installed-model")});
     assert.deepEqual(h.lastRequest()?.payload.sourceChecks, selected.sourceChecks);
   });
   await withHarness(async h => {
@@ -248,6 +259,76 @@ test("private RAG command witnesses bind exact model, device and source checks w
       assert.equal((await h.useCase.startAdmittedContext(unsupported, h.context, h.admission(unsupported))).ok, false);
     }
     assert.equal(h.counts().readCount, 0); assert.equal(h.counts().dispatchCount, 0);
+  });
+});
+
+test("admitted RAG needs a current model witness and checked local reference before source staging or issue", async () => {
+  await withHarness(async h => {
+    const selected = ragCommand(), {embeddingModel: _model, ...missing} = h.admission(selected);
+    assert.equal((await h.useCase.startAdmittedContext(selected, h.context, missing)).ok, false);
+    assert.equal(h.modelChecks(), 0); assert.equal(h.counts().readCount, 0);
+    h.setModelReference(undefined);
+    assert.equal((await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected))).ok, false);
+    assert.equal(h.modelChecks(), 1); assert.equal(h.counts().readCount, 0); assert.equal(h.counts().issueCount, 0);
+    h.setModelReference("relative/model");
+    assert.equal((await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected))).ok, false);
+    assert.equal(h.counts().readCount, 0);
+    h.setModelReference(path.join(h.base, "synthetic-installed-model")); h.setAfterModel(() => h.setAllowed(false));
+    assert.equal((await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected))).ok, false);
+    assert.equal(h.counts().readCount, 0); assert.equal(h.counts().dispatchCount, 0); assert.deepEqual(await h.roots(), []);
+  });
+  await withHarness(async h => {
+    assert.equal((await h.useCase.startAdmittedContext(ragCommand(), h.context, h.admission(ragCommand()))).ok, false);
+    assert.equal(h.counts().readCount, 0); assert.equal(h.counts().issueCount, 0);
+  }, false, true);
+});
+
+test("public Context generation cannot supply the private installed model reference", async () => withHarness(async h => {
+  const selected = ragCommand();
+  const result = await h.useCase.start({...selected, embedding: {...selected.embedding, localModelReference: path.join(h.base, "private-injected-model")}} as never, h.context);
+  assert.equal(result.ok, false); assert.equal(h.modelChecks(), 0); assert.equal(h.counts().readCount, 0);
+  assert.equal(h.counts().dispatchCount, 0); assert.equal(JSON.stringify(result).includes("private-injected-model"), false);
+}));
+
+test("admitted RAG review binds logical model and source policy without exporting the private reference", async () => {
+  for (const variant of ["attribution", "no-attribution", "wrong-model", "private-reference", "unexpected-attribution", "changed-license",
+    "changed-source-policy", "reordered-policy"]) await withHarness(async h => {
+    const selected = ragCommand(), includeAttribution = !["no-attribution", "unexpected-attribution"].includes(variant);
+    const checks = {...selected.sourceChecks!, includeSourceAttribution: includeAttribution};
+    const chosen = {...selected, sourceChecks: checks};
+    const original = h.admission(chosen), admission = {...original, sources: original.sources.map(source => ({...source, declaredLicense: "LicenseRef-Proprietary"}))};
+    const bytes = Buffer.from("Synthetic runtime output; worker is simulated in this test.");
+    h.setDispatch(async () => {
+      await writeFile(path.join(h.lastRequest()!.payload.runtime.runtimeWorkingDirectory, "synthetic.lancedb.zip"), bytes);
+      return {requestId: h.taskId(), status: "queued"};
+    });
+    assert.ok((await h.useCase.startAdmittedContext(chosen, h.context, admission)).ok, variant);
+    const source = h.lastRequest()!.payload.sources[0];
+    const common = {artifactId: source.artifactId, digest: source.sourceDigest, mediaType: source.mediaType, sizeBytes: source.sizeBytes};
+    const actualPolicy = variant === "reordered-policy" ? {includeSourceAttribution: checks.includeSourceAttribution,
+      requireConsentMetadata: checks.requireConsentMetadata, requireLicenseMetadata: checks.requireLicenseMetadata,
+      allowedLanguages: checks.allowedLanguages, preset: checks.preset} : {...checks,
+        ...(variant === "changed-source-policy" ? {requireConsentMetadata: true} : {})};
+    h.setStatus({status: "succeeded", data: {
+      output: {name: "synthetic.lancedb.zip", outputHandle: "synthetic.lancedb.zip",
+        mediaType: "application/vnd.ai-system-builder.rag-database+lancedb+zip", sizeBytes: bytes.length, digest: hash(bytes)},
+      sourceInspections: [{...common, ready: true, sourceKind: "structured", format: "csv", textFields: ["text"], alreadyChunked: false,
+        chunkCount: 1, sourceInformation: {license: "LicenseRef-Proprietary"}}],
+      preview: {kind: "rag-database", name: chosen.name, sourceCount: 1, manualEntryCount: 0, chunkCount: 1,
+        items: [{id: "chunk.synthetic", kind: "chunk", text: "Synthetic answer", citations: [{sourceArtifactId: source.artifactId, chunkIndex: 0}]}]},
+      manifest: {schemaVersion: "1", kind: "rag-database", name: chosen.name,
+        mediaType: "application/vnd.ai-system-builder.rag-database+lancedb+zip", createdAt: "2026-11-18T00:00:00.000Z",
+        sources: [{...common, chunkCount: 1, chunkingMode: "extracted", ...(includeAttribution || variant === "unexpected-attribution"
+          ? {sourceInformation: {license: variant === "changed-license" ? "cc0-1.0" : "LicenseRef-Proprietary"}} : {})}],
+        manualEntries: [], chunking: chosen.chunking, sourceChecks: actualPolicy,
+        embedding: {provider: "transformers", modelId: variant === "wrong-model" ? "local/other" : chosen.embedding!.modelId, dimensions: 3,
+          ...(variant === "private-reference" ? {localModelReference: path.join(h.base, "synthetic-installed-model")} : {})}},
+    }});
+    const review = await h.useCase.read(h.taskId(), h.context);
+    const expected = ["attribution", "no-attribution", "reordered-policy"].includes(variant);
+    assert.equal(review.ok, expected, variant);
+    if (review.ok) assert.equal(review.value.state, "review-required", variant);
+    assert.equal(JSON.stringify(review).includes("synthetic-installed-model"), false, variant);
   });
 });
 
