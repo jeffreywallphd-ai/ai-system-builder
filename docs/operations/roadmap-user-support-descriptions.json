@@ -1191,6 +1191,43 @@
           "No accepted model accuracy or whole-software tests were repeated."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a6a7e9c472a7b18127ad2f0b772f3b0edba8d7f005b94fceee675f6878d29b4e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Eleven focused check groups and the Desktop, Server and Thin Client checks passed for showing a Context search summary.",
+          "Controlled host tests check current access, saved task identity and cached results.",
+          "UI and SDK tests check approval, replay and revocation.",
+          "An independent review accepted the component before commit."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9850e5da580087793eb7f490c4a2781ffecaf782b3027d661388899005d94303",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These controlled tests support the query display feature.",
+          "They do not prove physical model, memory, real-app or native offload behavior.",
+          "The parent criteria and work chunks remain open until their own checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a6ec9ac942d04fc5a10e918204afd200ff65c2b5c91f3bf0012c91555c7a345f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Window approval only permits the supported display.",
+          "It does not permit a new query, model load, save, source-text sharing or use of another task.",
+          "Earlier results and pending checks remain in place."
+        ]
+      }
     }
   ]
 }

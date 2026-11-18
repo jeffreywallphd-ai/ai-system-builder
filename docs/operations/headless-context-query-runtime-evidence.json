@@ -1,0 +1,624 @@
+{
+  "schema_version": "headless-context-query-runtime-evidence-v1",
+  "status": "observed-worker-targets-met",
+  "run_id": "da8eff88fa2f4ad3a51cacaeb77a12be",
+  "source_revision": "source.fcabb6959a5de792d8f83e0d032f2ddb90ea43f08734ab962545b5c5b055ac3f",
+  "commit": "8ffd1d620b364acf7225134e183282a9117903c7",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "model_files": {
+    "config.json": "953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41",
+    "tokenizer.json": "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037",
+    "tokenizer_config.json": "acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b",
+    "special_tokens_map.json": "303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3",
+    "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+    "model.safetensors": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+  },
+  "fixture_sha256": "809bd8d06af3c4ab5e90aea37618f2987bd8a53c93f0caa358cae955c19d224d",
+  "helper_sha256": "03ec78635c435d3bc3c1630c639ec707debdd3e09e305ce3acbc6eef6a4ff434",
+  "orchestrator_sha256": "cf9bd43f31eee29fe1a33a3e58db60196c1161ec1ea4a1cb5e0bb6297a4d20ec",
+  "heldout_sha256": "f056a26381c51dc02d8728218cc5192aa20351934a1b4092cf847ecaf4ac4f0a",
+  "parameters": {
+    "chunks": 1000,
+    "samples": 8,
+    "warmups": 5,
+    "cpu_threads": 4,
+    "seed": 17,
+    "recall_minimum": 0.9,
+    "maximum_recall_loss": 0.02,
+    "score_tolerance": 1e-06,
+    "query_rss_budget_bytes": 2147483648,
+    "query_vram_budget_bytes": 536870912,
+    "supervisor_safety_ceiling_bytes": 4294967296,
+    "generation_deadline_seconds": 900,
+    "query_deadline_seconds": 600
+  },
+  "measurement_boundary": "Existing worker-local run_child supervisor, RSS sampled every5ms after READY. Shared Torch/Lance imports precede query READY; lifetime import peak and host/storage/transport latency are not measured. Cold first query and eight samples after five warmups each load a fresh model and include archive hashing/materialization/schema validation, embedding/search and cleanup. OS cache warmth is uncontrolled.",
+  "pending": [
+    "Ordinary common-embedding worker requests are measured, not the physical Headless queryAdmitted/approvedEmbedding admission path.",
+    "Eight fixed topic samples and one CPU repeat are bounded observations, not a broader accuracy or statistical qualification.",
+    "The historical retrieval baseline uses the current common embedding runtime on CUDA; this does not assert historical CUDA support.",
+    "Actual packaged Desktop and authenticated Managed Headless MCP/Context UI journeys.",
+    "Headless task lease/ACK/policy/window authority are covered separately by controlled host tests, not by this worker observation.",
+    "Native/offload/security work outside this query worker, and parent/chunk/final all-suite qualification.",
+    "A failed or interrupted physical build and exact receipt replay are not exercised by this ordinary worker measurement.",
+    "The small bounded sample is not a statistical latency claim or a new qualification of the reused native supervisor."
+  ],
+  "attempts": [
+    {
+      "label": "cpu-generation",
+      "mode": "prepare",
+      "variant": "candidate",
+      "device": "cpu",
+      "profile": "reference",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "corpus": {
+        "bytes": 64485,
+        "sha256": "c4b7bacb6e51fca5ef9abb7d130f8fc3c7563a6082583606ab9f57b32cdc7504",
+        "source_digest": "sha256:21dcf2dc5e74dd0eced57be706e5b76a741a85ddb6bb84db555e5ac282261998",
+        "corpus_sha256": "21dcf2dc5e74dd0eced57be706e5b76a741a85ddb6bb84db555e5ac282261998",
+        "dimensions": 384,
+        "chunks": 1000,
+        "generation_device": "cpu-default",
+        "actual_tensor_devices": [
+          "cpu"
+        ],
+        "generation_ms": 18071.545299957506,
+        "generation_initial_rss_bytes": 27115520,
+        "generation_peak_rss_bytes": 821567488,
+        "physical_exit_code": 0
+      }
+    },
+    {
+      "label": "cpu-baseline",
+      "mode": "measure",
+      "variant": "baseline",
+      "device": "cpu",
+      "profile": "reference",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "measurement": {
+        "environment": {
+          "platform": "win32",
+          "python": "3.12.8",
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "lancedb": "0.34.0",
+          "pyarrow": "25.0.0",
+          "cuda_runtime": "12.6",
+          "accelerator": null,
+          "accelerator_memory_bytes": 0,
+          "memory_profile": {
+            "profile": "physical-reference"
+          }
+        },
+        "cold_ms": 3891.565600060858,
+        "samples_ms": [
+          420.1510000275448,
+          435.06040005013347,
+          467.00679999776185,
+          479.7216000733897,
+          454.3121000751853,
+          482.99409996252507,
+          469.80819990858436,
+          441.60120002925396
+        ],
+        "recall_at_5": 1.0,
+        "query_recalls": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "actual_tensor_devices": [
+          "cpu"
+        ],
+        "peak_vram_bytes": 0,
+        "peak_reserved_vram_bytes": 0,
+        "runtime_vram_floor_bytes": 0,
+        "runtime_reserved_floor_bytes": 0,
+        "remaining_vram_bytes": 0,
+        "remaining_reserved_bytes": 0,
+        "cleanup_passed": true,
+        "baseline_rss_bytes": 553103360,
+        "peak_rss_bytes": 773963776,
+        "incremental_peak_rss_bytes": 220860416,
+        "physical_exit_code": 0,
+        "p95_sample_ms": 482.99409996252507
+      },
+      "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334",
+      "thresholds": {
+        "recall": true,
+        "query_rss": true,
+        "query_vram": true,
+        "cleanup": true,
+        "native_exit": true
+      }
+    },
+    {
+      "label": "cpu-candidate",
+      "mode": "measure",
+      "variant": "candidate",
+      "device": "cpu",
+      "profile": "reference",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "measurement": {
+        "environment": {
+          "platform": "win32",
+          "python": "3.12.8",
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "lancedb": "0.34.0",
+          "pyarrow": "25.0.0",
+          "cuda_runtime": "12.6",
+          "accelerator": null,
+          "accelerator_memory_bytes": 0,
+          "memory_profile": {
+            "profile": "physical-reference"
+          }
+        },
+        "cold_ms": 3696.6303000226617,
+        "samples_ms": [
+          332.96919998247176,
+          358.5157999768853,
+          322.52360007259995,
+          337.6272999448702,
+          286.091799964197,
+          326.0737999808043,
+          313.32499999552965,
+          336.20249992236495
+        ],
+        "recall_at_5": 1.0,
+        "query_recalls": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "actual_tensor_devices": [
+          "cpu"
+        ],
+        "peak_vram_bytes": 0,
+        "peak_reserved_vram_bytes": 0,
+        "runtime_vram_floor_bytes": 0,
+        "runtime_reserved_floor_bytes": 0,
+        "remaining_vram_bytes": 0,
+        "remaining_reserved_bytes": 0,
+        "cleanup_passed": true,
+        "baseline_rss_bytes": 552706048,
+        "peak_rss_bytes": 769216512,
+        "incremental_peak_rss_bytes": 216510464,
+        "physical_exit_code": 0,
+        "p95_sample_ms": 358.5157999768853
+      },
+      "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334",
+      "thresholds": {
+        "recall": true,
+        "query_rss": true,
+        "query_vram": true,
+        "cleanup": true,
+        "native_exit": true
+      }
+    },
+    {
+      "label": "cpu-repeat",
+      "mode": "measure",
+      "variant": "candidate",
+      "device": "cpu",
+      "profile": "reference",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "measurement": {
+        "environment": {
+          "platform": "win32",
+          "python": "3.12.8",
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "lancedb": "0.34.0",
+          "pyarrow": "25.0.0",
+          "cuda_runtime": "12.6",
+          "accelerator": null,
+          "accelerator_memory_bytes": 0,
+          "memory_profile": {
+            "profile": "physical-reference"
+          }
+        },
+        "cold_ms": 3459.5664999214932,
+        "samples_ms": [
+          318.3312000473961,
+          296.26990004908293,
+          262.8416999941692,
+          279.3938999529928,
+          285.75939999427646,
+          296.95599991828203,
+          316.8499000603333,
+          327.2988999960944
+        ],
+        "recall_at_5": 1.0,
+        "query_recalls": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "actual_tensor_devices": [
+          "cpu"
+        ],
+        "peak_vram_bytes": 0,
+        "peak_reserved_vram_bytes": 0,
+        "runtime_vram_floor_bytes": 0,
+        "runtime_reserved_floor_bytes": 0,
+        "remaining_vram_bytes": 0,
+        "remaining_reserved_bytes": 0,
+        "cleanup_passed": true,
+        "baseline_rss_bytes": 553426944,
+        "peak_rss_bytes": 769425408,
+        "incremental_peak_rss_bytes": 215998464,
+        "physical_exit_code": 0,
+        "p95_sample_ms": 327.2988999960944
+      },
+      "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334",
+      "thresholds": {
+        "recall": true,
+        "query_rss": true,
+        "query_vram": true,
+        "cleanup": true,
+        "native_exit": true
+      }
+    },
+    {
+      "label": "cpu-constrained",
+      "mode": "measure",
+      "variant": "candidate",
+      "device": "cpu",
+      "profile": "constrained-2gib",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "measurement": {
+        "environment": {
+          "platform": "win32",
+          "python": "3.12.8",
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "lancedb": "0.34.0",
+          "pyarrow": "25.0.0",
+          "cuda_runtime": "12.6",
+          "accelerator": null,
+          "accelerator_memory_bytes": 0,
+          "memory_profile": {
+            "profile": "windows-owned-job-2gib",
+            "enforced": true,
+            "process_commit_limit_bytes": 2147483648,
+            "job_commit_limit_bytes": 2147483648,
+            "peak_process_commit_bytes": 1836568576,
+            "peak_job_commit_bytes": 1836568576
+          }
+        },
+        "cold_ms": 3520.1368000125512,
+        "samples_ms": [
+          307.58000002242625,
+          343.32970005925745,
+          276.4541000360623,
+          288.18909998517483,
+          265.8151000505313,
+          251.0338999563828,
+          373.6301999306306,
+          305.4935000836849
+        ],
+        "recall_at_5": 1.0,
+        "query_recalls": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "actual_tensor_devices": [
+          "cpu"
+        ],
+        "peak_vram_bytes": 0,
+        "peak_reserved_vram_bytes": 0,
+        "runtime_vram_floor_bytes": 0,
+        "runtime_reserved_floor_bytes": 0,
+        "remaining_vram_bytes": 0,
+        "remaining_reserved_bytes": 0,
+        "cleanup_passed": true,
+        "baseline_rss_bytes": 552865792,
+        "peak_rss_bytes": 767746048,
+        "incremental_peak_rss_bytes": 214880256,
+        "physical_exit_code": 0,
+        "p95_sample_ms": 373.6301999306306
+      },
+      "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334",
+      "thresholds": {
+        "recall": true,
+        "query_rss": true,
+        "query_vram": true,
+        "cleanup": true,
+        "native_exit": true
+      }
+    },
+    {
+      "label": "cuda-baseline",
+      "mode": "measure",
+      "variant": "baseline",
+      "device": "cuda",
+      "profile": "reference",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "measurement": {
+        "environment": {
+          "platform": "win32",
+          "python": "3.12.8",
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "lancedb": "0.34.0",
+          "pyarrow": "25.0.0",
+          "cuda_runtime": "12.6",
+          "accelerator": "NVIDIA GeForce RTX 4060",
+          "accelerator_memory_bytes": 8585216000,
+          "memory_profile": {
+            "profile": "physical-reference"
+          }
+        },
+        "cold_ms": 4336.296800058335,
+        "samples_ms": [
+          583.2175000105053,
+          684.4387999735773,
+          602.7170000597835,
+          758.9616000186652,
+          693.8399000791833,
+          657.4458999093622,
+          726.5831000404432,
+          703.0339000048116
+        ],
+        "recall_at_5": 1.0,
+        "query_recalls": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "actual_tensor_devices": [
+          "cuda:0"
+        ],
+        "peak_vram_bytes": 101245952,
+        "peak_reserved_vram_bytes": 111149056,
+        "runtime_vram_floor_bytes": 8519680,
+        "runtime_reserved_floor_bytes": 20971520,
+        "remaining_vram_bytes": 8519680,
+        "remaining_reserved_bytes": 20971520,
+        "cleanup_passed": true,
+        "baseline_rss_bytes": 793018368,
+        "peak_rss_bytes": 1356963840,
+        "incremental_peak_rss_bytes": 563945472,
+        "physical_exit_code": 0,
+        "p95_sample_ms": 758.9616000186652
+      },
+      "answer_sha256": "892286a0bb56870184338fbcb2062226b581f57e435190d42181e564daaecd2b",
+      "thresholds": {
+        "recall": true,
+        "query_rss": true,
+        "query_vram": true,
+        "cleanup": true,
+        "native_exit": true
+      }
+    },
+    {
+      "label": "cuda-candidate",
+      "mode": "measure",
+      "variant": "candidate",
+      "device": "cuda",
+      "profile": "reference",
+      "status": "observed",
+      "physical_exit_code": 0,
+      "measurement": {
+        "environment": {
+          "platform": "win32",
+          "python": "3.12.8",
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "lancedb": "0.34.0",
+          "pyarrow": "25.0.0",
+          "cuda_runtime": "12.6",
+          "accelerator": "NVIDIA GeForce RTX 4060",
+          "accelerator_memory_bytes": 8585216000,
+          "memory_profile": {
+            "profile": "physical-reference"
+          }
+        },
+        "cold_ms": 3786.586400005035,
+        "samples_ms": [
+          469.4846000056714,
+          450.2744999481365,
+          444.1275999415666,
+          487.42449993733317,
+          483.7002999847755,
+          497.4029998993501,
+          482.1024000411853,
+          579.5170000055805
+        ],
+        "recall_at_5": 1.0,
+        "query_recalls": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "actual_tensor_devices": [
+          "cuda:0"
+        ],
+        "peak_vram_bytes": 101245952,
+        "peak_reserved_vram_bytes": 111149056,
+        "runtime_vram_floor_bytes": 8519680,
+        "runtime_reserved_floor_bytes": 20971520,
+        "remaining_vram_bytes": 8519680,
+        "remaining_reserved_bytes": 20971520,
+        "cleanup_passed": true,
+        "baseline_rss_bytes": 793239552,
+        "peak_rss_bytes": 1349070848,
+        "incremental_peak_rss_bytes": 555831296,
+        "physical_exit_code": 0,
+        "p95_sample_ms": 579.5170000055805
+      },
+      "answer_sha256": "892286a0bb56870184338fbcb2062226b581f57e435190d42181e564daaecd2b",
+      "thresholds": {
+        "recall": true,
+        "query_rss": true,
+        "query_vram": true,
+        "cleanup": true,
+        "native_exit": true
+      }
+    }
+  ],
+  "runtime_hashes": {
+    "modules/adapters/runtime/python/worker/models.py": "60ae5370adcdc60dd949db6986adbb5cb8802fe52b93ae3623e89f59582334d0",
+    "modules/adapters/runtime/python/worker/tasks/context_generation.py": "48efd338dbbe64beef12024a9b5ecd7d79745ce2c40fbfa6c060616582bf3c1c",
+    "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py": "753b5599ce7f4dfb5d226ce297bf9100e1f9ea82da1ec34f1bd7b9c97f9e5029",
+    "modules/adapters/runtime/python/worker/tasks/local_text_generation.py": "bc600fe17e5166911fd7641e0e569cb1e4ea6dd5120bea3b7fdbcedb432acf4a",
+    "dev-tools/scripts/qualification/windows_qualification_memory.py": "463f91a0268d8d63121571a6c8c0892002ec50093c5ba464f9946cb45ef20dc5",
+    "dev-tools/scripts/qualification/observe_windows_process_exit.py": "8e7569305b0179b061176ea8878fc951c19e431fc94ac86590c1ebfecce3c23f"
+  },
+  "comparisons": [
+    {
+      "left": "cpu-baseline",
+      "right": "cpu-candidate",
+      "status": "passed",
+      "exact": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334"
+      },
+      "recall_loss": 0.0
+    },
+    {
+      "left": "cpu-candidate",
+      "right": "cpu-repeat",
+      "status": "passed",
+      "exact": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334"
+      },
+      "recall_loss": 0.0
+    },
+    {
+      "left": "cpu-candidate",
+      "right": "cpu-constrained",
+      "status": "passed",
+      "exact": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "7589b83c18114e44be0dfd9a7df94cc9b2739ae42327b95a98a7fcde7a288334"
+      },
+      "recall_loss": 0.0
+    },
+    {
+      "left": "cuda-baseline",
+      "right": "cuda-candidate",
+      "status": "passed",
+      "exact": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "892286a0bb56870184338fbcb2062226b581f57e435190d42181e564daaecd2b"
+      },
+      "recall_loss": 0.0
+    }
+  ],
+  "source_stable": true,
+  "model_stable": true,
+  "owned_synthetic_cleanup": "removed-exact-generated-inputs-after-confirmed-native-exits",
+  "orchestrator_stable": true,
+  "local_evidence_ref": ".local-codex/trained-context/da8eff88fa2f4ad3a51cacaeb77a12be/headless-observation.json",
+  "local_evidence_sha256": "8599a6f49f8ecdb090fc82f227a78df72cabb46786b6103df539f5b3da77527a",
+  "review_checkout_equivalence": {
+    "modules/adapters/runtime/python/worker/models.py": {
+      "observed_raw_sha256": "60ae5370adcdc60dd949db6986adbb5cb8802fe52b93ae3623e89f59582334d0",
+      "review_checkout_raw_sha256": "60ae5370adcdc60dd949db6986adbb5cb8802fe52b93ae3623e89f59582334d0",
+      "lf_normalized_sha256": "30fb26209d868d14a6941160eb40006af6bbfa8db66fa9f59d006275c4b25168",
+      "same_commit_lf_normalized_bytes": true
+    },
+    "modules/adapters/runtime/python/worker/tasks/context_generation.py": {
+      "observed_raw_sha256": "48efd338dbbe64beef12024a9b5ecd7d79745ce2c40fbfa6c060616582bf3c1c",
+      "review_checkout_raw_sha256": "48efd338dbbe64beef12024a9b5ecd7d79745ce2c40fbfa6c060616582bf3c1c",
+      "lf_normalized_sha256": "d61a072bf118f6ca7312361bb26d4dd6559fcba0f966cbe752bb46052fbd4e51",
+      "same_commit_lf_normalized_bytes": true
+    },
+    "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py": {
+      "observed_raw_sha256": "753b5599ce7f4dfb5d226ce297bf9100e1f9ea82da1ec34f1bd7b9c97f9e5029",
+      "review_checkout_raw_sha256": "753b5599ce7f4dfb5d226ce297bf9100e1f9ea82da1ec34f1bd7b9c97f9e5029",
+      "lf_normalized_sha256": "78ded9fb1372f7b708162fb6beb3a048e8cb29a27f190667309996c5eef286f6",
+      "same_commit_lf_normalized_bytes": true
+    },
+    "modules/adapters/runtime/python/worker/tasks/local_text_generation.py": {
+      "observed_raw_sha256": "bc600fe17e5166911fd7641e0e569cb1e4ea6dd5120bea3b7fdbcedb432acf4a",
+      "review_checkout_raw_sha256": "bc600fe17e5166911fd7641e0e569cb1e4ea6dd5120bea3b7fdbcedb432acf4a",
+      "lf_normalized_sha256": "5dfa257b643e52e8d0799021a5a08e73e1a0ef03cbb67ce81378dae06ebf649e",
+      "same_commit_lf_normalized_bytes": true
+    },
+    "dev-tools/scripts/qualification/windows_qualification_memory.py": {
+      "observed_raw_sha256": "463f91a0268d8d63121571a6c8c0892002ec50093c5ba464f9946cb45ef20dc5",
+      "review_checkout_raw_sha256": "eebe665a14137ecc518859bc0573edd4384b56710a1f6f43ccf99a9855668ce1",
+      "lf_normalized_sha256": "463f91a0268d8d63121571a6c8c0892002ec50093c5ba464f9946cb45ef20dc5",
+      "same_commit_lf_normalized_bytes": true
+    },
+    "dev-tools/scripts/qualification/observe_windows_process_exit.py": {
+      "observed_raw_sha256": "8e7569305b0179b061176ea8878fc951c19e431fc94ac86590c1ebfecce3c23f",
+      "review_checkout_raw_sha256": "2c1d14574626d38199ad991ab490318acd1a3b00e7515444d5740e694ebf7977",
+      "lf_normalized_sha256": "8e7569305b0179b061176ea8878fc951c19e431fc94ac86590c1ebfecce3c23f",
+      "same_commit_lf_normalized_bytes": true
+    }
+  },
+  "qualification_scope": "Ordinary worker/common-embedding retrieval only; no physical Headless approvedEmbedding/queryAdmitted, host, UI, native/offload, parent or chunk qualification.",
+  "assessment": {
+    "observed_worker_targets_met": true,
+    "candidate_recall_at_5": 1.0,
+    "matched_baseline_recall_loss": 0.0,
+    "all_four_exact_comparisons_passed": true,
+    "maximum_score_delta": 0.0,
+    "cpu_candidate_sampled_peak_rss_bytes": 769216512,
+    "cuda_candidate_sampled_peak_rss_bytes": 1349070848,
+    "cuda_query_peak_vram_bytes": 101245952,
+    "constrained_profile_enforced": {
+      "profile": "windows-owned-job-2gib",
+      "enforced": true,
+      "process_commit_limit_bytes": 2147483648,
+      "job_commit_limit_bytes": 2147483648,
+      "peak_process_commit_bytes": 1836568576,
+      "peak_job_commit_bytes": 1836568576
+    },
+    "observed_clean_native_exits": 7,
+    "corpus_cleanup": "removed-exact-generated-inputs-after-confirmed-native-exits"
+  },
+  "baseline_retrieval_commit": "9a681ef79356e6b9a7aac7b30cd46040f85f07b4",
+  "baseline_retrieval_sha256": "24a98c96a5f9db75d776dc115abf43ef84ae4dce0a308217d0f357ae60bce30b",
+  "retained_evidence_bytes_before_final_report_write": 153132,
+  "retained_evidence_bytes_at_review": 154753,
+  "retained_evidence_size_boundary": "The collector count precedes its final report write. The review count covers only files retained in this exact run directory at review, not disk high-water usage or future changes.",
+  "collector_status": "collected-review-required"
+}

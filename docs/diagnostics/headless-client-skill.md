@@ -308,3 +308,22 @@ question hash and cleanup state; window context exposes only selector/view IDs.
 The window connection may differ from the plan connection for the same actor,
 workspace and host. Revoke or expiry stops fresh display/context, preserving the
 accepted backend task. Read the portable Context guide for exact steps and limits.
+
+### Context worker observations
+
+The [bounded retrieval record](../operations/headless-context-query-runtime-evidence.json)
+uses the existing offline, hash-pinned MiniLM model and the fixed 1,000-row,
+eight-topic corpus. CPU reference, repeat and enforced 2 GiB profiles and CUDA
+reference queries met the recorded recall, citation, sampled-memory and cleanup
+targets. Matched baseline/candidate results were exact within each device.
+The CUDA baseline uses the current shared embedding runtime; it does not assert
+that the historical release supported CUDA. Eight samples are bounded observations,
+not a statistical latency claim.
+
+The record measures the ordinary worker/common-embedding path. It does not
+physically exercise Headless `queryAdmitted`/`approvedEmbedding` admission, task
+approval, app storage, MCP transport or Context UI. Query RSS sampling begins
+after shared imports; it does not measure their lifetime peak. Keep actual-app
+journeys, failed/interrupted physical builds, exact receipt replay and final
+parent qualification pending. Reused native supervision is observed here, not
+independently requalified. No model, dependency, guard or runtime default changed.
