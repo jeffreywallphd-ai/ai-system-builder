@@ -482,12 +482,40 @@
         "Tests preserve role/report/deadline fences, atomic rollback, exact receipt reconciliation, uncertain-effect evidence and immutable lineage. Earlier failures and independent native/offload gaps remain retained."
       ],
       "title": "Prepare and validate a dataset"
+    },
+    {
+      "areas": [
+        "Finite Data presentation contracts and interactive resource panel",
+        "Existing current window, organization/workspace/artifact-read and accepted-task owners"
+      ],
+      "chunkId": "reveal-data",
+      "completedAt": "2026-11-18T01:56:18Z",
+      "criteriaIds": [
+        "real-data-handoff",
+        "security-data-boundaries"
+      ],
+      "documentation": [
+        "docs/architecture/data-management.md",
+        "docs/security/headless-system-builder-threat-model.md",
+        "docs/diagnostics/headless-client-skill.md",
+        "skills/control-ai-system-builder/references/build-plans.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "data-acquisition-and-datasets-reveal-data",
+      "incrementId": "data-acquisition-and-datasets",
+      "summary": "Delivered exact Data source/file/revision, immutable dataset/version/digest and same-actor accepted task presentation through separate revocable window consent. The real packaged Desktop and authenticated Managed browser show the exact selected resource, return bounded identifier-only context/replay, deny stale or unaccepted references, and preserve saved versions/tasks after revoke. No backend execution, provider transfer, model or native/offload qualification is granted by display.",
+      "tests": [
+        "Completed work headless-data-window-handoff: receipt d557ee8c298eb6dcef3b498857c60c8501c30729d950c8de1def8fe11e8e5a9a and independent review 68d143273cec911db7a23d7a27aada7744d889795bca672c4e4e1a9a77cc7561; all 16 focused groups passed, source stable.",
+        "Actual Desktop report runs/2026-11-18t01-44-43-464z-44def3dd and Managed report d/managed-5f6ee36efdc5464d82e79e9674dffa18 passed on the matching reviewed product source; owned worker shutdown left none alive and no cleanup errors within this profile.",
+        "Committed reviewed checkpoint e727660aa84ef0726d2d5f8882695d7788de77fc and fast-forwarded rebuild. Historical failures and all parent qualification remain separate."
+      ],
+      "title": "Review Data work in the app"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": "data-acquisition-and-datasets",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1200,6 +1228,50 @@
       "outcome": "passed",
       "recordedAt": "2026-11-15T08:36:49Z",
       "summary": "Current tests denied unsupported or changed plans, foreign workspaces and ordinary client registrations, stale decisions and unapproved steps. Tested refusals left saved systems unchanged. Protected source data and provider credentials stayed outside the plan workflow."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/data-increment-feature-evidence.json",
+      "command": "Executed focused control-plane plan for headless-data-increment-feature-acceptance; receipt 4a071aacccc216559b6e6d04a15f34e1d65048aad199defbea2ccd26d84cf92c",
+      "criterionId": "source-admission",
+      "id": "evidence-39",
+      "incrementId": "data-acquisition-and-datasets",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-18T02:04:30Z",
+      "summary": "The current 15-group feature receipt verifies exact selected local and supported approved provider references, workspace/actor/client/source revision and byte/result/runtime admission, provenance/license handling and unsupported-format refusal before effects. Actual two-host intake is synthetic local data; provider transfer effects use immutable simulated replies. No live private-provider or all-format delegation is asserted."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/data-increment-feature-evidence.json",
+      "command": "Executed focused control-plane plan for headless-data-increment-feature-acceptance; receipt 4a071aacccc216559b6e6d04a15f34e1d65048aad199defbea2ccd26d84cf92c",
+      "criterionId": "dataset-quality",
+      "id": "evidence-40",
+      "incrementId": "data-acquisition-and-datasets",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-18T02:04:31Z",
+      "summary": "Current focused tests and actual two-host MCP journeys verify provided-column mapping, required quality review, separately approved one-use immutable saving, exact version/report/recipe/source lineage and no duplicate replay. Canonical worker schema and deterministic grouped-split tests plus owner/store failure, cancellation and uncertainty tests passed. The supported processing profile is bounded saved local provided rows, with no model generation."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/data-increment-feature-evidence.json",
+      "command": "Executed focused control-plane plan for headless-data-increment-feature-acceptance; receipt 4a071aacccc216559b6e6d04a15f34e1d65048aad199defbea2ccd26d84cf92c",
+      "criterionId": "real-data-handoff",
+      "id": "evidence-41",
+      "incrementId": "data-acquisition-and-datasets",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-18T02:04:31Z",
+      "summary": "The matching current-source packaged Desktop and authenticated Managed browser import synthetic source data, prepare/review/save an immutable dataset and show its exact source, version and accepted task through separately approved window control. Replay returns the applied outcome. Revocation removes display/context and preserves the saved version and task. Raw controlled reports and hashes are indexed; broader native cleanup or host-exit recovery is not asserted."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/data-increment-feature-evidence.json",
+      "command": "Executed focused control-plane plan for headless-data-increment-feature-acceptance; receipt 4a071aacccc216559b6e6d04a15f34e1d65048aad199defbea2ccd26d84cf92c",
+      "criterionId": "security-data-boundaries",
+      "id": "evidence-42",
+      "incrementId": "data-acquisition-and-datasets",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-18T02:04:31Z",
+      "summary": "Focused strict-schema, permission/client/workspace/host, size, source/report/destination, licensing and private-field denials passed. The new actual provided-row worker regression keeps adversarial source instructions as data, preserves the exact payload/output root and records zero generation, readiness, network and process calls. The input compiler keeps source labels out of authority and rejects extra action/destination fields before reads. Existing provider/native guards and all historical failures remain intact."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1814,6 +1886,42 @@
       "recordedAt": "2026-11-18T00:58:17Z",
       "sequence": 93,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3eae2d70d8838f9af2bb239429aa4e669a79113e36eb5664c41b60cc27155be6",
+      "recordedAt": "2026-11-18T01:56:18Z",
+      "sequence": 94,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "1e2b895c13ee0f7a860cfd63a1b7a174743318e454a811ba56bd2bf88d561a63",
+      "recordedAt": "2026-11-18T02:04:30Z",
+      "sequence": 95,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b8e159f36ebc0b00d6fbb0c857d2cdab815d1db81d53687957bd0caf47c386e4",
+      "recordedAt": "2026-11-18T02:04:31Z",
+      "sequence": 96,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6a631d0266a8e619555efdd5da1323c66d3bcf109b0aed159df33f877d711bc9",
+      "recordedAt": "2026-11-18T02:04:31Z",
+      "sequence": 97,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6c51258065f2275a3642bd7f570a4416a876ac96ac209e3f33a3cda3dbc944ec",
+      "recordedAt": "2026-11-18T02:04:31Z",
+      "sequence": 98,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e80c07297330ccf739a815f39d3c18e6f2de7b23dda95007946e6ff25f197fec",
+      "recordedAt": "2026-11-18T02:08:20Z",
+      "sequence": 99,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -2664,11 +2772,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-11-18T02:08:20Z",
       "completedChunks": [
         "acquire-data",
-        "prepare-review-data"
+        "prepare-review-data",
+        "reveal-data"
       ],
+      "completionSummary": "All three Data work chunks and four approved increment criteria passed focused current-candidate checks and independent review for the supported bounded local provided-row profile, simulated immutable provider effects and separately consented exact Data display. Receipt 4a071aacccc216559b6e6d04a15f34e1d65048aad199defbea2ccd26d84cf92c and review d48d63a4ea57544e28e52c402b7670ae3c0bf0a2357b367da5d5453b968f2862 cover actual Desktop/browser import, preparation, review, immutable save, replay, display/revoke and source-instruction isolation. Other Data modes, live private transfer, native/offload and host-exit profiles are not qualified by this increment. The latest explicit user instruction reserves comprehensive whole-software/AI testing until every roadmap increment is implemented; no final gate is waived. Earlier failures and separate pending qualifications remain preserved.",
       "deliverables": [
         "Typed acquisition, recipe, validation, review and dataset-version tools",
         "Data presentation intents and synthetic local/provider qualification evidence"
@@ -2683,6 +2793,7 @@
       "id": "data-acquisition-and-datasets",
       "number": 5,
       "objective": "Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "The app owns user file/provider selection, ordinary credentials and current scope.",
@@ -2780,7 +2891,7 @@
       ],
       "rollback": "Disable new import and dataset tool routes. Preserve source artifacts, lineage, receipts and completed datasets.",
       "startedAt": "2026-11-15T08:37:21Z",
-      "status": "implementing",
+      "status": "completed",
       "title": "Acquire source material and build training datasets",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -3158,6 +3269,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "executing",
-  "updatedAt": "2026-11-18T00:58:17Z"
+  "status": "ready",
+  "updatedAt": "2026-11-18T02:08:20Z"
 }

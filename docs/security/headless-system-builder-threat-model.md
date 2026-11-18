@@ -2,6 +2,14 @@
 
 ## Data window presentation
 
+The Data instruction-isolation regressions run adversarial CSV text through the
+actual provided-row worker and the approved input compiler. Selected text stays
+data; unselected action/destination/system fields cannot change the recipe or
+output root. Generation, model readiness, network connection and process launch
+are denied by test spies and must have zero calls. Extra request authority fails
+before source lookup. These deterministic feature checks use no model inference
+and do not grant comprehensive roadmap qualification.
+
 Security impact: security-relevant. Protected assets are saved source/version
 metadata, transient task identity and current window consent. The fixed Data
 intents accept exact opaque references, not paths, provider coordinates, data

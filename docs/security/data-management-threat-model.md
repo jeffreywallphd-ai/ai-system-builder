@@ -2,6 +2,14 @@
 
 ## Headless Data presentation boundary
 
+Adversarial provided-row tests retain instruction text as dataset content while
+discarding unselected action/destination/system columns. They compare the exact
+approved recipe/output request before and after processing, contain every output
+in the selected test directory, and assert no generation, model readiness,
+network or process call. Compiler tests reject extra authority before source
+access and prove source labels cannot alter the approved command or preview.
+No model accuracy or broad software suite is part of this regression.
+
 Security impact: security-relevant. Exact source task/file/revision, dataset
 version/digest and same-actor accepted task presentation reuse current window
 consent and artifact-read checks. Source snapshot lineage and immutable version
