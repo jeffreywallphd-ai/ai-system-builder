@@ -14,6 +14,26 @@
 
 ## Purpose
 
+### Qualification of the approved-model worker
+
+The trained Context qualification helper has an explicit `--approved-query`
+profile. Ordinary comparison behavior is unchanged. Its fixed 1,000-row corpus,
+eight topic samples and pinned installed MiniLM model exercise the production
+`approvedEmbedding` branch without replacing its embedding callable. The private
+model reference is explicit and the ordinary cache alias is removed. Exact
+repeat/constrained comparisons, original-model/digest denials, sampled memory,
+tensor placement, cleanup and native exit are recorded under the existing
+supervisor. The versioned ordinary baseline is reused; none of its model runs
+are repeated. Python source equivalence permits only Git LF/CRLF differences.
+The [approved-model worker evidence](../operations/headless-context-admitted-query-evidence.json)
+preserves the observed five query cohorts, exact comparisons and negative probes.
+
+Source tests and physical measurements are distinct. Physical worker evidence
+does not qualify `queryAdmitted` runtime-adapter dispatch, Headless task/policy
+ownership, real Desktop/Managed MCP/UI journeys or the parent increment. GPU
+observations count Torch allocations after warmup; sampled query RSS excludes
+the shared import phase. Existing resource and cleanup controls are unchanged.
+
 ### Private approved query owner
 
 The retained `ContextBrowserUseCases` has a separate private admitted-query

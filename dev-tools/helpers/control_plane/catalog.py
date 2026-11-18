@@ -426,6 +426,10 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_sources": (
             "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py",
             "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py",
+            "dev-tools/scripts/qualification/run_trained_context_qualification.py",
+            "dev-tools/scripts/qualification/tests/test_trained_context_qualification.py",
+            "dev-tools/scripts/qualification/trained_context_fixture.py",
+            "docs/operations/headless-context-query-runtime-evidence.json",
         ),
         "sources": (
             "modules/adapters/runtime/python/worker/models.py",
@@ -433,10 +437,15 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py",
             "modules/adapters/runtime/python/worker/tests/test_context_generation.py",
             "modules/adapters/runtime/python/worker/README.md",
+            "dev-tools/scripts/qualification/run_trained_context_qualification.py",
+            "dev-tools/scripts/qualification/tests/test_trained_context_qualification.py",
+            "dev-tools/scripts/qualification/trained_context_fixture.py",
+            "docs/operations/headless-context-query-runtime-evidence.json",
         ),
         "command": ("-u", "-m", "unittest", "-v",
             "modules.adapters.runtime.python.worker.tests.test_context_artifact_operation",
-            "modules.adapters.runtime.python.worker.tests.test_context_generation"),
+            "modules.adapters.runtime.python.worker.tests.test_context_generation",
+            "dev-tools/scripts/qualification/tests/test_trained_context_qualification.py"),
     },
     "headless-context-artifact-lifecycle": {
         "automatic_sources": (

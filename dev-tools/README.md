@@ -13,6 +13,16 @@ Production execution, accounting, fencing and recovery remain pending.
 
 # Developer tools
 
+The existing `scripts/qualification/run_trained_context_qualification.py` has a
+separate `--approved-query --chunks 1000 --samples 8` profile. It reuses the
+verified pinned MiniLM acquisition and fixed corpus to exercise the production
+approved-model query worker with CPU/repeat/constrained and CUDA/repeat runs.
+The no-option comparison matrix stays unchanged. This profile starts no model
+download, uses the existing native supervisor and resource limits, and preserves
+failed observations. Read the [Headless Context procedure](../docs/diagnostics/headless-client-skill.md)
+before running it. A worker result does not qualify Headless runtime-adapter,
+app, MCP, UI or parent roadmap behavior.
+
 Saved-version full-app test support is described in
 [Provided-data version journeys](scripts/qualification/visual-composer/provided-dataset-qualification.md).
 It uses the real packaged processor with synthetic supplied rows and a durable

@@ -32,6 +32,7 @@ from observe_windows_process_exit import observe
 
 MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+APPROVED_QUERY_BASELINE = "70e204cd4e739c96166c6a28d3779e3f0e8ede29486933b95df88f943d158116"
 FILES = {
     "config.json": "953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41",
     "tokenizer.json": "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037",
@@ -223,18 +224,77 @@ def prepare(folder, count, model_path, device):
     return value
 
 
+def approved_query_mode(args):
+    selected = getattr(args, "approved_query", False)
+    if type(selected) is not bool:
+        raise ValueError("Invalid approved-query profile.")
+    return selected
+
+
+def validate_approved_query_launch(args, count, mode, variant, device, phase, profile, early_identity=False):
+    if not approved_query_mode(args):
+        return
+    if (SCRIPT != ROOT / "dev-tools/scripts/qualification/run_trained_context_qualification.py"
+        or count != 1000 or type(count) is not int or args.samples != 8 or type(args.samples) is not int
+        or mode not in {"prepare", "measure"} or variant != "candidate" or device not in {"cpu", "cuda"}
+        or phase != "timing" or profile not in {"reference", "constrained-2gib"} or early_identity
+        or (profile == "constrained-2gib" and device != "cpu")
+        or (mode == "prepare" and (device != "cpu" or profile != "reference"))):
+        raise ValueError("The approved-query profile requires its fixed worker protocol.")
+
+
+def query_runtime(args, folder, model_path):
+    if approved_query_mode(args) and (args.variant != "candidate" or args.device not in {"cpu", "cuda"}
+                                    or not Path(model_path).is_absolute()):
+        raise ValueError("Invalid approved-query runtime.")
+    from modules.adapters.runtime.python.worker.tasks.context_generation import _embed_with_transformers
+    module = load_runtime(args.variant, folder)
+    if approved_query_mode(args):
+        from modules.adapters.runtime.python.worker.tasks import local_text_generation
+        # Generation's compatibility alias must not supply query authority.
+        local_text_generation._RESOLVED_MODEL_REFERENCES.pop(MODEL, None)
+        if module._embed_with_transformers is not _embed_with_transformers:
+            raise ValueError("The approved-query embedding function was replaced.")
+        return module, {"provider": "transformers", "modelId": MODEL,
+                        "localModelReference": str(model_path), "batchSize": 1, "device": args.device}
+    def common_embedding(texts, settings):
+        return _embed_with_transformers(texts, settings.model_copy(update={"device": args.device}))
+    module._embed_with_transformers = common_embedding
+    return module, None
+
+
+def approved_query_denials(module, request, folder, forward_count):
+    values = []
+    original = request.model_dump(exclude_none=True)
+    wrong_model = {**original["approvedEmbedding"], "modelId": "qualification/wrong-recorded-model"}
+    for name, changes in (("wrong-original-model", {"approvedEmbedding": wrong_model}),
+                          ("wrong-artifact-digest", {"digest": "sha256:" + "0" * 64})):
+        rejected = False
+        before = forward_count()
+        try:
+            module.operate_on_context_artifact(type(request).model_validate({**original, **changes}))
+        except ValueError:
+            rejected = True
+        if not rejected or forward_count() != before or list(folder.glob(".rag-lancedb-read-*")):
+            raise ValueError("Approved-query denial or cleanup failed.")
+        values.append({"case": name, "denied": True, "embedding_forward_calls": 0, "cleanup_passed": True})
+    return values
+
+
 def measure(args, folder, model_path):
     torch = runtime(model_path)
     import lancedb, pyarrow
     from modules.adapters.runtime.python.worker.models import ContextArtifactOperationTaskRequest
-    from modules.adapters.runtime.python.worker.tasks.context_generation import _embed_with_transformers
-    module = load_runtime(args.variant, folder)
+    module, approved = query_runtime(args, folder, model_path)
     corpus = json.loads((folder / f"corpus-{args.count}.json").read_text())
     path = folder / corpus["path"]
     devices = set()
     mismatches = []
+    forwards = 0
     def placement_hook(layer, inputs):
+        nonlocal forwards
         if isinstance(layer, torch.nn.Embedding) and inputs and hasattr(inputs[0], "device"):
+            forwards += 1
             device = str(inputs[0].device)
             devices.add(device)
             if layer.weight.device != inputs[0].device:
@@ -244,9 +304,6 @@ def measure(args, folder, model_path):
     progress={"status":"running","variant":args.variant,"device":args.device,"profile":args.profile,"phase":args.phase,"queries":[]}
     def save_progress(): progress_path.write_text(json.dumps(progress,indent=2)+"\n",encoding="utf-8")
     save_progress()
-    def common_embedding(texts, settings):
-        return _embed_with_transformers(texts, settings.model_copy(update={"device": args.device}))
-    module._embed_with_transformers = common_embedding
     initial_allocated=initial_reserved=0
     if args.device == "cuda":
         if not torch.cuda.is_available():
@@ -270,7 +327,7 @@ def measure(args, folder, model_path):
     try:
         for index in range(iterations):
             query_index = index % len(TOPICS)
-            request = ContextArtifactOperationTaskRequest.model_validate({"workspaceId": "workspace.fixture", "operation": "query", "artifactId": "fixture-context", "localPath": str(path), "mediaType": module.RAG_MEDIA_TYPE, "digest": "sha256:" + corpus["sha256"], "sizeBytes": corpus["bytes"], "query": TOPICS[query_index][0], "maximumResults": 5, "embeddingDevice": args.device, "runtime": {"runtimeWorkingDirectory": str(folder)}})
+            request = ContextArtifactOperationTaskRequest.model_validate({"workspaceId": "workspace.fixture", "operation": "query", "artifactId": "fixture-context", "localPath": str(path), "mediaType": module.RAG_MEDIA_TYPE, "digest": "sha256:" + corpus["sha256"], "sizeBytes": corpus["bytes"], "query": TOPICS[query_index][0], "maximumResults": 5, "embeddingDevice": args.device, **({"approvedEmbedding": approved} if approved is not None else {}), "runtime": {"runtimeWorkingDirectory": str(folder)}})
             started = time.perf_counter()
             result = module.operate_on_context_artifact(request)
             if args.device == "cuda":
@@ -288,6 +345,7 @@ def measure(args, folder, model_path):
                 cold = elapsed
             if args.phase == "memory" or index >= 5:
                 durations.append(elapsed); answers.append(matches); recalls.append(recall)
+        denials = approved_query_denials(module, request, folder, lambda: forwards) if approved is not None else []
         expected = "cuda:0" if args.device == "cuda" else "cpu"
         if devices != {expected} or mismatches:
             raise ValueError("Actual embedding tensor placement failed.")
@@ -297,7 +355,7 @@ def measure(args, folder, model_path):
             raise ValueError(f"Embedding accelerator cleanup failed: allocated={allocated}, reserved={reserved}.")
         environment={"platform":sys.platform,"python":sys.version.split()[0],"torch":torch.__version__,"transformers":importlib.metadata.version("transformers"),"lancedb":lancedb.__version__,"pyarrow":pyarrow.__version__,"cuda_runtime":torch.version.cuda,"accelerator":torch.cuda.get_device_name() if args.device=="cuda" else None,"accelerator_memory_bytes":torch.cuda.get_device_properties(0).total_memory if args.device=="cuda" else 0, "memory_profile":memory_profile_evidence() if args.profile=="constrained-2gib" else {"profile":"physical-reference"}}
         progress["status"]="passed"
-        print(json.dumps({"kind": "result", "environment":environment, "cold_ms": cold, "samples_ms": durations, "answers": answers, "recall_at_5": statistics.mean(recalls), "query_recalls": recalls, "actual_tensor_devices": sorted(devices), "peak_vram_bytes": torch.cuda.max_memory_allocated() if args.device == "cuda" else 0, "peak_reserved_vram_bytes":torch.cuda.max_memory_reserved() if args.device=="cuda" else 0,"runtime_vram_floor_bytes":initial_allocated,"runtime_reserved_floor_bytes":initial_reserved,"remaining_vram_bytes":allocated,"remaining_reserved_bytes":reserved,"cleanup_passed":True}), flush=True)
+        print(json.dumps({"kind": "result", "environment":environment, "cold_ms": cold, "samples_ms": durations, "answers": answers, "recall_at_5": statistics.mean(recalls), "query_recalls": recalls, "actual_tensor_devices": sorted(devices), "peak_vram_bytes": torch.cuda.max_memory_allocated() if args.device == "cuda" else 0, "peak_reserved_vram_bytes":torch.cuda.max_memory_reserved() if args.device=="cuda" else 0,"runtime_vram_floor_bytes":initial_allocated,"runtime_reserved_floor_bytes":initial_reserved,"remaining_vram_bytes":allocated,"remaining_reserved_bytes":reserved,"cleanup_passed":True, **({"query_protocol": "host-approved-local-model", "production_embedding_unchanged": True, "negative_probes": denials} if approved is not None else {})}), flush=True)
     finally:
         if progress["status"]=="running": progress["status"]="failed"
         save_progress()
@@ -325,10 +383,15 @@ def run_child(args, folder, count, mode, variant="candidate", device="cpu", phas
     if (type(execution_seconds) is not int or (execution_seconds not in (600, 1200) and not extended_standard_cpu)
             or type(early_identity) is not bool):
         raise ValueError("Unsupported owned qualification deadline.")
+    validate_approved_query_launch(args, count, mode, variant, device, phase, profile, early_identity)
+    if approved_query_mode(args) and execution_seconds != 600:
+        raise ValueError("The approved-query deadline is fixed.")
     deadline = 900 if mode == "prepare" else execution_seconds
     if _UNCONFIRMED_CHILD is not None:
         raise _UNCONFIRMED_CHILD
     command = [sys.executable, "-s", "-B", str(SCRIPT), "--child", mode, "--run-id", folder.name, "--count", str(count), "--variant", variant, "--device", device, "--phase", phase, "--profile",profile,"--samples", str(args.samples), "--model-manifest", args.model_manifest]
+    if approved_query_mode(args):
+        command.append("--approved-query")
     process = subprocess.Popen(command, cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
     stderr_tail=[]; readers=[]; native_thread=None; native_result=[]
     startup_deadline = time.monotonic() + 60
@@ -465,6 +528,135 @@ def run_child(args, folder, count, mode, variant="candidate", device="cpu", phas
             workload_error.owned_child_failure = {"reason": reason, **lifecycle}
 
 
+def approved_query_baseline():
+    path = ROOT / "docs/operations/headless-context-query-runtime-evidence.json"
+    if path.stat().st_size > 64 * 1024:
+        raise ValueError("The recorded Context baseline exceeds its bound.")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    fixture = (SCRIPT.parent / "trained_context_fixture.py").read_bytes().replace(b"\r\n", b"\n")
+    fixture_digests = {hashlib.sha256(b).hexdigest() for b in (fixture, fixture.replace(b"\n", b"\r\n"))}
+    if (hashlib.sha256(encoded).hexdigest() != APPROVED_QUERY_BASELINE
+        or value["model"] != MODEL or value["model_revision"] != REVISION or value["model_files"] != FILES
+        or value["fixture_sha256"] not in fixture_digests
+        or value["heldout_sha256"] != hashlib.sha256(json.dumps(TOPICS).encode()).hexdigest()):
+        raise ValueError("The fixed Context baseline changed.")
+    for name, identity in value["review_checkout_equivalence"].items():
+        if hashlib.sha256((ROOT / name).read_bytes().replace(b"\r\n", b"\n")).hexdigest() != identity["lf_normalized_sha256"]:
+            raise ValueError("The measured Context runtime differs from its baseline.")
+    selected = {row["label"]: row["measurement"]["recall_at_5"] for row in value["attempts"] if "measurement" in row}
+    return {"report_digest": APPROVED_QUERY_BASELINE, "cpu": selected["cpu-candidate"], "cuda": selected["cuda-candidate"]}
+
+
+def approved_query_targets_met(value, device, profile, baseline_recall):
+    if (not isinstance(value, dict) or device not in {"cpu", "cuda"}
+        or profile not in {"reference", "constrained-2gib"} or (profile == "constrained-2gib" and device != "cpu")):
+        return False
+    try:
+        def count(key, limit):
+            return type(value[key]) is int and 0 <= value[key] <= limit
+        expected_probes = [{"case": name, "denied": True, "embedding_forward_calls": 0, "cleanup_passed": True}
+                           for name in ("wrong-original-model", "wrong-artifact-digest")]
+        valid = (value["query_protocol"] == "host-approved-local-model" and value["production_embedding_unchanged"] is True
+            and value["negative_probes"] == expected_probes and len(value["query_recalls"]) == 8
+            and len(value["samples_ms"]) == 8 and all(type(t) in (int, float) and math.isfinite(t) and t > 0 for t in value["samples_ms"])
+            and all(type(r) in (int, float) and math.isfinite(r) and 0 <= r <= 1 for r in value["query_recalls"])
+            and type(value["recall_at_5"]) in (int, float) and math.isfinite(value["recall_at_5"])
+            and value["recall_at_5"] == statistics.mean(value["query_recalls"])
+            and value["recall_at_5"] >= max(0.90, baseline_recall - 0.02)
+            and count("peak_rss_bytes", 2 * 1024 ** 3) and value["peak_rss_bytes"] > 0
+            and count("peak_vram_bytes", 512 * 1024 ** 2) and (device == "cpu" or value["peak_vram_bytes"] > 0)
+            and value["actual_tensor_devices"] == ["cpu" if device == "cpu" else "cuda:0"]
+            and value["cleanup_passed"] is True and type(value["physical_exit_code"]) is int and value["physical_exit_code"] == 0)
+        if profile == "constrained-2gib":
+            memory = value["environment"]["memory_profile"]
+            valid = valid and memory["profile"] == "windows-owned-job-2gib" and memory["enforced"] is True
+            for key in ("process_commit_limit_bytes", "job_commit_limit_bytes"):
+                valid = valid and type(memory[key]) is int and memory[key] == 2 * 1024 ** 3
+        return valid
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def approved_query_profile(args, folder):
+    report = {"schema_version": "approved-context-query-qualification-v1", "status": "running",
+              "model": MODEL, "revision": REVISION, "model_files": FILES, "chunks": 1000,
+              "warmups": 5, "samples": 8, "seed": 17, "cpu_threads": 4, "attempts": [], "comparisons": [],
+              "qualification_complete": False,
+              "measurement_boundary": "Production approvedEmbedding worker branch, original embedding function and exact local model reference. Query RSS is sampled after shared imports. GPU peak is the Torch allocator after CUDA warmup/reset, not total process/device VRAM. Cold and warm queries include fresh model load, archive validation/materialization, search and cleanup; OS cache warmth is uncontrolled. Eight samples are bounded observations.",
+              "pending": ["Physical queryAdmitted runtime-adapter dispatch and Headless task/approval/policy/ACK ownership.",
+                          "Actual packaged Desktop/authenticated Managed MCP, save/rebuild/reveal/revoke and physical failed-build/replay journeys.",
+                          "Independent native/offload and parent/final roadmap qualification."]}
+    def save():
+        (folder / "approved-query-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    def attempt(label, mode, device="cpu", profile="reference"):
+        entry = {"label": label, "device": device, "profile": profile, "status": "running"}
+        report["attempts"].append(entry); save()
+        try:
+            value = run_child(args, folder, 1000, mode, device=device, profile=profile)
+            entry.update(status="observed", result=value); save()
+            print(json.dumps({"phase": label, "status": "observed"}), flush=True)
+            return value
+        except Exception as error:
+            entry.update(status="failed", error_type=failure_kind(error))
+            if isinstance(getattr(error, "owned_child_failure", None), dict):
+                entry["owned_child_failure"] = error.owned_child_failure
+            abort_unconfirmed_child(error, report, save)
+            save(); print(json.dumps({"phase": label, "status": "failed", "error_type": failure_kind(error)}), flush=True)
+            return None
+    save()
+    source = None
+    try:
+        verified_model(args.model_manifest)
+        source = source_identity()
+        report.update(source_revision=source, helper_sha256=sha256_file(SCRIPT),
+                      fixture_sha256=sha256_file(SCRIPT.parent / "trained_context_fixture.py"),
+                      heldout_sha256=hashlib.sha256(json.dumps(TOPICS).encode()).hexdigest(),
+                      thresholds={"recall_at_5_minimum": 0.90, "maximum_recall_loss": 0.02,
+                                  "score_tolerance": 1e-6, "sampled_query_rss_bytes": 2 * 1024 ** 3,
+                                  "torch_query_vram_bytes": 512 * 1024 ** 2})
+        save()
+        baseline = report["recorded_ordinary_baseline"] = approved_query_baseline()
+        corpus = attempt("cpu-generation", "prepare")
+        if corpus is None:
+            raise ValueError("The approved-query corpus was not generated.")
+        results = {}
+        for label, device, profile in (("cpu-reference", "cpu", "reference"), ("cpu-repeat", "cpu", "reference"),
+                                       ("cpu-constrained", "cpu", "constrained-2gib"),
+                                       ("cuda-reference", "cuda", "reference"), ("cuda-repeat", "cuda", "reference")):
+            value = attempt(label, "measure", device, profile)
+            if value is not None:
+                results[label] = value
+        for left, right in (("cpu-reference", "cpu-repeat"), ("cpu-reference", "cpu-constrained"),
+                            ("cuda-reference", "cuda-repeat")):
+            if left not in results or right not in results:
+                report["comparisons"].append({"left": left, "right": right, "status": "pending"})
+                continue
+            report["comparisons"].append({"left": left, "right": right, "status": "passed",
+                                          **compare(results[left], results[right])})
+        for entry in report["attempts"][1:]:
+            value = results.get(entry["label"])
+            entry["targets_met"] = approved_query_targets_met(value, entry["device"], entry["profile"], baseline[entry["device"]])
+        report["status"] = "worker-targets-met" if (len(results) == 5
+            and all(e.get("targets_met") is True for e in report["attempts"][1:])
+            and all(c["status"] == "passed" for c in report["comparisons"])) else "failed-or-pending"
+    except Exception as error:
+        report.update(status="failed", error_type=failure_kind(error))
+    finally:
+        try:
+            report["source_stable"] = source is not None and source_identity() == source
+            verified_model(args.model_manifest)
+            report["model_stable"] = True
+        except Exception as error:
+            report.update(model_stable=False, final_check_error_type=failure_kind(error))
+        if report["status"] == "worker-targets-met" and not (report.get("source_stable") and report.get("model_stable")):
+            report["status"] = "failed-input-stability"
+        save()
+        print(json.dumps({"status": report["status"], "report": (folder / "approved-query-report.json").relative_to(ROOT).as_posix()}), flush=True)
+    if report["status"] != "worker-targets-met":
+        raise SystemExit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-manifest", required=True)
@@ -477,13 +669,24 @@ def main():
     parser.add_argument("--device", choices=["cpu","cuda"], default="cpu")
     parser.add_argument("--phase", choices=["timing","memory"], default="timing")
     parser.add_argument("--profile",choices=["reference","constrained-2gib"],default="reference")
+    parser.add_argument("--approved-query", action="store_true", help="Measure only the fixed approved-model query worker profile.")
     args = parser.parse_args()
+    if args.approved_query:
+        if sys.flags.optimize:
+            raise ValueError("Approved-query qualification requires Python assertions.")
+        validate_approved_query_launch(args, args.count if args.child else 1000, args.child or "prepare",
+                                       args.variant, args.device, args.phase, args.profile)
+        if not args.child and (args.chunks != [1000] or args.run_id is not None or args.count is not None):
+            raise ValueError("Approved-query qualification requires --chunks 1000 and a fresh run.")
     run_id = args.run_id if args.child else uuid.uuid4().hex
     if not re.fullmatch(r"[a-f0-9]{32}", str(run_id)):
         raise ValueError("Invalid qualification run identity.")
     folder = ROOT / ".local-codex/trained-context" / run_id
     folder.mkdir(parents=True, exist_ok=bool(args.child))
     if args.child: child(args, folder); return
+    if args.approved_query:
+        approved_query_profile(args, folder)
+        return
     verified_model(args.model_manifest)
     source = source_identity()
     report = {"schema_version":"trained-context-qualification-v1", "source_revision":source, "model":MODEL, "revision":REVISION, "baseline_retrieval_commit":BASELINE_COMMIT, "baseline_retrieval_sha256":BASELINE_SHA256, "common_embedding_runtime":"current fixed runtime; identical trained model and device for each matched pair", "precision":"float32", "cpu_threads":4, "seed":17, "warmups":5, "samples":args.samples, "memory_runs":3, "rss_sample_interval_ms":5, "measurement_boundary":"Shared Python/Torch/Lance imports and CUDA context initialization excluded; every timed query includes package hashing/materialization/validation, fresh trained model load/inference, exact search and cleanup. OS file cache warmth uncontrolled; no cross-request model/vector cache.", "heldout_sha256":hashlib.sha256(json.dumps(TOPICS).encode()).hexdigest(), "status":"running", "workloads":[], "attempts":[]}

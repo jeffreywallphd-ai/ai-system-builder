@@ -92,7 +92,8 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         self.assertEqual(definition['interpreter'], 'python')
         self.assertEqual(selected[name]['argv'], [sys.executable, '-B', '-u', '-m', 'unittest', '-v',
             'modules.adapters.runtime.python.worker.tests.test_context_artifact_operation',
-            'modules.adapters.runtime.python.worker.tests.test_context_generation'])
+            'modules.adapters.runtime.python.worker.tests.test_context_generation',
+            'dev-tools/scripts/qualification/tests/test_trained_context_qualification.py'])
         self.assertNotIn('focused-tests', selected)
         self.assertIn('focused-tests', self.selected(list(definition['sources']), ['architecture', 'focused-tests']))
         self.assertIn('focused-tests', self.selected(list(definition['sources']) + [
@@ -100,6 +101,15 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         model_only = self.selected(['modules/adapters/runtime/python/worker/models.py'], ['architecture'])
         self.assertNotIn(name, model_only)
         self.assertIn('focused-tests', model_only)
+        for exact in ('dev-tools/scripts/qualification/run_trained_context_qualification.py',
+                      'dev-tools/scripts/qualification/tests/test_trained_context_qualification.py',
+                      'dev-tools/scripts/qualification/trained_context_fixture.py',
+                      'docs/operations/headless-context-query-runtime-evidence.json'):
+            checks = self.selected([exact], ['documentation'])
+            self.assertIn(name, checks)
+            self.assertNotIn('focused-tests', checks)
+            self.assertIn('focused-tests', self.selected([exact], ['focused-tests']))
+            self.assertIn('focused-tests', self.selected([exact, 'dev-tools/scripts/qualification/unmapped-context.py'], ['documentation']))
         lifecycle = self.selected(list(catalog.PUBLISHED_FORM_CHECKS['headless-context-artifact-lifecycle']['sources']), ['architecture'])
         self.assertEqual(lifecycle['headless-context-artifact-lifecycle']['argv'][0], 'node')
 

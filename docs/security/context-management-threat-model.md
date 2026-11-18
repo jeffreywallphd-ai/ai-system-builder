@@ -671,3 +671,23 @@ opaque selection/view IDs reach window context. No lazy initialization, source
 sharing, new query, save, adoption or restart is granted. Focused denial, real
 Core/SQLite, consent/revoke, DOM and SDK cases are controlled feature evidence;
 physical/native/actual-host and parent qualification remain separate.
+
+## Approved-model query qualification boundary
+
+The optional trained-runner profile uses only the verified fixed MiniLM
+acquisition, corpus and candidate worker. It does not replace the production
+embedding function. It removes the ordinary model alias before using an exact
+private `approvedEmbedding` reference. Negative original-model and archive-digest
+probes require denial before embedding and no retained materialization. The
+pinned ordinary baseline and unchanged worker/source hashes prevent silently
+changing the comparison corpus, model or implementation. Fixed eight-sample,
+CPU/CUDA, reference/constrained settings reject broader starts before launch.
+
+The existing supervisor owns every child and retains its unknown-exit latch,
+deadlines and memory ceilings. Only numeric results and synthetic fixture facts
+belong in portable evidence; private model paths, questions and excerpts do not.
+Never treat sampled post-import RSS or Torch allocator peaks as lifetime/process
+or whole-device memory. This profile qualifies no runtime-adapter, policy, task
+ACK/accept, app/MCP/UI or native/offload boundary. No dependency/model download,
+production guard or recovery choice is changed. Disable only the opt-in test
+profile for rollback; preserve prior results and normal security controls.

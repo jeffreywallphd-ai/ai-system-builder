@@ -104,15 +104,20 @@ current automated security checks and a separate review for Asset closure.
 
 ## Start a work request
 
-`headless-context-installed-query-worker` runs only the two fixed Context worker
-unit modules with the current test interpreter, unbuffered verbose output and a
-120-second limit. It uses synthetic vectors/archives, not model downloads. Only
-its exact task/test changes automatically select it; a shared `models.py` change
+`headless-context-installed-query-worker` runs the two fixed Context worker
+unit modules and the trained Context runner regressions with the current test
+interpreter, unbuffered verbose output and a 120-second limit. It uses synthetic
+vectors/archives and harmless protocol children, not model downloads. Its exact
+task/test and qualification-runner/test changes automatically select it; a shared `models.py` change
 alone retains generic fallback. The versioned catalog chooses the interpreter;
 no command or interpreter comes from a user work spec. Existing Node checks stay
 unchanged. The Context lifecycle profile also covers the private query port and
 payload contract. Unknown neighbors and explicit generic requests retain coverage.
-These checks qualify neither public querying nor physical resources/parent work.
+These source checks qualify neither physical resources nor parent work. The
+separate opt-in `--approved-query --chunks 1000 --samples 8` runner mode measures
+the original worker embedding callable with an explicit verified local model,
+without its ordinary comparison hook or ambient model alias. Physical results,
+actual host/adapter/MCP/UI and parent qualification remain separately reviewed.
 
 The fixed `headless-context-rebuild-inputs` profile covers strict rebuild metadata,
 current resource/liveness checks, accepted lineage and composed two-host reads with

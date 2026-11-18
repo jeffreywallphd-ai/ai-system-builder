@@ -49,7 +49,7 @@
 - Inspection/query inputs use a private hashed byte snapshot and the existing
   host task lease. Exact terminal status or successful owned worker stop permits
   cleanup; uncertain replies/cancellation and cleanup failures retain ownership.
-  Private `queryAdmitted` binds installed starts; the retained Browser adds exact saved-byte/model/source admission, numeric summaries and separate cleanup capacity. Passive question preview is metadata only. Public queries use separate v10 approval; query-window uses separate consent and ModelRead; physical qualification remains pending.
+  Private `queryAdmitted` binds installed starts; the retained Browser adds exact saved-byte/model/source admission, numeric summaries and separate cleanup capacity. Question preview is metadata-only. Public queries use v10 approval; query-window requires separate consent and ModelRead. The opt-in approved-query runner preserves the production worker embedding callable; physical/actual-host evidence stays separate from source checks and parent qualification.
 - Saved RAG validation scans every vector in bounded 256-row Arrow batches,
   retains metadata only and checks cancellation throughout. Exact query ranking,
   citations, package limits and private materialization cleanup remain required;

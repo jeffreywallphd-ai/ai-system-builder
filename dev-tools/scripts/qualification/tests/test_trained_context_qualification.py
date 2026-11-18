@@ -1,3 +1,4 @@
+import copy
 import importlib.util
 import io
 import json
@@ -358,6 +359,117 @@ class TrainedContextQualificationTests(unittest.TestCase):
                 qualification.run_child(SimpleNamespace(samples=8,model_manifest="unused"),Path(directory),1,"measure",early_identity=True)
             self.assertEqual(raised.exception.owned_child_failure["reason"],"startup-deadline")
             process.stdin.write.assert_called_once_with("observe\n")
+
+
+class ApprovedQueryQualificationTests(unittest.TestCase):
+    def args(self, **changes):
+        return SimpleNamespace(approved_query=True, samples=8, model_manifest="unused", variant="candidate", device="cpu", **changes)
+
+    def test_fixed_profile_refuses_expansion_before_process_launch(self):
+        base = dict(count=1000, mode="measure", variant="candidate", device="cpu", phase="timing", profile="reference")
+        for changes in ({"count": True}, {"count": 10000}, {"variant": "baseline"}, {"device": "auto"},
+                        {"phase": "memory"}, {"profile": "unknown"}, {"profile": "constrained-2gib", "device": "cuda"},
+                        {"early_identity": True}, {"execution_seconds": 1200}, {"mode": "prepare", "device": "cuda"}):
+            with self.subTest(changes=changes), patch.object(qualification.subprocess, "Popen") as launch, self.assertRaises(ValueError):
+                qualification.run_child(self.args(), Path("unused"), **{**base, **changes})
+            launch.assert_not_called()
+        for samples in (True, 8.0, 30):
+            args = self.args(); args.samples = samples
+            with patch.object(qualification.subprocess, "Popen") as launch, self.assertRaises(ValueError):
+                qualification.run_child(args, Path("unused"), 1000, "prepare")
+            launch.assert_not_called()
+
+    def test_child_flag_is_explicit_and_default_command_stays_compatible(self):
+        for approved in (True, False):
+            args = self.args()
+            if not approved:
+                del args.approved_query
+            with patch.object(qualification.subprocess, "Popen", side_effect=RuntimeError("launch sentinel")) as launch, self.assertRaisesRegex(RuntimeError, "launch sentinel"):
+                qualification.run_child(args, Path("fixed-run"), 1000, "prepare")
+            argv = launch.call_args.args[0]
+            self.assertEqual(argv.count("--approved-query"), int(approved))
+            self.assertIn("--child", argv)
+
+    def test_approved_runtime_retains_real_embedding_and_removes_only_its_alias(self):
+        from modules.adapters.runtime.python.worker.tasks.context_generation import _embed_with_transformers
+        from modules.adapters.runtime.python.worker.tasks import local_text_generation
+        module = SimpleNamespace(_embed_with_transformers=_embed_with_transformers)
+        model = qualification.ROOT / ".local-codex/fixed-model"
+        with patch.dict(local_text_generation._RESOLVED_MODEL_REFERENCES, {qualification.MODEL: "wrong-alias", "other/model": "untouched"}), \
+             patch.object(qualification, "load_runtime", return_value=module):
+            returned, settings = qualification.query_runtime(self.args(), Path("unused"), model)
+            self.assertIs(returned, module)
+            self.assertIs(module._embed_with_transformers, _embed_with_transformers)
+            self.assertNotIn(qualification.MODEL, local_text_generation._RESOLVED_MODEL_REFERENCES)
+            self.assertEqual(local_text_generation._RESOLVED_MODEL_REFERENCES["other/model"], "untouched")
+            self.assertEqual(settings, {"provider": "transformers", "modelId": qualification.MODEL,
+                "localModelReference": str(model), "batchSize": 1, "device": "cpu"})
+        with patch.object(qualification, "load_runtime", return_value=SimpleNamespace(_embed_with_transformers=lambda: None)), self.assertRaisesRegex(ValueError, "replaced"):
+            qualification.query_runtime(self.args(), Path("unused"), model)
+        args = self.args(); args.variant = "baseline"
+        with patch.object(qualification, "load_runtime") as load, self.assertRaises(ValueError):
+            qualification.query_runtime(args, Path("unused"), model)
+        load.assert_not_called()
+
+    def targets(self):
+        return {"query_protocol": "host-approved-local-model", "production_embedding_unchanged": True,
+                "negative_probes": [{"case": n, "denied": True, "embedding_forward_calls": 0, "cleanup_passed": True}
+                                    for n in ("wrong-original-model", "wrong-artifact-digest")],
+                "query_recalls": [1.0] * 8, "recall_at_5": 1.0, "samples_ms": [10] * 8,
+                "peak_rss_bytes": 1000, "peak_vram_bytes": 0, "actual_tensor_devices": ["cpu"],
+                "cleanup_passed": True, "physical_exit_code": 0}
+
+    def test_missing_false_nonfinite_wrong_device_and_exceeded_budget_never_pass(self):
+        self.assertTrue(qualification.approved_query_targets_met(self.targets(), "cpu", "reference", 1.0))
+        for key, value in (("query_protocol", "ordinary"), ("production_embedding_unchanged", False),
+                           ("negative_probes", []), ("recall_at_5", float("nan")), ("recall_at_5", True),
+                           ("query_recalls", [1.0] * 7), ("samples_ms", [10] * 7), ("samples_ms", [float("inf")] * 8),
+                           ("peak_rss_bytes", 0), ("peak_rss_bytes", True), ("peak_rss_bytes", 2 * 1024**3 + 1),
+                           ("peak_vram_bytes", 512 * 1024**2 + 1), ("actual_tensor_devices", ["cuda:0"]),
+                           ("cleanup_passed", False), ("physical_exit_code", False)):
+            with self.subTest(key=key, value=value):
+                v = self.targets(); v[key] = value
+                self.assertFalse(qualification.approved_query_targets_met(v, "cpu", "reference", 1.0))
+        v = self.targets(); v["query_recalls"][0] = 0.8; v["recall_at_5"] = 0.975
+        self.assertFalse(qualification.approved_query_targets_met(v, "cpu", "reference", 1.0))
+
+    def test_constrained_profile_requires_actual_unchanged_job_readback(self):
+        v = self.targets()
+        memory = {"profile": "windows-owned-job-2gib", "enforced": True,
+                  "process_commit_limit_bytes": 2 * 1024**3, "job_commit_limit_bytes": 2 * 1024**3}
+        v["environment"] = {"memory_profile": memory}
+        self.assertTrue(qualification.approved_query_targets_met(v, "cpu", "constrained-2gib", 1.0))
+        for key, value in (("enforced", False), ("process_commit_limit_bytes", 4 * 1024**3), ("job_commit_limit_bytes", None)):
+            other = copy.deepcopy(v); other["environment"]["memory_profile"][key] = value
+            self.assertFalse(qualification.approved_query_targets_met(other, "cpu", "constrained-2gib", 1.0))
+
+    def test_negative_probe_requires_real_denial_and_no_embedding_calls(self):
+        from modules.adapters.runtime.python.worker.models import ContextArtifactOperationTaskRequest
+        with tempfile.TemporaryDirectory() as name:
+            folder = Path(name)
+            request = ContextArtifactOperationTaskRequest.model_validate({"workspaceId": "fixture", "operation": "query",
+                "artifactId": "fixture", "localPath": str(folder / "synthetic.zip"), "mediaType": "application/zip",
+                "digest": "sha256:" + "1" * 64, "sizeBytes": 1, "query": "synthetic", "maximumResults": 5,
+                "embeddingDevice": "cpu", "approvedEmbedding": {"provider": "transformers", "modelId": qualification.MODEL,
+                    "localModelReference": str(folder / "model"), "batchSize": 1, "device": "cpu"},
+                "runtime": {"runtimeWorkingDirectory": str(folder)}})
+            module = SimpleNamespace(operate_on_context_artifact=Mock(side_effect=ValueError("denied")))
+            self.assertEqual(len(qualification.approved_query_denials(module, request, folder, lambda: 10)), 2)
+            module.operate_on_context_artifact = Mock(return_value={})
+            with self.assertRaisesRegex(ValueError, "denial or cleanup"):
+                qualification.approved_query_denials(module, request, folder, lambda: 10)
+            module.operate_on_context_artifact = Mock(side_effect=ValueError("denied"))
+            with self.assertRaisesRegex(ValueError, "denial or cleanup"):
+                qualification.approved_query_denials(module, request, folder, Mock(side_effect=[10, 11]))
+
+    def test_recorded_baseline_matches_fixed_model_runtime_and_corpus(self):
+        value = qualification.approved_query_baseline()
+        self.assertEqual(value, {"report_digest": qualification.APPROVED_QUERY_BASELINE, "cpu": 1.0, "cuda": 1.0})
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name); p = root / "docs/operations/headless-context-query-runtime-evidence.json"
+            p.parent.mkdir(parents=True); p.write_text('{"model":"wrong"}')
+            with patch.object(qualification, "ROOT", root), self.assertRaisesRegex(ValueError, "baseline changed"):
+                qualification.approved_query_baseline()
 
 
 if __name__ == "__main__": unittest.main()

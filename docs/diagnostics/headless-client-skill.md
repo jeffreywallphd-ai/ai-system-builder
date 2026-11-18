@@ -7,7 +7,7 @@ saved RAG reference, the question, CPU or CUDA, and a result limit from 1 to 20.
 The question can contain up to 2,000 characters. The app returns its exact
 fingerprint and original model metadata. It does not save or return the question,
 read source files, load a model or start a query. Keep all readiness marked as
-not checked. The public query action and query summaries still need implementation.
+not checked. Execution requires the separate version-10 query approval below.
 
 ## Show Context in the app
 
@@ -23,7 +23,7 @@ status/counts, not source or query text. Display cannot create the Context featu
 or approve a new task. Checking an accepted task can validate its output and
 recover its existing worker under the original task controls. A saved file's
 availability is not checked by this metadata read.
-Public query summaries need their separate implementation. Stop display after
+Query summaries use the separate `show-context-query` selector below. Stop display after
 revoke or expiry; independent Context work remains intact. Report window display
 separately from backend completion and save approval.
 
@@ -310,6 +310,35 @@ workspace and host. Revoke or expiry stops fresh display/context, preserving the
 accepted backend task. Read the portable Context guide for exact steps and limits.
 
 ### Context worker observations
+
+For the separate approved-model worker profile, use the already installed,
+verified MiniLM acquisition. Run from the repository root with the existing
+qualified Python environment:
+
+```text
+python dev-tools/scripts/qualification/run_trained_context_qualification.py --approved-query --chunks 1000 --samples 8 --model-manifest .local-codex/model-qualification/minilm-<UUID>/acquisition.json
+```
+
+This mode preserves the ordinary comparison matrix. It runs only the current
+approved-model query branch with the original production embedding callable,
+an explicit local model reference and no ordinary model alias. It uses the fixed
+corpus and CPU/repeat/constrained and CUDA/repeat profiles. Wrong original-model
+and artifact-digest probes must deny before inference and clean materialization.
+The recorded ordinary baseline is pinned and reused without rerunning it.
+Existing child ownership, unknown-exit refusal, deadlines and memory bounds stay.
+No model or dependency is downloaded. Keep every failure and review the generated
+`approved-query-report.json` before updating qualification. This worker-only
+profile does not exercise the Headless runtime adapter, task approval, saved
+ownership, MCP transport or app UI. Those checks remain separate.
+
+The [approved-model worker record](../operations/headless-context-admitted-query-evidence.json)
+contains the observed CPU/repeat/constrained and CUDA/repeat results. All five
+query cohorts reached recall 1.0, the three exact comparisons passed, and ten
+negative probes denied with zero embedding forward calls. All six owned workers
+exited normally. The verified temporary model copy and generated source/archive
+were removed; the original cache remains unchanged. This is a bounded worker
+observation. It does not complete the remaining runtime-adapter, app or roadmap
+qualification. No ordinary or Qwen accuracy cohort was rerun.
 
 The [bounded retrieval record](../operations/headless-context-query-runtime-evidence.json)
 uses the existing offline, hash-pinned MiniLM model and the fixed 1,000-row,
