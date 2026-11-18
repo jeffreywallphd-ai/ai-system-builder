@@ -538,14 +538,14 @@ function isPairRequest(value: unknown): value is { readonly pairingCode: string 
     "pairingCode" in value && typeof value.pairingCode === "string" && value.pairingCode.length === 43;
 }
 
-function errorStatus(code: Extract<HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult |
+function errorStatus(code: Extract<HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessPlanStepResult |
   HeadlessPlanReviewAgentResult, { ok: false }>["code"]): number {
   switch (code) {
     case "headless.forbidden": return 403;
     case "headless.not-found": return 404;
     case "headless.host-changed": case "headless.stale": case "headless.stale-revision": case "headless.idempotency-conflict": case "headless.source-not-ready": return 409;
     case "headless.idempotency-expired": case "headless.plan-expired": return 410;
-    case "headless.unavailable": case "headless.operation-unconfirmed": case "headless.operation-capacity": return 503;
+    case "headless.unavailable": case "headless.operation-unconfirmed": case "headless.operation-capacity": case "headless.not-started": return 503;
     case "headless.result-too-large": return 413;
     default: return 400;
   }

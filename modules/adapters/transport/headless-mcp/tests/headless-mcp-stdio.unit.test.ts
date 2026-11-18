@@ -457,12 +457,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   });
   const store = createStructuredHeadlessPlanReviewRepository(platform, async (_owner, target) =>
     target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
-    target.scope.workspaceId === workspaceId, Date.now, async () => true, true, true, true, true);
+    target.scope.workspaceId === workspaceId, Date.now, async () => true, true, true, true, true, true);
   let effectCount = 0;
   let fileEffectCount = 0;
   let providerEffectCount = 0;
   let datasetEffectCount = 0;
   let datasetSaveCount = 0;
+  let contextDenials = 0;
   const datasetTaskId = randomUUID();
   let requestCount = 0;
   let sourceReads = 0;
@@ -548,7 +549,7 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
     } },
     planReview: { hostIncarnationId, allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true,
-      allowDatasetResultSave: true, async execute(input, grant) {
+      allowDatasetResultSave: true, allowContextPackGeneration: true, async execute(input, grant) {
       const { fingerprint, workspaceId } = input.target;
       const target = { hostIncarnationId, fingerprint, scope: { workspaceId, organizationId: grant.organizationId,
         principalId: grant.principalId, registeredClientId: grant.registeredClientId } };
@@ -568,6 +569,10 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       const review = await store.read({ target: { hostIncarnationId, fingerprint, scope }, isCurrent });
       if (!review.ok || review.snapshot.state.status !== "approved" || review.snapshot.state.revision !== approvalRevision || step !== 1)
         return { result: { ok: false, code: "headless.forbidden" } };
+      if (review.snapshot.preview.steps[0]?.operation === "context.generate-pack") {
+        contextDenials++;
+        return {result: {ok: false, code: "headless.not-started"}};
+      }
       if (review.snapshot.preview.steps[0]?.operation === "data.save-prepared-dataset") {
         const kind = datasetSaveCount ? "replayed" as const : "committed" as const;
         if (!datasetSaveCount) datasetSaveCount++;
@@ -848,6 +853,18 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     assert.deepEqual(await call("aisb_run_approved_build_step", resultTarget), {ok: true, value: {...savedDataset.value, kind: "replayed"}});
     assert.equal(datasetSaveCount, 1);
     assert.equal(datasetEffectCount, 1);
+    const contextSteps = [{operation: "context.generate-pack", idempotencyKey: randomUUID(), name: "Unavailable Context profile",
+      sources: [{kind: "ingestion-file", taskId: sourceTarget.taskId, fileId: sourceTarget.fileId, taskRevision: sourceTarget.taskRevision}],
+      settings: contextSettings}];
+    const contextPlan = checkedPlan(await call("aisb_preview_build_plan", {...scope, steps: contextSteps}));
+    assert.equal((await call("aisb_request_build_plan_approval", {...scope, fingerprint: contextPlan.fingerprint, steps: contextSteps})).ok, true);
+    assert.ok((await new HeadlessBuildPlanReviewUseCase(store, Date.now).decide({fingerprint: contextPlan.fingerprint,
+      expectedRevision: 1, decision: {kind: "approve", mode: "whole-plan"}}, hostIncarnationId,
+      {workspaceId, organizationId, principalId: identity.principalId, registeredClientId: registered.registeredClientId},
+      {organizationId, principalId: identity.principalId, channel: "app-popup", isCurrent, canDecide: async () => isCurrent()})).ok);
+    assert.deepEqual(await call("aisb_run_approved_build_step", {...scope, fingerprint: contextPlan.fingerprint, approvalRevision: 2, step: 1}),
+      {ok: false, code: "headless.not-started"});
+    assert.equal(contextDenials, 1, "A declared non-start must traverse the actual loopback status and SDK without an automatic retry.");
   } finally {
     await client.close();
     await connector.close();
@@ -871,6 +888,9 @@ test("the pinned plan forwarder validates status and preserves uncertain writes"
     { ...localValue, privatePath: "synthetic-private.csv" }];
   let localRequests = 0;
   const stepReplies = [
+    {status:503, body:{ok:false, code:"headless.not-started"}},
+    {status:503, body:{ok:false, code:"headless.not-started", detail:"private"}},
+    {status:400, body:{ok:false, code:"headless.not-started"}},
     {status:503, body:{ok:false, code:"headless.invalid-request"}},
     {status:503, body:{unexpected:true}},
     {status:404, body:{ok:false, code:"headless.invalid-request"}},
@@ -927,7 +947,8 @@ test("the pinned plan forwarder validates status and preserves uncertain writes"
     assert.deepEqual(await forward({ version, ...request.request }), { ok: false, code: "headless.unavailable" });
     const exact = {version, operation:"plan.run-step",
       input:{hostIncarnationId, workspaceId, fingerprint, approvalRevision:2, step:1}} as const;
-    for (const code of ["headless.operation-unconfirmed", "headless.operation-unconfirmed",
+    for (const code of ["headless.not-started", "headless.operation-unconfirmed", "headless.operation-unconfirmed",
+      "headless.operation-unconfirmed", "headless.operation-unconfirmed",
       "headless.operation-unconfirmed", "headless.operation-unconfirmed", "headless.invalid-request", "headless.host-changed",
       "headless.operation-unconfirmed"]) {
       assert.deepEqual(await forward(exact), {ok:false, code});

@@ -16,6 +16,7 @@ import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createOrganizationId} from "../../../../contracts/organization";
 import type {StartContextGenerationCommand} from "../../../../contracts/context-management";
 import {TaskType, type ContextGenerationTaskRequest} from "../../../../contracts/runtime";
+import {readHeadlessPlanStepResult, type HeadlessHostIncarnationId} from "../../../../contracts/headless";
 import {createFilesystemArtifactObjectStorageAdapter, createFilesystemContextResultByteStorageAdapter,
   createFilesystemContextResultOutputSourceAdapter} from "../../../../adapters/storage/filesystem/artifact-store";
 import type {ArtifactObjectStoragePort} from "../../../ports/storage";
@@ -27,6 +28,20 @@ const workspaceId = createWorkspaceId("workspace.context-admission"), organizati
 const originalBytes = new TextEncoder().encode("text\nSynthetic release documentation.\n");
 const hash = (bytes: Uint8Array) => "sha256:" + createHash("sha256").update(bytes).digest("hex");
 const artifactId = "private/synthetic/context.csv";
+test("known Context non-start wire reports require its capability and cannot disclose extra fields", () => {
+  const exact = {hostIncarnationId: "95f65f77-e882-441a-a7db-cb0b99a5f1ad" as HeadlessHostIncarnationId,
+    workspaceId, fingerprint: "a".repeat(64), approvalRevision: 2, step: 1};
+  const result = {ok: false, code: "headless.not-started"};
+  for (const options of [{allowContextPackGeneration: true}, {allowContextRagGeneration: true}])
+    assert.deepEqual(readHeadlessPlanStepResult(result, exact, options), result);
+  for (const options of [undefined, {}, {allowContextResultSave: true}, {allowContextRagGeneration: false}])
+    assert.deepEqual(readHeadlessPlanStepResult(result, exact, options), {ok: false, code: "headless.unavailable"});
+  for (const extra of [{detail: "private"}, {value: {}}, {taskId: "guessed-task"}, {path: "private"}])
+    assert.deepEqual(readHeadlessPlanStepResult({...result, ...extra}, exact, {allowContextPackGeneration: true}),
+      {ok: false, code: "headless.unavailable"});
+  assert.deepEqual(readHeadlessPlanStepResult({ok: false, code: "headless.operation-unconfirmed"}, exact),
+    {ok: false, code: "headless.operation-unconfirmed"});
+});
 function command(): StartContextGenerationCommand {return {kind: "markdown-context-pack", name: "Synthetic context",
   sources: [{artifactId}], chunking: {strategy: "topic-aware", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]},
   contextPack: {inputMode: "source-materials", method: "none", cleaningPreset: "standard"}};}
@@ -162,6 +177,29 @@ test("approved Context dispatch uses exact staged bytes and reserved identity on
   assert.deepEqual(h.counts(), {issueCount: 1, readCount: 1, dispatchCount: 1, statusCount: 0, cancelCount: 0});
   await h.stop(); assert.deepEqual(await h.roots(), []);
 }));
+
+test("the Context owner proves only fresh pre-dispatch or closed no-POST non-starts, never duplicate or unknown attempts", async () => {
+  for (const variant of ["missing-model", "missing-runtime", "closed-unavailable", "unknown-issue", "unknown-dispatch", "accepted"] as const)
+    await withHarness(async h => {
+      const selected = variant === "missing-model" ? ragCommand() : command();
+      if (variant === "missing-model") h.setModelReference(undefined);
+      if (variant === "missing-runtime") h.setInstalledSupported(false);
+      if (variant === "closed-unavailable") h.setInstalledStart("unavailable");
+      if (variant === "unknown-issue") h.setIssue(async () => "unconfirmed");
+      if (variant === "unknown-dispatch") h.setInstalledBridge(async () => ({kind: "unconfirmed", admittedStartOutcome: "not-started"} as never));
+      const result = await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected));
+      const proven = ["missing-model", "missing-runtime", "closed-unavailable"].includes(variant);
+      assert.equal(result.admittedStartOutcome, proven ? "not-started" : undefined, variant);
+      assert.equal(result.ok, variant === "accepted", variant);
+      if (variant === "missing-model" || variant === "missing-runtime") {
+        assert.equal(h.counts().readCount, 0); assert.equal(h.counts().dispatchCount, 0); assert.equal(h.counts().issueCount, 0);
+      }
+      if (variant === "unknown-issue" || variant === "unknown-dispatch" || variant === "accepted" || variant === "closed-unavailable") {
+        const duplicate = await h.useCase.startAdmittedContext(selected, h.context, h.admission(selected));
+        assert.equal(duplicate.ok, false); assert.equal(duplicate.admittedStartOutcome, undefined, variant);
+      }
+    });
+});
 
 test("declared source terms are copied from admission instead of unbound object metadata", async () => withHarness(async h => {
   const selected = command(), original = h.admission(selected);

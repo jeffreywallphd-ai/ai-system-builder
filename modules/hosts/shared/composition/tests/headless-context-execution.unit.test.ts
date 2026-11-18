@@ -23,6 +23,7 @@ import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot} from "..
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createTenantPlacementConfig} from "../../../../contracts/config";
+import {createContractError, createFailureResult} from "../../../../contracts/shared";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentRequest} from "../../../../contracts/headless";
 
@@ -78,6 +79,7 @@ test(`${host} approved Context ${kind} ${channel} ${mode} starts once and retain
       localPath: join(directory, "private/model"), taskTags: ["embeddings"] as const, serializationFormat: "safetensors" as const};
     if (kind === "rag") await models.registerDownloadedModel({...savedModel, taskTags: [...savedModel.taskTags]});
     let current = true, starts = 0, statusReads = 0, ownerResolutions = 0, loseAccessAfterStart = false, mutateModelBeforeIssue = false, changedIssues = 0;
+    let forceNonstart = false, nonstartCalls = 0;
     const scope = {organizationId, principalId, workspaceId, registeredClientId};
     const registration = {...scope, purpose: "plan-review" as const, isCurrent: () => current};
     const grant = {...scope, planReview: true as const, workspaceIds: [workspaceId], isCurrent: () => current};
@@ -85,6 +87,12 @@ test(`${host} approved Context ${kind} ${channel} ${mode} starts once and retain
     const getContextStart = async () => async (command: any, context: any, admission: any) => {
       assert.equal(context.organizationId, organizationId); assert.equal(context.principalId, principalId);
       assert.equal(command.kind, kind === "rag" ? "rag-database" : "markdown-context-pack");
+      if (forceNonstart) {
+        nonstartCalls++;
+        if (mode === "whole-plan") assert.equal(await admission.issue(), "issued");
+        return {...createFailureResult(createContractError("unavailable", "Synthetic unavailable profile.")),
+          admittedStartOutcome: "not-started" as const};
+      }
       if (kind === "pack") assert.equal(command.contextPack.method, "none");
       else {
         assert.equal(admission.embeddingModel.modelRecordId, savedModel.modelRecordId);
@@ -187,6 +195,27 @@ test(`${host} approved Context ${kind} ${channel} ${mode} starts once and retain
       assert.ok(acceptedAfterModelChange.result.ok, "An accepted historical receipt remains replayable after model metadata changes.");
       assert.equal(acceptedAfterModelChange.result.value.kind, "replayed"); assert.equal(starts, 1);
     }
+    const deniedInput = {...input, steps: [{...input.steps[0], idempotencyKey: randomUUID(), name: "Unavailable profile"}]};
+    const deniedPlan = parseHeadlessBuildPlanProposal(deniedInput, hostIncarnationId, capabilities); assert.ok(deniedPlan.ok);
+    const deniedFingerprint = createHash("sha256").update(JSON.stringify(deniedPlan.preview)).digest("hex");
+    const deniedSubmit = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit",
+      input: {...deniedInput, fingerprint: deniedFingerprint}}, hostIncarnationId, capabilities); assert.ok(deniedSubmit.ok);
+    const deniedSubmitted = host === "Desktop" ? await desktop.execute(deniedSubmit.request, grant, async () => grant)
+      : await managed(deniedSubmit.request, registration, () => current); assert.ok(deniedSubmitted.ok);
+    assert.ok((await app.decide({fingerprint: deniedFingerprint, expectedRevision: 1, decision: mode === "whole-plan"
+      ? {kind: "approve", mode} : {kind: "approve", mode, step: 1}}, hostIncarnationId, scope,
+      {...identity, channel, isCurrent: () => current, canDecide: async () => current})).ok);
+    const deniedStep = {...step, input: {...step.input, fingerprint: deniedFingerprint}};
+    const runDenied = () => host === "Desktop" ? desktop.runStep!(deniedStep, grant, async () => grant)
+      : managed.runStep!(deniedStep, registration, () => current);
+    forceNonstart = true;
+    assert.deepEqual((await runDenied()).result, {ok: false, code: "headless.not-started"});
+    forceNonstart = false;
+    assert.deepEqual((await runDenied()).result, {ok: false, code: "headless.not-started"});
+    assert.equal(nonstartCalls, 1); assert.equal(starts, 1, "A recorded non-start can never become a fresh dispatch.");
+    current = false;
+    assert.deepEqual((await runDenied()).result, {ok: false, code: "headless.forbidden"});
+    current = true;
     let retireWhileOpening = false, processorOpens = 0;
     const status = composeHeadlessContextTask(platform, async () => {
       processorOpens++; if (retireWhileOpening) current = false;
@@ -197,6 +226,8 @@ test(`${host} approved Context ${kind} ${channel} ${mode} starts once and retain
       input: {hostIncarnationId, workspaceId, selection: {kind: "plan-step" as const, fingerprint, step: 1}}};
     const authority = {context: scope, clientId: registeredClientId, stillAllowed: async () => current};
     assert.equal((await status.execute(query, authority)).ok, true); assert.equal(statusReads, 1);
+    assert.equal((await status.execute({...query, input: {...query.input, selection: {...query.input.selection, fingerprint: deniedFingerprint}}}, authority)).ok, false);
+    assert.equal(statusReads, 1, "A non-start record cannot be adopted as an accepted task.");
     assert.equal((await status.execute(query, {...authority, clientId: randomUUID()})).ok, false); assert.equal(statusReads, 1);
     assert.equal(processorOpens, 1, "A foreign client must not resolve the processor.");
     retireWhileOpening = true;

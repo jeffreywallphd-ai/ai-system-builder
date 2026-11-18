@@ -621,3 +621,22 @@ Desktop proposal checks use only its cached retained Context owner, not lazy
 runtime initialization inside a metadata transaction. Both hosts replay a
 committed save without that owner. Unknown effects retain uncertainty and the
 existing ordinary-action denial; no second publication or file adoption follows.
+
+### Proven generation non-starts
+
+The internal admitted-start result can carry `admittedStartOutcome: not-started`
+only when the owner proves a fresh call did not dispatch a task and retains no
+uncertain attempt. This includes missing model/runtime support before dispatch
+and the installed-only registry's closed no-task-POST result. Duplicate IDs,
+unknown issuance, possible dispatch and lost or malformed replies supply no proof.
+
+The exact newly reserved owning call can record that proof as a version-2
+terminal task outcome, with its original reserved/issued phase and indexes.
+Ordinary version-1 task records retain their schema. Historical unknown records
+are never inferred or adopted as non-starts. The terminal outcome cannot issue,
+become accepted or authorize status/save/presentation. Current approved-step
+replay reports only `headless.not-started`, without reopening a processor or
+dispatching again. Outward actor/client/plan checks remain separate from trusted
+outcome recording after revocation. HTTP503 carries the exact fixed code; SDK
+transport preserves it only at that status and under declared Context generation
+support. Lost, malformed or mismatching responses remain unconfirmed.

@@ -87,8 +87,9 @@ export function composeDesktopHeadlessPlanReview(options: {
     const canUse = async (savesFile = false, usesModel = false) => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
       await authorize(workspaces, authorization, workspaceId, request.operation, savesFile, usesModel) && isCurrent();
     let savingFile: "local-data-save" | "provider-data-save" | "local-dataset-start" | "local-dataset-save" | "context-pack-start" | "context-rag-start" | "context-result-save" | undefined;
-    function localFailure(result: typeof forbidden | typeof unconfirmed) {
-      options.audit?.backend(savingFile ?? "local-data-save", workspaceId, result.code === "headless.forbidden" ? "denied" : "unconfirmed");
+    function localFailure(result: typeof forbidden | typeof unconfirmed | {readonly ok: false; readonly code: "headless.not-started"}) {
+      options.audit?.backend(savingFile ?? "local-data-save", workspaceId,
+        result.code === "headless.forbidden" || result.code === "headless.not-started" ? "denied" : "unconfirmed");
       return { result };
     }
     try {
@@ -136,7 +137,8 @@ export function composeDesktopHeadlessPlanReview(options: {
         savingFile = rag ? "context-rag-start" : "context-pack-start";
         const outcome = await runPreparedHeadlessContextPack({prepared, request, context: {organizationId, principalId, workspaceId},
           canUse: () => canUse(true, rag), resolveStart: async () => options.getContextStart?.()});
-        if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
+        if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.not-started" ? outcome.result
+          : outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
         options.audit?.backend(savingFile, workspaceId, outcome.result.value.kind);
         return outcome;
       }

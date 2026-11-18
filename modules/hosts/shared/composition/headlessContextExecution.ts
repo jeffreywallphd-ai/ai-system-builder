@@ -80,6 +80,7 @@ export async function runPreparedHeadlessContextPack(options: {
   if (!prepared.isCurrent() || !await canUse()) return forbidden;
   const observed = await prepared.inspect();
   if (!observed) return unconfirmed;
+  let noTaskStarted = observed.kind === "not-started";
   let kind: "started" | "replayed" = "replayed";
   let reference = observed.kind === "accepted" ? observed.reference : undefined;
   if (observed.kind === "absent") {
@@ -89,7 +90,8 @@ export async function runPreparedHeadlessContextPack(options: {
     const reserved = await prepared.reserve();
     if (!reserved) return unconfirmed;
     if (reserved.kind === "capacity") return {result: {ok: false, code: "headless.operation-capacity"}} as const;
-    if (reserved.kind === "accepted") reference = reserved.reference;
+    if (reserved.kind === "not-started") noTaskStarted = true;
+    else if (reserved.kind === "accepted") reference = reserved.reference;
     else if (reserved.kind === "new") {
       const {taskId, sourceDigest, compiled} = reserved;
       if (!context.organizationId || !context.principalId || context.workspaceId !== prepared.request.input.workspaceId) return forbidden;
@@ -99,15 +101,21 @@ export async function runPreparedHeadlessContextPack(options: {
         isCurrent: prepared.isCurrent,
         stillAllowed: async () => prepared.isCurrent() && await canUse() && await prepared.stillAllowed(),
         issue: () => prepared.issue(taskId, sourceDigest)});
-      if (!result.ok || result.value.requestId !== taskId || result.value.taskType !== "generate-context-artifact" ||
-          result.value.accepted !== true || (result.value.status !== "queued" && result.value.status !== "running")) return unconfirmed;
-      // Record the admitted outcome even after caller revocation; outward disclosure is a separate boundary.
-      if (!await prepared.accept(taskId)) return unconfirmed;
-      kind = "started";
-      reference = await prepared.readReceipt();
+      if (!result.ok && result.admittedStartOutcome === "not-started") {
+        if (!await prepared.recordNotStarted(taskId, sourceDigest)) return unconfirmed;
+        noTaskStarted = true;
+      } else {
+        if (!result.ok || result.value.requestId !== taskId || result.value.taskType !== "generate-context-artifact" ||
+            result.value.accepted !== true || (result.value.status !== "queued" && result.value.status !== "running")) return unconfirmed;
+        // Record the admitted outcome even after caller revocation; outward disclosure is a separate boundary.
+        if (!await prepared.accept(taskId)) return unconfirmed;
+        kind = "started";
+        reference = await prepared.readReceipt();
+      }
     }
   }
   if (!prepared.isCurrent() || !await canUse() || !await prepared.stillAllowed()) return forbidden;
+  if (noTaskStarted) return {result: {ok: false, code: "headless.not-started"}} as const;
   if (!reference) return unconfirmed;
   const {fingerprint, approvalRevision, step} = request.input;
   return {result: readHeadlessPlanStepResult({ok: true, value: {kind, operation: prepared.request.operation,

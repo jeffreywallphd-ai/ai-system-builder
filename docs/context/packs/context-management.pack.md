@@ -164,14 +164,12 @@ the list or report deletion. A different key leaves the selected view intact.
   v6 approval, then inspect only an accepted `context.task`. The initial active
   profile uses exact saved sources and no model. Distinct one-use receipts bind
   source/license witnesses; uncertainty never permits another start or adoption.
-  Replies contain state/counts/review fingerprint and require separate save.
-  See the canonical architecture and threat model. Active RAG, Context saving,
-  query/rebuild/presentation and parent qualification remain separate work.
+  Replies contain state/counts/review fingerprint and require separate save;
+  they grant no query/rebuild/presentation or parent qualification.
 
 - Internal RAG admission also binds selected saved-model facts and checked existing
   safe-weight files. The runtime-only local reference is excluded from public
-  commands and portable manifests. File checks are cooperative; public RAG,
-  actual model resources and native custody remain separate qualification.
+  commands and portable manifests. Cooperative file checks do not qualify actual model resources or native custody.
 
 - Separately enabled `context.generate-rag` plans use preview version7 and bind
   the exact saved-model witness through atomic issue after source staging.
@@ -182,9 +180,7 @@ the list or report deletion. A different key leaves the selected view intact.
 - The private Context result-byte publisher shares ingestion's bounded verified
   stream mechanism. It derives an opaque scoped key and checks complete EOF/SHA
   before exclusive publication, without catalog/binding writes or deletion.
-  Byte acknowledgement alone grants no task ownership or save approval. The
-  owning save admission, atomic causal metadata, public operations and native
-  qualification remain separate work.
+  Byte acknowledgement grants no task/save approval, metadata activation or native qualification.
 
 - The internal Context save owner binds an accepted task and exact reviewed
   output to one admitted save, a bounded output reader and exclusive byte
@@ -197,3 +193,7 @@ the list or report deletion. A different key leaves the selected view intact.
   Its atomic version-2 index supports passive `context.saved` metadata; `byteAvailability: not-checked` asserts no archive readiness.
   Desktop proposal reads use the retained owner without runtime initialization; receipt replay needs no live processor.
   Version-1 private receipts stay internal; no file/task adoption or parent pass is inferred.
+
+- Only the owning call's proven non-start can create a version-2 terminal task outcome.
+  `headless.not-started` replay never dispatches or becomes an accepted task.
+  Unknown issuance, possible starts and legacy interrupted attempts stay unconfirmed.

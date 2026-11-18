@@ -167,3 +167,10 @@ path. The shared host composition requires an exact save authorizer in the same
 root-owned transaction and performs one exact read-only reconciliation of a
 possibly committed reply. It does not provide a public save action, native
 restart recovery or physical RAG/retrieval qualification.
+
+`startAdmittedContext` can also return a private proven `not-started` outcome.
+The owner sets it only after a fresh pre-dispatch denial or a closed installed-only
+no-task-POST result, with no retained uncertain attempt. Duplicate/possibly started
+tasks, unknown issuance and arbitrary runtime fields never supply that proof.
+Ordinary generation responses are unchanged. The headless owner records the
+terminal non-start separately from current permission to disclose it.

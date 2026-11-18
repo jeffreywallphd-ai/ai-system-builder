@@ -130,6 +130,11 @@ export interface StartContextGenerationValue {
   readonly status: "queued" | "running";
 }
 
+/** Internal owning-call evidence only; never parsed from a runtime/client reply. */
+export type AdmittedContextStartResult = ContractResult<StartContextGenerationValue> & {
+  readonly admittedStartOutcome?: "not-started";
+};
+
 const OUTPUT_HANDLE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,200}$/;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
@@ -473,18 +478,23 @@ export class ContextGenerationUseCase {
 
   /** Internal capability only. The host must supply exact current one-use plan admission. */
   public async startAdmittedContext(rawCommand: StartContextGenerationCommand, rawContext: ApplicationRequestContext,
-    rawAdmission: ApprovedContextGenerationAdmission): Promise<ContractResult<StartContextGenerationValue>> {
+    rawAdmission: ApprovedContextGenerationAdmission): Promise<AdmittedContextStartResult> {
     const context = {...rawContext};
     const parsed = readApprovedContextAdmission(rawCommand, context, rawAdmission);
-    if (!parsed || !this.taskReconciler || !this.runtime.startTaskWithoutInstalling ||
-        (parsed.command.kind === "rag-database" && !this.embeddingModels) || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
-        this.issuedTaskIds.size >= APPROVED_CONTEXT_MAX_TASK_HISTORY ||
-        this.admittedStarts.has(parsed.admission.taskId) || this.issuedTaskIds.has(parsed.admission.taskId) ||
+    // A duplicate/invalid admission may refer to an existing or uncertain task.
+    // It must never manufacture evidence that that task did not start.
+    if (!parsed || this.admittedStarts.has(parsed.admission.taskId) || this.issuedTaskIds.has(parsed.admission.taskId) ||
         this.scopes.has(parsed.admission.taskId) || [...this.uncertainStarts].some(attempt => attempt.requestedId === parsed.admission.taskId))
       return this.startUnavailable(context);
+    if (!this.taskReconciler || !this.runtime.startTaskWithoutInstalling ||
+        (parsed.command.kind === "rag-database" && !this.embeddingModels) || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
+        this.issuedTaskIds.size >= APPROVED_CONTEXT_MAX_TASK_HISTORY)
+      return {...this.startUnavailable(context), admittedStartOutcome: "not-started"};
     const attempt: ContextStartAttempt = {admission: parsed.admission, leaseStarted: false, retained: false, issued: false, dispatchAttempted: false};
     this.admittedStarts.set(parsed.admission.taskId, attempt);
-    return this.runStartAttempt(parsed.command, context, attempt);
+    const result = await this.runStartAttempt(parsed.command, context, attempt);
+    return !result.ok && !attempt.dispatchAttempted && !attempt.retained
+      ? {...result, admittedStartOutcome: "not-started"} : result;
   }
 
   private startUnavailable(context?: ApplicationRequestContext): ContractResult<StartContextGenerationValue> {

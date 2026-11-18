@@ -469,3 +469,21 @@ read permission grants no original-task control. Version-1 private records are
 not adopted. A metadata reply explicitly does not assert current byte readiness.
 Synthetic SQLite/Core/SDK fixtures do not qualify real archives, models,
 PostgreSQL concurrency, browser delivery, native races or process recovery.
+
+### Proven non-start outcome integrity
+
+Only trusted admitted-start control flow can produce a no-task-started marker.
+No raw runtime field, exception, missing status, duplicate task ID or legacy
+reserved/issued record can establish it. The marker is internal; public step
+failure is only the fixed `headless.not-started` code. Source paths, model files,
+queries and port diagnostics remain private.
+
+A fresh owning call records the exact task/source/actor/client/plan identity in
+a strictly decoded version-2 terminal task variant. Its original phase fixes
+the expected revision. Counts and point indexes stay consumed; the outcome
+cannot be reset, issued or accepted and supplies no task/save/window capability.
+Unknown effects retain their existing staging and replay guard. Trusted outcome
+recording after revocation grants no disclosure; current policy surrounds the
+public reply. The SDK accepts the code only as a strict HTTP503 Context response;
+ambiguous status/body or transport errors stay unconfirmed. These focused checks
+do not qualify actual retrieval, native recovery or the parent increment.

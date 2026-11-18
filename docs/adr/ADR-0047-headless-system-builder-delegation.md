@@ -303,3 +303,12 @@ receipts remain replayable without public adoption. Desktop uses its retained
 owner for metadata-only proposal checks. Committed replay needs no runtime owner.
 No new engine, provider, external transfer, native exception or parent
 qualification follows from this connection.
+
+The same existing-owner boundary distinguishes a proven Context non-start from
+an uncertain effect. Only a fresh owning call can supply private proof that no
+task dispatched, including the installed-only registry's closed no-POST denial.
+A version-2 terminal task outcome preserves that fact under the original exact
+identity and consumed indexes. It grants no repeat issue, accepted-task access,
+adoption or recovery. Public `headless.not-started` and exact replay retain
+current policy; unknown, duplicated or possibly started work remains unconfirmed.
+Earlier previews, version-1 task history and ordinary Context behavior stay intact.

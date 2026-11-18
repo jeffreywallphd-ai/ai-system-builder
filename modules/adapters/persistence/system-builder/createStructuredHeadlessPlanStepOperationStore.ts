@@ -20,7 +20,7 @@ import {inspectStructuredDatasetResultSave, reserveStructuredDatasetResultSave, 
 import {inspectStructuredDatasetPlanTask, reserveStructuredDatasetPlanTask, issueStructuredDatasetPlanTask,
   acceptStructuredDatasetPlanTask, type DatasetPlanTaskEffect} from "../ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import {inspectStructuredContextPlanTask, reserveStructuredContextPlanTask, issueStructuredContextPlanTask,
-  acceptStructuredContextPlanTask, type ContextPlanTaskEffect} from "./createStructuredHeadlessContextPlanTaskStore";
+  acceptStructuredContextPlanTask, recordStructuredContextTaskNotStarted, type ContextPlanTaskEffect} from "./createStructuredHeadlessContextPlanTaskStore";
 import {
   issueStructuredLocalFilePlanEffect, readCommittedStructuredLocalFilePlanEffect, type LocalFilePlanEffect,
 } from "../ingestion/createStructuredHeadlessLocalFilePlanStepStore";
@@ -490,6 +490,13 @@ export async function prepareStructuredHeadlessPlanStep(
         // continuing authority to see the result or approve another step.
         try {return await ownedTransaction(owner => acceptStructuredContextPlanTask(
           owner.forOrganization(target.scope.organizationId), effect, taskId, now()), () => {});}
+        catch {return false;}
+      },
+      async recordNotStarted(taskId: string, sourceDigest: string) {
+        // Record this already observed owning-call outcome after revocation as
+        // well. It never grants another start or outward disclosure authority.
+        try {return await ownedTransaction(owner => recordStructuredContextTaskNotStarted(
+          owner.forOrganization(target.scope.organizationId), effect, taskId, sourceDigest, now()), () => {});}
         catch {return false;}
       },
       async readReceipt() {

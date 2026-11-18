@@ -35,6 +35,7 @@ type SavedContextEffect = {readonly kind: "committed" | "replayed"; readonly ope
 type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly operation: "context.generate-pack" | "context.generate-rag";
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
+  {readonly ok: false; readonly code: "headless.not-started"} |
   { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | SavedContextEffect | StartedContextPackEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
@@ -62,6 +63,9 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "code", "value"]);
     if (raw.ok === false && !("value" in raw)) {
+      if (raw.code === "headless.not-started" && Object.keys(raw).length === 2 &&
+          (options?.allowContextPackGeneration === true || options?.allowContextRagGeneration === true))
+        return {ok: false, code: "headless.not-started"};
       const fault = readHeadlessAuthoringWireResult({ ok: false, code: raw.code });
       return fault.ok ? unavailable : fault;
     }

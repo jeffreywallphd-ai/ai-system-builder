@@ -39,6 +39,9 @@ test("portable Context guidance and discovery separate metadata from execution a
   for (const text of ["context.save-result", "version 8", "aisb_read_context", "64 MiB", "byteAvailability: not-checked",
     "Generation approval does not approve saving", "Older private saves", "without opening the task processor"])
     assert.ok(guide.includes(text), `Missing separately approved Context save boundary: ${text}`);
+  for (const text of ["headless.not-started", "owning app proved that no task started", "original approved step remains terminal",
+    "headless.operation-unconfirmed", "Do not start again with a new key"])
+    assert.ok(guide.includes(text), `Missing Context non-start versus uncertainty guidance: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

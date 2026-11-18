@@ -9,7 +9,7 @@ import {createStructuredHeadlessPlanReviewRepository} from "../createStructuredH
 import {HeadlessBuildPlanReviewUseCase} from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import {readStructuredOwnedDatasetPlanTask} from "../../ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import {inspectStructuredContextPlanTask, reserveStructuredContextPlanTask, issueStructuredContextPlanTask,
-  acceptStructuredContextPlanTask, readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan,
+  acceptStructuredContextPlanTask, recordStructuredContextTaskNotStarted, readStructuredOwnedContextPlanTask, readStructuredOwnedContextPlanTaskByPlan,
   readStructuredPresentableContextPlanTask, readStructuredOwnedContextPlanTaskSourceDigest,
   type ContextPlanTaskEffect} from "../createStructuredHeadlessContextPlanTaskStore";
 
@@ -123,6 +123,37 @@ test("root-owned rollback leaves no reservation and a lost acknowledgement never
   })());
   assert.deepEqual(await f.transaction(owner => reserveStructuredContextPlanTask(owner, f.effect, f.sourceDigest, 2)), {kind: "unconfirmed"});
   await assert.rejects(reserveStructuredContextPlanTask(f.owner, {...f.effect, key: randomUUID()}, f.sourceDigest, 2));
+});
+
+for (const issued of [false, true]) test(`an exact proven non-start after ${issued ? "issue" : "reservation"} is terminal, versioned and never an accepted task`, async () => {
+  const f = fixture(), first = await f.transaction(owner => reserveStructuredContextPlanTask(owner, f.effect, f.sourceDigest, 1));
+  assert.ok("taskId" in first);
+  if (issued) assert.equal(await f.transaction(owner => issueStructuredContextPlanTask(owner, f.effect, first.taskId, f.sourceDigest, 2)), true);
+  assert.equal(await f.transaction(owner => recordStructuredContextTaskNotStarted(owner, f.effect, randomUUID(), f.sourceDigest, 3)), false);
+  assert.equal(await f.transaction(owner => recordStructuredContextTaskNotStarted(owner, f.effect, first.taskId, "f".repeat(64), 3)), false);
+  assert.deepEqual(await inspectStructuredContextPlanTask(f.owner, f.effect), {kind: "unconfirmed"}, "Unknown history alone remains unconfirmed.");
+  assert.equal(await f.transaction(owner => recordStructuredContextTaskNotStarted(owner, f.effect, first.taskId, f.sourceDigest, 3)), true);
+  assert.deepEqual(await inspectStructuredContextPlanTask(f.owner, f.effect), {kind: "not-started"});
+  assert.equal(await f.transaction(owner => recordStructuredContextTaskNotStarted(owner, f.effect, first.taskId, f.sourceDigest, 4)), true);
+  assert.deepEqual(await f.transaction(owner => reserveStructuredContextPlanTask(owner, f.effect, f.sourceDigest, 4)), {kind: "not-started"});
+  assert.equal(await f.transaction(owner => issueStructuredContextPlanTask(owner, f.effect, first.taskId, f.sourceDigest, 4)), false);
+  assert.equal(await f.transaction(owner => acceptStructuredContextPlanTask(owner, f.effect, first.taskId, 4)), false);
+  assert.equal(await readStructuredOwnedContextPlanTask(f.owner, f.target.scope, f.target.hostIncarnationId, first.taskId), undefined);
+  assert.equal(await readStructuredOwnedContextPlanTaskSourceDigest(f.owner, f.target.scope, f.target.hostIncarnationId, first.taskId), undefined);
+  const foreign = {...f.effect, target: {...f.target, scope: {...f.target.scope, registeredClientId: randomUUID()}}};
+  await assert.rejects(inspectStructuredContextPlanTask(f.owner, foreign));
+  assert.deepEqual(await inspectStructuredContextPlanTask(f.owner, {...f.effect, approvalRevision: 3}), {kind: "not-started"});
+  const records = await f.owner.listDocuments("headless/context/pack-plan-tasks");
+  assert.equal((records[0].value as {version: number}).version, 2);
+});
+
+test("a proven non-start cannot overwrite an already accepted Context task", async () => {
+  const f = fixture(), first = await f.transaction(owner => reserveStructuredContextPlanTask(owner, f.effect, f.sourceDigest, 1));
+  assert.ok("taskId" in first);
+  assert.ok(await f.transaction(owner => issueStructuredContextPlanTask(owner, f.effect, first.taskId, f.sourceDigest, 2)));
+  assert.ok(await f.transaction(owner => acceptStructuredContextPlanTask(owner, f.effect, first.taskId, 3)));
+  assert.equal(await f.transaction(owner => recordStructuredContextTaskNotStarted(owner, f.effect, first.taskId, f.sourceDigest, 4)), false);
+  assert.equal((await inspectStructuredContextPlanTask(f.owner, f.effect)).kind, "accepted");
 });
 
 test("a changed operation identity cannot take another reservation or accepted task", async () => {

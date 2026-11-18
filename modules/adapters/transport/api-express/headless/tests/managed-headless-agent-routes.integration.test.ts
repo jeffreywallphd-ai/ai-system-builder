@@ -47,6 +47,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let previewFence = true;
   let previewCurrent = true;
   let supportsLocalSave = false;
+  let knownNonstart = false, malformedNonstart = false;
   let statusMismatch = false;
   let statusExtra = false;
   let withdrawStatus = false;
@@ -68,6 +69,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   const retire = registerManagedHeadlessAgentRoutes(app, (): ManagedAgentRouteHandlers<typeof planIdentity> => ({
     hostIncarnationId,
     allowLocalFileSave:supportsLocalSave,
+    allowContextPackGeneration: true,
     identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" ||
       kind === "local-file-preview" || kind === "provider-file-preview" || kind === "read") &&
       request.organizationHeader === organizationId &&
@@ -154,6 +156,8 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {ok:true, value:{fingerprint:request.target.fingerprint, revision:1, stepCount:publish ? 1 : 2,
         approvedSteps:0, expiresAt, status:"pending"}};
     }, async planStep({input}) {
+      if (knownNonstart) return {result: {ok: false, code: "headless.not-started",
+        ...(malformedNonstart ? {detail: "private"} : {})} as never};
       const shared = {kind:"committed" as const, fingerprint:input.fingerprint, step:input.step,
         approvalRevision:input.approvalRevision, expiresAt:stepExpiresAt};
       const result:HeadlessPlanStepResult = {ok:true, value:savedFile
@@ -431,6 +435,12 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       kind:"committed",operation:"data.save-local-source",fingerprint:fileFingerprint,step:1,
       approvalRevision:2,expiresAt,reference:savedFile,
     }}});
+    knownNonstart = true;
+    assert.deepEqual(await request(step, "fixture-plan", stepPath), {status: 503, cache: "no-store",
+      body: {ok: false, code: "headless.not-started"}});
+    malformedNonstart = true;
+    assert.deepEqual(await request(step, "fixture-plan", stepPath), {status: 503, cache: "no-store",
+      body: {ok: false, code: "headless.unavailable"}});
   } finally {
     retire();
     server.closeAllConnections();

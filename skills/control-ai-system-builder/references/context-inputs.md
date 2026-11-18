@@ -133,3 +133,17 @@ source text or vectors. It still requires a separate save action. A RAG start
 receipt does not grant query, rebuild, publication or window permission and
 does not itself prove retrieval quality or resource qualification. Preserve
 uncertain attempts and the original keys using the rules above.
+
+## When a Context task does not start
+
+`headless.not-started` means the owning app proved that no task started. Check
+the selected model, installed runtime and current source references in the app.
+The original approved step remains terminal: replay reports the same non-start
+and does not try again. If a new attempt is needed after fixing availability,
+prepare a fresh exact plan for approval. The code grants no installation, model
+download, provider change or other permission.
+
+`headless.operation-unconfirmed` means the app cannot prove the outcome. Keep
+the original plan and key. Do not start again with a new key to bypass it. A lost
+reply, unknown issue or malformed result must never be reported as a non-start.
+Neither outcome is proof of an accepted background task, saved Context or qualification.

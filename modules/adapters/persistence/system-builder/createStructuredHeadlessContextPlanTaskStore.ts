@@ -59,7 +59,7 @@ async function read(owner: StructuredDocumentStore, effect: ContextPlanTaskEffec
   const {approvalRevision: originalRevision, ...original} = record.owner;
   const {approvalRevision: requestedRevision, ...requested} = expected;
   if (JSON.stringify(original) !== JSON.stringify(requested) || originalRevision > requestedRevision ||
-      (record.phase !== "accepted" && originalRevision !== requestedRevision)) unavailable();
+      (record.phase !== "accepted" && record.phase !== "not-started" && originalRevision !== requestedRevision)) unavailable();
   const indexed = await owner.readDocument(INDEX, `${expected.workspaceId}/${record.taskId}`);
   if (!indexed || indexed.revision !== 1) unavailable();
   const index = readStrictPassiveRecord(indexed.value, ["effectKey", "identityDigest"]);
@@ -72,30 +72,36 @@ async function read(owner: StructuredDocumentStore, effect: ContextPlanTaskEffec
 }
 
 function decode(value: unknown, revision: number) {
-  const row = readStrictPassiveRecord(value, ["version", "owner", "taskId", "sourceDigest", "phase", "createdAt", "updatedAt"]);
+  const row = readStrictPassiveRecord(value, ["version", "owner", "taskId", "sourceDigest", "phase", "createdAt", "updatedAt", "notStartedFrom"]);
   const owner = readStrictPassiveRecord(row.owner, ["hostIncarnationId", "workspaceId", "principalId", "registeredClientId",
     "fingerprint", "approvalRevision", "step", "inputDigest"]);
-  if (row.version !== 1 || !isHeadlessHostIncarnationId(row.taskId) || !isDigest(row.sourceDigest) ||
+  const nonstart = row.version === 2 && row.phase === "not-started" &&
+    (row.notStartedFrom === "reserved" || row.notStartedFrom === "issued") &&
+    revision === (row.notStartedFrom === "reserved" ? 2 : 3);
+  const ordinary = row.version === 1 && !("notStartedFrom" in row) &&
+    (row.phase === "reserved" || row.phase === "issued" || row.phase === "accepted") &&
+    revision === (row.phase === "reserved" ? 1 : row.phase === "issued" ? 2 : 3);
+  if ((!nonstart && !ordinary) || !isHeadlessHostIncarnationId(row.taskId) || !isDigest(row.sourceDigest) ||
       !isHeadlessHostIncarnationId(owner.hostIncarnationId) || !isDesktopHeadlessClientId(owner.registeredClientId) ||
       !isWorkspaceId(owner.workspaceId) || typeof owner.principalId !== "string" || owner.principalId.length < 1 || owner.principalId.length > 160 ||
       hasKnownPassiveCredential(owner.principalId) || !isDigest(owner.fingerprint) || !isDigest(owner.inputDigest) ||
       typeof owner.approvalRevision !== "number" || !Number.isSafeInteger(owner.approvalRevision) || owner.approvalRevision < 1 ||
       typeof owner.step !== "number" || !Number.isSafeInteger(owner.step) || owner.step < 1 || owner.step > HEADLESS_MAX_BUILD_PLAN_STEPS ||
-      (row.phase !== "reserved" && row.phase !== "issued" && row.phase !== "accepted") ||
-      revision !== (row.phase === "reserved" ? 1 : row.phase === "issued" ? 2 : 3) ||
       typeof row.createdAt !== "number" || typeof row.updatedAt !== "number" ||
       timestamp(row.createdAt) > timestamp(row.updatedAt)) unavailable();
-  return {version: 1 as const, owner: {hostIncarnationId: owner.hostIncarnationId as string, workspaceId: owner.workspaceId as string,
+  return {version: row.version as 1 | 2, owner: {hostIncarnationId: owner.hostIncarnationId as string, workspaceId: owner.workspaceId as string,
     principalId: owner.principalId as string, registeredClientId: owner.registeredClientId as string,
     fingerprint: owner.fingerprint as string, approvalRevision: owner.approvalRevision as number, step: owner.step as number,
     inputDigest: owner.inputDigest as string}, taskId: row.taskId as string, sourceDigest: row.sourceDigest as string,
-    phase: row.phase as "reserved" | "issued" | "accepted", createdAt: row.createdAt as number, updatedAt: row.updatedAt as number};
+    phase: row.phase as "reserved" | "issued" | "accepted" | "not-started",
+    ...(nonstart ? {notStartedFrom: row.notStartedFrom as "reserved" | "issued"} : {}),
+    createdAt: row.createdAt as number, updatedAt: row.updatedAt as number};
 }
 
 /** Read-only replay. Never turns an interrupted reservation/issue into a new start. */
 export async function inspectStructuredContextPlanTask(owner: StructuredDocumentStore, effect: ContextPlanTaskEffect) {
   const record = await read(owner, effect);
-  return !record ? {kind: "absent" as const} : record.phase === "accepted"
+  return !record ? {kind: "absent" as const} : record.phase === "not-started" ? {kind: "not-started" as const} : record.phase === "accepted"
     ? {kind: "accepted" as const, reference: {workspaceId: effect.target.scope.workspaceId, taskId: record.taskId}}
     : {kind: "unconfirmed" as const};
 }
@@ -141,6 +147,20 @@ export async function acceptStructuredContextPlanTask(owner: StructuredDocumentS
   if (timestamp(now) < record.updatedAt) return false;
   if (record.phase === "accepted") return true;
   await owner.writeDocument(TASKS, key(effect), {...record, phase: "accepted", updatedAt: timestamp(now)}, {expectedRevision: 2});
+  return true;
+}
+
+/** Trusted continuation of this newly reserved owning call only. Missing status
+ * or an old unknown record is not evidence for this terminal non-start outcome. */
+export async function recordStructuredContextTaskNotStarted(owner: StructuredDocumentStore, effect: ContextPlanTaskEffect,
+  taskId: string, sourceDigest: string, now: number) {
+  partition(owner, effect, true);
+  const record = await read(owner, effect);
+  if (!record || record.taskId !== taskId || record.sourceDigest !== sourceDigest || timestamp(now) < record.updatedAt ||
+      record.phase === "accepted") return false;
+  if (record.phase === "not-started") return true;
+  await owner.writeDocument(TASKS, key(effect), {...record, version: 2, phase: "not-started",
+    notStartedFrom: record.phase, updatedAt: timestamp(now)}, {expectedRevision: record.phase === "reserved" ? 1 : 2});
   return true;
 }
 

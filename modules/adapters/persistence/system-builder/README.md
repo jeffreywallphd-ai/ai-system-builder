@@ -45,3 +45,10 @@ projecting finite metadata. It neither enumerates files nor adopts old records.
 Version-1 private receipts remain internally replayable without gaining a public
 index. Current workspace read permission remains the caller's obligation;
 original task/client ownership grants no authority to a new reader.
+
+The Context task ledger also accepts one closed version-2 terminal `not-started`
+variant from a freshly reserved trusted owning call. It binds the same task,
+source digest and exact owner; its recorded previous phase fixes revision2 or3.
+Version-1 reserved/issued/accepted history stays unchanged. Replay preserves the
+terminal non-start without another dispatch. It never becomes an accepted task
+or a source witness for saving. Do not infer the outcome from interrupted history.
