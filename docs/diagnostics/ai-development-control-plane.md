@@ -2240,3 +2240,11 @@ does not run model accuracy or the full software suite. Current Desktop and
 Managed browser MCP journeys exercise metadata previews from saved local files
 and immutable dataset versions; actual Context build/retrieval remains separate.
 Unmapped neighboring files retain the generic focused-test routing fallback.
+
+`headless-context-owned-start` runs the exact internal admission, existing Context
+generation/browser and owning-reconciler tests. It covers finite source/command
+witnesses, private byte snapshots, authority handoff, uncertain start retention
+and exact terminal/cancel identity. Real filesystem metadata omission is a
+separate causal case. These simulated runtime tests do not qualify physical
+readiness, public plan execution, native stop or restart recovery. Unmapped source
+neighbors and an explicit generic focused-test request retain their fallback.

@@ -219,3 +219,10 @@ identifiers, hashes, sizes, settings and unverified runtime readiness. Exact
 saved source/version and model witnesses are private execution inputs, not new
 authority. Actual build/query/rebuild/save and revocable display remain separate
 increment work under the existing approval and Context lifecycle owners.
+
+The Context owner now has an internal exact-source start admission seam for the
+subsequent approved-plan composition. It consumes trusted current-authority and
+atomic one-use issue callbacks; no client command can supply those functions.
+Unknown dispatch preserves new owned staging without task adoption or retries.
+This seam alone neither advertises a new operation nor proves readiness, durable
+issuance or actual model execution. Those remain required before public use.

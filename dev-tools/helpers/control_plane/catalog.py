@@ -167,6 +167,34 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-owned-start": {
+        "automatic_sources": (
+            "modules/application/use-cases/context-management/context-generation.use-case.ts",
+            "modules/application/use-cases/context-management/approved-context-generation-admission.ts",
+            "modules/application/use-cases/context-management/tests/context-approved-start.unit.test.ts",
+            "modules/application/ports/context-management/approved-context-generation-admission.port.ts",
+            "modules/application/ports/context-management/index.ts",
+        ),
+        "sources": (
+            "modules/application/use-cases/context-management/context-generation.use-case.ts",
+            "modules/application/use-cases/context-management/approved-context-generation-admission.ts",
+            "modules/application/use-cases/context-management/tests/context-approved-start.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/context-generation.use-case.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",
+            "modules/application/use-cases/context-management/README.md",
+            "modules/application/ports/context-management/approved-context-generation-admission.port.ts",
+            "modules/application/ports/context-management/index.ts",
+            "modules/application/ports/context-management/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/application/use-cases/context-management/tests/context-approved-start.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/context-generation.use-case.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",
+            "modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts",
+            "modules/application/services/runtime/tests/task-power-lifecycle.service.unit.test.ts",
+        ),
+    },
     "headless-context-input-preview": {
         "automatic_sources": (
             "modules/contracts/headless/headless-context-preview.ts",

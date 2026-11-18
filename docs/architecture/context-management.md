@@ -421,3 +421,38 @@ This preview does not verify contents, selected columns, runtime availability,
 license rights or current model files. Later approved execution must revalidate
 bindings and current authority through the existing Context owner; the preview
 does not grant execution, save, provider-egress or window-control authority.
+
+### Host-owned Context start admission
+
+The internal approved start port is separate from ordinary Context commands and
+the passive compiler. A trusted host supplies the exact current approved plan,
+actor/client/workspace and source/model witnesses. Staging is bounded to four
+4 MiB sources and 1,000 chunks; it checks exact keys, actual bytes and hashes,
+media and format. Optional object descriptors can omit MIME/size, but defined
+conflicts deny and actual bytes must still match. Resolve omitted media through
+the catalog or the approved canonical source witness. Snapshot adapter-owned
+buffers before any later asynchronous metadata read.
+
+The atomic issuer must revalidate exact current authority and issue one reserved
+attempt. Local callback checks and an in-memory ID guard complement that durable
+issuer; they are not durable approval or crash recovery. The owner checks a live
+synchronous fence immediately before issue and host acceptance before dispatch.
+Only acknowledged issuance permits the reserved task's one start. A lost reply,
+wrong returned task ID/state or uncertain issue does not authorize another call.
+Retain only this newly created staging under its owned lease until a confirmed
+terminal result or successful owning runtime stop. Do not discover/adopt unknown
+tasks or touch historical native/offload trees.
+
+Confirmed tasks acquire reconciliation before power bookkeeping. An exception
+after acceptance cannot delete staging that a worker may use. Read identity,
+Context task type, scope and cancellation acknowledgement must match before
+cleanup. Wrong/unknown replies stay unavailable without entering the bad-output
+cleanup branch. Ordinary Context review/save/discard and source limits remain.
+This internal component does not advertise public execution or prove physical
+model/readiness, durable issuance, real retrieval, native stop or restart recovery;
+those remain subsequent Context/host qualification.
+
+Pending power registration gates task observation and cancellation cleanup.
+Runtime-stop reconciliation waits for registration to settle before release,
+so a late blocker cannot be created after terminal cleanup. Focused tests use
+the actual power-lifecycle service with a delayed simulated blocker.

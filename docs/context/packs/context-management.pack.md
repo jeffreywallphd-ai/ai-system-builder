@@ -144,3 +144,8 @@ the list or report deletion. A different key leaves the selected view intact.
   It cannot extract, install, load a model or start a task. Runtime readiness
   stays unverified. Current artifact/model scope and strict public DTOs fence
   both hosts; later execution revalidates through the existing Context owner.
+
+- Internal approved Context start binds exact scoped command/source bytes and a
+  reserved task to trusted current checks and atomic one-use issuance. Unknown
+  starts retain only new staging; exact task/terminal/cancel identity is required
+  for cleanup. Runtime/model readiness and public plan wiring remain separate.

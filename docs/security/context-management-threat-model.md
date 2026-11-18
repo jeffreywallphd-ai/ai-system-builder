@@ -289,3 +289,29 @@ repository or adapter errors. Recorded license metadata is not a license grant.
 Physical/model availability, extraction, real retrieval, query egress and native
 cleanup require their own subsequent execution checks; this preview qualifies
 none of them.
+
+### Approved dispatch and retained new staging
+
+The internal admission interface contains trusted function capabilities and is
+never deserialized from client/source data. Exact organization/actor/workspace,
+canonical command digest and source storage/size/hash/media/format witnesses are
+copied before asynchronous work. Current checks must cover the user-approved
+plan, client and exact source/model authority before protected byte reads.
+Reject extra fields, unsupported model/provider/placement settings, stale
+commands and changed bindings. A synchronous live check closes the local await
+handoff; only the issuer's atomic current-authority check grants one dispatch.
+
+Staging copies bounded adapter buffers before later awaits. Defined descriptor
+conflicts fail; omitted optional MIME/size is resolved without weakening exact
+byte identity. Read/store bounds remain finite and source labels are data.
+Denied attempts clean only new owned staging. Uncertain issue/start preserves
+new staging and cannot retry, query/adopt a guessed task, or cancel an unknown
+worker. Local retained attempts are capped; only the existing owning runtime
+stop proof can retire them. No historical offload/native data is inspected.
+
+Wrong task/type/scope terminal responses and wrong cancellation acknowledgements
+cannot grant deletion or release power. Fixed errors contain no raw port paths.
+Known accepted tasks keep reconciliation if later bookkeeping fails. Focused
+unit and actual filesystem-adapter evidence uses synthetic sources and simulated
+runtime/stop replies; it does not qualify physical model readiness, actual
+Python stop, durable plan issuance, native recovery or public execution.

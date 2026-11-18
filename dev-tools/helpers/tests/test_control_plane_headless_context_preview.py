@@ -28,3 +28,15 @@ class ContextPreviewRoutingTests(unittest.TestCase):
     def test_context_addition_does_not_claim_unrelated_registry_or_runtime_coverage(self):
         for path in ['modules/adapters/persistence/model/unknown.ts', 'modules/adapters/runtime/python/worker/context/unknown.py']:
             self.assertIn('focused-tests', self.selected([path]))
+
+    def test_owned_start_selects_exact_admission_lifecycle_and_ordinary_context_regressions(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-owned-start']
+        selected = self.selected(list(definition['automatic_sources']))
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-owned-start']['argv']
+        for name in ['context-approved-start.unit.test.ts', 'context-generation.use-case.unit.test.ts',
+                     'context-browser.use-cases.unit.test.ts', 'owned-task-reconciler.service.unit.test.ts']:
+            self.assertTrue(any(path.endswith('/' + name) for path in command))
+        self.assertNotIn('--suite=all', command)
+        self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']) + ['modules/application/use-cases/context-management/unmapped-start.ts']))
+        self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']), ['focused-tests']))

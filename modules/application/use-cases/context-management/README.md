@@ -85,3 +85,38 @@ Both-client composed regressions inject finite failures before worker acceptance
 check the registered response and UI, preserve input/source bytes and retry.
 These cases do not prove real worker exit, native cleanup or terminal-runtime
 error sanitization. Those qualifications remain separate.
+
+## Internal approved start admission
+
+`startAdmittedContext` consumes a trusted host capability, never a transported
+command. It copies a canonical private command and exact source bindings,
+requires an owning reconciler and current approved plan/actor/client/source/model
+scope before byte reads, and checks a synchronous live fence at the handoff to
+atomic one-use issuance. Only acknowledged issuance permits one runtime call
+with the reserved task ID. Later withdrawal affects replies and remaining steps,
+not the already admitted task. Source-derived no-model packs and explicit
+CPU/CUDA RAG settings have the finite Headless profile limits.
+
+Staging validates the selected storage key, actual byte count/hash and resolved
+media/format. Descriptor media and size are optional; defined conflicts deny.
+Catalog or approved canonical media supplies omitted MIME. A bounded private
+byte snapshot prevents adapter buffer changes across awaited catalog checks.
+This path cannot save or publish output; ordinary review-before-save stays.
+
+A denied attempt cleans its newly created staging. Uncertain issue/start or a
+mismatched start ID/state retains that exact new directory and lease without
+task discovery, guessed cancellation or a second dispatch. Four uncertain starts
+bound this local retention. Only a successful owning Python stop can retire an
+unknown start. An ordinary confirmed start also keeps its staging if later power
+bookkeeping fails; attach its lease before that bookkeeping.
+
+While power registration is pending, observation/cancellation cannot report
+terminal cleanup. Runtime-stop cleanup waits for that registration to settle,
+then releases its actual blocker. This avoids creating a late power blocker
+after a fast task or host stop has already attempted release.
+
+Status ID/type/scope and cancellation ID/acknowledgement must match before
+terminal cleanup. An unknown or mismatched status is unavailable, not a queued
+or terminal proof. Invalid replies leave staging and power ownership intact.
+Tests use fresh owned storage and simulated runtime/stop evidence. The internal
+entry is not yet a public Headless action or physical model/runtime qualification.

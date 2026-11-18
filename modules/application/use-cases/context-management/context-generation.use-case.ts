@@ -69,6 +69,8 @@ import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/
 import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import { projectContextSourceInformation } from "./context-source-information";
+import {APPROVED_CONTEXT_MAX_PENDING, APPROVED_CONTEXT_MAX_SOURCE_BYTES, type ApprovedContextGenerationAdmission} from "../../ports/context-management";
+import {approvedContextAdmissionCurrent, readApprovedContextAdmission} from "./approved-context-generation-admission";
 
 type ContextArtifactCatalogPort = ArtifactCatalogReadPort &
   ArtifactCatalogAppendPort &
@@ -86,6 +88,18 @@ interface PendingContextGeneration {
   readonly runtimeResult: ContextGenerationTaskResult;
   readonly outputPath: string;
   readonly scope: ContextTaskScope;
+}
+
+interface ContextStartAttempt {
+  readonly admission?: ApprovedContextGenerationAdmission;
+  lease?: OwnedTaskLease;
+  leaseStarted: boolean;
+  retained: boolean;
+  issued: boolean;
+  dispatchAttempted: boolean;
+  runtimeDirectory?: string;
+  requestedId?: string;
+  confirmedRequestId?: string;
 }
 
 export interface ContextGenerationUseCaseDependencies {
@@ -379,6 +393,10 @@ export class ContextGenerationUseCase {
   private readonly scopes = new Map<string, ContextTaskScope>();
   private readonly pending = new Map<string, PendingContextGeneration>();
   private readonly completed = new Map<string, ContextGenerationStatus>();
+  private readonly uncertainStarts = new Set<ContextStartAttempt>();
+  private readonly admittedStarts = new Map<string, ContextStartAttempt>();
+  private readonly issuedTaskIds = new Set<string>();
+  private readonly pendingPowerStarts = new Map<string, Promise<void>>();
 
   public constructor(dependencies: ContextGenerationUseCaseDependencies) {
     this.runtime = dependencies.runtimeTaskRegistry;
@@ -412,14 +430,77 @@ export class ContextGenerationUseCase {
   }
 
   public async start(command: StartContextGenerationCommand, context?: ApplicationRequestContext): Promise<ContractResult<StartContextGenerationValue>> {
-    return this.taskReconciler ? this.taskReconciler.withLease("python", (lease) => this.startOwned(command, context, lease)) : this.startOwned(command, context);
+    return this.runStartAttempt(command, context, {leaseStarted: false, retained: false, issued: false, dispatchAttempted: false});
+  }
+
+  /** Internal capability only. The host must supply exact current one-use plan admission. */
+  public async startAdmittedContext(rawCommand: StartContextGenerationCommand, rawContext: ApplicationRequestContext,
+    rawAdmission: ApprovedContextGenerationAdmission): Promise<ContractResult<StartContextGenerationValue>> {
+    const context = {...rawContext};
+    const parsed = readApprovedContextAdmission(rawCommand, context, rawAdmission);
+    if (!parsed || !this.taskReconciler || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
+        this.admittedStarts.has(parsed.admission.taskId) || this.issuedTaskIds.has(parsed.admission.taskId) ||
+        this.scopes.has(parsed.admission.taskId) || [...this.uncertainStarts].some(attempt => attempt.requestedId === parsed.admission.taskId))
+      return this.startUnavailable(context);
+    const attempt: ContextStartAttempt = {admission: parsed.admission, leaseStarted: false, retained: false, issued: false, dispatchAttempted: false};
+    this.admittedStarts.set(parsed.admission.taskId, attempt);
+    return this.runStartAttempt(parsed.command, context, attempt);
+  }
+
+  private startUnavailable(context?: ApplicationRequestContext): ContractResult<StartContextGenerationValue> {
+    return createFailureResult(createContractError("unavailable", "Context generation could not be admitted safely."), context);
+  }
+
+  private async runStartAttempt(command: StartContextGenerationCommand, context: ApplicationRequestContext | undefined,
+    attempt: ContextStartAttempt): Promise<ContractResult<StartContextGenerationValue>> {
+    const run = async (lease?: OwnedTaskLease) => {
+      attempt.lease = lease;
+      try {
+        if (attempt.admission && !await approvedContextAdmissionCurrent(attempt.admission))
+          return createFailureResult(createContractError("forbidden", "Context generation permission changed."), context);
+        return await this.startOwned(command, context, attempt);
+      } catch {
+        if (attempt.dispatchAttempted || attempt.issued) this.retainUnconfirmedStart(attempt);
+        return this.startUnavailable(context);
+      } finally {
+        if (!attempt.retained && attempt.runtimeDirectory) {
+          try {await rm(attempt.runtimeDirectory, {recursive: true, force: true}); attempt.runtimeDirectory = undefined;}
+          catch {this.retainUnconfirmedStart(attempt);}
+        }
+        if (!attempt.retained && attempt.admission) this.admittedStarts.delete(attempt.admission.taskId);
+      }
+    };
+    try {
+      if (this.uncertainStarts.size >= APPROVED_CONTEXT_MAX_PENDING) return this.startUnavailable(context);
+      return this.taskReconciler ? await this.taskReconciler.withLease("python", run) : await run();
+    } catch {return this.startUnavailable(context);}
+    finally {
+      if (!attempt.retained && attempt.admission) this.admittedStarts.delete(attempt.admission.taskId);
+    }
+  }
+
+  private retainUnconfirmedStart(attempt: ContextStartAttempt): void {
+    attempt.retained = true;
+    // A known accepted task already has its normal scoped reconciliation. Do not
+    // replace it with a discovery/status lookup for a guessed or changed ID.
+    if (attempt.confirmedRequestId && attempt.leaseStarted) return;
+    this.uncertainStarts.add(attempt);
+    if (attempt.leaseStarted || !attempt.lease) return;
+    attempt.lease.start(async () => false, async () => undefined, async () => {
+      if (attempt.runtimeDirectory) await rm(attempt.runtimeDirectory, {recursive: true, force: true});
+      attempt.runtimeDirectory = undefined;
+      this.uncertainStarts.delete(attempt);
+      if (attempt.admission) this.admittedStarts.delete(attempt.admission.taskId);
+    });
+    attempt.leaseStarted = true;
   }
 
   private async startOwned(
     command: StartContextGenerationCommand,
     context?: ApplicationRequestContext,
-    lease?: OwnedTaskLease,
+    attempt: ContextStartAttempt = {leaseStarted: false, retained: false, issued: false, dispatchAttempted: false},
   ): Promise<ContractResult<StartContextGenerationValue>> {
+    const lease = attempt.lease;
     const workspace = await this.resolveWorkspace(
       context,
       "context.generate",
@@ -442,7 +523,7 @@ export class ContextGenerationUseCase {
         context,
       );
     }
-    const staged = await this.stageSources(normalized, context);
+    const staged = await this.stageSources(normalized, context, attempt);
     if (!staged.ok) {
       return staged;
     }
@@ -468,8 +549,31 @@ export class ContextGenerationUseCase {
       },
     };
     try {
+      if (attempt.admission) {
+        if (!await approvedContextAdmissionCurrent(attempt.admission))
+          return createFailureResult(createContractError("forbidden", "Context generation permission changed."), context);
+        this.taskReconciler!.assertAccepting();
+        if (!attempt.admission.isCurrent())
+          return createFailureResult(createContractError("forbidden", "Context generation permission changed."), context);
+        let issued: "issued" | "denied" | "unconfirmed";
+        try {issued = await attempt.admission.issue();} catch {issued = "unconfirmed";}
+        if (issued !== "denied") {
+          attempt.issued = true;
+          this.issuedTaskIds.add(attempt.admission.taskId);
+        }
+        if (issued !== "issued") {
+          if (issued !== "denied") this.retainUnconfirmedStart(attempt);
+          return createFailureResult(createContractError(issued === "denied" ? "forbidden" : "unavailable",
+            "Context generation admission was not confirmed."), context);
+        }
+      }
+      // Acknowledged issuance is the admission point. Later withdrawal affects
+      // replies/remaining steps, while this one owned effect retains its lease.
+      this.taskReconciler?.assertAccepting();
+      attempt.requestedId = attempt.admission?.taskId ?? context?.requestId;
+      attempt.dispatchAttempted = true;
       const started = await this.runtime.startTask({
-        requestId: context?.requestId,
+        requestId: attempt.requestedId,
         taskType: TaskType.CONTEXT_GENERATION,
         payload: runtimeRequest,
         workspaceId: workspace.value.workspaceId,
@@ -480,9 +584,12 @@ export class ContextGenerationUseCase {
             : {}),
         },
       });
-      if (!started.requestId?.trim()) {
+      if (typeof started.requestId !== "string" || !started.requestId.trim() ||
+          (attempt.admission && (started.requestId !== attempt.admission.taskId || (started.status !== "queued" && started.status !== "running")))) {
         throw new Error("Context generation start response is incomplete.");
       }
+      attempt.confirmedRequestId = started.requestId;
+      attempt.retained = true;
       this.runtimeDirectories.set(
         started.requestId,
         staged.value.runtimeDirectory,
@@ -493,22 +600,33 @@ export class ContextGenerationUseCase {
         started.requestId,
         scopeFromContext(workspace.value.workspaceId, context),
       );
-      await this.taskPower.startTask(
-        started.requestId,
-        TaskType.CONTEXT_GENERATION,
-        "Generating context artifact",
-      );
       const ownedContext = { ...context, workspaceId: workspace.value.workspaceId };
-      lease?.start(async () => {
-        const result = await this.readOwned(started.requestId, workspace.value.workspaceId, ownedContext);
-        return result.ok ? result.value.state !== "queued" && result.value.state !== "running" : !this.runtimeDirectories.has(started.requestId);
-      }, () => this.runtime.cancelTask(started.requestId), async () => {
-        await this.taskPower.completeTask(started.requestId, "failed");
-        if (!this.pending.has(started.requestId)) {
-          await this.cleanup(started.requestId);
-          this.completed.set(started.requestId, { requestId: started.requestId, state: "failed", error: { code: "host_stopped", message: "The host stopped before context work completed.", retryable: false } });
-        }
-      });
+      let finishPowerStart!: () => void;
+      const powerStarted = new Promise<void>(resolve => {finishPowerStart = resolve;});
+      this.pendingPowerStarts.set(started.requestId, powerStarted);
+      try {
+        lease?.start(async () => {
+          if (this.pendingPowerStarts.has(started.requestId)) return false;
+          const result = await this.readOwned(started.requestId, workspace.value.workspaceId, ownedContext);
+          return result.ok ? result.value.state !== "queued" && result.value.state !== "running" : !this.runtimeDirectories.has(started.requestId);
+        }, () => this.runtime.cancelTask(started.requestId), async () => {
+          await powerStarted;
+          await this.taskPower.completeTask(started.requestId, "failed");
+          if (!this.pending.has(started.requestId)) {
+            await this.cleanup(started.requestId);
+            this.completed.set(started.requestId, { requestId: started.requestId, state: "failed", error: { code: "host_stopped", message: "The host stopped before context work completed.", retryable: false } });
+          }
+        });
+        attempt.leaseStarted = Boolean(lease);
+        await this.taskPower.startTask(
+          started.requestId,
+          TaskType.CONTEXT_GENERATION,
+          "Generating context artifact",
+        );
+      } finally {
+        this.pendingPowerStarts.delete(started.requestId);
+        finishPowerStart();
+      }
       return createSuccessResult(
         {
           requestId: started.requestId,
@@ -519,11 +637,9 @@ export class ContextGenerationUseCase {
         context,
       );
     } catch {
-      lease?.release();
-      await rm(staged.value.runtimeDirectory, {
-        recursive: true,
-        force: true,
-      });
+      // A thrown/lost reply or later bookkeeping error does not prove that a
+      // worker stopped. Only this attempt's owned lifecycle may retire staging.
+      if (attempt.dispatchAttempted || attempt.issued) this.retainUnconfirmedStart(attempt);
       return createFailureResult(
         createContractError(
           "internal",
@@ -568,6 +684,8 @@ export class ContextGenerationUseCase {
   }
 
   private async performReadOwned(requestId: string, workspaceId: WorkspaceId, context?: ApplicationRequestContext): Promise<ContractResult<ContextGenerationStatus>> {
+    if (this.pendingPowerStarts.has(requestId)) return createFailureResult(
+      createContractError("unavailable", "Context generation startup is still being confirmed."), context);
     const scope = this.scopes.get(requestId)!;
     const cached = this.completed.get(requestId);
     if (cached) {
@@ -596,6 +714,21 @@ export class ContextGenerationUseCase {
         createContractError("unavailable", "Context generation status is temporarily unavailable."),
         context,
       );
+    }
+    // A mismatched reply is not terminal proof for this owned directory. Keep
+    // this guard outside completion validation, whose catch retires bad output.
+    try {
+      if (!status || typeof status !== "object" || status.requestId !== requestId ||
+          (!("recordType" in status) && (status.taskType !== TaskType.CONTEXT_GENERATION ||
+            !["queued", "running", "succeeded", "failed", "cancelled"].includes(status.status) ||
+            (status.workspaceId !== undefined && status.workspaceId !== workspaceId) ||
+            (this.admittedStarts.has(requestId) && status.workspaceId !== workspaceId) ||
+            (status.metadata?.organizationId !== undefined && status.metadata.organizationId !== scope.organizationId) ||
+            (status.metadata?.principalId !== undefined && status.metadata.principalId !== scope.principalId)))) {
+        return createFailureResult(createContractError("unavailable", "Context generation status could not be confirmed."), context);
+      }
+    } catch {
+      return createFailureResult(createContractError("unavailable", "Context generation status could not be confirmed."), context);
     }
     try {
       if ("recordType" in status) {
@@ -972,8 +1105,18 @@ export class ContextGenerationUseCase {
         context,
       );
     }
+    if (this.pendingPowerStarts.has(requestId)) return createFailureResult(
+      createContractError("unavailable", "Context generation startup is still being confirmed."), context);
     if (!await this.finishSaveCleanup(requestId, context)) return this.saveCleanupUnavailable(context);
-    const result = await this.runtime.cancelTask(requestId);
+    let result: Awaited<ReturnType<RuntimeTaskRegistryPort["cancelTask"]>>;
+    try {
+      result = await this.runtime.cancelTask(requestId);
+      if (!result || result.requestId !== requestId || typeof result.cancelled !== "boolean" ||
+          (result.status === "cancelled" && result.cancelled !== true))
+        return createFailureResult(createContractError("unavailable", "Context generation cancellation could not be confirmed."), context);
+    } catch {
+      return createFailureResult(createContractError("unavailable", "Context generation cancellation could not be confirmed."), context);
+    }
     if (result.status === "cancelled") {
       await this.taskPower.completeTask(requestId, "cancelled");
       await this.cleanup(requestId);
@@ -1001,11 +1144,17 @@ export class ContextGenerationUseCase {
     this.commands.delete(requestId);
     this.sourceInputs.delete(requestId);
     this.pending.delete(requestId);
+    const admitted = this.admittedStarts.get(requestId);
+    if (admitted) {admitted.runtimeDirectory = undefined; this.admittedStarts.delete(requestId); this.uncertainStarts.delete(admitted);}
+    for (const attempt of this.uncertainStarts) if (attempt.confirmedRequestId === requestId) {
+      attempt.runtimeDirectory = undefined; this.uncertainStarts.delete(attempt);
+    }
   }
 
   private async stageSources(
     command: StartContextGenerationCommand,
     context?: ApplicationRequestContext,
+    attempt?: ContextStartAttempt,
   ): Promise<
     ContractResult<{
       runtimeDirectory: string;
@@ -1015,14 +1164,18 @@ export class ContextGenerationUseCase {
     const runtimeDirectory = await mkdtemp(
       join(tmpdir(), "ai-system-builder-context-"),
     );
+    if (attempt) attempt.runtimeDirectory = runtimeDirectory;
     const sources: ContextRuntimeSourceInput[] = [];
     let aggregateBytes = 0;
     const fail = async (code: ContractErrorCode, message: string) => {
       await rm(runtimeDirectory, { recursive: true, force: true });
+      if (attempt) attempt.runtimeDirectory = undefined;
       return createFailureResult(createContractError(code, message), context);
     };
     try {
       for (const [index, source] of command.sources.entries()) {
+        const admission = attempt?.admission, selected = admission?.sources[index];
+        if (admission && !await approvedContextAdmissionCurrent(admission)) return fail("forbidden", "Context generation permission changed.");
         const bindingResult = await this.bindings.readArtifactStorageBindings(
           {
             workspaceId: context?.workspaceId as WorkspaceId,
@@ -1037,23 +1190,26 @@ export class ContextGenerationUseCase {
           source.artifactId,
           bindingResult.ok ? bindingResult.value.bindings : [],
         );
+        if (admission && (!selected || selected.artifactId !== source.artifactId || selected.storageKey !== storageKey ||
+            !await approvedContextAdmissionCurrent(admission))) return fail("forbidden", "The selected Context source changed.");
         const retrieved = await this.storage.retrieveArtifact<Uint8Array>(
           createRetrieveArtifactRequest(storageKey, {
-            maximumBytes: CONTEXT_GENERATION_LIMITS.maximumSourceBytes,
+            maximumBytes: admission ? APPROVED_CONTEXT_MAX_SOURCE_BYTES : CONTEXT_GENERATION_LIMITS.maximumSourceBytes,
           }),
           context,
         );
+        if (admission && !await approvedContextAdmissionCurrent(admission)) return fail("forbidden", "Context generation permission changed.");
         if (!retrieved.ok) {
           return fail(retrieved.error.code, "Context source bytes could not be read. Check that the selected source is available.");
         }
         if (!(retrieved.value.content instanceof Uint8Array)) {
           return fail("internal", "Context source bytes are unavailable.");
         }
-        const bytes = retrieved.value.content;
-        aggregateBytes += bytes.byteLength;
+        const retrievedBytes = retrieved.value.content;
+        aggregateBytes += retrievedBytes.byteLength;
         if (
-          bytes.byteLength < 1 ||
-          bytes.byteLength > CONTEXT_GENERATION_LIMITS.maximumSourceBytes ||
+          retrievedBytes.byteLength < 1 ||
+          retrievedBytes.byteLength > (admission ? APPROVED_CONTEXT_MAX_SOURCE_BYTES : CONTEXT_GENERATION_LIMITS.maximumSourceBytes) ||
           aggregateBytes > CONTEXT_GENERATION_LIMITS.maximumAggregateSourceBytes
         ) {
           return fail(
@@ -1061,7 +1217,14 @@ export class ContextGenerationUseCase {
             "Selected context sources exceed the safe size limit.",
           );
         }
+        // Adapter-owned buffers can change while catalog/permission reads await.
+        // Hash and stage a bounded private snapshot, never that mutable alias.
+        const bytes = new Uint8Array(retrievedBytes);
         const descriptor = retrieved.value.descriptor;
+        if (selected && (descriptor.key !== selected.storageKey || (descriptor.sizeBytes !== undefined && descriptor.sizeBytes !== selected.sizeBytes) ||
+            bytes.byteLength !== selected.sizeBytes || sha256(bytes) !== selected.digest ||
+            (descriptor.mediaType !== undefined && descriptor.mediaType !== selected.mediaType)))
+          return fail("conflict", "The selected Context source bytes changed.");
         const sourceInformation = projectContextSourceInformation(
           descriptor.metadata,
         );
@@ -1075,12 +1238,13 @@ export class ContextGenerationUseCase {
           },
           context,
         );
+        if (admission && !await approvedContextAdmissionCurrent(admission)) return fail("forbidden", "Context generation permission changed.");
         const originalName =
           descriptorOriginalName ??
           (catalog.ok ? catalog.value.record.originalName : undefined);
         const mediaType =
           descriptor.mediaType ??
-          (catalog.ok ? catalog.value.record.mediaType : undefined);
+          (catalog.ok ? catalog.value.record.mediaType : undefined) ?? selected?.mediaType;
         const capability = evaluateContextSourceCapability({
           fileName: originalName ?? storageKey,
           mediaType,
@@ -1091,6 +1255,8 @@ export class ContextGenerationUseCase {
             [capability.message, capability.action].filter(Boolean).join(" "),
           );
         }
+        if (selected && (capability.capability.format !== selected.format || mediaType !== selected.mediaType))
+          return fail("conflict", "The selected Context source format changed.");
         const effectiveMediaType =
           mediaType ?? capability.capability.mediaTypes[0];
         const localPath = join(
