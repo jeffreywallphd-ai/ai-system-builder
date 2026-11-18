@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { createWindowTakeoverController, type DraftHandoff } from "../../../../../../../modules/ui/shared/takeover/windowTakeoverController";
 import { createPresentationQueue } from "../../../../../../../modules/ui/shared/takeover/presentationQueue";
 import {
-  UI_PRESENTATION_LIMITS, type UiPresentationIntent, type UiPresentationContext,
+  UI_PRESENTATION_LIMITS, viewForUiPresentationIntent, type UiPresentationIntent, type UiPresentationContext,
   type UiPresentationDetail, type UiPresentationReceipt,
 } from "../../../../../../../modules/contracts/headless";
 import { getDesktopApi } from "../../../lib/desktopApi";
@@ -55,9 +55,7 @@ export function useDesktopWindowTakeover(workspaceId: string | undefined, isSyst
             const fence = control.controller.fence();
             if (!control.controller.permits(target, fence)) return;
             const intent = selected.current;
-            const view: UiPresentationContext["view"] = !intent ? "other" :
-              intent.action === "open-system" ? "system" : intent.action === "select-component" ? "component" :
-              intent.action === "show-validation" ? "validation" : intent.action === "show-run" ? "run" : "artifact";
+            const view: UiPresentationContext["view"] = intent ? viewForUiPresentationIntent(intent) : "other";
             await getDesktopApi().publishWindowContext?.({ target, challenge: next.contextChallenge, context: {
               view, ready: true, dirtyNavigationBlocked: draft.current?.().status === "dirty",
               ...(intent ? { selection: intent } : {}),

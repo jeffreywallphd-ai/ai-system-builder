@@ -1,5 +1,22 @@
 # Data Management Threat Model
 
+## Headless Data presentation boundary
+
+Security impact: security-relevant. Exact source task/file/revision, dataset
+version/digest and same-actor accepted task presentation reuse current window
+consent and artifact-read checks. Source snapshot lineage and immutable version
+identity are verified before fixed metadata is displayed. Unknown, reserved,
+issued, foreign-actor, foreign-host and cross-workspace tasks cannot resolve the
+processor. Separate presentation registration grants no plan/task mutation or
+adoption. Original execution-client requirements remain on status/review/save.
+
+No source bytes, names, private paths, samples, recipe contents or credentials
+are displayed or returned by these intents. Context returns only exact opaque
+selection and view. Existing current lease, document and egress checks fence
+late replies. Revocation preserves owned work and saved versions. Focused denial
+and actual two-host display tests are independent of provider/model/native
+qualification and never convert missing evidence in those areas into a pass.
+
 ## Delegated quality review and immutable result saving
 
 The passive Headless result read requires exact accepted task, host, principal,

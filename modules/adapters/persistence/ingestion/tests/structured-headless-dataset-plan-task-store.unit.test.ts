@@ -7,6 +7,7 @@ import {createWorkspaceId} from "../../../../contracts/workspace";
 import {isHeadlessHostIncarnationId, readHeadlessLocalDatasetPlanRequest} from "../../../../contracts/headless";
 import {inspectStructuredDatasetPlanTask, reserveStructuredDatasetPlanTask, issueStructuredDatasetPlanTask,
   acceptStructuredDatasetPlanTask, readStructuredOwnedDatasetPlanTask, readStructuredOwnedDatasetPlanTaskByPlan,
+  readStructuredPresentableDatasetPlanTask, readStructuredOwnedDatasetPlanTaskSourceDigest,
   type DatasetPlanTaskEffect} from "../createStructuredHeadlessDatasetPlanTaskStore";
 
 function fixture() {
@@ -45,6 +46,11 @@ test("an exact task moves once from reserved to issued to accepted, with a priva
   assert.deepEqual(await inspectStructuredDatasetPlanTask(f.owner, f.effect), {kind: "accepted", reference});
   assert.deepEqual(await f.transaction(owner => reserveStructuredDatasetPlanTask(owner, f.effect, f.sourceDigest, 4)), {kind: "accepted", reference});
   assert.deepEqual(await readStructuredOwnedDatasetPlanTask(f.owner, f.target.scope, f.target.hostIncarnationId, first.taskId), reference);
+  const {registeredClientId: _client, ...actor} = f.target.scope;
+  assert.deepEqual(await readStructuredPresentableDatasetPlanTask(f.owner, actor, f.target.hostIncarnationId, first.taskId), reference);
+  // Presentation consent is independent, but it must not weaken execution ownership.
+  assert.equal(await readStructuredOwnedDatasetPlanTask(f.owner, actor as never, f.target.hostIncarnationId, first.taskId), undefined);
+  assert.equal(await readStructuredOwnedDatasetPlanTaskSourceDigest(f.owner, actor as never, f.target.hostIncarnationId, first.taskId), undefined);
   assert.deepEqual(await inspectStructuredDatasetPlanTask(f.owner, {...f.effect, approvalRevision: 3}), {kind: "accepted", reference});
   assert.deepEqual(await readStructuredOwnedDatasetPlanTaskByPlan(f.owner, f.target.scope, f.target.hostIncarnationId,
     f.target.fingerprint, f.effect.step), reference);
@@ -54,6 +60,10 @@ test("an exact task moves once from reserved to issued to accepted, with a priva
     {...f.target.scope, organizationId: createOrganizationId("another.organization")}, {...f.target.scope, workspaceId: createWorkspaceId("another.workspace")}])
     assert.equal(await readStructuredOwnedDatasetPlanTask(f.owner, scope, f.target.hostIncarnationId, first.taskId), undefined);
   assert.equal(await readStructuredOwnedDatasetPlanTask(f.owner, f.target.scope, randomUUID(), first.taskId), undefined);
+  for (const scope of [{...actor, principalId: "another.actor"}, {...actor, workspaceId: createWorkspaceId("another.workspace")},
+    {...actor, organizationId: createOrganizationId("another.organization")}])
+    assert.equal(await readStructuredPresentableDatasetPlanTask(f.owner, scope, f.target.hostIncarnationId, first.taskId), undefined);
+  assert.equal(await readStructuredPresentableDatasetPlanTask(f.owner, actor, randomUUID(), first.taskId), undefined);
 });
 
 test("root-owned rollback leaves no reservation and a lost acknowledgement never supplies a fresh start", async () => {

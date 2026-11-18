@@ -545,12 +545,16 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-desktop-takeover-controls": {
         "automatic_sources": (
+            "modules/hosts/desktop/composition/tests/desktop-ui-control.unit.test.ts",
+            "modules/hosts/desktop/composition/composeDesktopUiControl.ts",
+            "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
             "apps/desktop/src/main/desktopUiControlIpc.ts",
             "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
             "modules/ui/shared/takeover/windowTakeoverController.ts",
             "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
         ),
         "sources": (
+            "modules/hosts/desktop/composition/tests/desktop-ui-control.unit.test.ts",
             "apps/desktop/src/main/desktopUiControlIpc.ts",
             "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
             "apps/desktop/src/renderer/App.tsx",
@@ -572,6 +576,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": (
             "--import", "tsx", "--test", "--",
+            "modules/hosts/desktop/composition/tests/desktop-ui-control.unit.test.ts",
             "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
             "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
             "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
@@ -607,6 +612,13 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-ui-control-authority": {
         "sources": (
+            "modules/contracts/headless/ui-control-delivery.ts",
+            "modules/contracts/headless/tests/ui-control-delivery.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-data-presentation.use-case.ts",
+            "modules/hosts/shared/composition/headlessDataPresentation.ts",
+            "modules/hosts/shared/composition/tests/headless-data-presentation.unit.test.ts",
+            "modules/adapters/persistence/ingestion/createStructuredHeadlessDatasetPlanTaskStore.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-headless-dataset-plan-task-store.unit.test.ts",
             "modules/contracts/headless/ui-control-authority.ts",
             "modules/contracts/headless/index.ts",
             "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
@@ -614,6 +626,9 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
         ),
         "automatic_sources": (
+            "modules/application/use-cases/ingestion-acquisition/headless-data-presentation.use-case.ts",
+            "modules/hosts/shared/composition/headlessDataPresentation.ts",
+            "modules/hosts/shared/composition/tests/headless-data-presentation.unit.test.ts",
             "modules/contracts/headless/ui-control-authority.ts",
             "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
             "modules/application/services/ui-control/ui-control-authority.service.ts",
@@ -621,6 +636,9 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": (
             "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/ui-control-delivery.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-data-presentation.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-headless-dataset-plan-task-store.unit.test.ts",
             "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
             "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
         ),

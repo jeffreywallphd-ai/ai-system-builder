@@ -15,6 +15,8 @@ import { composeDesktopHeadlessLocalFileSelection } from "./composeDesktopHeadle
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
+import {isUiDataPresentationIntent} from "../../../contracts/headless";
+import {composeHeadlessDataPresentation} from "../../shared/composition/headlessDataPresentation";
 import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../contracts/system-builder";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
@@ -2298,7 +2300,14 @@ export function composeDesktopHost(
               hostIncarnationId, identity, documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
               audit: headlessAudit,
               isOpen: () => !headlessReadAdmissionClosed,
-              async canPresent(workspaceId, intent) {
+              async canPresent(workspaceId, intent, stillAllowed) {
+                if (isUiDataPresentationIntent(intent)) {
+                  const context = {organizationId: identity.organizationId, principalId: identity.principalId, workspaceId};
+                  const reader = composeHeadlessDataPresentation({documents: platformDocuments!,
+                    rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId,
+                    getProcessor: async () => (await getDatasetPreparationFeatures()).prepareTrainingDatasetUseCase})(context);
+                  return reader?.execute(intent, context, stillAllowed);
+                }
                 if (intent.action === "show-run") {
                   const run = await executionRunRepositories.executionRunRepository.getExecutionRunById(workspaceId, normalizeExecutionRunId(intent.runId));
                   if (run?.workspaceId === workspaceId && run.id === intent.runId && run.status !== "archived")

@@ -1,5 +1,13 @@
 # Desktop host composition
 
+Data window presentation composes the existing saved source/version repositories
+and dataset owner through `headlessDataPresentation`. Current artifact-read
+authorization surrounds reads. Only a durably accepted same-host/actor task can
+resolve the lazy processor. A separate presentation registration grants display
+only; ordinary plan-client ownership still governs execution/status/review/save.
+No model, file-byte or provider work starts from a presentation intent. Existing
+lease/document/egress controls stop display on revoke without deleting Data work.
+
 ## Restrict automatic ComfyUI setup
 
 Set `COMFYUI_AUTO_INSTALL=0` in the Desktop host environment before launch to

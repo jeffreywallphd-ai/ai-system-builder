@@ -336,7 +336,7 @@ test("packaged Desktop pairs a real MCP client, observes its saved edit, and rep
 });
 
 test("packaged Desktop reviews an MCP plan in the app popup and reports the exact decision", async () => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
   const profile = prepareHeadlessDesktopProfile("plan-review");
   const python = process.env.PYTHON?.trim();
   expect(python && path.isAbsolute(python), "Data qualification requires an existing supported Python environment").toBe(true);
@@ -345,6 +345,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", HF_DATASETS_OFFLINE: "1", PIP_NO_INDEX: "1"};
   const lifetime = assetApplicationLifetime<ElectronApplication>();
   let mcp: Client | undefined;
+  let dataPresentationClient: Client | undefined;
   try {
     const app = await lifetime.launch(() => electron.launch({ executablePath: profile.executablePath, env,
       args: ["--user-data-dir=" + profile.dataRoot, "--disable-gpu"], timeout: 60_000 }));
@@ -699,8 +700,58 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     await expect(savedRow).toHaveCount(1);
     await savedRow.getByRole("button", { name: "View Details", exact: true }).click();
     await expect(page.getByRole("region", { name: "Artifact preview", exact: true })).toContainText("triage");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("region", {name: "Artifact preview", exact: true})).toBeHidden();
+    const presentationRegion = await connectorSettings(app, page);
+    await installPairingDialogDriver(app, true, "presentation");
+    await presentationRegion.getByRole("button", {name: "Pair a client that can request window control", exact: true}).click();
+    const displayCredential = await exchangePairing(address, pin, await takePairingCode(app));
+    const display = dataPresentationClient = await connectMcp(address, pin, displayCredential, undefined, "presentation");
+    const windows = await call(display, "aisb_list_windows", workspace);
+    const [windowTarget] = (windows.value as {windows: object[]}).windows;
+    expect(windowTarget).toBeTruthy();
+    const requested = await call(display, "aisb_request_window", {target: windowTarget, requestKey: randomUUID(), taskId: randomUUID()});
+    const attempt = (requested.value as {request: {target: object}}).request.target;
+    const consent = page.getByRole("dialog", {name: "Automation takeover request", exact: true});
+    await expect(consent).toContainText("dataset versions and your accepted Data tasks");
+    await consent.getByRole("button", {name: "Accept automation takeover", exact: true}).click();
+    let lease: object | undefined;
+    await expect.poll(async () => {
+      const status = await call(display, "aisb_window_status", {target: attempt});
+      lease = (status.value as {lease?: object} | undefined)?.lease; return !!lease;
+    }).toBe(true);
+    const dataSourceIntent = {action: "show-data-source", taskId: savedInput.taskId, fileId: savedInput.fileId,
+      taskRevision: (sourceStatus.value as {revision: number}).revision};
+    const dataVersionIntent = {action: "show-dataset-version", datasetId: savedReference.datasetId,
+      versionId: savedReference.versionId, versionDigest: savedReference.versionDigest};
+    for (const intent of [{...dataSourceIntent, taskRevision: 1}, {action: "show-dataset-task", taskId: randomUUID()}])
+      expect(await call(display, "aisb_present_in_window", {target: lease, commandId: randomUUID(), intent})).toMatchObject({ok: false});
+    const shown = page.getByRole("region", {name: "Resource shown by automation", exact: true});
+    for (const [intent, title] of [[dataSourceIntent, "Saved source data"], [dataVersionIntent, "Saved dataset version"],
+      [{action: "show-dataset-task", taskId: acceptedTaskId}, "Dataset preparation"]] as const) {
+      const command = {target: lease, commandId: randomUUID(), intent};
+      expect(await call(display, "aisb_present_in_window", command)).toMatchObject({ok: true});
+      await expect(shown.getByRole("heading", {name: title, exact: true})).toBeVisible();
+      await expect(shown).toContainText("versionId" in intent ? intent.versionId : intent.taskId);
+      await expect.poll(async () => (await call(display, "aisb_present_in_window", command)).value)
+        .toMatchObject({kind: "command", duplicate: true, receipt: {status: "applied"}});
+      expect(await call(display, "aisb_window_context", {target: lease})).toMatchObject({ok: true, value: {context: {selection: intent}}});
+      await expect(shown).not.toContainText(savedFilename);
+    }
+    await page.getByRole("button", {name: "Revoke automation takeover", exact: true}).click();
+    await expect(shown).toHaveCount(0);
+    await expect.poll(async () => {
+      const status = await call(display, "aisb_window_status", {target: attempt});
+      const value = status.value as {kind?: string; request?: {status: string}} | undefined;
+      return !status.ok || value?.kind === "ended" || value?.request?.status === "ended";
+    }).toBe(true);
+    expect(await call(display, "aisb_present_in_window", {target: lease, commandId: randomUUID(), intent: dataVersionIntent}))
+      .toEqual({ok: false, code: "headless.forbidden"});
+    expect(await call(display, "aisb_window_context", {target: lease})).toEqual({ok: false, code: "headless.forbidden"});
+    expect(await call(client, "aisb_dataset_versions", {...workspace, datasetId: savedReference.datasetId, versionIds: [savedReference.versionId]})).toEqual(versions);
+    expect(await call(client, "aisb_dataset_task_status", {...workspace, selection})).toMatchObject({ok: true, value: {taskId: acceptedTaskId, state: "succeeded"}});
   } finally {
-    try { await mcp?.close(); }
+    try { await Promise.all([mcp?.close(), dataPresentationClient?.close()]); }
     finally { await lifetime.retire(); }
   }
 });

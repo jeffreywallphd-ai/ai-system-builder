@@ -255,6 +255,8 @@ import { composeManagedSavedState } from "./composeManagedSavedState";
 import { composeManagedAgentReads } from "./composeManagedAgentReads";
 import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
 import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
+import {isUiDataPresentationIntent} from "../../../contracts/headless";
+import {composeHeadlessDataPresentation} from "../../shared/composition/headlessDataPresentation";
 import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
 import { composeManagedHeadlessPlanReview } from "./composeManagedHeadlessPlanReview";
 import { ReadHeadlessDatasetMetadataUseCase } from "../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case";
@@ -1758,10 +1760,14 @@ export function composeServerHost(
             authorizeObservation: authorize(observation),
             async resolvePresentation(principal, workspaceId, intent, {passive}) {
               const scopes = intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
-                intent.action === "show-artifact" ? [...readScopes, "artifact:read"] as const : readScopes;
+                intent.action === "show-artifact" || isUiDataPresentationIntent(intent) ? [...readScopes, "artifact:read"] as const : readScopes;
               const mayRead = authorize(passive ? observation : workspaceAuthorization, scopes);
               if (!await mayRead(principal, workspaceId)) return;
-              const value = await presentation(workspaceId, intent);
+              const context = {organizationId: principal.organizationId, principalId: principal.principalId, workspaceId};
+              const value = isUiDataPresentationIntent(intent) ? await composeHeadlessDataPresentation({documents: managedDocuments,
+                rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId,
+                getProcessor: async () => prepareTrainingDatasetUseCase})(context)?.execute(intent, context, () => mayRead(principal, workspaceId)) :
+                await presentation(workspaceId, intent);
               if (value && await mayRead(principal, workspaceId)) return value;
             }});
           managedBrowserConsent = { ...browserConsent, hostIncarnationId };

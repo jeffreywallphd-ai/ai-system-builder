@@ -1,5 +1,29 @@
 # Data Management
 
+## Exact Data presentation through Headless window control
+
+Window presentation uses three finite intents: `show-data-source` selects an
+ingestion task, file and exact task revision; `show-dataset-version` selects a
+dataset, immutable version and SHA-256 digest; `show-dataset-task` selects an
+accepted preparation task. Existing current workspace and artifact-read checks
+surround metadata reads and delivery. Source/task/version lookup never scans
+files or history, transfers provider data, starts processing or saves output.
+
+Sources require a completed file and matching immutable snapshot. Version reads
+require the same organization, workspace, dataset, version and digest. Transient
+preparation tasks additionally require a durable accepted receipt for the same
+host and actor before the host resolves the existing dataset owner. A separately
+paired presentation client may display that actor's accepted task, but ordinary
+task status, review and saving retain their original plan-client binding.
+
+The existing consent dialog lists the display permissions. The current view and
+exact opaque resource identifiers may reach the connector; bounded counts and
+status appear only in the interactive resource panel. Private paths, source
+names, rows, samples, recipe bodies and credentials do not enter either result.
+Existing lease, document, deadline, order and revocation checks remain in force.
+Revoking display permission removes the panel and stops subsequent presentation
+and context; it does not cancel owned tasks or remove saved dataset versions.
+
 ## Headless reviewed dataset saving
 
 Plan-review registrations can read `data.dataset-task-review` for an exact

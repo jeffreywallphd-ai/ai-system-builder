@@ -157,6 +157,15 @@ saves local output only and grants no external publication or window control.
 
 ## Supported connections
 
+To show saved Data work, use a separately authorized window-control connection
+and the current exact lease. `show-data-source` takes the saved task/file/revision;
+`show-dataset-version` takes the saved dataset/version/digest;
+`show-dataset-task` takes an accepted task owned by this user on this host. These
+intents display fixed metadata and share identifiers only. They do not run,
+save, approve, publish or cancel Data work. Revoke stops display and context;
+retain the original plan connection to inspect the independent task or version.
+Do not retry an ended lease without fresh user direction.
+
 | Setup | Available plan workflow | Decision surface |
 | --- | --- | --- |
 | Desktop connector with the dedicated plan-review pairing and official stdio client | Approved system changes, selected local/provider source saves, bounded provided-row processing and separately approved immutable result saving; check host availability | Desktop Settings popup or approval chat |

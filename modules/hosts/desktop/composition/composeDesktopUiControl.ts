@@ -6,7 +6,7 @@ import type { StructuredDocumentStore } from "../../../adapters/persistence/shar
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { DesktopHeadlessAuthoringWireGrant } from "../../../adapters/transport/headless-loopback";
 import {
-  UI_CONTROL_VERSION, sameUiControlLease, readUiPresentationDetail, readUiPresentationContext,
+  UI_CONTROL_VERSION, sameUiControlLease, readUiPresentationDetail, readUiPresentationContext, isUiDataPresentationIntent,
   type HeadlessHostIncarnationId, type HeadlessWindowRequest, type HeadlessWindowResult, type HeadlessWindowValue,
   type UiControlAttempt, type UiControlLeaseTarget, type UiPresentationContext, type UiPresentationIntent, type UiPresentationDetail,
 } from "../../../contracts/headless";
@@ -24,7 +24,7 @@ export function composeDesktopUiControl({
   readonly documents: StructuredDocumentStore;
   readonly rootDirectory: string;
   readonly isOpen: () => boolean;
-  readonly canPresent?: (workspaceId: WorkspaceId, intent: UiPresentationIntent) => Promise<UiPresentationDetail | undefined>;
+  readonly canPresent?: (workspaceId: WorkspaceId, intent: UiPresentationIntent, stillAllowed: () => Promise<boolean>) => Promise<UiPresentationDetail | undefined>;
   readonly now?: () => number;
   readonly audit?: DesktopHeadlessAudit;
 }) {
@@ -54,11 +54,11 @@ export function composeDesktopUiControl({
   const authorizeIntent = async (workspaceId: WorkspaceId, intent: UiPresentationIntent) => {
     if (!canPresent) return;
     const extraScopes: readonly SecurityScope[] = intent.action === "show-run" ? ["runtime:read"] :
-      intent.action === "show-artifact" ? ["artifact:read"] : [];
+      intent.action === "show-artifact" || isUiDataPresentationIntent(intent) ? ["artifact:read"] : [];
     const scopes: readonly SecurityScope[] = ["workspace:read", "asset:read", ...extraScopes];
     if (!await authorizeWorkspace(workspaceId, scopes)) return;
     try {
-      const detail = readUiPresentationDetail(await canPresent(workspaceId, intent));
+      const detail = readUiPresentationDetail(await canPresent(workspaceId, intent, () => authorizeWorkspace(workspaceId, scopes)));
       if (detail && await authorizeWorkspace(workspaceId, scopes)) return detail;
     } catch { return undefined; }
   };

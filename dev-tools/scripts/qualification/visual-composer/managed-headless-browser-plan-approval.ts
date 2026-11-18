@@ -182,9 +182,10 @@ async function runFrontierCase(options: {
 async function main() {
   const frontier = process.env.AISB_QUALIFY_FRONTIER_PLAN === "1";
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
-    {headlessAgent:true, headlessBrowser:true, headlessPlanReview:true, headlessProvidedDatasets:true});
+    {headlessAgent:true, headlessBrowser:true, headlessPlanReview:true, headlessProvidedDatasets:true, headlessBrowserPresentation:true});
   const checks: Record<string, boolean | number> = {};
   const client = new Client({name:"managed-approved-step-qualification",version:"1.0.0"});
+  const presentationClient = new Client({name:"managed-data-window-qualification",version:"1.0.0"});
   let browser: Browser | undefined;
   let stage = "load";
   let passed = false;
@@ -730,6 +731,83 @@ async function main() {
     assert.match(savedVersion.recipeDigest, /^sha256:[a-f0-9]{64}$/);
     assert.deepEqual(savedVersion.quality, {policyFingerprint: quality.policyFingerprint, reportFingerprint: "sha256:" + quality.reportFingerprint});
     checks.managed_reviewed_dataset_saves_once_with_immutable_lineage = true;
+    stage = "connect-independent-data-presentation-client";
+    await presentationClient.connect(new StdioClientTransport({command:process.execPath,
+      args:["--import","tsx",path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts")],
+      stderr:"ignore", maxBufferSize:256 * 1024, env:{
+        AISB_HEADLESS_MODE:"managed", AISB_HEADLESS_ENABLE_MANAGED_CONSENT:"1", AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION:"1",
+        AISB_HEADLESS_MANAGED_ORIGIN:serverOrigin, AISB_HEADLESS_MANAGED_WORKSPACE_ID:workspaceId,
+        AISB_HEADLESS_MANAGED_ORGANIZATION_ID:organizationId, AISB_HEADLESS_MANAGED_CREDENTIAL:agent.access,
+        NODE_EXTRA_CA_CERTS:agent.caFile, TSX_DISABLE_CACHE:"1"}}), {timeout:10_000});
+    const presentCall = async (name: string, input: Record<string, unknown>) => {
+      const reply = await presentationClient.callTool({name, arguments: input}, undefined, {timeout:8_000});
+      assert.ok(Array.isArray(reply.content) && reply.content.length === 1 && reply.content[0].type === "text");
+      return JSON.parse(reply.content[0].text);
+    };
+    stage = "identify-data-presentation-window";
+    let windowTarget: object | undefined;
+    await expect.poll(async () => {
+      const windows = await presentCall("aisb_list_windows", scope);
+      windowTarget = windows.ok && windows.value.windows.length === 1 ? windows.value.windows[0] : undefined;
+      return !!windowTarget;
+    }).toBe(true);
+    const requested = await presentCall("aisb_request_window", {target: windowTarget, requestKey: randomUUID(), taskId: randomUUID()});
+    assert.equal(requested.ok, true);
+    const attempt = requested.value.request.target;
+    stage = "approve-independent-data-presentation";
+    const consent = page.getByRole("dialog", {name:"Automation takeover request", exact:true});
+    await expect(consent).toContainText("dataset versions and your accepted Data tasks");
+    await consent.getByRole("button", {name:"Accept automation takeover", exact:true}).click();
+    let lease: object | undefined;
+    await expect.poll(async () => {
+      const status = await presentCall("aisb_window_status", {target:attempt});
+      lease = status.ok ? status.value.lease : undefined; return !!lease;
+    }).toBe(true);
+    const sourceIntent = {action:"show-data-source", taskId, fileId, taskRevision:sourceStatus.value.revision};
+    const versionIntent = {action:"show-dataset-version", datasetId:savedReference.datasetId, versionId:savedReference.versionId,
+      versionDigest:savedReference.versionDigest};
+    stage = "deny-unaccepted-or-stale-data-presentation";
+    for (const intent of [{...sourceIntent, taskRevision:1}, {action:"show-dataset-task",taskId:randomUUID()}])
+      assert.equal((await presentCall("aisb_present_in_window", {target:lease,commandId:randomUUID(),intent})).ok,false);
+    const dataPanel = page.getByRole("region", {name:"Resource shown by automation", exact:true});
+    for (const [intent, title] of [[sourceIntent,"Saved source data"], [versionIntent,"Saved dataset version"],
+      [{action:"show-dataset-task",taskId:acceptedDatasetTask},"Dataset preparation"]] as const) {
+      stage = "show-managed-" + intent.action;
+      const command = {target:lease,commandId:randomUUID(),intent};
+      assert.equal((await presentCall("aisb_present_in_window",command)).ok,true);
+      await expect(dataPanel.getByRole("heading",{name:title,exact:true})).toBeVisible();
+      await expect(dataPanel).toContainText("versionId" in intent ? intent.versionId : intent.taskId);
+      await expect.poll(async () => (await presentCall("aisb_present_in_window",command)).value)
+        .toMatchObject({kind:"command",duplicate:true,receipt:{status:"applied"}});
+      const observed = await presentCall("aisb_window_context",{target:lease});
+      assert.equal(observed.ok,true); assert.deepEqual(observed.value.context.selection,intent);
+      assert.ok(!/private\/|sourceArtifactIds|rawArtifactKey|credential|recipeSnapshot/.test(JSON.stringify(observed)));
+    }
+    checks.managed_exact_data_source_version_and_owned_task_presented = true;
+    stage = "revoke-managed-data-presentation";
+    await page.getByRole("button",{name:"Revoke automation takeover",exact:true}).click();
+    stage = "confirm-managed-data-panel-retired";
+    await expect(dataPanel).toHaveCount(0);
+    stage = "confirm-managed-data-lease-retired";
+    await expect.poll(async () => {
+      const status = await presentCall("aisb_window_status",{target:attempt});
+      return !status.ok || status.value.kind === "ended" || status.value.request?.status === "ended";
+    }).toBe(true);
+    stage = "deny-managed-data-reveal-after-revoke";
+    assert.deepEqual(await presentCall("aisb_present_in_window",{target:lease,commandId:randomUUID(),intent:versionIntent}),{ok:false,code:"headless.forbidden"});
+    stage = "deny-managed-data-context-after-revoke";
+    const revokedContext = await presentCall("aisb_window_context",{target:lease});
+    assert.equal(revokedContext.ok,false);
+    assert.ok(["headless.forbidden","headless.unavailable"].includes(revokedContext.code));
+    assert.deepEqual(Object.keys(revokedContext).sort(),["code","ok"]);
+    stage = "confirm-managed-version-survives-revoke";
+    assert.deepEqual(await call("aisb_dataset_versions",{...scope,datasetId:savedReference.datasetId,versionIds:[savedReference.versionId]}),versions);
+    stage = "confirm-managed-task-survives-revoke";
+    const retainedTask = await call("aisb_dataset_task_status",{...scope,selection});
+    checks.managed_retained_task_read_succeeded = retainedTask.ok === true;
+    checks.managed_retained_task_is_saved = retainedTask.value?.state === "succeeded";
+    assert.equal(retainedTask.ok,true); assert.equal(retainedTask.value.taskId,acceptedDatasetTask); assert.equal(retainedTask.value.state,"succeeded");
+    checks.managed_data_window_revoke_preserves_saved_version_and_task = true;
     const followUp = await run(saveFingerprint,approvedSave.revision,2);
     assert.equal(followUp.ok,true);
     assert.equal(followUp.value.kind,"committed");
@@ -807,6 +885,7 @@ async function main() {
     if (passed) stage = "cleanup";
     await browser?.close().catch(() => {passed=false;});
     await client.close().catch(() => {passed=false;});
+    await presentationClient.close().catch(() => {passed=false;});
     await fixture.stop().catch(() => {passed=false;});
     const evidence = {schema_version:"managed-browser-plan-popup-v1",source_revision:fixture.sourceRevision,
       status:passed ? "passed" : "failed",stage:passed ? "complete" : stage,checks};

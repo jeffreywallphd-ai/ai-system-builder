@@ -4,7 +4,7 @@ import { createWindowTakeoverController, type DraftHandoff } from "../../../../.
 import { createPresentationQueue } from "../../../../../../modules/ui/shared/takeover/presentationQueue";
 import type { HeadlessPlanApprovalClient } from "../../../../../../modules/ui/shared/headless/HeadlessPlanApprovalDialog";
 import type { GuidedHeadlessFileClient } from "../../../../../../modules/ui/shared/data-management/GuidedIngestionTaskPanel";
-import { UI_PRESENTATION_LIMITS, type UiPresentationContext, type UiPresentationDetail,
+import { UI_PRESENTATION_LIMITS, viewForUiPresentationIntent, type UiPresentationContext, type UiPresentationDetail,
   type UiPresentationIntent, type UiPresentationReceipt } from "../../../../../../modules/contracts/headless";
 import { isWorkspaceId, type WorkspaceId } from "../../../../../../modules/contracts/workspace";
 import { isOrganizationId } from "../../../../../../modules/contracts/organization";
@@ -23,10 +23,6 @@ type Scope = {readonly client: Client; readonly tab: Tab;
 type ApprovalClients = {readonly client: HeadlessPlanApprovalClient; readonly chatClient?: HeadlessPlanApprovalClient;
   readonly fileClient: GuidedHeadlessFileClient};
 type PlanApprovals = ApprovalClients & {readonly workspaceId: WorkspaceId; readonly documentId: string; readonly isCurrent: () => boolean};
-const presentationViews = {
-  "open-system": "system", "select-component": "component",
-  "show-validation": "validation", "show-run": "run", "show-artifact": "artifact",
-} as const;
 
 /** Holds one volatile tab proof per visible, currently authenticated workspace. */
 export function useManagedBrowserTakeover(workspaceId: string | undefined, organizationId: string | undefined, isSystemsPage: boolean) {
@@ -171,7 +167,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
               const challenge = await client.challenge(scope.tab, target, lease.signal);
               if (!challenge || !valid() || currentTab.current !== scope || !controller.permits(target, fence)) return;
               const intent = selection.current;
-              const context: UiPresentationContext = {view: intent ? presentationViews[intent.action] : "other",
+              const context: UiPresentationContext = {view: intent ? viewForUiPresentationIntent(intent) : "other",
                 ready: true, dirtyNavigationBlocked: systems.current && draft.current?.().status !== "clean",
                 ...(intent ? {selection: intent} : {})};
               await client.publish(scope.tab, target, challenge, context, lease.signal);

@@ -1,5 +1,24 @@
 # Headless client skill
 
+## Show a Data result in the app
+
+Use a separate client with window-control permission. The plan-review connection
+does not gain that permission by importing or saving data. Ask for the exact
+current window, wait for the user's consent and active lease, then call
+`aisb_present_in_window` with one of these exact selections:
+
+- `show-data-source`: the saved ingestion `taskId`, `fileId` and `taskRevision`.
+- `show-dataset-version`: the returned `datasetId`, `versionId` and `versionDigest`.
+- `show-dataset-task`: the accepted preparation `taskId` owned by this user on
+  this host. Unknown, unaccepted or other-user tasks are unavailable.
+
+Keep the same command ID to read a prior delivery outcome. The app shows bounded
+status and counts; the client receives only current view and resource identifiers.
+Do not add source contents, paths, names or provider coordinates. The consent
+dialog lists display permissions and allows revocation. After revocation, do not
+issue another command or reuse the ended lease. Saved data and independently
+authorized tasks remain available through their original plan connection.
+
 A plan-review client can use `aisb_ingestion_status` to check one known Data
 task in its approved workspace. The result contains the state, revision and
 progress counts. It contains no filenames, paths, source contents or diagnostic

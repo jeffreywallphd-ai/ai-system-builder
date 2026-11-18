@@ -1,5 +1,28 @@
 # Headless System Builder threat model
 
+## Data window presentation
+
+Security impact: security-relevant. Protected assets are saved source/version
+metadata, transient task identity and current window consent. The fixed Data
+intents accept exact opaque references, not paths, provider coordinates, data
+rows or execution callbacks. Workspace and artifact-read authorization apply
+before and after resource reads and at the existing display/context egress.
+
+A task point-index must agree with its durable accepted owner and plan index,
+organization, workspace, principal and host before any lazy processor access.
+Reserved, issued, unknown and foreign tasks have no presentation authority.
+Only display may cross the original client boundary under separate consent;
+execution/status/review/save routes still require the original plan client.
+Interactive details contain fixed text, finite state and bounded counts. The
+connector context contains only view and exact identifiers. Revocation retires
+delivery and context while preserving independently authorized Data work.
+
+Focused tests cover strict schemas, stale or foreign lineage/version selection,
+permission withdrawal, accepted-task proof before lazy access, review arrival
+during a status read, replay and lease retirement. Packaged Desktop and managed
+browser journeys cover the actual separately consented handoff. These checks do
+not establish provider transfer, model quality or native worker/offload cleanup.
+
 Authority: [ADR-0047](../adr/ADR-0047-headless-system-builder-delegation.md).
 Scope: the approved desktop connector, shared authoring and receipt boundaries,
 revocable window presentation, managed parity, and passive plan discovery. This is a design

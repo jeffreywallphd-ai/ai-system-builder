@@ -30,6 +30,15 @@ class DatasetPreviewRoutingTests(unittest.TestCase):
             self.assertIn(name, command)
         self.assertIn("focused-tests", self.selected(sources + ["modules/application/ports/dataset-version/unknown.port.ts"]))
         self.assertIn("focused-tests", self.selected(sources, ["focused-tests"]))
+
+    def test_takeover_policy_and_consent_copy_select_existing_focused_denial_checks(self):
+        sources = ["modules/hosts/desktop/composition/composeDesktopUiControl.ts",
+                   "modules/ui/shared/takeover/WindowTakeoverControls.tsx"]
+        selected = self.selected(sources)
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+                      selected["headless-desktop-takeover-controls"]["argv"])
+        self.assertIn("focused-tests", self.selected(sources + ["modules/hosts/desktop/composition/unknown-policy.ts"]))
         worker = ["modules/contracts/runtime/dataset-preparation.ts", "modules/adapters/runtime/python/worker/README.md",
                   "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
                   "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py"]
@@ -62,6 +71,19 @@ class DatasetPreviewRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.selected(sources, ["focused-tests"]))
         self.assertIn("headless-approved-dataset-task-wiring", self.selected(
             ["dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts"]))
+
+    def test_exact_data_presentation_runs_authority_and_passive_resource_denials(self):
+        sources = ["modules/application/use-cases/ingestion-acquisition/headless-data-presentation.use-case.ts",
+                   "modules/hosts/shared/composition/headlessDataPresentation.ts",
+                   "modules/hosts/shared/composition/tests/headless-data-presentation.unit.test.ts"]
+        selected = self.selected(sources)
+        self.assertNotIn("focused-tests", selected)
+        command = selected["headless-ui-control-authority"]["argv"]
+        for name in [sources[2], "modules/contracts/headless/tests/ui-control-delivery.unit.test.ts",
+                     "modules/adapters/persistence/ingestion/tests/structured-headless-dataset-plan-task-store.unit.test.ts"]:
+            self.assertIn(name, command)
+        self.assertIn("focused-tests", self.selected(sources + ["modules/hosts/shared/composition/unmapped.ts"]))
+        self.assertIn("focused-tests", self.selected(sources, ["focused-tests"]))
 
     def selected(self, paths, required=None):
         return {row["id"]: row for row in catalog.plan(

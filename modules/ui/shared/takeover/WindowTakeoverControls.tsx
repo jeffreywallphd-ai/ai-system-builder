@@ -35,6 +35,8 @@ export function WindowTakeoverControls({ workspaceLabel }: { workspaceLabel?: st
             <p>Task <code>{prompt.request.taskId}</code> in {workspaceLabel ?? prompt.request.target.workspaceId}.</p>
             <p>{save ? "Save your draft before giving automation control of this window." :
               "This lets the chat client show saved resources in this window. You can take back control at any time."}</p>
+            <p>Permission: show saved systems, components, validation, runs, artifacts, Data sources, dataset versions and your accepted Data tasks.
+              Share only their identifiers and the current view with this chat client. This does not permit editing, importing, processing, saving or publishing data.</p>
           </div>
           <div className="ui-actions">
             <button type="button" className="ui-button ui-button--outline" data-modal-initial-focus onClick={controller.revoke}>

@@ -73,6 +73,11 @@ function addPresentationTools(server: McpServer) {
     z.strictObject({ action: z.literal("show-validation"), systemId, revisionId: exactResource }),
     z.strictObject({ action: z.literal("show-run"), runId: exactResource }),
     z.strictObject({ action: z.literal("show-artifact"), artifactId: z.string().min(1).max(512) }),
+    z.strictObject({ action: z.literal("show-data-source"), taskId: exactResource, fileId: exactResource,
+      taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) }),
+    z.strictObject({ action: z.literal("show-dataset-version"), datasetId: exactResource, versionId: exactResource,
+      versionDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/) }),
+    z.strictObject({ action: z.literal("show-dataset-task"), taskId: hostIncarnationId }),
   ]);
   const call = (operation: HeadlessWindowRequest["operation"], input: unknown, signal?: AbortSignal) => {
     const request = headless.readHeadlessWindowRequest({ version: headless.UI_CONTROL_VERSION, operation, input });

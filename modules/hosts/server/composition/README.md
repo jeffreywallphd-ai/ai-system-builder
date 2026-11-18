@@ -1,5 +1,13 @@
 # Server host composition
 
+Managed Data presentation routes exact source/version/accepted-task selections
+through the shared Data metadata reader under current request organization,
+workspace, principal and artifact-read policy. Existing consent/delivery owns
+lease and document fences. Transient tasks require durable same-host/actor
+acceptance before processor lookup. Separate window registration grants no
+execution/status/review/save authority. Revocation removes display and context,
+preserving owned tasks and immutable versions; no provider or model call starts.
+
 ## Restrict automatic ComfyUI setup
 
 Set `COMFYUI_AUTO_INSTALL=0` in the server host environment to disable automatic

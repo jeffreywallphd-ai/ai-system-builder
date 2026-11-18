@@ -2,7 +2,7 @@ import type { ArtifactCatalogReadPort } from "../../../application/ports/artifac
 import type { ExecutionRunRepositoryPort } from "../../../application/ports/execution-runs";
 import type { SystemBuilderRepositoryPort } from "../../../application/ports/system-builder";
 import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
-import type { UiPresentationDetail, UiPresentationIntent } from "../../../contracts/headless";
+import {isUiDataPresentationIntent, type UiPresentationDetail, type UiPresentationIntent} from "../../../contracts/headless";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../contracts/system-builder";
 import type { WorkspaceId } from "../../../contracts/workspace";
 
@@ -13,6 +13,8 @@ export function composeManagedBrowserPresentationResources(options: {
   readonly artifacts: Pick<ArtifactCatalogReadPort, "readArtifactCatalogRecord">;
 }) {
   return async (workspaceId: WorkspaceId, intent: UiPresentationIntent): Promise<UiPresentationDetail | undefined> => {
+    // Data uses the accepted-task/actor-aware reader in the calling host.
+    if (isUiDataPresentationIntent(intent)) return;
     if (intent.action === "show-run") {
       const run = await options.runs.getExecutionRunById(workspaceId, normalizeExecutionRunId(intent.runId));
       if (run?.workspaceId === workspaceId && run.id === intent.runId && run.status !== "archived")

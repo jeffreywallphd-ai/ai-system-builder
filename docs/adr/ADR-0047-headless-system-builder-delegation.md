@@ -1,5 +1,15 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+The approved Data handoff extends the same finite presentation protocol with
+exact source/file/revision, dataset/version/digest and accepted task intents.
+It adds no generic navigation, filesystem, provider or task execution tool.
+Both hosts reuse the existing consent, current artifact-read policy and display
+delivery fences. Accepted transient task lookup requires the same actor and
+host before lazy Data access; a distinct presentation registration cannot gain
+the original plan client's execution, status, review or save permission. The
+interactive resource panel shows bounded metadata; connector context remains
+identifier-only. Revocation leaves independent business work intact.
+
 - Status: accepted
 - Date: 2026-11-13
 - Deciders: repository owner, by approval of the desktop-first Headless Skills and Revocable UI Takeover roadmap

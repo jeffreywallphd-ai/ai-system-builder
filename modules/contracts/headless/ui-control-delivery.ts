@@ -1,6 +1,9 @@
 import { hasKnownPassiveCredential, readStrictPassiveRecord } from "../shared";
 import { isSystemBuilderSystemId, normalizeSystemBuilderRevisionId } from "../system-builder";
 import { normalizeExecutionRunId } from "../execution-runs";
+import { normalizeIngestionTaskId, normalizeIngestionTaskFileId } from "../ingestion";
+import { normalizeDatasetId, normalizeDatasetVersionId } from "../dataset";
+import { isHeadlessHostIncarnationId } from "./headless-read-request";
 import { isUiControlId, readUiControlLeaseTarget, type UiControlLeaseTarget } from "./ui-control-authority";
 
 export const UI_PRESENTATION_LIMITS = Object.freeze({
@@ -14,7 +17,15 @@ type SystemPresentation =
 
 export type UiPresentationIntent = SystemPresentation
   | { readonly action: "show-run"; readonly runId: string }
-  | { readonly action: "show-artifact"; readonly artifactId: string };
+  | { readonly action: "show-artifact"; readonly artifactId: string }
+  | { readonly action: "show-data-source"; readonly taskId: string; readonly fileId: string; readonly taskRevision: number }
+  | { readonly action: "show-dataset-version"; readonly datasetId: string; readonly versionId: string; readonly versionDigest: `sha256:${string}` }
+  | { readonly action: "show-dataset-task"; readonly taskId: string };
+
+export type UiDataPresentationIntent = Extract<UiPresentationIntent, {action: "show-data-source" | "show-dataset-version" | "show-dataset-task"}>;
+export function isUiDataPresentationIntent(intent: UiPresentationIntent): intent is UiDataPresentationIntent {
+  return intent.action === "show-data-source" || intent.action === "show-dataset-version" || intent.action === "show-dataset-task";
+}
 
 export type UiPresentationSubmission = {
   readonly target: UiControlLeaseTarget;
@@ -113,7 +124,7 @@ export function readUiPresentationPublication(raw: unknown) {
 }
 
 export type UiPresentationContext = {
-  readonly view: "system" | "component" | "run" | "artifact" | "validation" | "other";
+  readonly view: "system" | "component" | "run" | "artifact" | "validation" | "data-source" | "dataset-version" | "dataset-task" | "other";
   readonly ready: boolean;
   readonly dirtyNavigationBlocked: boolean;
   readonly selection?: UiPresentationIntent;
@@ -125,7 +136,14 @@ const contextSelection = {
   "show-run": "run",
   "show-artifact": "artifact",
   "show-validation": "validation",
+  "show-data-source": "data-source",
+  "show-dataset-version": "dataset-version",
+  "show-dataset-task": "dataset-task",
 } as const;
+
+export function viewForUiPresentationIntent(intent: UiPresentationIntent): UiPresentationContext["view"] {
+  return contextSelection[intent.action];
+}
 
 export function readUiPresentationContext(raw: unknown): UiPresentationContext | undefined {
   try {
@@ -133,7 +151,7 @@ export function readUiPresentationContext(raw: unknown): UiPresentationContext |
     const { view, ready, dirtyNavigationBlocked } = row;
     if (typeof ready !== "boolean" || typeof dirtyNavigationBlocked !== "boolean") return;
     if (view !== "system" && view !== "component" && view !== "run" && view !== "artifact" &&
-        view !== "validation" && view !== "other") return;
+        view !== "validation" && view !== "data-source" && view !== "dataset-version" && view !== "dataset-task" && view !== "other") return;
     if (!("selection" in row)) return { view, ready, dirtyNavigationBlocked };
     const selection = readUiPresentationIntent(row.selection);
     if (!selection || !ready || contextSelection[selection.action] !== view) return;
@@ -162,7 +180,8 @@ export function sameUiControlLease(left: UiControlLeaseTarget, right: UiControlL
 
 export function readUiPresentationIntent(raw: unknown): UiPresentationIntent | undefined {
   try {
-    const row = readStrictPassiveRecord(raw, ["action", "systemId", "revisionId", "instanceId", "runId", "artifactId"]);
+    const row = readStrictPassiveRecord(raw, ["action", "systemId", "revisionId", "instanceId", "runId", "artifactId",
+      "taskId", "fileId", "taskRevision", "datasetId", "versionId", "versionDigest"]);
     const { action, systemId, revisionId, instanceId, runId, artifactId } = row;
     const keys = Object.keys(row).length;
     switch (action) {
@@ -183,6 +202,25 @@ export function readUiPresentationIntent(raw: unknown): UiPresentationIntent | u
         break;
       case "show-artifact":
         if (keys === 2 && isArtifactCatalogId(artifactId)) return { action, artifactId };
+        break;
+      case "show-data-source": {
+        const {taskId, fileId, taskRevision} = row;
+        if (keys === 4 && isResourceId(taskId) && normalizeIngestionTaskId(taskId) === taskId &&
+            isResourceId(fileId) && normalizeIngestionTaskFileId(fileId) === fileId &&
+            typeof taskRevision === "number" && Number.isSafeInteger(taskRevision) && taskRevision > 0)
+          return {action, taskId, fileId, taskRevision};
+        break;
+      }
+      case "show-dataset-version": {
+        const {datasetId, versionId, versionDigest} = row;
+        if (keys === 4 && isResourceId(datasetId) && normalizeDatasetId(datasetId) === datasetId &&
+            isResourceId(versionId) && normalizeDatasetVersionId(versionId) === versionId &&
+            typeof versionDigest === "string" && /^sha256:[a-f0-9]{64}$/.test(versionDigest))
+          return {action, datasetId, versionId, versionDigest: versionDigest as `sha256:${string}`};
+        break;
+      }
+      case "show-dataset-task":
+        if (keys === 2 && isHeadlessHostIncarnationId(row.taskId)) return {action, taskId: row.taskId};
         break;
     }
   } catch { return undefined; }

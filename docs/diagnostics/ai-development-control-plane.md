@@ -1,5 +1,11 @@
 # Contributor Control Plane
 
+The focused `headless-ui-control-authority` check also executes strict Data
+presentation contracts, saved-resource lineage and accepted-task-before-lazy-read
+denials, alongside existing lease authority. Unknown sources retain the normal
+focused-test fallback. Actual two-host handoff evidence remains separate from
+these unit checks and from roadmap parent qualification.
+
 Headless dataset previews have an exact `headless-dataset-preview-contract`
 check for passive requests, minimized replies and current source admission.
 `headless-data-definition-witnesses` runs the actual Vitest reporting guard for
