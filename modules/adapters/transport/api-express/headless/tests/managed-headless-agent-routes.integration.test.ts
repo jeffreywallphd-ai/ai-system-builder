@@ -77,6 +77,18 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
         version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "context.models") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {workspaceId: statusMismatch ? "foreign" as never : request.input.workspaceId,
+          models: [], truncated: false, runtimeReadiness: "not-checked", ...(statusExtra ? {privatePath: "private/model"} : {})}};
+      }
+      if (request.operation === "context.preview-generation") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {workspaceId: request.input.workspaceId, name: request.input.name,
+          sources: request.input.sources.map(reference => ({reference, sizeBytes: 32, digest: "sha256:" + "a".repeat(64), format: "csv", licenseStatus: "unknown" as const})),
+          settings: request.input.settings, totalBytes: 32, runtimeReadiness: statusMismatch ? "ready" as never : "not-checked",
+          approvalRequired: true, reviewRequired: true, modelCalls: 0, externalProviderCalls: 0, ...(statusExtra ? {command: {private: "private"}} : {})}};
+      }
       if (request.operation === "data.dataset-task-status") {
         if (withdrawStatus) current = false;
         return {ok: true, operation: request.operation, value: {
@@ -217,6 +229,18 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     enabled = false;
     assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 400);
     enabled = true;
+    for (const [operation, target] of [["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
+      sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
+      settings: {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
+        overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]}}]] as const) {
+      const query = {version: HEADLESS_CONTRACT_VERSION, operation, input: {...scope, ...target}};
+      assert.equal((await request(query, "fixture-plan", readRoute)).status, 200);
+      statusMismatch = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
+      statusMismatch = false; statusExtra = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
+      statusExtra = false; withdrawStatus = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 403);
+      withdrawStatus = false; current = true; assert.equal((await request(query, "fixture-agent", readRoute)).status, 403);
+      enabled = false; assert.equal((await request(query, "fixture-plan", readRoute)).status, 400); enabled = true;
+    }
     const preparationRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.preview-dataset-preparation", input: {...scope,
       sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},

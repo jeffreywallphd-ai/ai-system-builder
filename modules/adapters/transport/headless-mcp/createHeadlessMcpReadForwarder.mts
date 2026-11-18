@@ -57,6 +57,8 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
   maximumLength: z.number().int().positive().optional(), options: z.array(workflowId).min(1).max(32).optional() });
 const resultValue = {
   // These two finite shapes use the shared exact-target passive decoders below.
+  "context.models": z.unknown(),
+  "context.preview-generation": z.unknown(),
   "data.dataset-versions": z.unknown(),
   "data.compare-dataset-versions": z.unknown(),
   "data.preview-dataset-preparation": z.unknown(),
@@ -136,7 +138,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? headless.HEADLESS_DATA_READ_OPERATIONS : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -241,7 +243,7 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
-    if (headless.isHeadlessDataReadOperation(input.operation) && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
+    if ((headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation)) && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -379,6 +381,14 @@ function createForwarder(options: {
       const expected = z.strictObject({ ok: z.literal(true), operation: z.literal(input.operation), value: resultValue[input.operation] });
       const parsed = expected.safeParse(raw);
       if (!parsed.success) return unavailable;
+      if (input.operation === "context.models") {
+        const value = headless.readHeadlessContextModels(parsed.data.value, input.input.workspaceId);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
+      if (input.operation === "context.preview-generation") {
+        const value = headless.readHeadlessContextPreview(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
       if (input.operation === "data.preview-dataset-preparation") {
         const value = headless.readHeadlessDatasetPreparationPreview(parsed.data.value, input.input);
         return value ? {ok: true, operation: input.operation, value} : unavailable;

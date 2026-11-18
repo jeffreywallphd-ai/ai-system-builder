@@ -206,3 +206,16 @@ Legacy `inputField` keeps its existing meaning. The worker derives all canonical
 instruction/output aliases solely from the selected columns and omits unrelated
 context. Missing selected fields remain a mapping failure. The exact map is
 retained in recipe lineage and the approved processing digest.
+
+### Context metadata before execution
+
+The approved Context increment first adds passive `context.models` and
+`context.preview-generation` reads on dedicated plan-review connections. Reuse
+the existing Context capability/command contracts and owning repositories.
+Do not reuse active source inspection, detail or query services for this read:
+they can resolve runtime work. Recorded model point reads have a separate port
+that cannot fall through to filesystem discovery. Public DTOs contain bounded
+identifiers, hashes, sizes, settings and unverified runtime readiness. Exact
+saved source/version and model witnesses are private execution inputs, not new
+authority. Actual build/query/rebuild/save and revocable display remain separate
+increment work under the existing approval and Context lifecycle owners.

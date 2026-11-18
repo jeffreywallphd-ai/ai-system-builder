@@ -54,7 +54,11 @@ type WorkflowField = {
   readonly options?: readonly string[];
 };
 
+import type {HeadlessContextModels, HeadlessContextPreview} from "./headless-context-preview";
+
 export type HeadlessReadResult =
+  | {readonly ok: true; readonly operation: "context.models"; readonly value: HeadlessContextModels}
+  | {readonly ok: true; readonly operation: "context.preview-generation"; readonly value: HeadlessContextPreview}
   | { readonly ok: true; readonly operation: "data.ingestion-status"; readonly value: HeadlessIngestionStatus }
   | { readonly ok: true; readonly operation: "data.dataset-versions"; readonly value: HeadlessDatasetVersionBatch }
   | { readonly ok: true; readonly operation: "data.compare-dataset-versions"; readonly value: DatasetVersionComparison }

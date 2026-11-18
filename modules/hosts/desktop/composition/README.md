@@ -130,3 +130,9 @@ environments are captured before startup observers. The trusted launch seam writ
 the rotated bearer into its attempt-local child environment; HTTP authentication
 keeps the same private token closure. Attached health failure updates its existing
 attempt without inventing a new launch.
+
+The Headless read composition resolves passive Context previews from the
+organization's stored ingestion/version/model metadata. It never resolves the
+active Context/runtime feature for preview. Plan-review purpose and current
+artifact/model permission surround reads and replies; private commands stay
+inside the application owner and model readiness remains unverified.

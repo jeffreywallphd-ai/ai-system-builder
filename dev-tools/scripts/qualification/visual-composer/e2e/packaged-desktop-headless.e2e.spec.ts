@@ -369,9 +369,9 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const workspace = { hostIncarnationId: await hostId(client), workspaceId };
     const names = (await client.listTools()).tools.map(tool => tool.name).sort();
     expect(names).toEqual([
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
-      "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
+      "aisb_preview_build_plan", "aisb_preview_context_generation", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
       "aisb_read_conversation_task", "aisb_read_system",
       "aisb_request_build_plan_approval",
       "aisb_run_approved_build_step", "aisb_saved_system_changes", "aisb_saved_system_snapshot",
@@ -613,6 +613,19 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     expect(await invokeDataStep(1)).toEqual({ ...fileCommit, value: { ...(fileCommit.value as object), kind: "replayed" } });
     const sourceStatus = await call(client, "aisb_ingestion_status", {...workspace, taskId: savedInput.taskId});
     expect(sourceStatus).toMatchObject({ok: true, value: {state: "succeeded", revision: expect.any(Number)}});
+    const contextSettings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
+      overlapCharacters: 50, maximumChunks: 100, textFields: ["team", "priority"]};
+    const contextInput = {...workspace, name: "Synthetic intake context", sources: [{kind: "ingestion-file", taskId: savedInput.taskId,
+      fileId: savedInput.fileId, taskRevision: (sourceStatus.value as {revision: number}).revision}], settings: contextSettings};
+    expect(await call(client, "aisb_context_models", workspace)).toMatchObject({ok: true, operation: "context.models",
+      value: {workspaceId, runtimeReadiness: "not-checked"}});
+    const contextPreview = await call(client, "aisb_preview_context_generation", contextInput);
+    expect(contextPreview).toMatchObject({ok: true, operation: "context.preview-generation", value: {workspaceId,
+      totalBytes: contents.byteLength, settings: contextSettings, runtimeReadiness: "not-checked", approvalRequired: true, reviewRequired: true,
+      modelCalls: 0, externalProviderCalls: 0}});
+    expect(JSON.stringify(contextPreview)).not.toContain(savedFilename);
+    expect(contextPreview).not.toHaveProperty("value.command");
+    expect(await call(client, "aisb_preview_context_generation", {...contextInput, sources: [{...contextInput.sources[0], taskRevision: 1}]})).toEqual({ok: false, code: "headless.stale"});
     const preparation = await call(client, "aisb_preview_dataset_preparation", {...workspace,
       sources: [{taskId: savedInput.taskId, fileId: savedInput.fileId, taskRevision: (sourceStatus.value as {revision: number}).revision}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "team", outputColumn: "priority"},
@@ -692,6 +705,9 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       versionDigest: savedReference.versionDigest, totalRows: 2, sourceCount: 1, splitSeed: 42,
       recipeDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/), quality: {
         policyFingerprint: quality.policyFingerprint, reportFingerprint: "sha256:" + quality.reportFingerprint}}]}});
+    expect(await call(client, "aisb_preview_context_generation", {...contextInput, sources: [{kind: "dataset-version",
+      datasetId: savedReference.datasetId, versionId: savedReference.versionId, versionDigest: savedReference.versionDigest, role: "train"}]}))
+      .toMatchObject({ok: true, operation: "context.preview-generation", value: {runtimeReadiness: "not-checked", modelCalls: 0}});
     await verifySavedStep(await invokeDataStep(2), "Fixture data intake");
     await page.getByRole("button", { name: "Data", exact: true }).click();
     await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();

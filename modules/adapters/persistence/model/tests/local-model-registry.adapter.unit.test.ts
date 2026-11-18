@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import ts from "typescript";
@@ -15,6 +15,22 @@ function createTestAdapterOptions(filePath: string) {
 }
 
 describe("createLocalModelRegistryAdapter", () => {
+  it("keeps recorded-only point reads separate from shared model discovery", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "model-recorded-only-"));
+    try {
+      let discoveryCalls = 0;
+      const adapter = createLocalModelRegistryAdapter({filePath: join(dir, "models.json"), discovery: {enabled: true,
+        searchRoots: () => {discoveryCalls++; return [join(dir, "shared")];}}});
+      await adapter.saveModelReference({workspaceId: "workspace-a" as never, modelRecordId: "model.synthetic",
+        provider: "huggingface", modelId: "synthetic/model", displayName: "Synthetic"});
+      expect((await adapter.readRecordedModel?.("workspace-a" as never, "model.synthetic"))?.modelRecordId).toBe("model.synthetic");
+      expect(await adapter.readRecordedModel?.("workspace-a" as never, "missing")).toBeUndefined();
+      expect(await adapter.readRecordedModel?.("workspace-b" as never, "model.synthetic")).toBeUndefined();
+      expect(discoveryCalls).toBe(0);
+      await adapter.getModelRecord("workspace-a" as never, "missing");
+      expect(discoveryCalls).toBe(1);
+    } finally {await rm(dir, {recursive: true, force: true});}
+  });
   it("type-checks with Node readdir directory-entry overloads", () => {
     const program = ts.createProgram(["modules/adapters/persistence/model/createLocalModelRegistryAdapter.ts"], {
       strict: true,

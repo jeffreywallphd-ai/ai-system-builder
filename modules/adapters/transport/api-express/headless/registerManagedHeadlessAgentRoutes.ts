@@ -3,7 +3,7 @@ import { raw, type Application, type Request, type Response } from "express";
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
   readHeadlessIngestionStatusValue,
-  isHeadlessDataReadOperation, readHeadlessDatasetVersionBatch, readHeadlessDatasetComparison,
+  isHeadlessDataReadOperation, isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview, readHeadlessDatasetVersionBatch, readHeadlessDatasetComparison,
   readHeadlessDatasetPreparationPreview,
   readHeadlessDatasetTaskStatusValue,
   readHeadlessDatasetTaskReviewValue,
@@ -215,7 +215,7 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    const dataRead = isHeadlessDataReadOperation(parsed.request.operation) && Boolean(handlers.planReview);
+    const dataRead = (isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation)) && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
     const result = await handlers.read(parsed.request, agent, current);
@@ -233,7 +233,17 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
-          ...(handlers.planReview ? result.value.operations.filter(isHeadlessDataReadOperation) : [])]}});
+          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation)) : [])]}});
+    }
+    if (result.operation === "context.models") {
+      if (parsed.request.operation !== "context.models") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessContextModels(result.value, parsed.request.input.workspaceId);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
+    }
+    if (result.operation === "context.preview-generation") {
+      if (parsed.request.operation !== "context.preview-generation") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessContextPreview(result.value, parsed.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "data.dataset-task-review") {
       if (parsed.request.operation !== "data.dataset-task-review") return failure(response, 503, "headless.unavailable");

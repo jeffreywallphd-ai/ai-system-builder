@@ -792,3 +792,14 @@ The Managed reply has the same bounded fields as the Desktop reply.
 Plan v4 is an explicit host capability. Strict DTOs reject source paths, raw rows, chosen runtime IDs, generation settings and extra destinations. A source-save step cannot be combined with preparation of the same upload at an invented future revision. The UI reconstructs and verifies the fixed processing limits for both approval channels; it distinguishes starting work from approving or saving results.
 
 Durable reserved/issued/accepted records bind the exact organization partition, actor, registered client, host incarnation, plan fingerprint, approval revision, step and source/command digests. Random task IDs remain private until accepted. Current plan/source authorization and the approval execution fence compose in the owning issue transaction. Dispatch is outside transaction retries. Acknowledgement loss, incomplete records and races cannot provide a second issuance. Accepted business receipts survive later outward revocation; final publication still requires current authority. Status uses exact accepted indexes and current artifact-read permission, with no enumeration, unknown-task adoption, result materialization or output payloads. Host-exit recovery is not claimed.
+
+### Context input metadata
+
+The dedicated plan-review client can read bounded recorded model metadata and
+preview exact saved Context inputs. Ordinary read/edit/conversation/window
+registrations cannot use these reads. Both hosts recheck current artifact/model
+permission and organization/workspace identity before publishing the response.
+The finite decoder removes no errors silently: extra fields, private paths,
+source contents and a claimed ready runtime make the complete reply unavailable.
+The private Context command is never a transport result. A metadata preview
+grants no execution, model install, save, publication or presentation authority.

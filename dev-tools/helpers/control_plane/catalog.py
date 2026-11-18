@@ -167,6 +167,41 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-input-preview": {
+        "automatic_sources": (
+            "modules/contracts/headless/headless-context-preview.ts",
+            "modules/contracts/headless/tests/headless-context-preview.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-preview.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-preview.unit.test.ts",
+            "modules/application/ports/model/model-registry.port.ts",
+            "modules/adapters/persistence/model/createLocalModelRegistryAdapter.ts",
+            "modules/adapters/persistence/model/tests/local-model-registry.adapter.unit.test.ts",
+            "modules/hosts/shared/composition/headlessContextPreview.ts",
+            "modules/hosts/shared/composition/tests/headless-context-preview.unit.test.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/headless-context-preview.ts",
+            "modules/contracts/headless/tests/headless-context-preview.unit.test.ts",
+            "modules/contracts/headless/headless-read-request.ts",
+            "modules/contracts/headless/headless-read-result.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/application/use-cases/context-management/headless-context-preview.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-preview.unit.test.ts",
+            "modules/application/ports/model/model-registry.port.ts",
+            "modules/adapters/persistence/model/createLocalModelRegistryAdapter.ts",
+            "modules/adapters/persistence/model/tests/local-model-registry.adapter.unit.test.ts",
+            "modules/hosts/shared/composition/headlessContextPreview.ts",
+            "modules/hosts/shared/composition/tests/headless-context-preview.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-context-preview.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-preview.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-preview.unit.test.ts",
+            "modules/adapters/persistence/model/tests/local-model-registry.adapter.unit.test.ts",
+        ),
+    },
     "managed-headless-browser-live-fixture": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/headless-dataset-runtime-worker.py",

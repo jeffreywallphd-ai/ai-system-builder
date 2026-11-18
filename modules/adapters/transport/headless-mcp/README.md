@@ -194,3 +194,11 @@ approved step by fingerprint and approval revision. Retry the same step after
 an uncertain reply so the host can read its own saved source receipt.
 The effect registers the remote origin and its license declaration. Dataset
 localization and preparation are separate application actions.
+
+Plan-review mode also offers `aisb_context_models` and
+`aisb_preview_context_generation`. The first lists bounded recorded workspace
+model metadata without shared-file discovery. The second previews exact saved
+file or dataset-version inputs and Context settings. It starts no processing,
+model, install or provider operation and reports runtime readiness as not checked.
+Both hosts and forwarders enforce purpose, current permissions and strict public
+reply schemas. Preview does not authorize later execution, save or window use.

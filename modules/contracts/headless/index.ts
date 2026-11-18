@@ -115,3 +115,4 @@ export {
   MANAGED_HEADLESS_AGENT_WINDOW_PATH,
   readManagedWindowResult,
 } from "./managed-headless-window";
+export * from "./headless-context-preview";

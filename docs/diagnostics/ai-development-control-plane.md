@@ -2233,3 +2233,10 @@ fixtures. App, browser, model, native lifecycle and whole-system qualification
 remain separate.
 
 The exact `headless-approved-dataset-task-wiring` check covers the additive dataset plan/status contracts, causal phase store, SQLite reopen/race behavior, both host approval compositions and shared approval UI. `headless-dataset-owned-start` retains the existing processor denial and pipeline regressions. The packaged Desktop and Managed browser journeys exercise the actual entry points. Definition/census witnesses remain separate from execution evidence and never award a roadmap pass. Unknown neighboring source files and an explicit `focused-tests` requirement retain the generic fallback.
+
+The exact `headless-context-input-preview` check covers the passive Context
+contract/compiler, recorded-only model lookup and both host read fences. It
+does not run model accuracy or the full software suite. Current Desktop and
+Managed browser MCP journeys exercise metadata previews from saved local files
+and immutable dataset versions; actual Context build/retrieval remains separate.
+Unmapped neighboring files retain the generic focused-test routing fallback.

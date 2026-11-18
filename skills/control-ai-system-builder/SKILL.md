@@ -22,6 +22,10 @@ use [Build from a written request](references/build-plans.md). It covers the
 supported plan connections, exact resources, approval choices, ordered
 execution and recovery. Open it before preparing a plan.
 
+For a Context or RAG request, use [Preview Context inputs](references/context-inputs.md)
+before selecting saved sources or an embedding model. A metadata preview does
+not start processing or prove that a model is ready.
+
 ## Read or edit saved systems
 
 List and read systems and templates within the selected workspace. If the host

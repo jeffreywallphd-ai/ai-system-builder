@@ -186,6 +186,33 @@ function addSystemBuilderTools(server: McpServer) {
     split: z.strictObject({trainRatio: z.number().positive().max(1), validationRatio: z.number().min(0).max(1), testRatio: z.number().min(0).max(1),
       seed: z.number().int().min(0).max(2_147_483_647)}), qualityPreset: z.enum(["recommended", "strict"])};
   if (enablePlanReview) {
+    const contextSource = z.discriminatedUnion("kind", [
+      z.strictObject({kind: z.literal("ingestion-file"), ...localFileTarget}),
+      z.strictObject({kind: z.literal("dataset-version"), datasetId: ingestionId, versionId: ingestionId,
+        versionDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/), role: z.enum(["dataset", "train", "validation", "test"])}),
+    ]);
+    const chunks = {chunkCharacters: z.number().int().min(64).max(32000), overlapCharacters: z.number().int().min(0).max(8000),
+      maximumChunks: z.number().int().min(1).max(1000), textFields: z.array(z.string().min(1).max(128)).max(32)};
+    const contextSettings = z.discriminatedUnion("kind", [
+      z.strictObject({...chunks, kind: z.literal("markdown-context-pack"), cleaningPreset: z.enum(["standard", "strict"])}),
+      z.strictObject({...chunks, kind: z.literal("rag-database"), modelRecordId: z.string().refine(headless.isHeadlessContextModelId),
+        modelUpdatedAt: z.string().refine(headless.isHeadlessContextTimestamp), batchSize: z.number().int().min(1).max(32), device: z.enum(["cpu", "cuda"]),
+        sourceChecks: z.strictObject({preset: z.enum(["recommended", "strict"]), allowedLanguages: z.array(z.string().min(2).max(16)).min(1).max(16),
+          requireLicenseMetadata: z.boolean(), requireConsentMetadata: z.boolean(), includeSourceAttribution: z.boolean()})}),
+    ]);
+    const contextRead = (operation: "context.models" | "context.preview-generation", input: {hostIncarnationId: string}, signal?: AbortSignal) => {
+      const parsed = headless.readHeadlessContextReadRequest({version, operation, input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, signal) : invalidAuthoring();
+    };
+    server.registerTool("aisb_context_models", {
+      description: "List at most 32 recorded model metadata entries in this workspace. No shared-file discovery, model warming or dependency install. Recorded status is not proof that a model is currently usable; runtime readiness remains not checked.",
+      inputSchema: z.strictObject(workspaceTarget), annotations: queryHints,
+    }, (input, context) => contextRead("context.models", input, context.mcpReq.signal));
+    server.registerTool("aisb_preview_context_generation", {
+      description: "Preview exact saved source files or immutable dataset versions with Context settings. Returns bounded hashes, sizes and settings, never source text or private paths. Starts no extraction, index, model or task. Approval and result review remain required; runtime readiness is not checked. Four sources of at most 4 MiB each and 1000 chunks.",
+      inputSchema: z.strictObject({...workspaceTarget, name: z.string().min(1).max(120),
+        sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextSettings}), annotations: queryHints,
+    }, (input, context) => contextRead("context.preview-generation", input, context.mcpReq.signal));
     const datasetSelection = z.discriminatedUnion("kind", [
       z.strictObject({kind: z.literal("task"), taskId: z.string().uuid()}),
       z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),

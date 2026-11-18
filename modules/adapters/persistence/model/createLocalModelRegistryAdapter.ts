@@ -442,6 +442,12 @@ export function createLocalModelRegistryAdapter(
   }
 
   return {
+    async readRecordedModel(workspaceId: WorkspaceId, modelRecordId: string) {
+      assertWorkspaceId(workspaceId);
+      const document = await readDocument();
+      const raw = (document.models ?? []).find(record => record.workspaceId === workspaceId && record.modelRecordId === modelRecordId);
+      return raw ? normalizeModelInventoryRecord(raw) : undefined;
+    },
     async readModelSummary(workspaceId: WorkspaceId) {
       assertWorkspaceId(workspaceId);
       const document = await readDocument();

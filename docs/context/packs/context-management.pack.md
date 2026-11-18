@@ -138,3 +138,9 @@ the list or report deletion. A different key leaves the selected view intact.
   acceptance. The outer package digest is separate. Original line endings stay
   exact; source-derived/legacy and RAG behavior remains unchanged. See the
   canonical Context architecture and threat model for scope and evidence limits.
+
+- Headless plan-review clients can list recorded model metadata and preview
+  exact saved source/version/settings through the passive Context compiler.
+  It cannot extract, install, load a model or start a task. Runtime readiness
+  stays unverified. Current artifact/model scope and strict public DTOs fence
+  both hosts; later execution revalidates through the existing Context owner.

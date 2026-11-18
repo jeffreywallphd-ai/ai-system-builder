@@ -150,3 +150,10 @@ Website ingestion receives the organization-scoped canonical artifact catalog
 for compensation. The application removes exact new capture catalog entries
 only after corresponding byte cleanup succeeds; existing authorization, object
 storage and native recovery controls remain authoritative.
+
+Managed Headless Context metadata reads require the verified plan-review client
+and current organization/workspace artifact/model permissions. The shared
+preview composition uses organization-partitioned saved repositories and a
+recorded-only model registry. It resolves no Context runtime, extraction,
+dependency installation or task. Strict reply readers keep private commands,
+paths and source content out of HTTP and MCP results.

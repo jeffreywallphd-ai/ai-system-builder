@@ -211,8 +211,8 @@ async function main() {
       }}), {timeout:10_000});
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
-      "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
+      "aisb_preview_build_plan", "aisb_preview_context_generation", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
     async function call(name:string, input:Record<string, unknown> = {}) {
@@ -619,6 +619,20 @@ async function main() {
     const sourceStatus = await call("aisb_ingestion_status", {...scope, taskId});
     assert.equal(sourceStatus.ok,true);
     assert.equal(sourceStatus.value.state,"succeeded");
+    stage = "preview-managed-context-inputs";
+    const contextSettings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
+      overlapCharacters: 50, maximumChunks: 100, textFields: ["name", "amount"]};
+    const contextInput = {...scope, name: "Synthetic intake context", sources: [{kind: "ingestion-file", taskId, fileId,
+      taskRevision: sourceStatus.value.revision}], settings: contextSettings};
+    const models = await call("aisb_context_models", scope);
+    assert.equal(models.ok, true); assert.equal(models.value.runtimeReadiness, "not-checked");
+    const contextPreview = await call("aisb_preview_context_generation", contextInput);
+    assert.equal(contextPreview.ok, true); assert.equal(contextPreview.operation, "context.preview-generation");
+    assert.equal(contextPreview.value.runtimeReadiness, "not-checked"); assert.equal(contextPreview.value.approvalRequired, true);
+    assert.equal(contextPreview.value.modelCalls, 0); assert.equal(contextPreview.value.externalProviderCalls, 0);
+    assert.equal("command" in contextPreview.value, false); assert.deepEqual(contextPreview.value.settings, contextSettings);
+    assert.deepEqual(await call("aisb_preview_context_generation", {...contextInput, sources: [{...contextInput.sources[0], taskRevision: 1}]}), {ok: false, code: "headless.stale"});
+    checks.managed_context_preview_is_exact_passive_metadata = true;
     const preparation = await call("aisb_preview_dataset_preparation", {...scope,
       sources: [{taskId, fileId, taskRevision: sourceStatus.value.revision}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "name", outputColumn: "amount"},
@@ -728,6 +742,10 @@ async function main() {
     const savedVersion = versions.value.versions[0];
     assert.equal(savedVersion.versionId, savedReference.versionId); assert.equal(savedVersion.versionDigest, savedReference.versionDigest);
     assert.equal(savedVersion.totalRows, 2); assert.equal(savedVersion.sourceCount, 1); assert.equal(savedVersion.splitSeed, 42);
+    const versionContext = await call("aisb_preview_context_generation", {...contextInput, sources: [{kind: "dataset-version",
+      datasetId: savedReference.datasetId, versionId: savedReference.versionId, versionDigest: savedReference.versionDigest, role: "train"}]});
+    assert.equal(versionContext.ok, true); assert.equal(versionContext.value.runtimeReadiness, "not-checked");
+    checks.managed_saved_version_context_preview_is_metadata_only = true;
     assert.match(savedVersion.recipeDigest, /^sha256:[a-f0-9]{64}$/);
     assert.deepEqual(savedVersion.quality, {policyFingerprint: quality.policyFingerprint, reportFingerprint: "sha256:" + quality.reportFingerprint});
     checks.managed_reviewed_dataset_saves_once_with_immutable_lineage = true;

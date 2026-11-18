@@ -395,3 +395,29 @@ explicit action-token checks also guard acknowledgement and error updates.
 Fresh renderer tests use actual registered Desktop IPC/preload or owned HTTP,
 application and filesystem catalog/bindings, with finite worker/archive fixtures.
 They do not qualify actual app restart, models, native cleanup or parent closure.
+
+### Passive Headless Context input previews
+
+`PreviewHeadlessContextInputsUseCase` is a metadata-only compiler. It has
+ingestion task/snapshot, immutable dataset-version and recorded-model metadata
+ports. It has no artifact-byte, runtime, dependency-install or task-start ports.
+Both host read compositions require a dedicated plan-review registration and
+current workspace artifact/model read authorization before and after reads and
+publication. They return only strict public DTOs; private commands and exact
+storage bindings stay in the application layer.
+
+`context.models` lists at most 32 persisted workspace entries with no shared
+discovery. `readRecordedModel` is a separate point read; the ordinary registry
+lookup retains its existing discovery behavior. `context.preview-generation`
+binds exact saved file task/revision/snapshot lineage or an exact immutable
+dataset/version/digest/data role. It accepts four sources of at most 4 MiB each
+and up to 1,000 chunks. Canonical Context capability and command validation
+remain authoritative. Source-derived packs use topic-aware chunking and no
+summarization model; the RAG preview selects recorded embedding metadata and
+explicit CPU or CUDA placement. No fallback, download or physical readiness is
+implied. Both DTOs report runtime readiness as `not-checked`.
+
+This preview does not verify contents, selected columns, runtime availability,
+license rights or current model files. Later approved execution must revalidate
+bindings and current authority through the existing Context owner; the preview
+does not grant execution, save, provider-egress or window-control authority.

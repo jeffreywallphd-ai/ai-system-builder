@@ -34,7 +34,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
-const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
+const planReviewTools = ["aisb_context_models", "aisb_preview_context_generation", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation", "aisb_dataset_task_status", "aisb_dataset_task_review"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
@@ -55,6 +55,14 @@ function preparationPreview(input: HeadlessDatasetPreparationRequest["input"]) {
     maximumRowsPerSource: 1000, outputFormat: "jsonl", reviewRequired: true, externalProviderCalls: 0, modelCalls: 0};
 }
 
+function contextPreview(input: {workspaceId: unknown; name: unknown; sources: readonly unknown[]; settings: unknown}) {
+  return {workspaceId: input.workspaceId, name: input.name, sources: input.sources.map(reference => ({reference,
+    digest: "sha256:" + "a".repeat(64), sizeBytes: 32, format: "csv", licenseStatus: "unknown"})),
+    settings: input.settings, totalBytes: input.sources.length * 32, runtimeReadiness: "not-checked",
+    approvalRequired: true, reviewRequired: true, modelCalls: 0, externalProviderCalls: 0};
+}
+const contextSettings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
+  overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]};
 // This fixture opens several real CLI processes with empty tsx caches and
 // waits once for the managed request deadline. Bound the whole fixture separately.
 test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 60_000 }, async () => {
@@ -124,6 +132,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           actions:["systems.rename"], approval:"required",
         }});
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "context.models" || input.operation === "context.preview-generation") {
+        const value = input.operation === "context.models" ? {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}
+          : {...contextPreview(input.input), ...(invalidStatusReply ? {privatePath: "private-source"} : {})};
+        const payload = JSON.stringify({ok: true, operation: input.operation, value});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       if (input.operation === "data.preview-dataset-preparation") {
@@ -311,6 +326,14 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     const preparation = {...planBase, sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
       split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"};
+    const contextInput = {...planBase, name: "Synthetic context", sources: preparation.sources.map(source => ({kind: "ingestion-file", ...source})), settings: contextSettings};
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_context_models", arguments: planBase})),
+      {ok: true, operation: "context.models", value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}});
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_generation", arguments: contextInput})),
+      {ok: true, operation: "context.preview-generation", value: contextPreview(contextInput)});
+    invalidStatusReply = true;
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_generation", arguments: contextInput})), {ok: false, code: "headless.unavailable"});
+    invalidStatusReply = false;
     const previewPreparation = async (input = preparation) => resultText(await planner.callTool({name: "aisb_preview_dataset_preparation", arguments: input}));
     assert.deepEqual(await previewPreparation(), {ok: true, operation: "data.preview-dataset-preparation", value: preparationPreview(preparation as never)});
     invalidStatusReply = true;
@@ -441,6 +464,10 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       if (decoded.request.operation === "data.dataset-versions") return {ok: true, operation: decoded.request.operation,
         value: {workspaceId, datasetId: decoded.request.input.datasetId, versions: [datasetSummary],
           ...(statusExtra ? {path: "private"} : {})}};
+      if (decoded.request.operation === "context.models") return {ok: true, operation: decoded.request.operation,
+        value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}};
+      if (decoded.request.operation === "context.preview-generation") return {ok: true, operation: decoded.request.operation,
+        value: {...contextPreview(decoded.request.input), ...(statusExtra ? {privatePath: "private-source"} : {})} as never};
       if (decoded.request.operation === "data.preview-dataset-preparation") return staleDatasetSource
         ? {ok: false, code: "headless.stale"}
         : {ok: true, operation: decoded.request.operation,
@@ -562,6 +589,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
       split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"};
+    const contextInput = {hostIncarnationId, workspaceId, name: "Synthetic context", sources: datasetPreparation.sources.map(source => ({kind: "ingestion-file", ...source})), settings: contextSettings};
+    assert.deepEqual(await call("aisb_context_models", {hostIncarnationId, workspaceId}), {ok: true, operation: "context.models",
+      value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}});
+    assert.deepEqual(await call("aisb_preview_context_generation", contextInput), {ok: true, operation: "context.preview-generation", value: contextPreview(contextInput)});
+    statusExtra = true;
+    assert.deepEqual(await call("aisb_preview_context_generation", contextInput), {ok: false, code: "headless.unavailable"});
+    statusExtra = false;
     assert.deepEqual(await call("aisb_preview_dataset_preparation", datasetPreparation),
       {ok: true, operation: "data.preview-dataset-preparation", value: preparationPreview(datasetPreparation as never)});
     statusExtra = true;

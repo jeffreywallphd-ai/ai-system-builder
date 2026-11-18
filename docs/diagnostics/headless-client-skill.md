@@ -215,3 +215,20 @@ packaged worker. Run `npm run build:thin-client` after browser changes and
 the current Desktop package before running it after worker changes. Its fixed
 entry/mapper hash check refuses stale copies before worker use. This is a build
 freshness check, not a complete package inventory or a native filesystem fence.
+
+## Preview a Context or RAG input
+
+Use a plan-review connection and check the host's current operation list.
+`aisb_context_models` lists up to 32 recorded model choices without scanning
+shared folders. `aisb_preview_context_generation` previews up to four saved
+sources of 4 MiB each, with an output name and Context settings. Use exact
+current file task/revision IDs or an exact saved dataset/version/digest/data
+role. A RAG preview also needs the recorded embedding model ID and timestamp.
+The reply contains no source text or private file paths. It starts no model,
+extraction, index, save or provider request. Runtime readiness is not checked.
+See the portable skill's Context input reference for the complete workflow.
+
+When installing or refreshing the portable skill, copy its `SKILL.md` and all
+references, including `context-inputs.md` and the generated `mcp-tools.json`.
+Use only tools offered by the actual connection. Older hosts can lack these
+reads; do not substitute an active Context operation as a passive preview.

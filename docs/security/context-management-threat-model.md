@@ -269,3 +269,23 @@ before worker acceptance are used. The existing cleanup/lease behavior is not
 changed, and no running-worker/native/host, terminal-runtime or parent/final
 qualification follows. Prior Save redaction and exact byte-cleanup evidence remain
 separate completed support at their recorded snapshots.
+
+### Headless metadata preview boundary
+
+The Context preview accepts only passive, finite source/settings records. It
+rejects extra authority fields, accessors, stale revisions and foreign source,
+version or model identities. A saved source's artifact key, digest, byte size,
+media type and provider lineage must match its immutable snapshot. Only dataset,
+train, validation and test roles can be selected. Duplicate storage targets and
+oversized inputs deny; report, recipe and quarantine artifacts are not inputs.
+Model point reads are recorded-only and cannot discover shared files. Model
+timestamps and embedding suitability are checked without loading a model.
+
+Current plan purpose and artifact/model permissions surround reads and egress.
+Strict host and MCP/HTTP decoders reject private command/path/content extensions
+and false readiness. Source labels and text are untrusted data and cannot change
+commands, destinations or authority. Fixed failure codes do not expose private
+repository or adapter errors. Recorded license metadata is not a license grant.
+Physical/model availability, extraction, real retrieval, query egress and native
+cleanup require their own subsequent execution checks; this preview qualifies
+none of them.

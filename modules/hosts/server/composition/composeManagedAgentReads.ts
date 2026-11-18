@@ -1,3 +1,5 @@
+import type {PreviewHeadlessContextInputsUseCase} from "../../../application/use-cases/context-management/headless-context-preview.use-case";
+import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
@@ -23,6 +25,7 @@ export function composeManagedAgentReads(options: {
   readonly systems: Pick<SystemBuilderCompositionRoot["useCases"], "listTemplates" | "read">;
   readonly ingestionTasks?: ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0];
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
+  readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
@@ -40,18 +43,19 @@ export function composeManagedAgentReads(options: {
       // Discovery gives the host identity only. Operator configuration supplies
       // the exact workspace for later requests without enumerating tenant data.
       return {ok: true, operation, value: {version: HEADLESS_CONTRACT_VERSION, hostIncarnationId: options.hostIncarnationId,
-        workspaces: [], operations: ["host.describe", "templates.list", "systems.read",
+        workspaces: [], operations: [
+          ...(identity.purpose === "plan-review" && options.getContextInputs ? ["context.models", "context.preview-generation"] as const : []),"host.describe", "templates.list", "systems.read",
           ...(identity.purpose === "plan-review" && options.ingestionTasks ? ["data.ingestion-status" as const] : []),
           ...(identity.purpose === "plan-review" && options.getDatasetQueries ? ["data.dataset-versions", "data.compare-dataset-versions"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetInputs ? ["data.preview-dataset-preparation"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskReview ? ["data.dataset-task-review"] as const : [])]}};
     }
-    if (operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
+    if (operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
         operation !== "data.ingestion-status" && operation !== "data.dataset-versions" && operation !== "data.compare-dataset-versions" &&
         operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status" && operation !== "data.dataset-task-review")
       return {ok: false, code: "headless.unsupported-operation"};
-    if (isHeadlessDataReadOperation(operation) && identity.purpose !== "plan-review") return denied;
+    if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation)) && identity.purpose !== "plan-review") return denied;
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
     const authorized = async (workspaceId: WorkspaceId,
       requestedOperation: HeadlessReadRequest["operation"] | HeadlessSystemManagementRequest["operation"] = operation,
@@ -64,6 +68,8 @@ export function composeManagedAgentReads(options: {
         await options.authorization.authorizeWorkspaceOperation({
           workspace, operation: `headless.${requestedOperation}`,
           requiredScopes: requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
+            : operation === "context.models" ? ["workspace:read", "model:read"]
+            : operation === "context.preview-generation" ? ["workspace:read", "artifact:read", "model:read"]
             : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"] : ["workspace:read", "asset:read"],
         });
         return current();
@@ -71,6 +77,24 @@ export function composeManagedAgentReads(options: {
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "context.models" || operation === "context.preview-generation") {
+        if (!options.getContextInputs) return {ok: false, code: "headless.unsupported-operation"};
+        const inputs = await options.getContextInputs();
+        const result = await inputs.execute(request, {hostIncarnationId: options.hostIncarnationId,
+          context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
+          stillAllowed: () => authorized(input.workspaceId)});
+        if (!current() || !await authorized(input.workspaceId)) return denied;
+        if (!result.ok) return result;
+        if (operation === "context.models" && result.operation === operation) {
+          const value = readHeadlessContextModels(result.value, input.workspaceId);
+          return value ? {ok: true, operation, value} : unavailable;
+        }
+        if (operation === "context.preview-generation" && result.operation === operation) {
+          const value = readHeadlessContextPreview(result.prepared.preview, input);
+          return value ? {ok: true, operation, value} : unavailable;
+        }
+        return unavailable;
+      }
       if (operation === "data.dataset-task-review") {
         if (!options.getDatasetTaskReview) return {ok: false, code: "headless.unsupported-operation"};
         if (!identity.registeredClientId) return denied;

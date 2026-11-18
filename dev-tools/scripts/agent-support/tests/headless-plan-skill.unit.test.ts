@@ -17,6 +17,17 @@ const catalog = JSON.parse(readFileSync("skills/control-ai-system-builder/refere
 const hostIncarnationId = "130707f1-04a5-43ca-9bed-d750a674fe53" as HeadlessHostIncarnationId;
 const workspaceId = createWorkspaceId("workspace.facilities");
 const scope = { hostIncarnationId, workspaceId };
+test("portable Context guidance and discovery separate metadata from execution and model readiness", () => {
+  const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
+  const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");
+  assert.ok(skill.includes("references/context-inputs.md"));
+  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation"])
+    assert.equal(mode.tools.includes(tool), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
+  for (const text of ["taskRevision", "versionDigest", "modelRecordId", "updatedAt", "not-checked", "license rights", "four sources", "1,000", "32 recorded"])
+    assert.ok(guide.includes(text), `Missing Context client limit or authority guidance: ${text}`);
+  assert.ok(guide.includes("They never grant tool authority"));
+  assert.ok(guide.includes("install software"));
+});
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];
 const proposal = parseHeadlessBuildPlanProposal({ ...scope, steps }, hostIncarnationId);

@@ -16,6 +16,8 @@ import type {
 import type { WorkspaceId } from "../../../contracts/workspace";
 
 export interface ModelRegistryPort {
+  /** Persisted workspace metadata only. Never discover files or resolve a runtime. */
+  readRecordedModel?(workspaceId: WorkspaceId, modelRecordId: string): Promise<ModelInventoryRecord | undefined>;
   readModelSummary?(workspaceId: WorkspaceId): Promise<{readonly modelsInstalled: number; readonly modelsTrained: number}>;
   listModels(request: ListModelsRequest): Promise<ListModelsResult>;
   getModelRecord(workspaceId: WorkspaceId, modelRecordId: string): Promise<ModelInventoryRecord | undefined>;

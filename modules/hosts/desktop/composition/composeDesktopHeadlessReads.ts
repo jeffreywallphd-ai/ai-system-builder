@@ -1,3 +1,5 @@
+import type {PreviewHeadlessContextInputsUseCase} from "../../../application/use-cases/context-management/headless-context-preview.use-case";
+import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
@@ -66,6 +68,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly conversationStatus?: Pick<HeadlessConversationStatusUseCase, "read">;
   readonly getIngestionTasks?: () => Promise<ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0]>;
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
+  readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
@@ -75,6 +78,7 @@ export function composeDesktopHeadlessReads(dependencies: {
     workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen } = dependencies;
 
   const supports = (operation: HeadlessReadOperation) => {
+    if (isHeadlessContextReadOperation(operation)) return Boolean(dependencies.getContextInputs);
     if (operation === "data.ingestion-status") return Boolean(getIngestionTasks);
     if (operation === "data.dataset-versions" || operation === "data.compare-dataset-versions") return Boolean(getDatasetQueries);
     if (operation === "data.preview-dataset-preparation") return Boolean(getDatasetInputs);
@@ -97,6 +101,8 @@ export function composeDesktopHeadlessReads(dependencies: {
         operation: `headless.${operation}`,
         requiredScopes: requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
+          : operation === "context.models" ? ["workspace:read", "model:read"]
+          : operation === "context.preview-generation" ? ["workspace:read", "artifact:read", "model:read"]
           : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"]
           : operation === "workspaces.list" ? ["workspace:read"]
           : operation === "workflows.list" || operation === "workflows.prepare" || operation === "conversation-tasks.read"
@@ -123,13 +129,13 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
-      if (isHeadlessDataReadOperation(operation) && grant.planReview !== true) return forbidden;
+      if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation)) && grant.planReview !== true) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
-          (!isHeadlessDataReadOperation(operation) || latest.planReview === true && latest.isCurrent?.() !== false) &&
+          (!(isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation)) || latest.planReview === true && latest.isCurrent?.() !== false) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -152,7 +158,7 @@ export function composeDesktopHeadlessReads(dependencies: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
               op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
-              (!isHeadlessDataReadOperation(op) || latest.planReview === true)),
+              (!(isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op)) || latest.planReview === true)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -164,6 +170,25 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "context.models":
+        case "context.preview-generation": {
+          if (!dependencies.getContextInputs) return unavailable;
+          const inputs = await dependencies.getContextInputs();
+          const result = await inputs.execute(parsed.request, {hostIncarnationId,
+            context: {workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
+            stillAllowed: async () => Boolean(await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation))});
+          if (!await currentScopedGrant([workspaceId]) || !await authorizedWorkspace(workspaceId, operation)) return forbidden;
+          if (!result.ok) return result;
+          if (operation === "context.models" && result.operation === operation) {
+            const value = readHeadlessContextModels(result.value, workspaceId);
+            return value ? {ok: true, operation, value} : unavailable;
+          }
+          if (operation === "context.preview-generation" && result.operation === operation) {
+            const value = readHeadlessContextPreview(result.prepared.preview, input);
+            return value ? {ok: true, operation, value} : unavailable;
+          }
+          return unavailable;
+        }
         case "data.dataset-task-review": {
           if (!dependencies.getDatasetTaskReview) return unavailable;
           const review = await dependencies.getDatasetTaskReview();
