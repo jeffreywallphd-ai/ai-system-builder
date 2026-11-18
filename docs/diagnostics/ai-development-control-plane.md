@@ -60,6 +60,13 @@ current automated security checks and a separate review for Asset closure.
 
 ## Start a work request
 
+The exact `headless-context-artifact-lifecycle` profile covers private byte staging,
+uncertain inspection/query replies, exact terminal identity and retryable cleanup.
+It runs the adapter, shared owned-task lifecycle and existing Context Browser
+regressions. Related host wiring is type/build checked and independently reviewed;
+these tests grant no physical worker/retrieval/resource or parent qualification.
+Unknown sources and explicit generic tests retain their normal focused fallback.
+
 The fixed `headless-context-result-save-contract` check runs strict save/read
 contracts, passive saved-metadata authorization and both composed hosts using
 the actual Context owner and SQLite with controlled runtime bytes. It selects

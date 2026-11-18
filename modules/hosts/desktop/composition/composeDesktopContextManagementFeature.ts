@@ -38,6 +38,7 @@ export function composeDesktopContextManagementFeature(
     storage: options.artifacts.storage,
     runtime: createPythonContextArtifactRuntimeAdapter(
       options.runtime.runtimeTaskRegistry,
+      options.runtime.taskReconciler,
     ),
     generation,
     deleteArtifact: options.artifacts.deleteRegisteredArtifactUseCase,

@@ -1,5 +1,11 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Context artifact inspection/query uses the same organization-bound owned-task
+reconciler as generation. Uncertain replies keep fresh inputs until exact terminal
+status or successful owned Python stop; cleanup failure retries without adopting
+another task. This ordinary Browser wiring grants no installed-only headless query
+or physical retrieval/resource qualification.
+
 The optional typed `pythonRuntimeEnvironmentPreparer` is an explicit
 nonproduction composition seam for controlled host tests. Direct composition
 and the server application reject it in production before initialization.

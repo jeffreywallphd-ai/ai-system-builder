@@ -5,6 +5,10 @@ import { join } from "node:path";
 
 import type { ContextArtifactRuntimePort } from "../../../../application/ports/context-management";
 import type { RuntimeTaskRegistryPort } from "../../../../application/ports/runtime";
+import type {
+  OwnedTaskLease,
+  OwnedTaskReconcilerService,
+} from "../../../../application/services/runtime/owned-task-reconciler.service";
 import {
   CONTEXT_GENERATION_LIMITS,
   isContextArtifactMediaType,
@@ -17,12 +21,16 @@ import {
   type ContextSourceInformation,
   type ContextSourceInspection,
 } from "../../../../contracts/context-management";
-import { TaskType } from "../../../../contracts/runtime";
+import { TaskType, type RuntimeTaskRecord } from "../../../../contracts/runtime";
 import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
 
 const INITIAL_POLL_INTERVAL_MS = 50;
 const MAXIMUM_POLL_INTERVAL_MS = 1_000;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
+const byteLengthOf = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Uint8Array.prototype), "byteLength",
+)!.get!;
+const copyBytes = Uint8Array.prototype.set;
 
 interface OperationInput {
   readonly workspaceId: string;
@@ -41,29 +49,35 @@ interface OperationInput {
 
 export function createPythonContextArtifactRuntimeAdapter(
   registry: RuntimeTaskRegistryPort,
+  reconciler: OwnedTaskReconcilerService,
 ): ContextArtifactRuntimePort {
+  const run = (operation: "inspect-source" | "inspect-artifact" | "query", input: OperationInput) =>
+    reconciler.withLease("python", lease => runOperation(registry, reconciler, lease, operation, input));
   return {
     async inspectSource(input) {
-      const data = await runOperation(registry, "inspect-source", input);
+      const artifactId = input.artifactId;
+      const data = await run("inspect-source", input);
       if (data.operation !== "inspect-source" || !isRecord(data.inspection)) {
         throw new Error("Context source inspection result is invalid.");
       }
-      return validateSourceInspection(data.inspection, input.artifactId);
+      return validateSourceInspection(data.inspection, artifactId);
     },
     async inspectArtifact(input) {
-      const data = await runOperation(registry, "inspect-artifact", input);
+      const mediaType = input.mediaType;
+      const data = await run("inspect-artifact", input);
       if (data.operation !== "inspect-artifact" || !isRecord(data.inspection)) {
         throw new Error("Context artifact inspection result is invalid.");
       }
-      return validateArtifactInspection(data.inspection, input.mediaType);
+      return validateArtifactInspection(data.inspection, mediaType);
     },
     async query(input) {
-      const data = await runOperation(registry, "query", input);
+      const maximumResults = input.maximumResults;
+      const data = await run("query", input);
       if (data.operation !== "query" || !Array.isArray(data.matches)) {
         throw new Error("Context retrieval result is invalid.");
       }
       if (
-        data.matches.length > input.maximumResults ||
+        data.matches.length > maximumResults ||
         data.matches.length > CONTEXT_GENERATION_LIMITS.maximumQueryResults
       ) {
         throw new Error("Context retrieval returned too many matches.");
@@ -75,26 +89,68 @@ export function createPythonContextArtifactRuntimeAdapter(
 
 async function runOperation(
   registry: RuntimeTaskRegistryPort,
+  reconciler: OwnedTaskReconcilerService,
+  lease: OwnedTaskLease,
   operation: "inspect-source" | "inspect-artifact" | "query",
-  input: OperationInput,
+  providedInput: OperationInput,
 ): Promise<Record<string, unknown>> {
+  // Read the actual view length, not an overridable property/iterator. Hash and
+  // write this same private snapshot across every asynchronous operation.
+  const input = { ...providedInput };
+  let content: Uint8Array;
+  try {
+    if (!(input.content instanceof Uint8Array)) throw new Error();
+    const size = byteLengthOf.call(input.content);
+    if (!Number.isSafeInteger(size) || size < 1 || size > CONTEXT_GENERATION_LIMITS.maximumArtifactBytes) throw new Error();
+    content = new Uint8Array(size);
+    copyBytes.call(content, input.content);
+  } catch {
+    throw new Error("Context artifact bytes do not match their descriptor.");
+  }
   if (
-    !(input.content instanceof Uint8Array) ||
-    input.content.byteLength < 1 ||
-    input.content.byteLength > CONTEXT_GENERATION_LIMITS.maximumArtifactBytes ||
     !DIGEST_PATTERN.test(input.digest) ||
-    digest(input.content) !== input.digest
+    digest(content) !== input.digest
   ) {
     throw new Error("Context artifact bytes do not match their descriptor.");
   }
-  const workingDirectory = await mkdtemp(
-    join(tmpdir(), "ai-system-builder-context-operation-"),
-  );
-  const inputPath = join(workingDirectory, "input.bin");
   const requestId = randomUUID();
+  const workspaceId = input.workspaceId;
+  let workingDirectory: string | undefined;
+  let dispatchAttempted = false;
+  let acknowledged = false;
+  let terminal = false;
+  let failure = "Context artifact operation could not be completed.";
+  const cleanup = async () => {
+    if (workingDirectory) await rm(workingDirectory, { recursive: true, force: true });
+    workingDirectory = undefined;
+  };
+  const readOwnedStatus = async (): Promise<RuntimeTaskRecord | undefined> => {
+    const status = await registry.getTaskStatus(requestId);
+    if (!status || typeof status !== "object" || "recordType" in status ||
+        status.requestId !== requestId || status.workspaceId !== workspaceId ||
+        status.taskType !== TaskType.CONTEXT_RETRIEVAL ||
+        !["queued", "running", "succeeded", "failed", "cancelled"].includes(status.status)) return undefined;
+    return status;
+  };
+  const reconcile = async () => {
+    if (dispatchAttempted && !terminal) {
+      // A lost/mismatched start reply never grants authority to discover/adopt
+      // a task. Only the owning host's successful Python stop settles it.
+      if (!acknowledged) return false;
+      const status = await readOwnedStatus();
+      if (!status || !["succeeded", "failed", "cancelled"].includes(status.status)) return false;
+      terminal = true;
+    }
+    await cleanup();
+    return true;
+  };
   try {
-    await writeFile(inputPath, input.content, { flag: "wx" });
-    await registry.startTask({
+    workingDirectory = await mkdtemp(join(tmpdir(), "ai-system-builder-context-operation-"));
+    const inputPath = join(workingDirectory, "input.bin");
+    await writeFile(inputPath, content, { flag: "wx" });
+    reconciler.assertAccepting();
+    dispatchAttempted = true;
+    const started = await registry.startTask({
       requestId,
       workspaceId: input.workspaceId as never,
       taskType: TaskType.CONTEXT_RETRIEVAL,
@@ -105,7 +161,7 @@ async function runOperation(
         localPath: inputPath,
         mediaType: input.mediaType,
         digest: input.digest,
-        sizeBytes: input.content.byteLength,
+        sizeBytes: content.byteLength,
         ...(input.originalName ? { originalName: input.originalName } : {}),
         ...(input.chunking ? { chunking: input.chunking } : {}),
         ...(input.sourceInformation
@@ -121,11 +177,16 @@ async function runOperation(
       },
       metadata: { operation: "context-artifact-operation" },
     });
+    if (!started || started.requestId !== requestId ||
+        (started.status !== undefined && started.status !== "queued" && started.status !== "running")) throw new Error();
+    acknowledged = true;
     const deadline = Date.now() + PYTHON_RUNTIME_TASK_TIMEOUTS.contextRetrieval;
     let pollInterval = INITIAL_POLL_INTERVAL_MS;
     while (Date.now() < deadline) {
-      const status = await registry.getTaskStatus(requestId);
+      const status = await readOwnedStatus();
+      if (!status) throw new Error();
       if (status.status === "succeeded") {
+        terminal = true;
         if (!("data" in status) || !isRecord(status.data)) {
           throw new Error("Context artifact operation returned invalid data.");
         }
@@ -133,22 +194,28 @@ async function runOperation(
       }
       if (
         status.status === "failed" ||
-        status.status === "cancelled" ||
-        status.status === "unknown"
+        status.status === "cancelled"
       ) {
-        throw new Error(
-          "error" in status && status.error?.message
-            ? status.error.message
-            : "Context artifact operation could not be completed.",
-        );
+        terminal = true;
+        throw new Error();
       }
       await delay(pollInterval);
       pollInterval = Math.min(pollInterval * 2, MAXIMUM_POLL_INTERVAL_MS);
     }
-    await registry.cancelTask(requestId);
-    throw new Error("Context artifact operation timed out.");
+    // Cancellation is a request, not terminal proof. Keep the input until a
+    // separately validated status or successful owned worker stop confirms it.
+    failure = "Context artifact operation timed out.";
+    try { await registry.cancelTask(requestId); } catch { /* Retain ownership. */ }
+    throw new Error();
+  } catch {
+    throw new Error(failure);
   } finally {
-    await rm(workingDirectory, { recursive: true, force: true });
+    if (!dispatchAttempted || terminal) {
+      try { await cleanup(); } catch { /* Retry through the existing owner. */ }
+    }
+    if (workingDirectory) lease.start(reconcile, async () => {
+      if (acknowledged && !terminal) await registry.cancelTask(requestId);
+    }, cleanup);
   }
 }
 

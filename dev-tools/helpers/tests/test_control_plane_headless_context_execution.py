@@ -12,6 +12,23 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_artifact_lifecycle_checks_exact_adapter_and_existing_consumer_without_masking_unknown_sources(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-artifact-lifecycle']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['architecture'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertEqual(selected['headless-context-artifact-lifecycle']['argv'][1:], [
+            '--import', 'tsx', '--test', '--',
+            'modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts',
+            'modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts',
+            'modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts'])
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(paths + [
+            'modules/adapters/runtime/python/context-management/unmapped-operation.ts'], ['architecture']))
+        host_only = self.selected(['modules/hosts/server/composition/composeServerHost.ts'], ['architecture'])
+        self.assertNotIn('headless-context-artifact-lifecycle', host_only)
+        self.assertIn('focused-tests', host_only)
+
     def test_public_result_save_automatically_checks_finite_contract_metadata_and_real_core_host_composition(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-result-save-contract']
         paths = list(definition['sources'])

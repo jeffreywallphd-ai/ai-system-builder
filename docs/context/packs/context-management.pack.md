@@ -2,8 +2,7 @@
 
 ## Use this pack when
 
-- Changing the Context page, RAG database generation, Markdown context-pack
-  generation, Context Browser, or Data Management-to-Context handoffs.
+- Changing Context UI, RAG/pack generation, Browser or Data Management handoffs.
 - Changing context source capability, chunk lineage, review/save/discard,
   context artifact formats, or local context-model execution.
 
@@ -17,8 +16,7 @@
 
 ## Implemented architecture
 
-- Context consumes the Dataset Preparation textual source capability authority;
-  it does not maintain a separate format list.
+- Context uses the Dataset Preparation textual capability authority, not a separate format list.
 - Data Management handoff is identifier-only: workspace id, artifact id, and
   target tab. The host resolves bytes, metadata, scope, and readiness again.
 - An existing structured artifact is already chunked only when every usable row
@@ -47,8 +45,11 @@
   saved LanceDB/context-pack ZIP through the managed runtime, computes source freshness,
   supports source-only rebuild and registered-artifact deletion, and runs RAG
   test queries without returning vectors.
-- Source inspection always returns the typed `textFields` projection; document
-  sources use an empty array rather than omitting the required field.
+- Source inspection returns typed `textFields`; document sources use an empty array.
+- Inspection/query inputs use a private hashed byte snapshot and the existing
+  host task lease. Exact terminal status or successful owned worker stop permits
+  cleanup; uncertain replies/cancellation and cleanup failures retain ownership.
+  Ordinary preparation remains; headless query/rebuild admission is separate.
 - Saved RAG validation scans every vector in bounded 256-row Arrow batches,
   retains metadata only and checks cancellation throughout. Exact query ranking,
   citations, package limits and private materialization cleanup remain required;
@@ -71,8 +72,7 @@
 - ZIP members are fixed: manual packs contain `manifest.json`, `README.md`,
   and `context.md`; source packs contain `manifest.json`, `README.md`,
   `topics.md`, and `sources.md`.
-- Catalog and binding metadata omit source content, manual context, prompts,
-  model output, vectors, credentials, and local paths.
+- Catalog/binding metadata omit source/manual content, prompts, model output, vectors, credentials and local paths.
 
 ## Security invariants
 

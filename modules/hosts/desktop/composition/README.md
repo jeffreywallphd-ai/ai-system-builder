@@ -1,5 +1,11 @@
 # Desktop host composition
 
+The Context artifact adapter shares the host's existing Python task reconciler
+with generation. Fresh inspection/query inputs remain owned through uncertain
+replies and cleanup failures. Only exact terminal status or successful owned
+worker stop settles them; cancellation alone does not. This ordinary Browser
+wiring grants no installed-only headless query or physical qualification.
+
 Data window presentation composes the existing saved source/version repositories
 and dataset owner through `headlessDataPresentation`. Current artifact-read
 authorization surrounds reads. Only a durably accepted same-host/actor task can

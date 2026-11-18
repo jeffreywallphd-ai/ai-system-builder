@@ -2395,7 +2395,7 @@ export function composeServerHost(
         catalog: artifactCatalog,
         storageBindings: artifactBindings,
         storage,
-        runtime: createPythonContextArtifactRuntimeAdapter(runtimeTaskRegistry),
+        runtime: createPythonContextArtifactRuntimeAdapter(runtimeTaskRegistry, taskReconciler),
         generation: contextGenerationUseCase,
         deleteArtifact: deleteRegisteredArtifact,
         workspaceRepository:

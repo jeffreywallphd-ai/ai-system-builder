@@ -111,6 +111,17 @@ into a safe bounded projection. Rebuild reconstructs a generation command only w
 remains available and no manual text would be lost. Delete delegates to the
 registered-artifact deletion lifecycle.
 
+Source/artifact inspection and query reserve the existing host-owned Python lease
+before allocation or dispatch. The adapter stages and hashes the same bounded
+private byte snapshot. After an exact start acknowledgement, only the same request,
+workspace and retrieval-task terminal status permits cleanup. Unknown or lost start
+replies cannot discover or adopt a task; successful owned worker stop settles
+those inputs. Status failure, mismatch, timeout and cancellation acknowledgement
+retain staging. Cleanup failure retains the lease for retry. Both hosts reuse their
+existing scoped reconciler and shutdown path. Ordinary dependency preparation
+remains unchanged; installed-only headless query/rebuild admission and actual
+retrieval/resource qualification are separate pending work.
+
 RAG test queries use the embedding model recorded in the verified manifest,
 rank vectors inside the managed runtime, and return only bounded excerpts,
 scores, and exact citations. Stored vectors and arbitrary LanceDB columns never

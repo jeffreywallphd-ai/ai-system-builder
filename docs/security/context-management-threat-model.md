@@ -102,6 +102,20 @@ Focused tests cover:
 
 ## Residual risk and qualification
 
+Artifact-operation lifecycle delta: mutable caller bytes are copied using intrinsic
+view length/copying before the first await; the exact private copy is hashed and
+written. The existing host lease bounds outstanding operations and precedes staging.
+Cleanup requires exact acknowledged request/workspace/retrieval-task terminal
+evidence or successful owned Python stop. Lost or mismatched starts cannot adopt
+tasks; unknown status, a cancellation acknowledgement and transport failure are not
+termination proof. Cleanup failure retains ownership for retry. Fixed adapter errors
+omit worker messages, query/source text and paths. Focused regressions use synthetic
+bytes and controlled runtime replies, not a physical embedding/retrieval or host
+shutdown qualification. No historical directory is discovered or removed; process
+crash orphan reconciliation remains an existing operational concern. Ordinary
+dependency preparation is unchanged; public installed-only headless query/rebuild
+admission remains pending.
+
 Host reconciliation retains only accepted task callbacks and immutable scope,
 preserving organization context across asynchronous observation. It does not
 discover tasks or save review output. A transient read failure cannot delete

@@ -19,6 +19,16 @@ Foundation for the managed Python sidecar runtime adapter:
 
 ## Security boundary
 
+Context source/artifact inspection and RAG query operations use the existing
+host-owned Python task reconciler. Admission precedes staging and dispatch. One
+private bounded byte snapshot is hashed and written. Exact acknowledged request,
+workspace and retrieval-task identity is required for terminal cleanup. Lost or
+substituted starts remain owned until successful host worker stop; uncertain
+status, timeout and cancellation acknowledgement cannot remove active inputs.
+Removal failures retain ownership for retry. Only fixed errors leave this adapter.
+This preserves ordinary dependency preparation; installed-only headless query and
+rebuild admission and physical retrieval/resource qualification remain separate.
+
 ### Dependency preparation observations
 
 `preparePythonRuntimeEnvironment` is the ordinary Desktop and Server setup

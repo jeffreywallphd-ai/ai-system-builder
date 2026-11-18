@@ -345,6 +345,27 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/tests/composeServerHost.unit.test.ts",
         ),
     },
+    "headless-context-artifact-lifecycle": {
+        "automatic_sources": (
+            "modules/adapters/runtime/python/context-management/createPythonContextArtifactRuntimeAdapter.ts",
+            "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/context-management/createPythonContextArtifactRuntimeAdapter.ts",
+            "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
+            "modules/adapters/runtime/python/README.md",
+            "modules/hosts/desktop/composition/composeDesktopContextManagementFeature.ts",
+            "modules/hosts/desktop/composition/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
+            "modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",
+        ),
+    },
     "headless-context-result-bytes": {
         "automatic_sources": (
             "modules/application/ports/context-management/context-result-byte-storage.port.ts",
