@@ -2255,3 +2255,11 @@ router, including ordinary compatibility. The separate owned-start check covers
 Context staging and lifecycle. Simulated process/worker tests qualify those
 internal controls only; they do not prove public execution, installed model
 availability, native recovery or parent increment completion.
+
+The `headless-context-installed-host` companion check runs only the installed-only
+Desktop composition and Managed configuration cases plus related ordinary
+Context/training readiness regressions. It is selected with the exact runtime
+check when those host sources change. Generic root tests alone cannot mask an
+unrelated primary profile's missing coverage. Foundation recovery tests remain
+in the exact runtime check. Both are feature-level controls, not live-host,
+physical model, public Context or parent qualification.

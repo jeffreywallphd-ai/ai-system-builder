@@ -136,3 +136,16 @@ organization's stored ingestion/version/model metadata. It never resolves the
 active Context/runtime feature for preview. Plan-review purpose and current
 artifact/model permission surround reads and replies; private commands stay
 inside the application owner and model readiness remains unverified.
+
+## Installed-only Context runtime
+
+The Python feature configures the bounded async installed-environment verifier.
+Task composition binds the foundation's exact retained host owner once and
+reuses it on feature recomposition. Its restrictive readiness and Python POST
+paths check admission; neither calls ordinary Context dependency preparation.
+The foundation enforces the same owner at the actual spawn boundary and in
+shared recovery. Missing support refuses without ordinary-start fallback.
+Held-verifier, health and final-launch tests use the actual foundation/composition
+with simulated process/HTTP replies and prove no spawn after host retirement.
+Actual public Headless Context execution and physical model readiness remain
+separate qualification.

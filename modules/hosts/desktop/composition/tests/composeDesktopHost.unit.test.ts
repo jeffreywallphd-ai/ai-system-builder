@@ -13,7 +13,7 @@ import {
 
 import type { LoggingPort } from "../../../../application/ports/logging";
 import type { StructuredLogEvent } from "../../../../contracts/logging";
-import { TaskType } from "../../../../contracts/runtime";
+import { TaskType, type StartPythonRuntimeTaskRequest } from "../../../../contracts/runtime";
 import { OwnedTaskReconcilerService } from "../../../../application/services/runtime/owned-task-reconciler.service";
 import type { HuggingFaceFetchImplementation } from "../../../../adapters/storage/huggingface";
 
@@ -1081,5 +1081,121 @@ describe("desktop host composition decomposition", () => {
     expect(helperSource).toContain("createRuntimeTaskRegistryRouter");
     expect(helperSource).not.toContain("ipc-electron");
     expect(helperSource).not.toContain("registerElectronIpc");
+  });
+});
+
+describe("installed-only Desktop Context composition", () => {
+  it("installed-only Desktop recomposition retains its exact foundation owner without replacing the guard", async () => {
+    const {createPythonRuntimeAdapterFoundation} = await import("../../../../adapters/runtime/python");
+    const {composeDesktopRuntimeTaskFeature} = await import("../composeDesktopRuntimeTaskFeature");
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const foreign = new OwnedTaskReconcilerService(); foreign.stopObservation();
+    const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111"},
+      supervisor: {command: "python", async verifyRuntimeEnvironment() {return false;}}});
+    let bindings = 0; const original = foundation.bindHostAdmission;
+    foundation.bindHostAdmission = guard => {bindings++; original(guard);};
+    const options = {pythonRuntimeFoundation: foundation, taskReconciler: reconciler, imageRuntimeTaskRegistry: {}, runtimeReadiness: {}};
+    await composeDesktopRuntimeTaskFeature(options); await composeDesktopRuntimeTaskFeature(options);
+    expect(bindings).toBe(1);
+    await expect(composeDesktopRuntimeTaskFeature({...options, taskReconciler: foreign})).rejects.toThrow("another host lifecycle");
+    expect(bindings).toBe(1);
+    reconciler.stopAccepting();
+    await expect(foundation.supervisor.startWithoutInstalling!()).rejects.toThrow("Background task lifecycle is unavailable");
+  });
+
+  for (const held of ["verifier", "health", "launch-token"] as const) {
+    it(`installed-only Desktop retirement during ${held} prevents every new worker spawn`, async () => {
+      const {createPythonRuntimeAdapterFoundation} = await import("../../../../adapters/runtime/python");
+      const {composeDesktopRuntimeTaskFeature} = await import("../composeDesktopRuntimeTaskFeature");
+      const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+      let entered!: () => void, release!: () => void, nativeSpawns = 0, tokens = 0, preparations = 0;
+      const waiting = new Promise<void>(resolve => {entered = resolve;});
+      const gate = new Promise<void>(resolve => {release = resolve;});
+      const foundation = createPythonRuntimeAdapterFoundation({
+        generateAuthorizationToken() {
+          if (++tokens === 2 && held === "launch-token") {queueMicrotask(() => reconciler.stopAccepting()); entered();}
+          return "synthetic-private-test-token-long-enough-" + tokens;
+        },
+        client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async () => {
+          if (held === "health") {entered(); await gate;}
+          return {ok: false, status: 401, json: async () => ({error: {code: "runtime_auth_required"}})};
+        }) as never},
+        supervisor: {command: "python", args: ["inert-test-worker.py"], startupTimeoutMs: 100, healthCheckIntervalMs: 1,
+          async verifyRuntimeEnvironment() {if (held === "verifier") {entered(); await gate;} return true;},
+          async prepareRuntimeEnvironment() {preparations++;},
+          spawnImplementation: (() => {nativeSpawns++; throw new Error("Unexpected native spawn");}) as never},
+      });
+      const feature = await composeDesktopRuntimeTaskFeature({pythonRuntimeFoundation: foundation, taskReconciler: reconciler,
+        imageRuntimeTaskRegistry: {}, runtimeReadiness: {}});
+      const pending = feature.runtimeTaskRegistry.startTaskWithoutInstalling({requestId: "held-start", workspaceId: "workspace.installed" as never,
+        taskType: TaskType.CONTEXT_GENERATION, payload: {kind: "markdown-context-pack"}});
+      await waiting;
+      if (held !== "launch-token") {reconciler.stopAccepting(); release();}
+      expect(await pending).toEqual({kind: "unavailable"}); expect(nativeSpawns).toBe(0); expect(preparations).toBe(0);
+      if (held !== "launch-token") expect(tokens).toBe(1);
+      await foundation.supervisor.stop();
+    });
+  }
+
+  const request = {requestId: "installed-context", workspaceId: "workspace.installed" as never,
+    taskType: TaskType.CONTEXT_GENERATION, payload: {kind: "markdown-context-pack"}};
+  async function setup(options: {supervisorMissing?: boolean; portMissing?: boolean; verify?: () => Promise<void>} = {}) {
+    const {composeDesktopRuntimeTaskFeature} = await import("../composeDesktopRuntimeTaskFeature");
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const ordinary = testDouble.fn(async () => {}), prepareContext = testDouble.fn(async () => {});
+    const verify = testDouble.fn(async () => {await options.verify?.();});
+    const accept = async (r: StartPythonRuntimeTaskRequest) => ({requestId: r.requestId, taskType: r.taskType, accepted: true, status: "queued"});
+    const dispatch = testDouble.fn(accept), ordinaryDispatch = testDouble.fn(accept);
+    const foundation = {supervisor: {start: ordinary, startWithoutInstalling: options.supervisorMissing ? undefined : verify},
+      runtimePort: {startTask: ordinaryDispatch, startTaskWithoutInstalling: options.portMissing ? undefined : dispatch},
+      prepareContextEnvironment: prepareContext};
+    const feature = await composeDesktopRuntimeTaskFeature({pythonRuntimeFoundation: foundation, taskReconciler: reconciler,
+      imageRuntimeTaskRegistry: {}, runtimeReadiness: {}});
+    return {feature, foundation, reconciler, ordinary, prepareContext, verify, dispatch, ordinaryDispatch};
+  }
+
+  it("installed-only Desktop work uses only restrictive readiness and dispatch", async () => {
+    const h = await setup();
+    expect(await h.feature.runtimeTaskRegistry.startTaskWithoutInstalling(request)).toEqual({kind: "accepted", value: {requestId: request.requestId, status: "queued"}});
+    expect(h.verify).toHaveBeenCalledTimes(1); expect(h.dispatch).toHaveBeenCalledTimes(1);
+    expect(h.ordinary).not.toHaveBeenCalled(); expect(h.prepareContext).not.toHaveBeenCalled(); expect(h.ordinaryDispatch).not.toHaveBeenCalled();
+    await h.feature.runtimeTaskRegistry.startTask({...request, requestId: "ordinary-context"});
+    expect(h.ordinary).toHaveBeenCalledTimes(1); expect(h.prepareContext).toHaveBeenCalledTimes(1); expect(h.ordinaryDispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("installed-only Desktop missing support never falls back to ordinary preparation", async () => {
+    for (const options of [{supervisorMissing: true}, {portMissing: true}]) {
+      const h = await setup(options);
+      expect(await h.feature.runtimeTaskRegistry.startTaskWithoutInstalling(request)).toEqual({kind: "unavailable"});
+      expect(h.ordinary).not.toHaveBeenCalled(); expect(h.prepareContext).not.toHaveBeenCalled();
+      expect(h.dispatch).not.toHaveBeenCalled(); expect(h.ordinaryDispatch).not.toHaveBeenCalled();
+    }
+  });
+
+  it("installed-only Desktop refuses task and recovery startup after host admission closes", async () => {
+    const h = await setup(); h.reconciler.stopAccepting();
+    expect(await h.feature.runtimeTaskRegistry.startTaskWithoutInstalling(request)).toEqual({kind: "unavailable"});
+    await expect(h.foundation.supervisor.startWithoutInstalling!()).rejects.toThrow("Background task lifecycle is unavailable");
+    expect(h.verify).not.toHaveBeenCalled(); expect(h.dispatch).not.toHaveBeenCalled(); expect(h.ordinary).not.toHaveBeenCalled();
+  });
+
+  it("installed-only Desktop rechecks shutdown after delayed readiness", async () => {
+    let entered!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => {entered = resolve;});
+    const h = await setup({async verify() {entered(); await new Promise<void>(resolve => {release = resolve;});}});
+    const start = h.feature.runtimeTaskRegistry.startTaskWithoutInstalling(request); await waiting;
+    h.reconciler.stopAccepting(); release();
+    expect(await start).toEqual({kind: "unavailable"}); expect(h.dispatch).not.toHaveBeenCalled(); expect(h.ordinary).not.toHaveBeenCalled();
+  });
+
+  it("installed-only Desktop guards the final asynchronous handoff before the business POST", async () => {
+    const h = await setup(); let checks = 0;
+    const original = h.reconciler.assertAccepting.bind(h.reconciler);
+    h.reconciler.assertAccepting = () => {
+      original(); if (++checks === 4) queueMicrotask(() => h.reconciler.stopAccepting());
+    };
+    expect(await h.feature.runtimeTaskRegistry.startTaskWithoutInstalling(request)).toEqual({kind: "unconfirmed"});
+    expect(checks).toBe(4); // The fifth check throws before incrementing.
+    expect(h.dispatch).not.toHaveBeenCalled(); expect(h.ordinaryDispatch).not.toHaveBeenCalled(); expect(h.ordinary).not.toHaveBeenCalled();
   });
 });

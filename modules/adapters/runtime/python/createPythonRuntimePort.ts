@@ -1,9 +1,13 @@
 import type { PythonRuntimePort } from "../../../application/ports/runtime";
 import { randomBytes } from "node:crypto";
+import { spawn } from "node:child_process";
+import { isWorkspaceId } from "../../../contracts/workspace";
+import { types } from "node:util";
 import type {
   CancelPythonRuntimeTaskResult,
   PythonRuntimeTaskStatusResult,
   StartPythonRuntimeTaskRequest,
+  StartPythonRuntimeTaskResult,
 } from "../../../contracts/runtime";
 
 import {
@@ -31,6 +35,8 @@ export interface CreatePythonRuntimePortOptions {
 export interface PythonRuntimeAdapterFoundation {
   runtimePort: PythonRuntimePort;
   supervisor: PythonRuntimeSupervisor;
+  /** Trusted host composition, once only. It can add a guard, never replace it. */
+  bindHostAdmission(assertAccepting: () => void): void;
 }
 
 export function createPythonRuntimeAdapterFoundation(
@@ -52,6 +58,18 @@ export function createPythonRuntimeAdapterFoundation(
   const runtimeEnvironment: NodeJS.ProcessEnv = {
     ...(options.supervisor.env ?? {}),
   };
+  let hostAdmission: (() => void) | undefined;
+  const assertHostAccepting = () => {
+    const result: unknown = hostAdmission?.();
+    if (result !== undefined) {
+      if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+      throw new Error("Python host admission must be synchronous.");
+    }
+  };
+  const bindHostAdmission = (assertAccepting: () => void) => {
+    if (hostAdmission || typeof assertAccepting !== "function") throw new Error("Python host admission is already bound or invalid.");
+    hostAdmission = assertAccepting;
+  };
   const client = createPythonRuntimeHttpClient({
     ...options.client,
     environment: runtimeEnvironment,
@@ -67,7 +85,19 @@ export function createPythonRuntimeAdapterFoundation(
     epoch: number;
     phase: "pending" | "accepted" | "uncertain";
   }>();
+  const assertInstalledScope = (admission: {workspaceId?: string; organizationId?: string}, result: {metadata?: Record<string, unknown>}) => {
+    if ((result.metadata?.workspaceId !== undefined && result.metadata.workspaceId !== admission.workspaceId) ||
+        (result.metadata?.organizationId !== undefined && result.metadata.organizationId !== admission.organizationId))
+      throw new Error("Installed-only Python task scope identity was not confirmed.");
+  };
   const maximumDatasetAdmissions = 256;
+  const installedContextAdmissions = new Map<string, {
+    epoch: number;
+    taskType: "generate-context-artifact" | "context-artifact-operation";
+    phase: "pending" | "accepted" | "uncertain";
+    workspaceId?: string;
+    organizationId?: string;
+  }>();
   let recoveryInFlight: Promise<boolean> | undefined;
   let recoveryUncertain = false;
   const terminalOverrides = new Map<string, PythonRuntimeTaskStatusResult>();
@@ -105,13 +135,27 @@ export function createPythonRuntimeAdapterFoundation(
   const supervisorInputs = { ...Object.defineProperties({}, supervisorDescriptors) } as CreatePythonRuntimePortOptions["supervisor"];
   if (supervisorInputs.args) supervisorInputs.args = [...supervisorInputs.args];
   if (supervisorInputs.requiredCapabilities) supervisorInputs.requiredCapabilities = [...supervisorInputs.requiredCapabilities];
+  const spawnWorker = supervisorInputs.spawnImplementation ?? spawn;
+  const verifyEnvironment = supervisorInputs.verifyRuntimeEnvironment;
+  const prepareEnvironment = supervisorInputs.prepareRuntimeEnvironment;
   let startupObserver: CreatePythonRuntimePortOptions["supervisor"]["onStartupEvent"];
   try { const observer = options.supervisor.onStartupEvent; if (typeof observer === "function") startupObserver = observer; } catch { /* Passive observer. */ }
   const supervisor = createPythonRuntimeSupervisor({
     ...supervisorInputs,
     onStartupEvent: startupObserver,
     env: runtimeEnvironment,
+    spawnImplementation: ((...args: Parameters<typeof spawn>) => {
+      assertHostAccepting();
+      return spawnWorker(...args);
+    }) as typeof spawn,
+    verifyRuntimeEnvironment: verifyEnvironment ? async context => {
+      assertHostAccepting(); const verified = await verifyEnvironment(context); assertHostAccepting(); return verified;
+    } : undefined,
+    prepareRuntimeEnvironment: prepareEnvironment ? async context => {
+      assertHostAccepting(); await prepareEnvironment(context); assertHostAccepting();
+    } : undefined,
     prepareLaunchEnvironment: (context) => {
+      assertHostAccepting();
       authorizationToken = assertStrongToken(generateAuthorizationToken());
       context.env.PYTHON_RUNTIME_AUTH_TOKEN = authorizationToken;
     },
@@ -129,7 +173,11 @@ export function createPythonRuntimeAdapterFoundation(
             rememberOwnedExit(requestId, "prepare-training-dataset");
           }
         }
+        for (const [requestId, admission] of installedContextAdmissions) {
+          if (!terminalOverrides.has(requestId)) rememberOwnedExit(requestId, admission.taskType);
+        }
         datasetAdmissions.clear();
+        installedContextAdmissions.clear();
         trackedTasks.clear();
         recoveryUncertain = false;
       }
@@ -163,9 +211,17 @@ export function createPythonRuntimeAdapterFoundation(
     if (recoveryInFlight) return recoveryInFlight;
     if (recoveryUncertain) throw new Error("Python runtime recovery has not been confirmed.");
     const recoveringTasks = [...trackedTasks];
+    // Capture policy before the owned stop clears task/admission maps. One
+    // restrictive owner makes shared recovery noninstalling for this flight.
+    const installedOnlyRecovery = installedContextAdmissions.size > 0;
+    const startInstalled = supervisor.startWithoutInstalling?.bind(supervisor);
     // Publish the flight before stop/start can yield or emit lifecycle events.
     const operation = Promise.resolve().then(async () => {
-      await supervisor.restart();
+      if (installedOnlyRecovery) {
+        if (!startInstalled) throw new Error("Installed-only Python recovery is unavailable.");
+        await supervisor.stop();
+        await startInstalled();
+      } else await supervisor.restart();
       const completedAt = new Date().toISOString();
       for (const [requestId, tracked] of recoveringTasks) {
         const retained = terminalOverrides.get(requestId);
@@ -210,9 +266,16 @@ export function createPythonRuntimeAdapterFoundation(
     }
   };
 
-  const runtimePort: PythonRuntimePort = {
-    startTask: async (request) => {
+  const startTask = async (original: StartPythonRuntimeTaskRequest, installedOnly = false): Promise<StartPythonRuntimeTaskResult> => {
+      const request = {...original, ...(original.metadata ? {metadata: {...original.metadata}} : {})};
+      if (installedOnly && !hostAdmission) throw new Error("Installed-only Python host admission is unavailable.");
+      assertHostAccepting();
       assertAdmissionAvailable();
+      if (installedOnly && (request.taskType !== "generate-context-artifact" && request.taskType !== "context-artifact-operation"))
+        throw new Error("Installed-only Python task type is unavailable.");
+      if (installedOnly && ((request.metadata?.workspaceId !== undefined && !isWorkspaceId(request.metadata.workspaceId)) ||
+          (request.metadata?.organizationId !== undefined && (typeof request.metadata.organizationId !== "string" || !request.metadata.organizationId.trim()))))
+        throw new Error("Installed-only Python task scope is unavailable.");
       if (typeof request.requestId !== "string" || request.requestId.length > 128) {
         throw new TypeError("Python runtime task identifier exceeds its retention bound.");
       }
@@ -221,10 +284,20 @@ export function createPythonRuntimeAdapterFoundation(
       if (!/^[A-Za-z0-9._:-]{1,128}$/.test(request.requestId)) {
         throw new TypeError("Python runtime task identifier is invalid.");
       }
-      if (datasetAdmissions.has(request.requestId) || trackedTasks.has(request.requestId) || terminalOverrides.has(request.requestId)) {
+      if (datasetAdmissions.has(request.requestId) || installedContextAdmissions.has(request.requestId) || trackedTasks.has(request.requestId) || terminalOverrides.has(request.requestId)) {
         throw new Error("Python runtime task is already known. Read its current status before retrying.");
       }
       const admissionEpoch = ownedExitEpoch;
+      const installedAdmission = installedOnly ? {epoch: admissionEpoch,
+        taskType: request.taskType as "generate-context-artifact" | "context-artifact-operation",
+        workspaceId: request.metadata?.workspaceId as string | undefined,
+        organizationId: request.metadata?.organizationId as string | undefined,
+        phase: "pending" as "pending" | "accepted" | "uncertain"} : undefined;
+      if (installedAdmission) {
+        if (installedContextAdmissions.size >= maximumDatasetAdmissions)
+          throw new Error("Installed-only Python task admission capacity is unavailable.");
+        installedContextAdmissions.set(request.requestId, installedAdmission);
+      }
       const admission = request.taskType === "prepare-training-dataset"
         ? { epoch: admissionEpoch, phase: "pending" as "pending" | "accepted" | "uncertain" }
         : undefined;
@@ -237,13 +310,19 @@ export function createPythonRuntimeAdapterFoundation(
       try {
         const result = await client.startTask(request);
         assertReplyIdentity(request.requestId, result, request.taskType);
+        if (installedAdmission) assertInstalledScope(installedAdmission, result);
+        if (installedAdmission && (result.taskType !== request.taskType || result.accepted !== true ||
+            (result.status !== "queued" && result.status !== "running")))
+          throw new Error("Installed-only Python task acceptance was not confirmed.");
         if (admissionEpoch !== ownedExitEpoch) {
           if (!terminalOverrides.has(request.requestId)) rememberOwnedExit(request.requestId, request.taskType);
-        } else if (admission && datasetAdmissions.get(request.requestId) !== admission) {
+        } else if ((admission && datasetAdmissions.get(request.requestId) !== admission) ||
+                   (installedAdmission && installedContextAdmissions.get(request.requestId) !== installedAdmission)) {
           // An exact terminal read/cancellation can beat the POST acknowledgement.
           return result;
         } else {
           if (admission) admission.phase = "accepted";
+          if (installedAdmission) installedAdmission.phase = "accepted";
           terminalOverrides.delete(request.requestId);
           trackedTasks.set(request.requestId, {
             taskType: request.taskType,
@@ -253,14 +332,21 @@ export function createPythonRuntimeAdapterFoundation(
         return result;
       } catch (error) {
         if (admission && datasetAdmissions.get(request.requestId) === admission) admission.phase = "uncertain";
+        if (installedAdmission && installedContextAdmissions.get(request.requestId) === installedAdmission) installedAdmission.phase = "uncertain";
         throw error;
       }
-    },
+  };
+
+  const runtimePort: PythonRuntimePort = {
+    startTask: request => startTask(request),
+    startTaskWithoutInstalling: typeof supervisorInputs.verifyRuntimeEnvironment === "function"
+      ? request => startTask(request, true) : undefined,
     readTaskStatus: async (requestId) => {
       const override = terminalOverrides.get(requestId);
       if (override) return override;
       const tracked = trackedTasks.get(requestId);
       const admission = datasetAdmissions.get(requestId);
+      const installedAdmission = installedContextAdmissions.get(requestId);
       const observationEpoch = ownedExitEpoch;
       // Dataset Preparation cannot be force-cancelled. A sibling's recovery
       // cannot kill its shared worker either; keep observing actual state.
@@ -278,10 +364,14 @@ export function createPythonRuntimeAdapterFoundation(
       const afterReadOverride = terminalOverrides.get(requestId);
       if (afterReadOverride) return afterReadOverride;
       if (observationEpoch !== ownedExitEpoch ||
-          trackedTasks.get(requestId) !== tracked || datasetAdmissions.get(requestId) !== admission) {
+          trackedTasks.get(requestId) !== tracked || datasetAdmissions.get(requestId) !== admission ||
+          installedContextAdmissions.get(requestId) !== installedAdmission) {
         throw new Error("Python runtime task observation is no longer current.");
       }
       assertReplyIdentity(requestId, status, admission ? "prepare-training-dataset" : tracked?.taskType);
+      if (installedAdmission && status.taskType !== installedAdmission.taskType)
+        throw new Error("Installed-only Python task response identity was not confirmed.");
+      if (installedAdmission) assertInstalledScope(installedAdmission, status);
       if (admission && admission.phase !== "accepted" && status.taskType !== "prepare-training-dataset") {
         throw new Error("Python runtime task response identity did not match the pending request.");
       }
@@ -290,9 +380,10 @@ export function createPythonRuntimeAdapterFoundation(
         status.status === "failed" ||
         status.status === "cancelled"
       ) {
-        if (tracked || admission) rememberOverride(requestId, status);
+        if (tracked || admission || installedAdmission) rememberOverride(requestId, status);
         trackedTasks.delete(requestId);
         datasetAdmissions.delete(requestId);
+        installedContextAdmissions.delete(requestId);
       }
       return status;
     },
@@ -313,6 +404,7 @@ export function createPythonRuntimeAdapterFoundation(
       }
       const tracked = trackedTasks.get(requestId);
       const admission = datasetAdmissions.get(requestId);
+      const installedAdmission = installedContextAdmissions.get(requestId);
       const observationEpoch = ownedExitEpoch;
       const result = await client.cancelTask(requestId);
       const afterCancelOverride = terminalOverrides.get(requestId);
@@ -322,10 +414,14 @@ export function createPythonRuntimeAdapterFoundation(
           cancelled: afterCancelOverride.status === "cancelled" };
       }
       if (observationEpoch !== ownedExitEpoch ||
-          trackedTasks.get(requestId) !== tracked || datasetAdmissions.get(requestId) !== admission) {
+          trackedTasks.get(requestId) !== tracked || datasetAdmissions.get(requestId) !== admission ||
+          installedContextAdmissions.get(requestId) !== installedAdmission) {
         throw new Error("Python runtime task observation is no longer current.");
       }
       assertReplyIdentity(requestId, result, admission ? "prepare-training-dataset" : tracked?.taskType);
+      if (installedAdmission && result.taskType !== installedAdmission.taskType)
+        throw new Error("Installed-only Python cancellation identity was not confirmed.");
+      if (installedAdmission) assertInstalledScope(installedAdmission, result);
       if (admission && admission.phase !== "accepted" && result.taskType !== "prepare-training-dataset") {
         throw new Error("Python runtime task response identity did not match the pending request.");
       }
@@ -333,12 +429,13 @@ export function createPythonRuntimeAdapterFoundation(
         throw new Error("Python runtime cancellation response is inconsistent.");
       }
       if (result.cancelled || result.status === "cancelled") {
-        if (tracked || admission) rememberOverride(requestId, {
+        if (tracked || admission || installedAdmission) rememberOverride(requestId, {
           requestId, taskType: result.taskType ?? tracked?.taskType ?? "prepare-training-dataset", status: "cancelled",
           completedAt: new Date().toISOString(), metadata: result.metadata,
         });
         trackedTasks.delete(requestId);
         datasetAdmissions.delete(requestId);
+        installedContextAdmissions.delete(requestId);
         return result;
       }
       if (result.status === "running" && trackedTasks.has(requestId)
@@ -381,5 +478,6 @@ export function createPythonRuntimeAdapterFoundation(
   return {
     runtimePort,
     supervisor,
+    bindHostAdmission,
   };
 }

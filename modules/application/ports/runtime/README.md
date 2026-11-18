@@ -34,3 +34,9 @@ dispatch (`unavailable`), and an uncertain start (`unconfirmed`). A throw is
 uncertain, not a nonstart proof. This port grants no model download, dependency
 installation, physical readiness or user approval. Ordinary starts keep their
 existing preparation policy.
+
+The Python port has its own installed-only Context start. It preserves that
+restriction in the owned worker's automatic recovery; the generic registry must
+not substitute ordinary Python start. A foundation without an explicit verifier
+or bound host admission refuses this path. Only trusted host composition binds
+the one-use admission callback; it is not a serialized client permission.

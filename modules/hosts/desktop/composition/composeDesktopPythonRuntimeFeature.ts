@@ -35,6 +35,7 @@ export async function composeDesktopPythonRuntimeFeature(
     ensurePythonRuntimeModelTrainingDependencies,
     preparePythonRuntimeEnvironment,
     createPythonRuntimeStartupDiagnostics,
+    checkPythonRuntimeInstallationAsync,
   } = await import("../../../adapters/runtime/python");
   const diagnostics = options.startupDiagnostics ?? createPythonRuntimeStartupDiagnostics();
   const pythonRuntimeEndpoint = resolvePythonRuntimeHostAndPort();
@@ -72,6 +73,10 @@ export async function composeDesktopPythonRuntimeFeature(
       requiredCapabilities:
         PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES,
       onStartupEvent: diagnostics.event,
+      async verifyRuntimeEnvironment(context) {
+        if (!context.cwd) return false;
+        return await checkPythonRuntimeInstallationAsync({command: context.command, cwd: context.cwd, env: context.env}) === "ready";
+      },
       ...(shouldPrepareDependencies
         ? {
             async prepareRuntimeEnvironment(context: {

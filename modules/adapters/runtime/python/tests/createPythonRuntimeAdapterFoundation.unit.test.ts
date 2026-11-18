@@ -26,6 +26,228 @@ function response(status: number, payload: unknown): Response {
 }
 
 describe("createPythonRuntimeAdapterFoundation", () => {
+  it("does not expose installed-only dispatch without an explicit verifier", () => {
+    const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111"}, supervisor: {command: "python"}});
+    assert.equal(foundation.runtimePort.startTaskWithoutInstalling, undefined);
+  });
+
+  for (const trigger of ["deadline", "cancel", "sibling"] as const) {
+    it(`preserves installed-only policy through ${trigger} recovery after stop clears ownership`, async () => {
+      const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+      await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}, timeoutMs: 1000});
+      if (trigger === "sibling") await fixture.start("sibling", "train-model", 1000);
+      const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+      try {
+        if (trigger === "cancel") {
+          fixture.cancelReply = {cancelled: false, status: "running", taskType: "generate-context-artifact"};
+          assert.equal((await fixture.foundation.runtimePort.cancelTask("context")).cancelled, true);
+        } else assert.equal((await fixture.foundation.runtimePort.readTaskStatus(trigger === "sibling" ? "sibling" : "context")).status, "failed");
+        assert.equal(fixture.children.length, 2); assert.equal(fixture.installedProbes, 2);
+        assert.equal(fixture.ordinaryPreparations, 0);
+        assert.equal(fixture.posted.filter(id => id === "context").length, 1);
+      } finally {clock.mockRestore(); await fixture.foundation.supervisor.stop();}
+    });
+  }
+
+  for (const pending of [true, false]) {
+    it(`retains restrictive recovery policy for uncertain or pending POST (pending=${pending})`, async () => {
+      const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+      await fixture.start("sibling", "train-model", 1000);
+      let release!: (value: Response) => void;
+      fixture.admission = async r => {
+        if (pending) return new Promise<Response>(resolve => {release = resolve;});
+        throw new Error("Synthetic lost Context acknowledgement");
+      };
+      const attempted = fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "uncertain-context", taskType: "generate-context-artifact", payload: {}});
+      if (!pending) await assert.rejects(() => attempted);
+      const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+      try {
+        assert.equal((await fixture.foundation.runtimePort.readTaskStatus("sibling")).status, "failed");
+        assert.equal(fixture.children.length, 2); assert.equal(fixture.ordinaryPreparations, 0); assert.equal(fixture.installedProbes, 2);
+        if (pending) {release(response(200, {requestId: "uncertain-context", taskType: "generate-context-artifact", accepted: true, status: "queued"})); await attempted;}
+        assert.equal((await fixture.foundation.runtimePort.readTaskStatus("uncertain-context")).status, "failed");
+      } finally {
+        if (pending) release(response(200, {requestId: "uncertain-context", taskType: "generate-context-artifact", accepted: true, status: "queued"}));
+        await attempted.catch(() => undefined); clock.mockRestore(); await fixture.foundation.supervisor.stop();
+      }
+    });
+  }
+
+  it("denies all new admission while installed-only recovery is awaiting verification", async () => {
+    const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+    await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}, timeoutMs: 1000});
+    let entered!: () => void, release!: () => void;
+    const waiting = new Promise<void>(resolve => {entered = resolve;});
+    fixture.verifyInstalled = async () => {entered(); await new Promise<void>(resolve => {release = resolve;}); return true;};
+    const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+    const recovery = fixture.foundation.runtimePort.readTaskStatus("context");
+    try {
+      await waiting;
+      await assert.rejects(() => fixture.start("ordinary"), /recovery/);
+      await assert.rejects(() => fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "restricted", taskType: "context-artifact-operation", payload: {}}), /recovery/);
+      assert.equal(fixture.posted.length, 1); release(); await recovery;
+      assert.equal(fixture.ordinaryPreparations, 0);
+    } finally {release?.(); await recovery.catch(() => undefined); clock.mockRestore(); await fixture.foundation.supervisor.stop();}
+  });
+
+  it("keeps failed installed-only recovery fenced without falling back to ordinary preparation", async () => {
+    const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+    await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}, timeoutMs: 1000});
+    fixture.verifyInstalled = async () => false;
+    const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+    try {
+      await assert.rejects(() => fixture.foundation.runtimePort.readTaskStatus("context"), /verification is unavailable/);
+      await assert.rejects(() => fixture.foundation.runtimePort.getHealthStatus());
+      await assert.rejects(() => fixture.start("new"), /recovery/);
+      assert.equal(fixture.children.length, 1); assert.equal(fixture.ordinaryPreparations, 0);
+      fixture.verifyInstalled = async () => true;
+      await fixture.foundation.supervisor.startWithoutInstalling!();
+      await fixture.start("after-confirmed-start");
+      assert.equal(fixture.ordinaryPreparations, 0);
+    } finally {clock.mockRestore(); await fixture.foundation.supervisor.stop();}
+  });
+
+  it("keeps protected Dataset work observed while installed-only Context reaches its deadline", async () => {
+    const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+    await fixture.start("protected-dataset", "prepare-training-dataset");
+    await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}, timeoutMs: 1000});
+    const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+    try {
+      assert.equal((await fixture.foundation.runtimePort.readTaskStatus("context")).status, "running");
+      fixture.cancelReply = {cancelled: false, status: "running", taskType: "generate-context-artifact"};
+      assert.equal((await fixture.foundation.runtimePort.cancelTask("context")).cancelled, false);
+      assert.equal(fixture.children.length, 1); assert.equal(fixture.ordinaryPreparations, 0);
+      fixture.statuses.set("protected-dataset", "succeeded"); await fixture.foundation.runtimePort.readTaskStatus("protected-dataset");
+      assert.equal((await fixture.foundation.runtimePort.readTaskStatus("context")).status, "failed");
+      assert.equal(fixture.children.length, 2); assert.equal(fixture.ordinaryPreparations, 0);
+    } finally {clock.mockRestore(); await fixture.foundation.supervisor.stop();}
+  });
+
+  it("requires exact restrictive terminal and cancellation identity before releasing policy", async () => {
+    const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+    await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}});
+    await fixture.start("sibling", "train-model", 1000);
+    try {
+      fixture.replyTaskType = "train-model"; fixture.statuses.set("context", "succeeded");
+      await assert.rejects(() => fixture.foundation.runtimePort.readTaskStatus("context"), /identity/);
+      fixture.cancelReply = {cancelled: true, status: "cancelled", taskType: "train-model"};
+      await assert.rejects(() => fixture.foundation.runtimePort.cancelTask("context"), /identity/);
+      fixture.replyTaskType = undefined; fixture.cancelReply = undefined;
+      const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+      try {await fixture.foundation.runtimePort.readTaskStatus("sibling");} finally {clock.mockRestore();}
+      assert.equal(fixture.children.length, 2); assert.equal(fixture.ordinaryPreparations, 0);
+    } finally {await fixture.foundation.supervisor.stop();}
+  });
+
+  for (const field of ["workspaceId", "organizationId"] as const) for (const operation of ["read", "cancel"] as const) {
+    it(`retains restrictive policy on a foreign ${field} ${operation} reply`, async () => {
+      const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+      await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {},
+        metadata: {workspaceId: "workspace.installed", organizationId: "org.installed"}});
+      await fixture.start("sibling", "train-model", 1000);
+      try {
+        const metadata = {workspaceId: "workspace.installed", organizationId: "org.installed", [field]: "foreign"};
+        if (operation === "read") fixture.read = async () => response(200, {requestId: "context", taskType: "generate-context-artifact", status: "succeeded", metadata});
+        else fixture.cancel = async () => response(200, {requestId: "context", taskType: "generate-context-artifact", status: "cancelled", cancelled: true, metadata});
+        await assert.rejects(() => operation === "read" ? fixture.foundation.runtimePort.readTaskStatus("context") : fixture.foundation.runtimePort.cancelTask("context"), /scope identity/);
+        fixture.read = undefined; fixture.cancel = undefined;
+        const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+        try {await fixture.foundation.runtimePort.readTaskStatus("sibling");} finally {clock.mockRestore();}
+        assert.equal(fixture.children.length, 2); assert.equal(fixture.ordinaryPreparations, 0);
+      } finally {await fixture.foundation.supervisor.stop();}
+    });
+  }
+
+  for (const terminal of ["read", "cancel"] as const) {
+    it(`retires restrictive policy after exact confirmed ${terminal} and preserves later ordinary recovery`, async () => {
+      const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+      await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}});
+      try {
+        if (terminal === "read") {fixture.statuses.set("context", "succeeded"); await fixture.foundation.runtimePort.readTaskStatus("context");}
+        else {
+          fixture.cancelReply = {taskType: "generate-context-artifact", status: "cancelled", cancelled: true};
+          await fixture.foundation.runtimePort.cancelTask("context"); fixture.cancelReply = undefined;
+        }
+        await fixture.start("ordinary", "train-model", 1000);
+        const clock = testDouble.spyOn(Date, "now").mockReturnValue(Date.now() + 5000);
+        try {await fixture.foundation.runtimePort.readTaskStatus("ordinary");} finally {clock.mockRestore();}
+        assert.equal(fixture.children.length, 2); assert.equal(fixture.ordinaryPreparations, 1);
+        assert.equal(fixture.installedProbes, 1);
+      } finally {await fixture.foundation.supervisor.stop();}
+    });
+  }
+
+  it("bounds uncertain restrictive admissions and releases them only after the owned process exits", async () => {
+    const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+    fixture.admission = async () => {throw new Error("Synthetic lost response");};
+    try {
+      for (let index = 0; index < 256; index++) await assert.rejects(() => fixture.foundation.runtimePort.startTaskWithoutInstalling!({
+        requestId: "context-" + index, taskType: "generate-context-artifact", payload: {}}));
+      await assert.rejects(() => fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "over-capacity", taskType: "generate-context-artifact", payload: {}}), /capacity/);
+      await assert.rejects(() => fixture.start("context-0"), /already known/);
+      assert.equal(fixture.posted.length, 256);
+      fixture.children[0]!.emit("error", new Error("No exit proof"));
+      await assert.rejects(() => fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "still-over-capacity", taskType: "generate-context-artifact", payload: {}}), /capacity/);
+      fixture.children[0]!.emit("exit", 1, null);
+      fixture.admission = undefined; await fixture.foundation.supervisor.startWithoutInstalling!();
+      await fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "fresh", taskType: "generate-context-artifact", payload: {}});
+      assert.equal(fixture.ordinaryPreparations, 0);
+    } finally {await fixture.foundation.supervisor.stop();}
+  });
+
+  for (const pending of [true, false]) for (const terminal of ["read", "cancel"] as const) {
+    it(`retains exact terminal evidence for a restrictive POST before acknowledgement (pending=${pending}, terminal=${terminal})`, async () => {
+      const fixture = ownedTaskFixture(); await fixture.foundation.supervisor.startWithoutInstalling!();
+      let release!: (value: Response) => void;
+      fixture.admission = async () => {
+        if (pending) return new Promise<Response>(resolve => {release = resolve;});
+        throw new Error("Lost restrictive acknowledgement");
+      };
+      const attempt = fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}});
+      if (!pending) await assert.rejects(() => attempt);
+      try {
+        if (terminal === "read") {fixture.statuses.set("context", "succeeded"); await fixture.foundation.runtimePort.readTaskStatus("context");}
+        else {fixture.cancelReply = {taskType: "generate-context-artifact", status: "cancelled", cancelled: true}; await fixture.foundation.runtimePort.cancelTask("context");}
+        fixture.admission = undefined;
+        await assert.rejects(() => fixture.start("context"), /already known/);
+        await assert.rejects(() => fixture.foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}}), /already known/);
+        if (pending) {release(response(200, {requestId: "context", taskType: "generate-context-artifact", accepted: true, status: "queued"})); await attempt;}
+        assert.equal((await fixture.foundation.runtimePort.readTaskStatus("context")).status, terminal === "read" ? "succeeded" : "cancelled");
+        assert.equal(fixture.posted.length, 1);
+      } finally {
+        if (pending) release(response(200, {requestId: "context", taskType: "generate-context-artifact", accepted: true, status: "queued"}));
+        await attempt.catch(() => undefined); await fixture.foundation.supervisor.stop();
+      }
+    });
+  }
+
+  it("binds one host admission guard that cannot be replaced and refuses unbound restrictive dispatch", async () => {
+    let posts = 0, accepting = true;
+    const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111",
+      fetchImplementation: (async () => {posts++; throw new Error("Unexpected IO");}) as never},
+      supervisor: {command: "python", async verifyRuntimeEnvironment() {return true;}}});
+    const request = {requestId: "context", taskType: "generate-context-artifact", payload: {}};
+    await assert.rejects(() => foundation.runtimePort.startTaskWithoutInstalling!(request), /host admission/);
+    foundation.bindHostAdmission(() => {if (!accepting) throw new Error("Host retired");});
+    assert.throws(() => foundation.bindHostAdmission(() => {}), /already bound/);
+    accepting = false;
+    await assert.rejects(() => foundation.runtimePort.startTaskWithoutInstalling!(request), /Host retired/);
+    assert.equal(posts, 0);
+  });
+
+  it("rejects asynchronous or nonvoid host admission without task or worker effects", async () => {
+    for (const guard of [() => true, async () => {}, async () => {throw new Error("Private asynchronous guard failure");}]) {
+      let effects = 0;
+      const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111",
+        fetchImplementation: (async () => {effects++; throw new Error("Unexpected IO");}) as never},
+        supervisor: {command: "python", async verifyRuntimeEnvironment() {effects++; return true;},
+          spawnImplementation: (() => {effects++; throw new Error("Unexpected spawn");}) as never}});
+      foundation.bindHostAdmission(guard as never);
+      await assert.rejects(() => foundation.runtimePort.startTaskWithoutInstalling!({requestId: "context", taskType: "generate-context-artifact", payload: {}}), /must be synchronous/);
+      await assert.rejects(() => foundation.supervisor.startWithoutInstalling!(), /verification is unavailable/);
+      await Promise.resolve(); assert.equal(effects, 0);
+    }
+  });
   for (const operation of ["read", "cancel"] as const) {
     it(`rejects a stale initially unowned ${operation} without releasing a newer Dataset admission`, async () => {
       const fixture = ownedTaskFixture();
@@ -581,6 +803,8 @@ function ownedTaskFixture() {
   const statuses = new Map<string, string>();
   const types = new Map<string, string>();
   const fixture = {
+    installedProbes: 0, ordinaryPreparations: 0,
+    verifyInstalled: async (): Promise<boolean> => true,
     children, statuses, types, posted: [] as string[], transportFailure: false,
     read: undefined as undefined | ((requestId: string) => Promise<Response>),
     cancel: undefined as undefined | (() => Promise<Response>),
@@ -615,6 +839,8 @@ function ownedTaskFixture() {
       return response(200, { requestId: fixture.replyRequestId ?? requestId, taskType: fixture.replyTaskType ?? types.get(requestId) ?? "train-model", status: statuses.get(requestId) ?? "running" });
     }) as never },
     supervisor: { command: "python", args: ["main.py"], startupTimeoutMs: 100, healthCheckIntervalMs: 1,
+      async verifyRuntimeEnvironment() {fixture.installedProbes++; return fixture.verifyInstalled();},
+      async prepareRuntimeEnvironment() {fixture.ordinaryPreparations++;},
       spawnImplementation: (() => {
         const child = new EventEmitter() as typeof children[number];
         processAlive = true;
@@ -624,5 +850,6 @@ function ownedTaskFixture() {
         children.push(child); return child;
       }) as never },
   });
+  fixture.foundation.bindHostAdmission(() => {});
   return fixture;
 }

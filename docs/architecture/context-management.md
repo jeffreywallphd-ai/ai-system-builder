@@ -459,8 +459,10 @@ the actual power-lifecycle service with a delayed simulated blocker.
 
 Approved start requires the installed-only task capability before source reads.
 Routine processing approval cannot implicitly repair an environment. A fixed
-nonblocking installed probe and separate supervisor/registry path support later
-host composition; there is no fallback to ordinary installation preparation.
+nonblocking installed probe and separate supervisor/registry path are composed
+in both hosts; there is no fallback to ordinary installation preparation. The
+foundation retains that policy during shared task recovery and checks host
+admission at the actual spawn and POST boundaries.
 Only an explicit proven nonstart can remove this attempt's new staging after
 issuance. The task ID remains consumed. Uncertainty, malformed acknowledgements
 and exceptions preserve custody. Public plan issuance, model readiness and actual

@@ -154,3 +154,8 @@ the list or report deletion. A different key leaves the selected view intact.
   source bytes. A proven no-dispatch refusal cleans fresh staging while consuming
   the task ID; unknown replies retain custody. There is no ordinary-start/install
   fallback. Public host composition and real model/runtime proof remain pending.
+
+- Installed-only host composition retains policy through pending/lost task replies
+  and shared worker recovery. Exact terminal facts prevent late-ack resurrection;
+  the bound host guard reaches native spawn and POST. See the runtime architecture.
+  Focused simulated evidence does not qualify public Context/model execution.

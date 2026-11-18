@@ -129,9 +129,11 @@ export function resolveDesktopPythonRuntimeCommand(
 }
 
 export interface DesktopPythonRuntimeFeature {
+  bindHostAdmission?: (assertAccepting: () => void) => void;
   readStartupDiagnostics?: () => import("../../../contracts/runtime").PythonRuntimeStartupDiagnostics;
   supervisor: {
     start: () => Promise<void>;
+    startWithoutInstalling?: () => Promise<void>;
     stop: () => Promise<void>;
     restart: () => Promise<void>;
     getStatus: () => string;

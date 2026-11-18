@@ -271,7 +271,8 @@ export function createPythonRuntimeTaskRegistryAdapter(
       let request: StartRuntimeTaskRequest;
       try { request = snapshotInstalledContextRequest(rawRequest); } catch { return {kind: "unavailable"}; }
       const requestId = request.requestId!;
-      if (!ensureWithoutInstalling || trackedTasks.has(requestId) || pendingStarts.has(requestId) || installedContextIds.has(requestId) ||
+      const startInstalledTask = runtimePort.startTaskWithoutInstalling?.bind(runtimePort);
+      if (!ensureWithoutInstalling || !startInstalledTask || trackedTasks.has(requestId) || pendingStarts.has(requestId) || installedContextIds.has(requestId) ||
           pendingStarts.size >= maximumTrackedTasks || installedContextIds.size >= maximumTrackedTasks) return {kind: "unavailable"};
       const admission = {taskType: request.taskType};
       pendingStarts.set(requestId, admission);
@@ -282,7 +283,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       try {
         const pythonTaskType = toPythonTaskType(request.taskType);
         installedContextIds.add(requestId);
-        const result = await runtimePort.startTask({requestId, taskType: pythonTaskType,
+        const result = await startInstalledTask({requestId, taskType: pythonTaskType,
           payload: request.payload, metadata: {...request.metadata, workspaceId: request.workspaceId},
           timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType)});
         if (result?.requestId !== requestId || result.taskType !== pythonTaskType || result.accepted !== true ||

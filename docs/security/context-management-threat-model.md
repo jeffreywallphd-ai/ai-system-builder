@@ -329,3 +329,15 @@ refusal releases new staging; unknown dispatch preserves custody and one-use IDs
 Focused negative tests cover policy mixing, stop during verification, missing
 support, mutated requests, wrong identities and uncertain starts. Public host
 composition, durable issuance and physical model/runtime proof remain pending.
+
+The production composition now binds one host lifecycle to the foundation.
+A synchronous guard at the captured spawn boundary closes the async startup
+retirement race; guarded preparation and POST cannot fall back to ordinary setup.
+Same-owner Desktop feature recomposition preserves this guard without replacement.
+Before POST, bounded restrictive ownership retains exact task and reported scope.
+Wrong task/workspace/organization replies cannot release that policy. Terminal
+facts received before a lost/delayed start reply are retained to prevent known-ID
+reuse and resurrection. Shared recovery captures restriction before owned exit
+clears maps, then uses installed-only restart with the existing Dataset veto and
+recovery fence. Simulated causal tests cover these controls. Real public Context,
+model, native and parent qualification remain separate.

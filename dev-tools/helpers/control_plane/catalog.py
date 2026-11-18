@@ -172,6 +172,8 @@ PUBLISHED_FORM_CHECKS = {
         # contract, including fallback when its declared source map is damaged.
         "automatic_sources": (
             "modules/application/ports/runtime/runtime-task-registry.port.ts",
+            "modules/application/ports/runtime/python-runtime.port.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
             "modules/adapters/runtime/createRuntimeTaskRegistryRouter.ts",
             "modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts",
             "modules/adapters/runtime/python/checkPythonRuntimeInstallation.ts",
@@ -182,6 +184,10 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "modules/application/ports/runtime/runtime-task-registry.port.ts",
+            "modules/application/ports/runtime/python-runtime.port.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
+            "modules/adapters/runtime/python/index.ts",
             "modules/application/ports/runtime/README.md",
             "modules/adapters/runtime/createRuntimeTaskRegistryRouter.ts",
             "modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts",
@@ -198,7 +204,31 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/tests/checkPythonRuntimeInstallation.unit.test.ts",
             "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts",
             "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
             "modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts",
+        ),
+    },
+    "headless-context-installed-host": {
+        # Pair exact host wiring with the restrictive runtime change. Generic
+        # root tests alone must not mask unrelated primary-profile fallback.
+        "automatic_sources": (),
+        "companion_to": "headless-context-existing-runtime",
+        "sources": (
+            "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts",
+            "modules/hosts/desktop/composition/composeDesktopRuntimeTaskFeature.ts",
+            "modules/hosts/desktop/composition/desktopPythonRuntimeHelpers.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopHost.unit.test.ts",
+            "modules/hosts/desktop/composition/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/tests/composeServerHost.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test",
+            "--test-name-pattern", "installed-only|prepares Context dependencies|prepares text-training dependencies|starts the lazy Python runtime",
+            "--",
+            "modules/hosts/desktop/composition/tests/composeDesktopHost.unit.test.ts",
+            "modules/hosts/server/composition/tests/composeServerHost.unit.test.ts",
         ),
     },
     "headless-context-owned-start": {

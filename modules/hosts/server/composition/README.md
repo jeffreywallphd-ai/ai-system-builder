@@ -157,3 +157,13 @@ preview composition uses organization-partitioned saved repositories and a
 recorded-only model registry. It resolves no Context runtime, extraction,
 dependency installation or task. Strict reply readers keep private commands,
 paths and source content out of HTTP and MCP results.
+
+## Installed-only Context runtime
+
+Managed composition configures the fixed async installed verifier, binds the
+foundation to its owning task reconciler and separately guards restrictive
+readiness and the Python business POST. Ordinary dependency preparation is not
+used by this path. The foundation retains installation policy through shared
+worker recovery and checks host admission at the actual spawn boundary. Source
+configuration checks accompany focused foundation/Desktop causal tests; they do
+not assert a live Managed Context journey, model execution or public plan wiring.

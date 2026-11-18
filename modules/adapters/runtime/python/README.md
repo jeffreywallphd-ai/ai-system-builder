@@ -387,7 +387,34 @@ retries can reuse them. Unknown outcomes do not authorize discovery or cleanup.
 The generic router preserves this restriction without ordinary-start fallback.
 
 These are internal adapter components, not public host execution or physical
-model qualification. The production host must still compose the installed-only
-path, exact current durable plan authority and model/source validation. Focused
+model qualification. Both production hosts compose the installed-only
+path; public actions still need exact current durable plan authority and model/source validation. Focused
 source tests use simulated process and worker responses. No model accuracy test,
 installation, download or native/offload recovery is qualified by them.
+
+### Host admission and recovery
+
+Both hosts now configure the fixed async installed verifier and use the separate
+Python start port. The foundation binds one trusted host admission callback.
+It cannot be replaced; asynchronous or nonvoid guard results refuse effects.
+Checks surround preparation/verification, precede launch
+token creation and the business POST, and run synchronously at the captured
+native spawn boundary. Host retirement during an awaited verifier, health read
+or final launch handoff cannot create a new worker. Desktop feature recomposition
+keeps the same foundation/reconciler owner; another owner is refused.
+
+Before a restrictive POST, the foundation retains its exact task type and any
+workspace/organization scope. Pending and lost replies keep this policy. Only
+exact terminal/cancellation or positive owned process exit retires it. Terminal
+facts are retained even when they arrive before the start reply; a late reply
+cannot resurrect work or permit the same known ID to start again. Retained
+restrictive admissions are bounded to 256 without evicting uncertain ownership.
+
+The existing shared recovery flight and protected-Dataset veto remain. Capture
+restrictive policy before stop clears task maps. Recovery involving such an
+owner uses owned stop and installed-only start; no ordinary restart/install
+fallback is permitted. Failed verification keeps recovery fenced. When all
+restrictive work has actually finished, ordinary recovery retains its prior
+behavior. Focused tests use simulated worker/process replies, actual foundation
+and Desktop composition, and a static Managed-root configuration check. They do
+not qualify physical processes, real Context/model execution or public plan use.

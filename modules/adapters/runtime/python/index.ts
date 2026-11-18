@@ -13,4 +13,4 @@ export * from "./createPythonRuntimeTaskRegistryAdapter";
 export * from "./createPythonParquetDatasetReviewAdapter";
 export * from "./context-management/createPythonContextArtifactRuntimeAdapter";
 export * from "./pythonRuntimeStartupDiagnostics";
-export { checkPythonRuntimeInstallation, type PythonRuntimeInstallation } from "./checkPythonRuntimeInstallation";
+export { checkPythonRuntimeInstallation, checkPythonRuntimeInstallationAsync, type PythonRuntimeInstallation } from "./checkPythonRuntimeInstallation";

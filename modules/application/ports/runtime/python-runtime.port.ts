@@ -12,6 +12,8 @@ import type { CompletedModelDownload } from "../model";
 
 export interface PythonRuntimePort {
   startTask(request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult>;
+  /** Internal Context start preserving noninstalling policy through owned recovery. */
+  startTaskWithoutInstalling?(request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult>;
   readTaskStatus(requestId: string): Promise<PythonRuntimeTaskStatusResult>;
   cancelTask(requestId: string): Promise<CancelPythonRuntimeTaskResult>;
   getHealthStatus(): Promise<PythonRuntimeHealthCheckResult>;

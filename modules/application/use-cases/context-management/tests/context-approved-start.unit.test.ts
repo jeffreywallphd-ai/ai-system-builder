@@ -164,7 +164,8 @@ test("installed-only support is required before bytes, proven refusals clean sta
 
 test("actual Context owner, router and Python registry carry the staged command through installed-only dispatch", async () => withHarness(async h => {
   let installs = 0, verifications = 0, dispatches = 0;
-  const python = createPythonRuntimeTaskRegistryAdapter({async startTask(request) {
+  const python = createPythonRuntimeTaskRegistryAdapter({async startTask() {assert.fail("Approved work cannot use ordinary Python start.");},
+    async startTaskWithoutInstalling(request) {
     dispatches++;
     assert.equal(request.taskType, "generate-context-artifact"); assert.equal(request.requestId, h.taskId());
     const payload = request.payload as ContextGenerationTaskRequest;

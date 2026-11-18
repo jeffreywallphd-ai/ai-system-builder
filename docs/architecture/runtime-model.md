@@ -1456,5 +1456,17 @@ mixed-policy startup flights. The async installed probe uses the same predicates
 fixed isolated arguments, 12-second timeout and 32-KiB output cap as the startup
 probe. Closed statuses hide command output. Stop-generation, private launch token,
 required capabilities and authenticated health remain authoritative. Ordinary
-start/restart behavior is unchanged. These components require explicit production
-host composition and do not prove physical model readiness or native recovery.
+start/restart behavior is unchanged. Both production hosts now configure this private path. The foundation binds one
+host admission callback and checks it around preparation, before launch-token
+creation/POST and synchronously at the captured actual spawn. Same-owner Desktop
+feature recomposition retains that binding; replacement is refused.
+
+The foundation retains bounded exact restrictive task/scope ownership before
+POST, including uncertain replies. Exact terminal facts are cached even before
+acknowledgement, preventing ID reuse and late resurrection. Shared recovery
+captures installed-only policy before stop clears maps, then uses owned stop and
+installed-only start within the same existing recovery flight. Data protection,
+admission fencing and ordinary recovery after confirmed restrictive retirement
+remain. Failed verification never falls back to an installer. Focused simulated
+causal tests and Managed configuration checks do not prove a live Managed
+Context journey, public plan execution, physical model readiness or native recovery.

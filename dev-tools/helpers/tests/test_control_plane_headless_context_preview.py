@@ -52,3 +52,21 @@ class ContextPreviewRoutingTests(unittest.TestCase):
         self.assertNotIn('--suite=all', command)
         self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']) + ['modules/adapters/runtime/python/unknown-admission.ts']))
         self.assertIn('focused-tests', self.selected(list(definition['automatic_sources']), ['focused-tests']))
+
+    def test_installed_hosts_select_only_the_scoped_composition_and_ordinary_compatibility_cases(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-installed-host']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['headless-context-existing-runtime', 'architecture'])
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-installed-host']['argv']
+        self.assertIn('--test-name-pattern', command)
+        pattern = command[command.index('--test-name-pattern') + 1]
+        for name in ['installed-only', 'prepares Context dependencies', 'prepares text-training dependencies', 'starts the lazy Python runtime']:
+            self.assertIn(name, pattern)
+        for path in definition['sources']:
+            if '/tests/' in path:
+                self.assertIn(path, command)
+        self.assertNotIn('--suite=all', command)
+        self.assertIn('focused-tests', self.selected(paths))
+        self.assertIn('focused-tests', self.selected(paths + ['modules/hosts/server/composition/unmapped-installed.ts'], ['headless-context-existing-runtime', 'architecture']))
+        self.assertIn('focused-tests', self.selected(paths, ['headless-context-existing-runtime', 'focused-tests']))

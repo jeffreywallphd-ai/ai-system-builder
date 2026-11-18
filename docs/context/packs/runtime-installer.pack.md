@@ -116,3 +116,8 @@ Include this pack when prompts involve:
   install, repair or replace dependencies. Missing support refuses. The registry
   cannot fall back to ordinary setup. Production composition and physical model
   qualification remain separate; ordinary explicit installation policy is unchanged.
+
+- Both hosts configure the private installed-only Context path. A one-use host
+  admission binding guards the actual spawn and task POST; shared recovery keeps
+  restrictive policy captured before stop. Ordinary installation behavior stays
+  separate. Public Context execution and physical model/native proof remain open.

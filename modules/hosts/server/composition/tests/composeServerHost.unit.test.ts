@@ -71,6 +71,20 @@ async function withRegisteredHostFixture(
 }
 
 describe("composeServerHost", () => {
+  it("installed-only Managed composition binds host retirement and a read-only verifier without installer fallback", () => {
+    const source = readFileSync(resolve("modules/hosts/server/composition/composeServerHost.ts"), "utf8");
+    expect(source).toContain("pythonRuntimeFoundation.bindHostAdmission(() => taskReconciler.assertAccepting())");
+    expect(source).toMatch(/async verifyRuntimeEnvironment\(context\)\s*\{\s*if \(!context\.cwd\) return false;\s*return await checkPythonRuntimeInstallationAsync\(\{command: context\.command, cwd: context\.cwd, env: context\.env\}\) === "ready";/u);
+    const installed = source.slice(source.indexOf("async ensureRuntimeReadyWithoutInstalling()"), source.indexOf("async ensureRuntimeReady(request, control)"));
+    expect(installed).toContain("supervisor.startWithoutInstalling!()");
+    expect(installed).toContain("taskReconciler.assertAccepting()");
+    expect(installed).not.toContain("preparePythonRuntimeEnvironment");
+    expect(installed).not.toContain("ensurePythonRuntimeContextDependencies");
+    expect(source).toMatch(/startTaskWithoutInstalling\(request\)\s*\{\s*taskReconciler\.assertAccepting\(\);\s*return startInstalledTask\(request\);/u);
+    // Actual factory/host held-verifier, health and final-spawn behavior is
+    // exercised in the focused Desktop composition test; this checks the
+    // Managed root's matching production configuration, not a live server.
+  });
   it("rejects malformed controlled runtime preparation before host composition", () => {
     for (const mode of ["production", "test"]) {
       for (const value of [false, 0, "", null, {}, []]) {

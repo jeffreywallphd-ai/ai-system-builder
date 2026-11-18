@@ -233,5 +233,9 @@ lifecycle without invoking ordinary dependency preparation. Missing support or a
 failed verifier refuses without an installer fallback. A bounded passive request
 snapshot and exact acknowledgement distinguish nonstart from uncertainty. This
 implements the existing separation of routine processing and install/download
-authority; it selects no new provider, dependency, engine or topology. Production
-composition and actual Context/model qualification remain subsequent work.
+authority; it selects no new provider, dependency, engine or topology. Both hosts compose this private path with a one-use bound host admission guard
+at the actual spawn/POST boundary. Shared worker recovery captures restrictive
+policy before owned stop, preserves Dataset protection and uses installed-only
+start without an ordinary installer fallback. This extends the existing owned
+lifecycle decision; no new recovery owner or provider is selected. Public Context
+plan actions and actual model/runtime qualification remain subsequent work.

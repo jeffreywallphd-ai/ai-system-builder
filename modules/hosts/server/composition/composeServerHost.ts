@@ -34,6 +34,7 @@ import {
   ensurePythonRuntimeContextDependencies,
   preparePythonRuntimeEnvironment,
   resolvePythonRuntimeLoopbackEndpoint,
+  checkPythonRuntimeInstallationAsync,
 } from "../../../adapters/runtime/python";
 import {
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
@@ -405,7 +406,7 @@ export interface ComposeServerHostOptions {
     localSettingsFilePath?: string;
   };
   runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
-  /** Trusted nonproduction composition only; production always prepares the managed Python dependencies. */
+  /** Trusted nonproduction ordinary-start seam; installed-only starts never use it. */
   pythonRuntimeEnvironmentPreparer?: ServerPythonRuntimeEnvironmentPreparer;
 }
 
@@ -2030,6 +2031,10 @@ export function composeServerHost(
           args: pythonRuntimeArgs,
           cwd: pythonRuntimeWorkerDirectory,
           env: pythonRuntimeEnvironment,
+          async verifyRuntimeEnvironment(context) {
+            if (!context.cwd) return false;
+            return await checkPythonRuntimeInstallationAsync({command: context.command, cwd: context.cwd, env: context.env}) === "ready";
+          },
           prepareRuntimeEnvironment: pythonRuntimeEnvironmentPreparer ?? (async (context) => {
             await preparePythonRuntimeEnvironment({
               command: context.command,
@@ -2064,11 +2069,32 @@ export function composeServerHost(
           },
         },
       });
+      pythonRuntimeFoundation.bindHostAdmission(() => taskReconciler.assertAccepting());
       const startOwnedPython = pythonRuntimeFoundation.supervisor.start.bind(pythonRuntimeFoundation.supervisor);
       pythonRuntimeFoundation.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
+      const startInstalledPython = pythonRuntimeFoundation.supervisor.startWithoutInstalling?.bind(pythonRuntimeFoundation.supervisor);
+      pythonRuntimeFoundation.supervisor.startWithoutInstalling = async () => {
+        taskReconciler.assertAccepting();
+        if (!startInstalledPython) throw new Error("Installed-only Python runtime is unavailable.");
+        await startInstalledPython();
+        taskReconciler.assertAccepting();
+      };
+      const startInstalledTask = pythonRuntimeFoundation.runtimePort.startTaskWithoutInstalling?.bind(pythonRuntimeFoundation.runtimePort);
       const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
-        pythonRuntimeFoundation.runtimePort,
+        {...pythonRuntimeFoundation.runtimePort,
+          ...(startInstalledTask ? {
+            startTaskWithoutInstalling(request) {
+              taskReconciler.assertAccepting();
+              return startInstalledTask(request);
+            },
+          } : {}),
+        },
         {
+          async ensureRuntimeReadyWithoutInstalling() {
+            taskReconciler.assertAccepting();
+            await pythonRuntimeFoundation.supervisor.startWithoutInstalling!();
+            taskReconciler.assertAccepting();
+          },
           async ensureRuntimeReady(request, control) {
             if (
               request.taskType === TaskType.CONTEXT_GENERATION ||

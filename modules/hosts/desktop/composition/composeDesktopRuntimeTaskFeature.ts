@@ -5,7 +5,7 @@ import {
   TaskPowerLifecycleService,
 } from "../../../application/services/runtime";
 import { createElectronPowerSuspensionBlocker } from "../../../adapters/runtime/electron";
-import { TaskType, type RuntimeCapabilityId } from "../../../contracts/runtime";
+import { TaskType, type RuntimeCapabilityId, type StartPythonRuntimeTaskRequest } from "../../../contracts/runtime";
 import { createDesktopRuntimeTaskRegistry } from "./composeDesktopRuntimeTaskRegistry";
 
 export interface ComposeDesktopRuntimeTaskFeatureOptions {
@@ -15,6 +15,10 @@ export interface ComposeDesktopRuntimeTaskFeatureOptions {
   runtimeReadiness: any;
   recordMilestone?: (milestone: string) => void;
 }
+
+// Explicit feature unload/recomposition keeps the same retained foundation and
+// host owner. Never replace its already bound admission with another owner.
+const foundationOwners = new WeakMap<object, OwnedTaskReconcilerService>();
 
 function createLazyPowerSuspensionBlocker(
   recordMilestone?: (milestone: string) => void,
@@ -46,9 +50,40 @@ export async function composeDesktopRuntimeTaskFeature(
   const taskPowerLifecycle = new TaskPowerLifecycleService(
     powerSuspensionBlocker,
   );
+  const supervisor = options.pythonRuntimeFoundation.supervisor;
+  const reconciler = options.taskReconciler;
+  const boundOwner = foundationOwners.get(options.pythonRuntimeFoundation);
+  if (boundOwner && boundOwner !== reconciler) throw new Error("Python runtime foundation belongs to another host lifecycle.");
+  const startInstalledPython = supervisor.startWithoutInstalling?.bind(supervisor);
+  // The foundation's automatic recovery uses this same supervisor object.
+  // Guard it too, so recovery cannot launch a worker after host shutdown.
+  if (!boundOwner) {
+    options.pythonRuntimeFoundation.bindHostAdmission?.(() => reconciler.assertAccepting());
+    if (startInstalledPython) supervisor.startWithoutInstalling = async () => {
+      reconciler.assertAccepting();
+      await startInstalledPython();
+      reconciler.assertAccepting();
+    };
+    foundationOwners.set(options.pythonRuntimeFoundation, reconciler);
+  }
+  const pythonPort = {...options.pythonRuntimeFoundation.runtimePort};
+  const startInstalledTask = pythonPort.startTaskWithoutInstalling?.bind(pythonPort);
   const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
-    { ...options.pythonRuntimeFoundation.runtimePort },
+    { ...pythonPort,
+      ...(startInstalledTask ? {
+        startTaskWithoutInstalling(request: StartPythonRuntimeTaskRequest) {
+          reconciler.assertAccepting();
+          return startInstalledTask(request);
+        },
+      } : {}),
+    },
     {
+      async ensureRuntimeReadyWithoutInstalling() {
+        reconciler.assertAccepting();
+        if (!supervisor.startWithoutInstalling) throw new Error("Installed-only Python runtime is unavailable.");
+        await supervisor.startWithoutInstalling();
+        reconciler.assertAccepting();
+      },
       async ensureRuntimeReady(request, control) {
         if (
           request.taskType === TaskType.CONTEXT_GENERATION ||
