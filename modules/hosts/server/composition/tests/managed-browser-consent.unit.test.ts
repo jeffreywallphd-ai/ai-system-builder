@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 
-import { UI_CONTROL_VERSION, readUiControlObservation, type HeadlessHostIncarnationId, type HeadlessWindowRequest } from "../../../../contracts/headless";
+import { UI_CONTROL_VERSION, readUiControlObservation, viewForUiPresentationIntent, type HeadlessHostIncarnationId, type HeadlessWindowRequest } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { composeManagedBrowserConsent } from "../composeManagedBrowserConsent";
@@ -44,8 +44,9 @@ test("only observations use the passive workspace authorizer and its denial reti
   } finally {service.close();}
 });
 
-test("only the active managed lease receives saved presentation and one fresh minimal context", async () => {
-  const intent = {action:"open-system", systemId:"fixture.saved", revisionId:"revision-1"} as const;
+for (const query of [false, true]) test(`only the active managed lease receives ${query ? "query" : "saved"} presentation and fresh minimal context`, async () => {
+  const intent = query ? {action: "show-context-query", taskId: randomUUID()} as const : {action:"open-system", systemId:"fixture.saved", revisionId:"revision-1"} as const;
+  let resourceAllowed = true;
   const resourcePolicyModes: boolean[] = [];
   let now = 0;
   const service = composeManagedBrowserConsent({hostIncarnationId, authorize:async () => true, now:() => now,
@@ -54,7 +55,7 @@ test("only the active managed lease receives saved presentation and one fresh mi
       assert.equal(principal.principalId, principalId);
       assert.equal(workspace, workspaceId);
       resourcePolicyModes.push(passive);
-      return input.action === "open-system" && input.systemId === intent.systemId ? {title:"Saved metadata"} : undefined;
+      return resourceAllowed && JSON.stringify(input) === JSON.stringify(intent) ? {title:"Saved metadata"} : undefined;
     }});
   try {
     const registered = await service.register(browser, workspaceId, active);
@@ -96,12 +97,22 @@ test("only the active managed lease receives saved presentation and one fresh mi
     const challengeResponse = await service.readContextChallenge(tab,target,active);
     const challenge = challengeResponse?.result;
     assert.ok(challenge && challengeResponse.canPublish());
-    const context = {view:"system",ready:true,dirtyNavigationBlocked:false,selection:intent};
+    const context = {view:viewForUiPresentationIntent(intent),ready:true,dirtyNavigationBlocked:false,selection:intent};
     assert.equal((await service.publishContext(tab,{target,challenge,context},active))?.result,true);
     assert.equal(challengeResponse.canPublish(), false);
     const response = await openContext;
     assert.deepEqual(response,{ok:true,value:{kind:"context",context}});
     assert.equal(service.canPublish(read,response,agent),true);
+    if (query) {
+      resourceAllowed = false;
+      const deniedRead = service.execute(read, agent, active);
+      const deniedChallenge = await service.readContextChallenge(tab, target, active);
+      assert.ok(deniedChallenge?.result);
+      assert.equal((await service.publishContext(tab, {target, challenge: deniedChallenge.result, context}, active))?.result, true);
+      assert.deepEqual(await deniedRead, {ok: false, code: "headless.forbidden"}, "Resource policy withdrawal must deny fresh query context after an earlier successful display.");
+      resourceAllowed = true;
+    }
+
     const pending = service.execute(read,agent,active);
     const pendingChallenge = await service.readContextChallenge(tab,target,active);
     assert.ok(pendingChallenge?.result && pendingChallenge.canPublish());

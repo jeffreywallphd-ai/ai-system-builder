@@ -913,3 +913,21 @@ Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
 Consented query-window display, physical retrieval/resources, actual app hosts and
 parent/chunk qualification remain separate. Rollback disables query/v10 admission
 and retains consumed history; it never restores a weaker execution path.
+
+## Query-specific window authority
+
+Backend query approval grants no window control. A separately consented
+`show-context-query` UUID selection adds artifact/model read at Desktop and
+Managed display, passive observation and final output fences. Accepted lineage
+must match host, actor and workspace before the cached Browser is read. Metadata
+recompilation preserves the original saved/source/model witnesses; it performs
+no source extraction or runtime initialization. External root policy surrounds
+the owned snapshot without recursively entering it.
+
+The card contains fixed bounded status/count/settings/hash/cleanup text; window
+context contains only opaque selector/view IDs. Query DTOs cannot cross the
+artifact-only generation selector. Queues, document/lease currentness, replay,
+expiry, revoke, draft protection and independent backend tasks retain existing
+semantics. Controlled fixtures and source guards do not grant physical/native,
+actual-app, resource, parent or chunk qualification. Rollback disables this
+selector, retaining execution history and all remaining fences.

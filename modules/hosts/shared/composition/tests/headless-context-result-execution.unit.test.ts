@@ -22,6 +22,7 @@ import {createLocalArtifactCatalogPersistenceAdapter} from "../../../../adapters
 import {createLocalArtifactStorageBindingAdapter} from "../../../../adapters/storage/filesystem/artifact-catalog/createLocalArtifactStorageBindingAdapter";
 import {composeHeadlessContextTask} from "../headlessContextExecution";
 import type {ApprovedContextQueryAdmission} from "../../../../application/ports/context-management";
+import {composeHeadlessContextPresentation} from "../headlessContextPresentation";
 import {composeHeadlessContextSaved} from "../headlessContextResults";
 import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot} from "../../../../contracts/ingestion";
 import {CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, CONTEXT_RAG_DATABASE_MEDIA_TYPE} from "../../../../contracts/context-management";
@@ -347,6 +348,39 @@ test(`${host} ${channel} ${mode} ${kind} separately builds, saves and rebuilds C
       assert.equal(completed.value.query.matches.length, 1); assert.equal(completed.value.query.cleanupPending, false);
       assert.deepEqual(completed.value.query.sources[0], {reference: rebuilt.value.preview.sources[0].reference, digest: sourceDigest});
       assert.doesNotMatch(JSON.stringify(completed), /Private source excerpt|private.runtime|What does the synthetic|café|storageKey|outputHandle|localPath|principalId|registeredClientId/);
+      let windowPeeks = 0, windowLive = true;
+      const presentation = composeHeadlessContextPresentation({documents: taskDocuments, rootDirectory: directory, hostIncarnationId,
+        peekProcessor() {assert.fail("Query window selection must not observe generation.");},
+        peekQueryOwner() {windowPeeks++; return queryBrowser;}})(context)!;
+      const queryIntent = {action: "show-context-query", taskId: queryTaskId} as const;
+      // This policy uses the same real SQLite owner. Reentry from the metadata
+      // snapshot would deadlock, so the shared reader must check it outside that snapshot.
+      let policyReads = 0;
+      const windowPolicy = async () => {
+        policyReads++;
+        return current && windowLive && !denyModelRead && await platform.runInOwnedTransaction!(async owner => {
+          const ws = await createLocalWorkspaceRepository({rootDirectory: directory, documents: owner.forOrganization(organizationId)}).readWorkspace(workspaceId);
+          return ws?.status === "active";
+        }, () => {});
+      };
+      const shown = await presentation.execute(queryIntent, context, windowPolicy);
+      assert.ok(shown, "An accepted query must display without recursive policy-transaction reentry.");
+      assert.equal(shown.title, "Context search"); assert.match(shown.summary!, /Status: succeeded.*Citation results: 1.*Cleanup: complete/);
+      assert.ok(shown.summary!.includes(ready.value.queryDigest)); assert.ok(policyReads > 1);
+      assert.doesNotMatch(JSON.stringify(shown), /source.task|source.file|source.one|Private source excerpt|private.runtime|What does the synthetic|registeredClientId|localPath/);
+      const beforeWindow = windowPeeks;
+      for (const actor of [{...context, principalId: "another"}, {...context, workspaceId: createWorkspaceId("another.workspace")},
+        {...context, organizationId: createOrganizationId("another.organization")}])
+        assert.equal(await presentation.execute(queryIntent, actor, windowPolicy), undefined);
+      for (const taskId of [randomUUID(), reference.taskId])
+        assert.equal(await presentation.execute({...queryIntent, taskId}, context, windowPolicy), undefined);
+      hideDefinition = true; assert.equal(await presentation.execute(queryIntent, context, windowPolicy), undefined); hideDefinition = false;
+      assert.equal(windowPeeks, beforeWindow, "Unknown/foreign/generation/missing definitions deny before the query owner.");
+      denyModelRead = true; assert.equal(await presentation.execute(queryIntent, context, windowPolicy), undefined);
+      denyModelRead = false; windowLive = false; assert.equal(await presentation.execute(queryIntent, context, windowPolicy), undefined); windowLive = true;
+      assert.equal(windowPeeks, beforeWindow);
+      assert.equal(queryStarts, 1, "Window display starts no query or model task.");
+
       const beforeMissing = {generationTaskLoads, queryTaskPeeks};
       hideDefinition = true; assert.equal((await queryStatus()).ok, false, "A missing exact definition cannot become generation status.");
       assert.deepEqual({generationTaskLoads, queryTaskPeeks}, beforeMissing, "Missing definitions deny before either owner."); hideDefinition = false;

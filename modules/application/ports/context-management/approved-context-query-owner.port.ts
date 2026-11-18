@@ -14,7 +14,9 @@ export interface ApprovedContextQueryOwnerAdmission {
   readonly embeddingDevice: "cpu" | "cuda";
   readonly embeddingModel: ApprovedContextEmbeddingModelWitness;
   readonly sources: readonly {readonly artifactId: string; readonly digest: string}[];
-  /** Current host/client/plan, original saved/source/model and artifact/model read authority. */
+  /** Before issue: current caller/client/plan and original saved/source/model read authority.
+   * After exact ACK plus durable acceptance: current host and owned actor/resource policy.
+   * A genuine already-issued ACK can be recorded after outward caller authority ends. */
   readonly isCurrent: () => boolean;
   readonly stillAllowed: () => Promise<boolean>;
   /** Atomically revalidate the exact original facts and issue this attempt once. */

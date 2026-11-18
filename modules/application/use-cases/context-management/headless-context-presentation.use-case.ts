@@ -9,6 +9,7 @@ import {isUiContextPresentationIntent, readUiPresentationIntent, readUiPresentat
 /** Fixed interactive metadata only. Current window/artifact authority stays with the host. */
 export class ReadHeadlessContextPresentationUseCase {
   constructor(private readonly dependencies: {
+    readonly readAcceptedQueryTask?: (taskId: string, context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) => Promise<unknown>;
     readonly readSaved: (contextId: string, context: ApplicationRequestContext) => Promise<unknown>;
     /** Must prove exact accepted host/actor ownership before cached processor access. */
     readonly readAcceptedTask: (taskId: string, context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) => Promise<unknown>;
@@ -23,10 +24,19 @@ export class ReadHeadlessContextPresentationUseCase {
     try {
       if (intent.action === "show-context-artifact" && intent.reference.workspaceId !== context.workspaceId) return;
       if (!await stillAllowed()) return;
+      if (intent.action === "show-context-query") {
+        if (!this.dependencies.readAcceptedQueryTask) return;
+        const task = readHeadlessContextTaskValue(await this.dependencies.readAcceptedQueryTask(intent.taskId, context, stillAllowed),
+          {kind: "task", taskId: intent.taskId});
+        if (!task || !("query" in task) || !await stillAllowed()) return;
+        const query = task.query;
+        return readUiPresentationDetail({title: "Context search",
+          summary: `Status: ${task.state}. Citation results: ${query.matches.length}. Sources: ${query.sources.length}. Device: ${query.embeddingDevice}. Maximum results: ${query.maximumResults}. Cleanup: ${query.cleanupPending ? "pending" : "complete"}. Question fingerprint: ${query.queryDigest}.`});
+      }
       if (intent.action === "show-context-task") {
         const task = readHeadlessContextTaskValue(await this.dependencies.readAcceptedTask(intent.taskId, context, stillAllowed),
           {kind: "task", taskId: intent.taskId});
-        if (!task || !await stillAllowed()) return;
+        if (!task || "query" in task || !await stillAllowed()) return;
         return readUiPresentationDetail({title: "Context task", summary: task.review
           ? `Review required. Sources: ${task.review.sourceCount}. Chunks: ${task.review.chunkCount}. Size: ${task.review.sizeBytes} bytes. Approve saving separately.`
           : `Task status: ${task.state}.`});

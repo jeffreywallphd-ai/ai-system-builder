@@ -150,3 +150,12 @@ reads require current artifact and model permission and return citation-only
 summaries. Query tasks cannot grant a generation save. See
 `docs/architecture/context-management.md` and the portable Context skill guide
 for request lifetime, owned policy, uncertainty and pending qualification limits.
+
+The separate `show-context-query` window selector displays an exact accepted
+query's fixed status/count/settings/hash/cleanup summary. Current artifact AND
+model read and existing window consent guard display and fresh context. Accepted
+same-actor/workspace/host lineage precedes cached Browser access; no lazy feature,
+new query/save, source sharing or task adoption follows. Context shares only the
+selector and view IDs. Generation-task display retains its artifact-only policy
+and rejects query DTOs. Controlled feature checks leave physical and actual-host
+qualification separate. See the Context architecture and portable skill guide.

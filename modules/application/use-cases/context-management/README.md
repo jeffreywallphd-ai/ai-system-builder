@@ -31,7 +31,7 @@ ownership before observing an already-loaded owner. The reader cannot construct
 a lazy Context feature or grant a new business task/save. Accepted-task observation
 retains its owner's output validation and existing owned-worker recovery under
 the original lifecycle. Fixed display output contains no source bytes. Existing
-window consent owns display and revocation; query-window summaries remain separate work.
+window consent owns display and revocation; query summaries use the separate selector and model-read fence below.
 
 `ReadHeadlessContextRebuildUseCase` is a passive recorded-input projection. Current
 actor/client/workspace/resource authority surrounds the indexed metadata lookup
@@ -230,3 +230,12 @@ reads require current artifact and model permission and return citation-only
 summaries. Query tasks cannot grant a generation save. See
 `docs/architecture/context-management.md` and the portable Context skill guide
 for request lifetime, owned policy, uncertainty and pending qualification limits.
+
+The separate `show-context-query` window selector displays an exact accepted
+query's fixed status/count/settings/hash/cleanup summary. Current artifact AND
+model read and existing window consent guard display and fresh context. Accepted
+same-actor/workspace/host lineage precedes cached Browser access; no lazy feature,
+new query/save, source sharing or task adoption follows. Context shares only the
+selector and view IDs. Generation-task display retains its artifact-only policy
+and rejects query DTOs. Controlled feature checks leave physical and actual-host
+qualification separate. See the Context architecture and portable skill guide.

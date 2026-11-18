@@ -2341,7 +2341,7 @@ export function composeDesktopHost(
                   const context = {organizationId: identity.organizationId, principalId: identity.principalId, workspaceId};
                   const reader = composeHeadlessContextPresentation({documents: platformDocuments!,
                     rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId,
-                    peekProcessor: () => contextResultOwner})(context);
+                    peekProcessor: () => contextResultOwner, peekQueryOwner: () => contextQueryOwner})(context);
                   return reader?.execute(intent, context, stillAllowed);
                 }
                 if (isUiDataPresentationIntent(intent)) {

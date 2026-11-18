@@ -12,6 +12,21 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_query_window_keeps_actual_selector_reader_and_both_scope_source_guards(self):
+        paths = ['modules/hosts/shared/composition/headlessContextPresentation.ts',
+                 'modules/application/use-cases/context-management/headless-context-presentation.use-case.ts']
+        selected = self.selected(paths, ['architecture'])
+        check = selected['headless-ui-control-authority']
+        self.assertIn('modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts', check['argv'])
+        for test in ['modules/contracts/headless/tests/ui-control-delivery.unit.test.ts',
+                     'modules/application/use-cases/context-management/tests/headless-context-presentation.unit.test.ts',
+                     'modules/hosts/shared/composition/tests/headless-context-presentation.unit.test.ts']:
+            self.assertIn(test, check['argv'])
+        self.assertIn('modules/hosts/server/composition/composeServerHost.ts', catalog.PUBLISHED_FORM_CHECKS['headless-ui-control-authority']['sources'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(paths + ['modules/hosts/shared/composition/unmapped-query-display.ts'], ['architecture']))
+
     def test_public_query_routes_to_contract_app_owner_and_real_host_checks_without_hiding_unknowns(self):
         paths = ['modules/contracts/headless/headless-context-query-plan.ts',
                  'modules/hosts/shared/composition/headlessContextQueryExecution.ts',

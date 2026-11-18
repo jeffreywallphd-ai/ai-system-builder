@@ -84,6 +84,7 @@ function addPresentationTools(server: McpServer) {
       kind: z.enum(["rag-database", "markdown-context-pack"]), artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
     }) }),
     z.strictObject({ action: z.literal("show-context-task"), taskId: hostIncarnationId }),
+    z.strictObject({ action: z.literal("show-context-query"), taskId: hostIncarnationId }),
   ]);
   const call = (operation: HeadlessWindowRequest["operation"], input: unknown, signal?: AbortSignal) => {
     const request = headless.readHeadlessWindowRequest({ version: headless.UI_CONTROL_VERSION, operation, input });

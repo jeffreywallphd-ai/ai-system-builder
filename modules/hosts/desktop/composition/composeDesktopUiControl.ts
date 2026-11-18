@@ -53,7 +53,7 @@ export function composeDesktopUiControl({
   const canObserve = (workspaceId: WorkspaceId) => authorizeWorkspace(workspaceId, ["workspace:read", "asset:read"]);
   const authorizeIntent = async (workspaceId: WorkspaceId, intent: UiPresentationIntent) => {
     if (!canPresent) return;
-    const extraScopes: readonly SecurityScope[] = intent.action === "show-run" ? ["runtime:read"] :
+    const extraScopes: readonly SecurityScope[] = intent.action === "show-context-query" ? ["artifact:read", "model:read"] : intent.action === "show-run" ? ["runtime:read"] :
       intent.action === "show-artifact" || isUiDataPresentationIntent(intent) || isUiContextPresentationIntent(intent) ? ["artifact:read"] : [];
     const scopes: readonly SecurityScope[] = ["workspace:read", "asset:read", ...extraScopes];
     if (!await authorizeWorkspace(workspaceId, scopes)) return;

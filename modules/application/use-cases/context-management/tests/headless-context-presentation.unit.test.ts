@@ -68,3 +68,41 @@ test("saved selection and actor are detached before an awaited permission check"
   f.context.principalId = "changed.principal"; resume();
   assert.equal((await running)?.title, "Saved RAG database");
 });
+
+
+test("query display admits only strict query task summaries and never borrows generation or source-content authority", async () => {
+  const f = fixture(), intent = {action: "show-context-query", taskId: f.task.taskId} as const;
+  const value = {taskId: f.task.taskId, state: "succeeded", review: null, query: {queryDigest: "sha256:" + "b".repeat(64),
+    maximumResults: 3, embeddingDevice: "cpu", cleanupPending: false,
+    sources: [{reference: {kind: "ingestion-file", taskId: "source.task", fileId: "source.file", taskRevision: 1}, digest: "sha256:" + "c".repeat(64)}],
+    matches: [{rank: 1, score: 0.8, sourceOrdinal: 1, chunkIndex: 0}]}};
+  let reads = 0, live = true, raw: unknown = value;
+  const app = new ReadHeadlessContextPresentationUseCase({
+    async readAcceptedQueryTask(taskId, actor, allowed) {
+      reads++; assert.equal(taskId, f.task.taskId); assert.deepEqual(actor, f.context); assert.equal(await allowed(), true); return raw;
+    }, async readSaved() {assert.fail("Query display cannot read saved metadata through an unrelated selector.");},
+    async readAcceptedTask() {assert.fail("Query display cannot observe generation or start work.");}});
+  const shown = await app.execute(intent, f.context, async () => live);
+  assert.deepEqual(shown, {title: "Context search", summary: `Status: succeeded. Citation results: 1. Sources: 1. Device: cpu. Maximum results: 3. Cleanup: complete. Question fingerprint: ${value.query.queryDigest}.`});
+  assert.doesNotMatch(JSON.stringify(shown), /source.task|source.file|excerpt|private|modelPath|storageKey/);
+  for (raw of [f.task, {...value, sourceText: "private"}, {...value, query: {...value.query, excerpt: "private"}}, {...value, taskId: randomUUID()},
+    {...value, state: "failed"}]) assert.equal(await app.execute(intent, f.context, async () => live), undefined);
+  live = false; const before = reads; assert.equal(await app.execute(intent, f.context, async () => live), undefined); assert.equal(reads, before);
+  let queryPortCalls = 0;
+  const substituted = new ReadHeadlessContextPresentationUseCase({async readSaved() {assert.fail();}, async readAcceptedTask() {return value;},
+    async readAcceptedQueryTask() {queryPortCalls++; return value;}});
+  assert.equal(await substituted.execute({action: "show-context-task", taskId: f.task.taskId}, f.context, async () => true), undefined,
+    "An artifact-only generation selector cannot disclose a substituted query DTO.");
+  assert.equal(queryPortCalls, 0);
+  const noQueryOwner = new ReadHeadlessContextPresentationUseCase({async readSaved() {assert.fail();}, async readAcceptedTask() {assert.fail();}});
+  assert.equal(await noQueryOwner.execute(intent, f.context, async () => true), undefined);
+});
+
+test("query display withholds a valid summary when permission ends after the cached task read", async () => {
+  const f = fixture(); let live = true;
+  const app = new ReadHeadlessContextPresentationUseCase({async readSaved() {assert.fail();}, async readAcceptedTask() {assert.fail();},
+    async readAcceptedQueryTask(taskId) {live = false; return {taskId, state: "running", review: null, query: {
+      queryDigest: "sha256:" + "a".repeat(64), maximumResults: 1, embeddingDevice: "cpu", cleanupPending: true, matches: [],
+      sources: [{reference: {kind: "ingestion-file", taskId: "source.task", fileId: "source.file", taskRevision: 1}, digest: "sha256:" + "b".repeat(64)}]}};}});
+  assert.equal(await app.execute({action: "show-context-query", taskId: f.task.taskId}, f.context, async () => live), undefined);
+});

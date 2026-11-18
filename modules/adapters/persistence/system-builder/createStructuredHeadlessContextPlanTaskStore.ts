@@ -202,6 +202,18 @@ export async function readStructuredPresentableContextPlanTask(owner: Structured
   return record ? {workspaceId: scope.workspaceId, taskId} : undefined;
 }
 
+/** Separate window consent can inspect same-actor accepted lineage across clients.
+ * Original client identity stays private and never grants execution or another query. */
+export async function readStructuredPresentableContextPlanTaskLineage(owner: StructuredDocumentStore,
+  scope: Pick<HeadlessPlanReviewTarget["scope"], "organizationId" | "workspaceId" | "principalId">,
+  hostIncarnationId: string, taskId: string) {
+  const record = await readOwnedContextPlanTaskRecord(owner, scope, hostIncarnationId, taskId);
+  if (!record || !isHeadlessHostIncarnationId(hostIncarnationId)) return;
+  return {target: {hostIncarnationId, scope: {...scope, registeredClientId: record.owner.registeredClientId},
+    fingerprint: record.owner.fingerprint}, step: record.owner.step, inputDigest: record.owner.inputDigest,
+    sourceDigest: record.sourceDigest};
+}
+
 /** Internal immutable input identity, after the same accepted-owner proof. */
 export async function readStructuredOwnedContextPlanTaskSourceDigest(owner: StructuredDocumentStore,
   scope: HeadlessPlanReviewTarget["scope"], hostIncarnationId: string, taskId: string) {

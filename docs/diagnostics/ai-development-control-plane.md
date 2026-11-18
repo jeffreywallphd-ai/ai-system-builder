@@ -1,3 +1,12 @@
+The existing Context display and delivery profiles also cover the separate
+`show-context-query` selector, strict family isolation and bounded query cards.
+Core/SQLite query journeys verify accepted lineage, cached-only observation and
+nonrecursive policy snapshots. Desktop tests causally withdraw ModelRead at final
+display; AST guards check both real host scope/cached-owner bindings. Managed
+consent/delivery cases exercise query context/replay/revoke and resource denial.
+These are controlled feature checks, not physical/actual-app or parent/chunk passes.
+Unknown files and explicitly required generic checks retain their fallback.
+
 The exact `headless-context-rebuild-inputs` check also covers version-10 query
 contracts, transient input, original recorded metadata, one-use ACK/accept and
 captured-actor lifecycle, with both real host compositions using Core/SQLite.

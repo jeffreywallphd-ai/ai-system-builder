@@ -1152,6 +1152,45 @@
           "No model accuracy or whole-software tests were repeated."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7b4acbe38ded4d7e9bc37531e27b6715ed83ea664578f3c0d716c7d07d60b580",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Seventeen focused check groups and the Desktop, Server and Thin Client checks passed for approved Context queries.",
+          "Both composed hosts tested one exact query, accepted-task ownership, replay and denial after source or model permission changes.",
+          "API, SDK and approval controls use the same exact question hash and limits.",
+          "An independent review accepted the component before it was committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fa0c8d974fa803e182d58e91d0904b8ea55bcbcf9b8d4e52d4f1161f742392d9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task results contain citation metadata and do not download a model.",
+          "This component alone does not provide query display under window consent.",
+          "Controlled feature tests do not prove physical model, resource, native or real-app behavior.",
+          "The parent criteria and chunks stay open until their own work and checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "31c75371c276d647970f3e1402768e73e988d05cfc2d96dbb7f9f3c0039f1756",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier test results remain in history.",
+          "The final receipt covers the corrected source and documentation.",
+          "Tests check missing definitions, accepted work after its original request ends, and current model access before results leave the host.",
+          "No accepted model accuracy or whole-software tests were repeated."
+        ]
+      }
     }
   ]
 }

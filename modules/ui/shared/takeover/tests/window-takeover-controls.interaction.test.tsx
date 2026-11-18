@@ -28,6 +28,11 @@ test("Context cards show the exact saved selection or accepted task without miss
       detail={{title: "Context task", summary: "Task status: running."}} />);});
     assert.deepEqual([...app.querySelectorAll("code")].map(node => node.textContent), [reference.taskId]);
     assert.doesNotMatch(app.textContent!, /sha256:|undefined/);
+    await act(async () => {root.render(<PresentedWindowResource elementRef={null} intent={{action: "show-context-query", taskId: reference.taskId}}
+      detail={{title: "Context search", summary: "Status: succeeded. Citation results: 2. Cleanup: complete."}} />);});
+    assert.deepEqual([...app.querySelectorAll("code")].map(node => node.textContent), [reference.taskId]);
+    assert.match(app.textContent!, /Context search.*Citation results: 2/);
+    assert.doesNotMatch(app.textContent!, /private-query|private-source|undefined/);
   } finally {await act(async () => {root.unmount();});}
 });
 

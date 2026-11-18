@@ -425,3 +425,21 @@ Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
 Consented query-window display, physical retrieval/resources, actual app hosts and
 parent/chunk qualification remain separate. Rollback disables query/v10 admission
 and retains consumed history; it never restores a weaker execution path.
+
+### Separately consented Context query display
+
+The existing finite presentation family adds `show-context-query` with one exact
+accepted task UUID and a matching `context-query` view. It adds no tool, lifecycle,
+engine or grant to the version-10 backend plan. Original client identity stays
+host-private: separate consent permits same-actor/workspace/host accepted lineage
+across connections, without task adoption or a new run. Query display requires
+artifact AND model read; legacy generation display remains artifact-only.
+
+The shared reader validates the recorded query and original saved/source/model
+metadata in an owned snapshot, checks external window policy before and after it,
+and observes only the cached Browser. It never reenters external root policy from
+inside that snapshot. Fixed200/320-character title/summary bounds contain only
+status, counts, device/limit, question fingerprint and cleanup state. Context
+contains opaque selectors/view identifiers. Existing lease, document, queue,
+replay/revoke and draft controls remain. Physical/actual-host/native/resource and
+parent qualification are separate; rollback disables only new query display.

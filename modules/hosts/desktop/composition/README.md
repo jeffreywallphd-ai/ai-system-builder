@@ -13,7 +13,7 @@ It hashes transient question text and compiles the exact saved Context's origina
 source/model metadata through the platform owner. It never resolves the lazy
 Context/model runtime, reads source bytes or creates an execution grant. The
 question stays out of records/results; transport request buffers retain their
-existing bounded lifetime. Separate version-10 approval below permits queries. Query-window and physical qualification remain pending.
+existing bounded lifetime. Separate version-10 approval below permits queries. Query display uses separate window consent; physical qualification remains pending.
 
 Context window intents use current artifact-read permission and the existing
 separate window consent. The shared Context presentation reader verifies an exact
@@ -24,7 +24,7 @@ Accepted-task observation retains owned output validation and existing worker
 recovery under the original task lifecycle; display grants no new business task.
 Fixed status/counts and opaque selectors cross the display boundary; source bytes,
 models and query text do not. Lease retirement stops new display/context while
-preserving independently authorized Context work. Query summaries remain pending.
+preserving independently authorized Context work. Query summaries use the separately consented selector below.
 
 `context.preview-rebuild` is a separate optional plan-review metadata provider.
 It requires current artifact/model permission and verifies immutable recorded
@@ -238,3 +238,12 @@ reads require current artifact and model permission and return citation-only
 summaries. Query tasks cannot grant a generation save. See
 `docs/architecture/context-management.md` and the portable Context skill guide
 for request lifetime, owned policy, uncertainty and pending qualification limits.
+
+The separate `show-context-query` window selector displays an exact accepted
+query's fixed status/count/settings/hash/cleanup summary. Current artifact AND
+model read and existing window consent guard display and fresh context. Accepted
+same-actor/workspace/host lineage precedes cached Browser access; no lazy feature,
+new query/save, source sharing or task adoption follows. Context shares only the
+selector and view IDs. Generation-task display retains its artifact-only policy
+and rejects query DTOs. Controlled feature checks leave physical and actual-host
+qualification separate. See the Context architecture and portable skill guide.

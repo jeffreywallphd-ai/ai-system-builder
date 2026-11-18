@@ -31,6 +31,10 @@ test("both real host sources compose Context display with a cached owner and no 
     const peek = options.properties.find(property => property.name?.getText(source) === "peekProcessor");
     assert.ok(peek && ts.isPropertyAssignment(peek) && ts.isArrowFunction(peek.initializer));
     assert.ok(ts.isIdentifier(peek.initializer.body)); assert.equal(peek.initializer.body.text, cachedName);
+    const query = options.properties.find(property => property.name?.getText(source) === "peekQueryOwner");
+    assert.ok(query && ts.isPropertyAssignment(query) && ts.isArrowFunction(query.initializer));
+    assert.ok(ts.isIdentifier(query.initializer.body));
+    assert.equal(query.initializer.body.text, path.includes("/desktop/") ? "contextQueryOwner" : "contextBrowserUseCases");
   }
 });
 
@@ -121,4 +125,30 @@ test("permission withdrawn at cached-owner observation prevents task reads and l
   assert.equal(await reader.execute({action: "show-context-task", taskId: f.taskId}, f.context, async () => live), undefined);
   assert.equal(reads, 0);
   assert.ok(await f.documents.forOrganization(f.context.organizationId).readDocument("headless/context/pack-plan-task-index", `${f.context.workspaceId}/${f.taskId}`));
+});
+
+
+test("actual Desktop and Managed query selectors require artifact and model scopes; a removed model fence is detected", () => {
+  function check(path: string, text: string) {
+    const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS), branches: ts.ArrayLiteralExpression[] = [];
+    function visit(node: ts.Node) {
+      if (ts.isConditionalExpression(node) && ts.isBinaryExpression(node.condition) &&
+          node.condition.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+          node.condition.left.getText(source) === "intent.action" && ts.isStringLiteral(node.condition.right) &&
+          node.condition.right.text === "show-context-query") {
+        const yes = node.whenTrue;
+        const array = ts.isAsExpression(yes) ? yes.expression : yes;
+        assert.ok(ts.isArrayLiteralExpression(array)); branches.push(array);
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(source); assert.equal(branches.length, 1);
+    const scopes = branches[0].elements.filter(ts.isStringLiteral).map(item => item.text);
+    assert.ok(scopes.includes("artifact:read")); assert.ok(scopes.includes("model:read"));
+  }
+  for (const path of ["modules/hosts/desktop/composition/composeDesktopUiControl.ts", "modules/hosts/server/composition/composeServerHost.ts"]) {
+    const source = readFileSync(path, "utf8"); check(path, source);
+    const mutated = source.replace(/(intent\.action === "show-context-query" \? \[[^\]]*)"model:read"/, '$1"artifact:read"');
+    assert.notEqual(mutated, source); assert.throws(() => check(path, mutated), "A ModelRead omission must fail this source-wiring guard.");
+  }
 });

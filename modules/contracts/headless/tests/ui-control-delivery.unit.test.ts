@@ -5,7 +5,7 @@ import { readUiPresentationIntent, readUiPresentationDelivery, readUiPresentatio
 test("Context display copies only exact saved references or accepted-task selectors", () => {
   const reference = {workspaceId: "context-workspace", contextId: "ca353bdd-7793-44c6-8c36-c470be8c537c",
     taskId: "ca353bdd-7793-44c6-8c36-c470be8c537d", kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`};
-  for (const intent of [{action: "show-context-artifact", reference}, {action: "show-context-task", taskId: reference.taskId}]) {
+  for (const intent of [{action: "show-context-artifact", reference}, {action: "show-context-task", taskId: reference.taskId}, {action: "show-context-query", taskId: reference.taskId}]) {
     const parsed = readUiPresentationIntent(intent); assert.ok(parsed); assert.deepEqual(parsed, intent);
     const context = {view: viewForUiPresentationIntent(parsed), ready: true, dirtyNavigationBlocked: false, selection: intent};
     assert.deepEqual(readUiPresentationContext(context), context);
@@ -24,6 +24,9 @@ test("Context display copies only exact saved references or accepted-task select
     assert.equal(readUiPresentationIntent({action: "show-context-artifact", reference}), undefined);
   assert.equal(reads, 0);
   assert.equal(readUiPresentationIntent({action: "show-context-task", taskId: "ordinary-task"}), undefined);
+  assert.equal(readUiPresentationIntent({action: "show-context-query", taskId: "ordinary-task"}), undefined);
+  assert.equal(readUiPresentationContext({view: "context-task", ready: true, dirtyNavigationBlocked: false,
+    selection: {action: "show-context-query", taskId: parsed.reference.taskId}}), undefined);
 });
 
 test("admits only exact saved resource identifiers to the fixed presentation family", () => {

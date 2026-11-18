@@ -653,3 +653,21 @@ Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
 Consented query-window display, physical retrieval/resources, actual app hosts and
 parent/chunk qualification remain separate. Rollback disables query/v10 admission
 and retains consumed history; it never restores a weaker execution path.
+
+## Consented query-result display boundary
+
+Protect query/source text, source handles and private model/runtime identities.
+An exact `show-context-query` selector requires same-actor/workspace/host accepted
+lineage, original saved/source/model metadata and separate current window consent.
+Artifact and model read guard metadata, final display and fresh observation.
+Unknown/foreign/generation tasks, changed metadata, retired authority and malformed
+output deny before disclosure; the generation selector explicitly rejects query
+DTOs. Original client IDs remain private despite cross-connection window consent.
+
+The metadata snapshot does not call external root policy recursively. Role/window
+checks surround it; the cached query owner retains its original actor policy.
+Only fixed counts/settings/hash/cleanup state reach a bounded card, and only
+opaque selection/view IDs reach window context. No lazy initialization, source
+sharing, new query, save, adoption or restart is granted. Focused denial, real
+Core/SQLite, consent/revoke, DOM and SDK cases are controlled feature evidence;
+physical/native/actual-host and parent qualification remain separate.

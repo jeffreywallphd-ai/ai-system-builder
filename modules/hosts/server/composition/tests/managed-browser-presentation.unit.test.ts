@@ -13,6 +13,7 @@ const current = () => true;
 for (const selected of [
   {action: "show-dataset-version", datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: `sha256:${"a".repeat(64)}`},
   {action: "show-context-task", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c"},
+  {action: "show-context-query", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c"},
   {action: "show-context-artifact", reference: {workspaceId: target.workspaceId, contextId: "ca353bdd-7793-44c6-8c36-c470be8c537d",
     taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c", kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`}},
 ] as const) test(`${selected.action} delivery retains strict context/replay and retires display/context`, async () => {

@@ -1075,6 +1075,9 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-ui-control-authority": {
         "sources": (
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessContextPlanTaskStore.ts",
             "modules/hosts/desktop/composition/composeDesktopHost.ts",
             "modules/application/use-cases/context-management/README.md",
             "modules/application/use-cases/context-management/headless-context-presentation.use-case.ts",
@@ -1096,6 +1099,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
         ),
         "automatic_sources": (
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
             "modules/application/use-cases/context-management/headless-context-presentation.use-case.ts",
             "modules/application/use-cases/context-management/tests/headless-context-presentation.unit.test.ts",
             "modules/hosts/shared/composition/headlessContextPresentation.ts",
@@ -1110,6 +1114,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": (
             "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
             "modules/contracts/headless/tests/ui-control-delivery.unit.test.ts",
             "modules/application/use-cases/context-management/tests/headless-context-presentation.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-context-presentation.unit.test.ts",

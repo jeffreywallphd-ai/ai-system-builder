@@ -297,3 +297,14 @@ Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
 Consented query-window display, physical retrieval/resources, actual app hosts and
 parent/chunk qualification remain separate. Rollback disables query/v10 admission
 and retains consumed history; it never restores a weaker execution path.
+
+### Show an existing Context search
+
+Use `aisb_context_task` to identify the exact accepted query, then obtain separate
+window consent. `aisb_present_in_window` accepts `show-context-query` with that
+UUID; it starts no query or model. Current artifact/model permission and original
+saved/source/model lineage are checked. The existing card shows counts, settings,
+question hash and cleanup state; window context exposes only selector/view IDs.
+The window connection may differ from the plan connection for the same actor,
+workspace and host. Revoke or expiry stops fresh display/context, preserving the
+accepted backend task. Read the portable Context guide for exact steps and limits.

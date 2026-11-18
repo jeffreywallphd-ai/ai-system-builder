@@ -33,7 +33,8 @@ before selecting saved sources or an embedding model. A metadata preview does
 not start processing or prove that a model is ready. The guide also covers
 separately approved source-derived packs, local RAG builds, accepted-task progress,
 reviewed result saves, passive saved metadata and separately approved recorded rebuilds.
-The same guide covers saved Context and accepted-task display under a separate window lease.
+The same guide covers saved Context, accepted generation tasks and query-summary
+display under a separate window lease; query display also requires model read permission.
 Use its passive query preview to obtain an exact question fingerprint without
 saving question text or starting a model. The guide then explains separately approved
 version-10 queries, transient `contextQuery`, fresh scoped status and citation-only output.

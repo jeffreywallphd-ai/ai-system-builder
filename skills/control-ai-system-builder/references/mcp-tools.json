@@ -1395,6 +1395,23 @@
                   "taskId"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "show-context-query"
+                  },
+                  "taskId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "action",
+                  "taskId"
+                ],
+                "additionalProperties": false
               }
             ]
           }

@@ -67,8 +67,8 @@ original model ID/timestamp, counts/limits and not-checked readiness. Route/SDK
 codecs independently correlate the hash. The 2,000-character headless profile fits
 existing request/passive guards; ordinary queries keep their existing bound.
 There is no input cache, durable question, source-byte/model load or query task.
-The separate version-10 approval below permits bounded queries. Query-window
-display and physical retrieval/resources remain pending.
+The separate version-10 approval below permits bounded queries. Query display requires separate window consent as described below.
+Physical retrieval/resources remain pending.
 
 ### Revocable Context metadata display
 
@@ -807,3 +807,24 @@ Controlled Core/SQLite, API, SDK, policy and UI tests are feature evidence only.
 Consented query-window display, physical retrieval/resources, actual app hosts and
 parent/chunk qualification remain separate. Rollback disables query/v10 admission
 and retains consumed history; it never restores a weaker execution path.
+
+### Query results under separate window consent
+
+`show-context-query` is distinct from generation's `show-context-task`. Desktop
+and Managed selectors require current artifact and model read before metadata,
+at final display and during fresh observation. The original query plan is history,
+not a window grant. Accepted same-actor/workspace/host lineage can use a different
+window connection; original client identity never leaves the host.
+
+The shared reader reconstructs the exact query, checks original saved/source/model
+facts in an owned metadata snapshot and only then reads the retained Browser.
+External root policy runs outside that snapshot to avoid recursive transaction
+entry, with checks before and after. No lazy feature, model, task, ordinary-query
+fallback, save or recovery follows. Legacy generation display rejects query DTOs.
+
+A fixed bounded card shows state, match/source counts, CPU/CUDA, result bound,
+question hash and independent cleanup state. It shows no excerpt, question,
+source handle or model/runtime path. Window context remains selector/view IDs.
+The current modal lists this permission. Existing consent/delivery/replay/revoke
+semantics and backend task independence remain. Controlled Core/SQLite/DOM/SDK
+and source-wiring checks do not qualify physical resources or actual app hosts.

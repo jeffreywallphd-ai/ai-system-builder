@@ -321,7 +321,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     }, duplicate:true}});
     repeatedCommand = false; commandApplied = false;
     const contextReference = {workspaceId, contextId: randomUUID(), taskId: randomUUID(), kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`};
-    for (const intent of [{action: "show-context-artifact", reference: contextReference}, {action: "show-context-task", taskId: contextReference.taskId}]) {
+    for (const intent of [{action: "show-context-artifact", reference: contextReference}, {action: "show-context-task", taskId: contextReference.taskId}, {action: "show-context-query", taskId: contextReference.taskId}]) {
       const commandId = randomUUID();
       assert.deepEqual(await present({...delivery, commandId, intent}), {ok: true, value: {kind: "command",
         receipt: {sequence: 1, commandId, status: "accepted"}, duplicate: false}});
@@ -330,6 +330,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     const malformedContext = await presentationClient.callTool({name: "aisb_present_in_window", arguments: {...delivery,
       intent: {action: "show-context-artifact", reference: {...contextReference, path: "private/context.zip"}}}});
     assert.equal(malformedContext.isError, true); assert.equal(requests.length, beforeMalformedContext);
+    for (const intent of [{action: "show-context-query", taskId: "ordinary-task"},
+      {action: "show-context-query", taskId: contextReference.taskId, query: "Synthetic private query"}]) {
+      const deniedQuery = await presentationClient.callTool({name: "aisb_present_in_window", arguments: {...delivery, intent}});
+      assert.equal(deniedQuery.isError, true); assert.equal(requests.length, beforeMalformedContext);
+      assert.doesNotMatch(JSON.stringify(deniedQuery), /Synthetic private query/);
+    }
+
     assert.ok(requests.slice(callsBeforeDenied).every(row => row.url === "/api/headless/agent/window"));
     const edit = {hostIncarnationId, workspaceId, systemId, baseRecordRevision:1, baseRevisionId:"revision-1",
       edits:[{kind:"configure", instanceId:"fixture-instance", values:{title:"Synthetic title"}}],
@@ -1153,6 +1160,11 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   const presentationSchema = assertExactObject("aisb_present_in_window", ["target", "commandId", "intent"]);
   const choices = (presentationSchema.properties?.intent as {oneOf: {additionalProperties: boolean; properties: Record<string, any>}[]}).oneOf;
   assert.deepEqual(choices.map(value => value.properties.action.const).sort(), [...UI_PRESENTATION_ACTIONS].sort());
+  const queryWindow = choices.find(value => value.properties.action.const === "show-context-query");
+  assert.ok(queryWindow); assert.equal(queryWindow.additionalProperties, false);
+  assert.deepEqual(Object.keys(queryWindow.properties).sort(), ["action", "taskId"]);
+  assert.equal(queryWindow.properties.taskId.type, "string");
+  assert.deepEqual(queryWindow.properties.taskId, choices.find(value => value.properties.action.const === "show-context-task")!.properties.taskId);
   const contextReference = choices.find(value => value.properties.action.const === "show-context-artifact")!.properties.reference;
   assert.equal(contextReference.additionalProperties, false);
   assert.deepEqual(Object.keys(contextReference.properties).sort(), ["workspaceId", "contextId", "taskId", "kind", "artifactDigest"].sort());

@@ -110,7 +110,7 @@ test("portable Context guidance and discovery separate metadata from execution a
     assert.ok(normalized.includes(text), `Missing separately approved recorded rebuild boundary: ${text}`);
   for (const text of ["Show Context in a window", "show-context-artifact", "show-context-task", "current window lease",
     "cannot create the Context feature or approve a new task", "validate its output and recover its existing worker",
-    "original task controls", "query summaries remain unavailable", "Ending display does not cancel"])
+    "original task controls", "show-context-query", "Ending display does not cancel"])
     assert.ok(normalized.includes(text), `Missing separately consented Context display boundary: ${text}`);
   for (const text of ["aisb_preview_context_query", "2,000 characters", "exact UTF8 text", "queryDigest", "A changed question needs a new preview",
     "does not save or return the question", "asynchronous metadata dependency", "Use the separate approval procedure below"])
@@ -124,6 +124,15 @@ test("portable approved-query guidance separates transient input, owned lifetime
     "question can be omitted", "uncertain issue or acceptance never permits", "closed request or old approval lifetime",
     "does not establish worker failure or restart authority", "Physical retrieval/resource and real-app qualification"])
     assert.ok(guide.includes(text), `Missing approved-query limit: ${text}`);
+});
+test("portable query-window guidance keeps separate consent, exact accepted work and opaque context", () => {
+  const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8").replace(/\s+/g, " ");
+  for (const text of ["show-context-query", "Backend query approval does not grant window control", "same user, workspace and host",
+    "starts no query", "fixed status", "Window context contains only the task selector and view identifiers",
+    "artifact and model read permission", "existing cached query owner", "Ending display does not cancel the query",
+    "Physical retrieval/resource and real-app qualification remain separate"])
+    assert.ok(guide.includes(text), `Missing query-window authority boundary: ${text}`);
+  assert.ok(!guide.includes("aisb_read_context_task"), "Use the actual discovered aisb_context_task tool name.");
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

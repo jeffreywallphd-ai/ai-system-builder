@@ -24,11 +24,12 @@ export type UiPresentationIntent = SystemPresentation
   | { readonly action: "show-dataset-version"; readonly datasetId: string; readonly versionId: string; readonly versionDigest: `sha256:${string}` }
   | { readonly action: "show-dataset-task"; readonly taskId: string }
   | { readonly action: "show-context-artifact"; readonly reference: HeadlessSavedContextReference }
-  | { readonly action: "show-context-task"; readonly taskId: string };
+  | { readonly action: "show-context-task"; readonly taskId: string }
+  | { readonly action: "show-context-query"; readonly taskId: string };
 
-export type UiContextPresentationIntent = Extract<UiPresentationIntent, {action: "show-context-artifact" | "show-context-task"}>;
+export type UiContextPresentationIntent = Extract<UiPresentationIntent, {action: "show-context-artifact" | "show-context-task" | "show-context-query"}>;
 export function isUiContextPresentationIntent(intent: UiPresentationIntent): intent is UiContextPresentationIntent {
-  return intent.action === "show-context-artifact" || intent.action === "show-context-task";
+  return intent.action === "show-context-artifact" || intent.action === "show-context-task" || intent.action === "show-context-query";
 }
 
 export type UiDataPresentationIntent = Extract<UiPresentationIntent, {action: "show-data-source" | "show-dataset-version" | "show-dataset-task"}>;
@@ -133,7 +134,7 @@ export function readUiPresentationPublication(raw: unknown) {
 }
 
 export type UiPresentationContext = {
-  readonly view: "system" | "component" | "run" | "artifact" | "validation" | "data-source" | "dataset-version" | "dataset-task" | "context-artifact" | "context-task" | "other";
+  readonly view: "system" | "component" | "run" | "artifact" | "validation" | "data-source" | "dataset-version" | "dataset-task" | "context-artifact" | "context-task" | "context-query" | "other";
   readonly ready: boolean;
   readonly dirtyNavigationBlocked: boolean;
   readonly selection?: UiPresentationIntent;
@@ -150,6 +151,7 @@ const contextSelection = {
   "show-dataset-task": "dataset-task",
   "show-context-artifact": "context-artifact",
   "show-context-task": "context-task",
+  "show-context-query": "context-query",
 } as const;
 
 export function viewForUiPresentationIntent(intent: UiPresentationIntent): UiPresentationContext["view"] {
@@ -163,7 +165,7 @@ export function readUiPresentationContext(raw: unknown): UiPresentationContext |
     if (typeof ready !== "boolean" || typeof dirtyNavigationBlocked !== "boolean") return;
     if (view !== "system" && view !== "component" && view !== "run" && view !== "artifact" &&
         view !== "validation" && view !== "data-source" && view !== "dataset-version" && view !== "dataset-task" &&
-        view !== "context-artifact" && view !== "context-task" && view !== "other") return;
+        view !== "context-artifact" && view !== "context-task" && view !== "context-query" && view !== "other") return;
     if (!("selection" in row)) return { view, ready, dirtyNavigationBlocked };
     const selection = readUiPresentationIntent(row.selection);
     if (!selection || !ready || contextSelection[selection.action] !== view) return;
@@ -241,6 +243,7 @@ export function readUiPresentationIntent(raw: unknown): UiPresentationIntent | u
         if (reference) return {action, reference};
         break;
       }
+      case "show-context-query":
       case "show-context-task":
         if (keys === 2 && isHeadlessHostIncarnationId(row.taskId)) return {action, taskId: row.taskId};
         break;

@@ -224,7 +224,7 @@ plan approval does not approve window control.
    Use `aisb_present_in_window` with `show-context-artifact` and that reference.
    Keep the workspace, Context ID, producing task, kind and digest unchanged.
 2. For a task, first obtain its exact accepted ID from the approved plan receipt
-   or `aisb_read_context_task`. Use `show-context-task` with that task ID.
+   or `aisb_context_task`. Use `show-context-task` with that task ID.
    Unknown, ordinary, foreign or unaccepted tasks cannot be shown this way.
 3. Keep the exact current window lease and a fresh command ID for each new
    selection. An exact replay reads its first receipt. Do not claim that an
@@ -232,8 +232,8 @@ plan approval does not approve window control.
 4. The window shows fixed status and counts with opaque identifiers. Display
    cannot create the Context feature or approve a new task. Checking an accepted
    task can validate its output and recover its existing worker under the
-   original task controls. A saved file's availability is not checked. Window query summaries remain unavailable
-   until their separate consented display is implemented.
+   original task controls. A saved file's availability is not checked. For a query result, use the separate
+   `show-context-query` selector described below; `show-context-task` is for generation tasks.
 5. Stop presenting after revoke or expiry. Ending display does not cancel
    independently approved Context work, delete a saved artifact or grant save
    approval. Report display and backend results separately.
@@ -276,3 +276,29 @@ governs its start reply. Model or source policy loss withholds output; it does
 not establish worker failure or restart authority. Existing model, memory and
 cleanup controls remain. Physical retrieval/resource and real-app qualification,
 query-window display and parent roadmap closure are separate checks.
+
+## Show an accepted query in a window
+
+Use this only when the user asks to show the search outcome. Backend query approval
+does not grant window control. Use the existing window-control workflow and a
+current window lease. The window connection may differ from the plan connection,
+but the accepted query must belong to the same user, workspace and host.
+
+1. Get the exact accepted task ID with `aisb_context_task`. Submit
+   `aisb_present_in_window` with `show-context-query`, that `taskId`, the current
+   lease and a fresh command ID. This selects existing work; it starts no query.
+2. Report the command receipt separately from delivery. An exact replay reads its
+   receipt without repeating the effect. An uncertain reply is not permission to
+   use another command ID or adopt an unknown task.
+3. The app shows fixed status, result/source counts, CPU/CUDA, result limit,
+   question fingerprint and cleanup state. No question, excerpt, source text,
+   source handle or model/runtime path is displayed or shared through window
+   context. Window context contains only the task selector and view identifiers.
+4. Current artifact and model read permission apply before metadata, at display
+   and on fresh observation. The reader validates accepted lineage and original
+   saved/source/model facts, then observes only the existing cached query owner.
+   Missing or changed facts deny display; there is no lazy feature or model start.
+5. Revocation, expiry or a retired document stops fresh effects and context.
+   Ending display does not cancel the query, delete saved data, restart a worker
+   or grant generation/save authority. Physical retrieval/resource and real-app
+   qualification remain separate from these controlled feature checks.
