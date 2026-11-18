@@ -18,6 +18,15 @@ worker's memory admission, explicit overflow policy or capability checks.
 
 Shared runtime execution contracts live in this module.
 
+Context retrieval has one optional runtime-only `approvedEmbedding` object for
+an admitted query. Its closed fields carry the host-resolved existing model,
+single batch and explicit CPU/CUDA device. It is query-only; inspection cannot
+supply it. The worker checks the model/provider against the verified RAG manifest
+and uses only the explicit local safe-weight reference. Portable manifests and
+public Context commands never provide this object. Ordinary requests omit it.
+This additive private shape does not advertise a public query or grant repair,
+fallback, old-worker compatibility, physical model or resource qualification.
+
 `dataset-preparation-ocr.ts` defines the internal `staged-pdf-ocr-v1` map and
 exact protocol capability. Each selected PDF has one generated direct-child name,
 artifact id, byte count and raw lowercase SHA256 under the task's owned runtime

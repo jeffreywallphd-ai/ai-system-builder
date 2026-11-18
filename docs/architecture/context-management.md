@@ -25,6 +25,31 @@ approval is data, not new execution permission. Archive bytes and physical runti
 readiness remain not checked. Rebuild execution requires the separate version-9
 approval described below.
 
+### Private installed-query support
+
+Private installed-query support is a separate optional method on the existing
+Context runtime port. A trusted owning application must still bind the exact
+saved source/model, current actor/client/plan and result-egress scope. The adapter
+reserves the existing bounded host lease before reading/copying query data or
+awaiting policy. It copies query/model/callback data and archive bytes before
+awaits, then releases
+its private byte-buffer references after staging. One final acknowledged issue
+and current host acceptance permit only the installed-only task path. An exact
+acceptance callback supports an owning asynchronous job without a long synchronous
+transport wait. Unknown issue/start/acceptance, mismatched status and failed cleanup
+retain the existing reconciler lease. Proven non-start requires no possible
+dispatch and no retained staging. Synchronous liveness is checked again after
+each policy await, including immediately before result delivery.
+Private matches and citations are copied through closed descriptors before that
+last await. Bounded citation fields cannot carry unexpected worker data; source
+and digest allowlists remain the owning application's responsibility.
+
+The query worker's private `approvedEmbedding` matches model/provider to the
+verified manifest and uses the explicit existing safe-weight path. Imported
+manifest paths cannot supply that authority. Ordinary query/default behavior is
+unchanged. This internal component does not compose a public query, raw-query
+storage policy, citation/egress owner, revocable display or physical qualification.
+
 ### Approved Headless rebuilds
 
 The existing generation requests accept an optional exact `rebuildOf` reference.

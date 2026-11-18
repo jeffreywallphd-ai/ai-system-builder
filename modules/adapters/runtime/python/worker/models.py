@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator, model_validator
 
 
 class PythonRuntimeError(BaseModel):
@@ -511,7 +511,32 @@ class ContextArtifactOperationTaskRequest(BaseModel):
     query: str | None = Field(default=None, min_length=1, max_length=4_000)
     maximumResults: int | None = Field(default=None, ge=1, le=20)
     embeddingDevice: Literal["cpu", "cuda", "auto"] | None = None
+    # Runtime-only capability data from the owning host; never read from ZIP metadata.
+    approvedEmbedding: ContextEmbeddingSettings | None = None
     runtime: ContextGenerationRuntimeSettings
+
+    @field_validator("approvedEmbedding", mode="before")
+    @classmethod
+    def validate_approved_query_fields(cls, value):
+        if value is not None and (
+            not isinstance(value, dict)
+            or set(value) != {"provider", "modelId", "localModelReference", "batchSize", "device"}
+            or type(value.get("batchSize")) is not int or value["batchSize"] != 1
+        ):
+            raise ValueError("The approved query model fields are invalid.")
+        return value
+
+    @model_validator(mode="after")
+    def validate_approved_query_model(self):
+        model = self.approvedEmbedding
+        if model is not None and (
+            self.operation != "query" or model.localModelReference is None
+            or model.device not in {"cpu", "cuda"}
+            or self.embeddingDevice != model.device or model.batchSize != 1
+            or model.dimensions is not None
+        ):
+            raise ValueError("The approved query model is invalid.")
+        return self
 
 
 class PythonRuntimeOutputDescriptor(BaseModel):

@@ -28,6 +28,75 @@ def _digest(value: bytes) -> str:
 
 
 class ContextArtifactOperationTests(unittest.TestCase):
+    def test_host_admitted_query_keeps_exact_text_and_original_private_model(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _ = self._generate(root, "rag-database")
+            for device in ("cpu", "cuda"):
+                approved = {"provider": "transformers", "modelId": "sentence-transformers/all-MiniLM-L6-v2",
+                            "localModelReference": str(root / "host-resolved-model"), "batchSize": 1, "device": device}
+                observed = []
+                def embed(texts, settings):
+                    observed.append((list(texts), settings.modelId, settings.localModelReference, settings.batchSize, settings.device))
+                    return [[1.0, 0.0] for _ in texts]
+                request = self._operation(root, path, RAG_MEDIA_TYPE, "query", query="release\u0085", maximumResults=3,
+                                          embeddingDevice=device, approvedEmbedding=approved)
+                result = operate_on_context_artifact(request, embedding_provider=embed)
+                self.assertEqual(observed, [(["release\u0085"], approved["modelId"], approved["localModelReference"], 1, device)])
+                self.assertEqual(len(result["matches"]), 1)
+                self.assertNotIn("localModelReference", json.dumps(result))
+                self.assertNotIn(approved["localModelReference"], json.dumps(result))
+                self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
+                wrong = {**approved, "modelId": "synthetic/wrong-original-model"}
+                def forbidden(*_args):
+                    self.fail("A different recorded model cannot start inference.")
+                with self.assertRaisesRegex(ValueError, "does not match"):
+                    operate_on_context_artifact(self._operation(root, path, RAG_MEDIA_TYPE, "query", query="release", maximumResults=3,
+                                                embeddingDevice=device, approvedEmbedding=wrong), embedding_provider=forbidden)
+                self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
+
+    def test_private_query_model_is_closed_typed_explicit_and_query_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path = root / "unread.zip"
+            path.write_bytes(b"synthetic fixture, not a database")
+            approved = {"provider": "transformers", "modelId": "synthetic/model", "localModelReference": str(root / "model"),
+                        "batchSize": 1, "device": "cpu"}
+            for patch_values in ({"localModelReference": "relative/model"}, {"localModelReference": None}, {"device": "auto"},
+                                 {"batchSize": 2}, {"batchSize": True}, {"batchSize": "1"}, {"dimensions": None},
+                                 {"trustRemoteCode": True}, {"provider": "external"}):
+                with self.subTest(patch=patch_values), self.assertRaises(ValueError):
+                    self._operation(root, path, RAG_MEDIA_TYPE, "query", query="release", maximumResults=3,
+                                    embeddingDevice="cpu", approvedEmbedding={**approved, **patch_values})
+            for operation in ("inspect-source", "inspect-artifact"):
+                with self.assertRaises(ValueError):
+                    self._operation(root, path, RAG_MEDIA_TYPE, operation, approvedEmbedding=approved, embeddingDevice="cpu")
+            with self.assertRaises(ValueError):
+                self._operation(root, path, RAG_MEDIA_TYPE, "query", query="release", maximumResults=3,
+                                embeddingDevice="cuda", approvedEmbedding=approved)
+
+    def test_manifest_paths_never_supply_query_model_authority_and_ordinary_text_behavior_stays(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _ = self._generate(root, "rag-database")
+            rewritten = root / "manifest-path-injection.zip"
+            with ZipFile(path) as archive, ZipFile(rewritten, "w", ZIP_DEFLATED) as target:
+                for entry in archive.infolist():
+                    content = archive.read(entry.filename)
+                    if entry.filename == "manifest.json":
+                        manifest = json.loads(content)
+                        manifest["embedding"]["localModelReference"] = str(root / "manifest-selected-model")
+                        content = json.dumps(manifest).encode()
+                    target.writestr(entry, content)
+            observed = []
+            def embed(texts, settings):
+                observed.append((list(texts), settings.localModelReference))
+                return [[1.0, 0.0] for _ in texts]
+            operate_on_context_artifact(self._operation(root, rewritten, RAG_MEDIA_TYPE, "query", query=" release\u0085", maximumResults=3),
+                                        embedding_provider=embed)
+            self.assertEqual(observed, [(["release"], None)])
+            self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
+
     def test_query_placement_is_transient_and_manifest_cannot_select_a_device(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

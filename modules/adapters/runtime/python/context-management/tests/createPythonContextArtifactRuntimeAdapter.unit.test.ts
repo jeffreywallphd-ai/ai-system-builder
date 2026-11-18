@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { OwnedTaskReconcilerService } from "../../../../../application/services/runtime/owned-task-reconciler.service";
 
 import {
@@ -476,5 +476,330 @@ describe("Context artifact operation ownership", () => {
     expect(test.registry.startTask).toHaveBeenCalledTimes(1);
     expect(test.registry.getTaskStatus).toHaveBeenCalledTimes(polls);
     await expect(fs.access(dirname(test.path()))).rejects.toThrow();
+  });
+});
+
+function admittedQueryFixture(t: {after: (fn: () => Promise<void>) => void}) {
+  const input = {workspaceId: createWorkspaceId("workspace.query"), artifactId: "artifact.rag", content: new TextEncoder().encode("synthetic archive"),
+    mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE, digest: "", query: "release policy", maximumResults: 3, embeddingDevice: "cpu" as const};
+  input.digest = digest(input.content);
+  const control = {current: true, issue: "issued" as "issued" | "denied" | "unconfirmed", accept: true,
+    start: "accepted", ack: {} as Record<string, unknown>, status: {} as Record<string, unknown>, revokeAfterAccept: false,
+    matches: [] as Record<string, unknown>[]};
+  const events: string[] = [];
+  let request: any;
+  const registry: any = {
+    startTask: testDouble.fn(async () => {assert.fail("Admitted querying must never use ordinary preparation.");}),
+    startTaskWithoutInstalling: testDouble.fn(async (value: any) => {
+      events.push("start"); request = value;
+      assert.equal(digest(await fs.readFile(value.payload.localPath)), value.payload.digest, "Staged bytes must match the approved private snapshot.");
+      if (control.start === "lost") throw new Error("private worker failure");
+      if (control.start !== "accepted") return {kind: control.start};
+      return {kind: "accepted", value: {requestId: value.requestId, status: "queued", ...control.ack}};
+    }),
+    getTaskStatus: testDouble.fn(async () => {
+      events.push("status");
+      return {requestId: request.requestId, workspaceId: request.workspaceId, taskType: TaskType.CONTEXT_RETRIEVAL,
+        status: "succeeded", concurrencyClass: "cpu-heavy", data: {operation: "query", matches: control.matches}, ...control.status};
+    }),
+    cancelTask: testDouble.fn(), listTasks: testDouble.fn(),
+  };
+  const admission = {taskId: randomUUID(), workspaceId: input.workspaceId, artifactId: input.artifactId,
+    artifactDigest: input.digest, queryDigest: digest(new TextEncoder().encode(input.query)), maximumResults: input.maximumResults,
+    embeddingDevice: "cpu" as const, embeddingModel: {modelId: "synthetic/embedding", localModelReference: join(process.cwd(), ".local-codex", "synthetic-model")},
+    isCurrent: () => control.current, stillAllowed: async () => control.current,
+    issue: async () => {events.push("issue"); return control.issue;},
+    accept: async (_id: string) => {events.push("accept"); if (control.revokeAfterAccept) control.current = false; return control.accept;}};
+  const owner = new OwnedTaskReconcilerService(); owner.stopObservation();
+  t.after(async () => {
+    await owner.settleAfterRuntimeStop(["python"]);
+    expect(registry.startTask).not.toHaveBeenCalled();
+    expect(registry.listTasks).not.toHaveBeenCalled();
+  });
+  const adapter = createPythonContextArtifactRuntimeAdapter(registry, owner);
+  return {input, admission, control, events, registry, owner, adapter, request: () => request};
+}
+
+describe("admitted installed-model Context queries", () => {
+  it("uses a copied exact model/query/byte snapshot and acknowledges the owning task before observing results", async t => {
+    const test = admittedQueryFixture(t), bytes = Uint8Array.from(test.input.content), taskId = test.admission.taskId;
+    const model = test.admission.embeddingModel.localModelReference;
+    let enter!: () => void, resume!: () => void, first = true;
+    const entered = new Promise<void>(resolve => {enter = resolve;});
+    test.admission.stillAllowed = async () => {if (first) {first = false; enter(); await new Promise<void>(resolve => {resume = resolve;});} return true;};
+    const running = test.adapter.queryAdmitted!(test.input, test.admission); await entered;
+    test.input.content.fill(0); test.input.query = "substituted"; test.input.maximumResults = 20;
+    test.admission.taskId = randomUUID(); test.admission.embeddingModel.localModelReference = join(process.cwd(), "changed");
+    test.admission.issue = async () => {assert.fail("A replaced callback cannot authorize this attempt.");};
+    resume();
+    assert.deepEqual(await running, {kind: "succeeded", matches: [], cleanupPending: false});
+    const request = test.request();
+    assert.equal(request.requestId, taskId); assert.equal(request.payload.query, "release policy");
+    assert.equal(request.concurrencyClass, "cpu-heavy");
+    assert.equal(request.payload.maximumResults, 3); assert.equal(request.payload.digest, digest(bytes));
+    assert.deepEqual(request.payload.approvedEmbedding, {provider: "transformers", modelId: "synthetic/embedding",
+      localModelReference: model, batchSize: 1, device: "cpu"});
+    assert.deepEqual(test.events, ["issue", "start", "accept", "status"]);
+    expect(test.registry.startTask).not.toHaveBeenCalled();
+    await assert.rejects(fs.access(request.payload.localPath));
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: false});
+    expect(test.registry.startTaskWithoutInstalling).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects malformed scope, model, query, data and accessor descriptors before any issue or dispatch", async t => {
+    let accessorReads = 0;
+    for (const mutate of [
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.admission.artifactDigest = "sha256:" + "f".repeat(64);},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.admission.queryDigest = "sha256:" + "f".repeat(64);},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.admission.maximumResults = 4;},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.admission.artifactId = "artifact.foreign";},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.admission.workspaceId = createWorkspaceId("workspace.foreign");},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.admission.embeddingModel.localModelReference = "relative/model";},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.input.content.fill(0);},
+      (test: ReturnType<typeof admittedQueryFixture>) => {test.input.query = "\ud800";},
+      (test: ReturnType<typeof admittedQueryFixture>) => {Object.defineProperty(test.input, "query", {enumerable: true, get() {accessorReads++; return "release policy";}});},
+      (test: ReturnType<typeof admittedQueryFixture>) => {const issue = test.admission.issue; Object.defineProperty(test.admission, "issue", {enumerable: true, get() {accessorReads++; return issue;}});},
+      (test: ReturnType<typeof admittedQueryFixture>) => {const model = test.admission.embeddingModel.localModelReference; Object.defineProperty(test.admission.embeddingModel, "localModelReference", {enumerable: true, get() {accessorReads++; return model;}});},
+    ]) {
+      const test = admittedQueryFixture(t); mutate(test);
+      assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "not-started"});
+      assert.deepEqual(test.events, []); assert.equal(test.owner.status.pending, 0);
+      expect(test.registry.startTask).not.toHaveBeenCalled();
+      assert.equal(accessorReads, 0);
+    }
+  });
+
+  it("keeps an explicit CUDA query GPU-exclusive without selecting an automatic fallback", async t => {
+    const test = admittedQueryFixture(t);
+    Object.assign(test.input, {embeddingDevice: "cuda"}); Object.assign(test.admission, {embeddingDevice: "cuda"});
+    assert.equal((await test.adapter.queryAdmitted!(test.input, test.admission)).kind, "succeeded");
+    assert.equal(test.request().concurrencyClass, "gpu-exclusive");
+    assert.equal(test.request().payload.approvedEmbedding.device, "cuda");
+    expect(test.registry.startTask).not.toHaveBeenCalled();
+  });
+
+  it("missing installed-only support, pre-issue denial and post-issue revoke never fall back or dispatch", async t => {
+    for (const scenario of ["unsupported", "denied", "revoked"]) {
+      const test = admittedQueryFixture(t);
+      if (scenario === "unsupported") delete test.registry.startTaskWithoutInstalling;
+      if (scenario === "denied") test.control.issue = "denied";
+      if (scenario === "revoked") test.admission.issue = async () => {test.control.current = false; return "issued";};
+      assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "not-started"});
+      assert.equal(test.request(), undefined); assert.equal(test.owner.status.pending, 0);
+      expect(test.registry.startTask).not.toHaveBeenCalled();
+    }
+  });
+
+  it("unknown issue stays retained without dispatch, status adoption or same-capability retry", async t => {
+    for (const throws of [false, true]) {
+      const test = admittedQueryFixture(t); test.control.issue = "unconfirmed";
+      if (throws) test.admission.issue = async () => {throw new Error("private issue failure");};
+      assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: true});
+      assert.equal(test.owner.status.pending, 1); assert.equal(test.request(), undefined);
+      await test.owner.reconcileNow(); expect(test.registry.getTaskStatus).not.toHaveBeenCalled();
+      assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: true});
+      await test.owner.settleAfterRuntimeStop(["python"]);
+      assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: false});
+    }
+  });
+
+  it("rechecks permission after directory allocation before writing any query input", async t => {
+    const test = admittedQueryFixture(t), allocate = fs.mkdtemp;
+    let hasDirectory = false;
+    const allocated = t.mock.method(fs, "mkdtemp", async (...args: any[]) => {
+      const directory = await Reflect.apply(allocate, fs, args); hasDirectory = true; return directory;
+    });
+    test.admission.stillAllowed = async () => {if (hasDirectory) {await Promise.resolve(); test.control.current = false;} return true;};
+    const written = t.mock.method(fs, "writeFile", async () => {assert.fail("Revoked permission cannot write staged input.");});
+    syncBuiltinESMExports();
+    t.after(async () => {allocated.mock.restore(); written.mock.restore(); syncBuiltinESMExports(); await test.owner.settleAfterRuntimeStop(["python"]);});
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "not-started"});
+    assert.equal(test.owner.status.pending, 0); assert.deepEqual(test.events, []);
+    assert.equal(allocated.mock.callCount(), 1); assert.equal(written.mock.callCount(), 0);
+    expect(test.registry.startTaskWithoutInstalling).not.toHaveBeenCalled();
+  });
+
+  it("does not release matches when permission retires during the final policy check", async t => {
+    const test = admittedQueryFixture(t);
+    test.control.matches = [{id: "chunk-0", excerpt: "private excerpt", score: 0.8,
+      citation: {sourceArtifactId: "artifact.source", sourceDigest: "sha256:" + "1".repeat(64), chunkIndex: 0}}];
+    let enter!: () => void, resume!: () => void;
+    const entered = new Promise<void>(resolve => {enter = resolve;});
+    const gate = new Promise<void>(resolve => {resume = resolve;});
+    test.admission.stillAllowed = async () => {if (test.events.includes("status")) {enter(); await gate;} return true;};
+    const running = test.adapter.queryAdmitted!(test.input, test.admission);
+    await entered; test.control.current = false; resume();
+    const result = await running;
+    assert.deepEqual(result, {kind: "failed", cleanupPending: false});
+    assert.doesNotMatch(JSON.stringify(result), /matches|private excerpt/);
+    assert.equal(test.owner.status.pending, 0);
+    expect(test.registry.startTaskWithoutInstalling).toHaveBeenCalledTimes(1);
+  });
+
+  it("copies a complete bounded citation before awaiting final result permission", async t => {
+    const test = admittedQueryFixture(t);
+    const citation = {sourceArtifactId: "artifact.source", sourceDigest: "sha256:" + "1".repeat(64), chunkIndex: 0,
+      rowIndex: 1, field: "document.body", normalizedStart: 4, normalizedEnd: 24, pageNumber: 2, regionKind: "paragraph"};
+    const match = {id: "chunk-0", excerpt: "private excerpt", score: 0.8, citation};
+    const expected = structuredClone(match); test.control.matches = [match];
+    let enter!: () => void, resume!: () => void;
+    const entered = new Promise<void>(resolve => {enter = resolve;});
+    const gate = new Promise<void>(resolve => {resume = resolve;});
+    test.admission.stillAllowed = async () => {if (test.events.includes("status")) {enter(); await gate;} return true;};
+    const running = test.adapter.queryAdmitted!(test.input, test.admission); await entered;
+    Object.assign(citation, {sourceArtifactId: "artifact.foreign", privatePath: "private-worker-data"});
+    match.excerpt = "substituted excerpt"; resume();
+    assert.deepEqual(await running, {kind: "succeeded", matches: [expected], cleanupPending: false});
+    assert.equal(test.owner.status.pending, 0);
+  });
+
+  it("rejects extra, oversized, malformed and accessor result/citation fields without disclosing them", async t => {
+    let accessorReads = 0;
+    for (const mutate of [
+      (citation: Record<string, unknown>) => {citation.privatePath = "private-worker-data";},
+      (citation: Record<string, unknown>) => {citation.sourceArtifactId = "x".repeat(513);},
+      (citation: Record<string, unknown>) => {citation.sourceArtifactId = "   ";},
+      (citation: Record<string, unknown>) => {citation.sourceDigest = "invalid";},
+      (citation: Record<string, unknown>) => {citation.chunkIndex = Number.MAX_SAFE_INTEGER + 1;},
+      (citation: Record<string, unknown>) => {citation.rowIndex = -1;},
+      (citation: Record<string, unknown>) => {citation.field = "invalid field";},
+      (citation: Record<string, unknown>) => {citation.normalizedStart = 1;},
+      (citation: Record<string, unknown>) => {citation.normalizedStart = 2; citation.normalizedEnd = 2;},
+      (citation: Record<string, unknown>) => {citation.pageNumber = 0;},
+      (citation: Record<string, unknown>) => {citation.pageNumber = "1";},
+      (citation: Record<string, unknown>) => {citation.regionKind = "x".repeat(65);},
+      (citation: Record<string, unknown>) => {citation.regionKind = "paragraph\nprivate";},
+      (citation: Record<string, unknown>) => {Object.defineProperty(citation, "sourceArtifactId", {enumerable: true, get() {accessorReads++; return "artifact.source";}});},
+      (_citation: Record<string, unknown>, match: Record<string, unknown>) => {match.privatePath = "private-worker-data";},
+      (_citation: Record<string, unknown>, match: Record<string, unknown>) => {Object.defineProperty(match, "excerpt", {enumerable: true, get() {accessorReads++; return "private excerpt";}});},
+    ]) {
+      const test = admittedQueryFixture(t);
+      const citation: Record<string, unknown> = {sourceArtifactId: "artifact.source", sourceDigest: "sha256:" + "1".repeat(64), chunkIndex: 0};
+      const match = {id: "chunk-0", excerpt: "private excerpt", score: 0.8, citation};
+      mutate(citation, match); test.control.matches = [match];
+      const result = await test.adapter.queryAdmitted!(test.input, test.admission);
+      assert.deepEqual(result, {kind: "failed", cleanupPending: false});
+      assert.doesNotMatch(JSON.stringify(result), /private excerpt|private-worker-data|matches/);
+      assert.equal(accessorReads, 0); assert.equal(test.owner.status.pending, 0);
+    }
+  });
+
+  it("rechecks synchronous liveness after each awaited admission or issue policy", async t => {
+    for (const retireAt of [1, 2, 4, 5]) {
+      const test = admittedQueryFixture(t); let checks = 0;
+      test.admission.stillAllowed = async () => {
+        if (++checks === retireAt) {await Promise.resolve(); test.control.current = false;}
+        return true;
+      };
+      assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "not-started"});
+      assert.equal(checks, retireAt); assert.equal(test.owner.status.pending, 0);
+      expect(test.registry.startTaskWithoutInstalling).not.toHaveBeenCalled();
+      assert.deepEqual(test.events, retireAt === 5 ? ["issue"] : []);
+    }
+  });
+
+  for (const reason of ["full", "stopped"]) it(`reserves ownership before reading input, policy or staging when the owner is ${reason}`, async t => {
+    const test = admittedQueryFixture(t);
+    const reserved = reason === "full" ? Array.from({length: 256}, () => test.owner.reserve("python")) : [];
+    if (reason === "stopped") test.owner.stopAccepting();
+    let inputReads = 0;
+    const descriptor = Object.getOwnPropertyDescriptor, allocate = fs.mkdtemp, write = fs.writeFile;
+    const read = t.mock.method(Object, "getOwnPropertyDescriptor", (...args: Parameters<typeof Object.getOwnPropertyDescriptor>) => {
+      if (args[0] === test.input || args[0] === test.admission) inputReads++;
+      return descriptor(...args);
+    });
+    const allocated = t.mock.method(fs, "mkdtemp", allocate), written = t.mock.method(fs, "writeFile", write);
+    const policy = testDouble.fn(async () => true); test.admission.stillAllowed = policy;
+    syncBuiltinESMExports();
+    t.after(async () => {read.mock.restore(); allocated.mock.restore(); written.mock.restore(); syncBuiltinESMExports(); reserved.forEach(lease => lease.release());});
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "not-started"});
+    assert.equal(inputReads, 0); assert.equal(allocated.mock.callCount(), 0); assert.equal(written.mock.callCount(), 0);
+    expect(policy).not.toHaveBeenCalled(); expect(test.registry.startTaskWithoutInstalling).not.toHaveBeenCalled();
+    assert.equal(test.owner.status.pending, reserved.length);
+    if (reason === "full") {
+      reserved.pop()!.release();
+      assert.equal((await test.adapter.queryAdmitted!(test.input, test.admission)).kind, "succeeded");
+      assert.equal(test.owner.status.pending, 255);
+    }
+  });
+
+  it("counts a held initial policy check against the existing ownership limit", async t => {
+    const test = admittedQueryFixture(t), reserved = Array.from({length: 255}, () => test.owner.reserve("python"));
+    let enter!: () => void, resume!: () => void;
+    const entered = new Promise<void>(resolve => {enter = resolve;});
+    const gate = new Promise<void>(resolve => {resume = resolve;});
+    test.admission.stillAllowed = async () => {enter(); await gate; return false;};
+    const running = test.adapter.queryAdmitted!(test.input, test.admission); await entered;
+    assert.equal(test.owner.status.pending, 256);
+    const otherPolicy = testDouble.fn(async () => true);
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, {...test.admission, taskId: randomUUID(), stillAllowed: otherPolicy}), {kind: "not-started"});
+    expect(otherPolicy).not.toHaveBeenCalled(); expect(test.registry.startTaskWithoutInstalling).not.toHaveBeenCalled();
+    resume(); assert.deepEqual(await running, {kind: "not-started"});
+    assert.equal(test.owner.status.pending, 255); reserved.forEach(lease => lease.release());
+    assert.equal(test.owner.status.pending, 0);
+  });
+
+  it("closed installed-only refusal proves non-start, while lost, mismatched and malformed starts retain custody", async t => {
+    for (const scenario of ["unavailable", "lost", "unconfirmed", "wrong-id", "missing-status", "extra"]) {
+      const test = admittedQueryFixture(t);
+      if (["unavailable", "lost", "unconfirmed"].includes(scenario)) test.control.start = scenario;
+      if (scenario === "wrong-id") test.control.ack.requestId = randomUUID();
+      if (scenario === "missing-status") test.control.ack.status = undefined;
+      if (scenario === "extra") test.control.ack.privatePath = "private-model";
+      const result = await test.adapter.queryAdmitted!(test.input, test.admission);
+      assert.deepEqual(result, scenario === "unavailable" ? {kind: "not-started"} : {kind: "unconfirmed", cleanupPending: true});
+      expect(test.registry.getTaskStatus).not.toHaveBeenCalled(); assert.equal(test.events.includes("accept"), false);
+      await test.owner.reconcileNow(); expect(test.registry.getTaskStatus).not.toHaveBeenCalled();
+      await test.owner.settleAfterRuntimeStop(["python"]);
+      await assert.rejects(fs.access(test.request().payload.localPath));
+      expect(test.registry.startTask).not.toHaveBeenCalled();
+    }
+  });
+
+  it("failed acceptance and foreign status cannot release staging, and revoked result permission discloses no matches", async t => {
+    for (const scenario of ["accept", "foreign", "revoke"]) {
+      const test = admittedQueryFixture(t);
+      if (scenario === "accept") test.control.accept = false;
+      if (scenario === "foreign") test.control.status.workspaceId = "workspace.foreign";
+      if (scenario === "revoke") test.control.revokeAfterAccept = true;
+      test.control.matches = [{id: "chunk-0", excerpt: "private excerpt", score: 0.8,
+        citation: {sourceArtifactId: "artifact.source", sourceDigest: "sha256:" + "1".repeat(64), chunkIndex: 0}}];
+      const result = await test.adapter.queryAdmitted!(test.input, test.admission);
+      assert.deepEqual(result, scenario === "revoke" ? {kind: "failed", cleanupPending: false} : {kind: "unconfirmed", cleanupPending: true});
+      assert.doesNotMatch(JSON.stringify(result), /private excerpt|private-model|localModelReference/);
+      if (scenario !== "revoke") {
+        await fs.access(test.request().payload.localPath);
+        delete test.control.status.workspaceId;
+        await test.owner.reconcileNow();
+        await assert.rejects(fs.access(test.request().payload.localPath));
+      }
+    }
+  });
+
+  for (const scenario of ["denied", "finished"]) it(`retains ${scenario} query staging when cleanup fails and updates its proof after owned retry`, async t => {
+    const test = admittedQueryFixture(t);
+    if (scenario === "denied") test.control.issue = "denied";
+    const write = fs.writeFile, remove = fs.rm;
+    let directory: string | undefined, fail = true;
+    const written = t.mock.method(fs, "writeFile", async (...args: Parameters<typeof fs.writeFile>) => {
+      await write(...args); directory = dirname(String(args[0]));
+    });
+    const removed = t.mock.method(fs, "rm", async (...args: Parameters<typeof fs.rm>) => {
+      if (directory !== undefined && String(args[0]) === directory && fail) {fail = false; throw new Error("private cleanup failure");}
+      return remove(...args);
+    });
+    syncBuiltinESMExports();
+    t.after(async () => {written.mock.restore(); removed.mock.restore(); syncBuiltinESMExports(); await test.owner.settleAfterRuntimeStop(["python"]);});
+    const result = await test.adapter.queryAdmitted!(test.input, test.admission);
+    assert.deepEqual(result, scenario === "denied" ? {kind: "unconfirmed", cleanupPending: true}
+      : {kind: "succeeded", matches: [], cleanupPending: true});
+    assert.ok(directory); await fs.access(directory); assert.equal(test.owner.status.pending, 1);
+    const polls = test.registry.getTaskStatus.mock.calls.length;
+    await test.owner.reconcileNow();
+    assert.equal(test.owner.status.pending, 0); await assert.rejects(fs.access(directory));
+    expect(test.registry.getTaskStatus).toHaveBeenCalledTimes(polls);
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: false});
+    expect(test.registry.startTask).not.toHaveBeenCalled();
+    expect(test.registry.startTaskWithoutInstalling).toHaveBeenCalledTimes(scenario === "denied" ? 0 : 1);
   });
 });

@@ -60,3 +60,18 @@ filesystem implementation checks a private regular file, captured identity and
 size, reads at most 64 KiB per chunk plus one excess-byte check, and closes its
 handle on completion or failure. These cooperative checks are not native custody
 or crash recovery. Public save approval and routes remain separate work.
+
+`ContextArtifactRuntimePort.queryAdmitted` is optional and private. Its trusted
+caller must resolve the original safe model and bind current actor/client/plan,
+saved artifact, source freshness, citation allowlist and egress policy. The port
+accepts copied exact query/artifact hashes, bounds, explicit device and existing
+model reference. It uses only installed dispatch and one acknowledged issue.
+The `accept` callback records the exact acknowledged task for an owning async job;
+it is not public task discovery. Ordinary `query` remains unchanged.
+
+A private non-start result requires no possible dispatch/unknown issue and no
+retained staging. Unknown replies retain the existing lease; `cleanupPending`
+describes that result snapshot. Confirmed terminal processing or result-delivery
+failure is not non-start. A capability cannot be reused for another call. Raw
+matches stay application-private, and this seam grants no transport query,
+content-sharing, model/runtime installation, physical readiness or parent pass.

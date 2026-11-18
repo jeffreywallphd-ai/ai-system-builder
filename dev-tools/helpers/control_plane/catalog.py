@@ -389,12 +389,33 @@ PUBLISHED_FORM_CHECKS = {
             "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
         ),
     },
+    "headless-context-installed-query-worker": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py",
+            "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/worker/models.py",
+            "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py",
+            "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py",
+            "modules/adapters/runtime/python/worker/tests/test_context_generation.py",
+            "modules/adapters/runtime/python/worker/README.md",
+        ),
+        "command": ("-u", "-m", "unittest", "-v",
+            "modules.adapters.runtime.python.worker.tests.test_context_artifact_operation",
+            "modules.adapters.runtime.python.worker.tests.test_context_generation"),
+    },
     "headless-context-artifact-lifecycle": {
         "automatic_sources": (
             "modules/adapters/runtime/python/context-management/createPythonContextArtifactRuntimeAdapter.ts",
             "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
         ),
         "sources": (
+            "modules/application/ports/context-management/context-artifact-runtime.port.ts",
+            "modules/application/ports/context-management/README.md",
+            "modules/contracts/runtime/context-retrieval.ts",
+            "modules/contracts/runtime/README.md",
             "modules/adapters/runtime/python/context-management/createPythonContextArtifactRuntimeAdapter.ts",
             "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
             "modules/adapters/runtime/python/README.md",
@@ -1865,7 +1886,7 @@ def definitions(root: Path) -> list[dict]:
         *[{"id": name, "patterns": [],
            "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
            "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
-        *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": check.get("timeout", 120)}
+        *[{"id": name, "patterns": [], "argv": [*([py, "-B"] if check.get("interpreter") == "python" else [node]), *check["command"]], "timeout": check.get("timeout", 120)}
           for name, check in PUBLISHED_FORM_CHECKS.items()],
         {"id": HEADLESS_DESKTOP_READ_CHECK, "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--",

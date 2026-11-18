@@ -42,6 +42,10 @@ export type ContextArtifactOperationTaskRequest =
       readonly operation: "query";
       readonly query: string;
       readonly maximumResults: number;
+      readonly embeddingDevice?: "cpu" | "cuda" | "auto";
+      /** Private host-resolved existing model, never accepted from a manifest. */
+      readonly approvedEmbedding?: {readonly provider: "transformers"; readonly modelId: string;
+        readonly localModelReference: string; readonly batchSize: 1; readonly device: "cpu" | "cuda"};
     });
 
 export type ContextArtifactOperationTaskResult =

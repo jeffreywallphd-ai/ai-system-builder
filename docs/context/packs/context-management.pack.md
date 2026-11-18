@@ -49,7 +49,7 @@
 - Inspection/query inputs use a private hashed byte snapshot and the existing
   host task lease. Exact terminal status or successful owned worker stop permits
   cleanup; uncertain replies/cancellation and cleanup failures retain ownership.
-  Ordinary preparation remains; queries and physical/native qualification are separate from approved installed-only rebuilds.
+  Private `queryAdmitted` adds exact installed-model issue/acceptance; ordinary behavior stays. Public queries and physical/native qualification remain separate.
 - Saved RAG validation scans every vector in bounded 256-row Arrow batches,
   retains metadata only and checks cancellation throughout. Exact query ranking,
   citations, package limits and private materialization cleanup remain required;

@@ -12,6 +12,24 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_installed_query_worker_is_fixed_exact_python_and_shared_model_only_keeps_fallback(self):
+        name = 'headless-context-installed-query-worker'
+        definition = catalog.PUBLISHED_FORM_CHECKS[name]
+        selected = self.selected(list(definition['sources']), ['architecture'])
+        self.assertEqual(definition['interpreter'], 'python')
+        self.assertEqual(selected[name]['argv'], [sys.executable, '-B', '-u', '-m', 'unittest', '-v',
+            'modules.adapters.runtime.python.worker.tests.test_context_artifact_operation',
+            'modules.adapters.runtime.python.worker.tests.test_context_generation'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('focused-tests', self.selected(list(definition['sources']), ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(list(definition['sources']) + [
+            'modules/adapters/runtime/python/worker/tasks/unmapped-context-query.py'], ['architecture']))
+        model_only = self.selected(['modules/adapters/runtime/python/worker/models.py'], ['architecture'])
+        self.assertNotIn(name, model_only)
+        self.assertIn('focused-tests', model_only)
+        lifecycle = self.selected(list(catalog.PUBLISHED_FORM_CHECKS['headless-context-artifact-lifecycle']['sources']), ['architecture'])
+        self.assertEqual(lifecycle['headless-context-artifact-lifecycle']['argv'][0], 'node')
+
     def test_rebuild_inputs_bind_exact_metadata_and_real_composed_consumers_without_generic_coverage_loss(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-rebuild-inputs']
         paths = list(definition['sources'])

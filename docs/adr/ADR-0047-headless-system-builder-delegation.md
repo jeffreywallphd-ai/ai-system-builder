@@ -346,3 +346,13 @@ can later be read without recursively adopting an ancestor or requiring its inde
 Both approval channels disclose parent identity and the unchanged generation limits.
 Focused synthetic Core/host and SDK tests are not physical retrieval/resource,
 native, real-app or parent qualification. Queries and display remain pending.
+
+The same existing-owner extension adds optional private `queryAdmitted` support.
+It binds copied exact query/artifact/model data and current one-use issue to the
+installed-only task registry, with an exact accepted-task callback and the existing
+owned staging/reconciler. Unknown outcomes and cleanup failure retain custody.
+The worker's runtime-only approved embedding reference must match the verified
+manifest and cannot come from imported metadata. Ordinary query behavior remains.
+This selects no new engine, lifecycle topology, recovery or content-retention
+policy and advertises no public query. Public async plan/task composition, current
+source/citation/egress policy, display and physical qualification remain required.

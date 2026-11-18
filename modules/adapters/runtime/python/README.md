@@ -19,6 +19,20 @@ Foundation for the managed Python sidecar runtime adapter:
 
 ## Security boundary
 
+The optional private `queryAdmitted` path reserves the existing bounded host lease
+before reading/copying query data or awaiting policy. It copies exact
+query/model/authority data and archive bytes before awaits. It drops private archive-buffer references once
+staging finishes. Current one-use issue and host acceptance are rechecked before
+installed-only dispatch; ordinary preparation is never a fallback. Its exact
+acknowledgement callback lets the owning application observe the admitted task.
+Unknown issue/start/acceptance retains the existing task lease, and only positive
+terminal or owned-stop evidence permits cleanup. Failed removal remains owned.
+Results remain private. Synchronous liveness is checked after each policy await,
+including immediately before delivery.
+Explicit CUDA requests use the existing GPU-exclusive scheduling hint; this is
+not physical capacity or concurrency qualification. Public query/task/egress
+composition and actual retrieval/resources remain separate work.
+
 Context source/artifact inspection and RAG query operations use the existing
 host-owned Python task reconciler. Admission precedes staging and dispatch. One
 private bounded byte snapshot is hashed and written. Exact acknowledged request,

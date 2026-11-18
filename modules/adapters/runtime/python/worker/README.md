@@ -28,6 +28,15 @@ their existing behavior. The path is not a public Context command or a saved
 manifest field. Manifest inspection reconstructs the permitted embedding fields
 before queries. File presence alone does not qualify model quality or resources.
 
+An admitted query may separately receive runtime-only `approvedEmbedding` with
+exactly provider, model ID, existing local reference, integer batch size one and
+explicit CPU/CUDA device. The DTO rejects inspection use, extra/coerced batch
+fields and mismatched placement. Query execution matches model/provider to the
+verified manifest before inference and reuses local-only safe-weight loading.
+An imported manifest cannot supply a path. Admitted query text is not trimmed
+after host approval; ordinary query text behavior is unchanged. Unit tests use
+real temporary archives and fake vectors, not physical model/resource proof.
+
 Provided instruction datasets can carry an explicit `providedRowMapping` with
 two distinct bounded source columns. This map requires provided mode and omitted
 source context. It derives instruction/prompt and output/completion only from the

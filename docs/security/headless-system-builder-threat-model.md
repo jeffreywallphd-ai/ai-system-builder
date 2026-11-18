@@ -795,6 +795,15 @@ Durable reserved/issued/accepted records bind the exact organization partition, 
 
 ### Context input metadata
 
+Internal query support uses a separate optional installed-only runtime port,
+with exact private artifact/query/model data and current one-use callbacks. It
+does not advertise a Headless command or persist raw queries in plans. The owning
+application still must prove current source/model/client scope and citation/egress
+policy before public composition. Unknown effects and cleanup failures retain
+the existing owner. Manifest-injected paths cannot select query models. Ordinary
+queries and native/offload controls are unchanged; actual retrieval/resources,
+revocable display and parent qualification remain separate evidence.
+
 Version-9 Context generation proposals can bind `rebuildOf` to one exact saved
 reference. This is a new approval for the existing generation effect, not old
 task or parent mutation authority. Current artifact/model/source and plan policy

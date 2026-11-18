@@ -29,6 +29,30 @@ new approval, exact replay, substitutions and parent loss after staging. No
 runtime/model installation, raw-content disclosure, native recovery or resource
 qualification follows. Actual query, display and parent qualification remain open.
 
+## Private installed-query boundary
+
+The optional private installed-query seam accepts only strict copied descriptors,
+bounded actual byte snapshots, exact artifact/query hashes, matching scope/limits,
+explicit device and a host-resolved model reference. Trusted callback capabilities
+cannot come from a transport. Current policy and acknowledged one-use issue are
+checked around staging, followed by a fresh host-acceptance check before installed
+dispatch. The existing host lease is reserved before descriptor reads, byte copying
+or an awaited policy check. Full or stopped ownership denies before allocation.
+Synchronous liveness is checked again after every policy await, including final
+result delivery. An exact acknowledgement must precede accepted-task recording. Unknown
+issue/start/acceptance and foreign status retain the existing lease, never task
+discovery or retry. Cleanup failure prevents a positive non-start proof.
+
+Worker-approved embedding data is closed, query-only, explicit and matched to the
+verified manifest's model/provider. The safe-weight loader uses the host path with
+local-only/remote-code-disabled controls; imported paths are ignored. Admitted
+query bytes remain exact after approval. Current permission fences private results.
+Private match/citation fields are closed, bounded and copied before the final
+policy await; extra fields, accessors and malformed spans/pages deny delivery.
+The application still must compose current source/model authorization, citation
+allowlists and egress; this component grants no public raw-content or query right.
+Cooperative byte/fixture tests are not native custody or real model/resource proof.
+
 ## Protected assets
 
 - Workspace-owned source bytes and exact source identity

@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
+import {types} from "node:util";
 
-import type { ContextArtifactRuntimePort } from "../../../../application/ports/context-management";
+import type { AdmittedContextQueryResult, ApprovedContextQueryAdmission, ContextArtifactRuntimePort } from "../../../../application/ports/context-management";
 import type { RuntimeTaskRegistryPort } from "../../../../application/ports/runtime";
 import type {
   OwnedTaskLease,
@@ -11,7 +12,9 @@ import type {
 } from "../../../../application/services/runtime/owned-task-reconciler.service";
 import {
   CONTEXT_GENERATION_LIMITS,
+  CONTEXT_RAG_DATABASE_MEDIA_TYPE,
   isContextArtifactMediaType,
+  validateContextChunkCitation,
   type ContextArtifactInspection,
   type ContextArtifactManifest,
   type ContextChunkCitation,
@@ -22,6 +25,8 @@ import {
   type ContextSourceInspection,
 } from "../../../../contracts/context-management";
 import { TaskType, type RuntimeTaskRecord } from "../../../../contracts/runtime";
+import {isWorkspaceId} from "../../../../contracts/workspace";
+import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
 
 const INITIAL_POLL_INTERVAL_MS = 50;
@@ -31,6 +36,7 @@ const byteLengthOf = Object.getOwnPropertyDescriptor(
   Object.getPrototypeOf(Uint8Array.prototype), "byteLength",
 )!.get!;
 const copyBytes = Uint8Array.prototype.set;
+const EMPTY_BYTES = new Uint8Array(0);
 
 interface OperationInput {
   readonly workspaceId: string;
@@ -47,10 +53,68 @@ interface OperationInput {
   readonly embeddingDevice?: "cpu" | "cuda" | "auto";
 }
 
+interface QueryAttemptState {
+  dispatchAttempted: boolean;
+  issueUnconfirmed: boolean;
+  acknowledged: boolean;
+  terminal: boolean;
+  cleanupPending: boolean;
+}
+interface AdmittedQuery {
+  readonly admission: ApprovedContextQueryAdmission;
+  readonly input: OperationInput;
+  content: Uint8Array;
+  readonly state: QueryAttemptState;
+}
+
+function snapshotBytes(value: Uint8Array): Uint8Array {
+  try {
+    if (!(value instanceof Uint8Array) || types.isProxy(value)) throw new Error();
+    const size = byteLengthOf.call(value);
+    if (!Number.isSafeInteger(size) || size < 1 || size > CONTEXT_GENERATION_LIMITS.maximumArtifactBytes) throw new Error();
+    const content = new Uint8Array(size);
+    copyBytes.call(content, value);
+    return content;
+  } catch {throw new Error("Context artifact bytes do not match their descriptor.");}
+}
+
+/** Copy every datum/callback before any await. This capability is host-owned. */
+function snapshotAdmittedQuery(rawInput: OperationInput, rawAdmission: ApprovedContextQueryAdmission) {
+  if (types.isProxy(rawInput) || types.isProxy(rawAdmission)) throw new Error();
+  const data = readStrictPassiveRecord(rawInput, ["workspaceId", "artifactId", "content", "mediaType", "digest", "query", "maximumResults", "embeddingDevice"]);
+  const proof = readStrictPassiveRecord(rawAdmission, ["taskId", "workspaceId", "artifactId", "artifactDigest", "queryDigest",
+    "maximumResults", "embeddingDevice", "embeddingModel", "isCurrent", "stillAllowed", "issue", "accept"]);
+  if (types.isProxy(proof.embeddingModel)) throw new Error();
+  const model = readStrictPassiveRecord(proof.embeddingModel, ["modelId", "localModelReference"]);
+  if (!isWorkspaceId(data.workspaceId) || typeof data.artifactId !== "string" || data.artifactId.length < 1 || data.artifactId.length > 512 ||
+      data.mediaType !== CONTEXT_RAG_DATABASE_MEDIA_TYPE || typeof data.digest !== "string" || !DIGEST_PATTERN.test(data.digest) ||
+      typeof data.query !== "string" || !data.query || data.query !== data.query.trim() || data.query.length > CONTEXT_GENERATION_LIMITS.maximumQueryCharacters ||
+      Buffer.from(data.query, "utf8").toString("utf8") !== data.query ||
+      typeof data.maximumResults !== "number" || !Number.isSafeInteger(data.maximumResults) || data.maximumResults < 1 || data.maximumResults > CONTEXT_GENERATION_LIMITS.maximumQueryResults ||
+      (data.embeddingDevice !== "cpu" && data.embeddingDevice !== "cuda") ||
+      typeof proof.taskId !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(proof.taskId) ||
+      proof.workspaceId !== data.workspaceId || proof.artifactId !== data.artifactId || proof.artifactDigest !== data.digest ||
+      proof.queryDigest !== "sha256:" + createHash("sha256").update(data.query, "utf8").digest("hex") ||
+      proof.maximumResults !== data.maximumResults || proof.embeddingDevice !== data.embeddingDevice ||
+      typeof model.modelId !== "string" || model.modelId.length < 3 || model.modelId.length > 193 || model.modelId !== model.modelId.trim() ||
+      typeof model.localModelReference !== "string" || model.localModelReference.length < 1 || model.localModelReference.length > 4096 ||
+      model.localModelReference !== model.localModelReference.trim() || !isAbsolute(model.localModelReference) ||
+      model.localModelReference.startsWith("\\\\") || model.localModelReference.startsWith("//") ||
+      /[\u0000-\u001f\u007f]/.test(model.modelId + model.localModelReference) ||
+      ![proof.isCurrent, proof.stillAllowed, proof.issue, proof.accept].every(value => typeof value === "function")) throw new Error();
+  const content = snapshotBytes(data.content as Uint8Array);
+  if (digest(content) !== data.digest) throw new Error();
+  const input: OperationInput = {workspaceId: data.workspaceId, artifactId: data.artifactId, content,
+    mediaType: data.mediaType, digest: data.digest, query: data.query, maximumResults: data.maximumResults, embeddingDevice: data.embeddingDevice};
+  const admission: ApprovedContextQueryAdmission = {...proof, embeddingModel: Object.freeze({...model})} as unknown as ApprovedContextQueryAdmission;
+  return {input, admission: Object.freeze(admission), content};
+}
+
 export function createPythonContextArtifactRuntimeAdapter(
   registry: RuntimeTaskRegistryPort,
   reconciler: OwnedTaskReconcilerService,
 ): ContextArtifactRuntimePort {
+  const usedQueryAdmissions = new WeakMap<object, {state: QueryAttemptState; settled: boolean}>();
   const run = (operation: "inspect-source" | "inspect-artifact" | "query", input: OperationInput) =>
     reconciler.withLease("python", lease => runOperation(registry, reconciler, lease, operation, input));
   return {
@@ -84,7 +148,54 @@ export function createPythonContextArtifactRuntimeAdapter(
       }
       return data.matches.map(validateMatch);
     },
+    queryAdmitted(rawInput, rawAdmission) {
+      const previous = rawAdmission && typeof rawAdmission === "object" ? usedQueryAdmissions.get(rawAdmission) : undefined;
+      if (previous) return Promise.resolve({kind: "unconfirmed" as const, cleanupPending: previous.state.cleanupPending || !previous.settled});
+      const state: QueryAttemptState = {dispatchAttempted: false, issueUnconfirmed: false, acknowledged: false, terminal: false, cleanupPending: false};
+      let lease: OwnedTaskLease;
+      try {lease = reconciler.reserve("python");}
+      catch {return Promise.resolve({kind: "not-started" as const});}
+      let snapshot: AdmittedQuery;
+      try {
+        snapshot = {...snapshotAdmittedQuery(rawInput, rawAdmission), state};
+      } catch {
+        lease.release();
+        return Promise.resolve({kind: "not-started" as const});
+      }
+      const entry = {state, settled: false};
+      usedQueryAdmissions.set(rawAdmission, entry);
+      // The async frame retains only our private snapshot, never caller bytes.
+      return runAdmittedQuery(registry, reconciler, lease, snapshot).finally(() => {entry.settled = true;});
+    },
   };
+}
+
+function releaseAdmittedBytes(query: AdmittedQuery, runtimeInput?: OperationInput) {
+  query.content = EMPTY_BYTES;
+  Object.assign(query.input, {content: EMPTY_BYTES});
+  if (runtimeInput) Object.assign(runtimeInput, {content: EMPTY_BYTES});
+}
+
+async function runAdmittedQuery(registry: RuntimeTaskRegistryPort, reconciler: OwnedTaskReconcilerService,
+  reserved: OwnedTaskLease, query: AdmittedQuery): Promise<AdmittedContextQueryResult> {
+  const {input, admission, state} = query;
+  let started = false;
+  const lease: OwnedTaskLease = {release: () => reserved.release(), start: (...callbacks) => {
+    reserved.start(...callbacks); started = true;
+  }};
+  try {
+    if (!registry.startTaskWithoutInstalling || admission.isCurrent() !== true || await admission.stillAllowed() !== true || admission.isCurrent() !== true)
+      return {kind: "not-started"};
+    const data = await runOperation(registry, reconciler, lease, "query", input, query);
+    if (data.operation !== "query" || !Array.isArray(data.matches) || data.matches.length > input.maximumResults! ||
+        data.matches.length > CONTEXT_GENERATION_LIMITS.maximumQueryResults) throw new Error();
+    const matches = data.matches.map(validateAdmittedMatch);
+    if (admission.isCurrent() !== true || await admission.stillAllowed() !== true || admission.isCurrent() !== true) throw new Error();
+    return {kind: "succeeded", matches, cleanupPending: state.cleanupPending};
+  } catch {
+    if (!state.dispatchAttempted && !state.issueUnconfirmed && !state.cleanupPending) return {kind: "not-started"};
+    return {kind: state.acknowledged && state.terminal ? "failed" : "unconfirmed", cleanupPending: state.cleanupPending};
+  } finally {releaseAdmittedBytes(query); if (!started) reserved.release();}
 }
 
 async function runOperation(
@@ -93,36 +204,31 @@ async function runOperation(
   lease: OwnedTaskLease,
   operation: "inspect-source" | "inspect-artifact" | "query",
   providedInput: OperationInput,
+  admitted?: AdmittedQuery,
 ): Promise<Record<string, unknown>> {
   // Read the actual view length, not an overridable property/iterator. Hash and
   // write this same private snapshot across every asynchronous operation.
   const input = { ...providedInput };
-  let content: Uint8Array;
-  try {
-    if (!(input.content instanceof Uint8Array)) throw new Error();
-    const size = byteLengthOf.call(input.content);
-    if (!Number.isSafeInteger(size) || size < 1 || size > CONTEXT_GENERATION_LIMITS.maximumArtifactBytes) throw new Error();
-    content = new Uint8Array(size);
-    copyBytes.call(content, input.content);
-  } catch {
-    throw new Error("Context artifact bytes do not match their descriptor.");
-  }
+  let content = admitted?.content ?? snapshotBytes(input.content);
   if (
     !DIGEST_PATTERN.test(input.digest) ||
     digest(content) !== input.digest
   ) {
     throw new Error("Context artifact bytes do not match their descriptor.");
   }
-  const requestId = randomUUID();
+  const contentSize = content.byteLength;
+  const requestId = admitted?.admission.taskId ?? randomUUID();
   const workspaceId = input.workspaceId;
   let workingDirectory: string | undefined;
   let dispatchAttempted = false;
   let acknowledged = false;
   let terminal = false;
+  let issueUnconfirmed = false;
   let failure = "Context artifact operation could not be completed.";
   const cleanup = async () => {
     if (workingDirectory) await rm(workingDirectory, { recursive: true, force: true });
     workingDirectory = undefined;
+    if (admitted) admitted.state.cleanupPending = false;
   };
   const readOwnedStatus = async (): Promise<RuntimeTaskRecord | undefined> => {
     const status = await registry.getTaskStatus(requestId);
@@ -133,7 +239,7 @@ async function runOperation(
     return status;
   };
   const reconcile = async () => {
-    if (dispatchAttempted && !terminal) {
+    if ((dispatchAttempted || issueUnconfirmed) && !terminal) {
       // A lost/mismatched start reply never grants authority to discover/adopt
       // a task. Only the owning host's successful Python stop settles it.
       if (!acknowledged) return false;
@@ -145,15 +251,32 @@ async function runOperation(
     return true;
   };
   try {
-    workingDirectory = await mkdtemp(join(tmpdir(), "ai-system-builder-context-operation-"));
-    const inputPath = join(workingDirectory, "input.bin");
-    await writeFile(inputPath, content, { flag: "wx" });
+    if (admitted && (admitted.admission.isCurrent() !== true || await admitted.admission.stillAllowed() !== true || admitted.admission.isCurrent() !== true)) throw new Error();
     reconciler.assertAccepting();
+    workingDirectory = await mkdtemp(join(tmpdir(), "ai-system-builder-context-operation-"));
+    if (admitted) admitted.state.cleanupPending = true;
+    const inputPath = join(workingDirectory, "input.bin");
+    if (admitted && (admitted.admission.isCurrent() !== true || await admitted.admission.stillAllowed() !== true || admitted.admission.isCurrent() !== true)) throw new Error();
+    await writeFile(inputPath, content, { flag: "wx" });
+    if (admitted) {releaseAdmittedBytes(admitted, input); content = EMPTY_BYTES;}
+    reconciler.assertAccepting();
+    if (admitted) {
+      const proof = admitted.admission;
+      if (proof.isCurrent() !== true || await proof.stillAllowed() !== true || proof.isCurrent() !== true) throw new Error();
+      issueUnconfirmed = true;
+      const issued = await proof.issue();
+      if (issued === "denied") {issueUnconfirmed = false; throw new Error();}
+      if (issued !== "issued") throw new Error();
+      issueUnconfirmed = false;
+      if (proof.isCurrent() !== true || await proof.stillAllowed() !== true || proof.isCurrent() !== true) throw new Error();
+      reconciler.assertAccepting();
+    }
     dispatchAttempted = true;
-    const started = await registry.startTask({
+    const request = {
       requestId,
       workspaceId: input.workspaceId as never,
       taskType: TaskType.CONTEXT_RETRIEVAL,
+      ...(admitted ? {concurrencyClass: input.embeddingDevice === "cuda" ? "gpu-exclusive" as const : "cpu-heavy" as const} : {}),
       payload: {
         workspaceId: input.workspaceId,
         operation,
@@ -161,7 +284,7 @@ async function runOperation(
         localPath: inputPath,
         mediaType: input.mediaType,
         digest: input.digest,
-        sizeBytes: content.byteLength,
+        sizeBytes: contentSize,
         ...(input.originalName ? { originalName: input.originalName } : {}),
         ...(input.chunking ? { chunking: input.chunking } : {}),
         ...(input.sourceInformation
@@ -173,13 +296,24 @@ async function runOperation(
           ? { maximumResults: input.maximumResults }
           : {}),
         ...(input.embeddingDevice === undefined ? {} : {embeddingDevice: input.embeddingDevice}),
+        ...(admitted ? {approvedEmbedding: {provider: "transformers", ...admitted.admission.embeddingModel,
+          batchSize: 1, device: input.embeddingDevice}} : {}),
         runtime: { runtimeWorkingDirectory: workingDirectory },
       },
       metadata: { operation: "context-artifact-operation" },
-    });
+    };
+    let started;
+    if (admitted) {
+      const response = readStrictPassiveRecord(await registry.startTaskWithoutInstalling!(request), ["kind", "value"]);
+      if (response.kind === "unavailable" && !("value" in response)) {dispatchAttempted = false; throw new Error();}
+      if (response.kind !== "accepted") throw new Error();
+      started = readStrictPassiveRecord(response.value, ["requestId", "status"]);
+    } else started = await registry.startTask(request);
     if (!started || started.requestId !== requestId ||
-        (started.status !== undefined && started.status !== "queued" && started.status !== "running")) throw new Error();
+        (admitted ? started.status !== "queued" && started.status !== "running"
+          : started.status !== undefined && started.status !== "queued" && started.status !== "running")) throw new Error();
     acknowledged = true;
+    if (admitted && await admitted.admission.accept(requestId) !== true) throw new Error();
     const deadline = Date.now() + PYTHON_RUNTIME_TASK_TIMEOUTS.contextRetrieval;
     let pollInterval = INITIAL_POLL_INTERVAL_MS;
     while (Date.now() < deadline) {
@@ -210,9 +344,11 @@ async function runOperation(
   } catch {
     throw new Error(failure);
   } finally {
-    if (!dispatchAttempted || terminal) {
+    if (admitted) {releaseAdmittedBytes(admitted, input); content = EMPTY_BYTES;}
+    if ((!dispatchAttempted && !issueUnconfirmed) || terminal) {
       try { await cleanup(); } catch { /* Retry through the existing owner. */ }
     }
+    if (admitted) Object.assign(admitted.state, {dispatchAttempted, issueUnconfirmed, acknowledged, terminal, cleanupPending: workingDirectory !== undefined});
     if (workingDirectory) lease.start(reconcile, async () => {
       if (acknowledged && !terminal) await registry.cancelTask(requestId);
     }, cleanup);
@@ -567,6 +703,35 @@ function validateSourceCheckSettings(
     typeof value.requireConsentMetadata === "boolean" &&
     typeof value.includeSourceAttribution === "boolean"
   );
+}
+
+/** Closed private result copy. The owning caller still checks citation allowlists. */
+function validateAdmittedMatch(value: unknown): ContextRetrievalMatch {
+  if (types.isProxy(value)) throw new Error();
+  const match = readStrictPassiveRecord(value, ["id", "excerpt", "score", "citation"]);
+  if (types.isProxy(match.citation)) throw new Error();
+  const row = readStrictPassiveRecord(match.citation, ["sourceArtifactId", "sourceDigest", "chunkIndex",
+    "rowIndex", "field", "normalizedStart", "normalizedEnd", "pageNumber", "regionKind"]);
+  if (typeof row.sourceArtifactId !== "string" || row.sourceArtifactId.length < 1 || row.sourceArtifactId.length > 512 ||
+      row.sourceArtifactId !== row.sourceArtifactId.trim() || typeof row.sourceDigest !== "string" ||
+      typeof row.chunkIndex !== "number") throw new Error();
+  const citation: ContextChunkCitation = {sourceArtifactId: row.sourceArtifactId, sourceDigest: row.sourceDigest, chunkIndex: row.chunkIndex};
+  for (const key of ["rowIndex", "normalizedStart", "normalizedEnd", "pageNumber"] as const) {
+    if (key in row) {
+      if (typeof row[key] !== "number") throw new Error();
+      Object.assign(citation, {[key]: row[key]});
+    }
+  }
+  if ("field" in row) {
+    if (typeof row.field !== "string" || row.field.length > 128) throw new Error();
+    Object.assign(citation, {field: row.field});
+  }
+  if ("regionKind" in row) {
+    if (typeof row.regionKind !== "string" || !row.regionKind || row.regionKind.length > 64 ||
+        row.regionKind !== row.regionKind.trim() || /[\u0000-\u001f\u007f]/.test(row.regionKind)) throw new Error();
+    Object.assign(citation, {regionKind: row.regionKind});
+  }
+  return validateMatch({...match, citation: validateContextChunkCitation(citation)});
 }
 
 function validateMatch(value: unknown): ContextRetrievalMatch {

@@ -970,11 +970,14 @@ def _query_rag(
         | None
     ),
 ) -> list[dict[str, Any]]:
-    query = payload.query.strip() if isinstance(payload.query, str) else ""
+    raw_query = payload.query if isinstance(payload.query, str) else ""
+    # Host-admitted queries bind these exact Unicode bytes; do not apply a
+    # different language's whitespace normalization after approval.
+    query = raw_query if payload.approvedEmbedding is not None else raw_query.strip()
     maximum_results = payload.maximumResults
     if (
         payload.mediaType != RAG_MEDIA_TYPE
-        or not query
+        or not query or not query.strip()
         or len(query) > 4_000
         or maximum_results is None
         or not 1 <= maximum_results <= 20
@@ -990,8 +993,15 @@ def _query_rag(
             database, table, rows, dimensions = _validated_rag_table(
                 database_path, manifest, cancellation_check
             )
+            approved = payload.approvedEmbedding
+            if approved is not None and (
+                approved.provider != manifest["embedding"]["provider"]
+                or approved.modelId != manifest["embedding"]["modelId"]
+            ):
+                raise ValueError("The approved query model does not match this artifact.")
             settings = ContextEmbeddingSettings.model_validate({
                 **manifest["embedding"],
+                **(approved.model_dump(exclude_none=True) if approved is not None else {}),
                 "batchSize": 1,
                 "device": payload.embeddingDevice or "cpu",
             })
