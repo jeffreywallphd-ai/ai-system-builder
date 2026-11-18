@@ -2381,14 +2381,15 @@ export function composeServerHost(
             : {}),
           now: options.now,
         });
+      const contextEmbeddingModels = new ResolveApprovedContextEmbeddingModelUseCase(modelRegistry,
+        createLocalContextEmbeddingModelFilesAdapter({allowedRootDirectories: [hfHome, transformersCache]}));
       const contextGenerationUseCase = new ContextGenerationUseCase({
         ...(organizationDocuments ? {
           resultBytes: createFilesystemContextResultByteStorageAdapter({rootDirectory: registerOptions.storageRootDirectory,
             organizationContextProvider: options.organizationContextProvider}),
           resultSource: createFilesystemContextResultOutputSourceAdapter(),
         } : {}),
-        embeddingModels: new ResolveApprovedContextEmbeddingModelUseCase(modelRegistry,
-          createLocalContextEmbeddingModelFilesAdapter({allowedRootDirectories: [hfHome, transformersCache]})),
+        embeddingModels: contextEmbeddingModels,
         taskReconciler,
         runtimeTaskRegistry,
         storageBindings: artifactBindings,
@@ -2404,6 +2405,8 @@ export function composeServerHost(
         now: options.now,
       });
       const contextBrowserUseCases = new ContextBrowserUseCases({
+        embeddingModels: contextEmbeddingModels,
+        isAcceptingQueries: () => {taskReconciler.assertAccepting(); return true;},
         catalog: artifactCatalog,
         storageBindings: artifactBindings,
         storage,

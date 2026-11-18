@@ -33,7 +33,9 @@ import type {
   ArtifactCatalogReadPort,
   ArtifactCatalogRecord,
 } from "../../ports/artifact-catalog";
-import type { ContextArtifactRuntimePort } from "../../ports/context-management";
+import type { ContextArtifactRuntimePort, ApprovedContextEmbeddingModelResolverPort, ApprovedContextQueryCommand,
+  ApprovedContextQueryOwnerAdmission } from "../../ports/context-management";
+import {ApprovedContextQueryOwner} from "./approved-context-query-owner";
 import type { WorkspaceOperationAuthorizationPort } from "../../ports/security";
 import type {
   ArtifactObjectStoragePort,
@@ -86,6 +88,9 @@ export interface ContextBrowserUseCasesDependencies {
   >;
   readonly storage: Pick<ArtifactObjectStoragePort, "retrieveArtifact">;
   readonly runtime: ContextArtifactRuntimePort;
+  readonly embeddingModels?: ApprovedContextEmbeddingModelResolverPort;
+  /** Existing owned runtime admission fence; missing proof denies only private queries. */
+  readonly isAcceptingQueries?: () => boolean;
   readonly generation: ContextGenerationStartPort;
   readonly deleteArtifact: RegisteredArtifactDeletePort;
   readonly workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
@@ -93,9 +98,20 @@ export interface ContextBrowserUseCasesDependencies {
 }
 
 export class ContextBrowserUseCases {
+  private readonly admittedQueries: ApprovedContextQueryOwner;
   public constructor(
     private readonly dependencies: ContextBrowserUseCasesDependencies,
-  ) {}
+  ) {this.admittedQueries = new ApprovedContextQueryOwner(dependencies);}
+
+  /** Trusted host capability only; ordinary Browser query behavior is unchanged. */
+  public startAdmittedContextQuery(command: ApprovedContextQueryCommand, context: ApplicationRequestContext,
+    admission: ApprovedContextQueryOwnerAdmission) {
+    return this.admittedQueries.start(command, context, admission);
+  }
+
+  public readAdmittedContextQueryTask(taskId: string, context: ApplicationRequestContext) {
+    return this.admittedQueries.read(taskId, context);
+  }
 
   public async inspectSource(
     command: InspectContextSourceCommand,

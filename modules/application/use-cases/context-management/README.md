@@ -1,5 +1,21 @@
 # Context Management Application Use Cases
 
+The existing Browser owns `startAdmittedContextQuery` and
+`readAdmittedContextQueryTask` through `ApprovedContextQueryOwner`. These are
+private composition capabilities, not ordinary Browser commands. Admission
+requires exact copied actor/artifact/question/model/source proof and current
+trusted policy. The owner reserves bounded pending/history state before model
+or bytes, uses the original existing-model resolver and an admitted-only exact
+primary-local/checksummed byte reader, then calls only `queryAdmitted`.
+Runtime ACK plus durable exact accept permits an early task reply. Revocation
+withholds replies without erasing genuine accepted ownership. Stored/status
+matches contain only original source ordinals and bounded numeric citations.
+Cleanup observation is separate from business outcome; both settled promise and
+proven custody retirement are required to free pending capacity. Unknown work
+is never discovered, adopted or retried through ordinary query. Existing Browser
+query/detail/rebuild/delete behavior is unchanged. Public approved query wiring,
+physical/host/resource and parent qualification remain separate work.
+
 `PreviewHeadlessContextQueryUseCase` copies strict input and hashes the exact
 transient question before its asynchronous application metadata frame. That frame
 and its dependency receive no question text. Current actor/client/workspace and
@@ -170,15 +186,16 @@ after a fast task or host stop has already attempted release.
 Status ID/type/scope and cancellation ID/acknowledgement must match before
 terminal cleanup. An unknown or mismatched status is unavailable, not a queued
 or terminal proof. Invalid replies leave staging and power ownership intact.
-Tests use fresh owned storage and simulated runtime/stop evidence. The internal
-entry is not yet a public Headless action or physical model/runtime qualification.
+Tests use fresh owned storage and simulated runtime/stop evidence. These internal
+checks alone provide no physical model/runtime qualification; public approved
+generation and save composition are described separately above.
 
 The internal approved entry now requires `startTaskWithoutInstalling` before
 source access. It never calls ordinary runtime start. Only the closed unavailable
 result proves no business dispatch and permits fresh staging cleanup. The issued
 ID remains consumed. Lost or contradictory responses retain the exact owned
-lease. This additive path does not alter ordinary Context preparation and is not
-yet advertised through public Headless host composition.
+lease. This additive path does not alter ordinary Context preparation. Public
+approved generation separately composes it through exact plan admission.
 
 The separate internal `saveAdmittedContextResult` entry uses the exact accepted
 task and current review fingerprint. It requires both optional result-byte and
@@ -194,8 +211,9 @@ refusal and lost acknowledgements in synthetic owned fixtures.
 Private save compilation is metadata only. It exposes no raw output content or
 path. The shared host composition requires an exact save authorizer in the same
 root-owned transaction and performs one exact read-only reconciliation of a
-possibly committed reply. It does not provide a public save action, native
-restart recovery or physical RAG/retrieval qualification.
+possibly committed reply. The separate public version-8 save action uses that
+owner; these internal checks grant no native restart recovery or physical
+RAG/retrieval qualification.
 
 `startAdmittedContext` can also return a private proven `not-started` outcome.
 The owner sets it only after a fresh pre-dispatch denial or a closed installed-only

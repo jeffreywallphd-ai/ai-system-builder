@@ -425,10 +425,21 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-context-artifact-lifecycle": {
         "automatic_sources": (
+            "modules/application/use-cases/context-management/approved-context-query-owner.ts",
+            "modules/application/use-cases/context-management/context-browser.use-cases.ts",
+            "modules/application/use-cases/context-management/tests/context-approved-query.unit.test.ts",
+            "modules/application/ports/context-management/approved-context-query-owner.port.ts",
             "modules/adapters/runtime/python/context-management/createPythonContextArtifactRuntimeAdapter.ts",
             "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
         ),
         "sources": (
+            "modules/application/use-cases/context-management/approved-context-query-owner.ts",
+            "modules/application/use-cases/context-management/context-browser.use-cases.ts",
+            "modules/application/use-cases/context-management/tests/context-approved-query.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",
+            "modules/application/use-cases/context-management/README.md",
+            "modules/application/ports/context-management/approved-context-query-owner.port.ts",
+            "modules/application/ports/context-management/index.ts",
             "modules/application/ports/context-management/context-artifact-runtime.port.ts",
             "modules/application/ports/context-management/README.md",
             "modules/contracts/runtime/context-retrieval.ts",
@@ -443,6 +454,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": (
             "--import", "tsx", "--test", "--",
+            "modules/application/use-cases/context-management/tests/context-approved-query.unit.test.ts",
             "modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts",
             "modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts",
             "modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",

@@ -1,5 +1,21 @@
 # Context runtime and approved start ports
 
+`ApprovedContextQueryOwnerAdmission` is a private trusted capability for the
+retained Browser owner. It binds exact actor/workspace/artifact size/digest,
+question hash, original saved-model witness and ordered source allowlist to
+current host/client/plan/artifact/model permission and one-use issue/accept.
+It contains no question or caller-selected model path. The existing installed
+resolver and runtime query port own files/execution. Public query transport and
+query-result save authority do not follow from this interface.
+
+The runtime admission's optional `cleanupRetired(taskId)` reports only actual
+owned cleanup. It can arrive after the result promise. It grants no cleanup,
+dispatch, adoption, success or retry authority. The caller holds bounded pending
+capacity until both promise settlement and custody retirement are proven;
+unknown cleanup stays retained. Observer failure cannot undo completed removal.
+Native Promise rejections from an async observer are drained without awaiting
+the observer or changing the business/cleanup outcome.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `ContextArtifactRuntimePort` owns bounded source/artifact inspection and query
@@ -37,15 +53,16 @@ noninstalling registry and supervisor path; ordinary start is not a substitute.
 `ResolveApprovedContextEmbeddingModelUseCase` owns exact metadata and authority
 checks around that port. A private runtime reference does not prove valid
 weights, native custody, immutable bytes, resource capacity or model quality.
-Public RAG plan wiring and actual model qualification remain separate work.
+Public RAG plans use this port through the separately composed approved owner;
+these internal file checks supply no actual model/resource qualification.
 
-`ContextResultByteStoragePort` is an internal byte-only publisher for a future
+`ContextResultByteStoragePort` is the internal byte-only publisher for a
 reviewed-result save. Its caller must bind the accepted task, review fingerprint
 and one-use save approval separately. It accepts an opaque publication identity,
 finite Context media type, exact nonempty size and SHA-256, and derives its key
 inside the captured workspace. It has no path, overwrite, catalog/binding or
 delete operation. A successful byte acknowledgement is not a saved Context.
-The result-save owner and atomic metadata receipt remain separate work.
+The separate result-save owner and atomic metadata receipt govern activation.
 
 `ApprovedContextResultSaveAdmission` is the separate internal save capability.
 The host must bind it to a current save-specific approval, exact accepted task,

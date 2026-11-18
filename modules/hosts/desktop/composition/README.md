@@ -1,5 +1,12 @@
 # Desktop host composition
 
+The retained Context Browser's private query owner receives the same original
+installed-model resolver as generation and the existing reconciler's admission
+fence. It requires exact saved bytes and source/model policy before installed-only
+dispatch. Status retains only source-checked numeric citations. Existing runtime
+cleanup observation is separate from completion and admission capacity. No public
+query plan or query-summary handoff is exposed by this composition component.
+
 `context.preview-query` is a separate optional plan-review metadata provider.
 Current artifact/model permission and registration/liveness surround its output.
 It hashes transient question text and compiles the exact saved Context's original

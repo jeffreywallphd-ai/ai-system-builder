@@ -83,7 +83,7 @@ function snapshotAdmittedQuery(rawInput: OperationInput, rawAdmission: ApprovedC
   if (types.isProxy(rawInput) || types.isProxy(rawAdmission)) throw new Error();
   const data = readStrictPassiveRecord(rawInput, ["workspaceId", "artifactId", "content", "mediaType", "digest", "query", "maximumResults", "embeddingDevice"]);
   const proof = readStrictPassiveRecord(rawAdmission, ["taskId", "workspaceId", "artifactId", "artifactDigest", "queryDigest",
-    "maximumResults", "embeddingDevice", "embeddingModel", "isCurrent", "stillAllowed", "issue", "accept"]);
+    "maximumResults", "embeddingDevice", "embeddingModel", "isCurrent", "stillAllowed", "issue", "accept", "cleanupRetired"]);
   if (types.isProxy(proof.embeddingModel)) throw new Error();
   const model = readStrictPassiveRecord(proof.embeddingModel, ["modelId", "localModelReference"]);
   if (!isWorkspaceId(data.workspaceId) || typeof data.artifactId !== "string" || data.artifactId.length < 1 || data.artifactId.length > 512 ||
@@ -101,7 +101,8 @@ function snapshotAdmittedQuery(rawInput: OperationInput, rawAdmission: ApprovedC
       model.localModelReference !== model.localModelReference.trim() || !isAbsolute(model.localModelReference) ||
       model.localModelReference.startsWith("\\\\") || model.localModelReference.startsWith("//") ||
       /[\u0000-\u001f\u007f]/.test(model.modelId + model.localModelReference) ||
-      ![proof.isCurrent, proof.stillAllowed, proof.issue, proof.accept].every(value => typeof value === "function")) throw new Error();
+      ![proof.isCurrent, proof.stillAllowed, proof.issue, proof.accept].every(value => typeof value === "function") ||
+      (proof.cleanupRetired !== undefined && typeof proof.cleanupRetired !== "function")) throw new Error();
   const content = snapshotBytes(data.content as Uint8Array);
   if (digest(content) !== data.digest) throw new Error();
   const input: OperationInput = {workspaceId: data.workspaceId, artifactId: data.artifactId, content,
@@ -225,10 +226,22 @@ async function runOperation(
   let terminal = false;
   let issueUnconfirmed = false;
   let failure = "Context artifact operation could not be completed.";
+  let cleanupNotified = false;
   const cleanup = async () => {
     if (workingDirectory) await rm(workingDirectory, { recursive: true, force: true });
     workingDirectory = undefined;
     if (admitted) admitted.state.cleanupPending = false;
+    if (admitted && !cleanupNotified) {
+      cleanupNotified = true;
+      // Observation only. Notification failure cannot undo proven cleanup or
+      // change the business outcome; the caller must conservatively hold capacity.
+      try {
+        const notification = admitted.admission.cleanupRetired?.(requestId);
+        // An async function is assignable to a void callback. Drain its native
+        // Promise without awaiting it or letting rejection alter owned cleanup.
+        if (types.isPromise(notification)) void Promise.prototype.then.call(notification, () => undefined, () => undefined);
+      } catch { /* No new authority or diagnostic. */ }
+    }
   };
   const readOwnedStatus = async (): Promise<RuntimeTaskRecord | undefined> => {
     const status = await registry.getTaskStatus(requestId);

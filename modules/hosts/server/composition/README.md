@@ -1,5 +1,12 @@
 # Server host composition
 
+The already-composed Context Browser's private query owner shares generation's
+original installed-model resolver and uses the existing reconciler admission
+fence. It does not call ordinary query/inspection or use legacy storage fallbacks.
+Trusted exact saved/source/model/current-plan proof is still required. Numeric
+summary status and owned cleanup observation grant no public query plan, native
+proof or parent qualification. No second scheduler or runtime is introduced.
+
 Managed query preview uses the same strict transient-text/hash and recorded-input
 metadata reader under current plan-client, organization/workspace and artifact/
 model read policy. The route and SDK independently correlate the exact question

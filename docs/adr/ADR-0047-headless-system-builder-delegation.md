@@ -1,5 +1,14 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+Approved local query implementation stays inside the retained Context Browser
+and existing installed-only query port. Private admission binds exact saved
+bytes, original source/model witnesses and current trusted issue/accept policy.
+It adds no scheduler, dependency, implicit model selection or fallback. Business
+acceptance, outward disclosure and existing cleanup retirement stay separate;
+application history contains only bounded source-checked citation coordinates.
+This internal owner does not by itself enable a public query plan or SDK action,
+nor qualify physical resources or the parent roadmap.
+
 The finite `context.preview-query` read prepares exact transient question hashes
 for the existing approved-plan workflow. It reuses recorded saved Context input
 compilation and current artifact/model/actor/client scope; no new engine, cache,

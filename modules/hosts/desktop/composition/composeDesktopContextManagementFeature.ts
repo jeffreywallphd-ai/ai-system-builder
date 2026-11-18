@@ -33,6 +33,8 @@ export function composeDesktopContextManagementFeature(
     now: options.now,
   });
   const browser = new ContextBrowserUseCases({
+    embeddingModels: options.embeddingModels,
+    isAcceptingQueries: () => {options.runtime.taskReconciler.assertAccepting(); return true;},
     catalog: options.artifacts.artifactCatalog,
     storageBindings: options.artifacts.artifactBindings,
     storage: options.artifacts.storage,

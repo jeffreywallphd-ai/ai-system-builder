@@ -1,5 +1,14 @@
 # Python runtime adapter
 
+The private admitted Context query can notify its exact cleanup observer only
+after the existing owner removes staging. The callback is copied with admission,
+is optional for existing callers and runs at most once. Cleanup failure sends
+no notification; the existing reconciler retry or owned runtime stop can later
+retire custody. Observer errors do not undo cleanup or change business outcome.
+Rejected native Promise results from async observers are also drained; cleanup
+does not wait for the observer.
+This observation grants no new dispatch, cleanup, task adoption or native proof.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 The capabilities mapper preserves only a positive safe integer for the optional

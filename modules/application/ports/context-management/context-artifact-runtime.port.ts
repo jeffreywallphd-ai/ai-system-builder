@@ -47,6 +47,9 @@ export interface ApprovedContextQueryAdmission {
   readonly issue: () => Promise<"issued" | "denied" | "unconfirmed">;
   /** Record only this exact acknowledged task before outward task disclosure. */
   readonly accept: (taskId: string) => Promise<boolean>;
+  /** Exact owned cleanup observation only. It grants no cleanup or task authority.
+   * May arrive after the result promise settles; callers must retain capacity. */
+  readonly cleanupRetired?: (taskId: string) => void;
 }
 
 export type AdmittedContextQueryResult =

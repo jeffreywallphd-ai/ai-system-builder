@@ -64,6 +64,30 @@ actual retrieval/resources and final qualification remain separate obligations.
 
 ## Private installed-query boundary
 
+The retained Browser's private query owner binds copied organization/actor/
+workspace, saved artifact digest/size, question hash, original model witness and
+source allowlist to trusted current issue/accept callbacks. It does not use the
+ordinary Browser's optional legacy authorization or backing/checksum fallback.
+Exact generated catalog and primary local binding checks precede a bounded
+private byte copy/hash. Current policy/liveness surrounds model/files, staging,
+atomic issuance and result release. Slots are reserved before model/byte work;
+history and uncertain attempts are never evicted to admit another task.
+
+Only the existing installed query port runs. Runtime ACK and confirmed durable
+acceptance precede task disclosure. Recording an already-issued outcome is
+separate from outward permission; revocation withholds start/status output.
+Strict results match the original ordered source ID/digest allowlist before
+discarding excerpts, worker IDs, free-text field/region and private paths. Only
+rank/score/source ordinal and canonical numeric coordinates remain in task state.
+Foreign/malformed citations cannot become a query result or generation save.
+
+The runtime's exact cleanup-retirement callback is observation only. It runs
+after owned removal and can arrive after the result snapshot. The application
+holds capacity until promise settlement and retirement proof; callback failures
+or unknown custody retain the slot. Cleanup does not prove business success or
+authorize retry/adoption. Focused controlled adapter/application tests do not
+qualify physical models, native custody, actual app hosts or public query plans.
+
 The optional private installed-query seam accepts only strict copied descriptors,
 bounded actual byte snapshots, exact artifact/query hashes, matching scope/limits,
 explicit device and a host-resolved model reference. Trusted callback capabilities

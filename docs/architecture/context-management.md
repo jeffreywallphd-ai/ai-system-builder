@@ -14,6 +14,37 @@
 
 ## Purpose
 
+### Private approved query owner
+
+The retained `ContextBrowserUseCases` has a separate private admitted-query
+owner. It requires a copied actor/workspace, exact saved artifact digest/size,
+question hash, original model witness and ordered source digest allowlist, plus
+current trusted host policy, one-use issue and durable exact-ACK acceptance.
+It reserves the existing four-pending/256-history profile before model or byte
+work. Ordinary Browser helpers and their legacy backing/checksum fallbacks are
+not used. Admitted reads require the exact generated catalog record and one
+primary local binding, then an immediate private byte copy and matching hash.
+The actual byte reader may omit descriptor MIME. Catalog MIME remains required;
+a defined conflicting descriptor MIME still denies. Canonical optional binding
+metadata does not change the required exact primary locator.
+
+Both existing host compositions supply the original installed-model resolver
+and existing reconciler admission fence. Only `queryAdmitted` may dispatch.
+Acceptance may return before completion. Genuine durable acceptance is retained
+after outward permission retires; task disclosure remains separately fenced.
+Stored summaries contain only source ordinals, rank/score and bounded numeric
+citation coordinates. Raw questions, excerpts, worker IDs and private model/file
+references do not enter application task history or status. Query tasks never
+enter generation review/save maps.
+
+Business completion and custody retirement are separate. The existing runtime
+cleanup owner can report exact retirement through an optional private callback;
+it grants no cleanup or execution right. Capacity is held until the query promise
+settles and custody retirement is proven. Unknown outcomes retain their state
+and cannot trigger task discovery or an ordinary retry. This component does not
+yet expose a public approved query or query-summary window selector. Physical
+retrieval/resource, actual host and parent qualification remain pending.
+
 Headless `context.preview-rebuild` resolves an exact indexed saved resource to
 its accepted original build and immutable proposal/model witness. The same
 metadata-only input preview revalidates source revisions and full model facts;

@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, isAbsolute } from "node:path";
+import {tmpdir} from "node:os";
+import {ContextBrowserUseCases} from "../../../../../application/use-cases/context-management/context-browser.use-cases";
+import {createOrganizationId} from "../../../../../contracts/organization";
+import {createRetrieveArtifactRequest} from "../../../../../contracts/storage";
+import {createFilesystemArtifactObjectStorageAdapter} from "../../../../storage/filesystem/artifact-store/createFilesystemArtifactStorageAdapter";
+import {createFilesystemContextResultByteStorageAdapter} from "../../../../storage/filesystem/artifact-store/createFilesystemContextResultByteStorageAdapter";
+import {createLocalArtifactCatalogPersistenceAdapter} from "../../../../storage/filesystem/artifact-catalog/createLocalArtifactCatalogAdapter";
+import {createLocalArtifactStorageBindingAdapter} from "../../../../storage/filesystem/artifact-catalog/createLocalArtifactStorageBindingAdapter";
+import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../../persistence/sqlite";
 import { OwnedTaskReconcilerService } from "../../../../../application/services/runtime/owned-task-reconciler.service";
 
 import {
@@ -521,6 +530,98 @@ function admittedQueryFixture(t: {after: (fn: () => Promise<void>) => void}) {
 }
 
 describe("admitted installed-model Context queries", () => {
+  it("queries bytes published by the real filesystem adapters without inventing optional descriptor MIME", async t => {
+    const runtime = admittedQueryFixture(t), parent = resolve(process.env.TEMP ?? tmpdir()), prefix = join(parent, "context-owner-filesystem-");
+    const root = await fs.mkdtemp(prefix);
+    let database: Awaited<ReturnType<typeof openLocalSqliteDatabase>> | undefined;
+    try {
+      database = await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: root})});
+      const context = {organizationId: createOrganizationId("org.context-fixture"), principalId: "principal.synthetic", workspaceId: runtime.input.workspaceId};
+      const provider = {getCurrentOrganizationContext: () => context};
+      const bytes = createFilesystemContextResultByteStorageAdapter({rootDirectory: root, organizationContextProvider: provider});
+      const storage = createFilesystemArtifactObjectStorageAdapter({rootDirectory: root, organizationContextProvider: provider});
+      const documents = database.documents.forOrganization(context.organizationId);
+      const catalog = createLocalArtifactCatalogPersistenceAdapter({rootDirectory: root, documents});
+      const bindings = createLocalArtifactStorageBindingAdapter({rootDirectory: root, documents});
+      const publicationId = randomUUID().replaceAll("-", ""), artifactId = `workspaces/${context.workspaceId}/artifacts/context/${publicationId}`;
+      const published = await bytes.publishResult({publicationId, mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE,
+        expectedSizeBytes: runtime.input.content.byteLength, expectedSha256: runtime.input.digest,
+        content: (async function* () {yield runtime.input.content;})()}, context);
+      assert.equal(published.ok, true);
+      assert.equal((await catalog.createArtifactCatalogRecordIfAbsent({record: {workspaceId: context.workspaceId, storageKey: artifactId,
+        artifactFamily: "binary", sourceKind: "generated", mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE, sizeBytes: runtime.input.content.byteLength,
+        checksum: {algorithm: "sha256", value: runtime.input.digest.slice(7)}}}, context)).ok, true);
+      assert.equal((await bindings.createArtifactStorageBindingIfAbsent({binding: {workspaceId: context.workspaceId, artifactId, role: "primary",
+        backing: {kind: "artifact-object", provider: "local-filesystem", locator: artifactId}}}, context)).ok, true);
+      const retrieved = await storage.retrieveArtifact(createRetrieveArtifactRequest(artifactId), context);
+      assert.equal(retrieved.ok, true); if (!retrieved.ok) return;
+      assert.equal(retrieved.value.descriptor.mediaType, undefined, "The real reader legitimately omits MIME.");
+      const app = new ContextBrowserUseCases({catalog, storageBindings: bindings, storage, runtime: runtime.adapter,
+        embeddingModels: {async resolveExistingModel() {return {localModelReference: runtime.admission.embeddingModel.localModelReference};}},
+        isAcceptingQueries: () => {runtime.owner.assertAccepting(); return true;},
+        generation: {async start() {throw new Error("Generation cannot run.");}}, deleteArtifact: {async execute() {throw new Error("Deletion cannot run.");}}});
+      const proof = {taskId: runtime.admission.taskId, ...context, artifactId, artifactDigest: runtime.input.digest,
+        artifactSizeBytes: runtime.input.content.byteLength, queryDigest: runtime.admission.queryDigest, maximumResults: 3, embeddingDevice: "cpu" as const,
+        embeddingModel: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", modelId: "synthetic/embedding", recordDigest: "sha256:" + "b".repeat(64)},
+        sources: [{artifactId: "source/synthetic", digest: "sha256:" + "a".repeat(64)}], isCurrent: () => true, stillAllowed: async () => true,
+        issue: async () => "issued" as const, accept: async (id: string) => id === runtime.admission.taskId};
+      assert.deepEqual(await app.startAdmittedContextQuery({artifactId, query: runtime.input.query, maximumResults: 3, embeddingDevice: "cpu"}, context, proof),
+        {kind: "accepted", taskId: proof.taskId});
+      let result = await app.readAdmittedContextQueryTask(proof.taskId, context);
+      for (let count = 0; result?.state === "running" && count < 100; count++) {
+        await new Promise(resolve => setTimeout(resolve, 5)); result = await app.readAdmittedContextQueryTask(proof.taskId, context);
+      }
+      assert.deepEqual(result, {taskId: proof.taskId, state: "succeeded", matches: [], cleanupPending: false});
+      expect(runtime.registry.startTask).not.toHaveBeenCalled();
+    } finally {
+      await database?.close();
+      assert.ok(isAbsolute(root) && dirname(root) === parent && root.startsWith(prefix));
+      await fs.rm(root, {recursive: true, force: true});
+    }
+  });
+
+  it("notifies only the copied exact cleanup observer after terminal custody retires", async t => {
+    const test = admittedQueryFixture(t), retired: string[] = [], taskId = test.admission.taskId;
+    Object.assign(test.admission, {cleanupRetired: (id: string) => {retired.push(id); test.events.push("retired");}});
+    let resume!: () => void, entered!: () => void, first = true;
+    const gate = new Promise<void>(resolve => {resume = resolve;}), ready = new Promise<void>(resolve => {entered = resolve;});
+    test.admission.stillAllowed = async () => {if (first) {first = false; entered(); await gate;} return true;};
+    const running = test.adapter.queryAdmitted!(test.input, test.admission); await ready;
+    Object.assign(test.admission, {cleanupRetired: () => {assert.fail("Replaced observer cannot see this attempt.");}});
+    resume(); assert.deepEqual(await running, {kind: "succeeded", matches: [], cleanupPending: false});
+    assert.deepEqual(retired, [taskId]); assert.deepEqual(test.events, ["issue", "start", "accept", "status", "retired"]);
+    await test.owner.reconcileNow(); await test.owner.settleAfterRuntimeStop(["python"]);
+    assert.deepEqual(retired, [taskId]);
+  });
+
+  it("uncertain issuance sends no cleanup proof until the existing owned stop retires custody", async t => {
+    const test = admittedQueryFixture(t), retired: string[] = [];
+    test.control.issue = "unconfirmed";
+    Object.assign(test.admission, {cleanupRetired: (id: string) => {retired.push(id);}});
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: true});
+    assert.deepEqual(retired, []); await test.owner.reconcileNow(); assert.deepEqual(retired, []);
+    expect(test.registry.getTaskStatus).not.toHaveBeenCalled();
+    await test.owner.settleAfterRuntimeStop(["python"]);
+    assert.deepEqual(retired, [test.admission.taskId]);
+    assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: false});
+  });
+
+  it("bad cleanup callbacks deny admission and observer exceptions cannot undo proven retirement", async t => {
+    const invalid = admittedQueryFixture(t);
+    Object.assign(invalid.admission, {cleanupRetired: "not executable"});
+    assert.deepEqual(await invalid.adapter.queryAdmitted!(invalid.input, invalid.admission), {kind: "not-started"});
+    expect(invalid.registry.startTaskWithoutInstalling).not.toHaveBeenCalled();
+    const valid = admittedQueryFixture(t); let observed = 0;
+    Object.assign(valid.admission, {cleanupRetired: () => {observed++; throw new Error("private observer exception");}});
+    assert.deepEqual(await valid.adapter.queryAdmitted!(valid.input, valid.admission), {kind: "succeeded", matches: [], cleanupPending: false});
+    assert.equal(observed, 1); assert.equal(valid.owner.status.pending, 0);
+    const rejected = admittedQueryFixture(t);
+    Object.assign(rejected.admission, {cleanupRetired: async () => {throw new Error("private rejected observer");}});
+    assert.deepEqual(await rejected.adapter.queryAdmitted!(rejected.input, rejected.admission), {kind: "succeeded", matches: [], cleanupPending: false});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(rejected.owner.status.pending, 0);
+  });
+
   it("uses a copied exact model/query/byte snapshot and acknowledges the owning task before observing results", async t => {
     const test = admittedQueryFixture(t), bytes = Uint8Array.from(test.input.content), taskId = test.admission.taskId;
     const model = test.admission.embeddingModel.localModelReference;
@@ -778,6 +879,8 @@ describe("admitted installed-model Context queries", () => {
 
   for (const scenario of ["denied", "finished"]) it(`retains ${scenario} query staging when cleanup fails and updates its proof after owned retry`, async t => {
     const test = admittedQueryFixture(t);
+    const retired: string[] = [];
+    Object.assign(test.admission, {cleanupRetired: (id: string) => {retired.push(id);}});
     if (scenario === "denied") test.control.issue = "denied";
     const write = fs.writeFile, remove = fs.rm;
     let directory: string | undefined, fail = true;
@@ -794,9 +897,11 @@ describe("admitted installed-model Context queries", () => {
     assert.deepEqual(result, scenario === "denied" ? {kind: "unconfirmed", cleanupPending: true}
       : {kind: "succeeded", matches: [], cleanupPending: true});
     assert.ok(directory); await fs.access(directory); assert.equal(test.owner.status.pending, 1);
+    assert.deepEqual(retired, []);
     const polls = test.registry.getTaskStatus.mock.calls.length;
     await test.owner.reconcileNow();
     assert.equal(test.owner.status.pending, 0); await assert.rejects(fs.access(directory));
+    assert.deepEqual(retired, [test.admission.taskId]);
     expect(test.registry.getTaskStatus).toHaveBeenCalledTimes(polls);
     assert.deepEqual(await test.adapter.queryAdmitted!(test.input, test.admission), {kind: "unconfirmed", cleanupPending: false});
     expect(test.registry.startTask).not.toHaveBeenCalled();

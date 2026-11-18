@@ -1,5 +1,11 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The existing Context Browser now also owns private admitted queries through the
+original safe-model resolver, strict saved bytes and installed-only query port.
+Both current policy and existing shutdown admission fence are required. Runtime
+ACK/durable acceptance, public disclosure and cleanup retirement stay separate.
+This internal component supplies no public query plan or physical qualification.
+
 Managed `context.preview-rebuild` is plan-review-only indexed metadata. Current
 organization/workspace/artifact/model authorization surrounds its result. The
 platform owner validates the original saved/build/source/model lineage without

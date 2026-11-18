@@ -1,5 +1,14 @@
 # Contributor Control Plane
 
+The exact `headless-context-artifact-lifecycle` check also runs the admitted
+Context Browser query tests alongside the actual adapter, reconciler and ordinary
+Browser regressions. It covers exact private saved-byte admission, source-checked
+numeric summaries, ACK/issue uncertainty, separate cleanup retirement/capacity
+and shutdown/current-authority denial. Exact owner/port/test paths select it;
+unknown source and explicit generic requirements retain their checks. Host wiring
+is separately type/build checked. Controlled fixtures grant no public query,
+physical resource/model/real-app or parent/chunk qualification.
+
 The fixed `headless-context-rebuild-inputs` check also covers strict transient
 question preparation, its application privacy/liveness checks, existing host
 readers and actual Core/SQLite recorded-metadata consumers. The SDK/API checks

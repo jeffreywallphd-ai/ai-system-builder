@@ -2,6 +2,17 @@
 
 ## Passive Context question preparation
 
+The existing Context Browser also has a private admitted query owner. Trusted
+host composition must bind original saved/source/model facts and current client/
+plan/artifact/model authority; the interface itself grants no public permission.
+It uses a strict primary-local saved-byte reader and installed model resolver,
+reserving bounded state before either. Runtime ACK and durable accept are distinct
+from outward disclosure. Only original-source-checked numeric citation summaries
+remain in application history. Raw question/excerpt/path/model data cannot enter
+plans, status or window context through this component. Existing runtime custody
+retirement is separately observed, never inferred from task completion. Public
+query plan/SDK/display wiring and physical/parent qualification remain pending.
+
 One fixed plan-review read accepts transient question text and a saved RAG
 reference under current actor/client/workspace/artifact/model policy. Synchronous
 hashing removes question text from the application's async metadata frame and

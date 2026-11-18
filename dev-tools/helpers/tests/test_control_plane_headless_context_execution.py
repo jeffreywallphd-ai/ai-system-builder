@@ -12,6 +12,25 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_admitted_query_owner_uses_actual_lifecycle_cases_and_preserves_unknown_fallback(self):
+        name = 'headless-context-artifact-lifecycle'
+        paths = ['modules/application/use-cases/context-management/approved-context-query-owner.ts',
+                 'modules/application/use-cases/context-management/context-browser.use-cases.ts',
+                 'modules/application/use-cases/context-management/tests/context-approved-query.unit.test.ts',
+                 'modules/application/ports/context-management/approved-context-query-owner.port.ts']
+        selected = self.selected(paths, ['architecture'])
+        self.assertIn(name, selected)
+        self.assertNotIn('focused-tests', selected)
+        for test in ['modules/application/use-cases/context-management/tests/context-approved-query.unit.test.ts',
+                     'modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts',
+                     'modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts',
+                     'modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts']:
+            self.assertIn(test, selected[name]['argv'])
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(paths + [
+            'modules/application/use-cases/context-management/unmapped-query-owner.ts'], ['architecture']))
+        self.assertNotIn(name, self.selected(['modules/hosts/desktop/composition/composeDesktopContextManagementFeature.ts'], ['architecture']))
+
     def test_context_presentation_keeps_exact_authority_and_renderer_checks_without_unknown_coverage_loss(self):
         name = 'headless-ui-control-authority'
         paths = ['modules/application/use-cases/context-management/headless-context-presentation.use-case.ts',
@@ -102,6 +121,7 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         self.assertNotIn('focused-tests', selected)
         self.assertEqual(selected['headless-context-artifact-lifecycle']['argv'][1:], [
             '--import', 'tsx', '--test', '--',
+            'modules/application/use-cases/context-management/tests/context-approved-query.unit.test.ts',
             'modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts',
             'modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts',
             'modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts'])
