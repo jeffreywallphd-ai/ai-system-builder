@@ -191,5 +191,9 @@ the list or report deletion. A different key leaves the selected view intact.
   publication. Catalog, primary binding and causal receipt activate together in
   the root-owned metadata transaction. The host must supply a separate exact-save
   authorizer. Unknown outcomes cannot bypass through ordinary review actions;
-  confirmed saves survive cleanup/reply failure. Public save approval/routes and
-  real model/retrieval/native qualification remain separate.
+  confirmed saves survive cleanup/reply failure. Real model/retrieval/native qualification remains separate.
+
+- Public version-8 `context.save-result` binds accepted task/review/name to separate approval.
+  Its atomic version-2 index supports passive `context.saved` metadata; `byteAvailability: not-checked` asserts no archive readiness.
+  Desktop proposal reads use the retained owner without runtime initialization; receipt replay needs no live processor.
+  Version-1 private receipts stay internal; no file/task adoption or parent pass is inferred.

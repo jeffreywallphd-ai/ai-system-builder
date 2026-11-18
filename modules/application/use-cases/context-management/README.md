@@ -43,6 +43,12 @@ and diagnostics contain only bounded metadata, counts, lineage, and safe reason
 codes. Source text, prompts, embedding vectors, model output, credentials, and
 runtime paths remain outside public application state.
 
+The passive `ReadHeadlessContextSavedUseCase` accepts an exact opaque Context ID
+under current registered-client and workspace read authority. It copies the
+actor/request before awaits, rechecks authorization after the metadata port and
+returns only bounded saved metadata. It cannot resolve a task owner, read bytes
+or initialize a runtime. `byteAvailability: not-checked` preserves that limit.
+
 See `docs/architecture/context-management.md`, ADR-0041, and
 `docs/security/context-management-threat-model.md`.
 

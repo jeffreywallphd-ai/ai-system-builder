@@ -6,6 +6,7 @@ import { readHeadlessLocalFileImportRequest, type HeadlessLocalFileImportRequest
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
 import {readHeadlessSavedDatasetReference, type HeadlessSavedDatasetReference} from "./headless-dataset-result-plan";
+import {readHeadlessSavedContextReference, type HeadlessSavedContextReference} from "./headless-context-result-plan";
 
 export const HEADLESS_PLAN_STEP_PATH = "/aisb-headless/v1/plan-step";
 export const MANAGED_HEADLESS_PLAN_STEP_PATH = "/api/headless/agent/plan-step";
@@ -29,10 +30,12 @@ type StartedLocalDatasetEffect = {readonly kind: "started" | "replayed"; readonl
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 type SavedDatasetEffect = {readonly kind: "committed" | "replayed"; readonly operation: "data.save-prepared-dataset";
   readonly reference: HeadlessSavedDatasetReference};
+type SavedContextEffect = {readonly kind: "committed" | "replayed"; readonly operation: "context.save-result";
+  readonly reference: HeadlessSavedContextReference};
 type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly operation: "context.generate-pack" | "context.generate-rag";
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
-  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | StartedContextPackEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | SavedContextEffect | StartedContextPackEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -70,6 +73,12 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
         !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed" && kind !== "started")) return unavailable;
     if ("operation" in operationField) {
       const operation = operationField.operation;
+      if (operation === "context.save-result") {
+        if (!options?.allowContextResultSave || (kind !== "committed" && kind !== "replayed")) return unavailable;
+        const exactReference = readHeadlessSavedContextReference(reference, exact.workspaceId);
+        return exactReference ? {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt,
+          reference: exactReference}} : unavailable;
+      }
       if (operation === "context.generate-pack" || operation === "context.generate-rag") {
         if ((operation === "context.generate-pack" ? !options?.allowContextPackGeneration : !options?.allowContextRagGeneration) ||
             (kind !== "started" && kind !== "replayed")) return unavailable;

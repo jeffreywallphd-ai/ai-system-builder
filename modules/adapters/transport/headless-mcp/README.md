@@ -211,8 +211,18 @@ Poll only its accepted task or original plan step. Uncertain reservations cannot
 be adopted or restarted. Replies contain state, counts and a required-review
 fingerprint, never source contents, paths, prompts or embeddings. Separate
 Context save, queries/rebuilds and presentation are not granted.
-The generated SDK catalog has 39 distinct tools across modes, with 26 Desktop
-and 19 Managed plan-review tools; each mode stays within the existing 32 limit.
+The generated SDK catalog has 40 distinct tools across modes, with 27 Desktop
+and 20 Managed plan-review tools; each mode stays within the existing 32 limit.
+
+Version 8 separately enables `context.save-result`. Preview verifies the exact
+accepted task review; the host also binds the reviewed name before approval.
+Saving uses no model or second processing task. Both approval channels disclose
+the exact task, review, name and 64 MiB bound. A committed or replayed result
+contains an opaque Context ID, task, kind and digest, without storage keys.
+`aisb_read_context` reads only this indexed saved metadata and explicitly reports
+`byteAvailability: not-checked`. It opens no runtime or archive and grants no
+query, rebuild, publication, original-task control or window authority. Unknown
+save outcomes retain the original key and cannot be retried as new effects.
 
 Version 7 separately opts into `context.generate-rag` through the same plan
 tools. Its closed settings bind the exact saved embedding model, device and

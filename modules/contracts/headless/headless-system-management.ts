@@ -12,6 +12,8 @@ import {readHeadlessDatasetResultSavePlanRequest, type HeadlessDatasetResultSave
 import {readHeadlessContextGenerationPlanRequest, type HeadlessContextGenerationPlanRequest,
   type HeadlessContextPackPlanRequest, type HeadlessContextRagPlanRequest} from "./headless-context-plan";
 import {HEADLESS_CONTEXT_MAX_SOURCE_BYTES, HEADLESS_CONTEXT_MAX_SOURCES} from "./headless-context-preview";
+import {readHeadlessContextResultSavePlanRequest, type HeadlessContextResultSavePlanRequest} from "./headless-context-result-plan";
+import {CONTEXT_GENERATION_LIMITS} from "../context-management";
 import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEADLESS_DATASET_MAX_ROWS_PER_SOURCE} from "./headless-dataset-preparation";
 import type { HeadlessSemanticBatchRequest } from "./headless-semantic-batch";
 
@@ -36,8 +38,9 @@ export type HeadlessSystemManagementRequest =
   );
 
 export type HeadlessBuildPlanRequest = HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest | HeadlessProviderFileSavePlanRequest |
-  HeadlessLocalDatasetPlanRequest | HeadlessDatasetResultSavePlanRequest | HeadlessContextGenerationPlanRequest;
-type LegacyBuildPlanRequest = Exclude<HeadlessBuildPlanRequest, HeadlessContextGenerationPlanRequest>;
+  HeadlessLocalDatasetPlanRequest | HeadlessDatasetResultSavePlanRequest | HeadlessContextGenerationPlanRequest | HeadlessContextResultSavePlanRequest;
+type PreContextResultBuildPlanRequest = Exclude<HeadlessBuildPlanRequest, HeadlessContextResultSavePlanRequest>;
+type LegacyBuildPlanRequest = Exclude<PreContextResultBuildPlanRequest, HeadlessContextGenerationPlanRequest>;
 export interface HeadlessBuildPlanCapabilities {
   readonly allowLocalFileSave: boolean;
   readonly allowProviderFileSave?: boolean;
@@ -45,6 +48,7 @@ export interface HeadlessBuildPlanCapabilities {
   readonly allowDatasetResultSave?: boolean;
   readonly allowContextPackGeneration?: boolean;
   readonly allowContextRagGeneration?: boolean;
+  readonly allowContextResultSave?: boolean;
 }
 
 /** Serialize the saved effect without the connection identity or its receipt key. */
@@ -70,6 +74,7 @@ const LOCAL_DATASET_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v4";
 const DATASET_RESULT_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v5";
 const CONTEXT_PACK_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v6";
 const CONTEXT_RAG_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v7";
+const CONTEXT_RESULT_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v8";
 const proposalFields = ["operation", "idempotencyKey", "name", "templateId", "systemId",
   "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision", "sources", "recipe", "split", "qualityPreset",
   "reportFingerprint", "outputBaseName", "settings"];
@@ -166,6 +171,21 @@ function projectContextRagPlanStep({operation, input: {hostIncarnationId: _host,
     maximumChunks: 1000 as const, reviewRequired: true as const, explicitSaveRequired: true as const};
 }
 
+function projectContextResultPlanStep({operation, input: {hostIncarnationId: _host, workspaceId: _workspace, ...input}}:
+  HeadlessContextResultSavePlanRequest) {
+  return {operation, input, effect: "save-reviewed-context" as const, externalProviderCalls: 0 as const, modelCalls: 0 as const,
+    maximumArtifactBytes: CONTEXT_GENERATION_LIMITS.maximumArtifactBytes, exactReviewRequired: true as const};
+}
+function projectBuildPlanStep(request: HeadlessBuildPlanRequest) {
+  return request.operation === "context.save-result" ? projectContextResultPlanStep(request)
+    : request.operation === "context.generate-rag" ? projectContextRagPlanStep(request)
+      : request.operation === "context.generate-pack" ? projectContextPackPlanStep(request)
+        : request.operation === "data.save-prepared-dataset" ? projectDatasetResultPlanStep(request)
+          : request.operation === "data.prepare-local-dataset" ? projectLocalDatasetPlanStep(request)
+            : request.operation === "data.save-provider-source" ? projectProviderFilePlanStep(request)
+              : request.operation === "data.save-local-source" ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request);
+}
+
 type PlanScope = { readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId };
 type PlanPreview<V, Step> = PlanScope & {
   readonly version: V;
@@ -185,7 +205,8 @@ type MixedPreview = PlanPreview<typeof LOCAL_FILE_PLAN_PREVIEW_VERSION, SystemSt
   PlanPreview<typeof LOCAL_DATASET_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep> |
   PlanPreview<typeof DATASET_RESULT_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep> |
   PlanPreview<typeof CONTEXT_PACK_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep | ContextPackStep> |
-  PlanPreview<typeof CONTEXT_RAG_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep | ContextPackStep | ContextRagStep>;
+  PlanPreview<typeof CONTEXT_RAG_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep | ContextPackStep | ContextRagStep> |
+  PlanPreview<typeof CONTEXT_RESULT_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep>>;
 type PlanSuccess<Request, Preview> = { readonly ok: true; readonly scope: PlanScope; readonly requests: readonly Request[];
   readonly preview: Preview };
 type PlanFailure = typeof invalid | { readonly ok: false; readonly code: "headless.host-changed" };
@@ -207,12 +228,13 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
         steps.length === 0 || steps.length > HEADLESS_MAX_BUILD_PLAN_STEPS) return invalid;
     if (hostIncarnationId !== host) return { ok: false, code: "headless.host-changed" } as const;
     const scope = { hostIncarnationId, workspaceId };
-    const requests: HeadlessBuildPlanRequest[] = [];
+    const allRequests: HeadlessBuildPlanRequest[] = [];
     const keys = new Set<string>();
     const renamedSystems = new Set<SystemBuilderSystemId>();
     const selectedUploads = new Set<string>();
     const datasetSources = new Set<string>();
     const savedDatasets = new Set<string>();
+    const savedContexts = new Set<string>();
     for (const step of steps) {
       const { operation, ...fields } = readStrictPassiveRecord(step, proposalFields);
       const input = { version: HEADLESS_CONTRACT_VERSION, operation, input: { ...scope, ...fields } };
@@ -224,6 +246,8 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
             ? readHeadlessLocalDatasetPlanRequest(input, host)
             : operation === "data.save-prepared-dataset" && options?.allowDatasetResultSave
               ? readHeadlessDatasetResultSavePlanRequest(input, host)
+              : operation === "context.save-result" && options?.allowContextResultSave
+                ? readHeadlessContextResultSavePlanRequest(input, host)
               : ((operation === "context.generate-pack" && options?.allowContextPackGeneration) ||
                  (operation === "context.generate-rag" && options?.allowContextRagGeneration))
                 ? readHeadlessContextGenerationPlanRequest(input, host)
@@ -252,14 +276,20 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       } else if (request.operation === "data.save-prepared-dataset") {
         if (savedDatasets.has(request.input.taskId)) return invalid;
         savedDatasets.add(request.input.taskId);
+      } else if (request.operation === "context.save-result") {
+        if (savedContexts.has(request.input.taskId)) return invalid;
+        savedContexts.add(request.input.taskId);
       } else if (request.operation !== "systems.create") {
         // A saved revision cannot be reused after a previous change to that system.
         if (renamedSystems.has(request.input.systemId)) return invalid;
         if (request.operation === "systems.rename") renamedSystems.add(request.input.systemId);
       }
-      requests.push(request);
+      allRequests.push(request);
     }
     const previewScope = { ...scope, approval: "required" as const };
+    if (savedContexts.size) return {ok: true, scope, requests: allRequests, preview: {version: CONTEXT_RESULT_PLAN_PREVIEW_VERSION,
+      ...previewScope, steps: allRequests.map(projectBuildPlanStep)}};
+    const requests = allRequests.filter((request): request is PreContextResultBuildPlanRequest => request.operation !== "context.save-result");
     if (requests.some(request => request.operation === "context.generate-rag")) return {ok: true, scope, requests,
       preview: {version: CONTEXT_RAG_PLAN_PREVIEW_VERSION, ...previewScope,
         steps: requests.map(request => request.operation === "context.generate-rag" ? projectContextRagPlanStep(request)
@@ -268,7 +298,7 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
               : request.operation === "data.prepare-local-dataset" ? projectLocalDatasetPlanStep(request)
                 : request.operation === "data.save-provider-source" ? projectProviderFilePlanStep(request)
                   : request.operation === "data.save-local-source" ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request))}};
-    const packRequests = requests.filter((request): request is Exclude<HeadlessBuildPlanRequest, HeadlessContextRagPlanRequest> =>
+    const packRequests = requests.filter((request): request is Exclude<PreContextResultBuildPlanRequest, HeadlessContextRagPlanRequest> =>
       request.operation !== "context.generate-rag");
     if (packRequests.some(request => request.operation === "context.generate-pack")) return {ok: true, scope, requests: packRequests,
       preview: {version: CONTEXT_PACK_PLAN_PREVIEW_VERSION, ...previewScope,

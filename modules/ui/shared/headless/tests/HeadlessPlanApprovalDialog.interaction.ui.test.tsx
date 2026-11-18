@@ -13,7 +13,9 @@ import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalVa
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient } from "../HeadlessPlanApprovalDialog";
 
-for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context"]) test(variant === "mixed-context"
+for (const variant of ["local", "provider", "dataset", "result", "context", "rag", "mixed-context", "context-save", "mixed-save"]) test(variant === "context-save" || variant === "mixed-save"
+  ? `${variant} approval in both channels and modes discloses separate reviewed Context saving permissions`
+  : variant === "mixed-context"
   ? "mixed RAG and pack plans scope model permissions to their own actions in both channels and modes"
   : variant === "rag"
   ? "both approval channels and modes disclose exact RAG model, device, policy and separate save permissions"
@@ -26,7 +28,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   : variant === "provider"
   ? "both app channels disclose provider reads and approve the exact provider save"
   : "both app channels identify the exact file save and approve through the same scoped view", async () => {
-  const mixed = variant === "mixed-context";
+  const mixed = variant === "mixed-context" || variant === "mixed-save";
+  const contextSave = variant === "context-save" || variant === "mixed-save";
   const provider = variant === "provider", dataset = variant === "dataset", result = variant === "result", context = variant === "context" || mixed, rag = variant === "rag" || mixed;
   const hostIncarnationId = "d52c0a60-3384-48ce-80e4-6102898ad428";
   assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
@@ -39,6 +42,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
         ...(rag ? {kind: "rag-database", modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", device: "cpu", batchSize: 4,
           sourceChecks: {preset: "strict", allowedLanguages: ["en"], requireLicenseMetadata: true, requireConsentMetadata: true, includeSourceAttribution: false}}
           : {kind: "markdown-context-pack", cleaningPreset: "strict"})}}
+      : contextSave ? {operation: "context.save-result", taskId: "26a7ce63-a472-4779-876a-58500d26b971",
+      reportFingerprint: "a".repeat(64), name: "Reviewed support context"}
       : result ? {operation: "data.save-prepared-dataset", taskId: "26a7ce63-a472-4779-876a-58500d26b971",
       reportFingerprint: "a".repeat(64), outputBaseName: "Reviewed support answers"}
       : dataset ? {operation: "data.prepare-local-dataset", sources: [{taskId: "ingestion.synthetic", fileId: "file.synthetic", taskRevision: 4}],
@@ -50,8 +55,10 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   if (mixed) steps.push({operation: "context.generate-pack", name: "Support reference", sources: steps[0].sources,
     idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086db", settings: {kind: "markdown-context-pack", cleaningPreset: "strict",
       chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["question", "answer"]}});
+  if (variant === "mixed-save") steps.push({operation: "context.save-result", taskId: "26a7ce63-a472-4779-876a-58500d26b971",
+    reportFingerprint: "a".repeat(64), name: "Reviewed support context", idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086dc"});
   const parsed = parseHeadlessBuildPlanProposal({hostIncarnationId, workspaceId, steps}, hostIncarnationId, { allowLocalFileSave: true, allowProviderFileSave: provider, allowLocalDatasetPreparation: dataset,
-    allowDatasetResultSave: result, allowContextPackGeneration: context, allowContextRagGeneration: rag });
+    allowDatasetResultSave: result, allowContextPackGeneration: context, allowContextRagGeneration: rag, allowContextResultSave: contextSave });
   assert.ok(parsed.ok);
   const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
   const selection = { workspaceId, fingerprint, registeredClientId: "83739bf2-c08e-4d9d-ad84-da05ae2d17f3" };
@@ -61,7 +68,7 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   const view = readDesktopPlanApprovalView({ selection, viewId, preview: parsed.preview, state }, selection);
   assert.ok(view);
   assert.equal(readDesktopPlanApprovalView({ selection, viewId, preview: parsed.preview, state }, selection,
-    { allowLocalFileSave: false, allowDatasetResultSave: false }), undefined);
+    { allowLocalFileSave: false, allowDatasetResultSave: false, allowContextResultSave: false }), undefined);
   const managed = readManagedBrowserPlanApprovalRequest({ operation: "open", selection,
     document: { hostIncarnationId, workspaceId, windowId: "f57979a4-41e3-489f-b32b-40452707c441",
       uiIncarnationId: "90583b7a-16a4-4478-b28d-ec9f3349175c" } });
@@ -73,7 +80,7 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
   const original = Object.fromEntries(Object.keys(globals).map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   Object.assign(globalThis, globals);
   try {
-    for (const surface of ["popup", "chat"] as const) for (const mode of (context || rag ? ["each-change", "whole-plan"] : ["each-change"]) as ("each-change" | "whole-plan")[]) {
+    for (const surface of ["popup", "chat"] as const) for (const mode of (context || rag || contextSave ? ["each-change", "whole-plan"] : ["each-change"]) as ("each-change" | "whole-plan")[]) {
       const decisions: DesktopPlanApprovalDecision[] = [];
       const client: HeadlessPlanApprovalClient = {
         async list(workspace) { assert.equal(workspace, workspaceId); return [{ ...selection, expiresAt }]; },
@@ -96,8 +103,8 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
         await act(async () => button("Review request " + fingerprint.slice(0, 8), false).click());
         const changes = dom.window.document.querySelector('[aria-label="Requested changes"]');
         const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]');
-        assert.match(permissions?.textContent ?? "", rag ? /Build a RAG database/ : context ? /Prepare a Markdown Context pack/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
-        assert.match(changes?.textContent ?? "", rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
+        assert.match(permissions?.textContent ?? "", rag ? /Build a RAG database/ : context ? /Prepare a Markdown Context pack/ : contextSave ? /Save only the reviewed Context result/ : result ? /Save the reviewed task output/ : dataset ? /Process the listed saved local files/ : /Save the listed files in this workspace/);
+        assert.match(changes?.textContent ?? "", rag ? /Build RAG database: Support reference/ : context ? /Prepare Context pack: Support reference/ : contextSave ? /Save reviewed Context: Reviewed support context/ : result ? /Save reviewed dataset: Reviewed support answers/ : dataset ? /Prepare a dataset from saved local files/ : provider
           ? /Save the selected Hugging Face source in Data/ : /Save the selected file in Data/);
         if (provider) {
           assert.match(permissions?.textContent ?? "", /using your saved provider access/);
@@ -109,9 +116,16 @@ for (const variant of ["local", "provider", "dataset", "result", "context", "rag
           assert.match(permissions?.textContent ?? "", /immutable dataset version/);
           assert.match(permissions?.textContent ?? "", /Saving this dataset makes no model calls\. No outside publication\. No second processing run/);
           assert.doesNotMatch(permissions?.textContent ?? "", /Process the listed|Save the listed files/);
-        } else {
+        } else if (!contextSave || mixed) {
           assert.match(changes?.textContent ?? "", /File reference file\.synthetic/);
           assert.match(changes?.textContent ?? "", /Upload ingestion\.synthetic, version 4/);
+        }
+        if (contextSave) {
+          assert.match(changes?.textContent ?? "", /26a7ce63-a472-4779-876a-58500d26b971/);
+          assert.match(changes?.textContent ?? "", new RegExp("a".repeat(64)));
+          assert.match(permissions?.textContent ?? "", /64 MiB/);
+          assert.match(permissions?.textContent ?? "", /This save starts no model or processing task/);
+          assert.doesNotMatch(permissions?.textContent ?? "", /Save the listed files|immutable dataset version/);
         }
         if (dataset) {
           assert.match(permissions?.textContent ?? "", /4 files, 4 MiB per file, 16 MiB total and 1,000 rows per file/);

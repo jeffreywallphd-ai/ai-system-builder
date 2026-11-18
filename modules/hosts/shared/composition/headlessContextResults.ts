@@ -1,4 +1,5 @@
 import {createHash} from "node:crypto";
+import type {ApplicationRequestContext} from "../../../application/ports";
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
 import {readStructuredOwnedContextPlanTaskSourceDigest} from "../../../adapters/persistence/system-builder/createStructuredHeadlessContextPlanTaskStore";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
@@ -8,6 +9,24 @@ import type {ContextSavedArtifactReference} from "../../../contracts/context-man
 import {reserveStructuredContextResultSave, inspectStructuredContextResultSave, issueStructuredContextResultSave,
   commitStructuredContextResultSave, readCommittedStructuredContextResult, type ContextResultSaveEffect}
   from "../../../adapters/persistence/system-builder/createStructuredHeadlessContextResultStore";
+import {readStructuredSavedContextMetadata} from "../../../adapters/persistence/system-builder/createStructuredHeadlessContextResultStore";
+import {ReadHeadlessContextSavedUseCase} from "../../../application/use-cases/context-management/headless-context-saved.use-case";
+import type {prepareStructuredHeadlessPlanStep} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import {readHeadlessPlanStepResult, type HeadlessPlanStepRequest, type HeadlessSavedContextReference} from "../../../contracts/headless";
+
+export type HeadlessContextResultOwner = Pick<ContextGenerationUseCase, "peekAdmittedContextSaveInputs" | "saveAdmittedContextResult">;
+type PreparedContextResultStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, {kind: "context-result"}>;
+
+export function composeHeadlessContextSaved(documents: StructuredDocumentStore, rootDirectory: string) {
+  if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
+    throw new Error("Saved Context metadata requires the platform owner.");
+  const transaction = documents.runInOwnedTransaction.bind(documents);
+  return new ReadHeadlessContextSavedUseCase(async (request, context) => {
+    if (!context.organizationId || !context.principalId || context.workspaceId !== request.input.workspaceId) return;
+    return transaction(owner => readStructuredSavedContextMetadata(owner.forOrganization(context.organizationId!), rootDirectory,
+      request.input.workspaceId, request.input.contextId), () => {});
+  });
+}
 
 /** Metadata only inside the caller's owning organization transaction. The
  * already-instantiated processor is supplied, so compilation cannot open runtime
@@ -35,6 +54,7 @@ export function composeHeadlessContextResultSave(options: {
   readonly isCurrent: () => boolean;
   readonly authorizeExactSave: (owner: StructuredDocumentStore, effect: ContextResultSaveEffect) => Promise<boolean>;
   readonly now?: () => number;
+  readonly expectedName?: string;
 }) {
   const {documents, rootDirectory, processor, isCurrent, authorizeExactSave} = options;
   const effect = structuredClone(options.effect), now = options.now ?? Date.now;
@@ -49,8 +69,9 @@ export function composeHeadlessContextResultSave(options: {
   }
   async function compile(owner: StructuredDocumentStore) {
     const partition = await authorized(owner); if (!partition) return;
-    return compileHeadlessContextResultInputs(partition, effect.target.scope, effect.target.hostIncarnationId,
+    const result = await compileHeadlessContextResultInputs(partition, effect.target.scope, effect.target.hostIncarnationId,
       effect.taskId, effect.reportFingerprint, processor, async () => isCurrent() && await authorizeExactSave(owner, effect) && isCurrent());
+    return result && (options.expectedName === undefined || result.prepared.name === options.expectedName) ? result : undefined;
   }
   const sum = (prepared: PreparedContextResultReview, sourceDigest: string) =>
     createHash("sha256").update(JSON.stringify([sourceDigest, prepared]), "utf8").digest("hex");
@@ -110,4 +131,54 @@ export function composeHeadlessContextResultSave(options: {
       }, protect);} catch {return;}
     },
   };
+}
+
+/** No ordinary save fallback. A committed replay needs no live task processor. */
+export async function runPreparedHeadlessContextResult(options: {
+  readonly documents: StructuredDocumentStore;
+  readonly rootDirectory: string;
+  readonly prepared: PreparedContextResultStep;
+  readonly request: HeadlessPlanStepRequest;
+  readonly context: ApplicationRequestContext;
+  readonly canUse: () => Promise<boolean>;
+  readonly peekOwner: () => HeadlessContextResultOwner | undefined;
+}) {
+  const {prepared, request, canUse} = options, context = {...options.context};
+  const forbidden = {result: {ok: false, code: "headless.forbidden"}} as const;
+  const unconfirmed = {result: {ok: false, code: "headless.operation-unconfirmed"}} as const;
+  if (!prepared.isCurrent() || !await canUse()) return forbidden;
+  const processor = options.peekOwner();
+  const owner = composeHeadlessContextResultSave({documents: options.documents, rootDirectory: options.rootDirectory,
+    effect: prepared.effect, processor: processor ?? {peekAdmittedContextSaveInputs: () => undefined},
+    isCurrent: prepared.isCurrent, authorizeExactSave: prepared.authorizeSaveOwned, expectedName: prepared.request.input.name});
+  const observed = await owner.inspect(); if (!observed) return unconfirmed;
+  let kind: "committed" | "replayed" = "replayed";
+  let committed: {readonly contextId: string; readonly artifact: ContextSavedArtifactReference} | undefined =
+    observed.kind === "committed" ? observed : undefined;
+  if (observed.kind === "absent") {
+    if (!processor || !context.organizationId || !context.principalId || context.workspaceId !== prepared.request.input.workspaceId ||
+        !prepared.isCurrent() || !await canUse()) return forbidden;
+    const reserved = await owner.reserve(); if (!reserved) return unconfirmed;
+    if (reserved.kind === "capacity") return {result: {ok: false, code: "headless.operation-capacity"}} as const;
+    if (reserved.kind === "committed") committed = reserved;
+    else if (reserved.kind === "new") {
+      const {saveId, sourceDigest, reviewDigest} = reserved, input = prepared.request.input;
+      await processor.saveAdmittedContextResult({taskId: input.taskId, reportFingerprint: input.reportFingerprint}, context,
+        {effectId: saveId, taskId: input.taskId, reportFingerprint: input.reportFingerprint, organizationId: context.organizationId,
+          principalId: context.principalId, workspaceId: context.workspaceId, isCurrent: prepared.isCurrent,
+          stillAllowed: async () => prepared.isCurrent() && await canUse() && await prepared.stillAllowed(),
+          issue: () => owner.issue(saveId, sourceDigest, reviewDigest),
+          commit: async artifact => (await owner.commit(saveId, sourceDigest, reviewDigest, artifact)).artifact});
+      committed = await owner.readReceipt();
+      kind = "committed";
+    }
+  }
+  if (!prepared.isCurrent() || !await canUse() || !await prepared.stillAllowed()) return forbidden;
+  if (!committed) return unconfirmed;
+  const reference: HeadlessSavedContextReference = {workspaceId: prepared.request.input.workspaceId,
+    contextId: committed.contextId, taskId: prepared.request.input.taskId, kind: committed.artifact.kind, artifactDigest: committed.artifact.digest};
+  const {fingerprint, approvalRevision, step} = request.input;
+  return {result: readHeadlessPlanStepResult({ok: true, value: {kind, operation: "context.save-result", reference,
+    fingerprint, approvalRevision, step, expiresAt: prepared.expiresAt}}, request.input,
+    {allowLocalFileSave: false, allowContextResultSave: true}), publishIfCurrent: prepared.publishIfCurrent};
 }

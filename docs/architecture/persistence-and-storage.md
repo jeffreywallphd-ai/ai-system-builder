@@ -734,5 +734,13 @@ Shared composition requires an explicit save-specific current-approval/policy
 check over the supplied owner and an immediate before-commit acceptance guard.
 Serializable retries contain metadata only. Lost acknowledgement reconciliation
 reads the exact private save identity plus committed catalog/binding; it does not
-repeat effects or grant disclosure. Unknown writes remain retained. Public save
-wiring and native/crash/physical model qualification remain separate work.
+repeat effects or grant disclosure. Unknown writes remain retained. Native/crash
+and physical model qualification remain separate work.
+
+Public approved saves write version-2 result records and an opaque Context point
+index in that same metadata transaction. Reading `context.saved` verifies the
+index, canonical original owner, catalog and primary binding before projecting
+finite metadata. It asserts no byte readiness or task-control authority.
+Version-1 private receipts remain internally replayable without a public index;
+no scan or adoption backfills them. New index conflicts roll back metadata
+activation without deleting or adopting previously written bytes.

@@ -18,6 +18,7 @@ import { readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type Headles
   type HeadlessPlanReviewAgentResult, type HeadlessPlanStepRequest, type HeadlessDatasetResultSavePlanRequest,
   readHeadlessDatasetTaskReviewValue } from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
+import type {HeadlessContextResultSavePlanRequest} from "../../../contracts/headless";
 import { composeIngestionAcquisitionRepository } from "./composeIngestionAcquisitionRepository";
 
 type PreparedLocalFileStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, { kind: "local-file" }>;
@@ -262,11 +263,18 @@ export async function validateHeadlessPlanSavedSources(
   validateDataset?: (request: HeadlessLocalDatasetPlanRequest) => Promise<true | false | "stale">,
   validateDatasetResult?: (request: HeadlessDatasetResultSavePlanRequest) => Promise<true | false | "stale">,
   validateContext?: (request: HeadlessContextGenerationPlanRequest) => Promise<true | false | "stale">,
+  validateContextResult?: (request: HeadlessContextResultSavePlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
+    if (operation === "context.save-result") {
+      if (!validateContextResult) return false;
+      const eligible = await validateContextResult(request);
+      if (eligible !== true) return eligible;
+      continue;
+    }
     if (operation === "context.generate-pack" || operation === "context.generate-rag") {
       if (!validateContext) return false;
       const eligible = await validateContext(request);

@@ -1087,6 +1087,9 @@ export function composeDesktopHost(
               });
           },
         });
+      // Context is retained by the existing lifecycle. Proposals may inspect its
+      // already loaded owner, but must never create runtime dependencies.
+      let contextResultOwner: import("../../shared/composition/headlessContextResults").HeadlessContextResultOwner | undefined;
       const getContextManagementFeatures =
         featureLifecycle.registerAsyncFeature({
           featureKey: "context-management",
@@ -1095,8 +1098,8 @@ export function composeDesktopHost(
           importFeature: async () => {
             const module =
               await import("./composeDesktopContextManagementFeature");
-            return async () =>
-              module.composeDesktopContextManagementFeature({
+            return async () => {
+              const feature = module.composeDesktopContextManagementFeature({
                 artifacts: await getArtifactFeatures(),
                 runtime: await getRuntimeTaskFeatures(),
                 embeddingModels: {async resolveExistingModel(witness, context, stillAllowed) {
@@ -1109,6 +1112,9 @@ export function composeDesktopHost(
                 workspaceAuthorization,
                 now: options.now,
               });
+              contextResultOwner = feature.generation;
+              return feature;
+            };
           },
         });
       const structuredRepositoryOptions = {
@@ -2268,6 +2274,10 @@ export function composeDesktopHost(
               const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
               return composeHeadlessContextTask(platformDocuments, async () => (await getContextManagementFeatures()).generation);
             } : undefined,
+            getContextSaved: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
+              const {composeHeadlessContextSaved} = await import("../../shared/composition/headlessContextResults");
+              return composeHeadlessContextSaved(platformDocuments, registerOptions.storageRootDirectory);
+            } : undefined,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
             getDatasetTaskStatus: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");
@@ -2405,6 +2415,7 @@ export function composeDesktopHost(
                   const generation = (await getContextManagementFeatures()).generation;
                   return generation.startAdmittedContext.bind(generation);
                 },
+                peekContextResults: () => contextResultOwner,
                 systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
               dataPreview: planReviewOwner ? {

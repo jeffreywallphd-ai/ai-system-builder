@@ -35,5 +35,13 @@ catalog and primary binding; they perform no output, source or model IO.
 The caller must enforce current exact save approval/policy in that same owning
 transaction. The shared composition provides this required callback and a
 before-commit guard, with one read-only reconciliation after lost commit reply.
-It does not advertise a public save action, borrow a generation approval or
-qualify native restart/physical RAG behavior.
+The private helper alone does not advertise a public save action, borrow a
+generation approval or qualify native restart/physical RAG behavior.
+
+New result-save records use version 2 and atomically add an opaque saved-Context
+point index alongside catalog, primary binding and causal receipt. Reading that
+index verifies the exact committed owner, receipt, catalog and binding before
+projecting finite metadata. It neither enumerates files nor adopts old records.
+Version-1 private receipts remain internally replayable without gaining a public
+index. Current workspace read permission remains the caller's obligation;
+original task/client ownership grants no authority to a new reader.

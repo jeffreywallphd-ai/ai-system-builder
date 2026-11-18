@@ -152,6 +152,7 @@
         "aisb_preview_dataset_preparation",
         "aisb_preview_selected_local_file",
         "aisb_preview_selected_provider_file",
+        "aisb_read_context",
         "aisb_read_conversation_task",
         "aisb_read_system",
         "aisb_request_build_plan_approval",
@@ -179,6 +180,7 @@
         "aisb_preview_dataset_preparation",
         "aisb_preview_selected_local_file",
         "aisb_preview_selected_provider_file",
+        "aisb_read_context",
         "aisb_read_system",
         "aisb_request_build_plan_approval",
         "aisb_run_approved_build_step"
@@ -1353,6 +1355,40 @@
             "type": "array",
             "items": {
               "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "context.save-result"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "reportFingerprint": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "taskId",
+                    "reportFingerprint",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
                 {
                   "type": "object",
                   "properties": {
@@ -2794,6 +2830,32 @@
       }
     },
     {
+      "name": "aisb_read_context",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "contextId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "contextId"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "aisb_read_conversation_task",
       "inputSchema": {
         "type": "object",
@@ -3065,6 +3127,40 @@
             "type": "array",
             "items": {
               "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "context.save-result"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "reportFingerprint": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "taskId",
+                    "reportFingerprint",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
                 {
                   "type": "object",
                   "properties": {

@@ -289,3 +289,17 @@ or response failure. The shared composition requires an exact save-specific
 policy/approval check, not the earlier generation approval. Public save contract
 and approval wiring follow separately; this component grants no external,
 native-recovery or physical model/retrieval exception.
+
+### Existing-owner public reviewed save connection
+
+The approved extension separately exposes `context.save-result` through preview
+version 8, exact accepted task/review/name binding and both existing approval
+channels/modes. The save-specific current policy fence surrounds reserve, issue
+and atomic catalog/binding/causal-receipt activation. A version-2 opaque Context
+point index commits in that same transaction. Passive `context.saved` reads
+finite metadata under current workspace/artifact permission and explicitly do
+not verify archive bytes. They grant no original-task control. Private version-1
+receipts remain replayable without public adoption. Desktop uses its retained
+owner for metadata-only proposal checks. Committed replay needs no runtime owner.
+No new engine, provider, external transfer, native exception or parent
+qualification follows from this connection.

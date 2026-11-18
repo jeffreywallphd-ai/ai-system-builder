@@ -594,8 +594,30 @@ its before-commit guard retains current host acceptance. It recompiles the exact
 review/source before issue and commit. A lost commit reply permits one exact
 read-only receipt reconciliation, never another write or outward authority.
 
-Both hosts inject optional byte/source ports for structured storage. No public
-save request, approval projection, MCP or UI route is enabled here. Those must
-bind the exact save authorizer before use; a generation approval is insufficient.
+Both hosts inject optional byte/source ports for structured storage. That
+internal component supplies no public authority. The public connection below
+binds the exact save authorizer; a generation approval is insufficient.
 Synthetic lifecycle/transaction tests and cooperative file checks are distinct
 from real embeddings, retrieval, native custody or process-restart recovery.
+
+### Separately approved public result saves
+
+Hosts opt into `context.save-result` with preview version 8. The accepted task,
+exact review fingerprint and reviewed name are checked before proposal storage
+and again around one-use issue and metadata commit. Both approval modes and
+channels disclose the save permission and existing 64 MiB limit. Versions 1
+through 7 retain their fingerprints. Saving never starts a model or processing
+task and grants no query, rebuild, external publication or window authority.
+
+New version-2 result records add an opaque Context point index to the same
+catalog/binding/causal-receipt transaction. `context.saved` verifies this metadata
+and returns only ID, original task, kind, digest, name and bounded counts. Its
+explicit `byteAvailability: not-checked` is not archive or retrieval readiness.
+Current workspace/artifact read permission can disclose saved workspace metadata;
+it cannot adopt the original actor/client's task. Version-1 internal receipts
+remain replayable but are not automatically indexed or publicly adopted.
+
+Desktop proposal checks use only its cached retained Context owner, not lazy
+runtime initialization inside a metadata transaction. Both hosts replay a
+committed save without that owner. Unknown effects retain uncertainty and the
+existing ordinary-action denial; no second publication or file adoption follows.

@@ -513,6 +513,7 @@ export async function createServer(
           allowDatasetResultSave: planReview.allowDatasetResultSave,
           allowContextPackGeneration: planReview.allowContextPackGeneration,
           allowContextRagGeneration: planReview.allowContextRagGeneration,
+          allowContextResultSave: planReview.allowContextResultSave,
           planReview: async (input, agent, current) =>
             agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(runPlanStep ? { planStep: async (input, agent, current) =>

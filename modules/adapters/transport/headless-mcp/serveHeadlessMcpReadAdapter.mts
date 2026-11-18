@@ -178,6 +178,7 @@ function addSystemBuilderTools(server: McpServer) {
   const allowDatasetResultSave = enablePlanReview;
   const allowContextPackGeneration = enablePlanReview;
   const allowContextRagGeneration = enablePlanReview;
+  const allowContextResultSave = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -230,6 +231,13 @@ function addSystemBuilderTools(server: McpServer) {
         input.hostIncarnationId as HeadlessHostIncarnationId);
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
+    server.registerTool("aisb_read_context", {
+      description: "Read bounded metadata for one exact saved Context ID in this workspace. Returns its causal saved reference, name, digest and counts. Reads no artifact bytes, source text, private paths or embeddings and starts no model/runtime. Byte availability remains not checked; this read grants no query, rebuild or window permission.",
+      inputSchema: z.strictObject({...workspaceTarget, contextId: z.string().uuid()}), annotations: queryHints,
+    }, (input, context) => {
+      const parsed = headless.readHeadlessContextSavedRequest({version, operation: "context.saved", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     server.registerTool("aisb_dataset_task_status", {
       description: "Read one accepted dataset task or recover its receipt from a known approved plan step. Returns only task identity and state. Unconfirmed reservations are not adopted or restarted. This read cannot prepare, approve, save or publish output.",
       inputSchema: z.strictObject({...workspaceTarget, selection: datasetSelection}), annotations: queryHints,
@@ -276,6 +284,8 @@ function addSystemBuilderTools(server: McpServer) {
     return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
   });
   const step = z.discriminatedUnion("operation", [
+    z.strictObject({operation: z.literal("context.save-result"), idempotencyKey, taskId: z.string().uuid(),
+      reportFingerprint: z.string().regex(/^[a-f0-9]{64}$/), name: z.string().min(1).max(120)}),
     z.strictObject({operation: z.literal("context.generate-rag"), idempotencyKey, name: z.string().min(1).max(120),
       sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextRagSettings}),
     z.strictObject({operation: z.literal("context.generate-pack"), idempotencyKey, name: z.string().min(1).max(120),
@@ -301,13 +311,13 @@ function addSystemBuilderTools(server: McpServer) {
   });
   server.registerTool("aisb_preview_build_plan", {
     description: allowLocalFileSave
-      ? "Check proposed system changes, selected file saves, provided-row dataset preparation, reviewed dataset saves and source-derived Context packs with no model calls. Preparation sources must already be saved. A dataset save needs the accepted task and exact approved quality report. The preview identifies permissions and limits. Execution requires separate approval."
+      ? "Check proposed system changes, selected file saves, provided-row dataset preparation, reviewed dataset saves, Context generation and separately reviewed Context saves. Sources must already be saved. RAG generation requires an approved installed embedding model; deterministic packs and result saves call no model. The preview identifies exact permissions and limits. Execution requires separate approval."
       : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -317,6 +327,16 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "context.save-result") {
+        const selection = {kind: "task", taskId: request.input.taskId} as const;
+        const reviewed = await forward?.({version, operation: "context.task", input: {
+          hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId, selection}}, signal);
+        if (!reviewed?.ok) return toolResult(reviewed ?? unavailable);
+        const report = headless.readHeadlessContextTaskValue(reviewed.value, selection)?.review;
+        if (!report || !report.requiresExplicitSave || report.reportFingerprint !== request.input.reportFingerprint)
+          return toolResult(unavailable);
+        continue;
+      }
       if (request.operation === "context.generate-pack" || request.operation === "context.generate-rag") {
         const {idempotencyKey: _key, ...selected} = request.input;
         const preview = await forward?.({version, operation: "context.preview-generation", input: selected}, signal);
@@ -413,7 +433,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

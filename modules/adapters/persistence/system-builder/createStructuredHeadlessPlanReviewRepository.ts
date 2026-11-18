@@ -61,6 +61,7 @@ export function createStructuredHeadlessPlanReviewRepository(
   allowContextRagGeneration = false,
   bindContextModels?: (partition: StructuredDocumentStore, requests: readonly HeadlessBuildPlanRequest[]) =>
     Promise<readonly ContextPlanModelBinding[] | undefined>,
+  allowContextResultSave = false,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -108,7 +109,7 @@ export function createStructuredHeadlessPlanReviewRepository(
       const proposal = decodeProposal(input.proposal, input.target, allowLocalFileSave && Boolean(validateNewProposal),
         allowProviderFileSave && Boolean(validateNewProposal), allowLocalDatasetPreparation && Boolean(validateNewProposal),
         allowDatasetResultSave && Boolean(validateNewProposal), allowContextPackGeneration && Boolean(validateNewProposal),
-        allowContextRagGeneration && Boolean(validateNewProposal));
+        allowContextRagGeneration && Boolean(validateNewProposal), allowContextResultSave && Boolean(validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
       return run(input, "propose", async (store, target, key, requireFresh) => {
         const existing = await readReview(store, target, key);
@@ -193,9 +194,11 @@ function planKey(target: HeadlessPlanReviewTarget) {
 function sha256(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowLocalFileSave: boolean, allowProviderFileSave = false,
-  allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false, allowContextRagGeneration = false) {
+  allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false, allowContextRagGeneration = false,
+  allowContextResultSave = false) {
   const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId,
-    { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration });
+    { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration,
+      allowContextResultSave });
   if (proposal.ok && proposal.scope.workspaceId === target.scope.workspaceId &&
       sha256(JSON.stringify(proposal.preview)) === target.fingerprint) return proposal;
 }
@@ -205,7 +208,7 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
   if (!document) return;
   const raw = readStrictPassiveRecord(document.value, ["version", "proposal", "state", "contextModels"]);
   const {version, proposal, state} = raw;
-  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true);
+  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true);
   if (!parsed) throw new Error("Stored plan review is unavailable.");
   const normalizedState = readState(state, document.revision, parsed.requests.length);
   const contextModels = version === 2 ? readContextModels(raw.contextModels, parsed.requests) : undefined;
@@ -221,7 +224,8 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
 export async function readStructuredHeadlessPlanModelPermission(partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget) {
   if (!validTarget(target) || partition.organizationId !== target.scope.organizationId) return;
   const review = await readReview(partition, target, planKey(target));
-  return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag")} : undefined;
+  return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag"),
+    requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result")} : undefined;
 }
 
 /** Used by the execution adapter after current authorization in the same transaction. */

@@ -61,6 +61,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   readonly allowDatasetResultSave?: boolean;
   readonly allowContextPackGeneration?: boolean;
   readonly allowContextRagGeneration?: boolean;
+  readonly allowContextResultSave?: boolean;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, planClientId, platform, rootDirectory, contexts, placement, now = Date.now} = options;
@@ -74,6 +75,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   const allowDatasetResultSave = options.allowDatasetResultSave === true && stableReads !== undefined;
   const allowContextPackGeneration = options.allowContextPackGeneration === true && stableReads !== undefined;
   const allowContextRagGeneration = options.allowContextRagGeneration === true && stableReads !== undefined;
+  const allowContextResultSave = options.allowContextResultSave === true && stableReads !== undefined;
   const views = new Map<string, View>();
 
   async function authorize(owner: StructuredDocumentStore, identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
@@ -222,12 +224,12 @@ export function composeManagedHeadlessPlanApprovals(options: {
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
         const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
           selection, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave,
-            allowContextPackGeneration, allowContextRagGeneration });
+            allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
         const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
           step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
-          step.operation === "context.generate-pack" || step.operation === "context.generate-rag");
+          step.operation === "context.generate-pack" || step.operation === "context.generate-rag" || step.operation === "context.save-result");
         const usesModel = ready.preview.steps.some(step => step.operation === "context.generate-rag");
         const requiredScopes = usesModel ? ragScopes : fileSave ? filePlanScopes : planScopes;
         if (!await verifyAccess(identity, workspaceId, active, requiredScopes)) return forbidden;

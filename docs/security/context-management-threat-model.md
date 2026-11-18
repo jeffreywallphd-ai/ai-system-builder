@@ -448,6 +448,24 @@ catalog and primary binding share its causal-receipt transaction. The shared
 composition requires a trusted exact-save authorizer against that same owner;
 there is no permissive default or generation-approval substitution. Lost commit
 reply reconciliation is one private point read and never disclosure authority.
-The public approved-save decoder/projection/routes are still absent at this
-component boundary. File/worker/native restart custody and physical retrieval
-remain independently qualified obligations.
+This internal component alone supplies no public approval authority.
+File/worker/native restart custody and physical retrieval remain independently
+qualified obligations.
+
+### Public save approval and passive saved metadata
+
+The closed version-8 save request binds an accepted original task, review and
+name to separate current artifact/plan authority. Generation approval cannot
+authorize it. Metadata-only proposal checks use the retained owner; they cannot
+initialize a runtime inside a transaction. Issue and commit recheck the exact
+save and original actor/client/source association. Unknown outcomes cannot
+repeat publication or bypass through ordinary save/discard/cancel.
+
+An insert-only opaque Context index joins the causal receipt transaction. Passive
+reads verify the exact index, owner, catalog and primary binding, then project
+finite metadata under current workspace/artifact permission. Private owner facts,
+handles, paths, source text and vectors never enter that projection. Saved-resource
+read permission grants no original-task control. Version-1 private records are
+not adopted. A metadata reply explicitly does not assert current byte readiness.
+Synthetic SQLite/Core/SDK fixtures do not qualify real archives, models,
+PostgreSQL concurrency, browser delivery, native races or process recovery.

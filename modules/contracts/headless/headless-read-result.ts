@@ -56,8 +56,10 @@ type WorkflowField = {
 
 import type {HeadlessContextModels, HeadlessContextPreview} from "./headless-context-preview";
 import type {HeadlessContextTaskValue} from "./headless-context-task";
+import type {HeadlessContextSavedValue} from "./headless-context-result-plan";
 
 export type HeadlessReadResult =
+  | {readonly ok: true; readonly operation: "context.saved"; readonly value: HeadlessContextSavedValue}
   | {readonly ok: true; readonly operation: "context.task"; readonly value: HeadlessContextTaskValue}
   | {readonly ok: true; readonly operation: "context.models"; readonly value: HeadlessContextModels}
   | {readonly ok: true; readonly operation: "context.preview-generation"; readonly value: HeadlessContextPreview}

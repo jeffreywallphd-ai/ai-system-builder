@@ -19,6 +19,7 @@ const forbidden = { ok: false, code: "forbidden" } as const;
 const unconfirmed = { ok: false, code: "unconfirmed" } as const;
 const requiredScopes = ["workspace:read", "asset:read", "asset:write"] as const;
 const ragScopes = [...requiredScopes, "artifact:read", "artifact:write", "model:read"] as const;
+const contextSaveScopes = [...requiredScopes, "artifact:read", "artifact:write"] as const;
 type CapturePlanReviewClients = ReturnType<typeof createDesktopHeadlessClientAuthority>["capturePlanReviewClients"];
 
 interface DesktopPlanReviewSelection {
@@ -49,7 +50,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
   const { organizationId, principalId } = identity;
 
   async function authorize(owner: StructuredDocumentStore, workspaceId: WorkspaceId, operation: "list" | "read" | "decide",
-    current: () => boolean, usesModel = false) {
+    current: () => boolean, usesModel = false, savesContext = false) {
     try {
       if (!current() || !isWorkspaceId(workspaceId)) return false;
       const documents = owner.forOrganization(organizationId);
@@ -58,7 +59,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== organizationId ||
           workspace.status !== "active") return false;
       await composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }).authorizeWorkspaceOperation({
-        workspace, operation: `headless.plan-approval.${operation}`, requiredScopes: usesModel ? ragScopes : requiredScopes,
+        workspace, operation: `headless.plan-approval.${operation}`, requiredScopes: usesModel ? ragScopes : savesContext ? contextSaveScopes : requiredScopes,
       });
       return current();
     } catch { return false; }
@@ -77,6 +78,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       if (!await authorize(owner, workspaceId, kind, current)) return false;
       const permissions = await readStructuredHeadlessPlanModelPermission(owner.forOrganization(organizationId), target);
       if (!permissions || !current() || (permissions.requiresModelRead && !await authorize(owner, workspaceId, kind, current, true))) return false;
+      if (permissions.requiresArtifactWrite && !await authorize(owner, workspaceId, kind, current, permissions.requiresModelRead, true)) return false;
       const clients = await capturePlanReviewClients(owner.forOrganization(organizationId), workspaceId);
       const requester = clients.find(client => client.registeredClientId === registeredClientId);
       if (!requester || !current()) return false;

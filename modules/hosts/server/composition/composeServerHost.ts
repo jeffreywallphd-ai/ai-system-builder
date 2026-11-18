@@ -1707,6 +1707,10 @@ export function composeServerHost(
               const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
               return composeHeadlessContextTask(managedDocuments, async () => contextGenerationUseCase);
             },
+            getContextSaved: async () => {
+              const {composeHeadlessContextSaved} = await import("../../shared/composition/headlessContextResults");
+              return composeHeadlessContextSaved(managedDocuments, registerOptions.storageRootDirectory);
+            },
             getDatasetTaskStatus: async () => {
               const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");
               return composeHeadlessDatasetTaskStatus(managedDocuments, async () => prepareTrainingDatasetUseCase);
@@ -1740,6 +1744,7 @@ export function composeServerHost(
             getDatasetStart: async () => prepareTrainingDatasetUseCase.startAdmittedLocalProvidedDataset.bind(prepareTrainingDatasetUseCase),
             getDatasetResults: async () => prepareTrainingDatasetUseCase,
             getContextStart: async () => contextGenerationUseCase.startAdmittedContext.bind(contextGenerationUseCase),
+            peekContextResults: () => contextGenerationUseCase,
           }) } : {}),
         };
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {
@@ -1770,7 +1775,8 @@ export function composeServerHost(
             allowLocalDatasetPreparation: Boolean(managedDocuments.publishWithStableReads),
             allowDatasetResultSave: Boolean(managedDocuments.publishWithStableReads),
             allowContextPackGeneration: Boolean(managedDocuments.publishWithStableReads),
-            allowContextRagGeneration: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
+            allowContextRagGeneration: Boolean(managedDocuments.publishWithStableReads),
+            allowContextResultSave: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),

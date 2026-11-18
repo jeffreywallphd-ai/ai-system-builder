@@ -24,7 +24,7 @@ test("portable Context guidance and discovery separate metadata from execution a
   for (const instruction of ["entire `control-ai-system-builder` directory", "every file in",
     "same repository revision", "does not install an MCP server or", "pair it separately"])
     assert.ok(skill.replace(/\s+/g, " ").includes(instruction), `Missing portable skill installation boundary: ${instruction}`);
-  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation", "aisb_context_task"])
+  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation", "aisb_context_task", "aisb_read_context"])
     assert.equal(mode.tools.includes(tool), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
   for (const text of ["taskRevision", "versionDigest", "modelRecordId", "updatedAt", "not-checked", "license rights", "four sources", "1,000", "32 recorded"])
     assert.ok(guide.includes(text), `Missing Context client limit or authority guidance: ${text}`);
@@ -36,6 +36,9 @@ test("portable Context guidance and discovery separate metadata from execution a
   for (const text of ["context.generate-rag", "Version 7", "modelUpdatedAt", "model.safetensors", "before source",
     "logical model ID is unchanged", "memory guard", "does not itself prove retrieval quality"])
     assert.ok(guide.includes(text), `Missing installed RAG authority or profile limit: ${text}`);
+  for (const text of ["context.save-result", "version 8", "aisb_read_context", "64 MiB", "byteAvailability: not-checked",
+    "Generation approval does not approve saving", "Older private saves", "without opening the task processor"])
+    assert.ok(guide.includes(text), `Missing separately approved Context save boundary: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

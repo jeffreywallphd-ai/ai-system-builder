@@ -85,6 +85,7 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
         allowDatasetResultSave: options?.allowDatasetResultSave === true,
         allowContextPackGeneration: options?.allowContextPackGeneration === true,
           allowContextRagGeneration: options?.allowContextRagGeneration === true,
+        allowContextResultSave: options?.allowContextResultSave === true,
       });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }

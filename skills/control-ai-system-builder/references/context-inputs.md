@@ -68,9 +68,37 @@ replay can return only its already accepted task. Reserved or issued attempts
 without a confirmed acceptance remain unconfirmed. Do not change keys or start
 another task to bypass that outcome. Losing access can suppress a reply after
 the task was accepted; it does not prove cancellation. Host-exit recovery,
-Context result saving, active RAG queries/rebuilds and result presentation need
+Active RAG queries/rebuilds and result presentation need
 their own supported capability and qualification. Do not describe them as
 available based on this pack-processing receipt.
+
+## Save a reviewed Context result
+
+Check that the host offers `context.save-result` before proposing a save. Use
+the accepted task and its current `reportFingerprint` from `aisb_context_task`.
+Keep the exact reviewed name. Propose `context.save-result` with that task,
+fingerprint, name and a fresh idempotency key. Preview version 8 identifies this
+separate save permission and the 64 MiB limit. The host checks that the name and
+review still match its owned result. Generation approval does not approve saving.
+
+Submit the exact save plan. The user can approve the full scoped plan or each
+change through the app popup or approval chat. Run only the approved step.
+Saving starts no model, does not repeat processing and grants no publication,
+query, rebuild or window permission. A confirmed reply contains an opaque
+`contextId`, task ID, kind and digest. It contains no path or storage key.
+
+Use `aisb_read_context` with that exact context ID to check finite saved metadata.
+`byteAvailability: not-checked` means the metadata read did not open the archive,
+check current bytes, run a model or prove retrieval quality. Saved workspace
+metadata requires current read permission; it does not give a different client
+control of the original task. Older private saves without this public index are
+not adopted or discovered through this tool.
+
+After an uncertain save, keep the original plan and key. An exact approved-step
+replay can return a committed receipt without opening the task processor or
+writing bytes again. An unconfirmed attempt remains uncertain. Do not retry with
+a new key, use ordinary save/discard/cancel, or delete retained output to bypass
+that state. Host-exit and native recovery retain their separate limits.
 
 ## Build RAG with an installed local model
 

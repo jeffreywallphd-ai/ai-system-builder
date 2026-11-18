@@ -177,5 +177,12 @@ With structured metadata configured, the artifact feature also supplies the
 private Context result-byte publisher and owned-output reader. The Context
 feature injects both into the existing generation owner. Missing capabilities
 deny admitted saving before issue. Ordinary Context saving keeps its current
-path. Public save approval/routes are not enabled by this internal composition;
-the future exact-save host authorizer must own the metadata transaction fence.
+path. That internal composition alone grants no public save authority.
+
+The public version-8 `context.save-result` step now binds its own exact approval
+and current artifact/plan permissions to that metadata transaction fence.
+Proposal validation uses only the already instantiated retained Context owner;
+it never initializes the runtime inside the transaction. Confirmed receipt replay
+does not require the owner to remain loaded. `context.saved` is a separate passive
+indexed metadata read with current workspace/artifact permissions. It provides
+no archive-readiness, query, rebuild, model or window qualification.

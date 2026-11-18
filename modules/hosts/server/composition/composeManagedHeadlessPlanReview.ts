@@ -30,6 +30,8 @@ import { composeIngestionAcquisitionRepository } from "../../shared/composition/
 import type { ManagedPlanReviewRegistration } from "../security/resolveManagedHeadlessClientPolicy";
 import {compileHeadlessContextPlanInputs, compileHeadlessContextModelBindings, runPreparedHeadlessContextPack, type StartHeadlessContext}
   from "../../shared/composition/headlessContextExecution";
+import {compileHeadlessContextResultInputs, runPreparedHeadlessContextResult, type HeadlessContextResultOwner}
+  from "../../shared/composition/headlessContextResults";
 
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
@@ -53,6 +55,7 @@ export function composeManagedHeadlessPlanReview(options: {
   readonly getDatasetStart?: () => Promise<StartHeadlessDataset>;
   readonly getDatasetResults?: () => Promise<HeadlessDatasetResultOwner>;
   readonly getContextStart?: () => Promise<StartHeadlessContext>;
+  readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
 }) {
   const { hostIncarnationId, platform, rootDirectory, workspaces, contexts, authorization, placement, systems } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
@@ -62,6 +65,7 @@ export function composeManagedHeadlessPlanReview(options: {
   const getDatasetStart = platform.publishWithStableReads ? options.getDatasetStart : undefined;
   const getDatasetResults = platform.publishWithStableReads ? options.getDatasetResults : undefined;
   const getContextStart = platform.publishWithStableReads ? options.getContextStart : undefined;
+  const peekContextResults = platform.publishWithStableReads ? options.peekContextResults : undefined;
 
   function admitWorkspace(requested: Pick<HeadlessPlanReviewAgentRequest["target"], "workspaceId" | "hostIncarnationId">,
     operation: string, registration: ManagedPlanReviewRegistration, isOpen: () => boolean,
@@ -152,9 +156,10 @@ export function composeManagedHeadlessPlanReview(options: {
       const savesFile = request.operation === "plan.submit" &&
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
           step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
-          step.operation === "context.generate-pack" || step.operation === "context.generate-rag");
+          step.operation === "context.generate-pack" || step.operation === "context.generate-rag" || step.operation === "context.save-result");
       const usesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "context.generate-rag");
       if (request.operation === "plan.submit" && request.proposal.requests.some(step =>
+        step.operation === "context.save-result" ? !peekContextResults :
         step.operation === "context.generate-pack" || step.operation === "context.generate-rag" ? !getContextStart :
         step.operation === "data.save-prepared-dataset" ? !getDatasetResults :
         step.operation === "data.save-local-source" ? !finalize : step.operation === "data.prepare-local-dataset" ? !getDatasetStart :
@@ -203,8 +208,14 @@ export function composeManagedHeadlessPlanReview(options: {
             const compiled = await compileHeadlessContextPlanInputs(rootDirectory, documents, selected, scope, async () => current());
             return compiled.ok && compiled.operation === "context.preview-generation" ? true :
               !compiled.ok && compiled.code === "headless.stale" ? "stale" : false;
+          }, async selected => {
+            const processor = peekContextResults?.(); if (!processor) return false;
+            const compiled = await compileHeadlessContextResultInputs(documents, scope, hostIncarnationId,
+              selected.input.taskId, selected.input.reportFingerprint, processor, async () => current());
+            return compiled?.prepared.name === selected.input.name;
           }), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart), Boolean(getDatasetResults), Boolean(getContextStart), Boolean(getContextStart),
-          getContextStart ? (partition, requests) => compileHeadlessContextModelBindings(rootDirectory, partition, requests, scope, async () => current()) : undefined);
+          getContextStart ? (partition, requests) => compileHeadlessContextModelBindings(rootDirectory, partition, requests, scope, async () => current()) : undefined,
+          Boolean(peekContextResults));
         const outcome = request.operation === "plan.submit"
           ? await reviews.propose({ target, isCurrent: current, proposal: {
               ...request.proposal.scope,
@@ -224,7 +235,7 @@ export function composeManagedHeadlessPlanReview(options: {
       if (!access || !systems || !platform.publishWithStableReads) return { result: forbidden };
       const { target, scope, current, authorizeOwned } = access;
       const { fingerprint, approvalRevision, step } = request.input;
-      const fileAccess = finalize || finalizeProvider || getDatasetStart || getDatasetResults || getContextStart
+      const fileAccess = finalize || finalizeProvider || getDatasetStart || getDatasetResults || getContextStart || peekContextResults
         ? admitWorkspace(request.input, request.operation, registration, isOpen, filePlanScopes) : undefined;
       const modelAccess = getContextStart ? admitWorkspace(request.input, request.operation, registration, isOpen, ragScopes) : undefined;
       try {
@@ -233,7 +244,7 @@ export function composeManagedHeadlessPlanReview(options: {
           target, approvalRevision, step, isCurrent: current,
         }, async (owner, _scope, operation) => operation?.operation === "context.generate-rag" ? Boolean(await modelAccess?.authorizeOwned(owner)) :
           operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source" ||
-          operation?.operation === "data.prepare-local-dataset" || operation?.operation === "data.save-prepared-dataset" || operation?.operation === "context.generate-pack"
+          operation?.operation === "data.prepare-local-dataset" || operation?.operation === "data.save-prepared-dataset" || operation?.operation === "context.generate-pack" || operation?.operation === "context.save-result"
           ? Boolean(await fileAccess?.authorizeOwned(owner)) : authorizeOwned(owner),
         Date.now, "stable-reads", Boolean(finalize && fileAccess), finalizeProvider && fileAccess
           ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
@@ -250,8 +261,13 @@ export function composeManagedHeadlessPlanReview(options: {
             const compiled = await compileHeadlessContextPlanInputs(rootDirectory, owner.forOrganization(scope.organizationId), selected,
               scope, async () => current() && await contextAccess.authorizeOwned(owner));
             return compiled.ok && compiled.operation === "context.preview-generation" ? compiled.prepared : undefined;
-          } : undefined);
+          } : undefined, peekContextResults ? rootDirectory : undefined);
         if (!prepared || !prepared.isCurrent()) return { result: forbidden };
+        if (prepared.kind === "context-result") {
+          if (!fileAccess || !peekContextResults) return {result: forbidden};
+          return runPreparedHeadlessContextResult({documents: platform, rootDirectory, prepared, request, context: scope,
+            canUse: fileAccess.authorizeCurrent, peekOwner: peekContextResults});
+        }
         if (prepared.kind === "context-pack") {
           const contextAccess = prepared.request.operation === "context.generate-rag" ? modelAccess : fileAccess;
           if (!contextAccess || !getContextStart) return {result: forbidden};
@@ -311,6 +327,7 @@ export function composeManagedHeadlessPlanReview(options: {
     allowLocalDatasetPreparation: Boolean(getDatasetStart),
     allowDatasetResultSave: Boolean(getDatasetResults),
     allowContextPackGeneration: Boolean(getContextStart),
+    allowContextResultSave: Boolean(peekContextResults),
     allowContextRagGeneration: Boolean(getContextStart),
     runStep: systems && platform.publishWithStableReads ? handlers.runStep : undefined,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads

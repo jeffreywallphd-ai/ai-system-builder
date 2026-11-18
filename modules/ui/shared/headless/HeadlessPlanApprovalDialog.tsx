@@ -197,6 +197,7 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const datasetSaving = view.preview.steps.some(step => step.operation === "data.save-prepared-dataset");
   const contextProcessing = view.preview.steps.some(step => step.operation === "context.generate-pack");
   const ragProcessing = view.preview.steps.some(step => step.operation === "context.generate-rag");
+  const contextSaving = view.preview.steps.some(step => step.operation === "context.save-result");
   const processing = datasetProcessing || contextProcessing || ragProcessing;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
@@ -228,6 +229,11 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Apply the selected source checks and attribution setting. Known license terms stay recorded; unknown terms stay unknown.</li>
         <li>Review the result before a separate save request. Model downloads, installation and outside publication need separate permission.</li>
       </> : null}
+      {contextSaving ? <>
+        <li>Save only the reviewed Context result with the name and task shown below. Limit: 64 MiB.</li>
+        <li>Use the exact review fingerprint. Add the result to this workspace's Context collection.</li>
+        <li>This save starts no model or processing task. Queries, rebuilding, outside publication and window control need separate permission.</li>
+      </> : null}
       <li>Limit of {state.stepCount} {processing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
       {providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
@@ -256,6 +262,10 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
           <strong>Save reviewed dataset: {step.input.outputBaseName}</strong>
           <div>Preparation task: {step.input.taskId}</div>
           <div>Approved quality report: {step.input.reportFingerprint}</div>
+        </> : step.operation === "context.save-result" ? <>
+          <strong>Save reviewed Context: {step.input.name}</strong>
+          <div>Context task: {step.input.taskId}</div>
+          <div>Reviewed result: {step.input.reportFingerprint}</div>
         </> : step.operation === "context.generate-pack" || step.operation === "context.generate-rag" ? <>
           <strong>{step.operation === "context.generate-rag" ? "Build RAG database" : "Prepare Context pack"}: {step.input.name}</strong>
           <ul>{step.input.sources.map(source => <li key={JSON.stringify(source)}>

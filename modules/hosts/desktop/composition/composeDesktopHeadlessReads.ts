@@ -1,5 +1,6 @@
 import type {PreviewHeadlessContextInputsUseCase} from "../../../application/use-cases/context-management/headless-context-preview.use-case";
 import type {ReadHeadlessContextTaskUseCase} from "../../../application/use-cases/context-management";
+import type {ReadHeadlessContextSavedUseCase} from "../../../application/use-cases/context-management";
 import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
@@ -71,6 +72,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
+  readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
@@ -80,6 +82,7 @@ export function composeDesktopHeadlessReads(dependencies: {
     workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen } = dependencies;
 
   const supports = (operation: HeadlessReadOperation) => {
+    if (operation === "context.saved") return Boolean(dependencies.getContextSaved);
     if (operation === "context.task") return Boolean(dependencies.getContextTask);
     if (isHeadlessContextReadOperation(operation)) return Boolean(dependencies.getContextInputs);
     if (operation === "data.ingestion-status") return Boolean(getIngestionTasks);
@@ -106,7 +109,7 @@ export function composeDesktopHeadlessReads(dependencies: {
           ? ["workspace:read", "asset:read", "asset:write"]
           : operation === "context.models" ? ["workspace:read", "model:read"]
           : operation === "context.preview-generation" ? ["workspace:read", "artifact:read", "model:read"]
-          : operation === "context.task" ? ["workspace:read", "artifact:read"]
+          : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
           : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"]
           : operation === "workspaces.list" ? ["workspace:read"]
           : operation === "workflows.list" || operation === "workflows.prepare" || operation === "conversation-tasks.read"
@@ -133,13 +136,13 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
-      if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task") && grant.planReview !== true) return forbidden;
+      if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved") && grant.planReview !== true) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
-          (!(isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task") || latest.planReview === true && latest.isCurrent?.() !== false) &&
+          (!(isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved") || latest.planReview === true && latest.isCurrent?.() !== false) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -162,7 +165,7 @@ export function composeDesktopHeadlessReads(dependencies: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
               op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
-              (!(isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task") || latest.planReview === true)),
+              (!(isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved") || latest.planReview === true)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -174,6 +177,15 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "context.saved": {
+          if (!dependencies.getContextSaved) return unavailable;
+          const saved = await dependencies.getContextSaved();
+          if (!await currentScopedGrant([workspaceId]) || !await authorizedWorkspace(workspaceId, operation)) return forbidden;
+          const result = await saved.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {
+            organizationId: identity.organizationId, principalId: identity.principalId, workspaceId}, clientId,
+            stillAllowed: async () => Boolean(await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation))});
+          return await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation) ? result : forbidden;
+        }
         case "context.task": {
           if (!dependencies.getContextTask) return unavailable;
           const task = await dependencies.getContextTask();

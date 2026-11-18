@@ -60,6 +60,18 @@ current automated security checks and a separate review for Asset closure.
 
 ## Start a work request
 
+The fixed `headless-context-result-save-contract` check runs strict save/read
+contracts, passive saved-metadata authorization and both composed hosts using
+the actual Context owner and SQLite with controlled runtime bytes. It selects
+only its exact declared files. It does not qualify a physical archive, embedding
+model, browser journey or parent increment. Unmapped sources and explicitly
+required generic tests keep the normal focused-test fallback.
+
+The companion `headless-context-result-save-bootstrap` profile uses bounded
+Vitest collection to test the actual Server startup handler factory and real
+route registrar. Controlled host delegates isolate capability forwarding and
+saved-result projection. This is not live OIDC, PostgreSQL or model evidence.
+
 The fixed `headless-context-result-bytes` profile automatically covers the exact
 private Context byte publisher, its stream helper and the existing ingestion
 byte-publication regressions. It runs both focused adapter test files and owns

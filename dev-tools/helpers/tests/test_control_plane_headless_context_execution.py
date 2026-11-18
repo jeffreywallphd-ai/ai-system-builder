@@ -12,6 +12,22 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_public_result_save_automatically_checks_finite_contract_metadata_and_real_core_host_composition(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-result-save-contract']
+        paths = list(definition['sources'])
+        selected = self.selected(paths, ['architecture'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertEqual(selected['headless-context-result-save-contract']['argv'][1:], [
+            '--import', 'tsx', '--test', '--',
+            'modules/contracts/headless/tests/headless-context-result-plan.unit.test.ts',
+            'modules/application/use-cases/context-management/tests/headless-context-saved.unit.test.ts',
+            'modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts'])
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(paths + [
+            'modules/application/use-cases/context-management/unmapped-saved-context.ts'], ['architecture']))
+        self.assertNotIn('headless-context-result-save-contract', self.selected([
+            'modules/contracts/headless/index.ts'], ['architecture']))
+
     def test_result_byte_checks_cover_only_exact_publication_sources_and_existing_ingestion(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-result-bytes']
         paths = list(definition['sources'])
@@ -27,6 +43,15 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         index_only = self.selected(['modules/adapters/storage/filesystem/artifact-store/index.ts'], ['architecture'])
         self.assertNotIn('headless-context-result-bytes', index_only)
         self.assertIn('focused-tests', index_only)
+
+    def test_bootstrap_save_capability_uses_actual_server_factory_and_bounded_vitest_collection(self):
+        path = 'modules/hosts/shared/composition/tests/headless-context-result-bootstrap.unit.test.ts'
+        selected = self.selected([path, 'apps/server/src/createServer.ts'], ['architecture'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertEqual(selected['headless-context-result-save-bootstrap']['argv'][1:], [
+            'dev-tools/helpers/run_vitest_checks.mjs', '--', path])
+        self.assertIn('focused-tests', self.selected([path], ['architecture', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected([path, 'apps/server/src/unmapped-bootstrap.ts'], ['architecture']))
 
     def test_result_save_checks_bind_internal_owner_metadata_and_related_publication_only(self):
         definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-result-save-owner']

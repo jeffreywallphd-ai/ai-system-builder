@@ -372,6 +372,41 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
         ),
     },
+    "headless-context-result-save-contract": {
+        "automatic_sources": (
+            "modules/contracts/headless/headless-context-result-plan.ts",
+            "modules/contracts/headless/tests/headless-context-result-plan.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-saved.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-saved.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/headless-context-result-plan.ts",
+            "modules/contracts/headless/tests/headless-context-result-plan.unit.test.ts",
+            "modules/application/use-cases/context-management/headless-context-saved.use-case.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-saved.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-context-result-plan.unit.test.ts",
+            "modules/application/use-cases/context-management/tests/headless-context-saved.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts",
+        ),
+    },
+    "headless-context-result-save-bootstrap": {
+        "automatic_sources": (
+            "modules/hosts/shared/composition/tests/headless-context-result-bootstrap.unit.test.ts",
+        ),
+        "sources": (
+            "apps/server/src/createServer.ts",
+            "modules/hosts/shared/composition/tests/headless-context-result-bootstrap.unit.test.ts",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/hosts/shared/composition/tests/headless-context-result-bootstrap.unit.test.ts",
+        ),
+    },
     "headless-context-result-save-owner": {
         "automatic_sources": (
             "modules/application/ports/context-management/context-result-save-admission.port.ts",

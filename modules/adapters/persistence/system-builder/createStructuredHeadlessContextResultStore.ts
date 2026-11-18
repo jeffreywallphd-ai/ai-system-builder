@@ -4,6 +4,7 @@ import type {HeadlessPlanReviewTarget} from "../../../application/ports/system-b
 import type {ContextSavedArtifactReference} from "../../../contracts/context-management";
 import {CONTEXT_GENERATION_LIMITS, CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, CONTEXT_RAG_DATABASE_MEDIA_TYPE} from "../../../contracts/context-management";
 import {readHeadlessContextTaskValue} from "../../../contracts/headless/headless-context-task";
+import {readHeadlessContextSavedValue} from "../../../contracts/headless/headless-context-result-plan";
 import {HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId} from "../../../contracts/headless";
 import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
 import {isOrganizationId} from "../../../contracts/organization";
@@ -15,6 +16,7 @@ import {HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE} from "./createStructuredHeadless
 import {readStructuredOwnedContextPlanTaskSourceDigest} from "./createStructuredHeadlessContextPlanTaskStore";
 
 const SAVES = "headless/context/result-saves", TASKS = "headless/context/result-save-tasks", COUNTS = "headless/context/result-save-counts";
+const CONTEXTS = "headless/context/saved-contexts";
 const sha = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 const contentDigest = (value: unknown): value is string => typeof value === "string" && /^sha256:[a-f0-9]{64}$/.test(value);
@@ -70,7 +72,7 @@ function decode(value: unknown, revision: number, effect: ContextResultSaveEffec
     "approvalRevision", "step", "taskId", "reportFingerprint"]);
   const expected = identity(effect), {approvalRevision: expectedRevision, ...stable} = expected;
   const {approvalRevision: recordedRevision, ...saved} = owner;
-  if (row.version !== 1 || !isHeadlessHostIncarnationId(row.saveId) || !digest(row.sourceDigest) ||
+  if ((row.version !== 1 && row.version !== 2) || !isHeadlessHostIncarnationId(row.saveId) || !digest(row.sourceDigest) ||
       Object.keys(saved).length !== Object.keys(stable).length ||
       !Object.entries(stable).every(([key, value]) => saved[key] === value) ||
       typeof recordedRevision !== "number" || !Number.isSafeInteger(recordedRevision) ||
@@ -83,7 +85,7 @@ function decode(value: unknown, revision: number, effect: ContextResultSaveEffec
   if (prepared.review.reportFingerprint !== expected.reportFingerprint) unavailable();
   // Reconstruct canonical owner order for the private identity digest. Persisted
   // JSONB object key order is not part of task, actor or approval identity.
-  return {version: 1 as const, owner: {...expected, approvalRevision: recordedRevision}, saveId: row.saveId,
+  return {version: row.version as 1 | 2, owner: {...expected, approvalRevision: recordedRevision}, saveId: row.saveId,
     sourceDigest: row.sourceDigest, prepared, phase: row.phase as "reserved" | "issued" | "committed",
     createdAt: row.createdAt, updatedAt: row.updatedAt};
 }
@@ -112,6 +114,12 @@ export async function readCommittedStructuredContextResult(owner: StructuredDocu
   const record = await read(owner, effect);
   if (record?.phase !== "committed") return;
   if (attempt && (record.saveId !== attempt.saveId || record.sourceDigest !== attempt.sourceDigest)) unavailable();
+  if (record.version === 2) {
+    const index = await owner.readDocument(CONTEXTS, `${record.owner.workspaceId}/${record.saveId}`);
+    if (!index || index.revision !== 1) unavailable();
+    const value = readStrictPassiveRecord(index.value, ["effectKey", "identityDigest"]);
+    if (value.effectKey !== effect.key || value.identityDigest !== sha(JSON.stringify(record.owner))) unavailable();
+  }
   const expected = artifact(record), context = effect.target.scope;
   const catalog = await createLocalArtifactCatalogPersistenceAdapter({rootDirectory, documents: owner}).readArtifactCatalogRecord(
     {workspaceId: context.workspaceId, storageKey: expected.storageKey}, context);
@@ -151,7 +159,7 @@ export async function reserveStructuredContextResultSave(owner: StructuredDocume
   if (typeof used !== "number" || !Number.isSafeInteger(used) || used < 0 || (count && count.revision !== used)) unavailable();
   if (used >= HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE) return {kind: "capacity" as const};
   const saveId = randomUUID();
-  await owner.writeDocument(SAVES, key(effect), {version: 1, owner: actor, saveId, sourceDigest, prepared: checked,
+  await owner.writeDocument(SAVES, key(effect), {version: 2, owner: actor, saveId, sourceDigest, prepared: checked,
     phase: "reserved", createdAt: timestamp, updatedAt: timestamp}, {expectedRevision: 0});
   await owner.writeDocument(COUNTS, countKey, {used: used + 1}, {expectedRevision: count?.revision ?? 0});
   return {kind: "new" as const, saveId};
@@ -192,6 +200,51 @@ export async function commitStructuredContextResultSave(owner: StructuredDocumen
   const bound = await bindings.createArtifactStorageBindingIfAbsent({binding: {workspaceId: context.workspaceId, artifactId: expected.artifactId,
     role: "primary", backing: {kind: "artifact-object", provider: "local-filesystem", locator: expected.storageKey}, createdAt}}, context);
   if (!bound.ok) unavailable();
+  if (record.version === 2) await owner.writeDocument(CONTEXTS, `${record.owner.workspaceId}/${saveId}`,
+    {effectKey: effect.key, identityDigest: sha(JSON.stringify(record.owner))}, {expectedRevision: 0});
   await owner.writeDocument(SAVES, key(effect), {...record, phase: "committed", updatedAt: time(now)}, {expectedRevision: 2});
   return {contextId: saveId, artifact: expected, created: true};
+}
+
+/** Private indexed origin. The caller must hold current workspace/artifact read
+ * authority. A saved workspace resource is not execution authority over its
+ * original actor/client's task. No enumeration or unindexed-file adoption. */
+export async function readStructuredSavedContextOrigin(owner: StructuredDocumentStore, rootDirectory: string,
+  workspaceId: string, contextId: string) {
+  if (!isOrganizationId(owner.organizationId) || !isWorkspaceId(workspaceId) || !isHeadlessHostIncarnationId(contextId)) return;
+  const index = await owner.readDocument(CONTEXTS, `${workspaceId}/${contextId}`);
+  if (!index) return;
+  if (index.revision !== 1) unavailable();
+  const pointer = readStrictPassiveRecord(index.value, ["effectKey", "identityDigest"]);
+  if (!isHeadlessHostIncarnationId(pointer.effectKey) || !digest(pointer.identityDigest)) unavailable();
+  const document = await owner.readDocument(SAVES, `${workspaceId}/${pointer.effectKey}`);
+  if (!document || document.revision !== 3) unavailable();
+  const row = readStrictPassiveRecord(document.value, ["version", "owner", "saveId", "sourceDigest", "prepared", "phase", "createdAt", "updatedAt"]);
+  const original = readStrictPassiveRecord(row.owner, ["hostIncarnationId", "workspaceId", "principalId", "registeredClientId", "fingerprint",
+    "approvalRevision", "step", "taskId", "reportFingerprint"]);
+  if (row.version !== 2 || row.saveId !== contextId || row.phase !== "committed" || original.workspaceId !== workspaceId ||
+      !isHeadlessHostIncarnationId(original.hostIncarnationId) || typeof original.principalId !== "string" ||
+      typeof original.registeredClientId !== "string" || typeof original.fingerprint !== "string" ||
+      typeof original.approvalRevision !== "number" || typeof original.step !== "number" ||
+      typeof original.taskId !== "string" || typeof original.reportFingerprint !== "string") unavailable();
+  const effect: ContextResultSaveEffect = {key: pointer.effectKey, target: {hostIncarnationId: original.hostIncarnationId,
+    fingerprint: original.fingerprint, scope: {organizationId: owner.organizationId, workspaceId,
+      principalId: original.principalId, registeredClientId: original.registeredClientId}},
+    approvalRevision: original.approvalRevision, step: original.step, taskId: original.taskId, reportFingerprint: original.reportFingerprint};
+  const record = decode(row, document.revision, effect);
+  if (pointer.identityDigest !== sha(JSON.stringify(record.owner))) unavailable();
+  const saved = await readCommittedStructuredContextResult(owner, rootDirectory, effect);
+  return saved ? {effect, prepared: record.prepared, sourceDigest: record.sourceDigest, ...saved} : unavailable();
+}
+
+/** Reconstruct bounded metadata only. Never return private origin, keys, handles,
+ * original actor/client, raw source text, model paths or a byte-readiness claim. */
+export async function readStructuredSavedContextMetadata(owner: StructuredDocumentStore, rootDirectory: string,
+  workspaceId: string, contextId: string) {
+  const saved = await readStructuredSavedContextOrigin(owner, rootDirectory, workspaceId, contextId);
+  if (!saved || !isWorkspaceId(workspaceId)) return;
+  const {artifact, prepared, effect} = saved;
+  return readHeadlessContextSavedValue({reference: {workspaceId, contextId, taskId: effect.taskId, kind: artifact.kind, artifactDigest: artifact.digest},
+    name: prepared.name, sizeBytes: artifact.sizeBytes, sourceCount: prepared.review.sourceCount, chunkCount: prepared.review.chunkCount,
+    byteAvailability: "not-checked"}, workspaceId, contextId);
 }

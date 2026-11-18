@@ -196,5 +196,12 @@ and owned-output ports. The publisher uses the existing captured organization
 provider mapping; the task owner supplies private file selection. The shared
 result-save metadata composition accepts only the platform root transaction and
 a trusted exact-save policy/approval callback. It performs no runtime/provider
-work in that transaction. This is internal support, not an advertised save
-action or real provider/model/native qualification.
+work in that transaction. That internal support alone grants no public authority.
+
+With stable publication available, the version-8 `context.save-result` connection
+adds exact accepted task/review/name validation and current artifact/plan approval
+through both supported channels and modes. Its owner performs file work outside
+the transaction and confirms only the causal metadata receipt. Replay opens no
+runtime. `context.saved` reads a finite indexed saved resource under current
+workspace/artifact authority, without archive/model/provider access. Physical
+browser, PostgreSQL, model and native qualification remain separate evidence.

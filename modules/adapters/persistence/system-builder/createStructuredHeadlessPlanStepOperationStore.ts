@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import {isDeepStrictEqual} from "node:util";
 
 import type {
   HeadlessPlanReviewQuery, HeadlessPlanReviewTarget,
@@ -32,6 +33,8 @@ import { publishStructuredProviderFilePlanEffect, readCommittedStructuredProvide
 import type { StructuredDocumentStore } from "../shared";
 import { createStructuredHeadlessOperationStore, hasStructuredHeadlessOperationReceipt } from "./createStructuredHeadlessOperationStore";
 import { fenceStructuredApprovedPlan, readStructuredApprovedPlan } from "./createStructuredHeadlessPlanReviewRepository";
+import {readCommittedStructuredContextResult, type ContextResultSaveEffect} from "./createStructuredHeadlessContextResultStore";
+import type {HeadlessContextResultSavePlanRequest} from "../../../contracts/headless";
 
 const denied = { kind: "denied" } as const;
 
@@ -59,6 +62,7 @@ export async function prepareStructuredHeadlessPlanStep(
   compileDataset?: CompileApprovedDataset,
   compileResult?: CompileApprovedDatasetResult,
   compileContext?: CompileApprovedContext,
+  contextResultRootDirectory?: string,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -84,9 +88,10 @@ export async function prepareStructuredHeadlessPlanStep(
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
         (!compileResult && approved.requests.some(candidate => candidate.operation === "data.save-prepared-dataset")) ||
         (!compileContext && approved.requests.some(candidate => candidate.operation === "context.generate-pack" || candidate.operation === "context.generate-rag")) ||
+        (!contextResultRootDirectory && approved.requests.some(candidate => candidate.operation === "context.save-result")) ||
         ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source" ||
           request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-          request.operation === "context.generate-pack" || request.operation === "context.generate-rag") &&
+          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result") &&
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
@@ -101,6 +106,8 @@ export async function prepareStructuredHeadlessPlanStep(
               ? await readCommittedStructuredDatasetResult(partition, datasetResultEffect(target, previous, index + 1, approvalRevision))
             : previous.operation === "context.generate-pack" || previous.operation === "context.generate-rag"
               ? (await inspectStructuredContextPlanTask(partition, contextTaskEffect(target, previous, index + 1, approvalRevision))).kind === "accepted"
+            : previous.operation === "context.save-result"
+              ? await readCommittedStructuredContextResult(partition, contextResultRootDirectory!, contextResultEffect(target, previous, index + 1, approvalRevision))
           : await hasStructuredHeadlessOperationReceipt(partition, target.scope, previous.operation,
           stepKey(target, previous, index + 1), sum(serializeHeadlessMutationInput(previous)));
       if (!received) return;
@@ -140,6 +147,26 @@ export async function prepareStructuredHeadlessPlanStep(
       if (publication === "stable-reads") return await stableReads!(approvedForPublication, send);
       return await ownedTransaction!(async owner => await approvedForPublication(owner) && send(), () => {});
     } catch { return false; }
+  }
+
+  if (request.operation === "context.save-result") {
+    const effect = contextResultEffect(target, request, step, approvalRevision);
+    return {kind: "context-result" as const, request: structuredClone(request), effect: structuredClone(effect),
+      expiresAt: prepared.expiresAt, isCurrent: current,
+      async authorizeSaveOwned(owner: StructuredDocumentStore, selected: ContextResultSaveEffect) {
+        if (!isDeepStrictEqual(selected, effect) || !current()) return false;
+        const latest = await select(owner);
+        return Boolean(latest && latest.expiresAt === deadline && current() &&
+          await fenceStructuredApprovedPlan(owner.forOrganization(target.scope.organizationId), target, approvalRevision) && current());
+      },
+      async stillAllowed() {
+        try {return await ownedTransaction(async owner => Boolean(await select(owner)) && current(),
+          () => {if (!current()) throw new Error("The approved Context save ended.");});} catch {return false;}
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => Boolean(await readCommittedStructuredContextResult(partition, contextResultRootDirectory!, effect)));
+      },
+    };
   }
 
   if (request.operation === "data.save-local-source") {
@@ -513,7 +540,8 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "context.generate-rag" ? "aisb-approved-context-rag-step-v1" :
+  const family = request.operation === "context.save-result" ? "aisb-approved-context-result-step-v1" :
+    request.operation === "context.generate-rag" ? "aisb-approved-context-rag-step-v1" :
     request.operation === "context.generate-pack" ? "aisb-approved-context-pack-step-v1" :
     request.operation === "data.save-prepared-dataset" ? "aisb-approved-dataset-result-step-v1" :
     request.operation === "data.prepare-local-dataset" ? "aisb-approved-local-dataset-step-v1" :
@@ -521,7 +549,7 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
     request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
   const parts = [family, target.hostIncarnationId, target.fingerprint, step, request.input.idempotencyKey];
   const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" ?
+    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" ?
     [...parts, target.scope.organizationId, target.scope.workspaceId, target.scope.principalId, target.scope.registeredClientId] : parts));
   // Keep the existing validated internal UUID shape. The plan and ordinal
   // reserve a different key even when two proposals reuse a supplied key.
@@ -532,6 +560,12 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
 function contextTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessContextGenerationPlanRequest,
   step: number, approvalRevision: number): ContextPlanTaskEffect {
   return {key: stepKey(target, request, step), target, request, step, approvalRevision};
+}
+
+function contextResultEffect(target: HeadlessPlanReviewTarget, request: HeadlessContextResultSavePlanRequest,
+  step: number, approvalRevision: number): ContextResultSaveEffect {
+  return {key: stepKey(target, request, step), target, step, approvalRevision,
+    taskId: request.input.taskId, reportFingerprint: request.input.reportFingerprint};
 }
 
 function datasetTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessLocalDatasetPlanRequest,

@@ -74,6 +74,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     readonly allowDatasetResultSave?: true;
     readonly allowContextPackGeneration?: true;
     readonly allowContextRagGeneration?: true;
+    readonly allowContextResultSave?: true;
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly execute: (request: HeadlessPlanReviewAgentRequest, grant: DesktopHeadlessAuthoringWireGrant,
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessPlanReviewAgentResult>;
@@ -323,7 +324,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
           allowLocalDatasetPreparation: dependencies.planReview.allowLocalDatasetPreparation === true,
           allowDatasetResultSave: dependencies.planReview.allowDatasetResultSave === true,
           allowContextPackGeneration: dependencies.planReview.allowContextPackGeneration === true,
-          allowContextRagGeneration: dependencies.planReview.allowContextRagGeneration === true });
+          allowContextRagGeneration: dependencies.planReview.allowContextRagGeneration === true,
+          allowContextResultSave: dependencies.planReview.allowContextResultSave === true });
       if (!plan.ok) { fail(response, errorStatus(plan.code), plan.code); return; }
       const grant = await currentGrant();
       if (grant?.planReview !== true || !grantIsCurrent(grant, true) || !admitting() || response.destroyed ||
@@ -412,7 +414,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
           allowLocalDatasetPreparation: dependencies.planReview.allowLocalDatasetPreparation === true,
           allowDatasetResultSave: dependencies.planReview.allowDatasetResultSave === true,
           allowContextPackGeneration: dependencies.planReview.allowContextPackGeneration === true,
-          allowContextRagGeneration: dependencies.planReview.allowContextRagGeneration === true });
+          allowContextRagGeneration: dependencies.planReview.allowContextRagGeneration === true,
+          allowContextResultSave: dependencies.planReview.allowContextResultSave === true });
       const finalGrant = await currentGrant();
       if (!admitting() || response.destroyed) return;
       if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {

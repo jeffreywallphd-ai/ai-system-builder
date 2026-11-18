@@ -12,6 +12,7 @@ import {reserveStructuredContextPlanTask, issueStructuredContextPlanTask, accept
 import {reserveStructuredContextResultSave, issueStructuredContextResultSave, commitStructuredContextResultSave,
   readCommittedStructuredContextResult, inspectStructuredContextResultSave, type ContextResultSaveEffect}
   from "../createStructuredHeadlessContextResultStore";
+import {readStructuredSavedContextMetadata, readStructuredSavedContextOrigin} from "../createStructuredHeadlessContextResultStore";
 import {createLocalArtifactCatalogPersistenceAdapter} from "../../../storage/filesystem/artifact-catalog/createLocalArtifactCatalogAdapter";
 import {createLocalArtifactStorageBindingAdapter} from "../../../storage/filesystem/artifact-catalog/createLocalArtifactStorageBindingAdapter";
 import {composeHeadlessContextResultSave} from "../../../../hosts/shared/composition/headlessContextResults";
@@ -127,18 +128,76 @@ test("Context metadata rollback removes catalog and binding together without del
   const bindings = await f.bindings.readArtifactStorageBindings({workspaceId: f.scope.workspaceId, artifactId: candidate.artifactId}, f.scope);
   assert.ok(bindings.ok); assert.deepEqual(bindings.value.bindings, []);
   assert.equal(await readCommittedStructuredContextResult(f.owner, f.rootDirectory, f.effect), undefined);
+  assert.equal(await readStructuredSavedContextMetadata(f.owner, f.rootDirectory, f.scope.workspaceId, saveId), undefined);
   assert.deepEqual(await inspectStructuredContextResultSave(f.owner, f.rootDirectory, f.effect), {kind: "unconfirmed"});
 });
 
-for (const collision of ["catalog", "binding"] as const) test(`ordinary ${collision} metadata is not adopted by an approved Context save`, async () => {
+for (const collision of ["catalog", "binding", "saved-index"] as const) test(`ordinary ${collision} metadata is not adopted by an approved Context save`, async () => {
   const f = await fixture(), saveId = await f.reserve(), candidate = f.candidate(saveId); await f.issue(saveId);
   if (collision === "catalog") assert.ok((await f.catalog.createArtifactCatalogRecordIfAbsent({record: {workspaceId: f.scope.workspaceId,
     storageKey: candidate.storageKey, artifactFamily: "binary", mediaType: candidate.mediaType, sizeBytes: 3}}, f.scope)).ok);
-  else assert.ok((await f.bindings.createArtifactStorageBindingIfAbsent({binding: {workspaceId: f.scope.workspaceId, artifactId: candidate.artifactId,
+  else if (collision === "binding") assert.ok((await f.bindings.createArtifactStorageBindingIfAbsent({binding: {workspaceId: f.scope.workspaceId, artifactId: candidate.artifactId,
     role: "primary", backing: {kind: "artifact-object", provider: "local-filesystem", locator: candidate.storageKey}}}, f.scope)).ok);
+  else await f.owner.writeDocument("headless/context/saved-contexts", `${f.scope.workspaceId}/${saveId}`,
+    {effectKey: randomUUID(), identityDigest: "f".repeat(64)}, {expectedRevision: 0});
   await assert.rejects(f.tx(owner => commitStructuredContextResultSave(owner, f.rootDirectory, f.effect, saveId, f.sourceDigest, candidate, 6)));
   assert.equal(await readCommittedStructuredContextResult(f.owner, f.rootDirectory, f.effect), undefined);
-  if (collision === "binding") assert.equal((await f.catalog.readArtifactCatalogRecord({workspaceId: f.scope.workspaceId, storageKey: candidate.storageKey}, f.scope)).ok, false);
+  if (collision !== "catalog") assert.equal((await f.catalog.readArtifactCatalogRecord({workspaceId: f.scope.workspaceId, storageKey: candidate.storageKey}, f.scope)).ok, false);
+});
+
+test("saved Context index exposes only committed finite workspace metadata with no original actor or storage keys", async () => {
+  const f = await fixture(), saveId = await f.reserve(), candidate = f.candidate(saveId);
+  assert.equal(await readStructuredSavedContextMetadata(f.owner, f.rootDirectory, f.scope.workspaceId, saveId), undefined);
+  await f.issue(saveId);
+  assert.equal(await readStructuredSavedContextMetadata(f.owner, f.rootDirectory, f.scope.workspaceId, saveId), undefined);
+  await f.tx(owner => commitStructuredContextResultSave(owner, f.rootDirectory, f.effect, saveId, f.sourceDigest, candidate, 6));
+  assert.deepEqual(await readStructuredSavedContextMetadata(f.owner, f.rootDirectory, f.scope.workspaceId, saveId), {
+    reference: {workspaceId: f.scope.workspaceId, contextId: saveId, taskId: f.effect.taskId,
+      kind: "markdown-context-pack", artifactDigest: candidate.digest},
+    name: f.prepared.name, sizeBytes: 3, sourceCount: 1, chunkCount: 1, byteAvailability: "not-checked",
+  });
+  assert.equal((await readStructuredSavedContextOrigin(f.owner, f.rootDirectory, f.scope.workspaceId, saveId))?.effect.key, f.effect.key);
+  assert.equal(await readStructuredSavedContextMetadata(f.owner, f.rootDirectory, "workspace.foreign", saveId), undefined);
+  assert.equal(await readStructuredSavedContextMetadata(f.root.forOrganization(createOrganizationId("org.foreign")),
+    f.rootDirectory, f.scope.workspaceId, saveId), undefined);
+  assert.equal(await readStructuredSavedContextMetadata(f.root, f.rootDirectory, f.scope.workspaceId, saveId), undefined);
+});
+
+test("saved Context pointer corruption and missing underlying bindings cannot assert saved availability", async () => {
+  const f = await fixture(), saveId = await f.reserve(), candidate = f.candidate(saveId); await f.issue(saveId);
+  await f.tx(owner => commitStructuredContextResultSave(owner, f.rootDirectory, f.effect, saveId, f.sourceDigest, candidate, 6));
+  const key = `${f.scope.workspaceId}/${saveId}`, namespace = "headless/context/saved-contexts";
+  const index = await f.owner.readDocument(namespace, key); assert.ok(index);
+  for (const value of [{...(index.value as object), identityDigest: "f".repeat(64)},
+    {...(index.value as object), effectKey: randomUUID()}, {...(index.value as object), path: "private"}]) {
+    const corrupt: StructuredDocumentStore = {...f.owner, async readDocument<T>(name: string, selected: string) {
+      return name === namespace && selected === key ? {...index, value: value as T} : f.owner.readDocument<T>(name, selected);
+    }};
+    await assert.rejects(readStructuredSavedContextMetadata(corrupt, f.rootDirectory, f.scope.workspaceId, saveId));
+    await assert.rejects(readCommittedStructuredContextResult(corrupt, f.rootDirectory, f.effect));
+  }
+  assert.ok((await f.bindings.deleteArtifactStorageBindings({workspaceId: f.scope.workspaceId, artifactId: candidate.artifactId}, f.scope)).ok);
+  await assert.rejects(readStructuredSavedContextMetadata(f.owner, f.rootDirectory, f.scope.workspaceId, saveId));
+});
+
+test("legacy private save receipts remain replayable without creating a public saved Context index", async () => {
+  const f = await fixture();
+  // Simulate the former writer on an isolated metadata store. No application
+  // adoption or revision rewriting of an already committed historical row.
+  const legacy = (owner: StructuredDocumentStore): StructuredDocumentStore => ({...owner,
+    async writeDocument<T>(namespace: string, key: string, value: T, options) {
+      return owner.writeDocument(namespace, key, namespace === "headless/context/result-saves" ? {...value, version: 1} : value, options);
+    },
+  });
+  const reserved = await f.tx(owner => reserveStructuredContextResultSave(legacy(owner), f.effect, f.prepared, f.sourceDigest, 4));
+  assert.equal(reserved.kind, "new"); assert.ok("saveId" in reserved);
+  const saveId = reserved.saveId, candidate = f.candidate(saveId);
+  assert.equal(await f.tx(owner => issueStructuredContextResultSave(legacy(owner), f.effect, saveId, f.sourceDigest, 5)), true);
+  assert.deepEqual(await f.tx(owner => commitStructuredContextResultSave(legacy(owner), f.rootDirectory, f.effect, saveId, f.sourceDigest, candidate, 6)),
+    {contextId: saveId, artifact: candidate, created: true});
+  assert.deepEqual(await readCommittedStructuredContextResult(f.owner, f.rootDirectory, f.effect), {contextId: saveId, artifact: candidate});
+  assert.equal(await readStructuredSavedContextMetadata(f.owner, f.rootDirectory, f.scope.workspaceId, saveId), undefined);
+  assert.equal(await f.owner.readDocument("headless/context/saved-contexts", `${f.scope.workspaceId}/${saveId}`), undefined);
 });
 
 test("Context commit rejects changed candidates and exact receipt reads detect deleted binding metadata", async () => {
