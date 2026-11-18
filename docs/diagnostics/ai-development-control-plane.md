@@ -1,5 +1,14 @@
 # Contributor Control Plane
 
+The fixed `headless-ui-control-authority` check also covers exact saved Context
+and accepted-task presentation using structured owner fixtures. The existing
+Desktop takeover and managed presentation checks cover copied selectors, current
+policy, replay/revoke and DOM cards. Cached Context observation cannot initialize
+runtime dependencies. An AST-only guard checks both actual host callback bindings;
+it does not launch either app. The catalog keeps exact source declarations, unknown-source
+and explicit generic fallback. These feature checks do not qualify public queries,
+physical retrieval/resources, real app-host journeys or the parent increment.
+
 Headless local RAG uses the existing Context contract/owned-start, composed-host,
 approval UI and official MCP feature checks. Its separately enabled version-7
 plan binds the selected saved-model witness through atomic issue after staging.

@@ -1,5 +1,14 @@
 # Local desktop tools over MCP
 
+`aisb_present_in_window` also accepts strict `show-context-artifact` and
+`show-context-task` intents. The saved selector contains the complete Context
+reference; the task selector contains one accepted task UUID. Both use existing
+separate window consent and current artifact-read/actor/host policy. They add no
+tool names. The reader observes committed metadata or a cached existing owner,
+never initializing a model/runtime or reading source bytes. Only fixed summaries
+and opaque selectors cross the window boundary. Backend execution/save approval,
+public query summaries and physical/host qualification remain separate.
+
 In plan-review mode, `aisb_ingestion_status` reads the state, revision and
 progress counts for one known task in the approved workspace. It returns no
 filenames, source contents, provider paths or credentials. Check for

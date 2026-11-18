@@ -15,7 +15,7 @@ import { HeadlessBuildPlanReviewUseCase } from "../../../../application/use-case
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../../headless-loopback";
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
-  isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
+  UI_PRESENTATION_ACTIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
 import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest} from "../../../../contracts/headless";
 import {normalizeDatasetVersionId} from "../../../../contracts/dataset";
@@ -287,7 +287,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION: "1"});
     const delivery = {target: {...windowArgs.target, requestId: randomUUID(), attemptId: randomUUID(), leaseId: randomUUID(),
       generation: 1}, commandId: randomUUID(), intent: {action: "open-system", systemId, revisionId: "revision-1"}};
-    const present = async (input = delivery) => resultText(await presentationClient.callTool({
+    const present = async (input: Parameters<Client["callTool"]>[0]["arguments"] = delivery) => resultText(await presentationClient.callTool({
       name: "aisb_present_in_window", arguments: input,
     }));
     const callsBeforeDenied = requests.length;
@@ -306,6 +306,17 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.deepEqual(await present(), {ok:true, value:{kind:"command", receipt:{
       sequence:1, commandId:delivery.commandId, status:"applied",
     }, duplicate:true}});
+    repeatedCommand = false; commandApplied = false;
+    const contextReference = {workspaceId, contextId: randomUUID(), taskId: randomUUID(), kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`};
+    for (const intent of [{action: "show-context-artifact", reference: contextReference}, {action: "show-context-task", taskId: contextReference.taskId}]) {
+      const commandId = randomUUID();
+      assert.deepEqual(await present({...delivery, commandId, intent}), {ok: true, value: {kind: "command",
+        receipt: {sequence: 1, commandId, status: "accepted"}, duplicate: false}});
+    }
+    const beforeMalformedContext = requests.length;
+    const malformedContext = await presentationClient.callTool({name: "aisb_present_in_window", arguments: {...delivery,
+      intent: {action: "show-context-artifact", reference: {...contextReference, path: "private/context.zip"}}}});
+    assert.equal(malformedContext.isError, true); assert.equal(requests.length, beforeMalformedContext);
     assert.ok(requests.slice(callsBeforeDenied).every(row => row.url === "/api/headless/agent/window"));
     const edit = {hostIncarnationId, workspaceId, systemId, baseRecordRevision:1, baseRevisionId:"revision-1",
       edits:[{kind:"configure", instanceId:"fixture-instance", values:{title:"Synthetic title"}}],
@@ -1068,7 +1079,13 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assert.deepEqual(turn.properties?.text, { type: "string", minLength: 1, maxLength: 2_000 });
   assertExactObject("aisb_list_windows", workspace);
   assertExactObject("aisb_request_window", ["target", "taskId", "requestKey"]);
-  assertExactObject("aisb_present_in_window", ["target", "commandId", "intent"]);
+  const presentationSchema = assertExactObject("aisb_present_in_window", ["target", "commandId", "intent"]);
+  const choices = (presentationSchema.properties?.intent as {oneOf: {additionalProperties: boolean; properties: Record<string, any>}[]}).oneOf;
+  assert.deepEqual(choices.map(value => value.properties.action.const).sort(), [...UI_PRESENTATION_ACTIONS].sort());
+  const contextReference = choices.find(value => value.properties.action.const === "show-context-artifact")!.properties.reference;
+  assert.equal(contextReference.additionalProperties, false);
+  assert.deepEqual(Object.keys(contextReference.properties).sort(), ["workspaceId", "contextId", "taskId", "kind", "artifactDigest"].sort());
+  assert.deepEqual([...contextReference.required].sort(), Object.keys(contextReference.properties).sort());
   for (const name of ["aisb_window_context", "aisb_window_status", "aisb_release_window", "aisb_renew_window"]) {
     assertExactObject(name, ["target"]);
   }

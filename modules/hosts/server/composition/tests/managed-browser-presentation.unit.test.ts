@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
-import { UI_PRESENTATION_LIMITS, type HeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { UI_PRESENTATION_LIMITS, viewForUiPresentationIntent, type HeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createManagedBrowserPresentation } from "../createManagedBrowserPresentation";
 
@@ -10,18 +10,22 @@ const target = {hostIncarnationId: randomUUID() as HeadlessHostIncarnationId, wi
 const intent = {action:"open-system", systemId:"fixture.system", revisionId:"revision-1"} as const;
 const current = () => true;
 
-test("Data delivery retains strict context and replay, then drops display/context on lease retirement", async () => {
+for (const selected of [
+  {action: "show-dataset-version", datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: `sha256:${"a".repeat(64)}`},
+  {action: "show-context-task", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c"},
+  {action: "show-context-artifact", reference: {workspaceId: target.workspaceId, contextId: "ca353bdd-7793-44c6-8c36-c470be8c537d",
+    taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c", kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`}},
+] as const) test(`${selected.action} delivery retains strict context/replay and retires display/context`, async () => {
   const owner = createManagedBrowserPresentation({now: () => 1_000});
   let live = true;
   const alive = () => live;
-  const intent = {action: "show-dataset-version", datasetId: "dataset.synthetic", versionId: "version.synthetic",
-    versionDigest: `sha256:${"a".repeat(64)}`} as const;
+  const intent = selected;
   const command = {target, commandId: randomUUID(), intent};
   try {
     assert.equal((await owner.submit(command, alive, alive, async () => true)).status, "accepted");
     assert.equal((await owner.pull({target, sequence: 1}, alive, async () => ({title: "Saved dataset version"}))).status, "command");
     assert.equal(owner.acknowledge({target, receipt: {commandId: command.commandId, sequence: 1, status: "applied"}}, alive), true);
-    const snapshot = {view: "dataset-version", ready: true, dirtyNavigationBlocked: false, selection: intent};
+    const snapshot = {view: viewForUiPresentationIntent(intent), ready: true, dirtyNavigationBlocked: false, selection: intent};
     const waiting = owner.readFreshContext(target, alive), challenge = owner.contextChallenge(target, alive);
     assert.ok(challenge);
     assert.equal(owner.publishContext({target, challenge, context: snapshot}, alive), true);

@@ -1,5 +1,11 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The existing takeover resource card shows exact saved Context IDs/digests or
+accepted Context task IDs with fixed bounded summaries from the owning reader.
+It renders no source/query/model content. Existing consent, dirty navigation,
+delivery and revoke behavior remains authoritative; displaying a resource grants
+no execution or save permission.
+
 - Page summary UI lives in `modules/ui/shared/page-dashboard`. Keep metric
   derivation host-neutral and use host adapters only to compose existing scoped
   clients. Home and Systems count active systems with at least one published

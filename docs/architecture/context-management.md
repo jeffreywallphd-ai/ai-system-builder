@@ -25,6 +25,22 @@ approval is data, not new execution permission. Archive bytes and physical runti
 readiness remain not checked. Rebuild execution requires the separate version-9
 approval described below.
 
+### Revocable Context metadata display
+
+The existing window presentation family admits `show-context-artifact` with the
+full exact saved reference and `show-context-task` with an accepted task ID.
+Both hosts require current artifact-read and separate window consent. Saved
+selection verifies committed catalog/binding/causal lineage, kind, producer and
+digest without reading bytes. Task selection proves its accepted same-host/actor
+point and plan indexes before observing the existing cached Context owner.
+Presentation cannot initialize the lazy Desktop feature or start a processor.
+An absent owner remains unavailable. Fixed summaries expose only state/counts;
+the window and connector context carry opaque selectors, not source/query text.
+Existing lease/document/dirty-navigation/replay/revoke fences stay in control.
+Ending display preserves independent Context tasks and saved artifacts. This
+metadata feature supplies no public query summary, physical retrieval, resource
+or actual app-host qualification.
+
 ### Private installed-query support
 
 Private installed-query support is a separate optional method on the existing

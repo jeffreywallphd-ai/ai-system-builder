@@ -7,11 +7,29 @@ import { readUiControlAttempt } from "../../../../contracts/headless";
 import { ModalDialog } from "../../components/ModalDialog";
 import { WindowTakeoverControls, WindowTakeoverProvider } from "../WindowTakeoverControls";
 import { createWindowTakeoverController } from "../windowTakeoverController";
+import { PresentedWindowResource } from "../PresentedWindowResource";
 
 const dom = new JSDOM("<!doctype html><body><div id='app'></div></body>", { url: "http://localhost" });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, Node: dom.window.Node, IS_REACT_ACT_ENVIRONMENT: true });
 after(() => dom.window.close());
 const id = (index: number) => `e38b2781-e605-4de3-83e1-${String(index).padStart(12, "0")}`;
+
+test("Context cards show the exact saved selection or accepted task without missing identifiers", async () => {
+  const app = document.getElementById("app")!, root = createRoot(app);
+  const reference = {workspaceId: "example" as never, contextId: id(31), taskId: id(32), kind: "rag-database" as const,
+    artifactDigest: "sha256:" + "a".repeat(64)};
+  try {
+    await act(async () => {root.render(<PresentedWindowResource elementRef={null} intent={{action: "show-context-artifact", reference}}
+      detail={{title: "Saved RAG database", summary: "Sources: 2. Chunks: 3. Size: 42 bytes."}} />);});
+    assert.ok(app.querySelector('[aria-label="Resource shown by automation"]'));
+    assert.deepEqual([...app.querySelectorAll("code")].map(node => node.textContent), [reference.contextId, reference.artifactDigest]);
+    assert.match(app.textContent!, /Saved RAG database/); assert.doesNotMatch(app.textContent!, /undefined|private-query|private-source/);
+    await act(async () => {root.render(<PresentedWindowResource elementRef={null} intent={{action: "show-context-task", taskId: reference.taskId}}
+      detail={{title: "Context task", summary: "Task status: running."}} />);});
+    assert.deepEqual([...app.querySelectorAll("code")].map(node => node.textContent), [reference.taskId]);
+    assert.doesNotMatch(app.textContent!, /sha256:|undefined/);
+  } finally {await act(async () => {root.unmount();});}
+});
 
 test("stacks an out-of-flow consent dialog over an ordinary dialog and restores its control on revoke", async () => {
   const target = readUiControlAttempt({ hostIncarnationId: id(1), windowId: id(2), uiIncarnationId: id(3),

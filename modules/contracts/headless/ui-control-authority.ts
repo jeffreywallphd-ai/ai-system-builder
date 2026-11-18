@@ -8,6 +8,7 @@ export const UI_CONTROL_VERSION = "aisb-window-control-v1";
 export const UI_PRESENTATION_ACTIONS = Object.freeze([
   "open-system", "select-component", "show-run", "show-artifact", "show-validation",
   "show-data-source", "show-dataset-version", "show-dataset-task",
+  "show-context-artifact", "show-context-task",
 ] as const);
 export type UiPresentationAction = (typeof UI_PRESENTATION_ACTIONS)[number];
 

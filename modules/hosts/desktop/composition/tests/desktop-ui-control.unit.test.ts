@@ -6,14 +6,18 @@ import {createStructuredOrganizationRepositories} from "../../../../adapters/per
 import {createLocalWorkspaceRepository} from "../../../../adapters/persistence/workspace";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
-import {isHeadlessHostIncarnationId, type UiDataPresentationIntent} from "../../../../contracts/headless";
+import {isHeadlessHostIncarnationId, type UiDataPresentationIntent, type UiContextPresentationIntent} from "../../../../contracts/headless";
 import {composeDesktopUiControl} from "../composeDesktopUiControl";
 
 for (const intent of [
   {action: "show-data-source", taskId: "source.task", fileId: "source.file", taskRevision: 1},
   {action: "show-dataset-version", datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: `sha256:${"a".repeat(64)}`},
   {action: "show-dataset-task", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c"},
-] as const satisfies readonly UiDataPresentationIntent[]) test(`Desktop ${intent.action} rechecks current policy before and after metadata`, async () => {
+  {action: "show-context-task", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c"},
+  {action: "show-context-artifact", reference: {workspaceId: createWorkspaceId("data-window-workspace"),
+    contextId: "ca353bdd-7793-44c6-8c36-c470be8c537d", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c",
+    kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`}},
+] as const satisfies readonly (UiDataPresentationIntent | UiContextPresentationIntent)[]) test(`Desktop ${intent.action} rechecks current policy before and after metadata`, async () => {
   const documents = createInMemoryStructuredDocumentStore(), organizationId = createOrganizationId("data-window-org"),
     workspaceId = createWorkspaceId("data-window-workspace"), at = "2026-11-18T00:00:00.000Z";
   const identity = {organizationId, principalId: "data-window-principal", principalDisplayName: "Synthetic", createdAt: at, updatedAt: at};

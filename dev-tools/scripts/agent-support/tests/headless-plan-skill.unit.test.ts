@@ -108,6 +108,9 @@ test("portable Context guidance and discovery separate metadata from execution a
     "at final issue after staging", "request a separate exact save approval", "saved parent stays unchanged",
     "do not start another attempt", "does not adopt an ancestor's task or require that ancestor's point index"])
     assert.ok(normalized.includes(text), `Missing separately approved recorded rebuild boundary: ${text}`);
+  for (const text of ["Show Context in a window", "show-context-artifact", "show-context-task", "current window lease",
+    "does not start a model", "query summaries remain unavailable", "Ending display does not cancel"])
+    assert.ok(normalized.includes(text), `Missing separately consented Context display boundary: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

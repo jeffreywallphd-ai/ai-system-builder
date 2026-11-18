@@ -12,6 +12,28 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_context_presentation_keeps_exact_authority_and_renderer_checks_without_unknown_coverage_loss(self):
+        name = 'headless-ui-control-authority'
+        paths = ['modules/application/use-cases/context-management/headless-context-presentation.use-case.ts',
+                 'modules/hosts/shared/composition/headlessContextPresentation.ts',
+                 'modules/hosts/shared/composition/tests/headless-context-presentation.unit.test.ts']
+        selected = self.selected(paths, ['architecture'])
+        self.assertIn(name, selected)
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('modules/application/use-cases/context-management/tests/headless-context-presentation.unit.test.ts', selected[name]['argv'])
+        self.assertIn('modules/hosts/shared/composition/tests/headless-data-presentation.unit.test.ts', selected[name]['argv'])
+        self.assertIn('headless-desktop-takeover-controls', self.selected(['modules/ui/shared/takeover/PresentedWindowResource.tsx'], ['architecture']))
+        for extra in ['modules/hosts/shared/composition/unknown-context.ts', 'modules/ui/shared/takeover/unknown.tsx', 'modules/ui/shared/unknown.tsx']:
+            self.assertIn('focused-tests', self.selected(paths + [extra], ['architecture']))
+        self.assertNotIn('focused-tests', self.selected(paths + ['modules/hosts/desktop/composition/composeDesktopHost.ts',
+            'modules/hosts/desktop/composition/README.md', 'modules/ui/shared/README.md',
+            'modules/application/use-cases/context-management/README.md'], ['architecture', 'headless-desktop-takeover-controls']))
+        self.assertIn('focused-tests', self.selected(['modules/hosts/desktop/composition/composeDesktopHost.ts'],
+            ['architecture', 'headless-desktop-takeover-controls']))
+        self.assertNotIn('focused-tests', self.selected(['modules/hosts/desktop/composition/composeDesktopHost.ts'],
+            ['architecture', 'headless-ui-control-authority']))
+        self.assertIn('focused-tests', self.selected(paths, ['architecture', 'focused-tests']))
+
     def test_installed_query_worker_is_fixed_exact_python_and_shared_model_only_keeps_fallback(self):
         name = 'headless-context-installed-query-worker'
         definition = catalog.PUBLISHED_FORM_CHECKS[name]

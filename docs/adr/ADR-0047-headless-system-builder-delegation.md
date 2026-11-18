@@ -1,5 +1,16 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+Context metadata handoff extends the same finite window presentation protocol
+with exact saved Context references and accepted task IDs. Both hosts retain
+current artifact-read, actor/workspace and separate window consent. A shared
+application reader verifies saved lineage or accepted same-host/actor indexes
+before observing the cached existing Context owner; presentation never invokes
+the lazy feature initializer. Existing delivery, replay, dirty navigation,
+document and revoke controls apply. Fixed status/count summaries and opaque
+selectors add no source/query egress, execution/save grant, new engine or
+retention policy. Public query summaries and physical/host/parent qualification
+remain separate work.
+
 The approved Data handoff extends the same finite presentation protocol with
 exact source/file/revision, dataset/version/digest and accepted task intents.
 It adds no generic navigation, filesystem, provider or task execution tool.

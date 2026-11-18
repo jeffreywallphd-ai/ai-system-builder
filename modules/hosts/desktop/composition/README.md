@@ -1,5 +1,14 @@
 # Desktop host composition
 
+Context window intents use current artifact-read permission and the existing
+separate window consent. The shared Context presentation reader verifies an exact
+committed saved reference or accepted same-host/actor task before observing the
+cached Context owner. The cache is populated only by existing feature use;
+presentation never calls the lazy feature initializer. Missing owners deny.
+Fixed status/counts and opaque selectors cross the display boundary; source bytes,
+models and query text do not. Lease retirement stops new display/context while
+preserving independently authorized Context work. Query summaries remain pending.
+
 `context.preview-rebuild` is a separate optional plan-review metadata provider.
 It requires current artifact/model permission and verifies immutable recorded
 inputs through the platform owner. It never initializes the Context execution

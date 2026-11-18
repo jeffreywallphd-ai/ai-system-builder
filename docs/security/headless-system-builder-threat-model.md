@@ -1,5 +1,18 @@
 # Headless System Builder threat model
 
+## Context window presentation
+
+The fixed saved-Context/task selectors reuse existing separate window consent,
+artifact-read, document and lease/publication fences in both hosts. A full saved
+reference must match committed Context lineage. A task must have exact accepted
+same-host/actor point and plan indexes before any cached owner observation.
+Display cannot initialize a runtime/model, read source bytes or grant execution
+or save authority. Fixed bounded summaries exclude source/query text, vectors,
+paths and untrusted names. Selector/actor copies survive caller mutation.
+Revocation retires fresh display/context and preserves independent Context work.
+Synthetic structured-owner, delivery and DOM checks remain distinct from public
+queries, actual app-host, physical retrieval/resources and parent qualification.
+
 ## Data window presentation
 
 The Data instruction-isolation regressions run adversarial CSV text through the

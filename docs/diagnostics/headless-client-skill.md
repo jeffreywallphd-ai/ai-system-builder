@@ -1,5 +1,21 @@
 # Headless client skill
 
+## Show Context in the app
+
+Use this only when the user requests a window handoff. Obtain a current window
+lease through the existing consent workflow. For a saved item, read its exact
+Context reference and send `show-context-artifact` with that reference. For an
+accepted task, send `show-context-task` with its exact task ID. The existing
+`aisb_present_in_window` tool supports both selectors; no new tool is needed.
+
+The agent must keep the workspace, saved digest, kind and producer unchanged.
+The host checks current read permission and window consent. It shows fixed
+status/counts, not source or query text. It does not start a model or initialize
+a processor. A saved file's availability is not checked by this metadata read.
+Public query summaries need their separate implementation. Stop display after
+revoke or expiry; independent Context work remains intact. Report window display
+separately from backend completion and save approval.
+
 ## Show a Data result in the app
 
 Use a separate client with window-control permission. The plan-review connection

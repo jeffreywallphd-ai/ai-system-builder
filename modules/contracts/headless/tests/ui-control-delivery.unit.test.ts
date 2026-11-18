@@ -2,6 +2,30 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readUiPresentationIntent, readUiPresentationDelivery, readUiPresentationContext, viewForUiPresentationIntent } from "..";
 
+test("Context display copies only exact saved references or accepted-task selectors", () => {
+  const reference = {workspaceId: "context-workspace", contextId: "ca353bdd-7793-44c6-8c36-c470be8c537c",
+    taskId: "ca353bdd-7793-44c6-8c36-c470be8c537d", kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`};
+  for (const intent of [{action: "show-context-artifact", reference}, {action: "show-context-task", taskId: reference.taskId}]) {
+    const parsed = readUiPresentationIntent(intent); assert.ok(parsed); assert.deepEqual(parsed, intent);
+    const context = {view: viewForUiPresentationIntent(parsed), ready: true, dirtyNavigationBlocked: false, selection: intent};
+    assert.deepEqual(readUiPresentationContext(context), context);
+    assert.equal(readUiPresentationContext({...context, view: "artifact"}), undefined);
+    for (const extra of [{path: "private/context.zip"}, {query: "private query"}, {principalId: "another"}, {start: true}])
+      assert.equal(readUiPresentationIntent({...intent, ...extra}), undefined);
+  }
+  const parsed = readUiPresentationIntent({action: "show-context-artifact", reference});
+  assert.ok(parsed && parsed.action === "show-context-artifact");
+  assert.notStrictEqual(parsed.reference, reference); reference.artifactDigest = `sha256:${"b".repeat(64)}`;
+  assert.equal(parsed.reference.artifactDigest, `sha256:${"a".repeat(64)}`);
+  let reads = 0;
+  for (const reference of [{...parsed.reference, contextId: "ordinary-id"}, {...parsed.reference, taskId: "ordinary-task"},
+    {...parsed.reference, kind: "dataset"}, {...parsed.reference, artifactDigest: "invalid"}, {...parsed.reference, workspaceId: ""},
+    {...parsed.reference, path: "private/context.zip"}, Object.defineProperty({...parsed.reference}, "contextId", {enumerable: true, get() {reads++; return parsed.reference.contextId;}})])
+    assert.equal(readUiPresentationIntent({action: "show-context-artifact", reference}), undefined);
+  assert.equal(reads, 0);
+  assert.equal(readUiPresentationIntent({action: "show-context-task", taskId: "ordinary-task"}), undefined);
+});
+
 test("admits only exact saved resource identifiers to the fixed presentation family", () => {
   assert.deepEqual(readUiPresentationIntent({ action: "show-run", runId: "run.1" }), { action: "show-run", runId: "run.1" });
   assert.deepEqual(readUiPresentationIntent({ action: "open-system", systemId: "system.1", revisionId: "revision.1" }),

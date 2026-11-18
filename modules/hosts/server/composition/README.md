@@ -1,5 +1,13 @@
 # Server host composition
 
+Managed Context display uses the shared exact saved/accepted-task reader under
+current request organization, workspace, actor and artifact-read policy. Existing
+browser consent owns lease, document, delivery and context fences. The reader uses
+only committed metadata or the already-composed Context owner, with accepted
+same-host/actor proof before observation. No model/runtime initialization, source
+byte read, provider call or new task follows from display. Revocation preserves
+independently authorized work; public query summaries remain pending.
+
 Managed Data presentation routes exact source/version/accepted-task selections
 through the shared Data metadata reader under current request organization,
 workspace, principal and artifact-read policy. Existing consent/delivery owns

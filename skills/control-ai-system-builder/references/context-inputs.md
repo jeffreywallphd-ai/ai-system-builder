@@ -191,3 +191,26 @@ does not adopt an ancestor's task or require that ancestor's point index. Curren
 permission and the rebuilt result's own accepted source/model lineage still apply.
 Focused host and SDK checks are separate from physical retrieval, resource,
 native, real-app and whole-roadmap qualification.
+
+## Show Context in a window
+
+Use this only when the user asks to show Context in the app. Obtain a current
+window lease through the skill's existing window-control workflow. A backend
+plan approval does not approve window control.
+
+1. For a saved Context, call `aisb_read_context` and keep its exact `reference`.
+   Use `aisb_present_in_window` with `show-context-artifact` and that reference.
+   Keep the workspace, Context ID, producing task, kind and digest unchanged.
+2. For a task, first obtain its exact accepted ID from the approved plan receipt
+   or `aisb_read_context_task`. Use `show-context-task` with that task ID.
+   Unknown, ordinary, foreign or unaccepted tasks cannot be shown this way.
+3. Keep the exact current window lease and a fresh command ID for each new
+   selection. An exact replay reads its first receipt. Do not claim that an
+   accepted command has already appeared in the window.
+4. The window shows fixed status and counts with opaque identifiers. It reads
+   no source bytes and does not start a model or initialize a processor. A saved
+   file's availability is not checked. Public query summaries remain unavailable
+   until their separate query connection is implemented.
+5. Stop presenting after revoke or expiry. Ending display does not cancel
+   independently approved Context work, delete a saved artifact or grant save
+   approval. Report display and backend results separately.

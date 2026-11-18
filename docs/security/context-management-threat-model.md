@@ -29,6 +29,21 @@ new approval, exact replay, substitutions and parent loss after staging. No
 runtime/model installation, raw-content disclosure, native recovery or resource
 qualification follows. Actual query, display and parent qualification remain open.
 
+## Revocable Context display boundary
+
+Strict Context selectors carry an exact saved workspace/Context/producer/kind/
+digest reference or one task UUID. Current artifact-read and existing separate
+window consent fence both host readers. The application copies actor/selection
+before awaits and rechecks permission after metadata. Saved records require exact
+committed catalog/binding/causal metadata, not caller names or generic keys.
+Transient tasks require accepted same-host/actor point and plan indexes before
+cached owner access. Unknown, ordinary, unaccepted, foreign or absent owners deny
+without model/runtime initialization, new task dispatch or source-byte access.
+Fixed bounded interactive summaries omit names, instructions, excerpts, queries,
+model paths and vectors. Existing window delivery/context fences stop new effects
+after revoke while preserving independent work. Source freshness, public queries,
+actual retrieval/resources and final qualification remain separate obligations.
+
 ## Private installed-query boundary
 
 The optional private installed-query seam accepts only strict copied descriptors,

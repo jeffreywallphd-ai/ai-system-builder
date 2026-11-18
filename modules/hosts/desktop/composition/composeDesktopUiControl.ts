@@ -6,7 +6,7 @@ import type { StructuredDocumentStore } from "../../../adapters/persistence/shar
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { DesktopHeadlessAuthoringWireGrant } from "../../../adapters/transport/headless-loopback";
 import {
-  UI_CONTROL_VERSION, sameUiControlLease, readUiPresentationDetail, readUiPresentationContext, isUiDataPresentationIntent,
+  UI_CONTROL_VERSION, sameUiControlLease, readUiPresentationDetail, readUiPresentationContext, isUiDataPresentationIntent, isUiContextPresentationIntent,
   type HeadlessHostIncarnationId, type HeadlessWindowRequest, type HeadlessWindowResult, type HeadlessWindowValue,
   type UiControlAttempt, type UiControlLeaseTarget, type UiPresentationContext, type UiPresentationIntent, type UiPresentationDetail,
 } from "../../../contracts/headless";
@@ -54,7 +54,7 @@ export function composeDesktopUiControl({
   const authorizeIntent = async (workspaceId: WorkspaceId, intent: UiPresentationIntent) => {
     if (!canPresent) return;
     const extraScopes: readonly SecurityScope[] = intent.action === "show-run" ? ["runtime:read"] :
-      intent.action === "show-artifact" || isUiDataPresentationIntent(intent) ? ["artifact:read"] : [];
+      intent.action === "show-artifact" || isUiDataPresentationIntent(intent) || isUiContextPresentationIntent(intent) ? ["artifact:read"] : [];
     const scopes: readonly SecurityScope[] = ["workspace:read", "asset:read", ...extraScopes];
     if (!await authorizeWorkspace(workspaceId, scopes)) return;
     try {

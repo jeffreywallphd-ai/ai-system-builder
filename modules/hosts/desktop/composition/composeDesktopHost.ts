@@ -15,8 +15,9 @@ import { composeDesktopHeadlessLocalFileSelection } from "./composeDesktopHeadle
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
-import {isUiDataPresentationIntent} from "../../../contracts/headless";
+import {isUiContextPresentationIntent, isUiDataPresentationIntent} from "../../../contracts/headless";
 import {composeHeadlessDataPresentation} from "../../shared/composition/headlessDataPresentation";
+import {composeHeadlessContextPresentation} from "../../shared/composition/headlessContextPresentation";
 import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../contracts/system-builder";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
@@ -1089,7 +1090,8 @@ export function composeDesktopHost(
         });
       // Context is retained by the existing lifecycle. Proposals may inspect its
       // already loaded owner, but must never create runtime dependencies.
-      let contextResultOwner: import("../../shared/composition/headlessContextResults").HeadlessContextResultOwner | undefined;
+      let contextResultOwner: (import("../../shared/composition/headlessContextResults").HeadlessContextResultOwner &
+        Pick<import("../../../application/use-cases/context-management").ContextGenerationUseCase, "readAdmittedContextTask">) | undefined;
       const getContextManagementFeatures =
         featureLifecycle.registerAsyncFeature({
           featureKey: "context-management",
@@ -2328,6 +2330,13 @@ export function composeDesktopHost(
               audit: headlessAudit,
               isOpen: () => !headlessReadAdmissionClosed,
               async canPresent(workspaceId, intent, stillAllowed) {
+                if (isUiContextPresentationIntent(intent)) {
+                  const context = {organizationId: identity.organizationId, principalId: identity.principalId, workspaceId};
+                  const reader = composeHeadlessContextPresentation({documents: platformDocuments!,
+                    rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId,
+                    peekProcessor: () => contextResultOwner})(context);
+                  return reader?.execute(intent, context, stillAllowed);
+                }
                 if (isUiDataPresentationIntent(intent)) {
                   const context = {organizationId: identity.organizationId, principalId: identity.principalId, workspaceId};
                   const reader = composeHeadlessDataPresentation({documents: platformDocuments!,

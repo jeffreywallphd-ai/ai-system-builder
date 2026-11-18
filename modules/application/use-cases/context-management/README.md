@@ -1,5 +1,13 @@
 # Context Management Application Use Cases
 
+`ReadHeadlessContextPresentationUseCase` returns fixed bounded interactive
+metadata for exact saved Context references and accepted tasks. It copies the
+selector/actor, fences metadata reads with current permission and verifies every
+saved-reference field. Task dependencies must prove accepted same-host/actor
+ownership before observing an already-loaded owner. This reader cannot initialize
+a model/runtime, read source bytes or grant execution/save authority. Existing
+window consent owns display and revocation; query summaries remain separate work.
+
 `ReadHeadlessContextRebuildUseCase` is a passive recorded-input projection. Current
 actor/client/workspace/resource authority surrounds the indexed metadata lookup
 and its strict result. An old approval supplies lineage only, never permission.
