@@ -63,6 +63,25 @@ test("source and saved-version previews compile canonical commands without conte
   assert.deepEqual(await owner.execute(request, authority), result, "Source labels are data, never commands or destinations.");
 });
 
+test("immutable Data declarations privately bind non-open terms while unknown terms stay unknown", async () => {
+  const f = await fixture(), saved = datasetVersion(1);
+  const selected = {...request, input: {...request.input, sources: [{kind: "dataset-version", datasetId: saved.datasetId,
+    versionId: saved.versionId, versionDigest: saved.versionDigest, role: "train"}]}};
+  for (const license of ["LicenseRef-Proprietary", "x".repeat(256), undefined]) {
+    const owner = new PreviewHeadlessContextInputsUseCase({...f, versions: {...f.versions,
+      async readVersion() {return {...saved, documentation: {...saved.documentation, license}};}}});
+    const result = await owner.execute(selected, authority);
+    assert.ok(result.ok && "prepared" in result);
+    assert.equal(result.prepared.admissionSources[0].declaredLicense, license);
+    assert.equal(result.prepared.admissionSources[0].storageKey, saved.artifacts[1].artifactKey);
+    assert.equal(result.prepared.preview.sources[0].licenseStatus, license ? "recorded" : "unknown");
+    assert.equal(JSON.stringify(result.prepared.preview).includes("LicenseRef-Proprietary"), false);
+  }
+  const tooLong = new PreviewHeadlessContextInputsUseCase({...f, versions: {...f.versions,
+    async readVersion() {return {...saved, documentation: {...saved.documentation, license: "x".repeat(257)}};}}});
+  assert.equal((await tooLong.execute(selected, authority)).ok, false, "Declared terms must be bounded whole; never silently truncate them.");
+});
+
 test("RAG previews use exact recorded embedding metadata and never fall back to discovery", async () => {
   const f = await fixture();
   const result = await f.owner.execute({...request, input: {...request.input, settings: rag}}, authority);

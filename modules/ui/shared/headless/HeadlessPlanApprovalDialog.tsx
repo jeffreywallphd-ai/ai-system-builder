@@ -195,12 +195,14 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const providerReads = view.preview.steps.some(step => step.operation === "data.save-provider-source");
   const datasetProcessing = view.preview.steps.some(step => step.operation === "data.prepare-local-dataset");
   const datasetSaving = view.preview.steps.some(step => step.operation === "data.save-prepared-dataset");
+  const contextProcessing = view.preview.steps.some(step => step.operation === "context.generate-pack");
+  const processing = datasetProcessing || contextProcessing;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
     <p>Requested by Client {view.selection.registeredClientId.slice(0, 8)}</p>
     <ul aria-label="Permissions and limits">
-      <li>{datasetProcessing ? "Perform" : "Save"} only the changes shown below in this workspace.</li>
+      <li>{processing ? "Perform" : "Save"} only the changes shown below in this workspace.</li>
       {view.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source") ? (
         <li>Save the listed files in this workspace’s Data area.</li>
       ) : null}
@@ -214,7 +216,12 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Use only the approved quality report. Include the source, recipe, data split and quality record.</li>
         <li>No model calls. No outside publication. No second processing run.</li>
       </> : null}
-      <li>Limit of {state.stepCount} {datasetProcessing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
+      {contextProcessing ? <>
+        <li>Prepare a Markdown Context pack from the listed saved sources. Limit: 4 sources, 4 MiB per source, 16 MiB total and 1,000 text chunks.</li>
+        <li>Use the listed text fields, cleaning and chunk settings. Keep recorded license information; unknown terms stay unknown.</li>
+        <li>No model calls or model installation. Review the result before a separate request to save it. Publication needs separate permission.</li>
+      </> : null}
+      <li>Limit of {state.stepCount} {processing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
       {providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
         : <li>No outside service calls or provider charges.</li>}
@@ -242,6 +249,20 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
           <strong>Save reviewed dataset: {step.input.outputBaseName}</strong>
           <div>Preparation task: {step.input.taskId}</div>
           <div>Approved quality report: {step.input.reportFingerprint}</div>
+        </> : step.operation === "context.generate-pack" ? <>
+          <strong>Prepare Context pack: {step.input.name}</strong>
+          <ul>{step.input.sources.map(source => <li key={JSON.stringify(source)}>
+            {source.kind === "ingestion-file" ? <>
+              File reference {source.fileId}. Upload {source.taskId}, version {source.taskRevision}.
+            </> : <>
+              Dataset {source.datasetId}. Saved version {source.versionId}. Part: {source.role}.
+              {" "}Version digest: {source.versionDigest}.
+            </>}
+          </li>)}</ul>
+          <div>Text fields: {step.input.settings.textFields.length ? step.input.settings.textFields.join(", ") : "No specific fields selected"}.</div>
+          <div>Cleaning: {step.input.settings.cleaningPreset}. Chunk size: {step.input.settings.chunkCharacters} characters.
+            {" "}Overlap: {step.input.settings.overlapCharacters} characters. Maximum chunks: {step.input.settings.maximumChunks}.</div>
+          <div>No summarization or model calls. Result review and a separate save request are required.</div>
         </> : <>
           <strong>{step.operation === "systems.create" ? "Create " : step.operation === "systems.clone" ? "Copy as " : "Rename to "}
             {step.input.name}</strong>

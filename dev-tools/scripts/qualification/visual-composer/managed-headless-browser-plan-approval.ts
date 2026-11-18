@@ -211,7 +211,7 @@ async function main() {
       }}), {timeout:10_000});
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_context_task", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
       "aisb_preview_build_plan", "aisb_preview_context_generation", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
@@ -242,6 +242,8 @@ async function main() {
     page.on("response", response => {
       if (stage.includes("managed-dataset") && response.url().endsWith("/api/headless/browser/plan-approvals"))
         checks.managed_dataset_approval_http_status = response.status();
+      if (stage.includes("managed-context") && response.url().endsWith("/api/headless/browser/plan-approvals"))
+        checks.managed_context_approval_http_status = response.status();
     });
     page.setDefaultTimeout(15_000);
     stage = "load-systems";
@@ -633,6 +635,62 @@ async function main() {
     assert.equal("command" in contextPreview.value, false); assert.deepEqual(contextPreview.value.settings, contextSettings);
     assert.deepEqual(await call("aisb_preview_context_generation", {...contextInput, sources: [{...contextInput.sources[0], taskRevision: 1}]}), {ok: false, code: "headless.stale"});
     checks.managed_context_preview_is_exact_passive_metadata = true;
+    stage = "propose-managed-context-pack";
+    const contextSteps = [{operation: "context.generate-pack", idempotencyKey: randomUUID(), name: contextInput.name,
+      sources: contextInput.sources, settings: contextSettings}];
+    const contextPlan = await call("aisb_preview_build_plan", {...scope, steps: contextSteps});
+    assert.equal(contextPlan.ok, true); assert.equal(contextPlan.value.version, "aisb-build-plan-preview-v6");
+    assert.equal(contextPlan.value.steps[0].explicitSaveRequired, true); assert.equal(contextPlan.value.steps[0].modelCalls, 0);
+    const contextFingerprint = contextPlan.value.fingerprint;
+    assert.equal((await call("aisb_request_build_plan_approval", {...scope, fingerprint: contextFingerprint, steps: contextSteps})).ok, true);
+    assert.deepEqual(await run(contextFingerprint, 2, 1), uncertain);
+    stage = "list-managed-context-request";
+    await dialog.getByRole("button", {name: "Back to requests", exact: true}).click();
+    stage = "select-managed-context-request";
+    await dialog.getByRole("button", {name: new RegExp("^Review request " + contextFingerprint.slice(0, 8) + " from Client ")}).click();
+    stage = "read-managed-context-permissions";
+    await dialog.getByRole("list", {name: "Permissions and limits"}).getByText("Limit of 1 change for this plan.", {exact: true}).waitFor();
+    await expect(dialog.getByRole("list", {name: "Requested changes"})).toContainText("Prepare Context pack: Synthetic intake context");
+    await expect(dialog.getByRole("list", {name: "Permissions and limits"})).toContainText("No model calls or model installation");
+    stage = "approve-managed-context-pack";
+    await dialog.getByRole("radio", {name: "Approve all listed changes"}).check();
+    await dialog.getByRole("button", {name: "Approve all changes", exact: true}).click();
+    await dialog.getByText("Plan approved.", {exact: true}).waitFor();
+    stage = "start-managed-context-pack";
+    const contextStart = await run(contextFingerprint, 2, 1);
+    if (contextStart.ok) {
+      assert.equal(contextStart.value.kind, "started"); assert.equal(contextStart.value.operation, "context.generate-pack");
+    } else assert.equal(contextStart.code, "headless.operation-unconfirmed");
+    const contextSelection = {kind: "plan-step", fingerprint: contextFingerprint, step: 1};
+    let contextState: string | undefined, acceptedContextTask: string | undefined;
+    const contextDeadline = Date.now() + 90_000;
+    stage = "observe-managed-context-review";
+    while (Date.now() < contextDeadline) {
+      const result = await call("aisb_context_task", {...scope, selection: contextSelection});
+      if (!result.ok) assert.ok(["headless.forbidden", "headless.unavailable"].includes(result.code));
+      else {
+        assert.deepEqual(Object.keys(result.value).sort(), ["review", "state", "taskId"]);
+        if (acceptedContextTask) assert.equal(result.value.taskId, acceptedContextTask);
+        acceptedContextTask = result.value.taskId; contextState = result.value.state;
+        if (contextState === "review-required") {
+          assert.equal(result.value.review.kind, "markdown-context-pack");
+          assert.equal(result.value.review.requiresExplicitSave, true); assert.equal(result.value.review.sourceCount, 1);
+          assert.match(result.value.review.reportFingerprint, /^[a-f0-9]{64}$/);
+          assert.ok(result.value.review.chunkCount > 0 && result.value.review.sizeBytes > 0);
+        }
+        assert.equal("data" in result.value || "path" in result.value || "preview" in result.value, false);
+      }
+      if (contextState === "review-required" || contextState === "failed" || contextState === "cancelled") break;
+      await delay(250);
+    }
+    assert.equal(contextState, "review-required");
+    const contextReplay = await run(contextFingerprint, 2, 1);
+    assert.equal(contextReplay.ok, true); assert.equal(contextReplay.value.kind, "replayed");
+    assert.equal(contextReplay.value.reference.taskId, acceptedContextTask);
+    assert.deepEqual(await call("aisb_context_task", {...scope, selection: {kind: "task", taskId: randomUUID()}}),
+      {ok: false, code: "headless.forbidden"});
+    checks.managed_context_pack_is_installed_only_owned_once_and_review_required = true;
+    // The pending review grants no Context save, active RAG, model or parent qualification.
     const preparation = await call("aisb_preview_dataset_preparation", {...scope,
       sources: [{taskId, fileId, taskRevision: sourceStatus.value.revision}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "name", outputColumn: "amount"},

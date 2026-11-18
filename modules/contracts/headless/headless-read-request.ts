@@ -13,6 +13,7 @@ import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHos
 export {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 
 import {readHeadlessContextReadRequest, type HeadlessContextReadRequest} from "./headless-context-preview";
+import {readHeadlessContextTaskRequest, type HeadlessContextTaskRequest} from "./headless-context-task";
 
 export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
   "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation", "data.dataset-task-status", "data.dataset-task-review",
@@ -34,7 +35,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "conversation-tasks.read",
   "plan.capabilities",
   ...HEADLESS_DATA_READ_OPERATIONS,
-  "context.models", "context.preview-generation",
+  "context.models", "context.preview-generation", "context.task",
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -66,6 +67,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 
 export type HeadlessReadRequest =
   | HeadlessContextReadRequest
+  | HeadlessContextTaskRequest
   | HeadlessIngestionStatusRequest
   | HeadlessDatasetMetadataRequest
   | HeadlessDatasetPreparationRequest
@@ -165,6 +167,7 @@ export function parseHeadlessReadRequest(
   if (!isHeadlessReadOperation(operation)) return { ok: false, code: "headless.unsupported-operation" };
 
   const version = HEADLESS_CONTRACT_VERSION;
+  if (operation === "context.task") return readHeadlessContextTaskRequest(value, currentHost);
   if (operation === "context.models" || operation === "context.preview-generation") return readHeadlessContextReadRequest(value, currentHost);
   if (operation === "data.dataset-task-status") return readHeadlessDatasetTaskStatusRequest(value, currentHost);
   if (operation === "data.dataset-task-review") return readHeadlessDatasetTaskReviewRequest(value, currentHost);

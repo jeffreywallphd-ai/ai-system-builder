@@ -75,8 +75,17 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     isCurrent: identity => identity === planIdentity && current,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "context.task") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {
+          taskId: statusMismatch ? randomUUID() : acceptedDatasetTaskId, state: "review-required",
+          review: {kind: "markdown-context-pack", reportFingerprint: "a".repeat(64), sourceCount: 1,
+            chunkCount: 2, sizeBytes: 128, requiresExplicitSave: true},
+          ...(statusExtra ? {outputPath: "private"} : {}),
+        }};
+      }
       if (request.operation === "context.models") {
         if (withdrawStatus) current = false;
         return {ok: true, operation: request.operation, value: {workspaceId: statusMismatch ? "foreign" as never : request.input.workspaceId,
@@ -212,6 +221,25 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {status:response.status, cache:response.headers.get("cache-control"), body:await response.json()};
     }
     const readRoute = MANAGED_HEADLESS_AGENT_PATHS.read;
+    const contextTaskRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "context.task",
+      input: {...scope, selection: {kind: "task", taskId: acceptedDatasetTaskId}}};
+    const described = await request({version: HEADLESS_CONTRACT_VERSION, operation: "host.describe", input: {}},
+      "fixture-plan", readRoute);
+    assert.ok(described.body.value.operations.includes("context.task"));
+    assert.equal((await request(contextTaskRequest, "fixture-plan", readRoute)).status, 200);
+    assert.equal((await request({...contextTaskRequest, input: {...scope, selection: {kind: "plan-step", fingerprint, step: 1}}},
+      "fixture-plan", readRoute)).status, 200);
+    statusMismatch = true;
+    assert.equal((await request(contextTaskRequest, "fixture-plan", readRoute)).status, 503);
+    statusMismatch = false; statusExtra = true;
+    assert.equal((await request(contextTaskRequest, "fixture-plan", readRoute)).status, 503);
+    statusExtra = false; withdrawStatus = true;
+    assert.equal((await request(contextTaskRequest, "fixture-plan", readRoute)).status, 403);
+    withdrawStatus = false; current = true;
+    assert.equal((await request(contextTaskRequest, "fixture-agent", readRoute)).status, 403);
+    enabled = false;
+    assert.equal((await request(contextTaskRequest, "fixture-plan", readRoute)).status, 400);
+    enabled = true;
     const datasetTaskRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.dataset-task-status",
       input: {...scope, selection: {kind: "task", taskId: acceptedDatasetTaskId}}};
     assert.deepEqual(await request(datasetTaskRequest, "fixture-plan", readRoute), {status: 200, cache: "no-store",

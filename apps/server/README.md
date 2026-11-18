@@ -305,3 +305,10 @@ and the proof for that document. Approval applies to the exact request and
 revision the user opened. It supports the whole plan and one change at a time.
 
 When configured Headless plan review supplies the dataset owner, the API forwards the explicit local-dataset capability into strict v4 plan and task-receipt decoding. Passive dataset status remains restricted to the plan-review client and exact accepted task association. Missing host capability fails closed; it does not fall back to general runtime commands.
+
+The dedicated Headless plan-review client can request source-derived Context
+packs when the host offers that capability. The API forwards the explicit v6
+capability flag and keeps accepted-task reads on the authenticated plan path.
+Both browser approval channels list exact saved sources and limits. This grants
+no runtime installation, model download, provider call, publication or window
+control. The result requires review and a separate save request.

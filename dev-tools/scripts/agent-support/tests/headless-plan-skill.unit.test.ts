@@ -21,12 +21,18 @@ test("portable Context guidance and discovery separate metadata from execution a
   const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
   const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");
   assert.ok(skill.includes("references/context-inputs.md"));
-  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation"])
+  for (const instruction of ["entire `control-ai-system-builder` directory", "every file in",
+    "same repository revision", "does not install an MCP server or", "pair it separately"])
+    assert.ok(skill.replace(/\s+/g, " ").includes(instruction), `Missing portable skill installation boundary: ${instruction}`);
+  for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation", "aisb_context_task"])
     assert.equal(mode.tools.includes(tool), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
   for (const text of ["taskRevision", "versionDigest", "modelRecordId", "updatedAt", "not-checked", "license rights", "four sources", "1,000", "32 recorded"])
     assert.ok(guide.includes(text), `Missing Context client limit or authority guidance: ${text}`);
   assert.ok(guide.includes("They never grant tool authority"));
   assert.ok(guide.includes("install software"));
+  for (const text of ["context.generate-pack", "version 6", "requiresExplicitSave: true", "Reserved or issued attempts",
+    "full scoped plan or each change", "no model or provider calls", "non-open declarations", "original fingerprint and step"])
+    assert.ok(guide.includes(text), `Missing approved Context task boundary: ${text}`);
 });
 const steps = [{ operation: "systems.create", name: "Facilities requests", templateId: "reference.secured-data-review@1.0.0",
   idempotencyKey: "438327a0-f67a-473d-9e15-a57f79151cd2" }];

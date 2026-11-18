@@ -1,6 +1,7 @@
 import {createHash} from "node:crypto";
 import type {ApplicationRequestContext} from "../../ports";
-import {APPROVED_CONTEXT_MAX_SOURCES, APPROVED_CONTEXT_MAX_SOURCE_BYTES, type ApprovedContextGenerationAdmission} from "../../ports/context-management";
+import {APPROVED_CONTEXT_MAX_SOURCES, APPROVED_CONTEXT_MAX_SOURCE_BYTES, APPROVED_CONTEXT_MAX_LICENSE_CHARACTERS,
+  type ApprovedContextGenerationAdmission} from "../../ports/context-management";
 import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
 import {validateStartContextGenerationCommand, type StartContextGenerationCommand} from "../../../contracts/context-management";
 import {isWorkspaceId} from "../../../contracts/workspace";
@@ -49,12 +50,16 @@ export function readApprovedContextAdmission(rawCommand: StartContextGenerationC
     const sourceData = copyBoundedPassiveData(raw.sources);
     if (!Array.isArray(sourceData) || sourceData.length !== command.sources.length) return;
     const sources = sourceData.map((value, index) => {
-      const source = readStrictPassiveRecord(value, ["artifactId", "storageKey", "digest", "sizeBytes", "mediaType", "format"]);
+      const source = readStrictPassiveRecord(value, ["artifactId", "storageKey", "digest", "sizeBytes", "mediaType", "format", "declaredLicense"]);
       if (source.artifactId !== command.sources[index].artifactId || typeof source.storageKey !== "string" ||
           normalizeStorageArtifactKey(source.storageKey) !== source.storageKey || typeof source.digest !== "string" || !digest.test(source.digest) ||
           !Number.isSafeInteger(source.sizeBytes) || (source.sizeBytes as number) < 1 || (source.sizeBytes as number) > APPROVED_CONTEXT_MAX_SOURCE_BYTES ||
           typeof source.mediaType !== "string" || source.mediaType.length < 1 || source.mediaType.length > 128 ||
           !["csv", "json", "jsonl", "parquet", "text", "markdown", "html", "pdf", "docx"].includes(source.format as string)) throw new Error("Invalid Context source binding.");
+      if (source.declaredLicense !== undefined && (typeof source.declaredLicense !== "string" || !source.declaredLicense.trim() ||
+          source.declaredLicense !== source.declaredLicense.trim() || source.declaredLicense.length > APPROVED_CONTEXT_MAX_LICENSE_CHARACTERS ||
+          hasKnownPassiveCredential(source.declaredLicense) || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(source.declaredLicense)))
+        throw new Error("Invalid declared Context source license.");
       return source as unknown as ApprovedContextGenerationAdmission["sources"][number];
     });
     if (new Set(sources.map(source => source.storageKey)).size !== sources.length) return;

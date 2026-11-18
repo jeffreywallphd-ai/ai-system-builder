@@ -21,6 +21,7 @@ from modules.adapters.runtime.python.worker.tasks.context_generation import (
     RAG_MEDIA_TYPE,
     generate_context_artifact,
     _embed_with_transformers,
+    _collect_chunks,
 )
 from modules.adapters.runtime.python.worker.tasks.markdown_chunking import (
     chunk_markdown_documents,
@@ -32,6 +33,64 @@ def _digest(value: bytes) -> str:
 
 
 class ContextGenerationTests(unittest.TestCase):
+    def test_source_pack_preserves_recorded_terms_in_inspection_and_archive_without_models(self):
+        for license_text in ["cc-by-4.0", "LicenseRef-Proprietary", None]:
+            with self.subTest(declaration=license_text), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                content = b"Bounded synthetic support instructions.\n"
+                source = root / "source.txt"
+                source.write_bytes(content)
+                information = {"license": license_text} if license_text else {}
+                request = ContextGenerationTaskRequest.model_validate({
+                    "workspaceId": "workspace.synthetic", "kind": "markdown-context-pack", "name": "Synthetic terms",
+                    "sources": [{"artifactId": "artifact.synthetic", "localPath": str(source), "mediaType": "text/plain",
+                        "originalName": "source.txt", "sourceDigest": _digest(content), "sizeBytes": len(content),
+                        **({"sourceInformation": information} if information else {})}],
+                    "manualEntries": [], "chunking": {"strategy": "topic-aware", "chunkCharacters": 500,
+                        "overlapCharacters": 50, "maximumChunks": 100},
+                    "contextPack": {"inputMode": "source-materials", "method": "none", "cleaningPreset": "standard"},
+                    "runtime": {"runtimeWorkingDirectory": str(root)},
+                })
+                embedding = MagicMock(side_effect=AssertionError("A source-derived pack must not call a model."))
+                self.assertIsNone(request.sourceChecks)
+                result = generate_context_artifact(request, embedding_provider=embedding)
+                embedding.assert_not_called()
+                with ZipFile(root / result["output"]["outputHandle"]) as archive:
+                    manifest = json.loads(archive.read("manifest.json"))
+                self.assertEqual(result["manifest"], manifest)
+                for item in [result["sourceInspections"][0], manifest["sources"][0]]:
+                    self.assertEqual(item.get("sourceInformation", {}), information)
+                self.assertEqual(manifest["contextPack"]["method"], "none")
+
+    def test_recorded_rag_terms_respect_attribution_selection_before_embedding(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            content = b"Bounded synthetic support instructions.\n"
+            source = root / "source.txt"
+            source.write_bytes(content)
+            for include_attribution in [True, False]:
+                with self.subTest(include_attribution=include_attribution):
+                    request = ContextGenerationTaskRequest.model_validate({
+                        "workspaceId": "workspace.synthetic", "kind": "rag-database", "name": "Synthetic terms",
+                        "sources": [{"artifactId": "artifact.synthetic", "localPath": str(source), "mediaType": "text/plain",
+                            "originalName": "source.txt", "sourceDigest": _digest(content), "sizeBytes": len(content),
+                            "sourceInformation": {"license": "LicenseRef-Proprietary"}}],
+                        "manualEntries": [], "chunking": {"strategy": "fixed-length", "chunkCharacters": 500,
+                            "overlapCharacters": 50, "maximumChunks": 100},
+                        "sourceChecks": {"preset": "recommended", "allowedLanguages": ["en"],
+                            "requireLicenseMetadata": True, "requireConsentMetadata": False,
+                            "includeSourceAttribution": include_attribution},
+                        "embedding": {"provider": "transformers", "modelId": "local/unused-test-model"},
+                        "runtime": {"runtimeWorkingDirectory": str(root)},
+                    })
+                    chunks, inspections, manifest_sources = _collect_chunks(request, lambda: None)
+                    self.assertTrue(chunks)
+                    self.assertEqual(inspections[0]["sourceInformation"]["license"], "LicenseRef-Proprietary")
+                    if include_attribution:
+                        self.assertEqual(manifest_sources[0]["sourceInformation"]["license"], "LicenseRef-Proprietary")
+                    else:
+                        self.assertNotIn("sourceInformation", manifest_sources[0])
+
     def test_embedding_device_moves_weights_and_every_input_without_changing_cpu_default(self):
         for requested, available, expected in [(None, True, "cpu"), ("cuda", True, "cuda"), ("auto", True, "cuda"), ("auto", False, "cpu")]:
             with self.subTest(requested=requested, available=available):

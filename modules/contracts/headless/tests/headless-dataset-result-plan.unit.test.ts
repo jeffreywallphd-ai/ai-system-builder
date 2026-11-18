@@ -40,7 +40,8 @@ test("the approval view reconstructs exact v5 permissions and refuses changed ef
     state: {fingerprint, revision: 1, stepCount: 1, approvedSteps: 0, expiresAt: Date.now() + 60000, status: "pending"}};
   assert.deepEqual(readDesktopPlanApprovalView(value, selection, capabilities), value);
   assert.equal(readDesktopPlanApprovalView(value, selection, {...capabilities, allowDatasetResultSave: false}), undefined);
-  for (const change of [{immutableVersion: false}, {modelCalls: 1}, {externalProviderCalls: "required"}, {maximumRowsPerSource: 1000}])
+  for (const change of [{immutableVersion: false}, {modelCalls: 1}, {externalProviderCalls: "required"}, {maximumRowsPerSource: 1000},
+    {maximumSources: 4}, {maximumChunks: 1000}, {explicitSaveRequired: true}])
     assert.equal(readDesktopPlanApprovalView({...value, preview: {...built.preview,
       steps: [{...built.preview.steps[0], ...change}]}}, selection, capabilities), undefined);
 });

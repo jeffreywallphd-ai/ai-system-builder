@@ -2,6 +2,8 @@ import type {ApplicationRequestContext} from "../../ports";
 import type {ModelRegistryPort} from "../../ports/model/model-registry.port";
 import type {IngestionAcquisitionRepositoryPort} from "../../ports/ingestion";
 import type {DatasetVersionRepositoryPort} from "../../ports/dataset-version";
+import {APPROVED_CONTEXT_MAX_LICENSE_CHARACTERS, type ApprovedContextGenerationAdmission} from "../../ports/context-management";
+import {hasKnownPassiveCredential} from "../../../contracts/shared";
 import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot, normalizeIngestionSourceSnapshotId,
   normalizeIngestionTaskId} from "../../../contracts/ingestion";
 import {normalizeDatasetVersionId, normalizeDatasetVersionRecord} from "../../../contracts/dataset";
@@ -47,11 +49,13 @@ export class PreviewHeadlessContextInputsUseCase {
       }
       const {settings} = input;
       const bindings: Array<{artifactId: string; digest: string; sizeBytes: number; mediaType: string}> = [];
+      const admissionSources: Array<ApprovedContextGenerationAdmission["sources"][number]> = [];
       const previewSources: HeadlessContextPreview["sources"][number][] = [];
       for (const reference of input.sources) {
         if (!await stillAllowed()) return forbidden;
         let artifactId: string, digest: string, sizeBytes: number, mediaType: string, fileName: string | undefined;
         let licenseStatus: "recorded" | "unknown" = "unknown";
+        let declaredLicense: string | undefined;
         if (reference.kind === "ingestion-file") {
           const record = await this.dependencies.sources.readTask(input.workspaceId, normalizeIngestionTaskId(reference.taskId));
           if (!await stillAllowed()) return forbidden;
@@ -75,6 +79,7 @@ export class PreviewHeadlessContextInputsUseCase {
               JSON.stringify(snapshot.providerLicenseIds ?? []) !== JSON.stringify(output.providerLicenseIds ?? [])) return unavailable;
           artifactId = output.key; digest = output.digest; sizeBytes = output.sizeBytes; mediaType = output.mediaType; fileName = file.fileName;
           licenseStatus = snapshot.providerLicenseIds?.length ? "recorded" : "unknown";
+          declaredLicense = snapshot.providerLicenseIds?.length ? snapshot.providerLicenseIds.join(", ") : undefined;
         } else {
           const saved = await this.dependencies.versions.readVersion(input.workspaceId, normalizeDatasetVersionId(reference.versionId));
           if (!await stillAllowed()) return forbidden;
@@ -87,11 +92,16 @@ export class PreviewHeadlessContextInputsUseCase {
           if (!artifact) return notReady;
           artifactId = artifact.artifactKey; digest = artifact.digest; sizeBytes = artifact.sizeBytes; mediaType = artifact.mediaType;
           licenseStatus = version.documentation.license ? "recorded" : "unknown";
+          declaredLicense = version.documentation.license?.trim();
         }
         const readiness = evaluateContextSourceCapability({fileName, mediaType});
         if (!readiness.ready || !readiness.capability || !readiness.capability.mediaTypes.includes(mediaType.split(";", 1)[0].trim().toLowerCase()) ||
             sizeBytes < 1 || sizeBytes > HEADLESS_CONTEXT_MAX_SOURCE_BYTES || bindings.some(binding => binding.artifactId === artifactId)) return notReady;
+        if (declaredLicense !== undefined && (!declaredLicense || declaredLicense.length > APPROVED_CONTEXT_MAX_LICENSE_CHARACTERS ||
+            hasKnownPassiveCredential(declaredLicense) || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(declaredLicense))) return notReady;
         bindings.push({artifactId, digest, sizeBytes, mediaType});
+        admissionSources.push({artifactId, storageKey: artifactId, digest, sizeBytes, mediaType, format: readiness.capability.format,
+          ...(declaredLicense ? {declaredLicense} : {})});
         previewSources.push({reference, digest, sizeBytes, format: readiness.capability.format, licenseStatus});
       }
       const totalBytes = bindings.reduce((sum, source) => sum + source.sizeBytes, 0);
@@ -120,7 +130,7 @@ export class PreviewHeadlessContextInputsUseCase {
       if (!await stillAllowed()) return forbidden;
       const preview = readHeadlessContextPreview({workspaceId: input.workspaceId, name: input.name, sources: previewSources, settings, totalBytes,
         runtimeReadiness: "not-checked", approvalRequired: true, reviewRequired: true, modelCalls: 0, externalProviderCalls: 0}, input);
-      return preview ? {ok: true, operation, prepared: {command, bindings, preview}} as const : unavailable;
+      return preview ? {ok: true, operation, prepared: {command, bindings, admissionSources, preview}} as const : unavailable;
     } catch {
       try {return await stillAllowed() ? unavailable : forbidden;} catch {return forbidden;}
     }

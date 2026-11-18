@@ -57,6 +57,7 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
   maximumLength: z.number().int().positive().optional(), options: z.array(workflowId).min(1).max(32).optional() });
 const resultValue = {
   // These two finite shapes use the shared exact-target passive decoders below.
+  "context.task": z.unknown(),
   "context.models": z.unknown(),
   "context.preview-generation": z.unknown(),
   "data.dataset-versions": z.unknown(),
@@ -138,7 +139,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation"] as const : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -176,7 +177,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
-    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
@@ -220,7 +221,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const authorization = `Bearer ${credential}`;
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
-    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
 
@@ -234,6 +235,7 @@ function createForwarder(options: {
   allowProviderFileSave?: boolean;
   allowLocalDatasetPreparation?: boolean;
   allowDatasetResultSave?: boolean;
+  allowContextPackGeneration?: boolean;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -243,7 +245,7 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
-    if ((headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation)) && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
+    if ((headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -281,7 +283,7 @@ function createForwarder(options: {
         const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input,
           { allowLocalFileSave: options.allowLocalFileSave === true, allowProviderFileSave: options.allowProviderFileSave === true,
             allowLocalDatasetPreparation: options.allowLocalDatasetPreparation === true,
-            allowDatasetResultSave: options.allowDatasetResultSave === true });
+            allowDatasetResultSave: options.allowDatasetResultSave === true, allowContextPackGeneration: options.allowContextPackGeneration === true });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         // The host can withhold a reply after it has saved the step. Only
@@ -302,6 +304,9 @@ function createForwarder(options: {
         return { ok: false, code: "headless.forbidden" };
       if (!options.allowLocalDatasetPreparation && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.prepare-local-dataset"))
+        return {ok: false, code: "headless.forbidden"};
+      if (!options.allowContextPackGeneration && input.operation === "plan.submit" &&
+          input.proposal.requests.some(step => step.operation === "context.generate-pack"))
         return {ok: false, code: "headless.forbidden"};
       if (!options.allowDatasetResultSave && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.save-prepared-dataset"))
@@ -381,6 +386,10 @@ function createForwarder(options: {
       const expected = z.strictObject({ ok: z.literal(true), operation: z.literal(input.operation), value: resultValue[input.operation] });
       const parsed = expected.safeParse(raw);
       if (!parsed.success) return unavailable;
+      if (input.operation === "context.task") {
+        const value = headless.readHeadlessContextTaskValue(parsed.data.value, input.input.selection);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
       if (input.operation === "context.models") {
         const value = headless.readHeadlessContextModels(parsed.data.value, input.input.workspaceId);
         return value ? {ok: true, operation: input.operation, value} : unavailable;

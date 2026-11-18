@@ -139,6 +139,32 @@ test("approved Context dispatch uses exact staged bytes and reserved identity on
   await h.stop(); assert.deepEqual(await h.roots(), []);
 }));
 
+test("declared source terms are copied from admission instead of unbound object metadata", async () => withHarness(async h => {
+  const selected = command(), original = h.admission(selected);
+  const source = {...original.sources[0], declaredLicense: "LicenseRef-Proprietary"};
+  const admission = {...original, sources: [source]};
+  h.setDescriptor({metadata: {originalFileName: "synthetic.csv", license: "cc0-1.0"}});
+  h.setAfterRead(() => {source.declaredLicense = "changed-after-admission";});
+  assert.ok((await h.useCase.startAdmittedContext(selected, h.context, admission)).ok);
+  assert.deepEqual(h.lastRequest()?.payload.sources[0].sourceInformation, {license: "LicenseRef-Proprietary"});
+  const before = h.counts();
+  assert.equal((await h.useCase.start(selected, {...h.context, requestId: h.taskId()})).ok, false);
+  assert.deepEqual(h.counts(), before, "An ordinary correlation cannot replace an already issued Headless task.");
+  assert.deepEqual(await h.useCase.readAdmittedContextTask(h.taskId(), h.context), {taskId: h.taskId(), state: "running", review: null});
+  const reads = h.counts().statusCount;
+  assert.equal(await h.useCase.readAdmittedContextTask(h.taskId(), {...h.context, principalId: "foreign"}), undefined);
+  assert.equal(await h.useCase.readAdmittedContextTask(randomUUID(), h.context), undefined);
+  assert.equal(h.counts().statusCount, reads);
+}));
+
+test("malformed or secret-like declared terms deny before source access", async () => withHarness(async h => {
+  const original = h.admission();
+  for (const declaredLicense of ["", " padded ", "x".repeat(513), "hf_" + "a".repeat(32), "bad\u0000terms", {license: "mit"}])
+    assert.equal((await h.useCase.startAdmittedContext(command(), h.context,
+      {...original, sources: [{...original.sources[0], declaredLicense}]} as never)).ok, false);
+  assert.equal(h.counts().readCount, 0); assert.equal(h.counts().issueCount, 0); assert.equal(h.counts().dispatchCount, 0);
+}));
+
 test("installed-only support is required before bytes, proven refusals clean staging and uncertain starts retain it", async () => {
   await withHarness(async h => {
     h.setInstalledSupported(false);

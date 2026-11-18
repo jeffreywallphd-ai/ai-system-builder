@@ -69,8 +69,10 @@ import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/
 import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import { projectContextSourceInformation } from "./context-source-information";
-import {APPROVED_CONTEXT_MAX_PENDING, APPROVED_CONTEXT_MAX_SOURCE_BYTES, type ApprovedContextGenerationAdmission} from "../../ports/context-management";
-import {approvedContextAdmissionCurrent, readApprovedContextAdmission} from "./approved-context-generation-admission";
+import {APPROVED_CONTEXT_MAX_PENDING, APPROVED_CONTEXT_MAX_SOURCE_BYTES, APPROVED_CONTEXT_MAX_TASK_HISTORY,
+  type ApprovedContextGenerationAdmission} from "../../ports/context-management";
+import {approvedContextAdmissionCurrent, contextCommandDigest, readApprovedContextAdmission} from "./approved-context-generation-admission";
+import {readHeadlessContextTaskValue, type HeadlessContextTaskReview, type HeadlessContextTaskValue} from "../../../contracts/headless/headless-context-task";
 
 type ContextArtifactCatalogPort = ArtifactCatalogReadPort &
   ArtifactCatalogAppendPort &
@@ -205,6 +207,7 @@ function validateRuntimeResult(
   result: ContextGenerationTaskResult,
   command: StartContextGenerationCommand,
   expectedSources: readonly ContextRuntimeSourceInput[],
+  boundSourceLicenses = false,
 ): void {
   const expectedMediaType =
     command.kind === "rag-database"
@@ -254,6 +257,9 @@ function validateRuntimeResult(
     ) {
       throw new Error("Context generation source evidence is incomplete.");
     }
+    if (boundSourceLicenses && (result.sourceInspections[index]?.sourceInformation?.license !== expected.sourceInformation?.license ||
+        result.manifest.sources[index]?.sourceInformation?.license !== expected.sourceInformation?.license))
+      throw new Error("Context generation declared source license changed.");
   }
   if (command.contextPack) {
     const actual = result.manifest.contextPack;
@@ -396,6 +402,7 @@ export class ContextGenerationUseCase {
   private readonly uncertainStarts = new Set<ContextStartAttempt>();
   private readonly admittedStarts = new Map<string, ContextStartAttempt>();
   private readonly issuedTaskIds = new Set<string>();
+  private readonly confirmedAdmittedTaskIds = new Set<string>();
   private readonly pendingPowerStarts = new Map<string, Promise<void>>();
 
   public constructor(dependencies: ContextGenerationUseCaseDependencies) {
@@ -439,6 +446,7 @@ export class ContextGenerationUseCase {
     const context = {...rawContext};
     const parsed = readApprovedContextAdmission(rawCommand, context, rawAdmission);
     if (!parsed || !this.taskReconciler || !this.runtime.startTaskWithoutInstalling || this.admittedStarts.size >= APPROVED_CONTEXT_MAX_PENDING ||
+        this.issuedTaskIds.size >= APPROVED_CONTEXT_MAX_TASK_HISTORY ||
         this.admittedStarts.has(parsed.admission.taskId) || this.issuedTaskIds.has(parsed.admission.taskId) ||
         this.scopes.has(parsed.admission.taskId) || [...this.uncertainStarts].some(attempt => attempt.requestedId === parsed.admission.taskId))
       return this.startUnavailable(context);
@@ -509,6 +517,7 @@ export class ContextGenerationUseCase {
     if (!workspace.ok) {
       return workspace;
     }
+    if (!attempt.admission && context?.requestId && this.issuedTaskIds.has(context.requestId)) return this.startUnavailable(context);
     let normalized: StartContextGenerationCommand;
     try {
       normalized = validateStartContextGenerationCommand(command);
@@ -602,6 +611,7 @@ export class ContextGenerationUseCase {
         throw new Error("Context generation start response is incomplete.");
       }
       attempt.confirmedRequestId = started.requestId;
+      if (attempt.admission) this.confirmedAdmittedTaskIds.add(started.requestId);
       attempt.retained = true;
       this.runtimeDirectories.set(
         started.requestId,
@@ -686,6 +696,30 @@ export class ContextGenerationUseCase {
       );
     }
     return this.readOwned(requestId, workspace.value.workspaceId, context);
+  }
+
+  /** Accepted-task metadata only. The host separately proves its durable client association. */
+  public async readAdmittedContextTask(requestId: string, rawContext: ApplicationRequestContext): Promise<HeadlessContextTaskValue | undefined> {
+    const context = {...rawContext}, scope = this.scopes.get(requestId);
+    if (!this.confirmedAdmittedTaskIds.has(requestId) || !scope || !context.organizationId || !context.principalId || !ownsScope(scope, context)) return;
+    const status = await this.read(requestId, context);
+    if (!status.ok || this.scopes.get(requestId) !== scope || !ownsScope(scope, context)) return;
+    const review = this.peekAdmittedContextReview(requestId, context);
+    return readHeadlessContextTaskValue({taskId: requestId, state: status.value.state, review: review ?? null}, {kind: "task", taskId: requestId});
+  }
+
+  /** Pure metadata from already verified, review-required owned output. No materialization or save. */
+  public peekAdmittedContextReview(requestId: string, context: ApplicationRequestContext): HeadlessContextTaskReview | undefined {
+    const scope = this.scopes.get(requestId), pending = this.pending.get(requestId);
+    if (!this.confirmedAdmittedTaskIds.has(requestId) || !scope || !context.organizationId || !context.principalId ||
+        !ownsScope(scope, context) || !pending || !ownsScope(pending.scope, context) || pending.command.kind !== "markdown-context-pack" ||
+        pending.command.contextPack?.method !== "none") return;
+    const output = pending.runtimeResult.output, preview = pending.runtimeResult.preview;
+    const reportFingerprint = createHash("sha256").update(JSON.stringify({requestId, outputDigest: output.digest, sizeBytes: output.sizeBytes,
+      commandDigest: contextCommandDigest(pending.command), sourceCount: preview.sourceCount, chunkCount: preview.chunkCount})).digest("hex");
+    return readHeadlessContextTaskValue({taskId: requestId, state: "review-required", review: {reportFingerprint,
+      kind: "markdown-context-pack", sourceCount: preview.sourceCount, chunkCount: preview.chunkCount, sizeBytes: output.sizeBytes,
+      requiresExplicitSave: true}}, {kind: "task", taskId: requestId})?.review ?? undefined;
   }
 
   private async readOwned(requestId: string, workspaceId: WorkspaceId, context?: ApplicationRequestContext): Promise<ContractResult<ContextGenerationStatus>> {
@@ -779,7 +813,7 @@ export class ContextGenerationUseCase {
             "Context generation completion evidence is unavailable.",
           );
         }
-        validateRuntimeResult(status.data, command, expectedSources);
+        validateRuntimeResult(status.data, command, expectedSources, this.confirmedAdmittedTaskIds.has(requestId));
         const outputPath = await resolveOutputPath(
           directory,
           status.data.output.outputHandle,
@@ -1238,9 +1272,8 @@ export class ContextGenerationUseCase {
             bytes.byteLength !== selected.sizeBytes || sha256(bytes) !== selected.digest ||
             (descriptor.mediaType !== undefined && descriptor.mediaType !== selected.mediaType)))
           return fail("conflict", "The selected Context source bytes changed.");
-        const sourceInformation = projectContextSourceInformation(
-          descriptor.metadata,
-        );
+        const sourceInformation = selected ? (selected.declaredLicense ? {license: selected.declaredLicense} : undefined)
+          : projectContextSourceInformation(descriptor.metadata);
         const descriptorOriginalName =
           metadataText(descriptor.metadata, "originalFileName") ??
           metadataText(descriptor.metadata, "originalName");

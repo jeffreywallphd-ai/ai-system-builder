@@ -369,7 +369,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const workspace = { hostIncarnationId: await hostId(client), workspaceId };
     const names = (await client.listTools()).tools.map(tool => tool.name).sort();
     expect(names).toEqual([
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_context_models", "aisb_context_task", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
       "aisb_preview_build_plan", "aisb_preview_context_generation", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
       "aisb_read_conversation_task", "aisb_read_system",
@@ -626,6 +626,51 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     expect(JSON.stringify(contextPreview)).not.toContain(savedFilename);
     expect(contextPreview).not.toHaveProperty("value.command");
     expect(await call(client, "aisb_preview_context_generation", {...contextInput, sources: [{...contextInput.sources[0], taskRevision: 1}]})).toEqual({ok: false, code: "headless.stale"});
+    const contextSteps = [{operation: "context.generate-pack", idempotencyKey: randomUUID(), name: contextInput.name,
+      sources: contextInput.sources, settings: contextSettings}];
+    const contextPlan = await call(client, "aisb_preview_build_plan", {...workspace, steps: contextSteps});
+    expect(contextPlan).toMatchObject({ok: true, value: {version: "aisb-build-plan-preview-v6", steps: [{modelCalls: 0,
+      externalProviderCalls: 0, maximumSources: 4, maximumChunks: 1000, reviewRequired: true, explicitSaveRequired: true}]}});
+    const contextFingerprint = (contextPlan.value as {fingerprint: string}).fingerprint;
+    const contextTarget = {...workspace, fingerprint: contextFingerprint, approvalRevision: 2, step: 1};
+    expect(await call(client, "aisb_request_build_plan_approval", {...workspace, fingerprint: contextFingerprint, steps: contextSteps}))
+      .toMatchObject({ok: true, value: {status: "pending"}});
+    expect(await call(client, "aisb_run_approved_build_step", contextTarget)).toMatchObject({ok: false});
+    await connectorSettings(app, page);
+    await region.getByRole("button", {name: "Open plan approval chat", exact: true}).click();
+    const contextChat = page.getByRole("region", {name: "Plan approval chat", exact: true});
+    await contextChat.getByRole("button", {name: new RegExp("^Review request " + contextFingerprint.slice(0, 8))}).click();
+    await expect(contextChat.getByRole("list", {name: "Requested changes"})).toContainText("Prepare Context pack: Synthetic intake context");
+    await expect(contextChat.getByRole("list", {name: "Permissions and limits"})).toContainText("No model calls or model installation");
+    await contextChat.getByRole("button", {name: "Approve change 1", exact: true}).click();
+    await expect(contextChat.getByText("Plan approved.", {exact: true})).toBeVisible();
+    await contextChat.getByRole("button", {name: "Close plan approval chat", exact: true}).click();
+    const contextStart = await call(client, "aisb_run_approved_build_step", contextTarget);
+    if (contextStart.ok) expect(contextStart).toMatchObject({value: {kind: "started", operation: "context.generate-pack"}});
+    else expect(contextStart.code).toBe("headless.operation-unconfirmed");
+    const contextSelection = {kind: "plan-step", fingerprint: contextFingerprint, step: 1};
+    let acceptedContextTask: string | undefined;
+    await expect.poll(async () => {
+      const result = await call(client, "aisb_context_task", {...workspace, selection: contextSelection});
+      if (!result.ok) {
+        expect(["headless.forbidden", "headless.unavailable"]).toContain(result.code);
+        return "awaiting-accepted-context";
+      }
+      const value = result.value as {taskId: string; state: string; review: unknown};
+      expect(Object.keys(value).sort()).toEqual(["review", "state", "taskId"]);
+      if (acceptedContextTask) expect(value.taskId).toBe(acceptedContextTask);
+      acceptedContextTask = value.taskId;
+      if (value.state === "review-required") expect(value.review).toMatchObject({kind: "markdown-context-pack",
+        reportFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/), sourceCount: 1,
+        chunkCount: expect.any(Number), sizeBytes: expect.any(Number), requiresExplicitSave: true});
+      expect(JSON.stringify(value)).not.toContain(savedFilename);
+      return value.state;
+    }, {timeout: 90_000, message: "approved Context processing uses the installed worker and requires result review"}).toBe("review-required");
+    expect(await call(client, "aisb_run_approved_build_step", contextTarget)).toMatchObject({ok: true, value: {kind: "replayed",
+      operation: "context.generate-pack", reference: {workspaceId, taskId: acceptedContextTask}}});
+    expect(await call(client, "aisb_context_task", {...workspace, selection: {kind: "task", taskId: randomUUID()}}))
+      .toEqual({ok: false, code: "headless.forbidden"});
+    // Context pack execution and its accepted receipt are distinct from saving, active RAG, model and parent qualification.
     const preparation = await call(client, "aisb_preview_dataset_preparation", {...workspace,
       sources: [{taskId: savedInput.taskId, fileId: savedInput.fileId, taskRevision: (sourceStatus.value as {revision: number}).revision}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "team", outputColumn: "priority"},

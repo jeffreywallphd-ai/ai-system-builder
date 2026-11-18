@@ -202,3 +202,14 @@ file or dataset-version inputs and Context settings. It starts no processing,
 model, install or provider operation and reports runtime readiness as not checked.
 Both hosts and forwarders enforce purpose, current permissions and strict public
 reply schemas. Preview does not authorize later execution, save or window use.
+
+The plan-review catalog also includes `aisb_context_task`. Propose the finite
+`context.generate-pack` action through `aisb_preview_build_plan`, submit the
+exact version-6 proposal for app approval and run its approved step. The initial
+profile cleans/chunks exact saved sources without model calls or installation.
+Poll only its accepted task or original plan step. Uncertain reservations cannot
+be adopted or restarted. Replies contain state, counts and a required-review
+fingerprint, never source contents, paths, prompts or embeddings. Separate
+Context save, active RAG, queries/rebuilds and presentation are not granted.
+The generated SDK catalog has 39 distinct tools across modes, with 26 Desktop
+and 19 Managed plan-review tools; each mode stays within the existing 32 limit.

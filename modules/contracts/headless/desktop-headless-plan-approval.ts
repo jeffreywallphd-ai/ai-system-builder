@@ -6,6 +6,7 @@ import { readHeadlessPlanReviewAgentResult, readHeadlessPlanReviewDecisionChoice
   type HeadlessPlanReviewAgentResult, type HeadlessPlanReviewDecisionChoice } from "./headless-plan-review-wire";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
 import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEADLESS_DATASET_MAX_ROWS_PER_SOURCE} from "./headless-dataset-preparation";
+import {HEADLESS_CONTEXT_MAX_SOURCE_BYTES, HEADLESS_CONTEXT_MAX_SOURCES} from "./headless-context-preview";
 
 export const DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS = Object.freeze({
   list: "desktop.headless.plan-approvals.list",
@@ -90,7 +91,7 @@ export function readDesktopPlanApprovalList(value: unknown, workspaceId: Workspa
 
 export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPlanApprovalSelection,
   options: HeadlessBuildPlanCapabilities = { allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true,
-    allowDatasetResultSave: true }): DesktopPlanApprovalView | undefined {
+    allowDatasetResultSave: true, allowContextPackGeneration: true }): DesktopPlanApprovalView | undefined {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["selection", "viewId", "preview", "state"]);
     const actual = readDesktopPlanApprovalSelection(raw.selection);
@@ -103,21 +104,30 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
     const decoded = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, steps: steps.map(step => {
       const { operation, input, effect, externalProviderCalls, ...limits } = readStrictPassiveRecord(step,
         ["operation", "input", "effect", "externalProviderCalls", "modelCalls", "maximumSourceBytes", "maximumTotalBytes",
-          "maximumRowsPerSource", "outputFormat", "reviewRequired", "immutableVersion"]);
+          "maximumRowsPerSource", "outputFormat", "reviewRequired", "immutableVersion", "maximumSources", "maximumChunks",
+          "explicitSaveRequired"]);
       const dataset = operation === "data.prepare-local-dataset";
       const resultSave = operation === "data.save-prepared-dataset";
-      if (dataset ? limits.modelCalls !== 0 || limits.maximumSourceBytes !== HEADLESS_DATASET_MAX_SOURCE_BYTES ||
+      const contextPack = operation === "context.generate-pack";
+      if (contextPack ? !exactLimitFields(limits, ["modelCalls", "maximumSources", "maximumSourceBytes", "maximumTotalBytes",
+          "maximumChunks", "reviewRequired", "explicitSaveRequired"]) || limits.modelCalls !== 0 ||
+          limits.maximumSources !== HEADLESS_CONTEXT_MAX_SOURCES || limits.maximumSourceBytes !== HEADLESS_CONTEXT_MAX_SOURCE_BYTES ||
+          limits.maximumTotalBytes !== HEADLESS_CONTEXT_MAX_SOURCES * HEADLESS_CONTEXT_MAX_SOURCE_BYTES ||
+          limits.maximumChunks !== 1000 || limits.reviewRequired !== true || limits.explicitSaveRequired !== true : dataset ?
+          !exactLimitFields(limits, ["modelCalls", "maximumSourceBytes", "maximumTotalBytes", "maximumRowsPerSource", "outputFormat", "reviewRequired"]) ||
+          limits.modelCalls !== 0 || limits.maximumSourceBytes !== HEADLESS_DATASET_MAX_SOURCE_BYTES ||
           limits.maximumTotalBytes !== HEADLESS_DATASET_MAX_TOTAL_BYTES || limits.maximumRowsPerSource !== HEADLESS_DATASET_MAX_ROWS_PER_SOURCE ||
-          limits.outputFormat !== "jsonl" || limits.reviewRequired !== true || "immutableVersion" in limits : resultSave ?
+          limits.outputFormat !== "jsonl" || limits.reviewRequired !== true : resultSave ?
           Object.keys(limits).sort().join(",") !== "immutableVersion,modelCalls,outputFormat" || limits.modelCalls !== 0 ||
             limits.outputFormat !== "jsonl" || limits.immutableVersion !== true : Object.keys(limits).length !== 0)
         throw new Error("Invalid processing limits.");
       const providerFile = operation === "data.save-provider-source";
       const savingFile = operation === "data.save-local-source" || providerFile;
-      if (effect !== (dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
+      if (effect !== (contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
           externalProviderCalls !== (providerFile ? "required" : 0))
         throw new Error("Invalid approval effects.");
-      const fields = readStrictPassiveRecord(input, dataset ? ["idempotencyKey", "sources", "recipe", "split", "qualityPreset"] :
+      const fields = readStrictPassiveRecord(input, contextPack ? ["idempotencyKey", "name", "sources", "settings"] :
+        dataset ? ["idempotencyKey", "sources", "recipe", "split", "qualityPreset"] :
         resultSave ? ["idempotencyKey", "taskId", "reportFingerprint", "outputBaseName"] :
         savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :
         ["idempotencyKey", "name", "templateId", "systemId", "baseRecordRevision", "baseRevisionId", "description"]);
@@ -127,6 +137,10 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
     const state = readHeadlessPlanReviewAgentResult({ ok: true, value: raw.state }, selection.fingerprint, decoded.requests.length);
     if (state.ok) return { selection: actual, viewId: raw.viewId, preview: decoded.preview, state: state.value };
   } catch { return undefined; }
+}
+
+function exactLimitFields(value: Record<string, unknown>, fields: readonly string[]): boolean {
+  return Object.keys(value).sort().join(",") === [...fields].sort().join(",");
 }
 
 function positiveInteger(value: unknown): value is number {

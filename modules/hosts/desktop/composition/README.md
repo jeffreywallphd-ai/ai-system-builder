@@ -149,3 +149,11 @@ Held-verifier, health and final-launch tests use the actual foundation/compositi
 with simulated process/HTTP replies and prove no spawn after host retirement.
 Actual public Headless Context execution and physical model readiness remain
 separate qualification.
+
+Desktop Headless plan review also composes opt-in source-derived Context packs.
+The shared exact-source compiler runs inside the owned plan transaction; bytes
+and installed-only task dispatch stay outside it. A separate Context receipt
+records one accepted task. `context.task` proves actor/client/host ownership
+before the lazy Context feature is resolved. Both approval views list fixed
+limits and separate review/save requirements. Source text and paths stay private;
+ordinary Context UI and Data behavior keep their existing owners.

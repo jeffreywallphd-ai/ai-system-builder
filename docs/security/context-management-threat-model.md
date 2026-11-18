@@ -341,3 +341,36 @@ reuse and resurrection. Shared recovery captures restriction before owned exit
 clears maps, then uses installed-only restart with the existing Dataset veto and
 recovery fence. Simulated causal tests cover these controls. Real public Context,
 model, native and parent qualification remain separate.
+
+### Public approved source-derived Context tasks
+
+Protect exact saved bytes, license declarations, approval, actor/client/tenant
+identity, one-use task issuance and private output. Untrusted plan fields and
+worker results cannot grant installer, model, publication or window authority.
+Version 6 admits only bounded source-derived no-model packs. Both approval
+channels show exact permissions; extra, missing or substituted limits deny.
+
+Use a distinct Context receipt namespace and point indexes, checked in the same
+root transaction as current approval and source metadata. A source digest covers
+the private canonical command and complete admitted source/license witnesses.
+No runtime or byte reads run in retriable transactions. Recompile before atomic
+issue; only its acknowledged one-use result permits installed-only dispatch.
+Reserved/issued uncertainty remains unconfirmed. A later ordinary task, matching
+name, guessed UUID or foreign client cannot supply an accepted receipt.
+
+Before polling the processor, prove exact durable accepted ownership. Recheck
+authority after lookup, lazy resolution, polling and before reply. Copy request
+and actor data before awaits. Return finite validated state/counts/fingerprint,
+never raw processor results. Bounded confirmed IDs prevent in-session UUID reuse
+from replacing an accepted task. Require result review and separate save. Bind
+known license terms whole, preserve non-open/unknown states, reject conflicting
+worker/descriptor declarations and do not infer rights.
+Source-derived Markdown generation preserves declared terms in the archive
+manifest even though its canonical request has no RAG source-check settings.
+Unknown terms remain absent; the RAG attribution selection stays unchanged.
+
+Focused tests cover substitution, revocation, lost acknowledgements, exact replay,
+wrong namespace/identity, passive parsing, bounds, private-field rejection and
+ordinary Data compatibility. Actual two-host pack journeys qualify only their
+measured scenario. RAG/model readiness, explicit Context save/query/rebuild and
+revocable presentation, native/offload and host-exit recovery remain pending.

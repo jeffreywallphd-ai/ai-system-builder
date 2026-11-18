@@ -159,3 +159,11 @@ the list or report deletion. A different key leaves the selected view intact.
   and shared worker recovery. Exact terminal facts prevent late-ack resurrection;
   the bound host guard reaches native spawn and POST. See the runtime architecture.
   Focused simulated evidence does not qualify public Context/model execution.
+
+- Dedicated Headless plan clients can propose `context.generate-pack` through
+  v6 approval, then inspect only an accepted `context.task`. The initial active
+  profile uses exact saved sources and no model. Distinct one-use receipts bind
+  source/license witnesses; uncertainty never permits another start or adoption.
+  Replies contain state/counts/review fingerprint and require separate save.
+  See the canonical architecture and threat model. Active RAG, Context saving,
+  query/rebuild/presentation and parent qualification remain separate work.

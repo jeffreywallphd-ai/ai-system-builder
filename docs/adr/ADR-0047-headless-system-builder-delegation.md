@@ -239,3 +239,15 @@ policy before owned stop, preserves Dataset protection and uses installed-only
 start without an ordinary installer fallback. This extends the existing owned
 lifecycle decision; no new recovery owner or provider is selected. Public Context
 plan actions and actual model/runtime qualification remain subsequent work.
+
+The approved Context implementation also extends the existing concrete plan with
+`context.generate-pack` (preview v6). Both decision channels/modes list no-model
+source processing, fixed source/chunk limits and separate result review/save.
+A distinct Context reserve/issue/accept record composes with the same root-owned
+approval fence and installed-only Context owner; it is not a new execution or
+approval framework. `context.task` proves accepted actor/client/host lineage
+before processor access and returns minimized progress/review counts. Uncertain
+work is never adopted or redispatched. Recorded non-open and unknown license
+terms keep their meanings. Initial active support is source-derived Markdown;
+active RAG, Context save/query/rebuild/presentation and parent qualification
+remain later work. This adds no installer, provider or model-download authority.

@@ -2263,3 +2263,22 @@ check when those host sources change. Generic root tests alone cannot mask an
 unrelated primary profile's missing coverage. Foundation recovery tests remain
 in the exact runtime check. Both are feature-level controls, not live-host,
 physical model, public Context or parent qualification.
+
+The fixed `headless-context-pack-contract` check covers v6 plan/approval
+contracts, accepted Context task reads, one-use receipt storage, two-host owned
+step controls and popup/chat regressions, alongside legacy Data compatibility.
+Its `headless-context-pack-browser` companion checks the exact Managed browser
+approval client only when that primary check is selected. Unknown sources and
+an explicitly requested generic check keep their fallback. These local checks
+do not grant parent, RAG/model/native or public-host qualification. Actual
+packaged Desktop/Managed journeys and final roadmap gates remain separate.
+
+The fixed `headless-context-pack-worker` check runs two model-free Python cases:
+actual Markdown ZIP generation with recorded open, non-open and absent license
+terms, and RAG attribution selection before embedding. It uses the selected
+verification interpreter and starts no model or database. The pack contract
+also declares its exact persistence README and worker sources. Unknown sources
+and an explicit generic request keep the fallback. Use a provisioned local test
+interpreter consistently for work planning, verification and separate review;
+the controller never installs missing dependencies. Broader RAG database and
+model qualification remains separate from these attribution checks.

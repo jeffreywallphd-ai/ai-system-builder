@@ -13,6 +13,14 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+Source-derived Markdown Context packs preserve recorded source information,
+including complete license declarations, in both inspections and the archive
+manifest. Pack requests do not use the RAG-only `sourceChecks` setting. Missing
+declarations stay absent; generation does not infer permission to use a source.
+RAG manifests still follow `includeSourceAttribution`. Focused tests generate
+actual no-model archives with open, non-open and absent declarations and check
+that the RAG attribution opt-out still applies.
+
 Provided instruction datasets can carry an explicit `providedRowMapping` with
 two distinct bounded source columns. This map requires provided mode and omitted
 source context. It derives instruction/prompt and output/completion only from the

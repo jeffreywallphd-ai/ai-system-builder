@@ -5,6 +5,12 @@ description: Plan and carry out requested AI System Builder work through its sco
 
 # Control AI System Builder
 
+Install or copy this entire `control-ai-system-builder` directory into the
+coding agent's supported skill location. Include `SKILL.md` and every file in
+`references/`, including the generated `mcp-tools.json`. Keep them from the same
+repository revision. Installing the skill does not install an MCP server or
+grant app access; configure the supported connector and pair it separately.
+
 Start with `aisb_host_describe`. Use the current host incarnation and exact
 workspace and record IDs returned by the host where the user's work is saved.
 Use the configured managed workspace or list authorized Desktop workspaces.
@@ -22,9 +28,10 @@ use [Build from a written request](references/build-plans.md). It covers the
 supported plan connections, exact resources, approval choices, ordered
 execution and recovery. Open it before preparing a plan.
 
-For a Context or RAG request, use [Preview Context inputs](references/context-inputs.md)
+For a Context or RAG request, use [Prepare Context inputs and packs](references/context-inputs.md)
 before selecting saved sources or an embedding model. A metadata preview does
-not start processing or prove that a model is ready.
+not start processing or prove that a model is ready. The guide also covers
+separately approved source-derived packs and accepted-task progress.
 
 ## Read or edit saved systems
 

@@ -2259,6 +2259,10 @@ export function composeDesktopHost(
             authorization: workspaceAuthorization,
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
+            getContextTask: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
+              const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
+              return composeHeadlessContextTask(platformDocuments, async () => (await getContextManagementFeatures()).generation);
+            } : undefined,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
             getDatasetTaskStatus: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");
@@ -2392,6 +2396,10 @@ export function composeDesktopHost(
                   return dataset.startAdmittedLocalProvidedDataset.bind(dataset);
                 },
                 getDatasetResults: async () => (await getDatasetPreparationFeatures()).prepareTrainingDatasetUseCase,
+                getContextStart: async () => {
+                  const generation = (await getContextManagementFeatures()).generation;
+                  return generation.startAdmittedContext.bind(generation);
+                },
                 systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
               dataPreview: planReviewOwner ? {

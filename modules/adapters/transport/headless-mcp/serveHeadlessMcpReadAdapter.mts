@@ -176,6 +176,7 @@ function addSystemBuilderTools(server: McpServer) {
   const allowProviderFileSave = enablePlanReview;
   const allowLocalDatasetPreparation = enablePlanReview;
   const allowDatasetResultSave = enablePlanReview;
+  const allowContextPackGeneration = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -185,16 +186,17 @@ function addSystemBuilderTools(server: McpServer) {
     recipe: z.strictObject({kind: z.literal("provided-instruction-rows-v1"), inputColumn: column, outputColumn: column}),
     split: z.strictObject({trainRatio: z.number().positive().max(1), validationRatio: z.number().min(0).max(1), testRatio: z.number().min(0).max(1),
       seed: z.number().int().min(0).max(2_147_483_647)}), qualityPreset: z.enum(["recommended", "strict"])};
+  const contextSource = z.discriminatedUnion("kind", [
+    z.strictObject({kind: z.literal("ingestion-file"), ...localFileTarget}),
+    z.strictObject({kind: z.literal("dataset-version"), datasetId: ingestionId, versionId: ingestionId,
+      versionDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/), role: z.enum(["dataset", "train", "validation", "test"])}),
+  ]);
+  const chunks = {chunkCharacters: z.number().int().min(64).max(32000), overlapCharacters: z.number().int().min(0).max(8000),
+    maximumChunks: z.number().int().min(1).max(1000), textFields: z.array(z.string().min(1).max(128)).max(32)};
+  const contextPackSettings = z.strictObject({...chunks, kind: z.literal("markdown-context-pack"), cleaningPreset: z.enum(["standard", "strict"])});
   if (enablePlanReview) {
-    const contextSource = z.discriminatedUnion("kind", [
-      z.strictObject({kind: z.literal("ingestion-file"), ...localFileTarget}),
-      z.strictObject({kind: z.literal("dataset-version"), datasetId: ingestionId, versionId: ingestionId,
-        versionDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/), role: z.enum(["dataset", "train", "validation", "test"])}),
-    ]);
-    const chunks = {chunkCharacters: z.number().int().min(64).max(32000), overlapCharacters: z.number().int().min(0).max(8000),
-      maximumChunks: z.number().int().min(1).max(1000), textFields: z.array(z.string().min(1).max(128)).max(32)};
     const contextSettings = z.discriminatedUnion("kind", [
-      z.strictObject({...chunks, kind: z.literal("markdown-context-pack"), cleaningPreset: z.enum(["standard", "strict"])}),
+      contextPackSettings,
       z.strictObject({...chunks, kind: z.literal("rag-database"), modelRecordId: z.string().refine(headless.isHeadlessContextModelId),
         modelUpdatedAt: z.string().refine(headless.isHeadlessContextTimestamp), batchSize: z.number().int().min(1).max(32), device: z.enum(["cpu", "cuda"]),
         sourceChecks: z.strictObject({preset: z.enum(["recommended", "strict"]), allowedLanguages: z.array(z.string().min(2).max(16)).min(1).max(16),
@@ -218,6 +220,14 @@ function addSystemBuilderTools(server: McpServer) {
       z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
         step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
     ]);
+    server.registerTool("aisb_context_task", {
+      description: "Poll one accepted Context task or recover its receipt from an exact known approved plan step. The owner validates completed output and returns only state, counts and a review fingerprint. No source text, paths, prompts or embeddings. Starts no new task and cannot approve, save, publish or adopt an uncertain attempt.",
+      inputSchema: z.strictObject({...workspaceTarget, selection: datasetSelection}), annotations: queryHints,
+    }, (input, context) => {
+      const parsed = headless.readHeadlessContextTaskRequest({version, operation: "context.task", input},
+        input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     server.registerTool("aisb_dataset_task_status", {
       description: "Read one accepted dataset task or recover its receipt from a known approved plan step. Returns only task identity and state. Unconfirmed reservations are not adopted or restarted. This read cannot prepare, approve, save or publish output.",
       inputSchema: z.strictObject({...workspaceTarget, selection: datasetSelection}), annotations: queryHints,
@@ -264,6 +274,8 @@ function addSystemBuilderTools(server: McpServer) {
     return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
   });
   const step = z.discriminatedUnion("operation", [
+    z.strictObject({operation: z.literal("context.generate-pack"), idempotencyKey, name: z.string().min(1).max(120),
+      sources: z.array(contextSource).min(1).max(headless.HEADLESS_CONTEXT_MAX_SOURCES), settings: contextPackSettings}),
     z.strictObject({ operation: z.literal("systems.create"), ...create }),
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
     z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
@@ -285,13 +297,13 @@ function addSystemBuilderTools(server: McpServer) {
   });
   server.registerTool("aisb_preview_build_plan", {
     description: allowLocalFileSave
-      ? "Check proposed system changes, selected file saves, provided-row dataset preparation and reviewed dataset saves. Preparation sources must already be saved. A dataset save needs the accepted task and exact approved quality report. The preview identifies permissions and limits. Execution requires separate approval."
+      ? "Check proposed system changes, selected file saves, provided-row dataset preparation, reviewed dataset saves and source-derived Context packs with no model calls. Preparation sources must already be saved. A dataset save needs the accepted task and exact approved quality report. The preview identifies permissions and limits. Execution requires separate approval."
       : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -301,6 +313,14 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "context.generate-pack") {
+        const {idempotencyKey: _key, ...selected} = request.input;
+        const preview = await forward?.({version, operation: "context.preview-generation", input: selected}, signal);
+        if (!preview?.ok) return toolResult(preview ?? unavailable);
+        if (!("operation" in preview) || preview.operation !== "context.preview-generation" ||
+            !headless.readHeadlessContextPreview(preview.value, selected)) return toolResult(unavailable);
+        continue;
+      }
       if (request.operation === "data.save-prepared-dataset") {
         const reviewed = await forward?.({version, operation: "data.dataset-task-review", input: {
           hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId,
@@ -389,7 +409,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

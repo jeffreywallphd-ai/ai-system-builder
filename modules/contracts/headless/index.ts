@@ -116,3 +116,5 @@ export {
   readManagedWindowResult,
 } from "./managed-headless-window";
 export * from "./headless-context-preview";
+export * from "./headless-context-plan";
+export * from "./headless-context-task";

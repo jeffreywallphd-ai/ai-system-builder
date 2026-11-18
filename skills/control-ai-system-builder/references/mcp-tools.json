@@ -135,6 +135,7 @@
         "aisb_build_plan_approval_status",
         "aisb_compare_dataset_versions",
         "aisb_context_models",
+        "aisb_context_task",
         "aisb_dataset_task_review",
         "aisb_dataset_task_status",
         "aisb_dataset_versions",
@@ -165,6 +166,7 @@
         "aisb_build_plan_approval_status",
         "aisb_compare_dataset_versions",
         "aisb_context_models",
+        "aisb_context_task",
         "aisb_dataset_task_review",
         "aisb_dataset_task_status",
         "aisb_dataset_versions",
@@ -558,6 +560,74 @@
         "required": [
           "hostIncarnationId",
           "workspaceId"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_context_task",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "selection": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "task"
+                  },
+                  "taskId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "taskId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "plan-step"
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  }
+                },
+                "required": [
+                  "kind",
+                  "fingerprint",
+                  "step"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "selection"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
@@ -1283,6 +1353,164 @@
             "type": "array",
             "items": {
               "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "context.generate-pack"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "sources": {
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ingestion-file"
+                              },
+                              "taskId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "fileId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "taskRevision": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "taskId",
+                              "fileId",
+                              "taskRevision"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "dataset-version"
+                              },
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "versionId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "versionDigest": {
+                                "type": "string",
+                                "pattern": "^sha256:[a-f0-9]{64}$"
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "dataset",
+                                  "train",
+                                  "validation",
+                                  "test"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "datasetId",
+                              "versionId",
+                              "versionDigest",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "chunkCharacters": {
+                          "type": "integer",
+                          "minimum": 64,
+                          "maximum": 32000
+                        },
+                        "overlapCharacters": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 8000
+                        },
+                        "maximumChunks": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1000
+                        },
+                        "textFields": {
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          }
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "markdown-context-pack"
+                        },
+                        "cleaningPreset": {
+                          "type": "string",
+                          "enum": [
+                            "standard",
+                            "strict"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "chunkCharacters",
+                        "overlapCharacters",
+                        "maximumChunks",
+                        "textFields",
+                        "kind",
+                        "cleaningPreset"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "name",
+                    "sources",
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                },
                 {
                   "type": "object",
                   "properties": {
@@ -2625,6 +2853,164 @@
             "type": "array",
             "items": {
               "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "context.generate-pack"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "sources": {
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ingestion-file"
+                              },
+                              "taskId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "fileId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "taskRevision": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "taskId",
+                              "fileId",
+                              "taskRevision"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "dataset-version"
+                              },
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "versionId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                              },
+                              "versionDigest": {
+                                "type": "string",
+                                "pattern": "^sha256:[a-f0-9]{64}$"
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "dataset",
+                                  "train",
+                                  "validation",
+                                  "test"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "datasetId",
+                              "versionId",
+                              "versionDigest",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "chunkCharacters": {
+                          "type": "integer",
+                          "minimum": 64,
+                          "maximum": 32000
+                        },
+                        "overlapCharacters": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 8000
+                        },
+                        "maximumChunks": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1000
+                        },
+                        "textFields": {
+                          "maxItems": 32,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          }
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "markdown-context-pack"
+                        },
+                        "cleaningPreset": {
+                          "type": "string",
+                          "enum": [
+                            "standard",
+                            "strict"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "chunkCharacters",
+                        "overlapCharacters",
+                        "maximumChunks",
+                        "textFields",
+                        "kind",
+                        "cleaningPreset"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "name",
+                    "sources",
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                },
                 {
                   "type": "object",
                   "properties": {

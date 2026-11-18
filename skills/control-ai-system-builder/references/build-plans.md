@@ -157,6 +157,13 @@ saves local output only and grants no external publication or window control.
 
 ## Supported connections
 
+For source-derived Context packs, follow [Prepare Context inputs and packs](context-inputs.md).
+Version 6 adds `context.generate-pack` to this same approval and ordered-step
+workflow. The initial profile makes no model calls and requires result review
+before a separate save request. Use `aisb_context_task` for accepted-only progress;
+an uncertain attempt never authorizes a new task. This does not enable active RAG,
+Context saving, query, rebuild, publication or window control.
+
 To show saved Data work, use a separately authorized window-control connection
 and the current exact lease. `show-data-source` takes the saved task/file/revision;
 `show-dataset-version` takes the saved dataset/version/digest;

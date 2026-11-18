@@ -34,7 +34,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
-const planReviewTools = ["aisb_context_models", "aisb_preview_context_generation", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
+const planReviewTools = ["aisb_context_models", "aisb_preview_context_generation", "aisb_context_task", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation", "aisb_dataset_task_status", "aisb_dataset_task_review"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
@@ -63,6 +63,8 @@ function contextPreview(input: {workspaceId: unknown; name: unknown; sources: re
 }
 const contextSettings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
   overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]};
+const contextTaskValue = {taskId: hostIncarnationId, state: "review-required", review: {kind: "markdown-context-pack",
+  reportFingerprint: "a".repeat(64), sourceCount: 1, chunkCount: 2, sizeBytes: 1000, requiresExplicitSave: true}};
 // This fixture opens several real CLI processes with empty tsx caches and
 // waits once for the managed request deadline. Bound the whole fixture separately.
 test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 60_000 }, async () => {
@@ -132,6 +134,12 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           actions:["systems.rename"], approval:"required",
         }});
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "context.task") {
+        const payload = JSON.stringify({ok: true, operation: input.operation,
+          value: {...contextTaskValue, ...(invalidStatusReply ? {sourceText: "synthetic private source"} : {})}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       if (input.operation === "context.models" || input.operation === "context.preview-generation") {
@@ -334,6 +342,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     invalidStatusReply = true;
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_preview_context_generation", arguments: contextInput})), {ok: false, code: "headless.unavailable"});
     invalidStatusReply = false;
+    const contextTaskQuery = {...planBase, selection: {kind: "task", taskId: hostIncarnationId}};
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_context_task", arguments: contextTaskQuery})),
+      {ok: true, operation: "context.task", value: contextTaskValue});
+    invalidStatusReply = true;
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_context_task", arguments: contextTaskQuery})),
+      {ok: false, code: "headless.unavailable"});
+    invalidStatusReply = false;
     const previewPreparation = async (input = preparation) => resultText(await planner.callTool({name: "aisb_preview_dataset_preparation", arguments: input}));
     assert.deepEqual(await previewPreparation(), {ok: true, operation: "data.preview-dataset-preparation", value: preparationPreview(preparation as never)});
     invalidStatusReply = true;
@@ -468,6 +483,9 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}};
       if (decoded.request.operation === "context.preview-generation") return {ok: true, operation: decoded.request.operation,
         value: {...contextPreview(decoded.request.input), ...(statusExtra ? {privatePath: "private-source"} : {})} as never};
+      if (decoded.request.operation === "context.task") return {ok: true, operation: decoded.request.operation,
+        value: {...contextTaskValue, taskId: wrongStatusTask ? randomUUID() : contextTaskValue.taskId,
+          ...(statusExtra ? {sourceText: "synthetic private source"} : {})} as never};
       if (decoded.request.operation === "data.preview-dataset-preparation") return staleDatasetSource
         ? {ok: false, code: "headless.stale"}
         : {ok: true, operation: decoded.request.operation,
@@ -596,6 +614,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     statusExtra = true;
     assert.deepEqual(await call("aisb_preview_context_generation", contextInput), {ok: false, code: "headless.unavailable"});
     statusExtra = false;
+    const contextTaskQuery = {hostIncarnationId, workspaceId, selection: {kind: "task", taskId: hostIncarnationId}};
+    assert.deepEqual(await call("aisb_context_task", contextTaskQuery), {ok: true, operation: "context.task", value: contextTaskValue});
+    statusExtra = true;
+    assert.deepEqual(await call("aisb_context_task", contextTaskQuery), {ok: false, code: "headless.unavailable"});
+    statusExtra = false; wrongStatusTask = true;
+    assert.deepEqual(await call("aisb_context_task", contextTaskQuery), {ok: false, code: "headless.unavailable"});
+    wrongStatusTask = false;
     assert.deepEqual(await call("aisb_preview_dataset_preparation", datasetPreparation),
       {ok: true, operation: "data.preview-dataset-preparation", value: preparationPreview(datasetPreparation as never)});
     statusExtra = true;

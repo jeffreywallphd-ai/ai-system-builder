@@ -29,8 +29,10 @@ type StartedLocalDatasetEffect = {readonly kind: "started" | "replayed"; readonl
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 type SavedDatasetEffect = {readonly kind: "committed" | "replayed"; readonly operation: "data.save-prepared-dataset";
   readonly reference: HeadlessSavedDatasetReference};
+type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly operation: "context.generate-pack";
+  readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
-  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | StartedContextPackEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -68,6 +70,13 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
         !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed" && kind !== "started")) return unavailable;
     if ("operation" in operationField) {
       const operation = operationField.operation;
+      if (operation === "context.generate-pack") {
+        if (!options?.allowContextPackGeneration || (kind !== "started" && kind !== "replayed")) return unavailable;
+        const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId"]);
+        if (fields.workspaceId !== exact.workspaceId || !isHeadlessHostIncarnationId(fields.taskId)) return unavailable;
+        return {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt,
+          reference: {workspaceId: exact.workspaceId, taskId: fields.taskId}}};
+      }
       if (operation === "data.save-prepared-dataset") {
         if (!options?.allowDatasetResultSave || (kind !== "committed" && kind !== "replayed")) return unavailable;
         const exactReference = readHeadlessSavedDatasetReference(reference, exact.workspaceId);

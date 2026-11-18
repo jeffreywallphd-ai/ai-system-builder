@@ -139,3 +139,36 @@ test("both decision channels show the same exact file-save step and reject an al
     MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH,
   ]);
 });
+
+test("Context approval uses both fixed channels and refuses substituted sources, settings or processing limits", async () => {
+  const plan = parseHeadlessBuildPlanProposal({hostIncarnationId, workspaceId, steps: [{operation: "context.generate-pack",
+    idempotencyKey: "d515ff1c-bb55-4984-88ce-2a2a8e9d9e9e", name: "Support reference",
+    sources: [{kind: "ingestion-file", taskId: "ingestion.browser-fixture", fileId: "file.browser-fixture", taskRevision: 3}],
+    settings: {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
+      overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]}}]}, hostIncarnationId,
+    {allowLocalFileSave: true, allowContextPackGeneration: true});
+  if (!plan.ok) throw new Error("The Context plan fixture is invalid.");
+  const fingerprint = createHash("sha256").update(JSON.stringify(plan.preview)).digest("hex");
+  const choice = {...selection, fingerprint};
+  const state = {fingerprint, revision: 1, stepCount: 1, expiresAt, status: "pending", approvedSteps: 0};
+  const view = {selection: choice, viewId, preview: plan.preview, state};
+  const first = plan.preview.steps[0];
+  if (first.operation !== "context.generate-pack") throw new Error("Expected a Context step.");
+  const altered = [
+    {...first, input: {...first.input, sources: [{...first.input.sources[0], taskRevision: 4}]}},
+    {...first, input: {...first.input, settings: {...first.input.settings, chunkCharacters: 600}}},
+    {...first, explicitSaveRequired: false}, {...first, modelCalls: 1},
+  ];
+  const transport = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(response(view)).mockResolvedValueOnce(response(view));
+  for (const step of altered) transport.mockResolvedValueOnce(response({...view, preview: {...plan.preview, steps: [step]}}));
+  const client = createManagedBrowserConsentClient("fixture-org", transport);
+  expect(await client.openPlanApproval(tab, choice, signal)).toEqual(view);
+  expect(await client.openPlanApproval(tab, choice, signal, true)).toEqual(view);
+  for (const _step of altered) expect(await client.openPlanApproval(tab, choice, signal, true)).toBeUndefined();
+  expect(transport.mock.calls.map(([path]) => path)).toEqual([
+    MANAGED_BROWSER_PLAN_APPROVAL_PATH, ...Array(5).fill(MANAGED_BROWSER_PLAN_CHAT_PATH),
+  ]);
+  for (const [, options] of transport.mock.calls)
+    expect(JSON.parse(options!.body as string)).toEqual({operation: "open", document, selection: choice});
+});

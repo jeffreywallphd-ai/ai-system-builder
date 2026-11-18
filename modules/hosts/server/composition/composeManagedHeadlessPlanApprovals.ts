@@ -57,6 +57,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   readonly allowProviderFileSave?: boolean;
   readonly allowLocalDatasetPreparation?: boolean;
   readonly allowDatasetResultSave?: boolean;
+  readonly allowContextPackGeneration?: boolean;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, planClientId, platform, rootDirectory, contexts, placement, now = Date.now} = options;
@@ -68,6 +69,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   const allowProviderFileSave = options.allowProviderFileSave === true && stableReads !== undefined;
   const allowLocalDatasetPreparation = options.allowLocalDatasetPreparation === true && stableReads !== undefined;
   const allowDatasetResultSave = options.allowDatasetResultSave === true && stableReads !== undefined;
+  const allowContextPackGeneration = options.allowContextPackGeneration === true && stableReads !== undefined;
   const views = new Map<string, View>();
 
   async function authorize(owner: StructuredDocumentStore, identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
@@ -215,11 +217,11 @@ export function composeManagedHeadlessPlanApprovals(options: {
         if (!summary.ok || summary.value.expiresAt <= now() ||
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
         const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
-          selection, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave });
+          selection, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
         const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
-          step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset");
+          step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" || step.operation === "context.generate-pack");
         if (!await verifyAccess(identity, workspaceId, active, fileSave ? filePlanScopes : planScopes)) return forbidden;
         view.revision = ready.state.revision;
         view.expiresAt = ready.state.expiresAt;

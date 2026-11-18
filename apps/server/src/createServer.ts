@@ -511,6 +511,7 @@ export async function createServer(
         ...(planReview ? { allowLocalFileSave: planReview.allowLocalFileSave, allowProviderFileSave: planReview.allowProviderFileSave,
           allowLocalDatasetPreparation: planReview.allowLocalDatasetPreparation,
           allowDatasetResultSave: planReview.allowDatasetResultSave,
+          allowContextPackGeneration: planReview.allowContextPackGeneration,
           planReview: async (input, agent, current) =>
             agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(runPlanStep ? { planStep: async (input, agent, current) =>

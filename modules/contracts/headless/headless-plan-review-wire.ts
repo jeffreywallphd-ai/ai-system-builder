@@ -60,7 +60,8 @@ export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost:
     const proposal = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, ...proposalFields }, expectedHost,
       { allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true,
         allowLocalDatasetPreparation: options?.allowLocalDatasetPreparation === true,
-        allowDatasetResultSave: options?.allowDatasetResultSave === true });
+        allowDatasetResultSave: options?.allowDatasetResultSave === true,
+        allowContextPackGeneration: options?.allowContextPackGeneration === true });
     return proposal.ok ? { ok: true, request: { operation, target, proposal } } : invalid;
   } catch { return invalid; }
 }

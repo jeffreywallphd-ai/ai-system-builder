@@ -7,6 +7,7 @@ import {
   readHeadlessDatasetPreparationPreview,
   readHeadlessDatasetTaskStatusValue,
   readHeadlessDatasetTaskReviewValue,
+  readHeadlessContextTaskValue,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -56,6 +57,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly allowProviderFileSave?: boolean;
   readonly allowLocalDatasetPreparation?: boolean;
   readonly allowDatasetResultSave?: boolean;
+  readonly allowContextPackGeneration?: boolean;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -141,7 +143,8 @@ async function respond<Agent>(
     const parsed = readHeadlessPlanReviewAgentRequest(value, handlers.hostIncarnationId,
       { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true,
         allowLocalDatasetPreparation: handlers.allowLocalDatasetPreparation === true,
-        allowDatasetResultSave: handlers.allowDatasetResultSave === true });
+        allowDatasetResultSave: handlers.allowDatasetResultSave === true,
+        allowContextPackGeneration: handlers.allowContextPackGeneration === true });
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
     const input = parsed.request;
@@ -162,7 +165,8 @@ async function respond<Agent>(
     const result = readHeadlessPlanStepResult(outcome.result, parsed.request.input,
       { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true,
         allowLocalDatasetPreparation: handlers.allowLocalDatasetPreparation === true,
-        allowDatasetResultSave: handlers.allowDatasetResultSave === true });
+        allowDatasetResultSave: handlers.allowDatasetResultSave === true,
+        allowContextPackGeneration: handlers.allowContextPackGeneration === true });
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;
@@ -215,7 +219,8 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    const dataRead = (isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation)) && Boolean(handlers.planReview);
+    const dataRead = (isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
+      parsed.request.operation === "context.task") && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
     const result = await handlers.read(parsed.request, agent, current);
@@ -233,7 +238,13 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
-          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation)) : [])]}});
+          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessDataReadOperation(operation) ||
+            isHeadlessContextReadOperation(operation) || operation === "context.task") : [])]}});
+    }
+    if (result.operation === "context.task") {
+      if (parsed.request.operation !== "context.task") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessContextTaskValue(result.value, parsed.request.input.selection);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "context.models") {
       if (parsed.request.operation !== "context.models") return failure(response, 503, "headless.unavailable");

@@ -167,3 +167,11 @@ used by this path. The foundation retains installation policy through shared
 worker recovery and checks host admission at the actual spawn boundary. Source
 configuration checks accompany focused foundation/Desktop causal tests; they do
 not assert a live Managed Context journey, model execution or public plan wiring.
+
+Managed Headless plan review composes the same source-derived Context-pack step
+when the platform supplies stable publication. Current tenant/client/workspace
+policy and exact source/license metadata fence reserve and one-use issue. The
+shared installed-only owner runs outside the database transaction. Accepted-only
+`context.task` lookup precedes lazy processor access and rechecks current policy.
+HTTP/MCP and browser approval readers reconstruct exact v6 permissions. No raw
+source, path, prompt or embedding is returned; review and save remain separate.

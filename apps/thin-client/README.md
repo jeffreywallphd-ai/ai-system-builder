@@ -304,3 +304,10 @@ also applies in the popup. Refresh the request if another view has already
 changed it.
 
 Automation plan review also shows bounded processing of saved local training rows when offered by the server. Both the popup and approval chat list the files, mapping, split, limits and result-review requirement. Browser decoding verifies the v4 limits. Approval to start processing does not save or publish a dataset.
+
+For source-derived Context packs, both approval views list the exact saved Data
+sources, text fields, cleaning and chunk settings. The browser verifies the v6
+limits: four sources, 4 MiB per source, 16 MiB total and 1,000 chunks. This
+permission permits no model call or installation. Review and a separate save
+request are required before the pack becomes saved content. Recorded license
+information stays attached; missing terms remain unknown.

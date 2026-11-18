@@ -21,7 +21,7 @@ const windowEvents = {
 } as const;
 
 export type DesktopWindowAuditEvent = keyof typeof windowEvents;
-const backendOperations = ["system-authoring", "approved-conversation", "local-data-save", "provider-data-save", "local-dataset-start", "local-dataset-save"] as const;
+const backendOperations = ["system-authoring", "approved-conversation", "local-data-save", "provider-data-save", "local-dataset-start", "local-dataset-save", "context-pack-start"] as const;
 const backendOutcomes = {
   committed: "success", started: "success", replayed: "success", previewed: "success", "handle-observed": "success",
   denied: "denied", refused: "denied", conflict: "denied", unconfirmed: "failure",

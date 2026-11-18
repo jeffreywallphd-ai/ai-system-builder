@@ -1,0 +1,57 @@
+"""Approved Context checks cover owned work without claiming unrelated sources."""
+from pathlib import Path
+import sys
+import unittest
+
+HELPERS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(HELPERS))
+from control_plane import catalog
+
+
+class ContextExecutionRoutingTests(unittest.TestCase):
+    def selected(self, paths, required):
+        return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
+
+    def test_required_pack_contract_executes_accepted_task_store_owner_and_approval_regressions(self):
+        definition = catalog.PUBLISHED_FORM_CHECKS['headless-context-pack-contract']
+        selected = self.selected(list(definition['sources']), ['headless-context-pack-contract'])
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-pack-contract']['argv']
+        for filename in ['headless-context-plan.unit.test.ts', 'headless-context-task.unit.test.ts',
+                         'context-approved-start.unit.test.ts', 'structured-headless-context-plan-task-store.unit.test.ts',
+                         'headless-context-execution.unit.test.ts', 'HeadlessPlanApprovalDialog.interaction.ui.test.tsx',
+                         'headless-dataset-plan.unit.test.ts', 'headless-dataset-result-plan.unit.test.ts']:
+            self.assertTrue(any(value.endswith('/' + filename) for value in command), filename)
+        self.assertNotIn('--suite=all', command)
+        self.assertIn('modules/adapters/persistence/system-builder/README.md', definition['sources'])
+        self.assertIn('focused-tests', self.selected([
+            'modules/adapters/persistence/system-builder/unmapped-context.ts'], ['headless-context-pack-contract']))
+        self.assertIn('focused-tests', self.selected(list(definition['sources']),
+            ['headless-context-pack-contract', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected(list(definition['sources']) +
+            ['modules/application/use-cases/context-management/unmapped-execution.ts'], ['headless-context-pack-contract']))
+
+    def test_browser_companion_requires_primary_selection_and_keeps_unknown_and_explicit_fallback(self):
+        paths = list(catalog.PUBLISHED_FORM_CHECKS['headless-context-pack-browser']['sources'])
+        selected = self.selected(paths, ['headless-context-pack-contract'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertEqual(selected['headless-context-pack-browser']['argv'][1:],
+            ['dev-tools/helpers/run_vitest_checks.mjs', '--',
+             'apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts'])
+        self.assertIn('focused-tests', self.selected(paths, ['architecture']))
+        self.assertIn('focused-tests', self.selected(paths +
+            ['apps/thin-client/src/features/workspace/api/unknown-context.ts'], ['headless-context-pack-contract']))
+        self.assertIn('focused-tests', self.selected(paths, ['headless-context-pack-contract', 'focused-tests']))
+
+    def test_worker_attribution_check_is_fixed_model_free_and_keeps_unknown_fallback(self):
+        path = 'modules/adapters/runtime/python/worker/tasks/context_generation.py'
+        selected = self.selected([path], ['headless-context-pack-contract'])
+        self.assertNotIn('focused-tests', selected)
+        command = selected['headless-context-pack-worker']['argv']
+        self.assertEqual(command[:5], [sys.executable, '-B', '-m', 'unittest', '-v'])
+        self.assertEqual(len(command), 7)
+        self.assertTrue(command[5].endswith('.test_source_pack_preserves_recorded_terms_in_inspection_and_archive_without_models'))
+        self.assertTrue(command[6].endswith('.test_recorded_rag_terms_respect_attribution_selection_before_embedding'))
+        self.assertIn('focused-tests', self.selected([path], ['headless-context-pack-contract', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected([path.replace('context_generation.py', 'unknown_context.py')],
+            ['headless-context-pack-contract']))

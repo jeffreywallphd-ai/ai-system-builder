@@ -467,3 +467,44 @@ Only an explicit proven nonstart can remove this attempt's new staging after
 issuance. The task ID remains consumed. Uncertainty, malformed acknowledgements
 and exceptions preserve custody. Public plan issuance, model readiness and actual
 Context execution remain subsequent qualification, not a consequence of this seam.
+
+### Approved source-derived pack plans
+
+Dedicated plan-review clients can propose the opt-in `context.generate-pack`
+operation through the existing ordered plan workflow. Preview version 6 lists
+exact saved Data references, no-model cleaning/chunk settings, four 4 MiB
+sources, 16 MiB total, 1,000 chunks and separate result-review/save requirements.
+Both app approval channels and both approval modes use that same projection.
+A source save and processing of that mutable upload cannot share a plan.
+
+The root-owned transaction recompiles current saved metadata and binds the
+command, actual source hashes and declared license terms to one reserved task.
+A distinct Context namespace records reserved, issued and accepted phases with
+exact organization, actor, client, host, workspace, plan and step identity.
+Runtime and file effects occur outside retriable persistence transactions.
+Current atomic issue permits one installed-only start. Unknown issue/start
+outcomes cannot authorize another call or adopt an ordinary task. Acceptance
+records the admitted outcome even if outward access has ended; reply and replay
+still require current approval and policy.
+
+`context.task` first proves that durable accepted association before resolving
+the processor. It can poll the exact task or recover it from the known plan step.
+The owner validates worker output through its existing lifecycle. Public replies
+contain state and, when review is required, a fingerprint, source/chunk counts
+and size. They never contain source text, private paths, prompts or embeddings.
+The report always requires a separate save. Declared non-open terms remain
+attached; absent terms stay unknown. Terms are bounded whole, never silently
+clipped, and do not establish usage rights. Source descriptors cannot replace
+the approved declaration; worker manifest and inspection terms must match it.
+Source-derived Markdown workers include recorded attribution in both places
+without the RAG-only source-check setting. RAG retains its attribution opt-out.
+
+The Managed HTTP adapter advertises `context.task` only with plan-review
+support. It validates the exact minimized task result before forwarding it.
+The host still enforces plan-client, accepted-receipt and current workspace
+authority; transport availability grants no task ownership.
+
+The initial active profile is source-derived Markdown without summarization.
+Active RAG/model admission, immutable Context saving, query/rebuild, revocable
+Context presentation and parent qualification remain separate Increment 6 work.
+No model readiness, native/offload or host-exit proof follows from these tasks.

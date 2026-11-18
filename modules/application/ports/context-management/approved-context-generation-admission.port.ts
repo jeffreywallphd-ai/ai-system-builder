@@ -13,6 +13,8 @@ export interface ApprovedContextGenerationAdmission {
     readonly sizeBytes: number;
     readonly mediaType: string;
     readonly format: string;
+    /** Exact declared terms from the selected immutable Data record; absence stays unknown. */
+    readonly declaredLicense?: string;
   }[];
   /** Current host acceptance and exact approved plan/actor/client/source/model scope, not just a timestamp. */
   readonly isCurrent: () => boolean;
@@ -28,3 +30,5 @@ export interface ApprovedContextGenerationAdmission {
 export const APPROVED_CONTEXT_MAX_SOURCES = 4;
 export const APPROVED_CONTEXT_MAX_SOURCE_BYTES = 4 * 1024 * 1024;
 export const APPROVED_CONTEXT_MAX_PENDING = 4;
+export const APPROVED_CONTEXT_MAX_TASK_HISTORY = 256;
+export const APPROVED_CONTEXT_MAX_LICENSE_CHARACTERS = 512;

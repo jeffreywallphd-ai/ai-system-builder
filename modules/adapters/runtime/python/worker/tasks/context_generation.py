@@ -687,8 +687,13 @@ def _collect_chunks(
                 {"sourceInformation": source_information}
                 if (
                     source_information
-                    and payload.sourceChecks is not None
-                    and payload.sourceChecks.includeSourceAttribution
+                    and (
+                        payload.kind == "markdown-context-pack"
+                        or (
+                            payload.sourceChecks is not None
+                            and payload.sourceChecks.includeSourceAttribution
+                        )
+                    )
                 )
                 else {}
             ),
