@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-18T10:39:55Z`
+- Updated: `2026-11-18T17:50:56Z`
 
 ## Objective
 
@@ -139,7 +139,7 @@ The user selected both approval modes, available in chat and in the app. The hos
 | 3: Deliver the same workflow through the authenticated server and browser | Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay. | revocable-desktop-presentation | `implemented-pending-qualification` |
 | 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `completed` |
 | 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `completed` |
-| 6: Build and test RAG databases and context packs | Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results. | data-acquisition-and-datasets | `implementing` |
+| 6: Build and test RAG databases and context packs | Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results. | data-acquisition-and-datasets | `verifying` |
 | 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `pending` |
 | 8: Select, plan and create reusable assets | Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component. | models-training-and-generation | `pending` |
 | 9: Compose, build, test and publish systems | Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation | `pending` |
@@ -390,7 +390,7 @@ Disable new import and dataset tool routes. Preserve source artifacts, lineage, 
 ## Increment 6: Build and test RAG databases and context packs
 
 - Id: `rag-and-context`
-- Status: `implementing`
+- Status: `verifying`
 - Dependencies: `data-acquisition-and-datasets`
 
 Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results.

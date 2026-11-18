@@ -538,6 +538,64 @@
         "Proven non-start: completed work headless-context-proven-start-denial at795a021dac88f894a5476dd4b1c2de77cc971c70, receipt9b2653e9c0437ea7e1f2d0a02846cfc529a3b84a8fe16b1d2d9f0d5793f873f6, reviewb1882d3a75fc31cad572d69a01d128d732eda617595e2de42db4da5f4ae36230. Nine fixed groups passed; unknown/legacy/revoked cases remain guarded. No task status, repeat dispatch or parent pass from a non-start."
       ],
       "title": "Prepare sources and index settings"
+    },
+    {
+      "areas": [
+        "Typed Context plan/preview/task/save/query contracts",
+        "Existing application Context owners and original source/model admission",
+        "Desktop and Managed host/API/SDK/approval composition"
+      ],
+      "chunkId": "build-evaluate-context",
+      "completedAt": "2026-11-18T17:50:56Z",
+      "criteriaIds": [
+        "grounded-context",
+        "measured-retrieval",
+        "security-context-isolation"
+      ],
+      "documentation": [
+        "docs/architecture/context-management.md",
+        "docs/security/context-management-threat-model.md",
+        "skills/control-ai-system-builder/references/context-inputs.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "rag-and-context-build-evaluate-context",
+      "incrementId": "rag-and-context",
+      "summary": "Implemented approved RAG/source-pack generation, review and exact-result save, recorded-source rebuild and bounded saved-RAG query. Current lineage, one-use issue, ACK/accept, replay, citations and current policy are covered by controlled feature tests. Worker-only retrieval observations are separate. Actual Headless physical admission and app/MCP completion checks remain pending; no criterion or increment closes.",
+      "tests": [
+        "headless-context-rag-plan-execution: receiptfc7489607a802e4a307c980365dca90d194fb0929eb4f529d3c79e6b63422f84, reviewc515185b1191a036b74130676283c2079456012106888d517aa21f6a332ee74f. Approved local RAG and source-pack composition with original model witness.",
+        "headless-context-approved-result-save: receipt3cb8438dd7fda1a5e6861a5c0ddcd93aa67e5f29e8beefccad0870e26fc9549c, reviewc1d69a8ae25c48627e525b592f60561f3f00f586c8a2ff9363a5b7ae0f4fe36b. Review-before-save, bounded exact result, one-use save and immutable lineage.",
+        "headless-context-approved-recorded-rebuild: receipt90a090e50edeae0c6637781032424af43813f6c7e2d992c24786550782ea36e8, review4f7d4f67ea9d7ec18306defb2b121915b1c63fd020d6985edefa225929348df5. Original recorded sources and model, one-use issue and exact replay.",
+        "headless-context-approved-query: receiptb0f8f11a761694a9fc20e6a3208b34b0dd501ad89cb41b249fa3fdc549337e28, review75443e78af63733260d84cb14c69eafbd1f75866e7354777ede1eeba964e6e98. Seventeen focused groups; Core/SQLite ownership, current egress, API/SDK and approval controls. Physical/actual-app coverage is separate."
+      ],
+      "title": "Build, review, save and test Context"
+    },
+    {
+      "areas": [
+        "Closed Context presentation selectors and bounded summaries",
+        "Desktop and Managed current-policy/consent composition",
+        "Existing modal, card, replay/revoke and SDK controls"
+      ],
+      "chunkId": "reveal-context",
+      "completedAt": "2026-11-18T17:50:56Z",
+      "criteriaIds": [
+        "measured-retrieval",
+        "security-context-isolation"
+      ],
+      "documentation": [
+        "docs/diagnostics/headless-client-skill.md",
+        "docs/security/headless-system-builder-threat-model.md",
+        "modules/hosts/desktop/composition/README.md",
+        "modules/hosts/server/composition/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "rag-and-context-reveal-context",
+      "incrementId": "rag-and-context",
+      "summary": "Implemented saved Context and accepted generation/query display through separately revocable window consent. Controlled two-host/Core/SQLite, DOM and SDK checks verify exact lineage, cached observation, current permissions and revocation. Actual packaged Desktop/authenticated Managed app journeys remain pending. This records implementation only; it grants no criterion or increment pass.",
+      "tests": [
+        "headless-context-window-presentation: receipt0537631bd20187a8cb194019c2c0a6a761f2e3274a9e8bb17a2fba3fab34c411, review52665d92bde511b9c2fa4c690d169ca5c5dbd8618118151e59fd9e03b4aa0202. Saved/generation exact display with cached-only ownership and existing lease fences.",
+        "headless-context-query-window: receipte37290e09b09c62b0e7c6d672a1af9d7aa44841b95413589995eaf48c53c27d7, reviewa907d7a9715cd7ebed6fd6eb41fd7370f485aaf7a5c1651506b9fce6d311178a. Eleven focused groups, Desktop types and Server/Thin builds; exact query family, final ModelRead and consent/replay/revoke."
+      ],
+      "title": "Show Context outcomes in the app"
     }
   ],
   "completion": null,
@@ -1974,6 +2032,18 @@
       "recordedAt": "2026-11-18T10:39:55Z",
       "sequence": 103,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ac2e97db79a198272f27cce85ce027fca4841bf3c29e8489542744bb64887fdb",
+      "recordedAt": "2026-11-18T17:50:56Z",
+      "sequence": 104,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3bf972c309d23264cc79b99dda7fd2b3627170bb4331a7753122335b02c64d95",
+      "recordedAt": "2026-11-18T17:50:56Z",
+      "sequence": 105,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -2987,7 +3057,9 @@
       "allowPendingQualification": false,
       "completedAt": null,
       "completedChunks": [
-        "prepare-context"
+        "prepare-context",
+        "build-evaluate-context",
+        "reveal-context"
       ],
       "deliverables": [
         "RAG/context capability contracts, validation reports and artifact handoffs to Systems",
@@ -3118,7 +3190,7 @@
       ],
       "rollback": "Disable agent Context admission and revoke related presentation. Retain saved and versioned indexes, packs, receipts and ordinary Context UI.",
       "startedAt": "2026-11-18T02:17:47Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "Build and test RAG databases and context packs",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -3436,5 +3508,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-18T10:39:55Z"
+  "updatedAt": "2026-11-18T17:50:56Z"
 }

@@ -1228,6 +1228,57 @@
           "Earlier results and pending checks remain in place."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bdd6c336ec7ca1d7cb27db4f6dbefc86b20816bd4878ebd71f39b7cfac1bb774",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Seven worker runs completed with the installed model.",
+          "All six query groups reached100% recall on the eight fixed topics and stayed within the recorded resource limits.",
+          "Four result comparisons matched exactly.",
+          "Workers exited and generated test inputs were removed.",
+          "An independent review checked saved outputs without rerunning the model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0c6598ec1104bce0f93465b0736ef6ca09d980433a023995bcd9768e971bd368",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These measurements cover the ordinary retrieval worker.",
+          "The full Headless approval path and real app, MCP and UI journeys still need testing.",
+          "Physical failure and replay checks and parent qualification remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "27f9776bc5e9f76ce22be73969a1ed39d1df349b2ade17fbeaff6707cc8736a4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "RAM sampling starts after shared imports.",
+          "The GPU value counts Torch allocations after startup, not all GPU memory used by the process or device.",
+          "Eight samples do not prove statistical speed or broad model accuracy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ca0f328c62d8047394c1293836f8bf63a204fe43c5af1c228434b0c641cb18fa",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The existing worker supervisor was reused.",
+          "The CUDA comparison uses the current embedding runtime on both sides.",
+          "No model, dependency, memory guard, offload policy or earlier result changed.",
+          "These observations do not close the parent roadmap."
+        ]
+      }
     }
   ]
 }
