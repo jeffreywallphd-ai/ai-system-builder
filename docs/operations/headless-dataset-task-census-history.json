@@ -20,5 +20,29 @@
       "prior_row_sha256": "722f65b7437e2136e03fd3b1e1fcf2fef95fdb4de3d1c29d0e3e7c4019f7df66",
       "current_row_sha256": "2adaa890f5afa82d10f7130fb67816ece8eac1f7839332e7c2280eedc5725031"
     }
+  ],
+  "revisions": [
+    {
+      "schema_version": "working-ui-census-update-v1",
+      "scope": "working-source-facts-only-no-execution",
+      "prior_commit": "415a06f6c7bf6d1a80e511e50bc67fff85ad1bc4",
+      "prior_census_git_sha256": "0c5129a2015d2db19cbe01d51f0d550ef1882f43825c5d0a12ae3731b6410260",
+      "prior_map_sha256": "644b61bae923b405fa29c0fecc9442b40ce53d5ca973932d92d4a27acdbf4673",
+      "current_map_sha256": "3aa02314c058db81aea716dd4c7120fb80b3fff107dfe7e81e2bb4b5c67dfeee",
+      "source_baseline": "be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+      "qualification_effect": {
+        "executed_tests": 0,
+        "actual_host_pass": false,
+        "parent_qualification_granted": false,
+        "full_testing_status": "pending-roadmap-final-qualification"
+      },
+      "sources": [
+        {
+          "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+          "prior_row_sha256": "2adaa890f5afa82d10f7130fb67816ece8eac1f7839332e7c2280eedc5725031",
+          "current_row_sha256": "90b5672bc4ca90b817df03d455b36efb23e390a5c6a46d5c88f29e809a16cc83"
+        }
+      ]
+    }
   ]
 }

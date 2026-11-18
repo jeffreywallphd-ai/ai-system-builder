@@ -1,7 +1,9 @@
 import type {
+  DatasetVersionCommitAdmission,
   DatasetVersionHasherPort,
   DatasetVersionRepositoryPort,
 } from "../../ports/dataset-version";
+import { DatasetVersionCommitUnconfirmedError } from "../../ports/dataset-version";
 import type { ArtifactObjectStoragePort } from "../../ports/storage";
 import type { ApplicationRequestContext } from "../../ports";
 import {
@@ -69,10 +71,14 @@ export class DatasetVersionFinalizationService {
     },
   ) {}
 
-  public async finalize(input: DatasetVersionFinalizationInput, context?: ApplicationRequestContext): Promise<DatasetVersionFinalizationResult> {
+  public async finalize(input: DatasetVersionFinalizationInput, context?: ApplicationRequestContext,
+    admission?: DatasetVersionCommitAdmission): Promise<DatasetVersionFinalizationResult> {
     const workspaceId = createWorkspaceId(input.workspaceId);
     if (context?.workspaceId !== workspaceId) throw new Error("Dataset version finalization requires the exact workspace scope.");
     if (context.organizationId !== input.organizationId) throw new Error("Dataset version finalization requires the exact organization scope.");
+    if (admission && (admission.workspaceId !== workspaceId || admission.organizationId !== input.organizationId ||
+        !admission.principalId || admission.principalId !== context.principalId || admission.principalId !== input.createdBy))
+      throw new Error("Dataset version commit admission requires the exact actor and workspace scope.");
 
     const recipeJson = canonicalJson(input.recipeSnapshot);
     const recipeBytes = new TextEncoder().encode(recipeJson);
@@ -80,6 +86,7 @@ export class DatasetVersionFinalizationService {
     const recipeArtifactKey = `dataset-versions/recipes/${recipeDigest.slice("sha256:".length)}.json`;
     let createdRecipe = false;
     const createdArtifactKeys: string[] = [];
+    let admittedCommitAttempted = false;
     try {
       createdRecipe = await this.storeRecipeArtifact(recipeArtifactKey, recipeBytes, recipeDigest, input, context);
       if (createdRecipe) createdArtifactKeys.push(recipeArtifactKey);
@@ -115,18 +122,33 @@ export class DatasetVersionFinalizationService {
       const digestInput = { schemaVersion: "1.0", datasetId, ...(input.organizationId ? { organizationId: input.organizationId } : {}), workspaceId, artifacts, lineage, documentation: input.documentation, totalRows: input.totalRows };
       const versionDigest = this.dependencies.hasher.digest(canonicalJson(digestInput));
       const versionId = `${datasetId}:${versionDigest.slice("sha256:".length, "sha256:".length + 20)}` as DatasetVersionRecord["versionId"];
-      const existing = await this.dependencies.repository.readVersion(workspaceId, versionId);
-      if (existing) {
-        if (existing.versionDigest !== versionDigest) throw new Error("Dataset version identity conflicts with different content.");
-        return { version: existing, created: false };
+      if (!admission) {
+        const existing = await this.dependencies.repository.readVersion(workspaceId, versionId);
+        if (existing) {
+          if (existing.versionDigest !== versionDigest) throw new Error("Dataset version identity conflicts with different content.");
+          return { version: existing, created: false };
+        }
       }
       const version = normalizeDatasetVersionRecord({
         schemaVersion: "1.0", versionId, datasetId: datasetId as DatasetVersionRecord["datasetId"],
         ...(input.organizationId ? { organizationId: input.organizationId } : {}), workspaceId, versionDigest, artifacts, lineage,
         documentation: input.documentation, totalRows: input.totalRows, createdAt: input.createdAt, createdBy: input.createdBy,
       });
+      if (admission) {
+        // Do not return an ordinary saved record as a causal plan receipt. The
+        // owning adapter must verify/commit both records in its transaction.
+        const exact = canonicalJson(version);
+        admittedCommitAttempted = true;
+        const committed = await admission.commit(JSON.parse(exact));
+        if (typeof committed?.created !== "boolean" || canonicalJson(normalizeDatasetVersionRecord(committed.version)) !== exact)
+          throw new DatasetVersionCommitUnconfirmedError();
+        return {version: JSON.parse(exact), created: committed.created};
+      }
       return { version: await this.dependencies.repository.createVersion(version), created: true };
     } catch (error) {
+      // A lost acknowledgement must not delete bytes referenced by a version
+      // that may already be visible. Never turn uncertainty into a retry.
+      if (admittedCommitAttempted) throw new DatasetVersionCommitUnconfirmedError();
       for (const key of createdArtifactKeys.reverse()) {
         try { await this.dependencies.artifacts.deleteArtifact(createDeleteArtifactRequest(key), context); } catch { /* Best-effort content-addressed orphan cleanup. */ }
       }

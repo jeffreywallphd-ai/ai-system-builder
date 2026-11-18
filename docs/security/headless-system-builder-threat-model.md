@@ -7,6 +7,35 @@ review; the first contract alone does not qualify any live host.
 
 ## Approved provider source registration
 
+The result-review query first proves the exact durable accepted task/actor/client/
+host association and current artifact read permission. It exposes finite counts,
+reasons and report/policy fingerprints, never rows, samples or paths. Strict host
+and transport decoders reject foreign tasks, extra fields, getters and impossible
+counts. Discovery cannot warm the processor or approve a result.
+
+The opt-in v5 result-save step grants only the exact accepted task, quality report
+and safe output name. Both app channels disclose immutable local saving with no
+model calls or outside publication. Current plan revision/order, actor/client,
+workspace role, artifact write permission and deadline are checked at reserve,
+issue and final metadata commit. A private source/report/name digest excludes
+only the owner's transient save-availability flag. A task-unique issue record
+prevents competing plans from saving the same prepared result.
+
+Artifact materialization stays outside retrying transactions. Version metadata
+and the private causal receipt commit together. Unknown issue or commit retains
+evidence and cannot admit another attempt. Lost commit acknowledgement allows one
+read of the exact private save identity and source digest, never publication retry
+or ordinary-version adoption. An already committed business result survives reply
+loss; current authority independently gates disclosure. The ordinary approval
+performer rechecks issued/unconfirmed ownership inside its task queue. Native
+cleanup and stop proof remain separate; a metadata receipt cannot retire staging.
+
+Explicit provided-column mapping is separate from legacy task `inputField`.
+TS and Python require two distinct bounded columns, provided mode and omitted
+context. Missing selected text cannot fall back to canonical aliases or unrelated
+context. The mapping is retained in the admitted recipe/digest and immutable
+lineage. It adds no generation, source format, destination or lifecycle authority.
+
 The finite Data status read is restricted to plan-review registrations and the
 current workspace artifact read policy. Desktop and Managed hosts recheck the
 exact principal, organization, workspace and grant around the owning task read.

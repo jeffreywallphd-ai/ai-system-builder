@@ -72,6 +72,7 @@ import {
   createDatasetPreparationExecutionPlan,
   evaluateDatasetPreparationSourceReadiness,
   isDatasetPreparationTaskType,
+  readProvidedInstructionColumnMapping,
   isDatasetPreparationOcrArtifactId,
   isDatasetPreparationOcrLanguage,
   normalizeLegacyDatasetPreparationMethod,
@@ -87,7 +88,9 @@ import {
 } from "../../contracts/runtime";
 
 import type { ApplicationRequestContext } from "../ports";
-import type { DatasetVersionHasherPort } from "../ports/dataset-version";
+import type { DatasetVersionHasherPort, DatasetVersionCommitAdmission,
+  PreparedLocalDatasetReview, PreparedLocalDatasetSaveAdmission } from "../ports/dataset-version";
+import { DatasetVersionCommitUnconfirmedError } from "../ports/dataset-version";
 import type { RuntimeTaskRegistryPort } from "../ports/runtime";
 import type { DatasetQualityPolicyProviderPort } from "../ports/runtime";
 import type { DatasetPreparationSourceHasherPort } from "../ports/runtime";
@@ -339,6 +342,11 @@ function validateDatasetPreparationCommand(
     !isDatasetPreparationTaskType(command.recipe.task.taskType)
   ) {
     return "The selected training goal is not supported.";
+  }
+  if (isRecord(command.recipe.task) && command.recipe.task.providedRowMapping !== undefined &&
+      (command.recipe.task.taskType !== "llm-instruction" || command.recipe.task.textInputMode !== "provided" ||
+        command.recipe.task.sourceContextPolicy !== "omit" || !readProvidedInstructionColumnMapping(command.recipe.task.providedRowMapping))) {
+    return "The provided instruction column mapping is invalid.";
   }
   if (!isRecord(command.split)) {
     return "Dataset split settings are required.";
@@ -1781,11 +1789,10 @@ function validLocalProvidedAdmission(command: PrepareTrainingDatasetFromArtifact
         capability.mediaTypes.some(media => media === source.mediaType.split(";", 1)[0].trim().toLowerCase())) &&
       Number.isSafeInteger(source.sizeBytes) && source.sizeBytes > 0 && source.sizeBytes <= LOCAL_DATASET_ADMISSION_MAX_SOURCE_BYTES &&
       /^sha256:[a-f0-9]{64}$/.test(source.digest)) &&
-    exact(command.recipe, ["task"]) && exact(task, ["taskType", "textInputMode", "promptStyle", "inputField", "outputField", "sourceContextPolicy"]) &&
+    exact(command.recipe, ["task"]) && exact(task, ["taskType", "textInputMode", "promptStyle", "providedRowMapping", "sourceContextPolicy"]) &&
     task?.taskType === "llm-instruction" && task.textInputMode === "provided" && task.promptStyle === "instruction-response" &&
-    task.sourceContextPolicy === "omit" && typeof task.inputField === "string" && typeof task.outputField === "string" &&
-    task.inputField.length > 0 && task.inputField.length <= 64 && task.outputField.length > 0 && task.outputField.length <= 64 &&
-    task.inputField !== task.outputField && exact(split, ["trainRatio", "validationRatio", "testRatio", "seed", "shuffle"]) &&
+    task.sourceContextPolicy === "omit" && Boolean(readProvidedInstructionColumnMapping(task.providedRowMapping)) &&
+    exact(split, ["trainRatio", "validationRatio", "testRatio", "seed", "shuffle"]) &&
     split.shuffle === true && Number.isSafeInteger(split.seed) && split.seed! >= 0 &&
     exact(command.output, ["format", "destinations"]) && command.output.format === "jsonl" &&
     exact(command.output.destinations, ["local"]) && exact(command.output.destinations?.local, ["enabled"]) &&
@@ -1799,6 +1806,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   private readonly localDatasetStartsByTask = new Map<string, LocalDatasetStart>();
   private readonly admittedLocalDatasetTaskIds = new Set<string>();
   private readonly admittedLocalDatasetTerminal = new Map<string, "failed" | "cancelled">();
+  private readonly admittedLocalDatasetSaves = new Map<string, {
+    readonly effectId: string; readonly signature: string; phase: "reserving" | "issued" | "unconfirmed" | "complete";
+  }>();
   private readonly approvals = new Map<string, { signature: string; operation: Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performApprovePreparedTrainingDataset"]>>> }>();
   private readonly approvedSignatures = new Map<string, string>();
   private readonly taskActions = new Map<string, Promise<unknown>>();
@@ -2333,6 +2343,79 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
   }
 
+  /** Pure metadata lookup for a separately proven accepted task. No file/runtime IO. */
+  public peekAdmittedLocalDatasetReview(requestId: string, context: ApplicationRequestContext): PreparedLocalDatasetReview | undefined {
+    const scope = this.taskScopeByRequestId.get(requestId), pending = this.pendingQualityReviewsByRequestId.get(requestId);
+    if (this.materializedResultsByRequestId.has(requestId) || !this.admittedLocalDatasetTaskIds.has(requestId) || !scope || !pending || !this.isRecordedScopeOwned(scope, context) ||
+        !context.organizationId || !context.principalId || !this.isRecordedScopeOwned(pending.scope, context)) return;
+    const report = pending.runtimeResult.qualityReport;
+    if (!isDatasetQualityReport(report)) return;
+    const summary = pending.runtimeResult.summary;
+    const attempt = this.admittedLocalDatasetSaves.get(requestId);
+    return {taskId: requestId, reportFingerprint: report.reportFingerprint,
+      policyFingerprint: `sha256:${createHash("sha256").update(JSON.stringify(report.policy), "utf8").digest("hex")}`,
+      status: report.status, counts: {...report.counts}, reasonCounts: {...report.reasonCounts},
+      splits: {trainRows: summary.trainRowCount, validationRows: summary.validationRowCount ?? 0, testRows: summary.testRowCount},
+      approvalAllowed: report.approvalAllowed,
+      saveAvailable: Boolean(this.datasetVersionFinalizer && this.datasetVersionHasher && report.approvalAllowed &&
+        report.status !== "blocked" && !attempt)};
+  }
+
+  /** Acknowledged one-use admission precedes the existing serialized result save. */
+  public async saveAdmittedLocalProvidedDataset(approval: DatasetQualityApprovalRequest, context: ApplicationRequestContext,
+    admission: PreparedLocalDatasetSaveAdmission) {
+    const unavailable = () => createFailureResult(createContractError("unavailable", "The approved dataset save could not be confirmed."), context);
+    const denied = () => createFailureResult(createContractError("forbidden", "The reviewed dataset save is unavailable."), context);
+    if (!approval || typeof approval.requestId !== "string" || !admission ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(admission.effectId) ||
+        !context.organizationId || !context.principalId || admission.organizationId !== context.organizationId ||
+        admission.workspaceId !== context.workspaceId || admission.principalId !== context.principalId ||
+        admission.taskId !== approval?.requestId || admission.reportFingerprint !== approval.reportFingerprint ||
+        typeof approval.outputBaseName !== "string" || !approval.outputBaseName.trim() ||
+        approval.outputBaseName !== admission.outputBaseName || validateDatasetPreparationSaveName(approval.outputBaseName) ||
+        typeof admission.commit !== "function" || typeof admission.issue !== "function" ||
+        typeof admission.isCurrent !== "function" || typeof admission.stillAllowed !== "function") return denied();
+    const current = async () => {try {return admission.isCurrent() && await admission.stillAllowed() && admission.isCurrent();} catch {return false;}};
+    if (!await current()) return denied();
+    return this.serialize(approval.requestId, async () => {
+      const scope = this.taskScopeByRequestId.get(approval.requestId);
+      if (!scope || !this.admittedLocalDatasetTaskIds.has(approval.requestId) || !this.isRecordedScopeOwned(scope, context)) return denied();
+      const signature = JSON.stringify([approval.reportFingerprint, approval.outputBaseName]);
+      const previous = this.admittedLocalDatasetSaves.get(approval.requestId);
+      if (previous) {
+        const saved = this.materializedResultsByRequestId.get(approval.requestId);
+        if (previous.effectId === admission.effectId && previous.signature === signature && previous.phase === "complete" &&
+            saved && await current())
+          return createSuccessResult({requestId: approval.requestId, taskType: "prepare-training-dataset" as const,
+            status: "succeeded" as const, result: saved}, context);
+        return unavailable();
+      }
+      const review = this.peekAdmittedLocalDatasetReview(approval.requestId, context);
+      if (!review?.saveAvailable || review.reportFingerprint !== approval.reportFingerprint || !await current()) return denied();
+      const attempt = {effectId: admission.effectId, signature, phase: "reserving" as "reserving" | "issued" | "unconfirmed" | "complete"};
+      this.admittedLocalDatasetSaves.set(approval.requestId, attempt);
+      let issued: "issued" | "denied" | "unconfirmed";
+      try {issued = await admission.issue();} catch {issued = "unconfirmed";}
+      if (issued !== "issued") {
+        if (issued === "denied") this.admittedLocalDatasetSaves.delete(approval.requestId);
+        else attempt.phase = "unconfirmed";
+        return issued === "denied" ? denied() : unavailable();
+      }
+      // Issuance admits this finite artifact attempt. The internal commit port
+      // still owns the current-authority metadata/publication fence. Outward
+      // loss never justifies repeated IO or erasing a confirmed causal receipt.
+      attempt.phase = "issued";
+      try {
+        const outcome = await this.performApprovePreparedTrainingDataset(approval, context, admission);
+        // Post-commit staging cleanup may fail after the immutable result and
+        // causal receipt are confirmed. Do not permit another save or hide the
+        // saved business result; existing cleanup guards still own retirement.
+        attempt.phase = outcome.ok || this.materializedResultsByRequestId.has(approval.requestId) ? "complete" : "unconfirmed";
+        return outcome.ok ? outcome : unavailable();
+      } catch {attempt.phase = "unconfirmed"; return unavailable();}
+    });
+  }
+
   public async readPrepareTrainingDataset(requestId: string, context?: ApplicationRequestContext): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performReadPrepareTrainingDataset"]>>> {
     const key = JSON.stringify([context?.organizationId, context?.principalId, context?.workspaceId, requestId]);
     const existing = this.reads.get(key);
@@ -2558,6 +2641,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }>
   > {
     try {
+      const saving = this.admittedLocalDatasetSaves.get(requestId);
+      const savedScope = this.taskScopeByRequestId.get(requestId);
+      if (saving && saving.phase !== "complete" && savedScope && context && this.isRecordedScopeOwned(savedScope, context))
+        return createFailureResult(createContractError("unavailable", "The approved dataset save could not be confirmed."), context);
       if (!isWorkspaceId(context?.workspaceId)) {
         return createFailureResult(
           createContractError(
@@ -2799,6 +2886,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   ): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performApprovePreparedTrainingDataset"]>>> {
     const scope = this.taskScopeByRequestId.get(approval?.requestId);
     if (!scope || !context || !this.isRecordedScopeOwned(scope, context)) return this.performApprovePreparedTrainingDataset(approval, context);
+    const saving = this.admittedLocalDatasetSaves.get(approval?.requestId);
+    if (saving && saving.phase !== "complete")
+      return createFailureResult(createContractError("unavailable", "The approved dataset save could not be confirmed."), context);
     const signature = JSON.stringify([approval.reportFingerprint, approval.outputBaseName ?? null]);
     const current = this.approvals.get(approval.requestId);
     if (current) {
@@ -2813,6 +2903,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   private async performApprovePreparedTrainingDataset(
     approval: DatasetQualityApprovalRequest,
     context?: ApplicationRequestContext,
+    admission?: DatasetVersionCommitAdmission,
   ): Promise<
     ContractResult<{
       requestId: string;
@@ -2848,6 +2939,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         context,
       );
     }
+    // Ordinary approval may have queued before an admitted save installed its
+    // attempt. Recheck inside the serialized owner, immediately before effects.
+    const saving = this.admittedLocalDatasetSaves.get(approval.requestId);
+    const savingScope = this.taskScopeByRequestId.get(approval.requestId);
+    if (!admission && saving && saving.phase !== "complete" && savingScope && this.isRecordedScopeOwned(savingScope, context))
+      return createFailureResult(createContractError("unavailable", "The approved dataset save could not be confirmed."), context);
     const receipt = this.materializedResultsByRequestId.get(approval.requestId);
     const receiptScope = this.taskScopeByRequestId.get(approval.requestId);
     if (receipt && receiptScope && this.isRecordedScopeOwned(receiptScope, context)) {
@@ -2944,6 +3041,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         approvedRuntimeResult,
         approved,
         context,
+        admission,
       );
       if (pending.reviewStorage) {
         await this.deleteStoredArtifacts([pending.reviewStorage.key], context);
@@ -3532,6 +3630,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     runtimeResult: PrepareTrainingDatasetResult,
     value: PrepareTrainingDatasetFromArtifactsValue,
     context?: ApplicationRequestContext,
+    admission?: DatasetVersionCommitAdmission,
   ): Promise<PrepareTrainingDatasetFromArtifactsValue> {
     const finalizer = this.datasetVersionFinalizer;
     const hasher = this.datasetVersionHasher;
@@ -3646,8 +3745,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           createdAt: this.now(),
         },
         context,
+        admission,
       );
     } catch (error) {
+      if (error instanceof DatasetVersionCommitUnconfirmedError) throw error;
       await this.deleteStoredArtifacts(
         artifacts
           .filter((artifact) =>

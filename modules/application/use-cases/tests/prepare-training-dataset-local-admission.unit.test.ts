@@ -11,19 +11,27 @@ import {createDefaultDatasetQualityPolicyProvider} from "../../services/dataset-
 import {OwnedTaskReconcilerService} from "../../services/runtime/owned-task-reconciler.service";
 import type {LocalDatasetPreparationAdmission} from "../../ports/runtime";
 import {PrepareTrainingDatasetFromArtifactsUseCase} from "../prepare-training-dataset-from-artifacts.use-case";
+import {createInMemoryStructuredDocumentStore} from "../../../adapters/persistence/shared";
+import {createStructuredDatasetVersionRepository} from "../../../adapters/persistence/dataset-version";
+import {createSha256DatasetVersionHasher} from "../../../adapters/storage/dataset-version";
+import {DatasetVersionFinalizationService} from "../../services/dataset-version";
+import type {ArtifactObjectStoragePort} from "../../ports/storage";
+import type {PreparedLocalDatasetSaveAdmission} from "../../ports/dataset-version";
 
 const context = {workspaceId: "workspace.synthetic", organizationId: createOrganizationId("org.synthetic"), principalId: "synthetic-user"};
 const source = Buffer.from("question,answer\nWhere is Help?,Open Help from the menu.\nHow do I save?,Use Save.\n");
 const digest = (bytes: Uint8Array) => "sha256:" + createHash("sha256").update(bytes).digest("hex") as `sha256:${string}`;
 const command = {sourceArtifactIds: ["source.one"],
   recipe: {task: {taskType: "llm-instruction" as const, textInputMode: "provided" as const, promptStyle: "instruction-response" as const,
-    inputField: "question", outputField: "answer", sourceContextPolicy: "omit" as const}},
+    providedRowMapping: {instructionColumn: "question", outputColumn: "answer"}, sourceContextPolicy: "omit" as const}},
   split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42, shuffle: true},
   output: {format: "jsonl" as const, destinations: {local: {enabled: true}}},
   quality: {policy: {preset: "recommended" as const, maxRowsPerSource: 1000}, reviewRequired: true}};
 
 async function fixture(options: {
   evidence?: boolean;
+  versioning?: boolean; lostSaveCommitAck?: boolean; loseCallerOnSaveIssue?: boolean; retainedReview?: boolean;
+  saveIssue?: "issued" | "denied" | "unconfirmed";
   omittedDescriptorMedia?: boolean; conflictingDescriptorMedia?: boolean;
   remote?: boolean; corrupt?: boolean; mutateDuringCatalog?: boolean; revokeAfterRead?: boolean;
   mutateDescriptorDuringCatalog?: boolean; activationFailure?: boolean; stopDuringActivation?: boolean;
@@ -42,6 +50,22 @@ async function fixture(options: {
   let runtimeRequest: any;
   let statusOverride: any;
   const saved = new Map<string, any>();
+  const versions = createStructuredDatasetVersionRepository(createInMemoryStructuredDocumentStore().forOrganization(context.organizationId));
+  const hasher = createSha256DatasetVersionHasher();
+  let saveIssues = 0, versionCommits = 0;
+  const storage: ArtifactObjectStoragePort = {async retrieveArtifact(request) {reads.push(request); if (options.revokeAfterRead) current = false;
+    if (saved.has(request.key)) return {ok: true, value: saved.get(request.key)} as any;
+    return {ok: true, value: {descriptor, content: options.corrupt ? Buffer.from("changed") : input}} as any;},
+    async storeArtifact(request) {
+      if (!options.evidence) throw new Error("Unexpected output save.");
+      saved.set(request.descriptor.key, {descriptor: request.descriptor, content: new Uint8Array(request.content as Uint8Array)});
+      return {ok: true, value: request.descriptor} as any;
+    }, async deleteArtifact(request) {
+      if (!options.evidence || !saved.has(request.key)) throw new Error("Unexpected source deletion.");
+      saved.delete(request.key); return {ok: true, value: {deleted: true}} as any;
+    },
+    async hasArtifact(request) {return {ok: true, value: {exists: saved.has(request.key),
+      ...(saved.has(request.key) ? {descriptor: saved.get(request.key).descriptor} : {})}} as any;}};
   const admission: LocalDatasetPreparationAdmission = {taskId: randomUUID(), sources: [{artifactId: "source.one", storageKey: "source.one",
     mediaType: "text/csv", format: "csv", sizeBytes: source.byteLength, digest: digest(source)}],
     isCurrent: () => current, stillAllowed: async () => current,
@@ -80,19 +104,7 @@ async function fixture(options: {
       artifactId: "source.one", role: "primary", backing: options.remote ? {kind: "imported-source", target: {provider: "huggingface"}} :
         {kind: "artifact-object", provider: "local-filesystem", locator: "source.one"}}]}} as any;},
       async upsertArtifactStorageBinding() {throw new Error("Unexpected localization.");}, async deleteArtifactStorageBindings() {throw new Error("Unexpected binding deletion.");}},
-    storage: {async retrieveArtifact(request) {reads.push(request); if (options.revokeAfterRead) current = false;
-      if (saved.has(request.key)) return {ok: true, value: saved.get(request.key)} as any;
-      return {ok: true, value: {descriptor,
-        content: options.corrupt ? Buffer.from("changed") : input}} as any;},
-      async storeArtifact(request) {
-        if (!options.evidence) throw new Error("Unexpected output save.");
-        saved.set(request.descriptor.key, {descriptor: request.descriptor, content: new Uint8Array(request.content)});
-        return {ok: true, value: request.descriptor} as any;
-      }, async deleteArtifact(request) {
-        if (!options.evidence || !saved.has(request.key)) throw new Error("Unexpected source deletion.");
-        saved.delete(request.key); return {ok: true, value: {deleted: true}} as any;
-      },
-      async hasArtifact() {return {} as any;}},
+    storage,
     artifactRepoStorage: {async retrieveArtifactFromRepo() {providerReads++; throw new Error("Unexpected provider access.");}} as any,
     artifactCatalog: {async readArtifactCatalogRecord() {
       if (options.mutateDuringCatalog) input.fill(0);
@@ -102,13 +114,30 @@ async function fixture(options: {
     taskPowerLifecycle: {async startTask() {}, async completeTask() {}}, taskReconciler: reconciler,
     sourceIntegrityHasher: {digest(bytes) {verifications++; return digest(bytes);}},
     datasetQualityPolicyProvider: createDefaultDatasetQualityPolicyProvider(),
+    ...(options.versioning ? {datasetVersioning: {hasher,
+      finalizer: new DatasetVersionFinalizationService({repository: versions, artifacts: storage, hasher})}} : {}),
     runtimeCapabilityGuard: {async requireCapabilityReady() {
       activations++; assert.equal(issues, 1); assert.equal(verifications, 1);
       if (options.stopDuringActivation) reconciler.stopAccepting();
       if (options.activationFailure) throw new Error("Private synthetic runtime diagnostic.");
     }},
   });
-  return {useCase, admission, reconciler, parent, reads,
+  const approval = {requestId: admission.taskId, reportFingerprint: "a".repeat(64), outputBaseName: "Synthetic reviewed answers"};
+  const saveAdmission: PreparedLocalDatasetSaveAdmission = {...context, effectId: randomUUID(), taskId: admission.taskId,
+    reportFingerprint: approval.reportFingerprint, outputBaseName: approval.outputBaseName,
+    isCurrent: () => current, stillAllowed: async () => current,
+    async issue() {saveIssues++; if (options.loseCallerOnSaveIssue) current = false; return options.saveIssue ?? "issued";},
+    async commit(version) {
+      // This core-only fixture supplies its commit admission independently of
+      // caller liveness. Actual host/adapter tests must fence publication policy.
+      versionCommits++;
+      const record = await versions.createVersion(version);
+      if (options.lostSaveCommitAck) throw new Error("Synthetic private commit acknowledgement failure.");
+      return {version: record, created: true};
+    }};
+  return {useCase, admission, reconciler, parent, reads, versions, approval, saveAdmission,
+    save(a = saveAdmission) {return useCase.saveAdmittedLocalProvidedDataset(approval, context, a);},
+    savedCount: () => saved.size,
     setStatus(value: any) {statusOverride = value;},
     async finishForReview() {
       reconciler.stopObservation();
@@ -133,21 +162,166 @@ async function fixture(options: {
           skippedDocumentCount: 0, chunkCount: 2, generatedExampleCount: 2, datasetRowCount: 1, trainRowCount: 1,
           validationRowCount: 0, testRowCount: 0, acceptedRowCount: 1, quarantinedRowCount: 1}}};
     },
-    counts: () => ({starts, issues, providerReads, statusReads, cancellations, activations}),
+    counts: () => ({starts, issues, providerReads, statusReads, cancellations, activations, saveIssues, versionCommits}),
     start: (a = admission, c = command) => useCase.startAdmittedLocalProvidedDataset(c, {...context, requestId: "caller-correlation"}, a),
     async directories() {return readdir(parent);},
     async close() {
       reconciler.stopObservation();
       // The fake registry creates no worker. This is a simulated successful owned
       // runtime stop; native lifecycle qualification is a separate host journey.
-      await reconciler.settleAfterRuntimeStop(["python"]);
-      assert.deepEqual(await readdir(parent), []);
-      if (prior.TEMP === undefined) delete process.env.TEMP; else process.env.TEMP = prior.TEMP;
-      if (prior.TMP === undefined) delete process.env.TMP; else process.env.TMP = prior.TMP;
-      await rm(parent, {recursive: true, force: true});
+      try {
+        await reconciler.settleAfterRuntimeStop(["python"]);
+        const directories = await readdir(parent);
+        if (options.retainedReview) assert.equal(directories.length, 1, "An uncertain save must retain its synthetic review stage.");
+        else assert.deepEqual(directories, []);
+        // Only this fresh unit-test directory is removed. Its registry and
+        // version storage are in memory; this is no native retirement proof.
+        await rm(parent, {recursive: true, force: true});
+      } finally {
+        if (prior.TEMP === undefined) delete process.env.TEMP; else process.env.TEMP = prior.TEMP;
+        if (prior.TMP === undefined) delete process.env.TMP; else process.env.TMP = prior.TMP;
+      }
     },
   };
 }
+
+async function readyForReview(f: Awaited<ReturnType<typeof fixture>>) {
+  assert.equal((await f.start()).ok, true);
+  await f.finishForReview();
+  const result = await f.useCase.readPrepareTrainingDataset(f.admission.taskId, context);
+  assert.equal(result.ok, true, JSON.stringify(result));
+  if (result.ok) assert.equal(result.value.status, "review-required");
+}
+
+test("admitted review metadata is detached, scoped and passive, and saving requires a configured version finalizer", async () => {
+  const f = await fixture({evidence: true});
+  try {
+    await readyForReview(f);
+    const before = f.counts(), stored = f.savedCount();
+    const review = f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context);
+    assert.ok(review); assert.equal(review.saveAvailable, false);
+    assert.deepEqual(review.counts, {inputRows: 2, acceptedRows: 1, quarantinedRows: 1});
+    assert.deepEqual(review.splits, {trainRows: 1, validationRows: 0, testRows: 0});
+    assert.equal("samples" in review, false); assert.equal("outputs" in review, false);
+    review.counts.acceptedRows = 99;
+    assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context)?.counts.acceptedRows, 1);
+    for (const other of [{...context, principalId: "foreign"}, {...context, workspaceId: "other.workspace"},
+      {...context, organizationId: createOrganizationId("other.org")}])
+      assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, other), undefined);
+    assert.equal((await f.save()).ok, false);
+    assert.deepEqual(f.counts(), before); assert.equal(f.savedCount(), stored);
+  } finally {await f.useCase.cancelPrepareTrainingDataset(f.admission.taskId, context); await f.close();}
+});
+
+test("one admitted result save produces the existing immutable version and concurrent/repeated calls do not save again", async () => {
+  const f = await fixture({evidence: true, versioning: true});
+  try {
+    await readyForReview(f);
+    assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context)?.saveAvailable, true);
+    for (const narrowed of [{...f.saveAdmission, reportFingerprint: "b".repeat(64)},
+      {...f.saveAdmission, taskId: randomUUID()}, {...f.saveAdmission, principalId: "foreign"},
+      {...f.saveAdmission, workspaceId: "foreign.workspace"}, {...f.saveAdmission, effectId: "not-an-effect"}])
+      assert.equal((await f.save(narrowed)).ok, false);
+    assert.equal(f.counts().saveIssues, 0); assert.equal(f.counts().versionCommits, 0);
+    const outcomes = await Promise.all([f.save(), f.save()]);
+    assert.ok(outcomes.every(value => value.ok), JSON.stringify(outcomes));
+    const versions = await f.versions.listVersions(context.workspaceId);
+    assert.equal(versions.length, 1); assert.equal(versions[0]!.lineage.split?.seed, 42);
+    assert.equal(versions[0]!.lineage.sources.length, 1);
+    assert.equal(versions[0]!.lineage.quality.reportFingerprint, "sha256:" + f.approval.reportFingerprint);
+    assert.equal((await f.save()).ok, true);
+    assert.equal(f.counts().saveIssues, 1); assert.equal(f.counts().versionCommits, 1); assert.equal(f.counts().starts, 1);
+    assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context), undefined);
+    assert.deepEqual(await f.useCase.readAdmittedLocalDatasetStatus(f.admission.taskId, context),
+      {taskId: f.admission.taskId, state: "succeeded"});
+  } finally {await f.close();}
+});
+
+test("unconfirmed save issuance preserves review evidence and denies repeated save, ordinary approval and cancellation", async () => {
+  const f = await fixture({evidence: true, versioning: true, saveIssue: "unconfirmed", retainedReview: true});
+  try {
+    await readyForReview(f); const stored = f.savedCount();
+    assert.equal((await f.save()).ok, false); assert.equal((await f.save()).ok, false);
+    assert.equal((await f.useCase.approvePreparedTrainingDataset(f.approval, context)).ok, false);
+    assert.equal((await f.useCase.cancelPrepareTrainingDataset(f.admission.taskId, context)).ok, false);
+    const foreign = await f.useCase.approvePreparedTrainingDataset(f.approval, {...context, principalId: "foreign"});
+    assert.equal(foreign.ok, false); if (!foreign.ok) assert.equal(foreign.error.code, "not-found");
+    assert.equal(f.counts().saveIssues, 1); assert.equal(f.counts().versionCommits, 0);
+    assert.equal(f.savedCount(), stored);
+    assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context)?.saveAvailable, false);
+  } finally {await f.close();}
+});
+
+test("a lost result-commit acknowledgement cannot delete or adopt the stored version or start a second save", async () => {
+  const f = await fixture({evidence: true, versioning: true, lostSaveCommitAck: true, retainedReview: true});
+  try {
+    await readyForReview(f);
+    assert.equal((await f.save()).ok, false);
+    const versions = await f.versions.listVersions(context.workspaceId);
+    assert.equal(versions.length, 1);
+    const stored = f.savedCount();
+    assert.equal((await f.save()).ok, false);
+    assert.equal((await f.useCase.approvePreparedTrainingDataset(f.approval, context)).ok, false);
+    assert.equal((await f.useCase.cancelPrepareTrainingDataset(f.admission.taskId, context)).ok, false);
+    assert.equal(f.savedCount(), stored); assert.equal(f.counts().versionCommits, 1);
+    assert.equal(f.counts().saveIssues, 1); assert.equal(f.counts().starts, 1);
+    assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context)?.saveAvailable, false);
+  } finally {await f.close();}
+});
+
+test("an ordinary approval queued before the save attempt is installed cannot bypass later unconfirmed admission", async () => {
+  const f = await fixture({evidence: true, versioning: true, saveIssue: "unconfirmed", retainedReview: true});
+  let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => {release = resolve;});
+  const entry = new Promise<void>(resolve => {entered = resolve;});
+  let scheduling: ReturnType<typeof mock.method> | undefined;
+  try {
+    await readyForReview(f); const stored = f.savedCount();
+    // Hold the real owner's queue before its first callback. Both public calls
+    // still use their production validation, serialization and save methods.
+    const owner = f.useCase as any;
+    const serialize = owner.serialize.bind(owner);
+    let held = false;
+    scheduling = mock.method(owner, "serialize", (id: string, operation: () => Promise<unknown>) => serialize(id, async () => {
+      if (!held) {held = true; entered(); await gate;}
+      return operation();
+    }));
+    const admitted = f.save();
+    await entry;
+    const ordinary = f.useCase.approvePreparedTrainingDataset(f.approval, context);
+    release();
+    assert.equal((await admitted).ok, false); assert.equal((await ordinary).ok, false);
+    assert.equal(f.counts().saveIssues, 1); assert.equal(f.counts().versionCommits, 0);
+    assert.equal((await f.versions.listVersions(context.workspaceId)).length, 0);
+    assert.equal(f.savedCount(), stored);
+  } finally {release(); scheduling?.mock.restore(); await f.close();}
+});
+
+test("losing outward caller access does not bypass the supplied publication callback or erase its confirmed result", async () => {
+  const f = await fixture({evidence: true, versioning: true, loseCallerOnSaveIssue: true});
+  try {
+    await readyForReview(f);
+    assert.equal((await f.save()).ok, true);
+    assert.equal((await f.versions.listVersions(context.workspaceId)).length, 1);
+    assert.equal((await f.save()).ok, false);
+    const unknown = await f.save(); assert.equal(unknown.ok, false);
+    if (!unknown.ok) assert.equal(unknown.error.code, "forbidden");
+    assert.equal(f.counts().saveIssues, 1); assert.equal(f.counts().versionCommits, 1);
+  } finally {await f.close();}
+});
+
+test("known save denial retains ordinary app review and an ordinary save cannot become a new admitted receipt", async () => {
+  const f = await fixture({evidence: true, versioning: true, saveIssue: "denied"});
+  try {
+    await readyForReview(f);
+    assert.equal((await f.save()).ok, false);
+    assert.equal(f.useCase.peekAdmittedLocalDatasetReview(f.admission.taskId, context)?.saveAvailable, true);
+    assert.equal((await f.useCase.approvePreparedTrainingDataset(f.approval, context)).ok, true);
+    assert.equal((await f.save()).ok, false);
+    assert.equal((await f.versions.listVersions(context.workspaceId)).length, 1);
+    assert.equal(f.counts().saveIssues, 1); assert.equal(f.counts().versionCommits, 0);
+  } finally {await f.close();}
+});
 
 test("an admitted provided-data task uses bounded copied bytes, the owned ID and existing workspace quality policy", async () => {
   const f = await fixture({mutateDuringCatalog: true, mutateDescriptorDuringCatalog: true});

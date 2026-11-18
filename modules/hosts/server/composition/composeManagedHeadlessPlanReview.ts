@@ -24,6 +24,7 @@ import type { SystemBuilderCompositionRoot } from "../../shared/composition/comp
 import type { GovernedIngestionTaskUseCases } from "../../../application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case";
 import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, runPreparedHeadlessProviderFile,
   compileHeadlessDatasetPlanInputs, runPreparedHeadlessLocalDataset, type StartHeadlessDataset,
+  compileHeadlessDatasetResultInputs, runPreparedHeadlessDatasetResult, type HeadlessDatasetResultOwner,
   validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import type { ManagedPlanReviewRegistration } from "../security/resolveManagedHeadlessClientPolicy";
@@ -47,6 +48,7 @@ export function composeManagedHeadlessPlanReview(options: {
   readonly finalizeApprovedLocalFile?: GovernedIngestionTaskUseCases["finalizeApprovedLocalFile"];
   readonly finalizeApprovedProviderFile?: GovernedIngestionTaskUseCases["finalizeApprovedProviderFile"];
   readonly getDatasetStart?: () => Promise<StartHeadlessDataset>;
+  readonly getDatasetResults?: () => Promise<HeadlessDatasetResultOwner>;
 }) {
   const { hostIncarnationId, platform, rootDirectory, workspaces, contexts, authorization, placement, systems } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
@@ -54,6 +56,7 @@ export function composeManagedHeadlessPlanReview(options: {
   const finalize = options.enableFilePreview && platform.publishWithStableReads ? options.finalizeApprovedLocalFile : undefined;
   const finalizeProvider = options.enableFilePreview && platform.publishWithStableReads ? options.finalizeApprovedProviderFile : undefined;
   const getDatasetStart = platform.publishWithStableReads ? options.getDatasetStart : undefined;
+  const getDatasetResults = platform.publishWithStableReads ? options.getDatasetResults : undefined;
 
   function admitWorkspace(requested: Pick<HeadlessPlanReviewAgentRequest["target"], "workspaceId" | "hostIncarnationId">,
     operation: string, registration: ManagedPlanReviewRegistration, isOpen: () => boolean,
@@ -143,8 +146,9 @@ export function composeManagedHeadlessPlanReview(options: {
       isOpen: () => boolean): Promise<HeadlessPlanReviewAgentResult> {
       const savesFile = request.operation === "plan.submit" &&
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
-          step.operation === "data.prepare-local-dataset");
+          step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset");
       if (request.operation === "plan.submit" && request.proposal.requests.some(step =>
+        step.operation === "data.save-prepared-dataset" ? !getDatasetResults :
         step.operation === "data.save-local-source" ? !finalize : step.operation === "data.prepare-local-dataset" ? !getDatasetStart :
           step.operation === "data.save-provider-source" && !finalizeProvider))
         return forbidden;
@@ -182,7 +186,11 @@ export function composeManagedHeadlessPlanReview(options: {
             if (!getDatasetStart) return false;
             const compiled = await compileHeadlessDatasetPlanInputs(rootDirectory, documents, selected, scope, async () => current());
             return compiled.ok ? true : compiled.code === "headless.stale" ? "stale" : false;
-          }), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart));
+          }, async selected => {
+            if (!getDatasetResults) return false;
+            const compiled = await compileHeadlessDatasetResultInputs(documents, selected, scope, getDatasetResults, async () => current());
+            return compiled?.review.saveAvailable === true;
+          }), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart), Boolean(getDatasetResults));
         const outcome = request.operation === "plan.submit"
           ? await reviews.propose({ target, isCurrent: current, proposal: {
               ...request.proposal.scope,
@@ -202,14 +210,14 @@ export function composeManagedHeadlessPlanReview(options: {
       if (!access || !systems || !platform.publishWithStableReads) return { result: forbidden };
       const { target, scope, current, authorizeOwned } = access;
       const { fingerprint, approvalRevision, step } = request.input;
-      const fileAccess = finalize || finalizeProvider || getDatasetStart
+      const fileAccess = finalize || finalizeProvider || getDatasetStart || getDatasetResults
         ? admitWorkspace(request.input, request.operation, registration, isOpen, filePlanScopes) : undefined;
       try {
         if (!await access.authorizeCurrent()) return { result: forbidden };
         const prepared = await prepareStructuredHeadlessPlanStep(platform, {
           target, approvalRevision, step, isCurrent: current,
         }, async (owner, _scope, operation) => operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source" ||
-          operation?.operation === "data.prepare-local-dataset"
+          operation?.operation === "data.prepare-local-dataset" || operation?.operation === "data.save-prepared-dataset"
           ? Boolean(await fileAccess?.authorizeOwned(owner)) : authorizeOwned(owner),
         Date.now, "stable-reads", Boolean(finalize && fileAccess), finalizeProvider && fileAccess
           ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
@@ -217,7 +225,9 @@ export function composeManagedHeadlessPlanReview(options: {
             const compiled = await compileHeadlessDatasetPlanInputs(rootDirectory, owner.forOrganization(scope.organizationId), selected,
               scope, async () => current() && await fileAccess.authorizeOwned(owner));
             return compiled.ok ? compiled.prepared : undefined;
-          } : undefined);
+          } : undefined, getDatasetResults && fileAccess ? async (owner, selected) =>
+            compileHeadlessDatasetResultInputs(owner.forOrganization(scope.organizationId), selected, scope,
+              getDatasetResults, async () => current()) : undefined);
         if (!prepared || !prepared.isCurrent()) return { result: forbidden };
         if (prepared.kind === "local-file") {
           if (!fileAccess || !finalize) return { result: forbidden };
@@ -235,6 +245,11 @@ export function composeManagedHeadlessPlanReview(options: {
           if (!fileAccess || !getDatasetStart) return {result: forbidden};
           return await runPreparedHeadlessLocalDataset({prepared, request, context: scope,
             canUse: fileAccess.authorizeCurrent, resolveStart: getDatasetStart});
+        }
+        if (prepared.kind === "dataset-result") {
+          if (!fileAccess || !getDatasetResults) return {result: forbidden};
+          return await runPreparedHeadlessDatasetResult({prepared, request, context: scope,
+            canUse: fileAccess.authorizeCurrent, getProcessor: getDatasetResults});
         }
         const active = (workspace: WorkspaceId, operation: string) =>
           workspace === scope.workspaceId && operation === prepared.request.operation && prepared.isCurrent();
@@ -265,6 +280,7 @@ export function composeManagedHeadlessPlanReview(options: {
     allowLocalFileSave: Boolean(finalize),
     allowProviderFileSave: Boolean(finalizeProvider),
     allowLocalDatasetPreparation: Boolean(getDatasetStart),
+    allowDatasetResultSave: Boolean(getDatasetResults),
     runStep: systems && platform.publishWithStableReads ? handlers.runStep : undefined,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads
       ? (request: HeadlessLocalFileImportRequest, registration: ManagedPlanReviewRegistration, isOpen: () => boolean) =>

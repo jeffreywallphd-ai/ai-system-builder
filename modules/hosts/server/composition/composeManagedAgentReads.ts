@@ -5,6 +5,7 @@ import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cas
 import type { ReadHeadlessDatasetMetadataUseCase } from "../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case";
 import type {PrepareHeadlessDatasetInputsUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case";
 import type {ReadHeadlessDatasetTaskStatusUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-task-status.use-case";
+import type {ReadHeadlessDatasetTaskReviewUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-task-review.use-case";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessDataReadOperation, readHeadlessDatasetPreparationPreview, type HeadlessHostIncarnationId, type HeadlessReadRequest,
   type HeadlessReadResult, type HeadlessSystemManagementRequest } from "../../../contracts/headless";
 import type { OrganizationRequestContext } from "../../../contracts/organization";
@@ -24,6 +25,7 @@ export function composeManagedAgentReads(options: {
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
+  readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
 }) {
   return async (request: HeadlessReadRequest, identity: Pick<OrganizationRequestContext, "principalId" | "organizationId"> &
     { readonly purpose?: "agent" | "plan-review"; readonly registeredClientId?: string },
@@ -42,11 +44,12 @@ export function composeManagedAgentReads(options: {
           ...(identity.purpose === "plan-review" && options.ingestionTasks ? ["data.ingestion-status" as const] : []),
           ...(identity.purpose === "plan-review" && options.getDatasetQueries ? ["data.dataset-versions", "data.compare-dataset-versions"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetInputs ? ["data.preview-dataset-preparation"] as const : []),
-          ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : [])]}};
+          ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : []),
+          ...(identity.purpose === "plan-review" && options.getDatasetTaskReview ? ["data.dataset-task-review"] as const : [])]}};
     }
     if (operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
         operation !== "data.ingestion-status" && operation !== "data.dataset-versions" && operation !== "data.compare-dataset-versions" &&
-        operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status")
+        operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status" && operation !== "data.dataset-task-review")
       return {ok: false, code: "headless.unsupported-operation"};
     if (isHeadlessDataReadOperation(operation) && identity.purpose !== "plan-review") return denied;
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
@@ -68,6 +71,15 @@ export function composeManagedAgentReads(options: {
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "data.dataset-task-review") {
+        if (!options.getDatasetTaskReview) return {ok: false, code: "headless.unsupported-operation"};
+        if (!identity.registeredClientId) return denied;
+        const review = await options.getDatasetTaskReview();
+        const result = await review.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {workspaceId: input.workspaceId,
+          organizationId: identity.organizationId, principalId: identity.principalId}, clientId: identity.registeredClientId,
+          stillAllowed: async () => current() && await authorized(input.workspaceId)});
+        return current() && await authorized(input.workspaceId) ? result : denied;
+      }
       if (operation === "data.dataset-task-status") {
         if (!options.getDatasetTaskStatus) return {ok: false, code: "headless.unsupported-operation"};
         if (!identity.registeredClientId) return denied;

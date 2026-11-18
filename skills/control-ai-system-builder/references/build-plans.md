@@ -27,7 +27,7 @@ effect.
 This plan mode supports up to eight changes. Use create, rename and copy for
 saved systems. A plan-review connection can also save an app-selected local or
 supported provider file when the host offers that capability. It can prepare
-provided instruction rows from exact saved local files. If more changes are needed, agree on a smaller batch with the user
+provided instruction rows from exact saved local files and separately save a reviewed dataset version. If more changes are needed, agree on a smaller batch with the user
 and request approval for each remaining plan. Preview reads metadata and makes
 zero provider calls or saved changes. For requests that need other operations, report which
 capabilities are missing before proposing a smaller deliverable. Ask before
@@ -126,14 +126,40 @@ Keep the same plan and step on retry. A reserved or issued attempt with an
 uncertain acknowledgement stays unconfirmed; do not change keys to start it
 again. Current access is required for receipts and status even when the owned
 task continues after withdrawal. Host-exit recovery, provider-file preparation,
-generated training rows, result approval/save and Data presentation are separate
+generated training rows and Data presentation are separate
 capabilities. Report them as unavailable until the host actually offers them.
+
+### Review and save a prepared dataset
+
+When the accepted task reaches `review-required`, read `aisb_dataset_task_review`
+with that exact task or original plan step. Show the user the accepted and set-aside
+row counts, quality status, reasons and split counts. This read contains no rows or
+samples and grants no save permission. Do not treat `review-required` as a quality
+pass. If `approvalAllowed` or `saveAvailable` is false, report the remaining work;
+do not start preparation again to bypass a failed or uncertain save.
+
+For an available result, propose `data.save-prepared-dataset` in a new plan. Use the
+accepted task ID, exact `reportFingerprint`, the agreed safe output name and a new
+idempotency key. Version 5 lists immutable saving, zero model/provider calls and
+no publication. Ask the user to review this separate concrete permission through
+either app channel and either approval mode. The earlier processing approval is
+not save authority.
+
+Run the approved result step once. Verify its saved dataset ID, version ID and
+digest with `aisb_dataset_versions`. Check quality fingerprints and row counts
+against the reviewed result. Check source count and split seed against the original
+processing proposal. Retain the recipe digest returned for this exact version;
+the result-review summary does not expose that digest. An exact
+replay can confirm this plan's committed receipt. An ordinary version with the same
+name is not this receipt. An uncertain attempt remains unconfirmed; preserve the
+original request and do not change keys or start a second save. This capability
+saves local output only and grants no external publication or window control.
 
 ## Supported connections
 
 | Setup | Available plan workflow | Decision surface |
 | --- | --- | --- |
-| Desktop connector with the dedicated plan-review pairing and official stdio client | Approved system changes, selected local/provider source saves and bounded provided-row processing from saved local files; check host availability | Desktop Settings popup or approval chat |
+| Desktop connector with the dedicated plan-review pairing and official stdio client | Approved system changes, selected local/provider source saves, bounded provided-row processing and separately approved immutable result saving; check host availability | Desktop Settings popup or approval chat |
 | Managed HTTPS host with the dedicated issuer-verified plan client and official stdio client | The same finite operations in the configured workspace when the host supplies the owning services and stable publication | Signed-in browser Settings popup or approval chat |
 | Other compatible clients | Check their listed tools and the host's current access before proceeding. Setup and client integration need their own verification. | Use the matching app popup when a client cannot prove the user's exact decision |
 

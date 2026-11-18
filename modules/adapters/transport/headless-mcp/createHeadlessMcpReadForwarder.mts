@@ -61,6 +61,7 @@ const resultValue = {
   "data.compare-dataset-versions": z.unknown(),
   "data.preview-dataset-preparation": z.unknown(),
   "data.dataset-task-status": z.unknown(),
+  "data.dataset-task-review": z.unknown(),
   "data.ingestion-status": z.strictObject({
     taskId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
     state: z.enum(["queued", "transferring", "finalizing", "succeeded", "failed", "cancelled"]),
@@ -173,7 +174,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
-    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
@@ -217,7 +218,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const authorization = `Bearer ${credential}`;
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
-    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
 
@@ -230,6 +231,7 @@ function createForwarder(options: {
   allowLocalFileSave?: boolean;
   allowProviderFileSave?: boolean;
   allowLocalDatasetPreparation?: boolean;
+  allowDatasetResultSave?: boolean;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -276,7 +278,8 @@ function createForwarder(options: {
         const { status, raw } = await sendRead(options.planStepAddress, agent, authorization, accepted.request, signal, headers);
         const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input,
           { allowLocalFileSave: options.allowLocalFileSave === true, allowProviderFileSave: options.allowProviderFileSave === true,
-            allowLocalDatasetPreparation: options.allowLocalDatasetPreparation === true });
+            allowLocalDatasetPreparation: options.allowLocalDatasetPreparation === true,
+            allowDatasetResultSave: options.allowDatasetResultSave === true });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         // The host can withhold a reply after it has saved the step. Only
@@ -297,6 +300,9 @@ function createForwarder(options: {
         return { ok: false, code: "headless.forbidden" };
       if (!options.allowLocalDatasetPreparation && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.prepare-local-dataset"))
+        return {ok: false, code: "headless.forbidden"};
+      if (!options.allowDatasetResultSave && input.operation === "plan.submit" &&
+          input.proposal.requests.some(step => step.operation === "data.save-prepared-dataset"))
         return {ok: false, code: "headless.forbidden"};
       if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
       active++;
@@ -375,6 +381,10 @@ function createForwarder(options: {
       if (!parsed.success) return unavailable;
       if (input.operation === "data.preview-dataset-preparation") {
         const value = headless.readHeadlessDatasetPreparationPreview(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
+      if (input.operation === "data.dataset-task-review") {
+        const value = headless.readHeadlessDatasetTaskReviewValue(parsed.data.value, input.input.selection);
         return value ? {ok: true, operation: input.operation, value} : unavailable;
       }
       if (input.operation === "data.dataset-task-status") {

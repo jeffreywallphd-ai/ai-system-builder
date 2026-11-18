@@ -14,6 +14,7 @@ import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
 import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, runPreparedHeadlessProviderFile,
   compileHeadlessDatasetPlanInputs, runPreparedHeadlessLocalDataset, type StartHeadlessDataset,
+  compileHeadlessDatasetResultInputs, runPreparedHeadlessDatasetResult, type HeadlessDatasetResultOwner,
   validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
@@ -38,6 +39,7 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly systems?: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
   readonly getIngestionTasks?: () => Promise<DesktopIngestionTaskCommands>;
   readonly getDatasetStart?: () => Promise<StartHeadlessDataset>;
+  readonly getDatasetResults?: () => Promise<HeadlessDatasetResultOwner>;
   readonly audit?: DesktopHeadlessAudit;
 }): LoopbackPlanReview {
   const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks } = options;
@@ -76,7 +78,7 @@ export function composeDesktopHeadlessPlanReview(options: {
     const isCurrent = () => admits(initial, registeredClientId, workspaceId);
     const canUse = async (savesFile = false) => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
       await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
-    let savingFile: "local-data-save" | "provider-data-save" | "local-dataset-start" | undefined;
+    let savingFile: "local-data-save" | "provider-data-save" | "local-dataset-start" | "local-dataset-save" | undefined;
     function localFailure(result: typeof forbidden | typeof unconfirmed) {
       options.audit?.backend(savingFile ?? "local-data-save", workspaceId, result.code === "headless.forbidden" ? "denied" : "unconfirmed");
       return { result };
@@ -89,7 +91,8 @@ export function composeDesktopHeadlessPlanReview(options: {
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
         return authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
           workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source" ||
-            approvedRequest?.operation === "data.save-provider-source" || approvedRequest?.operation === "data.prepare-local-dataset");
+            approvedRequest?.operation === "data.save-provider-source" || approvedRequest?.operation === "data.prepare-local-dataset" ||
+            approvedRequest?.operation === "data.save-prepared-dataset");
       }, Date.now, "serialized-owner", Boolean(getIngestionTasks), getIngestionTasks
         ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
         : undefined, options.getDatasetStart ? async (owner, selected, taskScope) => {
@@ -98,7 +101,9 @@ export function composeDesktopHeadlessPlanReview(options: {
           const compiled = await compileHeadlessDatasetPlanInputs(rootDirectory, owner.forOrganization(organizationId), selected,
             taskScope, async () => isCurrent() && await authorize(repository, policy, workspaceId, request.operation, true));
           return compiled.ok ? compiled.prepared : undefined;
-        } : undefined);
+        } : undefined, options.getDatasetResults ? async (owner, selected, taskScope) =>
+          compileHeadlessDatasetResultInputs(owner.forOrganization(organizationId), selected, taskScope,
+            options.getDatasetResults!, async () => isCurrent()) : undefined);
       if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
       if (prepared.kind === "local-file") {
         savingFile = "local-data-save";
@@ -131,6 +136,16 @@ export function composeDesktopHeadlessPlanReview(options: {
           canUse: () => canUse(true), resolveStart: async () => options.getDatasetStart?.()});
         if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
         options.audit?.backend("local-dataset-start", workspaceId, outcome.result.value.kind);
+        return outcome;
+      }
+      if (prepared.kind === "dataset-result") {
+        savingFile = "local-dataset-save";
+        if (!options.getDatasetResults) return localFailure(forbidden);
+        const outcome = await runPreparedHeadlessDatasetResult({prepared, request,
+          context: {organizationId, principalId, workspaceId}, canUse: () => canUse(true),
+          getProcessor: options.getDatasetResults});
+        if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
+        options.audit?.backend("local-dataset-save", workspaceId, outcome.result.value.kind);
         return outcome;
       }
       const { operation } = prepared.request;
@@ -171,6 +186,7 @@ export function composeDesktopHeadlessPlanReview(options: {
     ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
     ...(getIngestionTasks ? { allowProviderFileSave: true as const } : {}),
     ...(options.getDatasetStart ? {allowLocalDatasetPreparation: true as const} : {}),
+    ...(options.getDatasetResults ? {allowDatasetResultSave: true as const} : {}),
     ...(systems ? { runStep } : {}),
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
@@ -178,12 +194,13 @@ export function composeDesktopHeadlessPlanReview(options: {
       const isCurrent = () => admits(initialGrant, registeredClientId, workspaceId);
       const savesFile = request.operation === "plan.submit" &&
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
-          step.operation === "data.prepare-local-dataset");
+          step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset");
       const canUse = async () => isCurrent() && admits(await getCurrentGrant(), registeredClientId, workspaceId) &&
         await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
       if (request.target.hostIncarnationId !== hostIncarnationId || !isDesktopHeadlessClientId(registeredClientId)) return forbidden;
       try {
         if ((request.operation === "plan.submit" && request.proposal.requests.some(step =>
+          step.operation === "data.save-prepared-dataset" ? !options.getDatasetResults :
           step.operation === "data.prepare-local-dataset" ? !options.getDatasetStart :
             (step.operation === "data.save-local-source" || step.operation === "data.save-provider-source") && !getIngestionTasks)) ||
             !await canUse()) return forbidden;
@@ -220,7 +237,12 @@ export function composeDesktopHeadlessPlanReview(options: {
             const compiled = await compileHeadlessDatasetPlanInputs(rootDirectory, documents, selected,
               target.scope, async () => isCurrent());
             return compiled.ok ? true : compiled.code === "headless.stale" ? "stale" : false;
-          }), Boolean(getIngestionTasks), Boolean(getIngestionTasks), Boolean(options.getDatasetStart));
+          }, async selected => {
+            if (!options.getDatasetResults) return false;
+            const compiled = await compileHeadlessDatasetResultInputs(documents, selected, target.scope,
+              options.getDatasetResults, async () => isCurrent());
+            return compiled?.review.saveAvailable === true;
+          }), Boolean(getIngestionTasks), Boolean(getIngestionTasks), Boolean(options.getDatasetStart), Boolean(options.getDatasetResults));
         const result = request.operation === "plan.submit" ?
           await reviews.propose({ target, isCurrent, proposal: {
             ...request.proposal.scope,

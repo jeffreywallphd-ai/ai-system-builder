@@ -1,4 +1,6 @@
 import { describe, expect, it } from "../../../../testing/node-test";
+import assert from "node:assert/strict";
+import { DatasetVersionCommitUnconfirmedError, type DatasetVersionCommitAdmission } from "../../../ports/dataset-version";
 import { createStructuredDatasetVersionRepository } from "../../../../adapters/persistence/dataset-version";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createSha256DatasetVersionHasher } from "../../../../adapters/storage/dataset-version";
@@ -103,6 +105,84 @@ function input(datasetChecksum: string) {
 }
 
 describe("dataset version finalization service", () => {
+  function prepared() {
+    const events: string[] = [];
+    const storage = createMemoryArtifacts(events);
+    const bytes = new TextEncoder().encode('{"x":1}\n');
+    storage.values.set("prepared/support.jsonl", bytes);
+    storage.descriptors.set("prepared/support.jsonl", {key: "prepared/support.jsonl", sizeBytes: bytes.length});
+    const repository = createStructuredDatasetVersionRepository(createInMemoryStructuredDocumentStore());
+    const request = input(hasher.digest(bytes).slice("sha256:".length));
+    const context = {workspaceId: "workspace-a", principalId: "person-1"};
+    const scope = {workspaceId: createWorkspaceId(context.workspaceId), organizationId: undefined, principalId: context.principalId};
+    return {events, storage, repository, request, context, scope};
+  }
+
+  it("passes complete verified metadata to the admitted commit after artifact IO, without an ordinary repository save", async () => {
+    const f = prepared();
+    let commits = 0;
+    const service = new DatasetVersionFinalizationService({hasher, artifacts: f.storage.port, repository: {
+      ...f.repository,
+      async readVersion() {throw new Error("An ordinary read cannot establish an admitted save.");},
+      async createVersion() {throw new Error("The admission owns version publication.");},
+    }});
+    const admission: DatasetVersionCommitAdmission = {...f.scope, async commit(version) {
+      commits++;
+      expect(version.artifacts.some(artifact => artifact.role === "recipe")).toBe(true);
+      expect(version.artifacts.some(artifact => artifact.role === "dataset-card")).toBe(true);
+      for (const artifact of version.artifacts) expect(f.storage.values.has(artifact.artifactKey)).toBe(true);
+      return {version: await f.repository.createVersion(version), created: true};
+    }};
+    const result = await service.finalize(f.request, f.context, admission);
+    expect(commits).toBe(1);
+    expect(result.created).toBe(true);
+    expect(await f.repository.listVersions(f.scope.workspaceId)).toEqual([result.version]);
+    expect(f.events.some(event => event.startsWith("delete:"))).toBe(false);
+  });
+
+  it("denies a mismatched actor, workspace or organization admission before artifact IO", async () => {
+    const f = prepared();
+    const service = new DatasetVersionFinalizationService({repository: f.repository, artifacts: f.storage.port, hasher});
+    let commits = 0;
+    const admission: DatasetVersionCommitAdmission = {...f.scope, async commit() {commits++; throw new Error("Must not commit.");}};
+    for (const narrowed of [{...admission, principalId: "another-person"},
+      {...admission, workspaceId: createWorkspaceId("workspace-b")}, {...admission, organizationId: "another-organization" as never}])
+      await expect(service.finalize(f.request, f.context, narrowed)).rejects.toThrow("exact actor and workspace");
+    expect(commits).toBe(0);
+    expect(f.events).toEqual([]);
+  });
+
+  it("preserves all prepared artifacts when an admitted commit acknowledgement is lost", async () => {
+    const f = prepared();
+    const service = new DatasetVersionFinalizationService({repository: f.repository, artifacts: f.storage.port, hasher});
+    const admission: DatasetVersionCommitAdmission = {...f.scope, async commit(version) {
+      await f.repository.createVersion(version);
+      throw new Error("Synthetic private database diagnostic.");
+    }};
+    await assert.rejects(service.finalize(f.request, f.context, admission), error =>
+      error instanceof DatasetVersionCommitUnconfirmedError && error.message === "The approved dataset save could not be confirmed.");
+    const versions = await f.repository.listVersions(f.scope.workspaceId);
+    expect(versions.length).toBe(1);
+    for (const artifact of versions[0]!.artifacts) expect(f.storage.values.has(artifact.artifactKey)).toBe(true);
+    expect(f.events.some(event => event.startsWith("delete:"))).toBe(false);
+  });
+
+  it("rejects a mutated admitted result and never treats an ordinary existing version as a causal receipt", async () => {
+    const f = prepared();
+    const service = new DatasetVersionFinalizationService({repository: f.repository, artifacts: f.storage.port, hasher});
+    const ordinary = await service.finalize(f.request, f.context);
+    let commits = 0;
+    const admission: DatasetVersionCommitAdmission = {...f.scope, async commit(version) {
+      commits++;
+      (version.documentation as {name: string}).name = "Changed by the adapter";
+      return {version, created: false};
+    }};
+    await assert.rejects(service.finalize(f.request, f.context, admission), DatasetVersionCommitUnconfirmedError);
+    expect(commits).toBe(1);
+    expect(await f.repository.listVersions(f.scope.workspaceId)).toEqual([ordinary.version]);
+    expect(f.events.some(event => event.startsWith("delete:"))).toBe(false);
+  });
+
   it("writes artifacts first, inserts one immutable record last, and retries idempotently", async () => {
     const events: string[] = [];
     const storage = createMemoryArtifacts(events);

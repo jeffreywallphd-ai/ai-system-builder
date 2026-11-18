@@ -144,7 +144,7 @@ export async function acceptStructuredDatasetPlanTask(owner: StructuredDocumentS
 }
 
 /** Exact point index for an accepted task; no task/history enumeration or adoption. */
-export async function readStructuredOwnedDatasetPlanTask(owner: StructuredDocumentStore,
+async function readOwnedDatasetPlanTaskRecord(owner: StructuredDocumentStore,
   scope: HeadlessPlanReviewTarget["scope"], hostIncarnationId: string, taskId: string) {
   if (owner.organizationId !== scope.organizationId || !isHeadlessHostIncarnationId(taskId)) return;
   const indexed = await owner.readDocument(INDEX, `${scope.workspaceId}/${taskId}`);
@@ -161,7 +161,19 @@ export async function readStructuredOwnedDatasetPlanTask(owner: StructuredDocume
   if (!planned || planned.revision !== 1) return;
   const planIndex = readStrictPassiveRecord(planned.value, ["effectKey", "identityDigest"]);
   if (planIndex.effectKey !== index.effectKey || planIndex.identityDigest !== index.identityDigest) return;
-  return {workspaceId: scope.workspaceId, taskId};
+  return record;
+}
+
+export async function readStructuredOwnedDatasetPlanTask(owner: StructuredDocumentStore,
+  scope: HeadlessPlanReviewTarget["scope"], hostIncarnationId: string, taskId: string) {
+  const record = await readOwnedDatasetPlanTaskRecord(owner, scope, hostIncarnationId, taskId);
+  return record ? {workspaceId: scope.workspaceId, taskId} : undefined;
+}
+
+/** Internal immutable input identity, after the same accepted-owner proof. */
+export async function readStructuredOwnedDatasetPlanTaskSourceDigest(owner: StructuredDocumentStore,
+  scope: HeadlessPlanReviewTarget["scope"], hostIncarnationId: string, taskId: string) {
+  return (await readOwnedDatasetPlanTaskRecord(owner, scope, hostIncarnationId, taskId))?.sourceDigest;
 }
 
 /** Recover an acknowledged business receipt from a known plan step, without rerunning it. */

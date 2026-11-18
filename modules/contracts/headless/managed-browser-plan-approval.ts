@@ -82,6 +82,7 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
       const view = readDesktopPlanApprovalView(value, request.selection, {
         allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true,
         allowLocalDatasetPreparation: options?.allowLocalDatasetPreparation === true,
+        allowDatasetResultSave: options?.allowDatasetResultSave === true,
       });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }

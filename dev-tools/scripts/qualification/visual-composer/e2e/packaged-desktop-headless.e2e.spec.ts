@@ -368,7 +368,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const workspace = { hostIncarnationId: await hostId(client), workspaceId };
     const names = (await client.listTools()).tools.map(tool => tool.name).sort();
     expect(names).toEqual([
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
       "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
       "aisb_read_conversation_task", "aisb_read_system",
@@ -542,7 +542,9 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       return typeof api?.selectHeadlessLocalFile === "function" && status?.status === "ready" && status.running &&
         status.clients.some(client => client.workspaceId === id && client.access === "plan-review");
     }, workspaceId), { message: "the Data window can read its eligible paired client" }).toBe(true);
-    const contents = Buffer.from("team,priority\ntriage,2\n");
+    const contents = Buffer.from("team,priority\n" +
+      "How should support triage a report about a missing invoice?,Check the billing record and confirm the invoice period before sending a replacement.\n" +
+      "How should support respond when a customer cannot sign in?,Check account status and send the approved password reset instructions without requesting the password.\n");
     await ingestion.getByLabel("Choose one or more files", { exact: true }).setInputFiles({
       name: "synthetic.csv", mimeType: "text/csv", buffer: contents,
     });
@@ -655,6 +657,40 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     }, {timeout: 90_000, message: "the existing dataset worker produces a required review without saving output"}).toBe("review-required");
     expect(await call(client, "aisb_run_approved_build_step", datasetTarget)).toMatchObject({ok: true, value: {
       kind: "replayed", operation: "data.prepare-local-dataset", reference: {workspaceId, taskId: acceptedTaskId}}});
+    const resultReview = await call(client, "aisb_dataset_task_review", {...workspace, selection});
+    expect(resultReview).toMatchObject({ok: true, value: {taskId: acceptedTaskId, state: "review-required", review: {
+      taskId: acceptedTaskId, approvalAllowed: true, saveAvailable: true, counts: {acceptedRows: 2}}}});
+    expect(resultReview).not.toHaveProperty("value.review.samples");
+    const quality = (resultReview.value as {review: {reportFingerprint: string; policyFingerprint: string}}).review;
+    const resultSteps = [{operation: "data.save-prepared-dataset", idempotencyKey: randomUUID(), taskId: acceptedTaskId,
+      reportFingerprint: quality.reportFingerprint, outputBaseName: "Synthetic reviewed support answers"}];
+    const resultPreview = await call(client, "aisb_preview_build_plan", {...workspace, steps: resultSteps});
+    expect(resultPreview).toMatchObject({ok: true, value: {version: "aisb-build-plan-preview-v5"}});
+    const resultFingerprint = (resultPreview.value as {fingerprint: string}).fingerprint;
+    expect(await call(client, "aisb_request_build_plan_approval", {...workspace, fingerprint: resultFingerprint, steps: resultSteps}))
+      .toMatchObject({ok: true, value: {status: "pending"}});
+    const resultTarget = {...workspace, fingerprint: resultFingerprint, approvalRevision: 2, step: 1};
+    expect(await call(client, "aisb_run_approved_build_step", resultTarget)).toMatchObject({ok: false});
+    await connectorSettings(app, page); await trigger.click();
+    await dialog.getByRole("button", {name: new RegExp("^Review request " + resultFingerprint.slice(0, 8))}).click();
+    await expect(dialog.getByRole("list", {name: "Permissions and limits"})).toContainText("immutable dataset version");
+    await expect(dialog.getByRole("list", {name: "Requested changes"})).toContainText(quality.reportFingerprint);
+    await dialog.getByRole("radio", {name: "Approve all listed changes"}).check();
+    await dialog.getByRole("button", {name: "Approve all changes", exact: true}).click();
+    await expect(dialog.getByText("Plan approved.", {exact: true})).toBeVisible();
+    await dialog.getByRole("button", {name: "Close plan review"}).click();
+    const savedDataset = await call(client, "aisb_run_approved_build_step", resultTarget);
+    expect(savedDataset).toMatchObject({ok: true, value: {kind: "committed", operation: "data.save-prepared-dataset",
+      reference: {workspaceId, taskId: acceptedTaskId, datasetId: expect.any(String), versionId: expect.any(String)}}});
+    expect(await call(client, "aisb_run_approved_build_step", resultTarget))
+      .toEqual({ok: true, value: {...savedDataset.value as object, kind: "replayed"}});
+    const savedReference = (savedDataset.value as {reference: {datasetId: string; versionId: string; versionDigest: string}}).reference;
+    const versions = await call(client, "aisb_dataset_versions", {...workspace, datasetId: savedReference.datasetId,
+      versionIds: [savedReference.versionId]});
+    expect(versions).toMatchObject({ok: true, value: {versions: [{versionId: savedReference.versionId,
+      versionDigest: savedReference.versionDigest, totalRows: 2, sourceCount: 1, splitSeed: 42,
+      recipeDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/), quality: {
+        policyFingerprint: quality.policyFingerprint, reportFingerprint: "sha256:" + quality.reportFingerprint}}]}});
     await verifySavedStep(await invokeDataStep(2), "Fixture data intake");
     await page.getByRole("button", { name: "Data", exact: true }).click();
     await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();

@@ -9,6 +9,34 @@ from control_plane import catalog
 
 
 class DatasetPreviewRoutingTests(unittest.TestCase):
+    def test_reviewed_result_publication_runs_exact_atomic_and_host_tests(self):
+        sources = ["modules/contracts/headless/headless-dataset-result-plan.ts",
+                   "modules/contracts/headless/headless-dataset-task-review.ts",
+                   "modules/application/use-cases/ingestion-acquisition/headless-dataset-task-review.use-case.ts",
+                   "modules/application/ports/dataset-version/dataset-version-commit-admission.port.ts",
+                   "modules/application/services/dataset-version/dataset-version-finalization.service.ts",
+                   "modules/adapters/persistence/ingestion/createStructuredHeadlessDatasetResultStore.ts",
+                   "modules/adapters/persistence/dataset-version/createStructuredDatasetVersionRepository.ts"]
+        selected = self.selected(sources)
+        self.assertNotIn("focused-tests", selected)
+        command = selected["headless-approved-dataset-task-wiring"]["argv"]
+        for name in ["modules/contracts/headless/tests/headless-dataset-result-plan.unit.test.ts",
+                     "modules/contracts/headless/tests/headless-dataset-task-review.unit.test.ts",
+                     "modules/application/use-cases/ingestion-acquisition/tests/headless-dataset-task-review.unit.test.ts",
+                     "modules/application/services/dataset-version/tests/dataset-version-finalization.service.unit.test.ts",
+                     "modules/adapters/persistence/ingestion/tests/structured-headless-dataset-result-store.unit.test.ts",
+                     "modules/adapters/persistence/ingestion/tests/headless-reviewed-dataset-hosts.integration.test.ts",
+                     "modules/adapters/persistence/dataset-version/tests/structured-dataset-version-repository.unit.test.ts"]:
+            self.assertIn(name, command)
+        self.assertIn("focused-tests", self.selected(sources + ["modules/application/ports/dataset-version/unknown.port.ts"]))
+        self.assertIn("focused-tests", self.selected(sources, ["focused-tests"]))
+        worker = ["modules/contracts/runtime/dataset-preparation.ts", "modules/adapters/runtime/python/worker/README.md",
+                  "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+                  "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py"]
+        self.assertNotIn("focused-tests", self.selected(worker, ["architecture", "dataset-preparation-core-unit"]))
+        self.assertIn("focused-tests", self.selected(worker + ["modules/adapters/runtime/python/worker/tasks/unknown.py"],
+                                                     ["architecture", "dataset-preparation-core-unit"]))
+
     def test_production_worker_wrapper_runs_its_actual_guard_tests(self):
         source = "dev-tools/scripts/qualification/visual-composer/headless-dataset-runtime-worker.py"
         selected = self.selected([source])

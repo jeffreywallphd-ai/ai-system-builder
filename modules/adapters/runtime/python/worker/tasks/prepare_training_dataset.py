@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import tempfile
 from dataclasses import replace
 from pathlib import Path, PurePath
@@ -1139,8 +1140,35 @@ def _generate_text_field(
     )
 
 
+def _provided_instruction_columns(task_type: str, task_recipe: dict[str, Any]) -> tuple[str, str] | None:
+    if "providedRowMapping" not in task_recipe:
+        return None
+    mapping = task_recipe["providedRowMapping"]
+    if (task_type != "llm-instruction" or type(mapping) is not dict
+        or set(mapping) != {"instructionColumn", "outputColumn"}
+        or task_recipe.get("textInputMode") != "provided" or task_recipe.get("sourceContextPolicy") != "omit"):
+        raise ValueError("The provided instruction column mapping is invalid.")
+    names = [mapping["instructionColumn"], mapping["outputColumn"]]
+    if (any(type(name) is not str or len(name) > 64 or name != name.strip()
+            or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_. -]*", name) is None for name in names)
+        or names[0] == names[1]):
+        raise ValueError("The provided instruction column mapping is invalid.")
+    return names[0], names[1]
+
+
 def _map_structured_row(task_type: str, task_recipe: dict[str, Any], row: dict[str, Any], source: Any, row_index: int) -> dict[str, Any] | None:
+    columns = _provided_instruction_columns(task_type, task_recipe)
     if task_type == "llm-instruction":
+        if columns is not None:
+            names = columns
+            instruction = _first_present(row, names[0])
+            output = _first_present(row, names[1])
+            if (not isinstance(instruction, str) or not instruction.strip()
+                or not isinstance(output, str) or not output.strip()):
+                return None
+            # Explicit selection has no alias or unrelated context fallback.
+            return _row_with_source({"instruction": instruction, "input": "", "output": output,
+                "prompt": instruction, "completion": output}, source.artifactId, row_index)
         instruction = _first_present(row, "instruction", "prompt", "question")
         output = _first_present(row, "output", "completion", "answer", "response")
         if instruction is None or output is None:
@@ -2385,6 +2413,7 @@ def prepare_training_dataset(
         payload.output.naming.baseName if payload.output.naming is not None else None
     ) or "training-dataset"
     task_type, task_recipe = _resolve_task_recipe(payload)
+    _provided_instruction_columns(task_type, task_recipe)
     structured_output = (
         _resolve_structured_output_for_generation(payload)
         if isinstance(payload.runtime, dict)

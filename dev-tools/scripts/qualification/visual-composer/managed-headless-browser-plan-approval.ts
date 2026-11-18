@@ -210,7 +210,7 @@ async function main() {
       }}), {timeout:10_000});
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_review", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
       "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
@@ -276,10 +276,11 @@ async function main() {
     assert.equal(await trigger.evaluate(button => button === document.activeElement),true);
     checks.modal_layout_and_keyboard = true;
 
-    async function openProposal(fingerprint:string, panel:Locator) {
+    async function openProposal(fingerprint:string, panel:Locator, stepCount = 2) {
       await panel.getByRole("button",{name:new RegExp("^Review request " + fingerprint.slice(0,8) + " from Client ")}).click();
       await panel.getByRole("list",{name:"Requested changes"}).waitFor();
-      await panel.getByRole("list",{name:"Permissions and limits"}).getByText("Limit of 2 saved changes for this plan.").waitFor();
+      await panel.getByRole("list",{name:"Permissions and limits"})
+        .getByText(`Limit of ${stepCount} saved ${stepCount === 1 ? "change" : "changes"} for this plan.`, {exact: true}).waitFor();
     }
     async function propose(name:string, panel = dialog, activate = () => trigger.click()) {
       const steps = [1,2].map(index => ({operation:"systems.create",name:`Synthetic ${name} ${index}`,
@@ -537,7 +538,9 @@ async function main() {
     stage = "stage-file-for-managed-save";
     await page.getByRole("tab",{name:"Artifact Ingestion",exact:true}).click();
     const managedSaveName = "synthetic-managed-approved.csv";
-    const managedSaveBytes = Buffer.from("name,amount\nManaged save,17\n");
+    const managedSaveBytes = Buffer.from("name,amount\n" +
+      "How should support check a missing payment receipt?,Confirm the account and transaction date before sending a replacement receipt through the approved channel.\n" +
+      "How should support handle an incorrect shipping address?,Verify the order status and ask the customer to update the address through the secure account page.\n");
     await fileInput.setInputFiles({name:managedSaveName,mimeType:"text/csv",buffer:managedSaveBytes});
     await expect(clients.locator("option")).toHaveCount(2);
     await clients.selectOption({index:1});
@@ -679,6 +682,54 @@ async function main() {
     assert.equal(recoveredDataset.ok, true); assert.equal(recoveredDataset.value.kind, "replayed");
     assert.equal(recoveredDataset.value.reference.taskId, acceptedDatasetTask);
     checks.managed_dataset_task_is_owned_once_and_review_required = true;
+    stage = "review-managed-dataset-result";
+    const resultReview = await call("aisb_dataset_task_review", {...scope, selection});
+    checks.managed_dataset_result_read_succeeded = resultReview.ok === true;
+    if (!resultReview.ok) for (const [label, code] of [["forbidden", "headless.forbidden"], ["unavailable", "headless.unavailable"],
+      ["invalid", "headless.invalid-request"], ["unsupported", "headless.unsupported-operation"]])
+      if (resultReview.code === code) checks["managed_dataset_result_" + label] = true;
+    assert.equal(resultReview.ok, true); assert.equal(resultReview.value.taskId, acceptedDatasetTask);
+    const quality = resultReview.value.review;
+    checks.managed_dataset_quality_allows_save = quality?.approvalAllowed === true;
+    checks.managed_dataset_save_is_available = quality?.saveAvailable === true;
+    checks.managed_dataset_accepts_both_source_rows = quality?.counts?.acceptedRows === 2;
+    assert.equal(quality.approvalAllowed, true); assert.equal(quality.saveAvailable, true);
+    assert.equal(quality.counts.acceptedRows, 2); assert.equal("samples" in quality, false);
+    const resultSteps = [{operation: "data.save-prepared-dataset", idempotencyKey: randomUUID(), taskId: acceptedDatasetTask,
+      reportFingerprint: quality.reportFingerprint, outputBaseName: "Synthetic Managed reviewed answers"}];
+    stage = "preview-managed-reviewed-save";
+    const resultPreview = await call("aisb_preview_build_plan", {...scope, steps: resultSteps});
+    assert.equal(resultPreview.ok, true); assert.equal(resultPreview.value.version, "aisb-build-plan-preview-v5");
+    const resultFingerprint = resultPreview.value.fingerprint;
+    assert.equal((await call("aisb_request_build_plan_approval", {...scope, fingerprint: resultFingerprint, steps: resultSteps})).ok, true);
+    assert.deepEqual(await run(resultFingerprint, 2, 1), uncertain);
+    stage = "approve-managed-reviewed-save-in-chat";
+    await openChat(); await openProposal(resultFingerprint, chat, 1);
+    stage = "read-managed-reviewed-save-permissions";
+    await chat.getByRole("list", {name: "Permissions and limits"}).getByText(/immutable dataset version/).waitFor();
+    await chat.getByRole("list", {name: "Requested changes"}).getByText("Approved quality report: " + quality.reportFingerprint, {exact: true}).waitFor();
+    stage = "choose-managed-reviewed-save-approval";
+    await chat.getByRole("radio", {name: "Approve each change separately"}).check();
+    await chat.getByRole("button", {name: "Approve change 1", exact: true}).click();
+    stage = "confirm-managed-reviewed-save-approval";
+    await chat.getByText("Plan approved.", {exact: true}).waitFor();
+    await chat.getByRole("button", {name: "Close plan approval chat", exact: true}).click();
+    stage = "save-managed-reviewed-dataset";
+    const savedDataset = await run(resultFingerprint, 2, 1);
+    assert.equal(savedDataset.ok, true); assert.equal(savedDataset.value.kind, "committed");
+    assert.equal(savedDataset.value.operation, "data.save-prepared-dataset");
+    assert.equal(savedDataset.value.reference.taskId, acceptedDatasetTask);
+    assert.deepEqual(await run(resultFingerprint, 2, 1), {ok: true, value: {...savedDataset.value, kind: "replayed"}});
+    stage = "inspect-managed-reviewed-version";
+    const savedReference = savedDataset.value.reference;
+    const versions = await call("aisb_dataset_versions", {...scope, datasetId: savedReference.datasetId, versionIds: [savedReference.versionId]});
+    assert.equal(versions.ok, true);
+    const savedVersion = versions.value.versions[0];
+    assert.equal(savedVersion.versionId, savedReference.versionId); assert.equal(savedVersion.versionDigest, savedReference.versionDigest);
+    assert.equal(savedVersion.totalRows, 2); assert.equal(savedVersion.sourceCount, 1); assert.equal(savedVersion.splitSeed, 42);
+    assert.match(savedVersion.recipeDigest, /^sha256:[a-f0-9]{64}$/);
+    assert.deepEqual(savedVersion.quality, {policyFingerprint: quality.policyFingerprint, reportFingerprint: "sha256:" + quality.reportFingerprint});
+    checks.managed_reviewed_dataset_saves_once_with_immutable_lineage = true;
     const followUp = await run(saveFingerprint,approvedSave.revision,2);
     assert.equal(followUp.ok,true);
     assert.equal(followUp.value.kind,"committed");

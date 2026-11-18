@@ -23,6 +23,26 @@ import { assertIsolatedPostgresInspection, assertOwnedWorkerObservation, assertO
 const IMAGE = "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15";
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 
+/** Cooperative build-freshness check for the exact provided-data entry/mapper.
+ * This is not a native filesystem fence or a complete package inventory. */
+export async function assertCurrentProvidedDatasetWorker(root: string) {
+  assert.equal(await realpath(root), root);
+  for (const name of ["main.py", "tasks/prepare_training_dataset.py"]) {
+    const source = path.join(root, "modules/adapters/runtime/python/worker", name);
+    const packaged = path.join(root, "out/ai-system-builder-win32-x64/resources/worker", name);
+    const read = async (file: string) => {
+      const before = await lstat(file);
+      assert.ok(before.isFile() && !before.isSymbolicLink() && before.nlink === 1 && before.size > 0 && before.size <= 1024 * 1024);
+      assert.equal(await realpath(file), file);
+      const bytes = await readFile(file), after = await lstat(file);
+      assert.equal(bytes.length, before.size);
+      assert.deepEqual([after.dev, after.ino, after.size, after.mtimeMs], [before.dev, before.ino, before.size, before.mtimeMs]);
+      return createHash("sha256").update(bytes).digest("hex");
+    };
+    assert.equal(await read(packaged), await read(source), "Rebuild the packaged worker before provided-data qualification.");
+  }
+}
+
 export async function ownedInput(root: string, relative: string, pattern: RegExp) {
   assert.match(relative, pattern);
   const target = path.resolve(root, relative);
@@ -243,6 +263,8 @@ export async function startManagedReferenceHost(databaseReference: string,
       AI_SYSTEM_BUILDER_SECURITY_MODE: "oidc-bearer", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "true", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_TLS_CERT_PATH: material.certificatePath!, AI_SYSTEM_BUILDER_TLS_KEY_PATH: material.keyPath!, AI_SYSTEM_BUILDER_OIDC_ISSUER: issuerOrigin, AI_SYSTEM_BUILDER_OIDC_AUDIENCE: "aisb-controlled-qualification", AI_SYSTEM_BUILDER_OIDC_JWKS_URI: `${issuerOrigin}/jwks`, AI_SYSTEM_BUILDER_OIDC_ALGORITHMS: "RS256", AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated", AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: organizationId,
       PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(workerPort), PYTHON_RUNTIME_BASE_URL: `http://127.0.0.1:${workerPort}`, PYTHON_RUNTIME_COMMAND: process.execPath, PYTHON_RUNTIME_ARGS: "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs", PYTHON_RUNTIME_WORKER_DIR: root, PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000", HF_HUB_CACHE: path.join(runtimeRoot, "controlled-model-cache")};
     if (options.headlessProvidedDatasets) {
+      await assertCurrentProvidedDatasetWorker(root);
+      checks.provided_dataset_entry_and_mapper_match_current_source = true;
       const python = process.env.PYTHON?.trim();
       assert.ok(python && path.isAbsolute(python) && /[\\/]python(?:\.exe)?$/i.test(python));
       const worker = path.join(root, "out/ai-system-builder-win32-x64/resources/worker");

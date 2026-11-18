@@ -50,6 +50,8 @@ export * from "./headless-dataset-metadata";
 export * from "./headless-dataset-preparation";
 export * from "./headless-dataset-plan";
 export * from "./headless-dataset-task-status";
+export * from "./headless-dataset-task-review";
+export * from "./headless-dataset-result-plan";
 export * from "./headless-data-local-file";
 export * from "./headless-data-provider-file";
 export * from "./headless-data-app-selection";

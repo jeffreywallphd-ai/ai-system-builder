@@ -59,7 +59,8 @@ export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost:
     if (operation === "plan.status") return { ok: true, request: { operation, target } };
     const proposal = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, ...proposalFields }, expectedHost,
       { allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true,
-        allowLocalDatasetPreparation: options?.allowLocalDatasetPreparation === true });
+        allowLocalDatasetPreparation: options?.allowLocalDatasetPreparation === true,
+        allowDatasetResultSave: options?.allowDatasetResultSave === true });
     return proposal.ok ? { ok: true, request: { operation, target, proposal } } : invalid;
   } catch { return invalid; }
 }

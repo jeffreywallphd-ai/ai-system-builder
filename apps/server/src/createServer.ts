@@ -510,6 +510,7 @@ export async function createServer(
         isCurrent: (admitted) => admitted.isCurrent(),
         ...(planReview ? { allowLocalFileSave: planReview.allowLocalFileSave, allowProviderFileSave: planReview.allowProviderFileSave,
           allowLocalDatasetPreparation: planReview.allowLocalDatasetPreparation,
+          allowDatasetResultSave: planReview.allowDatasetResultSave,
           planReview: async (input, agent, current) =>
             agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(runPlanStep ? { planStep: async (input, agent, current) =>

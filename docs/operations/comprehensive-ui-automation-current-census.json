@@ -15087,40 +15087,7 @@
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
-   "facts": {
-      "sha256": "6664a9d73180c41ba40e59c16acf00c596c705dc4c292234664f74ebf976de7c",
-      "bytes": 58423,
-      "cases": [
-        {"name":"packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart","line":147},
-        {"name":"packaged Desktop reviews an MCP plan in the app popup and reports the exact decision","line":338},
-        {"name":"packaged Desktop observes a running approved turn from a separately paired MCP client","line":672}
-      ],
-      "dynamicCases": 0,
-      "functions": [
-        {"name":"call","line":17},
-        {"name":"connectorSettings","line":24},
-        {"name":"runningAddress","line":40},
-        {"name":"hostId","line":47},
-        {"name":"readVisibleSystemFeed","line":54},
-        {"name":"canvasCompetition","line":63},
-        {"name":"apply","line":93},
-        {"name":"timings","line":125},
-        {"name":"saveObservation","line":131},
-        {"name":"stage","line":390},
-        {"name":"verifySavedStep","line":455}
-      ],
-      "assertionCount": 152,
-      "assertionDigest": "15650232ec4d032f3aea97ccf156600ce926b43efda0271377a6ca3ee0c9cf3f",
-      "assertionExamples": [
-        {"line":36,"kind":"expect","sha256":"935abce407dd6fd602c09ded00a78053e4aa60af4db1f477be20d58ea08ab4f5"},
-        {"line":41,"kind":"expect","sha256":"ddda5a711b2e3497f1be9c2fb51362ed5af24f23da2f4a8170002f7525f86f86"},
-        {"line":77,"kind":"expect","sha256":"a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"},
-        {"line":78,"kind":"expect","sha256":"a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"}
-      ],
-      "modifiers": [
-
-      ]
-    },
+   "facts": {"sha256":"f44028d2b0d2afde231a5e9d7edf92b90423f5fc1ae2dbe9848ed60117bfaae4","bytes":62157,"cases":[{"name":"packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart","line":147},{"name":"packaged Desktop reviews an MCP plan in the app popup and reports the exact decision","line":338},{"name":"packaged Desktop observes a running approved turn from a separately paired MCP client","line":708}],"dynamicCases":0,"functions":[{"name":"call","line":17},{"name":"connectorSettings","line":24},{"name":"runningAddress","line":40},{"name":"hostId","line":47},{"name":"readVisibleSystemFeed","line":54},{"name":"canvasCompetition","line":63},{"name":"apply","line":93},{"name":"timings","line":125},{"name":"saveObservation","line":131},{"name":"stage","line":390},{"name":"verifySavedStep","line":455}],"assertionCount":161,"assertionDigest":"905c7594064298592718f4b9594eddf39825cb4a5e0f63126636b838e2ed08bf","assertionExamples":[{"line":36,"kind":"expect","sha256":"935abce407dd6fd602c09ded00a78053e4aa60af4db1f477be20d58ea08ab4f5"},{"line":41,"kind":"expect","sha256":"ddda5a711b2e3497f1be9c2fb51362ed5af24f23da2f4a8170002f7525f86f86"},{"line":77,"kind":"expect","sha256":"a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"},{"line":78,"kind":"expect","sha256":"a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"}],"modifiers":[]},
     "committed_sha256": "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd"
   },
   {

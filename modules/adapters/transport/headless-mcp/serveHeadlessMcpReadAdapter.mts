@@ -170,6 +170,7 @@ function addSystemBuilderTools(server: McpServer) {
   const allowLocalFileSave = enablePlanReview;
   const allowProviderFileSave = enablePlanReview;
   const allowLocalDatasetPreparation = enablePlanReview;
+  const allowDatasetResultSave = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -180,15 +181,24 @@ function addSystemBuilderTools(server: McpServer) {
     split: z.strictObject({trainRatio: z.number().positive().max(1), validationRatio: z.number().min(0).max(1), testRatio: z.number().min(0).max(1),
       seed: z.number().int().min(0).max(2_147_483_647)}), qualityPreset: z.enum(["recommended", "strict"])};
   if (enablePlanReview) {
+    const datasetSelection = z.discriminatedUnion("kind", [
+      z.strictObject({kind: z.literal("task"), taskId: z.string().uuid()}),
+      z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+        step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
+    ]);
     server.registerTool("aisb_dataset_task_status", {
       description: "Read one accepted dataset task or recover its receipt from a known approved plan step. Returns only task identity and state. Unconfirmed reservations are not adopted or restarted. This read cannot prepare, approve, save or publish output.",
-      inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
-        z.strictObject({kind: z.literal("task"), taskId: z.string().uuid()}),
-        z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-          step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
-      ])}), annotations: queryHints,
+      inputSchema: z.strictObject({...workspaceTarget, selection: datasetSelection}), annotations: queryHints,
     }, (input, context) => {
       const parsed = headless.readHeadlessDatasetTaskStatusRequest({version, operation: "data.dataset-task-status", input},
+        input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
+    server.registerTool("aisb_dataset_task_review", {
+      description: "Read bounded quality counts, split counts, report identity and save availability for an accepted dataset task. Returns no rows or samples. Processing must reach required result review first; this read cannot approve, save, publish or restart work.",
+      inputSchema: z.strictObject({...workspaceTarget, selection: datasetSelection}), annotations: queryHints,
+    }, (input, context) => {
+      const parsed = headless.readHeadlessDatasetTaskReviewRequest({version, operation: "data.dataset-task-review", input},
         input.hostIncarnationId as HeadlessHostIncarnationId);
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
@@ -228,6 +238,8 @@ function addSystemBuilderTools(server: McpServer) {
     z.strictObject({ operation: z.literal("data.save-local-source"), ...localFileTarget, idempotencyKey }),
     z.strictObject({ operation: z.literal("data.save-provider-source"), ...localFileTarget, idempotencyKey }),
     z.strictObject({ operation: z.literal("data.prepare-local-dataset"), ...datasetPreparation, idempotencyKey }),
+    z.strictObject({ operation: z.literal("data.save-prepared-dataset"), taskId: z.string().uuid(),
+      reportFingerprint: z.string().regex(/^[a-f0-9]{64}$/), outputBaseName: z.string().min(1).max(160), idempotencyKey }),
   ]);
   server.registerTool("aisb_plan_capabilities", {
     description: "Check which saved-system operations can be proposed in one current workspace. Use the corresponding template or saved revision as input. Plan execution requires approval.",
@@ -241,13 +253,13 @@ function addSystemBuilderTools(server: McpServer) {
   });
   server.registerTool("aisb_preview_build_plan", {
     description: allowLocalFileSave
-      ? "Check proposed system changes, selected file saves and provided-row dataset preparation. Sources for preparation must already be saved at the listed revisions. The preview identifies provider reads and processing limits. Execution requires separate approval."
+      ? "Check proposed system changes, selected file saves, provided-row dataset preparation and reviewed dataset saves. Preparation sources must already be saved. A dataset save needs the accepted task and exact approved quality report. The preview identifies permissions and limits. Execution requires separate approval."
       : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -257,6 +269,16 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "data.save-prepared-dataset") {
+        const reviewed = await forward?.({version, operation: "data.dataset-task-review", input: {
+          hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId,
+          selection: {kind: "task", taskId: request.input.taskId}}}, signal);
+        if (!reviewed?.ok) return toolResult(reviewed ?? unavailable);
+        const report = headless.readHeadlessDatasetTaskReviewValue(reviewed.value, {kind: "task", taskId: request.input.taskId})?.review;
+        if (!report || !report.saveAvailable || !report.approvalAllowed || report.reportFingerprint !== request.input.reportFingerprint)
+          return toolResult(unavailable);
+        continue;
+      }
       if (request.operation === "data.prepare-local-dataset") {
         const {idempotencyKey: _key, ...selected} = request.input;
         const preview = await forward?.({version, operation: "data.preview-dataset-preparation", input: selected}, signal);
@@ -335,7 +357,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

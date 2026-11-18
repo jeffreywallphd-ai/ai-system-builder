@@ -6,9 +6,14 @@ import type {
 import type { HeadlessOperationScope, HeadlessOperationStorePort } from "../../../application/ports/system-builder";
 import type { IngestionAcquisitionRepositoryPort, IngestionFilePublicationAdmission } from "../../../application/ports/ingestion";
 import type {PrepareHeadlessDatasetInputsUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case";
+import type {PreparedLocalDatasetResultInputs} from "../../../application/ports/dataset-version";
+import type {DatasetVersionRecord} from "../../../contracts/dataset";
+import {createStructuredDatasetVersionRepository} from "../dataset-version";
 import { normalizeIngestionFilePublication, publicationUnavailable } from "../../../application/shared/ingestion-file-publication";
 import { serializeHeadlessMutationInput, type HeadlessBuildPlanRequest, type HeadlessLocalFileSavePlanRequest,
-  type HeadlessProviderFileSavePlanRequest, type HeadlessLocalDatasetPlanRequest } from "../../../contracts/headless";
+  type HeadlessProviderFileSavePlanRequest, type HeadlessLocalDatasetPlanRequest, type HeadlessDatasetResultSavePlanRequest } from "../../../contracts/headless";
+import {inspectStructuredDatasetResultSave, reserveStructuredDatasetResultSave, issueStructuredDatasetResultSave,
+  commitStructuredDatasetResultSave, readCommittedStructuredDatasetResult, type DatasetResultSaveEffect} from "../ingestion/createStructuredHeadlessDatasetResultStore";
 import {inspectStructuredDatasetPlanTask, reserveStructuredDatasetPlanTask, issueStructuredDatasetPlanTask,
   acceptStructuredDatasetPlanTask, type DatasetPlanTaskEffect} from "../ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import {
@@ -35,6 +40,8 @@ type StepQuery = HeadlessPlanReviewQuery & {
 type CompiledDataset = Extract<Awaited<ReturnType<PrepareHeadlessDatasetInputsUseCase["execute"]>>, {ok: true}>["prepared"];
 export type CompileApprovedDataset = (owner: StructuredDocumentStore, request: HeadlessLocalDatasetPlanRequest,
   scope: HeadlessOperationScope) => Promise<CompiledDataset | undefined>;
+export type CompileApprovedDatasetResult = (owner: StructuredDocumentStore, request: HeadlessDatasetResultSavePlanRequest,
+  scope: HeadlessOperationScope) => Promise<PreparedLocalDatasetResultInputs | undefined>;
 
 /** Prepare the stored request, then independently enforce the same exact plan inside the mutation transaction. */
 export async function prepareStructuredHeadlessPlanStep(
@@ -43,6 +50,7 @@ export async function prepareStructuredHeadlessPlanStep(
   allowLocalFileSave = false,
   publishProvider?: OwnedProviderPublication,
   compileDataset?: CompileApprovedDataset,
+  compileResult?: CompileApprovedDatasetResult,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -66,8 +74,9 @@ export async function prepareStructuredHeadlessPlanStep(
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
+        (!compileResult && approved.requests.some(candidate => candidate.operation === "data.save-prepared-dataset")) ||
         ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source" ||
-          request.operation === "data.prepare-local-dataset") &&
+          request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset") &&
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
@@ -78,6 +87,8 @@ export async function prepareStructuredHeadlessPlanStep(
           ? await readCommittedStructuredProviderFilePlanEffect(partition, providerFileEffect(target, previous, index + 1))
           : previous.operation === "data.prepare-local-dataset"
             ? (await inspectStructuredDatasetPlanTask(partition, datasetTaskEffect(target, previous, index + 1, approvalRevision))).kind === "accepted"
+            : previous.operation === "data.save-prepared-dataset"
+              ? await readCommittedStructuredDatasetResult(partition, datasetResultEffect(target, previous, index + 1, approvalRevision))
           : await hasStructuredHeadlessOperationReceipt(partition, target.scope, previous.operation,
           stepKey(target, previous, index + 1), sum(serializeHeadlessMutationInput(previous)));
       if (!received) return;
@@ -221,6 +232,86 @@ export async function prepareStructuredHeadlessPlanStep(
     };
   }
 
+  if (request.operation === "data.save-prepared-dataset") {
+    const effect = datasetResultEffect(target, request, step, approvalRevision);
+    const protect = () => {if (!current()) throw new Error("The approved dataset save ended.");};
+    const resultDigest = (compiled: PreparedLocalDatasetResultInputs) => {
+      const {saveAvailable: _availability, ...review} = compiled.review;
+      return sum(JSON.stringify([compiled.admittedSourceDigest, review, request.input.outputBaseName]));
+    };
+    async function authorizedRecord(owner: StructuredDocumentStore) {
+      const selected = await select(owner);
+      return selected && selected.expiresAt === deadline && current() ? owner.forOrganization(target.scope.organizationId) : undefined;
+    }
+    return {
+      kind: "dataset-result" as const, request: structuredClone(request), expiresAt: prepared.expiresAt, isCurrent: current,
+      async stillAllowed() {
+        try {return await ownedTransaction(async owner => Boolean(await authorizedRecord(owner)), protect);} catch {return false;}
+      },
+      async inspect() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner);
+          return partition ? inspectStructuredDatasetResultSave(partition, effect) : undefined;
+        }, protect);} catch {return undefined;}
+      },
+      async reserve() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner); if (!partition) return;
+          const existing = await inspectStructuredDatasetResultSave(partition, effect);
+          if (existing.kind !== "absent") return existing;
+          const compiled = await compileResult!(owner, request, target.scope);
+          if (!compiled?.review.saveAvailable || !current() || !await fenceStructuredApprovedPlan(partition, target, approvalRevision)) return;
+          const sourceDigest = resultDigest(compiled);
+          const reserved = await reserveStructuredDatasetResultSave(partition, effect, compiled.review, sourceDigest, now());
+          return reserved.kind === "new" ? {...reserved, sourceDigest} : reserved;
+        }, protect);} catch {return undefined;}
+      },
+      async issue(saveId: string, expectedSourceDigest: string): Promise<"issued" | "denied" | "unconfirmed"> {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner); if (!partition) return "denied" as const;
+          const compiled = await compileResult!(owner, request, target.scope);
+          if (!compiled || resultDigest(compiled) !== expectedSourceDigest || !current() ||
+              !await fenceStructuredApprovedPlan(partition, target, approvalRevision)) return "denied" as const;
+          return await issueStructuredDatasetResultSave(partition, effect, saveId, expectedSourceDigest, now())
+            ? "issued" as const : "unconfirmed" as const;
+        }, protect);} catch {return "unconfirmed";}
+      },
+      async commit(saveId: string, expectedSourceDigest: string, version: DatasetVersionRecord) {
+        try {
+          return await ownedTransaction(async owner => {
+            const partition = await authorizedRecord(owner); if (!partition) throw new Error("Dataset publication is unavailable.");
+            const compiled = await compileResult!(owner, request, target.scope);
+            if (!compiled || resultDigest(compiled) !== expectedSourceDigest || !current() ||
+                !await fenceStructuredApprovedPlan(partition, target, approvalRevision)) throw new Error("Dataset publication is unavailable.");
+            return commitStructuredDatasetResultSave(partition, effect, saveId, expectedSourceDigest, version, now());
+          }, protect);
+        } catch {
+          // One read-only reconciliation of this private attempt may confirm a
+          // lost acknowledgement. It never retries publication or adopts an
+          // ordinary version, and grants no authority to release a response.
+          return ownedTransaction(async owner => {
+            const partition = owner.forOrganization(target.scope.organizationId);
+            const reference = await readCommittedStructuredDatasetResult(partition, effect, {saveId, sourceDigest: expectedSourceDigest});
+            if (!reference || reference.versionId !== version.versionId || reference.versionDigest !== version.versionDigest)
+              throw new Error("Dataset publication is unconfirmed.");
+            const stored = await createStructuredDatasetVersionRepository(partition).readVersion(target.scope.workspaceId, reference.versionId);
+            if (!stored) throw new Error("Dataset publication is unconfirmed.");
+            return {version: stored, created: false};
+          }, () => {});
+        }
+      },
+      async readReceipt() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner);
+          return partition ? readCommittedStructuredDatasetResult(partition, effect) : undefined;
+        }, protect);} catch {return undefined;}
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => Boolean(await readCommittedStructuredDatasetResult(partition, effect)));
+      },
+    };
+  }
+
   if (request.operation === "data.prepare-local-dataset") {
     const effect = datasetTaskEffect(target, request, step, approvalRevision);
     const protect = () => {if (!current()) throw new Error("The approved dataset step ended.");};
@@ -325,11 +416,12 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "data.prepare-local-dataset" ? "aisb-approved-local-dataset-step-v1" :
+  const family = request.operation === "data.save-prepared-dataset" ? "aisb-approved-dataset-result-step-v1" :
+    request.operation === "data.prepare-local-dataset" ? "aisb-approved-local-dataset-step-v1" :
     request.operation === "data.save-provider-source" ? "aisb-approved-provider-file-step-v1" :
     request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
   const parts = [family, target.hostIncarnationId, target.fingerprint, step, request.input.idempotencyKey];
-  const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" ?
+  const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ?
     [...parts, target.scope.organizationId, target.scope.workspaceId, target.scope.principalId, target.scope.registeredClientId] : parts));
   // Keep the existing validated internal UUID shape. The plan and ordinal
   // reserve a different key even when two proposals reuse a supplied key.
@@ -339,6 +431,11 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
 
 function datasetTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessLocalDatasetPlanRequest,
   step: number, approvalRevision: number): DatasetPlanTaskEffect {
+  return {key: stepKey(target, request, step), target, request, step, approvalRevision};
+}
+
+function datasetResultEffect(target: HeadlessPlanReviewTarget, request: HeadlessDatasetResultSavePlanRequest,
+  step: number, approvalRevision: number): DatasetResultSaveEffect {
   return {key: stepKey(target, request, step), target, request, step, approvalRevision};
 }
 

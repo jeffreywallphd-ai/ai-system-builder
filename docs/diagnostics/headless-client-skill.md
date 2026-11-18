@@ -179,3 +179,20 @@ input only. The report records message validation results without copying the
 agent's prose. Model token counts need a separately measured source.
 
 For saved local training rows, first read the completed ingestion task's current revision. Preview the files, columns, data split and quality settings with `aisb_preview_dataset_preparation`. Include the exact inputs as a `data.prepare-local-dataset` step in a plan. The approval dialog lists the processing limits and the requirement to review results before saving. A `started` receipt means a background task was accepted. Check `aisb_dataset_task_status` with its task ID or the original plan fingerprint and step. This tool cannot approve, save or publish a dataset. Keep the same request on retry; an unconfirmed attempt must not be restarted with a new key. This local provided-row profile does not run a model.
+
+Read `aisb_dataset_task_review` when that task requires review. It returns quality,
+reason and split counts with the report identity, without private rows or samples.
+If saving is available, propose a separate `data.save-prepared-dataset` step with
+the exact task, report fingerprint and output name. The version 5 preview lists
+the permission to save one immutable local dataset version. Either approval mode
+and app channel can approve it. Processing approval alone cannot save the result.
+Read the exact returned version with `aisb_dataset_versions`. An uncertain save
+cannot be restarted with a new key or confirmed from a name match. Publication
+and Data-window control retain their separate permissions.
+
+The controlled Managed provided-data journey uses the built thin client and
+packaged worker. Run `npm run build:thin-client` after browser changes and
+`npm run build:server` after server wiring changes. Rebuild
+the current Desktop package before running it after worker changes. Its fixed
+entry/mapper hash check refuses stale copies before worker use. This is a build
+freshness check, not a complete package inventory or a native filesystem fence.

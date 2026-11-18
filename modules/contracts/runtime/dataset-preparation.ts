@@ -1,5 +1,6 @@
 import type { DatasetPreparationVisualOutputShape } from "./dataset-preparation-output-shape";
 import type { DatasetPreparationMemoryMode } from "./dataset-preparation-memory";
+import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../shared";
 
 export interface DatasetPreparationSourceInput {
   artifactId: string;
@@ -346,6 +347,22 @@ export interface DatasetPreparationTaskProfileDefinition {
   compatibleTrainingMethods: readonly ("lora" | "qlora" | "full-finetune")[];
 }
 
+export interface ProvidedInstructionColumnMapping {
+  readonly instructionColumn: string;
+  readonly outputColumn: string;
+}
+
+/** Explicit provided-row source mapping; legacy inputField remains unchanged. */
+export function readProvidedInstructionColumnMapping(value: unknown): ProvidedInstructionColumnMapping | undefined {
+  try {
+    const r = readStrictPassiveRecord(copyBoundedPassiveData(value), ["instructionColumn", "outputColumn"]);
+    const column = (v: unknown): v is string => typeof v === "string" && v.length <= 64 &&
+      /^[A-Za-z_][A-Za-z0-9_. -]*$/.test(v) && v === v.trim() && !hasKnownPassiveCredential(v);
+    return column(r.instructionColumn) && column(r.outputColumn) && r.instructionColumn !== r.outputColumn
+      ? {instructionColumn: r.instructionColumn, outputColumn: r.outputColumn} : undefined;
+  } catch {return;}
+}
+
 export interface LlmInstructionDatasetPreparationTask {
   taskType: "llm-instruction";
   textInputMode?: DatasetPreparationTextInputMode;
@@ -354,6 +371,7 @@ export interface LlmInstructionDatasetPreparationTask {
   outputField?: string;
   systemPromptField?: string;
   sourceContextPolicy?: "include" | "omit";
+  providedRowMapping?: ProvidedInstructionColumnMapping;
 }
 
 export interface LlmClassificationDatasetPreparationTask {

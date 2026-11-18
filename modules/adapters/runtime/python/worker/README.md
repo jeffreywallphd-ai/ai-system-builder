@@ -13,6 +13,14 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+Provided instruction datasets can carry an explicit `providedRowMapping` with
+two distinct bounded source columns. This map requires provided mode and omitted
+source context. It derives instruction/prompt and output/completion only from the
+selected columns; missing columns quarantine the row without alias fallback.
+Unselected input/context are omitted. The recipe snapshot retains this map.
+Without the map, existing canonical instruction/input/context handling is unchanged.
+The mapping never admits model generation or changes quality/resource controls.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 When the decoder is ready, `/capabilities` may report a minimized accelerator

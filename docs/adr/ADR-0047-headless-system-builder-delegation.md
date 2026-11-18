@@ -180,3 +180,19 @@ model, provider request or mutation and grants no execution approval.
 ### Increment 5: finite local dataset tasks
 
 The existing concrete-plan workflow gains an opt-in v4 provided-row dataset step. Both hosts compose the same saved-source compiler, durable once-issued effect and existing dataset processor. This extends the accepted typed application delegation and two-channel approval design; it adds no general runtime-command API. Accepted task receipts and passive status remain separate from result approval, immutable version publication and presentation. Runtime effects stay outside retriable persistence transactions. Uncertain issuance cannot be adopted or restarted. Fixed local input limits, current artifact authority and native lifecycle guards remain independent controls.
+
+An additive opt-in v5 result-save step binds the accepted task, exact quality
+report and safe output name. Passive result review returns bounded quality and
+split metadata. Separate approval in either existing mode/channel permits one
+artifact materialization through the current Data owner. Immutable version
+metadata and its causal receipt share one owned transaction after fresh current
+plan, role, report and deadline checks. File IO remains outside transactions.
+A lost commit acknowledgement permits one exact private-receipt read, never a
+publication retry or ordinary-version adoption. Current authority separately gates
+the reply. Older plan versions and ordinary Data finalization remain compatible.
+
+Selected instruction/output columns use an explicit provided-only source map.
+Legacy `inputField` keeps its existing meaning. The worker derives all canonical
+instruction/output aliases solely from the selected columns and omits unrelated
+context. Missing selected fields remain a mapping failure. The exact map is
+retained in recipe lineage and the approved processing digest.

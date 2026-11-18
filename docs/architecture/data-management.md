@@ -1,5 +1,44 @@
 # Data Management
 
+## Headless reviewed dataset saving
+
+Plan-review registrations can read `data.dataset-task-review` for an exact
+durably accepted task belonging to their host, actor, client and workspace.
+The application resolves the existing processor only after that association is
+proven. It returns quality status, bounded counts and reasons, split counts,
+report/policy fingerprints and current save availability. It returns no rows,
+samples, paths or commands and performs no materialization or approval. Input
+and quarantine counts may exceed the accepted-row cap because the worker still
+counts rejected input; the finite decoder bounds them by total source bytes.
+
+The additive `data.save-prepared-dataset` plan step requires a separate v5
+approval for the accepted task, exact report and safe output name. Both hosts
+reuse the existing approval modes/channels, Data processor and immutable-version
+finalizer. A pure metadata compiler binds the original admitted source/recipe/
+split digest to the quality report. Its digest excludes only transient save
+availability, which changes when the owner installs the same private attempt.
+
+The existing serialized task owner admits one save, with an ordinary-approval
+guard inside that same queue. Current artifact write authority, plan revision,
+step order, report and deadline protect reserve, issue and final metadata commit.
+File preparation and hashing stay outside database transactions. The immutable
+version and causal save receipt share the owning transaction; ordinary matching
+versions cannot supply this receipt. After uncertain commit acknowledgement,
+one read of the exact private attempt may confirm an already committed result.
+It does not repeat publication. Unknown effects retain prepared evidence and
+cannot retry or adopt a save. Fresh authority still gates outward receipts.
+Ordinary Data saves preserve their existing path and compensation behavior.
+This saves local output only. External publication, Data presentation, host-exit
+recovery and native staging retirement retain independent authority and checks.
+
+The provided-row compiler records an explicit `providedRowMapping` from selected
+source columns to canonical instruction/output. Both boundaries validate distinct
+bounded column names. The worker requires provided mode and omitted context,
+derives instruction/prompt and output/completion solely from those columns, and
+quarantines missing values without alias fallback. Unselected input/context do
+not enter the output. The mapping stays in the recipe snapshot and admitted
+source digest. Existing no-map instruction/input/context imports are unchanged.
+
 Headless Data progress reads reuse `ReadHeadlessIngestionStatusUseCase` and the
 governed ingestion owner. Both hosts require a current plan-review registration,
 the exact workspace and task, and `workspace:read` plus `artifact:read` before

@@ -11,6 +11,7 @@ import {HEADLESS_CONTRACT_VERSION, HEADLESS_DATASET_MAX_SOURCE_BYTES, type Headl
   type HeadlessDatasetPreparationRequest} from "../../../../contracts/headless";
 import {PrepareHeadlessDatasetInputsUseCase} from "../headless-dataset-preparation.use-case";
 import {PrepareTrainingDatasetFromArtifactsUseCase} from "../../prepare-training-dataset-from-artifacts.use-case";
+import {readProvidedInstructionColumnMapping} from "../../../../contracts/runtime/dataset-preparation";
 
 const organizationId = createOrganizationId("dataset-source-fixture"), workspaceId = createWorkspaceId("workspace.synthetic");
 const hostIncarnationId = "ca353bdd-7793-44c6-8c36-c470be8c537c" as HeadlessHostIncarnationId;
@@ -62,6 +63,8 @@ test("exact immutable local sources map privately to the existing review-require
     storageKey: source(index).snapshot.rawArtifactKey, format: "csv", mediaType: "text/csv", sizeBytes: bytes.length,
     digest: source(index).snapshot.contentDigest})));
   assert.deepEqual(command.quality, {policy: {preset: "recommended", maxRowsPerSource: 1_000}, reviewRequired: true});
+  assert.deepEqual(command.recipe.task, {taskType: "llm-instruction", textInputMode: "provided", promptStyle: "instruction-response",
+    providedRowMapping: {instructionColumn: "question", outputColumn: "answer"}, sourceContextPolicy: "omit"});
   assert.deepEqual(command.output, {format: "jsonl", destinations: {local: {enabled: true}}});
   let readiness = 0;
   const pipeline = new PrepareTrainingDatasetFromArtifactsUseCase({runtimeCapabilityGuard: {async requireCapabilityReady() {
@@ -71,6 +74,28 @@ test("exact immutable local sources map privately to the existing review-require
   assert.equal(observed.ok, false);
   assert.ok(!observed.ok && observed.error.code === "unavailable", "The canonical validator must accept the command before readiness denies it.");
   assert.equal(readiness, 1);
+});
+
+test("explicit provided columns are finite, distinct and rejected before readiness when malformed", async () => {
+  const mapping = {instructionColumn: "support question", outputColumn: "support answer"};
+  assert.deepEqual(readProvidedInstructionColumnMapping(mapping), mapping);
+  for (const invalid of [undefined, {}, {...mapping, extra: true}, {...mapping, outputColumn: mapping.instructionColumn},
+    {...mapping, instructionColumn: "a/../../x"}, {...mapping, outputColumn: " "}, {...mapping, instructionColumn: "a".repeat(65)},
+    Object.defineProperty({...mapping}, "instructionColumn", {get() {throw new Error("Untrusted getter.");}})])
+    assert.equal(readProvidedInstructionColumnMapping(invalid), undefined);
+  const result = await new PrepareHeadlessDatasetInputsUseCase(await fixture()).execute(request(), authority); assert.ok(result.ok);
+  let readiness = 0;
+  const pipeline = new PrepareTrainingDatasetFromArtifactsUseCase({runtimeCapabilityGuard: {async requireCapabilityReady() {
+    readiness++; throw new Error("Malformed mapping cannot activate readiness.");
+  }}} as never);
+  for (const task of [
+    {...result.prepared.command.recipe.task, providedRowMapping: {instructionColumn: "question", outputColumn: "question"}},
+    {...result.prepared.command.recipe.task, textInputMode: "generate"},
+    {...result.prepared.command.recipe.task, sourceContextPolicy: "include"},
+  ]) {
+    assert.equal((await pipeline.startPrepareTrainingDataset({...result.prepared.command, recipe: {task} as never}, context)).ok, false);
+  }
+  assert.equal(readiness, 0);
 });
 
 test("admission stops between exact reads after permission withdrawal and rejects malformed authority before I/O", async () => {

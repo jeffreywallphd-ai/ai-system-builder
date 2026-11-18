@@ -5,6 +5,7 @@ import { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } fro
 import { readHeadlessLocalFileImportRequest, type HeadlessLocalFileImportRequest } from "./headless-data-local-file";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
+import {readHeadlessSavedDatasetReference, type HeadlessSavedDatasetReference} from "./headless-dataset-result-plan";
 
 export const HEADLESS_PLAN_STEP_PATH = "/aisb-headless/v1/plan-step";
 export const MANAGED_HEADLESS_PLAN_STEP_PATH = "/api/headless/agent/plan-step";
@@ -26,8 +27,10 @@ type SavedLocalFileEffect = { readonly kind: "committed" | "replayed"; readonly 
   readonly reference: LocalFileReference };
 type StartedLocalDatasetEffect = {readonly kind: "started" | "replayed"; readonly operation: "data.prepare-local-dataset";
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
+type SavedDatasetEffect = {readonly kind: "committed" | "replayed"; readonly operation: "data.save-prepared-dataset";
+  readonly reference: HeadlessSavedDatasetReference};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
-  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -65,6 +68,12 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
         !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed" && kind !== "started")) return unavailable;
     if ("operation" in operationField) {
       const operation = operationField.operation;
+      if (operation === "data.save-prepared-dataset") {
+        if (!options?.allowDatasetResultSave || (kind !== "committed" && kind !== "replayed")) return unavailable;
+        const exactReference = readHeadlessSavedDatasetReference(reference, exact.workspaceId);
+        return exactReference ? {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt,
+          reference: exactReference}} : unavailable;
+      }
       if (operation === "data.prepare-local-dataset") {
         if (!options?.allowLocalDatasetPreparation || (kind !== "started" && kind !== "replayed")) return unavailable;
         const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId"]);

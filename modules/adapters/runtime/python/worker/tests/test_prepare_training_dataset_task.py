@@ -32,6 +32,8 @@ from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset impor
     _parse_generated_text_value,
     _partition_rows,
     _read_structured_source_rows,
+    _map_structured_row,
+    _provided_instruction_columns,
     prepare_training_dataset,
 )
 from modules.adapters.runtime.python.worker.tests.structured_output_test_fixtures import (
@@ -42,6 +44,64 @@ from modules.adapters.runtime.python.worker.tests.test_dataset_quality import _q
 
 
 class PrepareTrainingDatasetTaskTests(unittest.TestCase):
+    def test_explicit_provided_columns_override_all_aliases_and_omit_unselected_context(self) -> None:
+        recipe = {"textInputMode": "provided", "sourceContextPolicy": "omit",
+            "providedRowMapping": {"instructionColumn": "support question", "outputColumn": "support answer"}}
+        source = SimpleNamespace(artifactId="synthetic.source")
+        row = {"support question": "Where can I find the invoice?", "support answer": "Open billing and select the invoice period.",
+            "instruction": "Unselected instruction", "question": "Unselected question", "prompt": "Unselected prompt",
+            "output": "Unselected output", "answer": "Unselected answer", "completion": "Unselected completion",
+            "input": "Unselected input", "context": "Unselected context", "text": "Unselected text"}
+        mapped = _map_structured_row("llm-instruction", recipe, row, source, 3)
+        self.assertEqual(mapped["instruction"], row["support question"])
+        self.assertEqual(mapped["prompt"], row["support question"])
+        self.assertEqual(mapped["output"], row["support answer"])
+        self.assertEqual(mapped["completion"], row["support answer"])
+        self.assertEqual(mapped["input"], "")
+        self.assertNotIn("context", mapped)
+        for field in ["support question", "support answer"]:
+            for missing in [None, "", "   "]:
+                with self.subTest(field=field, missing=missing):
+                    self.assertIsNone(_map_structured_row("llm-instruction", recipe, {**row, field: missing}, source, 3))
+        default = _map_structured_row("llm-instruction", {}, row, source, 3)
+        self.assertEqual(default["instruction"], "Unselected instruction")
+        self.assertEqual(default["input"], "Unselected input")
+        self.assertEqual(default["context"], "Unselected context")
+
+    def test_explicit_provided_column_contract_refuses_invalid_maps_and_modes(self) -> None:
+        good = {"instructionColumn": "question", "outputColumn": "answer"}
+        recipe = {"textInputMode": "provided", "sourceContextPolicy": "omit", "providedRowMapping": good}
+        for mapping in [None, {}, {**good, "extra": True}, {**good, "outputColumn": "question"},
+                        {**good, "instructionColumn": " a"}, {**good, "instructionColumn": "a/../../x"},
+                        {**good, "instructionColumn": "a" * 65}, {**good, "outputColumn": 1}]:
+            with self.subTest(mapping=mapping), self.assertRaisesRegex(ValueError, "column mapping is invalid"):
+                _provided_instruction_columns("llm-instruction", {**recipe, "providedRowMapping": mapping})
+        for task, changes in [("llm-classification", {}), ("llm-instruction", {"textInputMode": "generate"}),
+                              ("llm-instruction", {"sourceContextPolicy": "include"})]:
+            with self.subTest(task=task, changes=changes), self.assertRaisesRegex(ValueError, "column mapping is invalid"):
+                _provided_instruction_columns(task, {**recipe, **changes})
+
+    def test_selected_csv_columns_reach_quality_review_without_model_calls(self) -> None:
+        source_path = Path(self.temp_dir.name) / "selected-columns.csv"
+        source_path.write_text("support question,support answer\n"
+            "Where can I find an invoice?,Open billing and select the invoice period.\n"
+            "How can I update a shipping address?,Open the order and use the secure address update form.\n", encoding="utf-8")
+        payload = PrepareTrainingDatasetRequest.model_validate({"sourceInputs": [{"artifactId": "selected.source",
+            "localPath": str(source_path), "mediaType": "text/csv"}],
+            "recipe": {"task": {"taskType": "llm-instruction", "textInputMode": "provided", "sourceContextPolicy": "omit",
+                "providedRowMapping": {"instructionColumn": "support question", "outputColumn": "support answer"}}},
+            "split": {"trainRatio": 0.8, "validationRatio": 0.1, "testRatio": 0.1, "seed": 42},
+            "quality": _quality_config().model_dump(mode="json"), "output": {"format": "jsonl"}})
+        output_directory = Path(self.temp_dir.name) / "prepared"
+        output_directory.mkdir()
+        with patch("modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.generate_task_examples_for_chunks",
+                   side_effect=AssertionError("Provided rows cannot generate examples.")):
+            result = prepare_training_dataset(payload, output_directory=output_directory)
+        self.assertEqual(result.qualityReport["counts"]["acceptedRows"], 2)
+        self.assertTrue(result.qualityReport["approvalAllowed"])
+        self.assertEqual(result.summary.datasetRowCount, 2)
+        self.assertEqual(result.qualityReport["reasonCounts"].get("mapping-required-fields-missing", 0), 0)
+
     def test_image_text_generation_accepts_one_fenced_json_object(self) -> None:
         payload = {
             "schemaVersion": "1",

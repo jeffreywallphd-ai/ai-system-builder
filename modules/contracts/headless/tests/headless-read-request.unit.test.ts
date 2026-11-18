@@ -35,6 +35,7 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "plan.capabilities": scope,
     "data.ingestion-status": { ...scope, taskId: "intake.fixture" },
     "data.dataset-task-status": {...scope, selection: {kind: "task", taskId: "914adbca-10b9-4033-85af-7ba9011180a1"}},
+    "data.dataset-task-review": {...scope, selection: {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}},
     "data.dataset-versions": {...scope, datasetId: "dataset.fixture", versionIds: ["version.001"]},
     "data.compare-dataset-versions": {...scope, fromVersionId: "version.first", toVersionId: "version.second"},
     "data.preview-dataset-preparation": {...scope,

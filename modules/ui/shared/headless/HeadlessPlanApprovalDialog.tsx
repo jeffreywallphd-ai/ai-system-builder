@@ -194,6 +194,7 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const isPending = state.status === "pending";
   const providerReads = view.preview.steps.some(step => step.operation === "data.save-provider-source");
   const datasetProcessing = view.preview.steps.some(step => step.operation === "data.prepare-local-dataset");
+  const datasetSaving = view.preview.steps.some(step => step.operation === "data.save-prepared-dataset");
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
@@ -207,6 +208,11 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Process the listed saved local files. Limit: 4 files, 4 MiB per file, 16 MiB total and 1,000 rows per file.</li>
         <li>Use the selected columns, data split and quality checks. Stop for result review before saving a dataset version.</li>
         <li>No model calls. Dataset saving and publication need separate permission.</li>
+      </> : null}
+      {datasetSaving ? <>
+        <li>Save the reviewed task output as an immutable dataset version with the name shown below.</li>
+        <li>Use only the approved quality report. Include the source, recipe, data split and quality record.</li>
+        <li>No model calls. No outside publication. No second processing run.</li>
       </> : null}
       <li>Limit of {state.stepCount} {datasetProcessing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
       {providerReads
@@ -232,6 +238,10 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
           <div>Data split: {step.input.split.trainRatio * 100}% training, {step.input.split.validationRatio * 100}% validation,
             {" "}{step.input.split.testRatio * 100}% test. Seed: {step.input.split.seed}.</div>
           <div>Quality checks: {step.input.qualityPreset}. Review required.</div>
+        </> : step.operation === "data.save-prepared-dataset" ? <>
+          <strong>Save reviewed dataset: {step.input.outputBaseName}</strong>
+          <div>Preparation task: {step.input.taskId}</div>
+          <div>Approved quality report: {step.input.reportFingerprint}</div>
         </> : <>
           <strong>{step.operation === "systems.create" ? "Create " : step.operation === "systems.clone" ? "Copy as " : "Rename to "}
             {step.input.name}</strong>

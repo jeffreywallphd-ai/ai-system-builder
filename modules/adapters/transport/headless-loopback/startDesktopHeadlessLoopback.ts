@@ -71,6 +71,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     readonly allowLocalFileSave?: true;
     readonly allowProviderFileSave?: true;
     readonly allowLocalDatasetPreparation?: true;
+    readonly allowDatasetResultSave?: true;
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly execute: (request: HeadlessPlanReviewAgentRequest, grant: DesktopHeadlessAuthoringWireGrant,
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessPlanReviewAgentResult>;
@@ -317,7 +318,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       const plan = readHeadlessPlanReviewAgentRequest(body, dependencies.planReview.hostIncarnationId,
         { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true,
           allowProviderFileSave: dependencies.planReview.allowProviderFileSave === true,
-          allowLocalDatasetPreparation: dependencies.planReview.allowLocalDatasetPreparation === true });
+          allowLocalDatasetPreparation: dependencies.planReview.allowLocalDatasetPreparation === true,
+          allowDatasetResultSave: dependencies.planReview.allowDatasetResultSave === true });
       if (!plan.ok) { fail(response, errorStatus(plan.code), plan.code); return; }
       const grant = await currentGrant();
       if (grant?.planReview !== true || !grantIsCurrent(grant, true) || !admitting() || response.destroyed ||
@@ -403,7 +405,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       const result = readHeadlessPlanStepResult(outcome.result, target,
         { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true,
           allowProviderFileSave: dependencies.planReview.allowProviderFileSave === true,
-          allowLocalDatasetPreparation: dependencies.planReview.allowLocalDatasetPreparation === true });
+          allowLocalDatasetPreparation: dependencies.planReview.allowLocalDatasetPreparation === true,
+          allowDatasetResultSave: dependencies.planReview.allowDatasetResultSave === true });
       const finalGrant = await currentGrant();
       if (!admitting() || response.destroyed) return;
       if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {

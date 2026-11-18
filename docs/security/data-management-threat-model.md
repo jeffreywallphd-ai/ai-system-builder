@@ -1,5 +1,33 @@
 # Data Management Threat Model
 
+## Delegated quality review and immutable result saving
+
+The passive Headless result read requires exact accepted task, host, principal,
+client, tenant/workspace and current artifact read authority. Only bounded quality
+and split metadata cross the transport. Raw rows, samples, storage keys, commands,
+paths and credentials remain private. Count bounds retain rejected-input counts
+without relaxing the worker's accepted-row or byte limits.
+
+A separately approved v5 save binds the original task, report and safe name.
+The existing serialized Data owner issues one attempt. Ordinary approval checks
+that ownership inside its queue, including callers queued before issue. The
+source/recipe/split and quality digest remains stable through transient attempt
+installation. Current role, artifact-write scope, exact approval and deadline
+fence final metadata publication. File IO remains outside the transaction; the
+immutable version and causal receipt commit atomically. Rollback creates neither.
+An ordinary version cannot be adopted as this effect. After uncertain commit,
+one read-only exact-attempt receipt lookup can confirm an existing commit; it
+cannot retry publication or grant reply authority. Unconfirmed attempts preserve
+bytes and deny repeat saving/cancellation. Native cleanup, offload and unknown
+historical staging retain their original guards. Both hosts still require actual
+journey qualification; metadata fixtures alone supply no host or parent pass.
+
+The explicit provided-only column map preserves exact user selection. It is
+validated before source IO and maps only selected text into instruction/output
+aliases. Missing/blank text cannot fall back to unrelated fields. Input/context
+remain omitted. The ordinary no-map import is unchanged; recipe lineage retains
+the mapping. This correction preserves mandatory quality and native guards.
+
 The Headless preparation input compiler is an internal metadata admission seam.
 It verifies exact completed local task/file references against their immutable
 source snapshots under current tenant and artifact authority. Its initial cap

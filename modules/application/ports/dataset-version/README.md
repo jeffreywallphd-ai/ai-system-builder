@@ -7,6 +7,10 @@
   structured repository.
 - `DatasetVersionHasherPort` supplies exact SHA-256 identities without coupling
   application services to one cryptography runtime.
+- `DatasetVersionCommitAdmission` is an internal, exact actor/workspace admission
+  for an approved local save. Its adapter commits immutable version metadata and
+  the causal approval receipt together. File IO stays outside the transaction.
+  An unconfirmed commit preserves artifacts; it grants no retry or adoption.
 - `DatasetVersionPublisherPort` publishes one already-finalized version as a
   bounded multi-file provider commit and returns its immutable revision. It
   receives no credentials; provider adapters resolve credentials at their own

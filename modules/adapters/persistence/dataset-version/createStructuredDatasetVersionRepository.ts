@@ -26,31 +26,7 @@ export function createStructuredDatasetVersionRepository(
     async createVersion(input) {
       const version = normalizeDatasetVersionRecord(input);
       assertOrganizationScope(documents, version.organizationId);
-      const key = versionKey(version.workspaceId, version.versionId);
-      return documents.runInTransaction(async (transaction) => {
-        const current = await transaction.readDocument<DatasetVersionRecord>(
-          DATASET_VERSION_NAMESPACE,
-          key,
-        );
-        if (current) {
-          const existing = normalizeDatasetVersionRecord(current.value);
-          if (stableStructuredJson(existing) === stableStructuredJson(version)) {
-            return cloneStructuredJson(existing);
-          }
-          throw new StructuredDocumentConflictError(
-            DATASET_VERSION_NAMESPACE,
-            key,
-            0,
-          );
-        }
-        await transaction.writeDocument(
-          DATASET_VERSION_NAMESPACE,
-          key,
-          cloneStructuredJson(version),
-          { expectedRevision: 0 },
-        );
-        return cloneStructuredJson(version);
-      });
+      return documents.runInTransaction(transaction => writeVersion(transaction, version));
     },
 
     async readVersion(workspaceId, versionId) {
@@ -168,6 +144,28 @@ export function createStructuredDatasetVersionRepository(
         .map(cloneStructuredJson);
     },
   };
+}
+
+/** Join a host-owned metadata/receipt commit without reentering its transaction. */
+export async function createStructuredDatasetVersionInOwnedTransaction(owner: StructuredDocumentStore, input: DatasetVersionRecord) {
+  const version = normalizeDatasetVersionRecord(input);
+  if (owner.runInOwnedTransaction || owner.organizationId === undefined)
+    throw new Error("Dataset version publication requires the scoped transaction owner.");
+  assertOrganizationScope(owner, version.organizationId);
+  return writeVersion(owner, version);
+}
+
+async function writeVersion(owner: StructuredDocumentStore, version: DatasetVersionRecord) {
+  assertOrganizationScope(owner, version.organizationId);
+  const key = versionKey(version.workspaceId, version.versionId);
+  const current = await owner.readDocument<DatasetVersionRecord>(DATASET_VERSION_NAMESPACE, key);
+  if (current) {
+    const existing = normalizeDatasetVersionRecord(current.value);
+    if (stableStructuredJson(existing) === stableStructuredJson(version)) return cloneStructuredJson(existing);
+    throw new StructuredDocumentConflictError(DATASET_VERSION_NAMESPACE, key, 0);
+  }
+  await owner.writeDocument(DATASET_VERSION_NAMESPACE, key, cloneStructuredJson(version), {expectedRevision: 0});
+  return cloneStructuredJson(version);
 }
 
 const versionKey = (workspaceId: WorkspaceId, versionId: DatasetVersionId) =>

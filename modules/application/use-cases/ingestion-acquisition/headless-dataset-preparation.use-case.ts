@@ -69,7 +69,7 @@ export class PrepareHeadlessDatasetInputsUseCase {
       const command: PrepareTrainingDatasetFromArtifactsCommand = {
         sourceArtifactIds: artifactIds,
         recipe: {task: {taskType: "llm-instruction", textInputMode: "provided", promptStyle: "instruction-response",
-          inputField: input.recipe.inputColumn, outputField: input.recipe.outputColumn, sourceContextPolicy: "omit"}},
+          providedRowMapping: {instructionColumn: input.recipe.inputColumn, outputColumn: input.recipe.outputColumn}, sourceContextPolicy: "omit"}},
         split: {...input.split, shuffle: true},
         output: {format: "jsonl", destinations: {local: {enabled: true}}},
         quality: {policy: {preset: input.qualityPreset, maxRowsPerSource: HEADLESS_DATASET_MAX_ROWS_PER_SOURCE}, reviewRequired: true},
