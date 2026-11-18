@@ -211,8 +211,8 @@ Poll only its accepted task or original plan step. Uncertain reservations cannot
 be adopted or restarted. Replies contain state, counts and a required-review
 fingerprint, never source contents, paths, prompts or embeddings. Separate
 Context save, queries/rebuilds and presentation are not granted.
-The generated SDK catalog has 40 distinct tools across modes, with 27 Desktop
-and 20 Managed plan-review tools; each mode stays within the existing 32 limit.
+The generated SDK catalog has 41 distinct tools across modes, with 28 Desktop
+and 21 Managed plan-review tools; each mode stays within the existing 32 limit.
 
 Version 8 separately enables `context.save-result`. Preview verifies the exact
 accepted task review; the host also binds the reviewed name before approval.
@@ -231,3 +231,14 @@ The host requires current model-read permission, installed safe-weight files
 and the installed-only runtime. It rechecks the saved model witness at atomic
 issue after staging. Task results remain finite and require separate save.
 SDK/fixture passes do not establish actual embedding, retrieval or native proof.
+
+Use `aisb_preview_context_rebuild` with the exact saved reference from
+`aisb_read_context` to inspect the original source versions and settings. Both
+plan modes require current workspace, artifact and model-read permission. The
+host verifies the indexed saved result, accepted generation and original model
+witness before returning bounded metadata. Historical approval grants no new
+permission. Changed source or model facts are not silently substituted.
+This read opens no archive or runtime. Byte availability and runtime readiness
+remain not checked. It starts no rebuild and grants no query or window control.
+Approved rebuild execution, queries, result display and physical retrieval
+qualification remain separate work.
