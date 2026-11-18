@@ -515,7 +515,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "rag-and-context",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1922,6 +1922,24 @@
       "recordedAt": "2026-11-18T02:08:20Z",
       "sequence": 99,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "0a9850fec48acde388bb31537b0dc4c8833a546e716395c74edd199065ea8c5c",
+      "recordedAt": "2026-11-18T02:17:47Z",
+      "sequence": 100,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "77f68f7d565d6e753aee890679d30e162ed27170fea0e527eb0bbff5ea520c36",
+      "recordedAt": "2026-11-18T02:17:48Z",
+      "sequence": 101,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "b84fcdfdd3dbdbd9f2a2cd8ad5ab62d0a16324c08b53fdab60f0836d120b04e3",
+      "recordedAt": "2026-11-18T02:17:48Z",
+      "sequence": 102,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -2948,11 +2966,123 @@
       "id": "rag-and-context",
       "number": 6,
       "objective": "Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The merged Headless roadmap is already approved. This plan implements its existing Context increment without a new engine, topology, provider or broad content-sharing permission.",
+          "Passive metadata does not prove extraction/model readiness. Existing controlled source inspection and dependency/model work require explicit approved actions.",
+          "Use installed previously authorized models only. Missing runtime/model/dependency or unsupported host paths report unavailable before effects; no new download is authorized by this plan.",
+          "Initial controlled evidence uses small synthetic sources, the existing local embedding profile and source-derived No Summarization packs. Other supported modes need their own current availability and evidence; never imply all-mode qualification from this profile.",
+          "Canonical Context caps and existing native/offload/model safeguards stay unchanged. A focused pass does not qualify host-exit recovery or unsupported devices.",
+          "The original Data/handoff and all earlier roadmap history remain intact. The latest user instruction defers comprehensive qualification until all increments are implemented."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "grounded-context",
+              "security-context-isolation"
+            ],
+            "id": "prepare-context",
+            "outcome": "The client can select exact authorized source versions and a locally available model, then preview supported settings and limits. Passive reads start no extraction, installation or model task. Unsupported sources or runtime profiles explain what is unavailable before effects.",
+            "title": "Prepare sources and index settings"
+          },
+          {
+            "criteriaIds": [
+              "grounded-context",
+              "measured-retrieval",
+              "security-context-isolation"
+            ],
+            "id": "build-evaluate-context",
+            "outcome": "An explicitly approved plan uses the existing Context owner to inspect and build a RAG database or source-derived context pack, review and save the exact result, run bounded queries and rebuild from verified sources. Task identity, immutable lineage, citations, source freshness and replay remain exact.",
+            "title": "Build, review, save and test Context"
+          },
+          {
+            "criteriaIds": [
+              "measured-retrieval",
+              "security-context-isolation"
+            ],
+            "id": "reveal-context",
+            "outcome": "A separately authorized window shows the exact saved Context artifact, query summary or accepted task. Revoking display stops new window effects and context without losing independent work or saved artifacts.",
+            "title": "Show Context outcomes in the app"
+          }
+        ],
+        "completionTests": [
+          "Use a real MCP client in the packaged Desktop and authenticated Managed browser to create/review/save a small synthetic Context artifact, inspect its exact bounded metadata and show it under separate revocable window consent.",
+          "Freeze a labeled small corpus and expected citation IDs before the real local embedding run. Reuse recall@5 >=0.90, no regression greater than0.02, exact deterministic comparison/citation rules and zero invalid or cross-workspace citations. Use the existing approved pinned MiniLM/host resource budgets of2GiB process RSS and512MiB query VRAM for that profile, existing Context execution deadlines and explicit cold/warm observations; preserve failed attempts and unavailable profiles.",
+          "Finish only the increment's change-relevant tests and independent review. Reserve combined whole-software/end-to-end/AI qualification for the boundary after all roadmap increments are implemented, per the latest explicit user instruction."
+        ],
+        "documentation": [
+          "Context architecture, threat model and context pack",
+          "ADR0047 capability and authority composition",
+          "Portable client build-plan guidance and generated MCP schemas",
+          "Supported runtime/profile limits and focused qualification evidence"
+        ],
+        "fingerprint": "02547309b5af8085bafbc131c83eb7f3dc15afbd5777bb03371d9d34b070399e",
+        "focusedTests": [
+          "Strict finite contracts, source/model/version/digest and current actor/client/workspace checks; unsupported or stale references and missing permissions cause no runtime effects or private-field disclosure.",
+          "Current approved settings and exact one-use start/save/query/rebuild receipts; review-before-save, interrupted or failed tasks, cancellation, lost acknowledgement and exact replay cannot create duplicate artifacts or adopt ordinary work.",
+          "Untrusted source/query/model text remains data; citation allowlists, safe package parsing, size limits, no ambient model/network retrieval, current egress and revoked-window denials stay enforced.",
+          "Use source-compatible Context application, worker and host tests plus focused approval/MCP/presentation UI cases. Keep documentation and dependency-direction checks relevant to the changed feature."
+        ],
+        "recordedAt": "2026-11-18T02:17:48Z",
+        "rollback": "Stop advertising the new Context operations and intents. Preserve ordinary Context behavior, immutable saved artifacts, owned in-flight tasks, exact receipts and any staging retained by existing cleanup guards.",
+        "steps": [
+          "Add bounded Context discovery and exact source/model/settings previews. Resolve current Data source or saved artifact/version references inside the authorized application owner; preserve source checks, licence/provenance, supported formats and truthful runtime availability.",
+          "Add typed plan operations for approved inspection and Context generation/rebuild/query, accepted-only task observation and bounded review. Reuse local-only RAG/context-pack creation and explicit exact-result saving, with one-use effects and causal receipts. Verify real synthetic CPU retrieval without broad model-quality reruns.",
+          "Extend finite window presentation to the exact authorized Context artifact, result summary or accepted task. Reuse current consent, identifier-only context, document/order/deadline/revoke fences and both existing host journeys."
+        ],
+        "summary": "Extend the existing plan and Context owners with three integrated outcomes: prepare exact scoped inputs, run/review/save/query the approved Context work, and show its exact result through revocable presentation. Keep passive observation separate from approved processing and final whole-roadmap qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-18T02:17:48Z",
+          "risks": [
+            "Source/manual text, previews and query excerpts are protected untrusted data. Keep public discovery and passive status to bounded identifiers, manifests, counts and validated citations; never turn retrieved instructions into tool, window or backend authority.",
+            "Source inspection, dependency setup, model loading, generation and queries can have runtime effects. Passive preview cannot invoke those effects. Explicit approved actions require exact source/model/settings scope, current actor/client/workspace checks, fixed limits and acknowledged one-use admission.",
+            "Saved output must remain review-required until its exact result is separately approved for save. Preserve object/catalog/binding ownership, current source/report/destination fences and causal receipts; uncertainty must not authorize duplicate work or adoption of an ordinary artifact.",
+            "Raced source revisions, incomplete packages, stale indexes, foreign citations, actor changes and revoked windows must fail closed. Existing local/native/provider/runtime controls and unsupported states remain authoritative.",
+            "Use the existing qualified local embedding profile and realistic existing Context budgets for the small synthetic fixture. Observe cold startup separately; do not substitute deterministic fixtures for real embedding measurements or rerun accepted Qwen accuracy.",
+            "Latest explicit user direction governs testing: feature-focused checks while implementing each increment; comprehensive software/AI qualification only after every roadmap increment is implemented. No final gate is waived."
+          ],
+          "sources": [
+            {
+              "title": "Accepted Context architecture and portable artifacts",
+              "url": "docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md"
+            },
+            {
+              "title": "Accepted Headless delegation",
+              "url": "docs/adr/ADR-0047-headless-system-builder-delegation.md"
+            },
+            {
+              "title": "Context architecture and lifecycle",
+              "url": "docs/architecture/context-management.md"
+            },
+            {
+              "title": "Context threat model",
+              "url": "docs/security/context-management-threat-model.md"
+            },
+            {
+              "title": "Context application owners",
+              "url": "modules/application/use-cases/context-management/README.md"
+            },
+            {
+              "title": "Shared Context command facade",
+              "url": "modules/application/use-cases/context-management/context-management-command.use-case.ts"
+            },
+            {
+              "title": "Context contracts and limits",
+              "url": "modules/contracts/context-management/README.md"
+            },
+            {
+              "title": "Previously approved retrieval quality targets",
+              "url": "docs/functionality-optimization-implementation-roadmap.md"
+            }
+          ],
+          "summary": "Security-relevant continuation within ADR0041 and ADR0047. ContextGenerationUseCase owns source staging, task scope, review/save and cleanup; ContextBrowserUseCases owns verified saved artifacts, source freshness and bounded retrieval. Headless must add finite scoped requests and acknowledged plan effects around those owners, with metadata-only passive reads and separate current window consent. Reuse the existing shared textual source capabilities, local-only embedding/runtime, immutable LanceDB/context-pack packages and current Data source/version references. No new engine, synchronization, raw-content egress, model download or host-exit guarantee is introduced by this plan."
+        }
+      ],
       "rollback": "Disable agent Context admission and revoke related presentation. Retain saved and versioned indexes, packs, receipts and ordinary Context UI.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-18T02:17:47Z",
+      "status": "implementing",
       "title": "Build and test RAG databases and context packs",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -3269,6 +3399,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "ready",
-  "updatedAt": "2026-11-18T02:08:20Z"
+  "status": "executing",
+  "updatedAt": "2026-11-18T02:17:48Z"
 }
