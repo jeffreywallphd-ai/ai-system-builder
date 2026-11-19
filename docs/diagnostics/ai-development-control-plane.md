@@ -1,3 +1,17 @@
+The Context increment's [qualification record](../operations/headless-context-increment-qualification.json)
+composes actual Desktop/Managed MCP journeys with the fixed local MiniLM worker
+matrix. `headless-context-current-evidence` regrades the retained raw measurements
+against the current complete product source, pinned fixture/model/helper and
+installed package versions. It recalculates recall, citations, exact comparisons,
+resource limits and cleanup; a saved `targets_met` flag is insufficient. Malformed,
+changed, redirected, incomplete or stale evidence fails the check. The paired
+`headless-context-evidence-unit` check tests these rejection paths. These checks
+are feature qualification, not the final all-software suite. The report retains
+the distinction between post-import sampled RSS/Torch allocations and lifetime,
+startup or whole-device memory. Runtime version matching does not attest installed
+binary provenance. Current exact-target receipts and separate review still govern
+increment closure; a report or earlier component pass cannot close it by itself.
+
 The existing Context display and delivery profiles also cover the separate
 `show-context-query` selector, strict family isolation and bounded query cards.
 Core/SQLite query journeys verify accepted lineage, cached-only observation and

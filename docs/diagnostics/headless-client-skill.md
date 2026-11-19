@@ -1,5 +1,12 @@
 # Headless client skill
 
+The [Context qualification record](../operations/headless-context-increment-qualification.json)
+keeps actual two-host workflow observations separate from the measured local
+MiniLM worker profile. The fixed evidence check requires the current product
+source and recalculates the recorded grades. It does not run a model, grant a
+capability, or turn a dated component report into a parent pass. The final
+whole-roadmap suite follows implementation of the remaining increments.
+
 A failed Context task has no review and cannot be saved. Replay its original
 approved step only to observe the same accepted task; never issue a new task
 through a hidden retry. A separately consented `show-context-task` may show its

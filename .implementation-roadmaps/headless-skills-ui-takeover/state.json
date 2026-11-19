@@ -601,7 +601,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": "rag-and-context",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1358,6 +1358,39 @@
       "outcome": "passed",
       "recordedAt": "2026-11-18T02:04:31Z",
       "summary": "Focused strict-schema, permission/client/workspace/host, size, source/report/destination, licensing and private-field denials passed. The new actual provided-row worker regression keeps adversarial source instructions as data, preserves the exact payload/output root and records zero generation, readiness, network and process calls. The input compiler keeps source labels out of authority and rejects extra action/destination fields before reads. Existing provider/native guards and all historical failures remain intact."
+    },
+    {
+      "artifact": "docs/operations/headless-context-increment-qualification.json",
+      "command": "Fixed offline approved-query collector plus reviewed actual two-host Context component; current control-plane exact-target verification rechecks the composed evidence.",
+      "criterionId": "grounded-context",
+      "id": "evidence-43",
+      "incrementId": "rag-and-context",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-19T02:13:17Z",
+      "summary": "Actual Desktop and Managed component receipt a0c7c3a2/review e3831500 passed source inspection, real local pack/RAG generation, separate save, two grounded citation queries, exact rebuild/replay, failure preservation, five consented displays and revoke. Current target verification reruns both hosts before closure."
+    },
+    {
+      "artifact": "docs/operations/headless-context-increment-qualification.json",
+      "command": "Fixed offline approved-query collector plus reviewed actual two-host Context component; current control-plane exact-target verification rechecks the composed evidence.",
+      "criterionId": "measured-retrieval",
+      "id": "evidence-44",
+      "incrementId": "rag-and-context",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-19T02:13:17Z",
+      "summary": "Fresh frozen-source fixed1000-row MiniLM CPU/repeat/constrained and CUDA/repeat matrix passed the predeclared recall>=0.90/no loss>0.02, exact citation/result comparison and existing sampled2GiB RSS/512MiB Torch allocation limits, with six native exits. Actual two-host failed-build/replay/reveal is a separately reviewed component; current target composes and rechecks both evidence boundaries."
+    },
+    {
+      "artifact": "docs/operations/headless-context-increment-qualification.json",
+      "command": "Fixed offline approved-query collector plus reviewed actual two-host Context component; current control-plane exact-target verification rechecks the composed evidence.",
+      "criterionId": "security-context-isolation",
+      "id": "evidence-45",
+      "incrementId": "rag-and-context",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-19T02:13:17Z",
+      "summary": "Completed actual two-host component retained23permission/scope denial checks, failed-result save denial, same-task replay, exact bounded failed/null-review card, separate display consent, revoke and owned shutdown. New focused evidence/routing negatives reject stale sources, false grades, wrong citations, invalid resources and unsafe report reads. Fresh current exact-target verification and independent review remain mandatory before closure."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -2044,6 +2077,30 @@
       "recordedAt": "2026-11-18T17:50:56Z",
       "sequence": 105,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a5cbb0aa2444193410423b2e01a1026378462c86470f2de190b3a0e7ae84c184",
+      "recordedAt": "2026-11-19T02:13:17Z",
+      "sequence": 106,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ab826a60b8781a6cb499e07188cd68272d9b088d05a5c4415754ee0d459c1e7f",
+      "recordedAt": "2026-11-19T02:13:17Z",
+      "sequence": 107,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c21d74ee6d50b7a3b73e01569fa10fb7c43a98a0478b624affba487f99f2ae86",
+      "recordedAt": "2026-11-19T02:13:17Z",
+      "sequence": 108,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9ab3ae8e6fff870ecd61e66eca7c589a6472847f1f595465e2a43d388cff84a7",
+      "recordedAt": "2026-11-19T02:25:15Z",
+      "sequence": 109,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -3055,12 +3112,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-11-19T02:25:15Z",
       "completedChunks": [
         "prepare-context",
         "build-evaluate-context",
         "reveal-context"
       ],
+      "completionSummary": "All three Context criteria qualified on the frozen current source: fixed1000-row pinned MiniLM CPU/repeat/constrained and CUDA/repeat measurements regraded with recall1.0/exact comparisons and existing resource limits, real packaged Desktop and authenticated Managed MCP/UI build/save/query/rebuild/failed-build/replay/reveal/revoke with owned shutdown, focused isolation/denial/evidence controls, all13executed checks and independent exact-target review. Final whole-roadmap qualification and later increments remain separate.",
       "deliverables": [
         "RAG/context capability contracts, validation reports and artifact handoffs to Systems",
         "Scoped Context presentation actions and measured retrieval and resource evidence"
@@ -3074,6 +3132,7 @@
       "id": "rag-and-context",
       "number": 6,
       "objective": "Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "The merged Headless roadmap is already approved. This plan implements its existing Context increment without a new engine, topology, provider or broad content-sharing permission.",
@@ -3190,7 +3249,7 @@
       ],
       "rollback": "Disable agent Context admission and revoke related presentation. Retain saved and versioned indexes, packs, receipts and ordinary Context UI.",
       "startedAt": "2026-11-18T02:17:47Z",
-      "status": "verifying",
+      "status": "completed",
       "title": "Build and test RAG databases and context packs",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -3507,6 +3566,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "executing",
-  "updatedAt": "2026-11-18T17:50:56Z"
+  "status": "ready",
+  "updatedAt": "2026-11-19T02:25:15Z"
 }

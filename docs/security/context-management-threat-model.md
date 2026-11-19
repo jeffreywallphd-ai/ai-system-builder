@@ -1,5 +1,24 @@
 # Context Management Threat Model
 
+## Current Context qualification evidence
+
+Security-relevant qualification protects source/model identity, private retrieval
+content and host resources. The fixed evidence guard accepts only bounded regular
+JSON under the exact local run root. It rejects redirects, duplicate keys,
+non-finite numbers, changed hashes, stale complete product source, missing profiles
+and installed-version mismatches. It recomputes the predeclared eight held-out
+recalls and synthetic citations, native success, resource/allocator cleanup and
+three deterministic comparisons. Pure negative fixtures are not physical proof.
+The fresh offline collector and actual Desktop/Managed MCP journeys supply that
+proof separately. Existing authorization, source/model ownership, task ACK,
+save/replay and display/revoke controls remain unchanged. Reports omit private
+payloads and distinguish sampled query memory from startup/lifetime/whole-device
+usage. Version matching is not installed-binary attestation; the existing trusted
+qualification environment and operator-attested independent review remain the
+assurance boundary. Reverting this check cannot grant any product authority or
+erase failed history. No new network, download, dependency, model engine or
+resource policy is introduced.
+
 ## Accepted build failure and preserved saved Context
 
 The real-host regression requests a fresh RAG build with a valid settings shape

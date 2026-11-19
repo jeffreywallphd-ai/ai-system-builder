@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "headless-context-increment-qualification-v1",
+  "status": "observed",
+  "incrementId": "rag-and-context",
+  "criterionIds": [
+    "grounded-context",
+    "measured-retrieval",
+    "security-context-isolation"
+  ],
+  "measurement": {
+    "localEvidenceRef": ".local-codex/trained-context/b5f4117802c74ac78de623a97049697c/approved-query-report.json",
+    "sha256": "7b2f1e32ad216055b4cf9195c0ed7b53ecf0ff142ab20e775a556d0ef075ba36",
+    "sourceRevision": "source.54a24afea332fcce74b5e6aa2328afc89d438122a1f0c731835fc9bea4a55a82",
+    "observed": {
+      "profiles": 5,
+      "comparisons": 3,
+      "recall_minimum": 1.0,
+      "maximum_sampled_query_rss_bytes": 1350692864,
+      "maximum_torch_query_vram_bytes": 101245952
+    },
+    "thresholds": {
+      "recall_at_5_minimum": 0.9,
+      "maximum_recall_loss": 0.02,
+      "score_tolerance": 1e-06,
+      "sampled_query_rss_bytes": 2147483648,
+      "torch_query_vram_bytes": 536870912
+    },
+    "profiles": [
+      "cpu-generation",
+      "cpu-reference",
+      "cpu-repeat",
+      "cpu-constrained",
+      "cuda-reference",
+      "cuda-repeat"
+    ],
+    "environment": {
+      "platform": "win32",
+      "python": "3.12.8",
+      "torch": "2.6.0+cu126",
+      "transformers": "4.51.3",
+      "lancedb": "0.34.0",
+      "pyarrow": "25.0.0",
+      "cuda_runtime": "12.6",
+      "accelerator": "NVIDIA GeForce RTX 4060",
+      "accelerator_memory_bytes": 8585216000,
+      "memory_profile": {
+        "profile": "physical-reference"
+      }
+    },
+    "measurementBoundary": "Production approvedEmbedding worker branch, original embedding function and exact local model reference. Query RSS is sampled after shared imports. GPU peak is the Torch allocator after CUDA warmup/reset, not total process/device VRAM. Cold and warm queries include fresh model load, archive validation/materialization, search and cleanup; OS cache warmth is uncontrolled. Eight samples are bounded observations.",
+    "assurance": "Fresh offline fixed collector observations with six observed native exits. Installed package versions are checked again; no installed-binary attestation or whole-device/lifetime memory claim."
+  },
+  "completedFailureReplayComponent": {
+    "commit": "470961a3eda69b6506beaa541f1883c60b01b8d6",
+    "workId": "headless-context-failed-build-replay",
+    "receiptDigest": "a0c7c3a26170995d4e5acb3ed57b4e6003e34f58e78ee33650d2e5df4764a48e",
+    "reviewDigest": "e38315004c4b4eac261dde3fe4836dabc434fc252372a51002b2deb5f1133f54",
+    "closedFinding": "failed-context-card-state",
+    "desktop": {
+      "localEvidenceRef": "artifacts/qualification/visual-composer/runs/2026-11-19t01-50-22-767z-eca91be9/headless-context-desktop.json",
+      "sha256": "9d3cb3f7cc39a1f3896df06c8340bbdf1f1aadc641f0581665f2556fcbba60fc",
+      "sourceRevision": "source.b005ed748ba7714c5cf3c429e8783164cdbf9b5338a9da5c063994637c66041a",
+      "facts": {
+        "packSaved": true,
+        "ragSaved": true,
+        "queryCitations": 2,
+        "queriesGrounded": 2,
+        "rebuildSaved": true,
+        "failedBuildObserved": true,
+        "failedBuildReplayed": true,
+        "savedContextPreservedAfterFailure": true,
+        "replayChecks": 9,
+        "denialChecks": 23,
+        "presentations": 5,
+        "revoked": true
+      },
+      "scope": "Completed component observation; current exact-target verification reruns this actual host on the frozen current source."
+    },
+    "managed": {
+      "localEvidenceRef": "artifacts/qualification/visual-composer/d/managed-c4d25f8431e54eb2b46ab5816961a656/headless-context-managed.json",
+      "sha256": "17e8688377a62a71afae00797c3af249dda898a8067bcb5f1173b296a712d354",
+      "sourceRevision": "source.b005ed748ba7714c5cf3c429e8783164cdbf9b5338a9da5c063994637c66041a",
+      "facts": {
+        "packSaved": true,
+        "ragSaved": true,
+        "queryCitations": 2,
+        "queriesGrounded": 2,
+        "rebuildSaved": true,
+        "failedBuildObserved": true,
+        "failedBuildReplayed": true,
+        "savedContextPreservedAfterFailure": true,
+        "replayChecks": 9,
+        "denialChecks": 23,
+        "presentations": 5,
+        "revoked": true
+      },
+      "scope": "Completed component observation; current exact-target verification reruns this actual host on the frozen current source."
+    }
+  },
+  "currentTargetRequirements": [
+    "The current evidence check recomputes all five query profiles and three exact comparisons, authenticates the full raw digest/current product source/helper/fixture/model and compares public numbers with recalculated values.",
+    "Current actual Desktop and Managed MCP journeys must pass on the same frozen source, including acknowledged worker dispatch, separate save/query/rebuild/display permissions, two grounded questions, failed build with null review/literal failed card, exact replay, preserved saved Context, revoke and owned shutdown.",
+    "Current focused Context contracts/use cases/worker/persistence/host denials and evidence/routing negatives must pass. All three exact increment criteria require a current completed control-plane work record and accepted separate-invocation review before the roadmap engine can close increment6."
+  ],
+  "securityImpact": {
+    "disposition": "security-relevant",
+    "controls": [
+      "Current workspace/source/model/citation and immutable lineage checks",
+      "One-use exact approvals, durable accepted task ACK and same-task replay",
+      "Review before separate save; failed or partial results cannot become active",
+      "Separately consented bounded window display and current revoke/egress fences",
+      "Offline safe-weight model loading, existing resource limits and owned native cleanup",
+      "Bounded fail-closed evidence parsing, current-source identity and independently recomputed grades"
+    ],
+    "residualLimits": [
+      "The extraction failure is controlled; it does not qualify hostile mid-index crashes, offload recovery, unsupported models or hardware.",
+      "Managed worker shutdown uses verified configured launcher lineage and physical absence; it is not a held worker-handle exit-code claim.",
+      "Sampling excludes shared imports/startup; GPU numbers are Torch allocator measurements, not whole-device VRAM.",
+      "The final whole-roadmap software/AI suite remains pending until all increments are implemented."
+    ]
+  },
+  "historyPolicy": "Earlier worker/component reports, failed attempts and review findings remain unchanged. Their old pending statements describe their original scope; only fresh exact-target receipts and review can close this increment."
+}

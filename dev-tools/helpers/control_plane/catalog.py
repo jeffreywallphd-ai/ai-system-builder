@@ -167,6 +167,30 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-current-evidence": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/check_headless_context_evidence.py",
+            "docs/operations/headless-context-increment-qualification.json",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/check_headless_context_evidence.py",
+            "docs/operations/headless-context-increment-qualification.json",
+        ),
+        "command": ("dev-tools/scripts/qualification/check_headless_context_evidence.py",),
+    },
+    "headless-context-evidence-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/check_headless_context_evidence.py",
+            "dev-tools/scripts/qualification/tests/test_headless_context_evidence.py",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/check_headless_context_evidence.py",
+            "dev-tools/scripts/qualification/tests/test_headless_context_evidence.py",
+        ),
+        "command": ("-m", "unittest", "-v", "dev-tools/scripts/qualification/tests/test_headless_context_evidence.py"),
+    },
     "headless-context-failure-oracles": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-failure-oracles.ts",
