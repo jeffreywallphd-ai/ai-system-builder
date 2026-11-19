@@ -1107,6 +1107,7 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  ({map,result}=recoveryAssertionCensusLegacyView(map,result));
   ({map,result}=reviewPaginationCensusLegacyView(map,result));
   // The JSON map is unchanged between comparisons. Recompute for every call.
   const mapDigest = sha(JSON.stringify(map));
@@ -1684,6 +1685,45 @@ function headlessPackagedCensusLegacyView(map, result) {
   assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(prior));
   return {map: prior, result};
 }
+// The recovery observation changes exactly two already-prospective definitions.
+// All four published drift gaps remain; this adapter grants no host pass.
+const pendingReviewRecoveryCensus=Object.freeze({
+  priorCommit:"46609421cc0ef6404864ad54fc5d4aaa1d09ebcd",
+  priorMap:"dd1ef0bcc050238b08f8827dd4141500842800d2a3876a48f0021bc9a52d6f95",
+  currentMap:"38086249fb266f23cac347239ba5ee92ab1c2d52af6ea60de12f716f041d5637",
+  baseline:"be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+});
+const pendingReviewRecoveryDefinitions=Object.freeze([
+  {path:"dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",committed:"bc5bd6a1b736fd0196371ad532a3998edc3eff78fa9d7ef200b2881ab86bbafe",previous_candidate:"a48a843dd522e0977d2545ab68feb6d7bbded9bfb8be658323da608207bccaeb",candidate:"a4f6c1f884d755a1afe64bd09f1e4bb7ff9ec1a55c534591e38c2ca64b39d354",facts_sha256:"42b88acdce80245767657bfa188bfe5394e62b6e10b4bbf3b3f305f9f0585ea7"},
+  {path:"dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",committed:"d7e8ae80ae01a66e8503a2433cfc3007910ed048e29826d37683fad54707c070",previous_candidate:"9f8619a422690a340855bcfc68d525d7250615f2b5c9cbdcad20e5b287a54c36",candidate:"a6b2b3a4a5b31c2a970c5910e2db0e1c493dfc66c67b2d15e26201a6c394159e",facts_sha256:"258d6201d5a5419b69e9f9269f8fab84a555a091976841a82ceb3c2e4c9c6b65"},
+].map(Object.freeze));
+let reviewRecoveryPriorText;
+function recoveryAssertionCensusLegacyView(map,result){
+  const definitions=pendingReviewRecoveryDefinitions;
+  if(!map.sources.some(row=>definitions.some(pin=>pin.path===row.path&&pin.candidate===row.facts.sha256)))return{map,result};
+  assert.equal(map.source_baseline,pendingReviewRecoveryCensus.baseline);
+  assert.equal(sha(JSON.stringify(map)),pendingReviewRecoveryCensus.currentMap);
+  const names=new Set(definitions.map(pin=>pin.path)),ordered=rows=>rows.map(row=>JSON.stringify(row)).sort();
+  assert.deepEqual(ordered(result.gaps.filter(gap=>gap.kind==="unreviewed-source-drift"&&names.has(gap.source))),
+    ordered(definitions.map(pin=>({kind:"unreviewed-source-drift",source:pin.path}))));
+  if(reviewRecoveryPriorText===undefined){
+    const bytes=historicalSource(pendingReviewRecoveryCensus.priorCommit,censusDocument),prior=JSON.parse(bytes),expected=structuredClone(prior);
+    assert.equal(sha(JSON.stringify(prior)),pendingReviewRecoveryCensus.priorMap);
+    for(const pin of definitions){
+      const rows=map.sources.filter(row=>row.path===pin.path),old=expected.sources.filter(row=>row.path===pin.path);
+      assert.equal(rows.length,1);assert.equal(old.length,1);
+      assert.equal(rows[0].committed_sha256,pin.committed);assert.equal(old[0].committed_sha256,pin.committed);
+      assert.equal(pin.committed,sha(historicalSource(map.source_baseline,pin.path)));
+      assert.equal(old[0].facts.sha256,pin.previous_candidate);
+      assert.equal(rows[0].facts.sha256,pin.candidate);assert.equal(sha(JSON.stringify(rows[0].facts)),pin.facts_sha256);
+      old[0].facts=structuredClone(rows[0].facts);
+    }
+    assert.deepEqual(map,expected,"Only two exact observation definitions change; pins, all earlier facts and qualification remain.");
+    reviewRecoveryPriorText=bytes.toString("utf8");
+  }
+  return{map:JSON.parse(reviewRecoveryPriorText),result};
+}
+
 // Exact paging definitions remain prospective. All prior pins and historical
 // validators keep their genuine earlier map; no execution is granted here.
 const pendingReviewPaginationCensus=Object.freeze({
@@ -1770,7 +1810,8 @@ function assertCompleteCurrentSourceDrift(map,result){
 }
 
 test("paging census admits only four exact prospective facts and preserves original pins and history",()=>{
-  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8")),result={gaps:sourceDrift(map)};
+  const published=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const {map,result}=recoveryAssertionCensusLegacyView(published,{gaps:sourceDrift(published)});
   const prior=JSON.parse(historicalSource(pendingReviewPaginationCensus.priorCommit,censusDocument));
   const restored=reviewPaginationCensusLegacyView(map,result);
   assert.deepEqual(restored.map,prior);assert.deepEqual(restored.result.gaps,sourceDrift(prior));
@@ -1789,6 +1830,25 @@ test("paging census admits only four exact prospective facts and preserves origi
   const foreign=structuredClone(map);foreign.source_baseline="0".repeat(40);
   assert.throws(()=>reviewPaginationCensusLegacyView(foreign,result));
   assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:[...result.gaps,{kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"}]}));
+});
+
+test("recovery observation facts retain every pending gap and reject future or altered definitions",()=>{
+  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8")),result={gaps:sourceDrift(map)};
+  const prior=JSON.parse(historicalSource(pendingReviewRecoveryCensus.priorCommit,censusDocument));
+  const restored=recoveryAssertionCensusLegacyView(map,result);
+  assert.deepEqual(restored.map,prior);assert.deepEqual(restored.result,result);
+  restored.map.sources[0].facts.bytes++;
+  assert.deepEqual(recoveryAssertionCensusLegacyView(map,result).map,prior);
+  for(const pin of pendingReviewRecoveryDefinitions){
+    for(const mutate of [row=>{row.facts.sha256="0".repeat(64);},row=>{row.facts.assertionCount++;},row=>{row.committed_sha256="0".repeat(64);}]){
+      const changed=structuredClone(map);mutate(changed.sources.find(row=>row.path===pin.path));
+      assert.throws(()=>recoveryAssertionCensusLegacyView(changed,result));
+    }
+    assert.throws(()=>recoveryAssertionCensusLegacyView(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
+  const changed=structuredClone(map);changed.scenarios[0].execution_status="passed";
+  assert.throws(()=>recoveryAssertionCensusLegacyView(changed,result));
+  assert.throws(()=>recoveryAssertionCensusLegacyView(map,{gaps:[...result.gaps,result.gaps.find(row=>row.source===pendingReviewRecoveryDefinitions[0].path)]}));
 });
 
 function assertBrowserReferenceSourceDrift(map,result){
