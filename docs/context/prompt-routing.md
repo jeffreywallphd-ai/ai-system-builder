@@ -4,6 +4,10 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Baseline
 
+- Add runtime and security context for private exact-file Model downloads.
+  Source manifests and accepted completion bind model/commit/digest/handle;
+  they grant no public approval, credential channel, hard quota or model readiness.
+
 - Headless saved-model selection uses the portable
   `skills/control-ai-system-builder/references/models.md` guide and the generated
   tool catalog from the same revision. Add the affected host pack and security

@@ -1,5 +1,9 @@
 # Context Pack: Runtime Model
 
+- Private manifest downloads require exact source/digest, same-worker capability and the accepted owner's frozen expectation through async completion. Reject a
+  different canonical cache handle before resolution. Closed files and verified
+  reads grant no hard quota, native custody, public approval, rights or readiness.
+
 - Pack name: `runtime`
 
 ## Purpose
@@ -186,14 +190,10 @@ install/load. Installed-model and native filesystem evidence remain separate. So
 The private Windows/NTFS read-only file-identity prerequisite is not composed into
 production. See `docs/architecture/runtime-model.md` for bounded retained handle
 chains, exact identities, actual native-close fencing and qualification limits.
-It grants no model ownership, stable tree-size proof, offload recovery or delete/
-reveal authority; production controls and unknown staging remain fail-closed.
+It grants no model ownership, stable tree-size proof, offload recovery or delete/reveal authority; production controls and unknown staging remain fail-closed.
 
-ADR-0045 also records the approved guarded qualification-restart direction. Its
-current readiness gate reports pending native protection without touching the
-retained slot. Unknown retained usage consumes the full existing 12 GiB budget;
-pure serialized arithmetic never grants a native capability, journal authority or
-fresh model lease. Full guard/job/crash and model qualification remain pending.
+ADR-0045 also records the approved guarded qualification-restart direction. Its current readiness gate reports pending native protection without touching the retained slot. Unknown retained usage consumes the full existing 12 GiB budget;
+pure serialized arithmetic never grants a native capability, journal authority or fresh model lease. Full guard/job/crash and model qualification remain pending.
 - Test-only Windows exit checks bind held read-only process handles through at most two parent links before app close. See `dev-tools/README.md` for launcher handling, weaker exited-fixture evidence and focused tests. These checks grant no process ownership, native/offload protection, full job-tree or model/parent qualification. PID-only qualification observation also accepts nine exact existing controller windows; root-bound shutdown and the CLI retain 30 seconds. See the runtime model and tool guide for limits. This does not change workload budgets or grant native restart authority. The private Windows file-identity helper is versioned, uncomposed read-only support. Its fixed model-free unit profile and separate native fixture cannot qualify a stable tree fence, file effects, protected accounting or offload restart; see the runtime model and adapter/tool guides. Dependency preparation in ordinary Desktop and Server shares the real Context-then-Worker helper. Preserve commands, dependency/backend gates and authentication. Optional bounded frozen stage labels stay session-only under ADR-0043; returned is not success. A production-rejected controlled qualifier can persist synthetic labels in a fresh exclusive cache. Ordinary directory checks grant no native fence, readiness, ownership or roadmap pass. See the Python adapter README and provided-data qualification guide. Desktop Copy diagnostics exports only cached closed startup facts from the actual host attempt; reads/copy add no probe, setup or install, and unknown versions stay unknown. Retiring a report attempt does not prove worker exit.
 
 - Approved Context has an explicit installed-only registry/supervisor seam with a bounded asynchronous read-only probe. Missing support never falls back to ordinary start; uncertainty retains IDs and staging. See `docs/architecture/runtime-model.md` for bound host admission, restrictive shared recovery, host composition and physical/model/native limits. Ordinary repair remains separate.

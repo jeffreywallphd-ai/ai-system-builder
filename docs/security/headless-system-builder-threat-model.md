@@ -1,5 +1,25 @@
 # Headless System Builder threat model
 
+## Private exact-file Model downloads
+
+Strict manifest presence cannot fall back to an ordinary download when null,
+malformed, unpinned, substituted or unsupported. Capture/freeze task data before
+readiness; retain the exact manifest with the existing bounded accepted owner.
+Require its model/commit/digest/canonical cache handle before local resolution.
+An echoed verification marker without the accepted expectation grants nothing.
+
+Bind the SDK cache explicitly and disable implicit provider credentials. Reuse
+same-repository snapshot/blob confinement; deny extra files, index escapes or
+duplicates and changed size/hash/EOF/path/descriptor facts without deletion,
+retry or alias change. Compare Windows path/handle ctime against each API's own
+baseline. Ordinary omission and existing format guards remain authoritative.
+
+Residual limits: unauthenticated transfer does not prove public rights.
+Declared free space and bounded hashing are not hard transfer quotas or native
+custody. Public effect/resource authority, private credentials, later loading
+and physical/model outcomes remain pending. Controlled fixtures cannot close
+these gaps.
+
 ## Paired provider-source preview
 
 An upgrade must not grant old clients new credential-bearing provider access.

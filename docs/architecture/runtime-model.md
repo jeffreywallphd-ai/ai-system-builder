@@ -1,5 +1,14 @@
 # Runtime Model
 
+Private exact-file downloads add a strict optional manifest and same-worker
+capability to the existing runtime. A separate path binds the validated cache
+and verifies closed selected bytes without entering ordinary retry/cleanup or
+alias paths. The bounded accepted-download owner captures a frozen expectation
+before readiness; async completion compares model/commit/digest/canonical handle
+before resolution. This adds no public acquisition approval or credential
+channel. Declared capacity and read integrity are not hard quotas, native
+custody, public rights, loadability or model quality.
+
 Model source access has a distinct consent capability. Legacy Desktop pairings
 retain their previous permissions; new trusted native plan-review consent may
 grant source reads. Managed access requires the explicit default-off operator

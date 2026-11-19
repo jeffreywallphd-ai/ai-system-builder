@@ -498,8 +498,8 @@ export function createPythonRuntimeAdapterFoundation(
         throw error;
       }
     },
-    resolveModelDownloadTaskResult: (payload) =>
-      client.resolveModelDownloadTaskResult(payload),
+    resolveModelDownloadTaskResult: (payload, expectedManifest) =>
+      client.resolveModelDownloadTaskResult(payload, expectedManifest),
     getModelStatus: () => client.getModelStatus(),
     unloadModels: () => client.unloadModels(),
   };

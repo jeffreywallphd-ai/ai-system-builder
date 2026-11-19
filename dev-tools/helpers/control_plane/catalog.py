@@ -168,8 +168,36 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-model-manifest-worker": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tasks/model_download_manifest.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_download_manifest.py",
+        ),
+        "sources": (
+            "modules/application/ports/runtime/python-runtime.port.ts",
+            "modules/application/ports/model/model-download-completion.port.ts",
+            "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
+            "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeHttpClient.unit.test.ts",
+            "modules/adapters/runtime/python/worker/models.py",
+            "modules/adapters/runtime/python/worker/app.py",
+            "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
+            "modules/adapters/runtime/python/worker/tasks/model_download_manifest.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_download_manifest.py",
+            "modules/adapters/runtime/python/README.md",
+            "modules/adapters/runtime/python/worker/README.md",
+        ),
+        "command": ("-m", "unittest", "-v",
+            "modules.adapters.runtime.python.worker.tests.test_model_download_manifest.ModelDownloadManifestTests"),
+    },
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (
+            "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/contracts/headless/headless-model-source-preview.ts",
             "modules/contracts/headless/tests/headless-model-source-preview.unit.test.ts",
             "modules/application/use-cases/model/headless-model-source-preview.use-case.ts",
@@ -195,6 +223,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_download_revision.py",
         ),
         "sources": (
+            "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/contracts/headless/headless-model-source-preview.ts",
             "modules/contracts/headless/tests/headless-model-source-preview.unit.test.ts",
             "modules/application/use-cases/model/headless-model-source-preview.use-case.ts",
@@ -257,6 +287,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/README.md",
         ),
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-source-preview.unit.test.ts",
             "modules/application/use-cases/model/tests/headless-model-source-preview.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-model-source-preview.unit.test.ts",
@@ -280,6 +311,8 @@ PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-types": {
         "companion_to": "headless-model-metadata-owner-unit",
         "sources": (
+            "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/contracts/headless/headless-model-source-preview.ts",
             "modules/contracts/headless/tests/headless-model-source-preview.unit.test.ts",
             "modules/application/use-cases/model/headless-model-source-preview.use-case.ts",
@@ -314,6 +347,8 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
             "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
             "modules/contracts/headless/tests/headless-model-source-preview.unit.test.ts",
             "modules/application/use-cases/model/tests/headless-model-source-preview.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-model-source-preview.unit.test.ts",

@@ -81,6 +81,7 @@ class GenerationModelAvailability:
     local_path: str | None = None
     cache_handle: str | None = None
     revision: str | None = None
+    verified_manifest_digest: str | None = None
 
 
 class GenerationRuntimeDependencyError(RuntimeError):
@@ -1306,6 +1307,53 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
             self._owner._bundle.lease.assert_guarded_reusable(context)
 
 
+def _ensure_manifest_model_downloaded(model_config: LocalModelConfig, manifest) -> GenerationModelAvailability:
+    from .model_download_manifest import ModelDownloadManifestError, verify_snapshot
+
+    try:
+        source = manifest.source
+        if source.totalBytes > _parse_huggingface_max_model_bytes():
+            raise ModelDownloadManifestError()
+        cache = _resolve_huggingface_cache_root()
+        if cache is None:
+            raise ModelDownloadManifestError()
+        # This protocol can use an already prepared host-owned cache only.
+        _require_plain_cache_directory(cache)
+        cache = cache.resolve(strict=True)
+        repository = cache / ("models--" + source.modelId.replace("/", "--"))
+        snapshots = repository / "snapshots"
+        snapshot = snapshots / source.revision
+        for directory in (repository, snapshots, snapshot):
+            if os.path.lexists(directory):
+                _require_plain_cache_directory(directory)
+        cached = False
+        if os.path.lexists(snapshot):
+            # Existing extras or corrupt bytes never become a resumable miss.
+            cached = verify_snapshot(manifest, str(snapshot), allow_missing=True)
+        if not cached:
+            # Conservative declared capacity, not a hard transport/disk quota.
+            if shutil.disk_usage(cache).free < source.totalBytes * 2 + 128 * 1024 * 1024:
+                raise ModelDownloadManifestError()
+            configure_huggingface_download_environment()
+            from huggingface_hub import snapshot_download
+            selected = snapshot_download(repo_id=source.modelId, revision=source.revision,
+                cache_dir=str(cache), allow_patterns=[file.path for file in source.files], token=False, local_files_only=False, max_workers=1)
+            if Path(selected) != snapshot:
+                raise ModelDownloadManifestError()
+        verify_snapshot(manifest, str(snapshot))
+        _validate_huggingface_snapshot_path(str(snapshot))
+        _validate_snapshot_profile_result(model_config, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(snapshot))
+        return GenerationModelAvailability(provider=model_config.provider, model_id=source.modelId,
+            downloaded=not cached, from_cache=cached, local_path=str(snapshot),
+            cache_handle=_to_huggingface_snapshot_handle(str(snapshot)), revision=source.revision,
+            verified_manifest_digest=manifest.manifestDigest)
+    except ModelDownloadManifestError:
+        raise
+    except Exception:
+        # No raw SDK/path/token detail, automatic retry, cleanup or alias change.
+        raise ModelDownloadManifestError() from None
+
+
 def ensure_generation_model_downloaded(
     model_config: LocalModelConfig,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
@@ -1320,6 +1368,16 @@ def ensure_generation_model_downloaded(
         type(revision) is not str or re.fullmatch(r"[a-f0-9]{40}", revision) is None
     ):
         raise ValueError("Model download revision must be an exact repository commit.")
+
+    if download_context is not None and "sourceManifest" in download_context:
+        # Presence is strict and cannot fall through to the ordinary broad cache,
+        # transport retry, cleanup or mutable alias paths below.
+        from .model_download_manifest import capture_manifest
+        manifest = capture_manifest(download_context["sourceManifest"], model_config.modelId, revision)
+        if download_context.get("artifactForm") not in (None, "full-model"):
+            from .model_download_manifest import ModelDownloadManifestError
+            raise ModelDownloadManifestError()
+        return _ensure_manifest_model_downloaded(model_config, manifest)
 
     configure_huggingface_download_environment()
     download_profile = _resolve_snapshot_download_profile(model_config, download_context)

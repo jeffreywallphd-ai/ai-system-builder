@@ -21,6 +21,8 @@ import type {
 import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import { TaskType } from "../../../contracts/runtime";
 import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPolicy";
+import {copyBoundedPassiveData} from "../../../contracts/shared";
+import {captureModelManifestPayload, freezeCapturedModelData, type RuntimeModelDownloadManifest} from "./client/modelDownloadManifest";
 
 const downloadIdentityError = "Model download status did not match its accepted task.";
 const downloadCancellationIdentityError = "Model download cancellation did not match its accepted task.";
@@ -234,7 +236,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
   const ensureWithoutInstalling = options.ensureRuntimeReadyWithoutInstalling;
   const trackedTasks = new Map<string, RuntimeTaskRecord>();
   // Status records are replaceable. This owner identifies one accepted start.
-  const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId }>();
+  const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId; readonly sourceManifest?: RuntimeModelDownloadManifest }>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
   const preparingTasks = new Set<string>();
   const installedContextIds = new Set<string>();
@@ -303,6 +305,9 @@ export function createPythonRuntimeTaskRegistryAdapter(
       request: StartRuntimeTaskRequest,
     ): Promise<StartRuntimeTaskResult> {
       const { workspaceId, taskType } = request;
+      const sourceSelection = taskType === TaskType.MODEL_DOWNLOAD ? captureModelManifestPayload(request.payload) : undefined;
+      if (sourceSelection?.manifest) request = freezeCapturedModelData({
+        ...(copyBoundedPassiveData(request) as unknown as StartRuntimeTaskRequest), payload: sourceSelection.payload});
       if (!isWorkspaceId(workspaceId)) {
         throw new Error("Workspace id is required for python runtime tasks.");
       }
@@ -464,7 +469,8 @@ export function createPythonRuntimeTaskRegistryAdapter(
         progress: preflight?.progress,
         queuedAt: preflight?.queuedAt ?? new Date().toISOString(),
       });
-      if (modelDownload) acceptedModelDownloads.set(requestId, { workspaceId });
+      if (modelDownload) acceptedModelDownloads.set(requestId, { workspaceId,
+        ...(sourceSelection?.manifest ? {sourceManifest: sourceSelection.manifest} : {}) });
       return result;
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
@@ -508,6 +514,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       ) {
         const completion = await runtimePort.resolveModelDownloadTaskResult(
           status.data,
+          downloadOwner?.sourceManifest,
         );
         if (acceptedModelDownloads.get(requestId) !== downloadOwner) {
           throw new Error(downloadIdentityError);

@@ -1,5 +1,14 @@
 # Python runtime adapter
 
+Private `sourceManifest` downloads require an exact source/digest and the same
+worker's `ensure-model-download.source-manifest-v1` capability before dispatch.
+The bounded async registry retains the frozen manifest before readiness;
+completion requires its exact model/revision/digest/cache handle before local
+resolution. Results marked as manifest-verified without an accepted expectation
+deny. Omitted requests retain their wire behavior. This grants no public
+acquisition approval. Declared capacity and verified-at-read bytes are not hard
+quotas, native custody, private-provider authority or model readiness.
+
 The existing model-download request supports an optional exact repository commit
 through `revision`. The client captures pinned input before transport awaits and
 requires the worker to confirm the same model/revision.

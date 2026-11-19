@@ -1,0 +1,26 @@
+{
+  "schema_version": "headless-model-manifest-observation-v1",
+  "scope": "Optional private source-manifest download protocol and accepted async completion",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Fresh current-candidate checks and actual separate-invocation review govern this component. This report grants no executed or parent pass.",
+  "controls": [
+    "Strict exact model/commit/source/digest presence precedes effects; omission retains ordinary behavior. Same-worker manifest capability is required before task POST. Copied frozen source expectations survive readiness and capability waits.",
+    "The existing bounded accepted-download owner retains the original manifest; completion compares target, digest and canonical cache handle before filesystem resolution. An unassociated manifest marker denies. No new ownership map or public approval operation is introduced.",
+    "The worker selects literal safe files in the explicit validated prepared host cache, uses token=False and one SDK worker, and retains existing format/size guards. Existing extra/corrupt data denies without cache cleanup, fallback, alias replacement or application retry.",
+    "Actual temporary files exercise bounded size/hash/EOF and stable path/descriptor facts. Metadata hashes use the Git blob header; weights require SHA256. Index selection is bounded and closed, rejects escapes and duplicate keys. Windows path/handle ctime is separately guarded against each API's baseline.",
+    "Declared free-space admission remains conservative metadata-based admission, not a hard network/disk quota. Verified-at-read bytes are separate from native custody, later loading and quality."
+  ],
+  "retained_failures": [
+    "The first DTO import through tasks triggered that package's existing eager imports and a circular models import. Canonical wire DTOs moved into worker models.py; the task helper imports those completed definitions. No worker task initialization policy changed.",
+    "A real Windows fixture exposed different ctime observations between path and descriptor stat APIs. Their common file identity facts are compared across APIs; each full ctime baseline remains checked before/after within its own API. Growing/replaced files and descriptor drift still deny.",
+    "Initial strict TypeScript checking found three untyped fixture callback parameters. Explicit types corrected the tests; no production check or compiler option changed.",
+    "The sandbox stalled the existing authenticated worker HTTP fixture. The owned run was stopped and its log retained; the same controlled manifest/revision set passed outside the sandbox without external network or model execution.",
+    "Independent preflight found an implicit SDK cache destination, missing accepted async manifest association and an unbound completion handle. The implementation binds cache_dir, carries the frozen accepted expectation and checks the exact canonical handle, with focused regression fixtures. Final governed checks/review remain required."
+  ],
+  "qualification_limits": [
+    "The Windows relative-symlink probe was unavailable with winerror1314. This component claims actual regular-file and controlled protocol evidence only; it adds no native symlink/lifetime qualification or guard relaxation.",
+    "No external/model download, real weights, runtime activation, generation, training or output accuracy was exercised. Existing accepted accuracy results remain closed.",
+    "Unauthenticated transfer does not establish public provenance, license rights or private/gated credential support. Cached bytes do not gain those properties.",
+    "Public plan admission, actual transfer/resource enforcement, task recovery/presentation and physical model/host outcomes remain I7 work. No Model package, increment or parent criterion is closed by this private prerequisite."
+  ]
+}

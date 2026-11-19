@@ -10,6 +10,7 @@ import type {
 } from "../../../../contracts/runtime";
 import type { CompletedModelDownload } from "../../../../application/ports/model";
 import {normalizeModelDownloadRevision} from "../../../../contracts/model";
+import {captureModelManifestPayload, captureManifestExpectation, readVerifiedManifestDigest, type RuntimeModelDownloadManifest} from "./modelDownloadManifest";
 import { randomUUID } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -35,6 +36,7 @@ export interface PythonRuntimeHttpClient {
     provider: "transformers";
     modelId: string;
     revision?: string;
+    sourceManifest?: RuntimeModelDownloadManifest;
     inferenceMode?: string;
     taskTags?: string[];
     artifactForm?: string;
@@ -42,12 +44,14 @@ export interface PythonRuntimeHttpClient {
     provider: "transformers";
     modelId: string;
     revision?: string;
+    verifiedManifestDigest?: string;
     downloaded: boolean;
     fromCache: boolean;
     localPath?: string;
   }>;
   resolveModelDownloadTaskResult(
     payload: unknown,
+    expectedManifest?: RuntimeModelDownloadManifest,
   ): Promise<CompletedModelDownload>;
   getModelStatus(): Promise<PythonRuntimeModelStatusResult>;
   unloadModels(): Promise<PythonRuntimeUnloadModelsResult>;
@@ -198,6 +202,7 @@ async function mapModelDownloadPayload(
   payload: unknown,
   cacheRoot: string,
   assertCurrent: () => void = () => {},
+  expectedManifest?: {readonly modelId: string; readonly revision: string; readonly manifestDigest: string},
 ) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error(
@@ -218,6 +223,11 @@ async function mapModelDownloadPayload(
   }
 
   const revision = normalizeModelDownloadRevision(record.revision);
+  const verifiedManifestDigest = readVerifiedManifestDigest(record.verifiedManifestDigest);
+  if (expectedManifest && (record.modelId !== expectedManifest.modelId || revision !== expectedManifest.revision ||
+      verifiedManifestDigest !== expectedManifest.manifestDigest ||
+      record.modelHandle !== `models--${expectedManifest.modelId.replace("/", "--")}/snapshots/${expectedManifest.revision}`))
+    throw new Error("The selected model files could not be verified.");
   const modelId = record.modelId, downloaded = record.downloaded === true, fromCache = record.fromCache === true;
   const localPath = await resolveModelCacheHandle(
     cacheRoot,
@@ -229,6 +239,7 @@ async function mapModelDownloadPayload(
     provider: "transformers" as const,
     modelId,
     ...(revision === undefined ? {} : {revision}),
+    ...(verifiedManifestDigest === undefined ? {} : {verifiedManifestDigest}),
     downloaded,
     fromCache,
     localPath,
@@ -403,8 +414,9 @@ export function createPythonRuntimeHttpClient(
     async ensureModelDownloaded(request) {
       const assertCurrent = captureOwnership?.() ?? (() => {});
       assertCurrent();
-      const revision = normalizeModelDownloadRevision(request.revision);
-      const captured = revision === undefined ? request : structuredClone({...request, revision});
+      const selected = captureModelManifestPayload(request);
+      const revision = normalizeModelDownloadRevision(selected.payload.revision);
+      const captured = revision === undefined ? selected.payload : structuredClone({...selected.payload, revision});
       assertHuggingFaceModelId(captured.modelId);
       const requestId = `model-download-${randomUUID()}`;
       await this.startTask({
@@ -441,10 +453,14 @@ export function createPythonRuntimeHttpClient(
             status.data,
             modelCacheRoot,
             assertCurrent,
+            selected.manifest ? {modelId: selected.manifest.source.modelId, revision: selected.manifest.source.revision,
+              manifestDigest: selected.manifest.manifestDigest} : undefined,
           );
           assertCurrent();
           if (revision !== undefined && (result.revision !== revision || result.modelId !== captured.modelId))
             throw new Error("Pinned model download revision could not be confirmed.");
+          if (selected.manifest && result.verifiedManifestDigest !== selected.manifest.manifestDigest)
+            throw new Error("The selected model files could not be verified.");
           return result;
         }
         if (status.status === "failed" || status.status === "cancelled") {
@@ -469,11 +485,16 @@ export function createPythonRuntimeHttpClient(
       );
     },
 
-    async resolveModelDownloadTaskResult(payload) {
+    async resolveModelDownloadTaskResult(payload, expectedManifest) {
+      const expected = expectedManifest === undefined ? undefined : captureManifestExpectation(expectedManifest);
+      if (!expected && payload && typeof payload === "object" && "verifiedManifestDigest" in payload)
+        throw new Error("The model completion requires its accepted source manifest.");
       return mapModelDownloadPayload(
         "/tasks/:requestId",
         payload,
         modelCacheRoot,
+        captureOwnership?.() ?? (() => {}),
+        expected ? {modelId: expected.source.modelId, revision: expected.source.revision, manifestDigest: expected.manifestDigest} : undefined,
       );
     },
 
@@ -527,6 +548,8 @@ export function createPythonRuntimeHttpClient(
     },
     async startTask(request: StartPythonRuntimeTaskRequest) {
       assertRuntimeRequestId(request.requestId);
+      const selection = request.taskType === "ensure-model-download" ? captureModelManifestPayload(request.payload) : {payload: request.payload};
+      if (selection.manifest) request = {...request, payload: selection.payload};
       const body = request.payload;
       const revision = request.taskType === "ensure-model-download" && body !== null && typeof body === "object" && !Array.isArray(body)
         ? normalizeModelDownloadRevision((body as {revision?: unknown}).revision) : undefined;
@@ -538,6 +561,8 @@ export function createPythonRuntimeHttpClient(
         assertCurrent();
         if (!capabilities.capabilities.includes("ensure-model-download.exact-revision-v1"))
           throw new Error("Exact model version downloads are unavailable for this worker.");
+        if (selection.manifest && !capabilities.capabilities.includes("ensure-model-download.source-manifest-v1"))
+          throw new Error("Exact model file downloads are unavailable for this worker.");
       }
       const timeoutMs = Math.min(
         Math.max(request.timeoutMs ?? defaultTaskTimeoutMs, 1_000),

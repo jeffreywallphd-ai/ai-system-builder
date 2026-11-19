@@ -1,5 +1,19 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private exact-file download protocol
+
+Approved I7 first requires an optional strict source manifest in the existing
+runtime. Preserve omission, require exact model/commit/digest and same-worker
+capability before dispatch, and bind the SDK to the captured validated cache.
+The separate manifest path verifies closed selected files while preserving bad
+retained data; ordinary fallback/retry/cleanup and alias mutation cannot run.
+The bounded accepted owner captures the frozen manifest before readiness;
+private async completion requires its exact target/digest/canonical handle.
+The initial transfer profile is unauthenticated (`token=False`), not a public
+provenance or license assertion. It adds no secret channel or public approval.
+Declared storage admission and read integrity do not replace hard-resource,
+native lifetime, loading or model qualification.
+
 ### Scoped Model source preview
 
 Do not extend historical pairing authority. Persist `modelSourceRead:true` only

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+import hashlib
+import json
+import re
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator, model_validator
 
@@ -36,6 +39,109 @@ class PythonRuntimeCapabilitiesResult(BaseModel):
     totalAcceleratorMemoryBytes: StrictInt | None = Field(default=None, gt=0, le=2 ** 53 - 1)
 
 
+MAX_MODEL_DOWNLOAD_SOURCE_BYTES = 20 * 1024 ** 3
+MAX_MODEL_DOWNLOAD_SOURCE_FILES = 64
+MODEL_DOWNLOAD_ANCILLARY_FILES = frozenset(("config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+    "special_tokens_map.json", "added_tokens.json", "tokenizer.model", "vocab.json", "vocab.txt", "merges.txt",
+    "model.safetensors.index.json", "chat_template.jinja", "LICENSE", "LICENSE.txt", "LICENSE.md"))
+_MODEL_SOURCE_CREDENTIAL = re.compile(r"\b(?:AKIA[A-Z0-9]{16}|(?:sk[-_](?:proj-)?|gh[pousr]_|github_pat_|hf_|xox[baprs]-)[A-Za-z0-9_-]{16,})\b")
+
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+
+class _Integrity(_Strict):
+    algorithm: Literal["sha256", "git-blob-sha1"]
+    digest: str
+
+    @model_validator(mode="after")
+    def exact_digest(self):
+        length = 64 if self.algorithm == "sha256" else 40
+        if re.fullmatch(r"[a-f0-9]{" + str(length) + "}", self.digest) is None:
+            raise ValueError("Invalid model source digest.")
+        return self
+
+
+class _File(_Strict):
+    path: str
+    sizeBytes: Annotated[StrictInt, Field(ge=1, le=MAX_MODEL_DOWNLOAD_SOURCE_BYTES)]
+    integrity: _Integrity
+
+    @model_validator(mode="after")
+    def exact_file(self):
+        if (re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", self.path) is None or
+                ".." in self.path or self.path.endswith((".", " ")) or _MODEL_SOURCE_CREDENTIAL.search(self.path) or
+                re.match(r"^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)", self.path, re.I) or
+                self.path not in MODEL_DOWNLOAD_ANCILLARY_FILES and not self.path.endswith(".safetensors") or
+                self.path.endswith(".safetensors") and self.integrity.algorithm != "sha256"):
+            raise ValueError("Invalid model source file.")
+        return self
+
+
+class _DeclaredLicense(_Strict):
+    kind: Literal["provider-declared"]
+    identifier: str
+
+    @field_validator("identifier")
+    @classmethod
+    def bounded_identifier(cls, value: str) -> str:
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+._-]{0,79}", value) is None or _MODEL_SOURCE_CREDENTIAL.search(value):
+            raise ValueError("Invalid model license declaration.")
+        return value
+
+
+class _UnknownLicense(_Strict):
+    kind: Literal["unknown"]
+
+
+class ModelDownloadSource(_Strict):
+    # Field order matches the normalized TypeScript source codec, not caller order.
+    provider: Literal["huggingface"]
+    modelId: str
+    revision: str
+    format: Literal["transformers-safetensors"]
+    license: _DeclaredLicense | _UnknownLicense
+    files: tuple[_File, ...]
+    totalBytes: Annotated[StrictInt, Field(ge=1, le=MAX_MODEL_DOWNLOAD_SOURCE_BYTES)]
+    excludedFileCount: Annotated[StrictInt, Field(ge=0, le=256)]
+    sourceVerification: Literal["provider-metadata"]
+    bytesVerification: Literal["not-checked"]
+    runtimeReadiness: Literal["not-checked"]
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def finite_array(cls, value: Any):
+        if type(value) is not list or not 3 <= len(value) <= MAX_MODEL_DOWNLOAD_SOURCE_FILES:
+            raise ValueError("Invalid model source files.")
+        return tuple(value)
+
+    @model_validator(mode="after")
+    def exact_source(self):
+        if (re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}/[A-Za-z0-9][A-Za-z0-9._-]{0,95}", self.modelId) is None or
+                ".." in self.modelId or _MODEL_SOURCE_CREDENTIAL.search(self.modelId) or re.fullmatch(r"[a-f0-9]{40}", self.revision) is None):
+            raise ValueError("Invalid model source target.")
+        names = [file.path.lower() for file in self.files]
+        if (len(set(names)) != len(names) or "config.json" not in names or
+                not any(name in names for name in ("tokenizer.json", "tokenizer.model", "vocab.txt")) or
+                not any(name.endswith(".safetensors") for name in names) or
+                sum(file.sizeBytes for file in self.files) != self.totalBytes):
+            raise ValueError("Invalid model source selection.")
+        object.__setattr__(self, "files", tuple(sorted(self.files, key=lambda file: file.path)))
+        return self
+
+
+class ModelDownloadManifest(_Strict):
+    source: ModelDownloadSource
+    manifestDigest: str
+
+    @model_validator(mode="after")
+    def exact_manifest_digest(self):
+        normalized = json.dumps(self.source.model_dump(mode="json"), separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        if self.manifestDigest != "sha256:" + hashlib.sha256(normalized).hexdigest():
+            raise ValueError("Invalid model source manifest digest.")
+        return self
+
+
 class EnsureModelDownloadRequest(BaseModel):
     provider: Literal["transformers"]
     modelId: str
@@ -43,6 +149,21 @@ class EnsureModelDownloadRequest(BaseModel):
     inferenceMode: str | None = None
     taskTags: list[str] | None = None
     artifactForm: str | None = None
+    sourceManifest: ModelDownloadManifest | None = None
+
+    @field_validator("sourceManifest", mode="before")
+    @classmethod
+    def reject_explicit_null_source(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("Model source manifest must be explicit and exact.")
+        return value
+
+    @model_validator(mode="after")
+    def exact_manifest_target(self):
+        if self.sourceManifest is not None and (self.sourceManifest.source.modelId != self.modelId or
+                self.sourceManifest.source.revision != self.revision or self.artifactForm not in (None, "full-model")):
+            raise ValueError("Model source manifest does not match the request.")
+        return self
 
     @field_validator("revision", mode="before")
     @classmethod
@@ -61,6 +182,7 @@ class EnsureModelDownloadResult(BaseModel):
     downloaded: bool
     fromCache: bool
     modelHandle: str | None = None
+    verifiedManifestDigest: str | None = Field(default=None, strict=True, pattern=r"^sha256:[a-f0-9]{64}$")
 
 
 class LoadedModelDescriptor(BaseModel):

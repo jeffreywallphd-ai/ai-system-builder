@@ -3,6 +3,8 @@ export interface CompletedModelDownload {
   readonly modelId: string;
   /** Worker-confirmed exact revision, never inferred from a request alone. */
   readonly revision?: string;
+  /** Verified selected bytes at the worker's read, never loading or future file authority. */
+  readonly verifiedManifestDigest?: string;
   readonly downloaded: boolean;
   readonly fromCache: boolean;
   readonly localPath: string;

@@ -564,6 +564,7 @@ def _ensure_model_download_data(
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     provider, model_id, revision = request.provider, request.modelId, request.revision
+    source_manifest = request.sourceManifest.model_dump(mode="json") if request.sourceManifest is not None else None
     availability = ensure_generation_model_downloaded(
         LocalModelConfig(provider=provider, modelId=model_id),
         on_progress=on_progress,
@@ -572,10 +573,14 @@ def _ensure_model_download_data(
             "taskTags": request.taskTags,
             "artifactForm": request.artifactForm,
             **({"revision": revision} if revision is not None else {}),
+            **({"sourceManifest": source_manifest} if source_manifest is not None else {}),
         },
     )
     if revision is not None and getattr(availability, "revision", None) != revision:
         raise GenerationModelDownloadRevisionError("Pinned model download revision could not be confirmed.")
+    if source_manifest is not None and getattr(availability, "verified_manifest_digest", None) != source_manifest["manifestDigest"]:
+        from .tasks.model_download_manifest import ModelDownloadManifestError
+        raise ModelDownloadManifestError()
     result = EnsureModelDownloadResult(
         provider=provider,
         modelId=model_id,
@@ -586,6 +591,10 @@ def _ensure_model_download_data(
     ).model_dump(mode="json")
     if revision is None:
         result.pop("revision", None)
+    if source_manifest is not None:
+        result["verifiedManifestDigest"] = source_manifest["manifestDigest"]
+    else:
+        result.pop("verifiedManifestDigest", None)
     return result
 
 
@@ -708,6 +717,7 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "context-artifact-operation",
         "ensure-model-download",
         "ensure-model-download.exact-revision-v1",
+        "ensure-model-download.source-manifest-v1",
         "model-status",
         "unload-model",
         "dataset-preparation.auto-inference-mode",

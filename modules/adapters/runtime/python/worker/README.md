@@ -13,6 +13,23 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+Optional manifest downloads validate exact source/commit/digest before effects.
+The separate path binds SDK `cache_dir` to the captured plain prepared host
+cache, selects literal files, disables implicit credentials with `token=False`,
+uses one worker and retains existing format/size guards. Bounded reads verify
+EOF, size and SHA256 or Git blob SHA1. Path and descriptor facts must stay
+stable; Windows ctime is checked against each API's own before/after baseline.
+Extra files, foreign links, altered bytes and index escapes/duplicates deny
+without fallback, cleanup, alias changes or application retries. Partial valid
+files may resume; retained corrupt/extra data is never repaired automatically.
+
+The free-space check uses declared bytes, not a hard stream/disk quota.
+Unauthenticated transfer does not prove public provenance or license rights,
+including for cached bytes. Verification proves that read, not durable native
+custody, future loading or model quality. Public approved acquisition and
+physical qualification remain separate. Ordinary omitted requests stay on the
+original branch.
+
 Source-derived Markdown Context packs preserve recorded source information,
 including complete license declarations, in both inspections and the archive
 manifest. Pack requests do not use the RAG-only `sourceChecks` setting. Missing
