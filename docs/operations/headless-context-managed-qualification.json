@@ -1,0 +1,507 @@
+{
+  "schema_version": "headless-context-managed-qualification-v1",
+  "status": "historical-component-observed-current-review-required",
+  "work_id": "headless-context-host-qualification",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "profile": {
+    "hosts": [
+      "authenticated Managed browser"
+    ],
+    "browser": "installed Chrome headless; capture disabled",
+    "persistence": "fresh local pinned PostgreSQL with runtime-role RLS",
+    "identity": "synthetic signed OIDC; loopback TLS and exact browser SPKI",
+    "transport": "official stdio MCP with independent plan-review and presentation credentials",
+    "runtime": "unchanged packaged production Python worker",
+    "inputs": "one pinned installed-model record; all sources, approvals, tasks, indexes and saves created through the actual app",
+    "queries": 2,
+    "expected_top_rows": [
+      0,
+      1
+    ],
+    "result_bound": 5,
+    "expected_citations_per_query": 2,
+    "scope": "two labeled synthetic support rows; not a statistical accuracy or whole-corpus retrieval claim"
+  },
+  "observations": [
+    {
+      "attempt": 1,
+      "reason": "The test fixture copied the pinned model outside the ordinary configured model-reader roots. Production safely refused RAG start.",
+      "observation": {
+        "schema_version": "headless-context-managed-observation-v1",
+        "source_revision": "source.8d8b80f766ed585c00195dd1c2af6ac98b95c1f9ef19fb8003daef37a48edd64",
+        "status": "failed",
+        "phase": "rag",
+        "facts": {
+          "packSaved": true,
+          "ragSaved": false,
+          "queryCitations": 0,
+          "queriesGrounded": 0,
+          "rebuildSaved": false,
+          "replayChecks": 2,
+          "denialChecks": 5,
+          "presentations": 0,
+          "revoked": false
+        },
+        "journeyPassed": false,
+        "cleanupPassed": true,
+        "workerStarted": true,
+        "failures": [
+          "Error"
+        ],
+        "model": "pinned-installed-MiniLM",
+        "worker": "unchanged-packaged-main",
+        "physicalFailedBuild": "pending",
+        "parentQualification": "pending"
+      },
+      "local_report": {
+        "path": "artifacts/qualification/visual-composer/d/managed-a84d53cb37a2466b858dba35521e91ed/headless-context-managed.json",
+        "sha256": "83e161518f2ef440aae33aea2bfa8ae47f46a60cd8640413b669268a85a0c296",
+        "native_report": "artifacts/qualification/visual-composer/d/managed-a84d53cb37a2466b858dba35521e91ed/managed-host-evidence.json",
+        "native_sha256": "6d3a693fc1d9df2f4daa454e15c1995a3e49693028278b234d8eaf87c09e8aca",
+        "native_checks": {
+          "cleanup_error_count": 0,
+          "physical_workers_observed": 1,
+          "physical_workers_alive_after_shutdown": 0
+        }
+      }
+    },
+    {
+      "attempt": 2,
+      "reason": "The same retained configuration failure was localized to RAG start using bounded repository filename and line metadata.",
+      "observation": {
+        "schema_version": "headless-context-managed-observation-v1",
+        "source_revision": "source.6c54fb76d3337afac31f00881052909367398088d7cc9ce8969af0ad49ea8804",
+        "status": "failed",
+        "phase": "rag",
+        "facts": {
+          "packSaved": true,
+          "ragSaved": false,
+          "queryCitations": 0,
+          "queriesGrounded": 0,
+          "rebuildSaved": false,
+          "replayChecks": 2,
+          "denialChecks": 5,
+          "presentations": 0,
+          "revoked": false
+        },
+        "journeyPassed": false,
+        "cleanupPassed": true,
+        "workerStarted": true,
+        "failures": [
+          "Error"
+        ],
+        "failureLocations": [
+          [
+            "headless-context-workflow.ts:82:29",
+            "headless-context-workflow.ts:139:15",
+            "managed-headless-context.ts:77:5"
+          ]
+        ],
+        "model": "pinned-installed-MiniLM",
+        "worker": "unchanged-packaged-main",
+        "physicalFailedBuild": "pending",
+        "parentQualification": "pending"
+      },
+      "local_report": {
+        "path": "artifacts/qualification/visual-composer/d/managed-ca82de747296409b8a4266c48f4bc9f8/headless-context-managed.json",
+        "sha256": "d538fc8d6d0a77096c1b5db17212a0019f8d6773600c01457d69a59352131178",
+        "native_report": "artifacts/qualification/visual-composer/d/managed-ca82de747296409b8a4266c48f4bc9f8/managed-host-evidence.json",
+        "native_sha256": "1ac220be765c600bce797430529789b170044f47537d49f60746ef727a27ab91",
+        "native_checks": {
+          "cleanup_error_count": 0,
+          "physical_workers_observed": 1,
+          "physical_workers_alive_after_shutdown": 0
+        }
+      }
+    },
+    {
+      "attempt": 3,
+      "reason": "The public headless.not-started result confirmed no RAG worker task was admitted.",
+      "observation": {
+        "schema_version": "headless-context-managed-observation-v1",
+        "source_revision": "source.ed6fd7fe2988b374d8d5799764d2ec696ad1c712c129b0d1f042296a5b10eef7",
+        "status": "failed",
+        "phase": "rag-start-headless.not-started",
+        "facts": {
+          "packSaved": true,
+          "ragSaved": false,
+          "queryCitations": 0,
+          "queriesGrounded": 0,
+          "rebuildSaved": false,
+          "replayChecks": 2,
+          "denialChecks": 5,
+          "presentations": 0,
+          "revoked": false
+        },
+        "journeyPassed": false,
+        "cleanupPassed": true,
+        "workerStarted": true,
+        "failures": [
+          "Error"
+        ],
+        "failureLocations": [
+          [
+            "headless-context-workflow.ts:84:29",
+            "headless-context-workflow.ts:141:15",
+            "managed-headless-context.ts:77:5"
+          ]
+        ],
+        "model": "pinned-installed-MiniLM",
+        "worker": "unchanged-packaged-main",
+        "physicalFailedBuild": "pending",
+        "parentQualification": "pending"
+      },
+      "local_report": {
+        "path": "artifacts/qualification/visual-composer/d/managed-56b7b7167d42422e85f728d0c805fffc/headless-context-managed.json",
+        "sha256": "cb0831f1fd1778a174ba79d85d5a6cdbc412744bfaa0f1058bdd19c553a62a05",
+        "native_report": "artifacts/qualification/visual-composer/d/managed-56b7b7167d42422e85f728d0c805fffc/managed-host-evidence.json",
+        "native_sha256": "319adf0dd00bda86628089f75adb41d190452fbcd22ac818053e7c7eb5cd2de1",
+        "native_checks": {
+          "cleanup_error_count": 0,
+          "physical_workers_observed": 1,
+          "physical_workers_alive_after_shutdown": 0
+        }
+      }
+    },
+    {
+      "attempt": 4,
+      "reason": "The corrected fixture built, saved, queried and rebuilt Context, but the test asserted remote revocation before the HTTP acknowledgment and required a Desktop-only denial code.",
+      "observation": {
+        "schema_version": "headless-context-managed-observation-v1",
+        "source_revision": "source.d9d3c2a31bb371173b4c99c72aa1a10051044381372d37094c89239b6e181a01",
+        "status": "failed",
+        "phase": "presentation",
+        "facts": {
+          "packSaved": true,
+          "ragSaved": true,
+          "queryCitations": 2,
+          "queriesGrounded": 2,
+          "rebuildSaved": true,
+          "replayChecks": 8,
+          "denialChecks": 19,
+          "presentations": 4,
+          "revoked": false
+        },
+        "journeyPassed": false,
+        "cleanupPassed": true,
+        "workerStarted": true,
+        "failures": [
+          "Error"
+        ],
+        "failureLocations": [
+          [
+            "headless-context-workflow.ts:239:65",
+            "managed-headless-context.ts:77:5"
+          ]
+        ],
+        "model": "pinned-installed-MiniLM",
+        "worker": "unchanged-packaged-main",
+        "physicalFailedBuild": "pending",
+        "parentQualification": "pending"
+      },
+      "local_report": {
+        "path": "artifacts/qualification/visual-composer/d/managed-f8852e683f534c94879f8c4ddf494de2/headless-context-managed.json",
+        "sha256": "cf8a59520f173227ff4a2700e2cc04ec82c02f28665dfa197e7ec7afadd15332",
+        "native_report": "artifacts/qualification/visual-composer/d/managed-f8852e683f534c94879f8c4ddf494de2/managed-host-evidence.json",
+        "native_sha256": "7b471ec33843bba684c624b9ce2742d5948c7cab89d0fc293ce49f20b75ec282",
+        "native_checks": {
+          "cleanup_error_count": 0,
+          "physical_workers_observed": 1,
+          "physical_workers_alive_after_shutdown": 0
+        }
+      }
+    },
+    {
+      "attempt": 5,
+      "reason": "The complete actual Managed Context workflow and owned shutdown passed after test-fixture root and revocation synchronization corrections.",
+      "observation": {
+        "schema_version": "headless-context-managed-observation-v1",
+        "source_revision": "source.0e5e3b90b562959c14f4107b0dbf339ebd60884ba046913ec6a48ee7a6f6d5fd",
+        "status": "passed",
+        "phase": "complete",
+        "facts": {
+          "packSaved": true,
+          "ragSaved": true,
+          "queryCitations": 2,
+          "queriesGrounded": 2,
+          "rebuildSaved": true,
+          "replayChecks": 8,
+          "denialChecks": 21,
+          "presentations": 4,
+          "revoked": true
+        },
+        "journeyPassed": true,
+        "cleanupPassed": true,
+        "workerStarted": true,
+        "failures": [],
+        "failureLocations": [],
+        "model": "pinned-installed-MiniLM",
+        "worker": "unchanged-packaged-main",
+        "physicalFailedBuild": "pending",
+        "parentQualification": "pending"
+      },
+      "local_report": {
+        "path": "artifacts/qualification/visual-composer/d/managed-8368e4b859ec46c7a048c6bfe8ceccd9/headless-context-managed.json",
+        "sha256": "76f03e2d4e3f57f3b620ac4937fd6b203bfaf9eb75ad777972ba2831e71cfff0",
+        "native_report": "artifacts/qualification/visual-composer/d/managed-8368e4b859ec46c7a048c6bfe8ceccd9/managed-host-evidence.json",
+        "native_sha256": "c712a15b32fc7ec72d7c8ebd5aca61181df351b58be0ea1cd3445c38ca82811d",
+        "native_checks": {
+          "cleanup_error_count": 0,
+          "physical_workers_observed": 1,
+          "physical_workers_alive_after_shutdown": 0
+        }
+      }
+    }
+  ],
+  "successful_observation_source_pins_lf_sha256": {
+    "dev-tools/scripts/qualification/visual-composer/managed-headless-context.ts": "ed8b07ff12e1105df18d8fb3091d317b7e174b5cd1282373e4f5f1e143576f6f",
+    "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts": "c981bac44a735065a1c9b11a0f6f7c2acdae941a68e3be625fd0bb04a100b983",
+    "dev-tools/scripts/qualification/visual-composer/headless-context-fixture.ts": "ef19cb76edf6098b0d7cd774bc7a7c335b3b7a1990246f2b397457d0b04e77a7",
+    "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-workflow.ts": "df0d2356a8cd26e93544762aa604f871f5f6a469ccfd5ff80be971e6fed1e2ee"
+  },
+  "completed_desktop_component": {
+    "work_id": "headless-context-desktop-qualified-census",
+    "receipt_digest": "e6a90c88b48b62752126705ad33b4b4cadbb3684208a4aa28f61b4778103973b",
+    "review_digest": "80f9573e45b86b35b51eb81d90dbcda062837428b26392e9bbbe4bb3446718fb",
+    "commit": "a9a53905b75655ea1f44708dab82a4a3e549d49f",
+    "scope": "Earlier Desktop Context component before the shared two-question extension. New current Desktop execution remains required."
+  },
+  "boundaries": [
+    "The successful observation is historical. Final current candidate verification and separate review must actually rerun both host callers after all tracked edits.",
+    "Test-fixture configuration and synchronization fixes changed no production root, policy, isolation, runtime handler, memory ceiling or dependency.",
+    "The two known-row checks do not replace the separate declared corpus/resource measurements or physical failed/interrupted-build profile.",
+    "No ordinary Qwen model accuracy or whole-software suite was rerun. Parent, remaining physical failure/replay and final roadmap qualification remain pending.",
+    "The Desktop product PID-default port-admission defect remains separate agent work before parent qualification. No fixture pass or census update qualifies its repair."
+  ],
+  "independent_review_refinement": {
+    "finding": "A failed or unavailable status read cannot prove that remote revocation finished.",
+    "correction": "The shared test now requires ok true with an ended result or an ended request, followed by separate bounded context/presentation denial and backend continuity. Focused negative cases reject unavailable, forbidden, active and malformed results.",
+    "historical_receipt": "d9ad678665902c0a4ff5b44230b1e6ab41a80cf7330a0a8620886b7f8f5bab4b",
+    "historical_receipt_scope": "All12groups passed before this test assertion was strengthened. That receipt is not current qualification and was not accepted for completion.",
+    "source_pins": "The four successful-observation pins above describe the earlier exact source, retained in the ignored observation archive. They are historical, not final candidate pins. Fresh candidate-bound execution and independent review remain required."
+  },
+  "superseded_work": {
+    "work_id": "headless-context-managed-journey",
+    "status": "released-unqualified",
+    "passed_pre_refinement_receipt": "d9ad678665902c0a4ff5b44230b1e6ab41a80cf7330a0a8620886b7f8f5bab4b",
+    "failed_refined_receipt": "c14d9f139040e927b04c0c776135e8c32d7f7ce4d970534b10e8925f04dedd64",
+    "scope": "Its16owned source edits were adopted by the explicitly scoped successor. No incomplete work or failed report was marked complete."
+  },
+  "desktop_startup_and_cleanup": {
+    "observations": [
+      {
+        "run_id": "2026-11-18t23-00-59-702z-8e87a1c0",
+        "observation": {
+          "schemaVersion": "headless-context-desktop-observation-v2",
+          "sourceRevision": "source.25a4366e4f7ecde5a58075f2fc1eb20fc40da886a5d3ad3e202d6f425119e44f",
+          "journeyPassed": false,
+          "cleanupPassed": false,
+          "phase": "pack-start-headless.not-started",
+          "facts": {
+            "packSaved": false,
+            "ragSaved": false,
+            "queryCitations": 0,
+            "queriesGrounded": 0,
+            "rebuildSaved": false,
+            "replayChecks": 0,
+            "denialChecks": 2,
+            "presentations": 0,
+            "revoked": false
+          },
+          "failures": [
+            "Error",
+            "AggregateError"
+          ],
+          "model": "pinned-installed-MiniLM",
+          "worker": "unchanged-packaged-main",
+          "managedHost": "pending",
+          "physicalFailedBuild": "pending",
+          "parentQualification": "pending"
+        },
+        "native_observation": {
+          "schemaVersion": "owned-host-outcome-v1",
+          "kind": "cleanup",
+          "sourceRevision": "source.25a4366e4f7ecde5a58075f2fc1eb20fc40da886a5d3ad3e202d6f425119e44f",
+          "status": "failed",
+          "mainPid": 27340,
+          "launchedPid": 23852,
+          "mainExitCode": 0,
+          "willQuitAcknowledged": true,
+          "cleanupMilliseconds": 186.98799999999756,
+          "physicalWorkersObserved": 1,
+          "physicalWorkersAlive": null,
+          "failures": 1,
+          "failureTypes": [
+            "Error"
+          ],
+          "failureStages": [
+            "worker-admission"
+          ],
+          "failureStage": "journey"
+        },
+        "local_report": "artifacts/qualification/visual-composer/runs/2026-11-18t23-00-59-702z-8e87a1c0/headless-context-desktop.json",
+        "local_report_sha256": "988f11e65281b00427d585b6236f2130ce7c977d6d1f25609c9d19e6cebd6f20",
+        "native_report": "artifacts/qualification/visual-composer/runs/2026-11-18t23-00-59-702z-8e87a1c0/owned-host/cleanup-930e73a65c43df43.json",
+        "native_report_sha256": "692169e5f9ee0cb9d806c68354f282aa4b966c0f0d1202266793add0585bf144"
+      },
+      {
+        "run_id": "2026-11-18t23-10-57-204z-487f99c7",
+        "observation": {
+          "schemaVersion": "headless-context-desktop-observation-v2",
+          "sourceRevision": "source.5bc93a8f3ab032654137f55bfb34b8095e365b5b6d77413f53aef846e15d75ca",
+          "journeyPassed": true,
+          "cleanupPassed": true,
+          "phase": "complete",
+          "facts": {
+            "packSaved": true,
+            "ragSaved": true,
+            "queryCitations": 2,
+            "queriesGrounded": 2,
+            "rebuildSaved": true,
+            "replayChecks": 8,
+            "denialChecks": 21,
+            "presentations": 4,
+            "revoked": true
+          },
+          "failures": [],
+          "startupFailures": [],
+          "model": "pinned-installed-MiniLM",
+          "worker": "unchanged-packaged-main",
+          "managedHost": "pending",
+          "physicalFailedBuild": "pending",
+          "parentQualification": "pending"
+        },
+        "native_observation": {
+          "schemaVersion": "owned-host-outcome-v1",
+          "kind": "cleanup",
+          "sourceRevision": "source.5bc93a8f3ab032654137f55bfb34b8095e365b5b6d77413f53aef846e15d75ca",
+          "status": "passed",
+          "mainPid": 15200,
+          "launchedPid": 12012,
+          "mainExitCode": 0,
+          "willQuitAcknowledged": true,
+          "cleanupMilliseconds": 286.8261999999959,
+          "physicalWorkersObserved": 1,
+          "physicalWorkersNativeObserved": 1,
+          "physicalWorkersPidAbsenceObserved": 0,
+          "physicalWorkersAlive": 0,
+          "failures": 0,
+          "failureTypes": [],
+          "failureStages": []
+        },
+        "local_report": "artifacts/qualification/visual-composer/runs/2026-11-18t23-10-57-204z-487f99c7/headless-context-desktop.json",
+        "local_report_sha256": "bd7232d79fe527cf75322817a4a9ce59daad650aa7a3f4eef7be48f4c588eef9",
+        "native_report": "artifacts/qualification/visual-composer/runs/2026-11-18t23-10-57-204z-487f99c7/owned-host/cleanup-930e73a65c43df43.json",
+        "native_report_sha256": "71bddf694594f6b526e57392f9e3d88a83c9279a12a3503a81c07d4bdc24eefd"
+      }
+    ],
+    "diagnosis": "The earlier raw exception was not retained. Later exact port probes reproduce Windows bind denial on both PID-derived failed ports, strongly matching startup refusal. Independently, the old cleanup comparison erased the valid configured launcher relation. The corrected helper distinguishes exact lineage, native exit and absence-only evidence; old failed reports remain unchanged.",
+    "correction": "Retain and recheck the full fixed marker. Reuse the existing strict direct-or-configured-launcher lineage rule. Live workers still require root-bound native observation; already-exited workers retain both PID-absence checks and are labeled absence-only. Refused native admission cannot fall back. A successful actual Context journey requires all observed workers native-backed and zero absence-only.",
+    "startup_diagnostics": "Future wrapper exceptions can record only an allowlisted builtin error class and bounded numeric OS codes in an exclusive owned-cache file. The reader bounds and revalidates it and removes PID. Exception messages, args, paths and arbitrary classes are never reported. A short fixed filename avoids Windows path-length failure in the test profile.",
+    "scope_limits": "The fresh successful Desktop observation has1native-backed worker,0absence-only,0alive and no startup diagnostic. It does not explain or retroactively qualify the earlier startup failure. Prior failed report, alive=null and marker are unchanged. No guard, runtime deadline or production behavior changed. Final current both-host execution and separate review remain required.",
+    "earlier_diagnosis_note": "The earlier actual pack start returned not-started before a task was dispatched. No exception class or startup error was retained at that time, so its root cause remains unknown. Separately, cleanup erased a valid configured Windows venv-launcher relation and wrongly required an already-exited worker to be a direct Electron child."
+  },
+  "scoped_successor": {
+    "adopted_work": "headless-context-managed-native-qualification",
+    "status": "released-unqualified",
+    "receipt": "67a1016f3239171e5583193c9734c045b3e867bc42dc8d6cc0d2a429f3e30e9b",
+    "reason": "Expand only to the two-source census definition update. The earlier16group result had14passes, a real Desktop PID-port refusal, and the correct census stale-facts denial. All20owned edits are adopted and their required checks remain."
+  },
+  "port_admission_diagnosis": {
+    "default_strategy": "43111 + abs(Electron main PID) %10000",
+    "failed_observations": [
+      {
+        "main_pid": 27340,
+        "derived_port": 50451
+      },
+      {
+        "main_pid": 17360,
+        "derived_port": 50471
+      }
+    ],
+    "successful_observation": {
+      "main_pid": 15200,
+      "derived_port": 48311
+    },
+    "local_probe": ".local-codex/headless-provider-import-20261117/context-desktop-port-admission.json",
+    "local_probe_sha256": "9fe08fc9f749afe20141b768a0b229116ef6ab6a3cca4682bcc1efae7fe2aa2b",
+    "probe_facts": [
+      {
+        "port": 50451,
+        "status": "refused",
+        "code": "EACCES"
+      },
+      {
+        "port": 50471,
+        "status": "refused",
+        "code": "EACCES"
+      },
+      {
+        "port": 48311,
+        "status": "available"
+      },
+      {
+        "port": 43172,
+        "status": "available"
+      }
+    ],
+    "method": "Bind only each exact listed port on127.0.0.1, then close immediately. No data transfer, ambient listener adoption or OS setting change.",
+    "conclusion": "Both recorded failed PID-derived ports reproducibly deny bind withEACCES; the successful and established qualification ports admit. This strongly matches the actual before-dispatch failures. No old startup exception was captured, so this is not proof that every earlier refusal had only this cause.",
+    "fixture_correction": "Require the full exact trusted qualification loopback triple and use43172, rather than discard it and fall back to the product PID guess. Missing, foreign or mismatched triple denies before profile/app launch. Runtime/model/authority/deadline rules are unchanged.",
+    "product_follow_up": "Agent work pending before parent qualification: replace the production PID-derived default with one OS-admitted loopback selection shared by client/worker, preserving explicit configuration and per-launch authentication. The fixture correction is not that product repair."
+  },
+  "census_definition_update": {
+    "prior_commit": "a9a53905b75655ea1f44708dab82a4a3e549d49f",
+    "before": "b1cae51bb8cedb8f5fdb61b1708cc94f02397f2dd2f5ecde277bf5a60d679223",
+    "after": "676d5e0f549cfc404293b65fae974f7bc76ad3278c3a9cec6c7d27112a2bb026",
+    "superseded_working_definition": "d6a0b4a4ad46f02c909c8627965720711dd87277e9e6995d6d81fa3cdf389371",
+    "pins": [
+      {
+        "path": "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+        "source": "d06d652b87b7264e5a40a9f8776eba620e3766f4f461fd8d2df61875695693d5",
+        "facts": "5a63641ef299dc809ed34e49b71773d74e93c0ba6fb1cfce288b4da70cf6d056"
+      },
+      {
+        "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        "source": "d175b702cbfcffa9395e923ea75d92990ea0ec2aa8d3755f198c9dc4aedbf170",
+        "facts": "c6fe461a726b920713e8ccbdcec3bb71bd14e709e66c7e895c4e91d32ca25c82"
+      }
+    ],
+    "scope": "Only the two native-cleanup source facts change. Preserve every original committed hash, baseline, status,39scenarios,131behaviorlinks,33hostfiles and all execution gaps. Definition metadata is never a host/parent pass.",
+    "focused_negative_guards": "Authentic full previous Git map and both exact old/new sources; forged/future/missing/extra facts, pins, status and gaps deny. All58fixed census tests passed."
+  },
+  "framework_regression_refinement": {
+    "superseded_receipt": "a721b29c098d0dd09d0a14ef9ddf16ab8d414d00734218c9ca0391ed93371dfe",
+    "status": "unqualified",
+    "observed": "Both real Context hosts and16of17selected groups passed; the controller census subprocess reached its unchanged45-second deadline. The exact isolated controller test reproduced TimeoutExpired.",
+    "correction": "Compute the unchanged input map digest once per browserTakeoverCensusLegacyView invocation and reuse it in22exact branch comparisons. Every recursive/separate call recomputes. Separate old-map/source-fact hashes, all assertions, gap checks and branch literals remain. No cross-call or working-fact cache and no deadline change.",
+    "focused_result": "The exact one-test controller wrapper passed in33.301seconds, executing the complete58-case census suite under its original45-second bound. This is a focused result, not final current-candidate or parent qualification.",
+    "local_result": ".local-codex/headless-provider-import-20261117/context-census-controller-refined.log",
+    "local_result_sha256": "ed58273bd125eaa8917261d97520c622cd9f46adc1d6b58468c57b69abe5807d"
+  },
+  "shared_source_routing_refinement": {
+    "superseded_receipt": "c81a1fb2fab23fc0ff706038cb9f8f868effb9d298a1c96dee51eceef8fa2b4a",
+    "status": "unqualified",
+    "observed": "Both real host flows and16of17groups passed. The remaining framework negative case correctly caught automatic Context check activation hiding a generic check when a shared cleanup source had been omitted by every legitimate UI owner.",
+    "correction": "Automatically activate the new Context cleanup groups only from their own exact test files. The shared cleanup utility requires explicit Context check selection, as required by this component; other owners and missing-owner/explicit-generic/unknown-source checks retain their original routing. Existing negative tests were not changed.",
+    "focused_result": "All7existing UI-run ownership/omission regressions and21Context routing tests passed. This supplies no final candidate or parent pass.",
+    "local_failure_log": ".local-codex/headless-provider-import-20261117/context-controller-ui-diagnostic-2.log",
+    "local_failure_sha256": "4a1634a940cacbb3e35d4859382c39eae2a17281133f456527ff5fcc512f689f"
+  },
+  "private_marker_diagnostic_refinement": {
+    "reason": "Exact complete marker comparisons must not place unknown legacy fields or malformed JSON excerpts in assertion diagnostics. This is a fixture reader correction, not a production authority change.",
+    "correction": "Hash the complete raw read Buffer, retain only finite identity fields plus its SHA-256, and recheck that exact byte digest after close. Parse failure throws a fixed error. Keep existing legacy schema compatibility, strict Headless lineage and all native/absence semantics.",
+    "focused_result": "All103cleanup tests passed, including valid private-field mutation and malformed-private-JSON denial without payload in nested errors, persisted reports or attachments.",
+    "census_scope": "Only the same two current working source-fact rows and their exact new witness pins change, still authenticated to complete committed a9a53905/b1cae51b. The earlier uncommitted d6 working definition is retained locally, not invented as Git history or a qualification pass."
+  },
+  "focused_framework_observation": {
+    "status": "passed-before-final-private-marker-refinement",
+    "tests": 473,
+    "pre_existing_skips": 1,
+    "duration_seconds": 252.981,
+    "local_result": ".local-codex/headless-provider-import-20261117/context-controller-full-refined.log",
+    "sha256": "9fdfc423f3be7cdd387511642b2d564fedcce2324c85767284499b4da0a9e376",
+    "scope": "Complete controller feature regression after the shared-source routing correction. Final current-candidate selected verification remains required after the private-marker/census refinement; no parent pass."
+  }
+}

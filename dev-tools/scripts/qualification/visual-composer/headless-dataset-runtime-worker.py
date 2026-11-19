@@ -80,6 +80,39 @@ def write_identity(cache, launcher_parent=None):
         os.close(descriptor)
 
 
+def startup_failure_record(error):
+    """Fixed diagnostic facts only: never exception messages, args or paths."""
+    names = {kind: kind.__name__ for kind in (
+        ImportError, ModuleNotFoundError, MemoryError, OSError, RuntimeError, ValueError, TimeoutError)}
+    record = {"schemaVersion": "headless-worker-startup-failure-v1", "pid": os.getpid(),
+              "errorType": names.get(type(error), "OtherError")}
+    if type(error) in (OSError, TimeoutError):
+        for name in ("errno", "winerror"):
+            value = getattr(error, name, None)
+            if type(value) is int and 0 <= value <= 65535:
+                record[name] = value
+    return record
+
+
+def write_startup_failure(cache, error):
+    regular_path(cache, True)
+    name = cache / f"q-start-failure-{os.getpid()}.json"
+    payload = json.dumps(startup_failure_record(error)).encode("utf-8")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(name, flags, 0o600)
+    try:
+        before = os.fstat(descriptor)
+        if (len(payload) > 1024 or not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                or os.write(descriptor, payload) != len(payload)):
+            raise ValueError("Qualification startup diagnosis was not recorded.")
+        os.fsync(descriptor)
+        after = regular_path(name, False)
+        if (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino) or after.st_nlink != 1 or after.st_size != len(payload):
+            raise ValueError("Qualification startup diagnosis changed.")
+    finally:
+        os.close(descriptor)
+
+
 def main():
     if sys.argv[1:]:
         raise ValueError("This qualification entry accepts no arguments.")
@@ -88,7 +121,14 @@ def main():
     entry = admit(root, Path.cwd(), cache, os.environ, os.name)
     import psutil  # Already a production worker dependency; no installation.
     write_identity(cache, owned_launcher_parent(os.getenv("PYTHON_RUNTIME_COMMAND"), psutil.Process))
-    runpy.run_path(str(entry), run_name="__main__")
+    try:
+        runpy.run_path(str(entry), run_name="__main__")
+    except Exception as error:
+        try:
+            write_startup_failure(cache, error)
+        except Exception:
+            pass  # Diagnosis cannot replace the original worker failure.
+        raise
 
 
 if __name__ == "__main__":

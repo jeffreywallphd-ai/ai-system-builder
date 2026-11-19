@@ -855,3 +855,29 @@ source handle or model/runtime path. Window context remains selector/view IDs.
 The current modal lists this permission. Existing consent/delivery/replay/revoke
 semantics and backend task independence remain. Controlled Core/SQLite/DOM/SDK
 and source-wiring checks do not qualify physical resources or actual app hosts.
+
+The opt-in Headless Context host tests also use a shared real-app workflow for
+packaged Desktop and the Managed browser. The latter uses the ordinary
+PostgreSQL/OIDC/TLS composition and production Python worker. Only pre-existing
+installed-model metadata is seeded; source import, approvals, generation,
+review, saving, retrieval and rebuild use the actual app owners. The fixture
+aligns the ordinary model-reader roots with its own fresh cache. This changes
+no production root policy or default host option. Two labeled synthetic
+questions test distinct row citations; they do not qualify broad retrieval
+accuracy or physical failure recovery. Historical observations and current
+candidate verification remain distinct.
+
+The Desktop test shutdown helper retains and rechecks the complete fixed worker
+identity, including the verified Windows venv launcher relation when present.
+It distinguishes held native process observation from two PID-absence probes for
+an already-exited process. The latter is not native exit proof. Live native
+admission cannot fall back. A successful actual Context case requires all worker
+observations to be native-backed. These fixture changes alter no production
+runtime, model path policy, deadline or source authority.
+
+The Context qualification caller must retain the established trusted loopback
+endpoint rather than discard it with other inherited environment variables.
+Validate the complete exact test host/port/base-URL triple before app launch.
+The product's PID-derived default can select a Windows-denied port; direct
+checks reproduced admission refusal for both failed fixture ports. The fixture
+binding is not a repair or qualification of that separate product defect.

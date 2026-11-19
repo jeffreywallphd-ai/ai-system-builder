@@ -167,12 +167,67 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-native-cleanup": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+            "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-lifecycle.mjs",
+        ),
+        "command": ("dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts"),
+    },
+    "headless-context-native-cleanup-node": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+            "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--",
+            "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts"),
+    },
+    "headless-context-managed-journey": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-context.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-workflow.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-context.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-workflow.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+            "dev-tools/scripts/qualification/visual-composer/headless-context-fixture.ts",
+        ),
+        "command": ("--preserve-symlinks", "--preserve-symlinks-main", "--import", "tsx",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-context.ts"),
+        "timeout": 600,
+    },
+    "headless-context-managed-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/tests/managed-headless-context.unit.test.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/tests/managed-headless-context.unit.test.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--", "dev-tools/scripts/qualification/tests/managed-headless-context.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs"),
+    },
     "headless-context-desktop-journey": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-workflow.ts",
         ),
         "sources": (
             "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-workflow.ts",
             "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
             # The former standalone registration is removed by this same move.
             "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless-context.e2e.spec.ts",

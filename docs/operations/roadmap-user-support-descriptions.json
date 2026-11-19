@@ -1318,6 +1318,42 @@
           "Older staging and offload files remain unchanged."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "76fa9ee5328514114cdda1a1a4becdfc09a484544b2a49bbafdb0b51065af5e2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop Context workflow passed its feature checks and independent review.",
+          "Users can build, save, search, rebuild and display the tested Context results.",
+          "The completed component is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9b583cac38f778c81c61fd612c05c2217afe65dc3418796c2586fc70e139eaf9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The current two-question checks for both interfaces and the physical failure tests are separate work.",
+          "The earlier Desktop component does not close the parent increment or final roadmap testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6a4d5405e2e8ec85689cc6b2b0a59739be8b9b0ac3791dd5fadc27cd53c04c25",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failures stay recorded.",
+          "Accepted model accuracy and whole-software tests were not repeated.",
+          "Production safety limits and older staging files are unchanged."
+        ]
+      }
     }
   ]
 }

@@ -699,3 +699,57 @@ or whole-device memory. This profile qualifies no runtime-adapter, policy, task
 ACK/accept, app/MCP/UI or native/offload boundary. No dependency/model download,
 production guard or recovery choice is changed. Disable only the opt-in test
 profile for rollback; preserve prior results and normal security controls.
+
+## Real Headless host fixture boundary
+
+The opt-in Managed Context fixture uses a new owned run, isolated PostgreSQL
+runtime role with RLS, synthetic OIDC, verified loopback TLS, same-origin browser
+routing and independent plan-review/presentation credentials. Its fixed model
+input is the previously authorized six-file MiniLM revision. Bounded regular-file,
+hash, directory identity and exclusive-copy checks refuse foreign or occupied
+destinations. The installed-model seed is one-use and requires the active owned
+workspace. It cannot seed approvals, tasks, output, vectors or policy.
+
+The fixture sets the existing model-reader configuration to its fresh cache;
+production allowed roots are not widened. The shared journey checks exact
+question fingerprints, original saved/source/model references, numeric citations,
+separate save, replay, bounded cards and current revocation. Browser revoke
+fences local delivery immediately; remote denial assertions wait for the actual
+server acknowledgment. Desktop retains its exact forbidden denial contract.
+The retirement assertion requires a successful ended status; unavailable or
+denied status reads cannot prove that revocation finished.
+Capture is disabled. Failure reporting contains fixed public codes, source
+filenames/line numbers and numeric facts, never exception text or private data.
+Owned process shutdown and source integrity must pass. These cooperative fixture
+checks do not replace native filesystem isolation, broader resource measurement,
+physical failed-build evidence or final roadmap qualification.
+
+The Windows test identity may include exactly one configured venv-launcher
+parent verified by the existing wrapper. Reuse the strict fixed-scenario/field
+validator; reject foreign, cyclic, extra or changed launcher facts. Recheck the
+entire marker after shutdown. The comparison uses the SHA-256 of the full read
+bytes, so an assertion cannot print
+legacy marker fields. Malformed JSON produces a fixed error without a parser
+excerpt. The marker is not re-serialized to define byte identity. This record
+proves lineage only. A live worker
+still needs its root-bound native handle and exact immediate parent; failed
+admission cannot use a numeric-PID fallback. Already-exited observations retain
+both absence probes and are reported separately. Successful Context host
+qualification requires native-backed workers. Never rewrite an older failed
+report or claim that a later pass proves an earlier unknown exit.
+
+Startup diagnosis remains local and finite: exact builtin error class and bounded
+OS number only, written exclusively after the fixed cache/entry admission.
+Never copy exception text, args, paths, arbitrary class names or model data.
+Diagnostic write failure cannot replace the original exception. The bounded
+reader rejects unexpected fields and removes PID from its result. These facts
+are diagnostics, not admission, native ownership or permission to retry an
+unknown old process. Existing runtime and memory controls stay unchanged.
+
+The test endpoint projection accepts only the complete trusted qualification
+triple and emits only those three fixed values. It cannot inherit an arbitrary
+URL, adopt another listener or relax runtime authentication. Exact missing,
+foreign and mismatched inputs deny before app launch. Two recorded PID-derived
+ports reproduce Windows bind denial; keeping the established test endpoint
+avoids that fixture error. Production default-port admission remains separate
+pending work, with explicit configuration and launch authentication preserved.

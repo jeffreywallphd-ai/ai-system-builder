@@ -12,6 +12,29 @@ recorded rebuild and separately consented presentation/revocation through MCP.
 They retain earlier failures. This component does not complete Managed browser,
 physical failure/recovery or final roadmap qualification.
 
+The [Managed Context observations](../operations/headless-context-managed-qualification.json)
+cover the actual browser, OIDC, PostgreSQL, TLS, MCP and production-worker path.
+Both app callers now use one shared workflow. Each asks two different questions
+and checks the expected source row first, with exact source hashes and citation
+coordinates. A display client has separate credentials and window consent.
+For Managed revocation, wait for the server to confirm that the lease ended.
+An unavailable or forbidden status is not that confirmation.
+Then require a bounded denial and no further display. Local UI fencing remains
+immediate. These small feature cases do not replace the declared corpus/resource,
+physical failure or final roadmap checks. Earlier failed attempts stay recorded.
+
+Earlier Desktop pack starts returned “not started” before task dispatch.
+Later direct checks confirmed that Windows denies both failed ports selected
+from the app process ID. The qualification fixture now retains its established
+test endpoint instead of using that product default. The product default-port
+repair remains separate pending work. No old exception was retained, so the
+port finding does not prove a sole cause for every historical refusal.
+A separate cleanup defect rejected the verified Windows Python launcher
+relationship. The corrected test distinguishes native exit from process absence
+and requires native-backed workers for a successful Desktop journey. Older
+failed reports remain unchanged. Bounded error classes, OS codes and passive
+runtime diagnostic enums can help diagnose future failures without raw logs.
+
 ## Prepare a Context question
 
 Use `aisb_preview_context_query` on a plan-review connection. Supply the exact

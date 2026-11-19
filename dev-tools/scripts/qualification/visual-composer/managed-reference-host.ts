@@ -18,6 +18,9 @@ import { stopVisualComposerOwnedProcess } from "./visual-composer-owned-process.
 import { seedReferenceBrowseFixture } from "./reference-browse-fixture";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createLocalWorkspaceRepository } from "../../../../modules/adapters/persistence/workspace";
+import { createLocalModelRegistryAdapter } from "../../../../modules/adapters/persistence/model";
+import { CONTEXT_FIXTURE_MODEL, CONTEXT_FIXTURE_MODEL_RECORD, installManagedContextFixtureModel,
+  verifyManagedContextFixtureModel } from "./headless-context-fixture";
 import { assertIsolatedPostgresInspection, assertOwnedWorkerObservation, assertOwnedDatasetWorkerIdentity, closeOwnedManagedServer } from "./managed-reference-lifecycle.mjs";
 
 const IMAGE = "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15";
@@ -26,8 +29,17 @@ const digest = (value: string) => createHash("sha256").update(value).digest("hex
 /** Cooperative build-freshness check for the exact provided-data entry/mapper.
  * This is not a native filesystem fence or a complete package inventory. */
 export async function assertCurrentProvidedDatasetWorker(root: string) {
+  return assertCurrentPackagedWorkerFiles(root, ["main.py", "tasks/prepare_training_dataset.py"]);
+}
+
+export async function assertCurrentContextWorker(root: string) {
+  return assertCurrentPackagedWorkerFiles(root, ["main.py", "models.py", "tasks/context_generation.py",
+    "tasks/context_artifact_operation.py", "tasks/local_text_generation.py"]);
+}
+
+async function assertCurrentPackagedWorkerFiles(root: string, names: readonly string[]) {
   assert.equal(await realpath(root), root);
-  for (const name of ["main.py", "tasks/prepare_training_dataset.py"]) {
+  for (const name of names) {
     const source = path.join(root, "modules/adapters/runtime/python/worker", name);
     const packaged = path.join(root, "out/ai-system-builder-win32-x64/resources/worker", name);
     const read = async (file: string) => {
@@ -39,7 +51,7 @@ export async function assertCurrentProvidedDatasetWorker(root: string) {
       assert.deepEqual([after.dev, after.ino, after.size, after.mtimeMs], [before.dev, before.ino, before.size, before.mtimeMs]);
       return createHash("sha256").update(bytes).digest("hex");
     };
-    assert.equal(await read(packaged), await read(source), "Rebuild the packaged worker before provided-data qualification.");
+      assert.equal(await read(packaged), await read(source), "Rebuild the packaged worker before qualification.");
   }
 }
 
@@ -93,10 +105,12 @@ export async function startManagedReferenceHost(databaseReference: string,
   options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean;
     readonly headlessPlanReview?: boolean;
     readonly headlessProvidedDatasets?: boolean;
+    readonly headlessContext?: boolean;
     readonly headlessBrowserPresentation?: boolean; readonly headlessMembershipLoss?: boolean; readonly headlessRollback?: boolean } = {}) {
   assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
   assert.ok(!options.headlessPlanReview || options.headlessAgent && !options.headlessDelivery);
   assert.ok(!options.headlessProvidedDatasets || options.headlessPlanReview && options.headlessBrowser);
+  assert.ok(!options.headlessContext || options.headlessProvidedDatasets && options.headlessPlanReview && options.headlessBrowser);
   assert.ok(!options.headlessBrowserPresentation || options.headlessBrowser);
   assert.ok(!options.headlessMembershipLoss || options.headlessBrowserPresentation);
   assert.ok(!options.headlessRollback || options.headlessBrowserPresentation &&
@@ -130,6 +144,8 @@ export async function startManagedReferenceHost(databaseReference: string,
   let restartFailed = false;
   let assetsRestarts = 0;
   let headlessRestarts = 0;
+  let contextModel: Awaited<ReturnType<typeof installManagedContextFixtureModel>> | undefined;
+  let contextSeedReserved = false;
   const workerScenario = process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO ?? "immediate";
   const checks: Record<string, unknown> = {};
   const report = {schema_version: "managed-reference-host-v1", run_id: id, source_revision: sourceRevision, profile: "windows-i5-14600kf-16g-rtx4060-reference", deployment: "controlled-campus-server-oidc-postgres", tls_verification: true, database_image: IMAGE, database_container_digest: digest(fixture.container), checks, status: "starting"};
@@ -276,6 +292,14 @@ export async function startManagedReferenceHost(databaseReference: string,
         PYTHON_RUNTIME_WORKER_DIR: worker, MANAGED_REFERENCE_PROVIDED_DATASETS: "1", AISB_HEADLESS_DATASET_QUALIFICATION: "1",
         HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", HF_DATASETS_OFFLINE: "1", PIP_NO_INDEX: "1"});
       checks.production_dataset_worker_with_normal_dependency_preparation = true;
+    }
+    if (options.headlessContext) {
+      await assertCurrentContextWorker(root);
+      contextModel = await installManagedContextFixtureModel(root, runRoot, process.env.VISUAL_COMPOSER_CONTEXT_MODEL_ACQUISITION);
+      // Configure the ordinary installed-model reader to the same fresh cache as
+      // the worker. Do not widen production roots or inherit a user's model home.
+      Object.assign(environment, {HF_HOME: environment.HF_HUB_CACHE, TRANSFORMERS_CACHE: environment.HF_HUB_CACHE});
+      checks.current_context_worker_and_pinned_installed_model = true;
     }
     if (options.headlessDelivery || options.headlessAgent) Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: "1"});
     if (options.headlessAgent) Object.assign(environment, {
@@ -462,8 +486,32 @@ export async function startManagedReferenceHost(databaseReference: string,
         }};
       } finally { startingSecondary = false; }
     }
+    const seedContextModel = options.headlessContext ? async (rawWorkspaceId: string) => {
+      const input = contextModel;
+      assert.ok(input && admitted && !stopped && !contextSeedReserved, "A Context input can be seeded once in the active owned fixture.");
+      contextSeedReserved = true;
+      const workspaceId = createWorkspaceId(rawWorkspaceId);
+      const verified = await verifyManagedContextFixtureModel(root, runRoot, input.directory);
+      assert.ok(admitted && !stopped);
+      const store = await openPostgresDatabase({config: resolvePostgresPoolConfig({DATABASE_URL: runtimeUrl, POSTGRES_SSL_MODE: "disable"}), migrate: false});
+      try {
+        const documents = store.documents.forOrganization(organizationId);
+        const workspace = await createLocalWorkspaceRepository({rootDirectory: environment.SERVER_STORAGE_ROOT, documents}).readWorkspace(workspaceId);
+        assert.ok(workspace?.organizationId === organizationId && workspace.status === "active" && admitted && !stopped);
+        const registry = createLocalModelRegistryAdapter({filePath: path.join(environment.SERVER_STORAGE_ROOT, "model-registry/models.json"),
+          rootDirectory: environment.SERVER_STORAGE_ROOT, documents, discovery: {enabled: false}});
+        assert.ok(!await registry.getModelRecord(workspaceId, CONTEXT_FIXTURE_MODEL_RECORD));
+        // Known installed input only: no task, approval, generated result or vector is seeded.
+        await registry.registerDownloadedModel({workspaceId, modelRecordId: CONTEXT_FIXTURE_MODEL_RECORD,
+          displayName: "Qualification MiniLM", source: "local", provider: "huggingface", artifactForm: "full-model",
+          modelId: CONTEXT_FIXTURE_MODEL, localPath: input.directory, serializationFormat: "safetensors",
+          sizeBytes: verified.bytes, taskTags: ["embeddings"]});
+        checks.context_installed_model_seeded_once = true;
+      } finally { await store.close(); }
+    } : undefined;
     const common = {runRoot, sourceRevision, token, serverOrigin, request, organizationId, fixtureWorkspaceId, workerCacheRoot: environment.HF_HUB_CACHE!,
-      ownedHostPid: children[0]!.pid!, restartAssetsServer, stop, report};
+      ownedHostPid: children[0]!.pid!, restartAssetsServer, stop, report,
+      ...(options.headlessContext ? {seedContextModel} : {})};
     const delivery = {startDeliveryWorker, caPem, workspaceId: String(positive.body.value.workspace.workspaceId)};
     const setSyntheticMembershipSuspended = options.headlessMembershipLoss ? async (suspend: boolean) => {
       assert.ok(admitted && !stopped, "The isolated managed fixture must still be active.");

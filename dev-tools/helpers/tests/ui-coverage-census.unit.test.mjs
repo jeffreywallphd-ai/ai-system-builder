@@ -1095,6 +1095,8 @@ function navigationCensusLegacyView(map,result){
 }
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
+// Only two immutable historical Git facts. Never cache working-source facts.
+const nativeCleanupHistoricalFacts = new Map();
 const browserTakeoverCensus = {
   priorCommit: "f98e3f25d31f386598dcf0f761f72f600cf6e2a2",
   before: "0e1e0993aded066e4061ffbdbf7f4ccfa490b12f68f7416a4505a9a8a0e7377b",
@@ -1105,7 +1107,42 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
-  if (sha(JSON.stringify(map)) === "b1cae51bb8cedb8f5fdb61b1708cc94f02397f2dd2f5ecde277bf5a60d679223") {
+  // The JSON map is unchanged between comparisons. Recompute for every call.
+  const mapDigest = sha(JSON.stringify(map));
+  if (mapDigest === "676d5e0f549cfc404293b65fae974f7bc76ad3278c3a9cec6c7d27112a2bb026") {
+    // Two native-cleanup definition updates. Preserve every prior pin/gap.
+    const saved = JSON.parse(historicalSource("a9a53905b75655ea1f44708dab82a4a3e549d49f", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "b1cae51bb8cedb8f5fdb61b1708cc94f02397f2dd2f5ecde277bf5a60d679223");
+    const expected = structuredClone(saved);
+    const pins = [
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+    "source": "d06d652b87b7264e5a40a9f8776eba620e3766f4f461fd8d2df61875695693d5",
+    "facts": "5a63641ef299dc809ed34e49b71773d74e93c0ba6fb1cfce288b4da70cf6d056"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+    "source": "d175b702cbfcffa9395e923ea75d92990ea0ec2aa8d3755f198c9dc4aedbf170",
+    "facts": "c6fe461a726b920713e8ccbdcec3bb71bd14e709e66c7e895c4e91d32ca25c82"
+  }
+];
+    for (const pin of pins) {
+      const previous = saved.sources.find(row => row.path === pin.path), changed = map.sources.find(row => row.path === pin.path);
+      assert(previous && changed);
+      if (!nativeCleanupHistoricalFacts.has(pin.path)) nativeCleanupHistoricalFacts.set(pin.path,
+        sourceFacts(pin.path, historicalSource("a9a53905b75655ea1f44708dab82a4a3e549d49f", pin.path)));
+      assert.deepEqual(previous.facts, nativeCleanupHistoricalFacts.get(pin.path));
+      assert.equal(changed.facts.sha256, pin.source);
+      assert.equal(sha(JSON.stringify(changed.facts)), pin.facts);
+      expected.sources.find(row => row.path === pin.path).facts = changed.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(saved, {...result,
+      gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
+  if (mapDigest === "b1cae51bb8cedb8f5fdb61b1708cc94f02397f2dd2f5ecde277bf5a60d679223") {
     // One additional declared Context case, with its body in a separate helper.
     // Keep the authentic baseline, all earlier facts, pins and execution gaps.
     const saved = JSON.parse(historicalSource("15bf2f65d8ffe8f42db85a5304f6b39b17c4aa00", censusDocument));
@@ -1120,7 +1157,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "d665f249a4b27e8408171a9a6250e2f8407cf2ec7db3acf7a43806599e102f20") {
+  if (mapDigest === "d665f249a4b27e8408171a9a6250e2f8407cf2ec7db3acf7a43806599e102f20") {
     // Exact query-preview catalog definition only; retain every execution pin/gap.
     const saved = JSON.parse(historicalSource("1e888b467430140cfb970bfb599c65f731178a79", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "700706d0871bb29b7d1e388ddb6a8304883f12ae908ff91dafa744defbe5eb2c");
@@ -1135,7 +1172,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "700706d0871bb29b7d1e388ddb6a8304883f12ae908ff91dafa744defbe5eb2c") {
+  if (mapDigest === "700706d0871bb29b7d1e388ddb6a8304883f12ae908ff91dafa744defbe5eb2c") {
     // Exact literal catalog alignment only; retain all original execution gaps.
     const saved = JSON.parse(historicalSource("f57248b306b761a4b2a27486fbfcfe46ab5045da", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "e4855cb47ed90f3a7fd1f91d094d7f3de8bc5dd36fe822dd6cdb1b6acbe330db");
@@ -1150,7 +1187,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "e4855cb47ed90f3a7fd1f91d094d7f3de8bc5dd36fe822dd6cdb1b6acbe330db") {
+  if (mapDigest === "e4855cb47ed90f3a7fd1f91d094d7f3de8bc5dd36fe822dd6cdb1b6acbe330db") {
     // Exact approved Context-pack definitions retain every original pin and qualification gap.
     const saved = JSON.parse(historicalSource("643703308533f5fa0bae2a7a5d4c1e5b9f056795", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "fbd95a73ad7dd275b91b0f38ede2e635c64dd4c43823b26505c510ed0a6b6525");
@@ -1165,7 +1202,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "fbd95a73ad7dd275b91b0f38ede2e635c64dd4c43823b26505c510ed0a6b6525") {
+  if (mapDigest === "fbd95a73ad7dd275b91b0f38ede2e635c64dd4c43823b26505c510ed0a6b6525") {
     // Exact Context preview definitions retain every original pin and qualification gap.
     const saved = JSON.parse(historicalSource("70a9bcaec4965dc99867e1ffc9a2e20d4bfd5890", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "a0639a7c72a472c090fdc38d59739c4d73162fb48db02040e3500e436b6cee86");
@@ -1180,7 +1217,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "a0639a7c72a472c090fdc38d59739c4d73162fb48db02040e3500e436b6cee86") {
+  if (mapDigest === "a0639a7c72a472c090fdc38d59739c4d73162fb48db02040e3500e436b6cee86") {
     // Exact Data handoff definitions retain every original pin and qualification gap.
     const saved = JSON.parse(historicalSource("35ea64fefeed44b57ebf5e50250f436adbd6ef02", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "3aa02314c058db81aea716dd4c7120fb80b3fff107dfe7e81e2bb4b5c67dfeee");
@@ -1195,7 +1232,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "3aa02314c058db81aea716dd4c7120fb80b3fff107dfe7e81e2bb4b5c67dfeee") {
+  if (mapDigest === "3aa02314c058db81aea716dd4c7120fb80b3fff107dfe7e81e2bb4b5c67dfeee") {
     // Reviewed-result definitions retain every original pin and qualification gap.
     const saved = JSON.parse(historicalSource("415a06f6c7bf6d1a80e511e50bc67fff85ad1bc4", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "644b61bae923b405fa29c0fecc9442b40ce53d5ca973932d92d4a27acdbf4673");
@@ -1210,7 +1247,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "644b61bae923b405fa29c0fecc9442b40ce53d5ca973932d92d4a27acdbf4673") {
+  if (mapDigest === "644b61bae923b405fa29c0fecc9442b40ce53d5ca973932d92d4a27acdbf4673") {
     // Exact dataset-task definitions preserve all historical qualification gaps.
     const saved = JSON.parse(historicalSource("28bc8bd5bf59df6f6821ff178286f49768f8652f", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "5b27ae15e2fc1cb718cc7c0a1758f72992614097f4c8dd1ebed634a8c94e0f66");
@@ -1225,7 +1262,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "5b27ae15e2fc1cb718cc7c0a1758f72992614097f4c8dd1ebed634a8c94e0f66") {
+  if (mapDigest === "5b27ae15e2fc1cb718cc7c0a1758f72992614097f4c8dd1ebed634a8c94e0f66") {
     // The source-preview assertions add no execution or parent qualification.
     const saved = JSON.parse(historicalSource("d97c9afd8b57969d62b8d29f6279034429bed89d", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "7a905e3bd5c98912ac1722d1fe709399265c5ff275e0ec141951cc1e295c1055");
@@ -1240,7 +1277,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "7a905e3bd5c98912ac1722d1fe709399265c5ff275e0ec141951cc1e295c1055") {
+  if (mapDigest === "7a905e3bd5c98912ac1722d1fe709399265c5ff275e0ec141951cc1e295c1055") {
     // Two finite dataset queries extend the exact catalog, not host qualification.
     const saved = JSON.parse(historicalSource("c53e3c142e0e95e6d1bcbda6d958e06795536eaf", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "b6603ce551b19d11e29ffc6acc763f3799b3ee2844262596fc4f9129d23cd037");
@@ -1255,7 +1292,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "b6603ce551b19d11e29ffc6acc763f3799b3ee2844262596fc4f9129d23cd037") {
+  if (mapDigest === "b6603ce551b19d11e29ffc6acc763f3799b3ee2844262596fc4f9129d23cd037") {
     // The added Data status tool changes only the exact packaged catalog witness.
     // Retain every earlier definition, source pin and unqualified drift gap.
     const saved = JSON.parse(historicalSource("02603eee738eb54e7bc57bd72ed331fcb848b6af", censusDocument));
@@ -1271,7 +1308,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
     });
   }
-  if (sha(JSON.stringify(map)) === "5d232df9dd9bd4f4a77bdaa41edab1a8d6778b37b9b66d108b2435618d9ebc0d") {
+  if (mapDigest === "5d232df9dd9bd4f4a77bdaa41edab1a8d6778b37b9b66d108b2435618d9ebc0d") {
     const previous = JSON.parse(historicalSource("33ac7e58e741ef3631847e81fcd22a7bd317678a", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650");
     const expected = structuredClone(previous);
@@ -1294,7 +1331,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650") {
+  if (mapDigest === "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650") {
     const previous = JSON.parse(historicalSource("109b1b9570067bb3bc180a3d48fd00de2d07e28a", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e");
     const expected = structuredClone(previous);
@@ -1319,7 +1356,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e") {
+  if (mapDigest === "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e") {
     const previous = JSON.parse(historicalSource("6eab4d03368ee2dd84213d35361b91d2a6b6f4a5", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc");
     const expected = structuredClone(previous);
@@ -1341,7 +1378,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc") {
+  if (mapDigest === "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc") {
     const previous = JSON.parse(historicalSource("87c2ca4890864e1ebc8225a84913d68d6630d9f0", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d");
     const expected = structuredClone(previous);
@@ -1364,7 +1401,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d") {
+  if (mapDigest === "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d") {
     const previous = JSON.parse(historicalSource("06e7ba6e321b97a5a3d0005e8dbfed96eff4cd6c", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91");
     const expected = structuredClone(previous);
@@ -1381,7 +1418,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91") {
+  if (mapDigest === "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91") {
     const previous = JSON.parse(historicalSource("4b25161185278a29f1300d32d5c28bf84ce4f741", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d");
     const expected = structuredClone(previous);
@@ -1398,7 +1435,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d") {
+  if (mapDigest === "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d") {
     const previous = JSON.parse(historicalSource("d259564ece0bb1d8adc32cc56005b878087c2dfa", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541");
     const expected = structuredClone(previous);
@@ -1413,7 +1450,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541") {
+  if (mapDigest === "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541") {
     const approvedStepCommit = "d259564ece0bb1d8adc32cc56005b878087c2dfa";
     const previous = JSON.parse(historicalSource("67f91d8f279da39bd7b15e383c08fe73313aa029", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb");
@@ -1429,7 +1466,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) === "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb") {
+  if (mapDigest === "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb") {
     const source = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
     const previous = JSON.parse(historicalSource("8a783d664ada27cf55d363e87d29817e08c0665e", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), browserTakeoverCensus.after);
@@ -1443,7 +1480,7 @@ function browserTakeoverCensusLegacyView(map,result) {
       ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
     ]});
   }
-  if (sha(JSON.stringify(map)) !== browserTakeoverCensus.after) return {map,result};
+  if (mapDigest !== browserTakeoverCensus.after) return {map,result};
   const {priorCommit,before,test,facts,view,inventory} = browserTakeoverCensus;
   const saved = JSON.parse(historicalSource(priorCommit,censusDocument));
   assert.equal(sha(JSON.stringify(saved)),before);
@@ -2743,4 +2780,27 @@ test("the dedicated Context registration preserves the entire prior census and i
     assert.throws(() => assertCompleteCurrentSourceDrift(changed, result));
   }
   assert.equal(JSON.stringify({map, result}), serialized);
+});
+
+test("native cleanup definition facts retain authentic prior sources and reject forged future or missing gaps", () => {
+  const map = JSON.parse(fs.readFileSync(censusDocument, "utf8")), result = {gaps: sourceDrift(map)};
+  const before = JSON.stringify({map, result});
+  // The current-map positive check above already walks the complete history.
+  for (const path of ["dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts","dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts"]) {
+    assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: result.gaps.filter(row => row.source !== path)}));
+    for (const mutate of [
+      row => row.facts.sha256 = "0".repeat(64),
+      row => row.facts.assertionCount++,
+      row => row.committed_sha256 = "0".repeat(64),
+    ]) {
+      const changed = structuredClone(map); mutate(changed.sources.find(row => row.path === path));
+      assert.throws(() => assertCompleteCurrentSourceDrift(changed, result));
+    }
+  }
+  assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: [...result.gaps, {kind: "unreviewed-source-drift", source: "dev-tools/unrelated-native.unit.test.ts"}]}));
+  const future = structuredClone(map); future.full_testing_status = "passed";
+  assert.throws(() => assertCompleteCurrentSourceDrift(future, result));
+  assert.equal(map.host_spec_files.length, 33); assert.equal(map.scenarios.length, 39);
+  assert.equal(map.scenarios.reduce((n, row) => n + row.behavior_links.length, 0), 131);
+  assert.equal(JSON.stringify({map, result}), before);
 });

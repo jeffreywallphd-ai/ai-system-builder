@@ -18,6 +18,13 @@ export const CONTEXT_FIXTURE_FILES = Object.freeze({
 });
 const fail = () => new Error("The fixed installed Context model fixture is unavailable.");
 
+export function contextFixtureRuntimeEndpoint(environment: Readonly<Record<string, string | undefined>>) {
+  if (environment.PYTHON_RUNTIME_HOST !== "127.0.0.1" || environment.PYTHON_RUNTIME_PORT !== "43172" ||
+      environment.PYTHON_RUNTIME_BASE_URL !== "http://127.0.0.1:43172")
+    throw new Error("The fixed Context qualification runtime endpoint is unavailable.");
+  return {PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: "43172", PYTHON_RUNTIME_BASE_URL: "http://127.0.0.1:43172"};
+}
+
 export function contextAcquisitionRelative(value: unknown): string {
   if (typeof value !== "string" || !/^\.local-codex\/model-qualification\/minilm-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/acquisition\.json$/.test(value)) throw fail();
   return value;
@@ -107,6 +114,36 @@ export async function installContextFixtureModel(root: string, profile: string, 
 
 export async function verifyContextFixtureModel(root: string, profile: string, supplied: string) {
   const expected = contextFixtureModelDestination(root, profile);
+  return verifyFixedModelDirectory(root, expected, supplied);
+}
+
+export function managedContextFixtureModelDestination(root: string, runRoot: string) {
+  const base = path.resolve(root, "artifacts/qualification/visual-composer/d");
+  if (!/^managed-[a-f0-9]{32}$/.test(path.relative(base, runRoot))) throw fail();
+  return path.join(runRoot, "runtime", "controlled-model-cache", "preinstalled-minilm");
+}
+
+export async function installManagedContextFixtureModel(root: string, runRoot: string, acquisition: unknown) {
+  const input = await readContextModelAcquisition(root, acquisition);
+  const directory = managedContextFixtureModelDestination(root, runRoot), cache = path.dirname(directory);
+  await requireContextFixtureDirectory(root, cache);
+  // The owned host just created this cache. Never add a model to an old cache.
+  assert.deepEqual(await readdir(cache), [], fail().message);
+  await mkdir(directory);
+  for (const item of input.files) {
+    await copyFile(path.join(input.directory, item.name), path.join(directory, item.name), constants.COPYFILE_EXCL);
+    await digestRegular(path.join(directory, item.name), item.bytes, item.sha256);
+  }
+  await readContextModelAcquisition(root, acquisition);
+  await verifyFixedModelDirectory(root, directory, directory);
+  return {directory, cache, bytes: input.bytes};
+}
+
+export async function verifyManagedContextFixtureModel(root: string, runRoot: string, supplied: string) {
+  return verifyFixedModelDirectory(root, managedContextFixtureModelDestination(root, runRoot), supplied);
+}
+
+async function verifyFixedModelDirectory(root: string, expected: string, supplied: string) {
   if (supplied !== expected) throw fail();
   await requireContextFixtureDirectory(root, expected);
   assert.deepEqual((await readdir(expected)).sort(), Object.keys(CONTEXT_FIXTURE_FILES).sort(), fail().message);
@@ -117,4 +154,34 @@ export async function verifyContextFixtureModel(root: string, profile: string, s
     await digestRegular(file, info.size, digest); bytes += info.size;
   }
   return {bytes};
+}
+
+/** Read only finite facts from this exact owned Desktop fixture after shutdown. */
+export async function readContextFixtureStartupFailures(root: string, profile: string) {
+  const cache = path.dirname(contextFixtureModelDestination(root, profile));
+  await requireContextFixtureDirectory(root, cache);
+  const names = (await readdir(cache)).filter(name => /^q-start-failure-[0-9]+\.json$/.test(name));
+  if (names.length > 4) throw fail();
+  const values: {errorType: string; errno?: number; winerror?: number}[] = [];
+  for (const name of names) {
+    const file = path.join(cache, name), before = await lstat(file);
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size < 1 || before.size > 1024 || await realpath(file) !== file) throw fail();
+    const descriptor = await open(file, "r");
+    try {
+      const info = await descriptor.stat();
+      if (info.dev !== before.dev || info.ino !== before.ino || info.size !== before.size) throw fail();
+      const bytes = Buffer.alloc(1025), {bytesRead} = await descriptor.read(bytes, 0, bytes.length, 0);
+      if (bytesRead !== info.size) throw fail();
+      const row = JSON.parse(bytes.subarray(0, bytesRead).toString("utf8"));
+      const keys = ["schemaVersion", "pid", "errorType", "errno", "winerror"];
+      if (!row || Object.keys(row).some(key => !keys.includes(key)) || row.schemaVersion !== "headless-worker-startup-failure-v1" ||
+          !Number.isInteger(row.pid) || row.pid <= 0 || name !== `q-start-failure-${row.pid}.json` ||
+          !["ImportError", "ModuleNotFoundError", "MemoryError", "OSError", "RuntimeError", "ValueError", "TimeoutError", "OtherError"].includes(row.errorType) ||
+          ["errno", "winerror"].some(key => row[key] !== undefined && (!Number.isInteger(row[key]) || row[key] < 0 || row[key] > 65535))) throw fail();
+      const after = await lstat(file);
+      if (after.dev !== info.dev || after.ino !== info.ino || after.size !== info.size || after.mtimeMs !== info.mtimeMs || after.nlink !== 1) throw fail();
+      values.push({errorType: row.errorType, ...(row.errno === undefined ? {} : {errno: row.errno}), ...(row.winerror === undefined ? {} : {winerror: row.winerror})});
+    } finally { await descriptor.close(); }
+  }
+  return values;
 }

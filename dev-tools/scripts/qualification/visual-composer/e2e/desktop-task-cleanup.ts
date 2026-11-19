@@ -5,6 +5,7 @@ import {readFile,readdir,lstat,writeFile,realpath,mkdir} from "node:fs/promises"
 import {createHash} from "node:crypto";
 import path from "node:path";
 import {observeOwnedNativeProcessExit} from "../owned-native-process-exit.mjs";
+import {assertOwnedDatasetWorkerIdentity} from "../managed-reference-lifecycle.mjs";
 
 export type DesktopRestartPhase = "before-restart" | "after-restart";
 export function ownedDesktopCleanupIdentity(project: string, title: string, phase?: DesktopRestartPhase) {
@@ -20,10 +21,16 @@ export async function persistOwnedHostReport(kind:"cleanup"|"worker-recovery",re
   expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
   expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
   const allowed=kind==="cleanup"
-    ? ["sourceRevision","status","mainPid","launchedPid","mainExitCode","willQuitAcknowledged","cleanupMilliseconds","physicalWorkersObserved","physicalWorkersAlive","failures","failureTypes","failureStages","failureStage","finalizationStage"]
+    ? ["sourceRevision","status","mainPid","launchedPid","mainExitCode","willQuitAcknowledged","cleanupMilliseconds","physicalWorkersObserved","physicalWorkersNativeObserved","physicalWorkersPidAbsenceObserved","physicalWorkersAlive","failures","failureTypes","failureStages","failureStage","finalizationStage"]
     : ["sourceRevision","scenario","transport","terminal","cleanupMilliseconds","physicalWorkersObserved","listenerRefusalObserved","transientConnectionResets"];
   expect(Object.keys(report).every(key=>allowed.includes(key))).toBe(true);
   if(kind==="cleanup") {
+    if(report.physicalWorkersNativeObserved!==undefined||report.physicalWorkersPidAbsenceObserved!==undefined) {
+      expect([report.physicalWorkersNativeObserved,report.physicalWorkersPidAbsenceObserved,report.physicalWorkersObserved]
+        .every(value=>typeof value==="number"&&Number.isInteger(value)&&value>=0&&value<=4)).toBe(true);
+      expect((report.physicalWorkersNativeObserved as number)+(report.physicalWorkersPidAbsenceObserved as number))
+        .toBeLessThanOrEqual(report.physicalWorkersObserved as number);
+    }
     expect(Array.isArray(report.failureTypes) && report.failureTypes.length <= 32 && report.failureTypes.every(isQualificationFailureType)).toBe(true);
     if (report.failureStages !== undefined) expect(Array.isArray(report.failureStages) && report.failureStages.length === report.failures && report.failureStages.length <= 32 && report.failureStages.every(isOwnedCleanupFailureStage)).toBe(true);
     if (report.failureStage !== undefined) expect(["journey","evidence-attach","evidence-save"].includes(report.failureStage as string)).toBe(true);
@@ -58,20 +65,26 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
   const cleanupIdentity = ownedDesktopCleanupIdentity(info.project.name, info.title, phase);
   const started=performance.now(),errors:unknown[]=[];let parentPid:number|undefined,observer:Awaited<ReturnType<typeof observeOwnedNativeProcessExit>>|undefined;
   let mainExitCode:number|undefined,physicalWorkersObserved=0,launchedPid:number|undefined,willQuitAcknowledged=false;
+  let physicalWorkersNativeObserved=0,physicalWorkersPidAbsenceObserved=0;
   const failureStages: OwnedCleanupFailureStage[] = [];
   const recordFailure = (stage: OwnedCleanupFailureStage, error: unknown) => {failureStages.push(stage);errors.push(error);};
   const ack=path.join(cache,cleanupIdentity.acknowledgment);
-  type Worker = {pid:number;parentPid:number;name:string;observer?:Awaited<ReturnType<typeof observeOwnedNativeProcessExit>>;admitted:boolean};
+  type Worker = {pid:number;parentPid:number;markerDigest:string;headlessProvidedData:boolean;name:string;observer?:Awaited<ReturnType<typeof observeOwnedNativeProcessExit>>;admitted:boolean};
   const workers:Worker[]=[];let workerNames:string[]|undefined;
   const validPid=(value:unknown):value is number=>typeof value==="number"&&Number.isInteger(value)&&value>0&&value<=0xffffffff;
   const names=async()=>(await readdir(cache)).filter(name=>/^qualification-worker-identity-[0-9]+\.json$/.test(name)).sort();
   const readIdentity=async(name:string)=>{
     const file=path.join(cache,name),stat=await lstat(file);
     expect(stat.isSymbolicLink()).toBe(false);expect(stat.size).toBeLessThanOrEqual(1024);
-    const identity=JSON.parse(await readFile(file,"utf8"));
+    const bytes=Buffer.from(await readFile(file));let identity;
+    try{identity=JSON.parse(bytes.toString("utf8"));}catch{throw new Error("The owned worker identity is malformed.");}
     expect(validPid(identity.pid)&&validPid(identity.parentPid)).toBe(true);
     expect(name).toBe(`qualification-worker-identity-${identity.pid}.json`);
-    return {pid:identity.pid as number,parentPid:identity.parentPid as number};
+    const headlessProvidedData=identity.scenario==="headless-provided-data";
+    if(headlessProvidedData||Object.hasOwn(identity,"configuredPythonLauncherParentPid"))
+      assertOwnedDatasetWorkerIdentity(identity,parentPid);
+    return {pid:identity.pid as number,parentPid:identity.parentPid as number,
+      markerDigest:createHash("sha256").update(bytes).digest("hex"),headlessProvidedData};
   };
   const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(error){if((error as NodeJS.ErrnoException).code!=="ESRCH")throw error;return false;}};
   try {
@@ -107,7 +120,14 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
         if(alive(worker.pid)) {
           worker.observer=await observeOwnedNativeProcessExit(worker.pid,{rootPid:parentPid!});
           expect(worker.observer.admission.parentPid).toBe(worker.parentPid);
-        }else expect(worker.parentPid).toBe(parentPid);
+          physicalWorkersNativeObserved++;
+        }else {
+          // The wrapper verifies exactly one configured Windows venv launcher.
+          // Its marker proves lineage only. Keep the two PID-absence checks and
+          // distinguish this observation from a held native process handle.
+          if(!worker.headlessProvidedData)expect(worker.parentPid).toBe(parentPid);
+          physicalWorkersPidAbsenceObserved++;
+        }
         worker.admitted=true;
       }catch(error){recordFailure("worker-admission",error);}
     }
@@ -124,7 +144,7 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
     try {
       if(!worker.admitted)continue;
       if(worker.observer)await worker.observer.outcome;
-      expect(await readIdentity(worker.name)).toEqual({pid:worker.pid,parentPid:worker.parentPid});
+      expect(await readIdentity(worker.name)).toEqual({pid:worker.pid,parentPid:worker.parentPid,markerDigest:worker.markerDigest,headlessProvidedData:worker.headlessProvidedData});
       // A held native handle identifies the original process object. A later
       // numeric-PID probe could instead find an unrelated replacement process.
       if(!worker.observer)await expect.poll(()=>alive(worker.pid),{timeout:5000}).toBe(false);
@@ -132,7 +152,7 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
     finally{try{await worker.observer?.close();}catch(error){recordFailure("observer-close",error);}}
   }
   try{expect(await names()).toEqual(workerNames);}catch(error){recordFailure("worker-list",error);}
-  const report={sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,status:errors.length?"failed":"passed",mainPid:parentPid,launchedPid,mainExitCode,willQuitAcknowledged,cleanupMilliseconds:performance.now()-started,physicalWorkersObserved,physicalWorkersAlive:errors.length?null:0,failures:errors.length,failureTypes:errors.map(safeQualificationFailureType),failureStages};
+  const report={sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,status:errors.length?"failed":"passed",mainPid:parentPid,launchedPid,mainExitCode,willQuitAcknowledged,cleanupMilliseconds:performance.now()-started,physicalWorkersObserved,physicalWorkersNativeObserved,physicalWorkersPidAbsenceObserved,physicalWorkersAlive:errors.length?null:0,failures:errors.length,failureTypes:errors.map(safeQualificationFailureType),failureStages};
   try {
     await finalizeQualificationEvidence(report, errors, async () => {
       if(process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID || !errors.length) await persistOwnedHostReport("cleanup",report,info,phase);

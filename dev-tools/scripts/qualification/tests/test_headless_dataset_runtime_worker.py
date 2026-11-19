@@ -61,6 +61,20 @@ class WrapperTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             fixture.write_identity(self.cache)
         self.assertEqual(identity.read_bytes(), before)
+        secret = "synthetic-private-message-and-path"
+        for error, expected in [(MemoryError(secret), "MemoryError"), (ModuleNotFoundError(secret), "ModuleNotFoundError"),
+                                (OSError(12, secret), "OSError"), (Exception(secret), "OtherError")]:
+            value = fixture.startup_failure_record(error)
+            self.assertEqual(value["errorType"], expected)
+            self.assertNotIn(secret, json.dumps(value))
+            self.assertLess(len(json.dumps(value)), 1024)
+        fixture.write_startup_failure(self.cache, OSError(12, secret))
+        diagnostic = self.cache / f"q-start-failure-{os.getpid()}.json"
+        self.assertEqual(json.loads(diagnostic.read_text())["errno"], 12)
+        original = diagnostic.read_bytes()
+        with self.assertRaises(FileExistsError):
+            fixture.write_startup_failure(self.cache, ValueError(secret))
+        self.assertEqual(diagnostic.read_bytes(), original)
 
     def test_only_the_exact_configured_venv_launcher_can_supply_one_parent(self):
         executable = self.root / "python.exe"

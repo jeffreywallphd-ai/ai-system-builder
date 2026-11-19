@@ -131,6 +131,68 @@ it("admits a live real-worker shape through its launcher before closing the app"
   await closeDesktopAndQualifyOwnedWorkers(app(),cache,info());
   expect(io.nativeCalls).toEqual([{pid:401,rootPid:301,closed:false},{pid:501,rootPid:401,closed:false}]);
   expect(io.disposed).toBe(2);expect(JSON.parse(io.writes[0]!).status).toBe("passed");
+  expect(JSON.parse(io.writes[0]!).physicalWorkersNativeObserved).toBe(1);
+  expect(JSON.parse(io.writes[0]!).physicalWorkersPidAbsenceObserved).toBe(0);
+});
+it("records an already-exited verified Python launcher as absence-only, never native exit proof",async()=>{
+  const marker={pid:501,parentPid:470,scenario:"headless-provided-data",configuredPythonLauncherParentPid:401};
+  io.files.set(path.join(cache,"qualification-worker-identity-501.json"),JSON.stringify(marker));
+  await closeDesktopAndQualifyOwnedWorkers(app(),cache,info());
+  const report=JSON.parse(io.writes[0]!);
+  expect(report.status).toBe("passed");expect(report.physicalWorkersNativeObserved).toBe(0);
+  expect(report.physicalWorkersPidAbsenceObserved).toBe(1);
+  expect(io.nativeCalls).toHaveLength(1);expect(vi.mocked(process.kill).mock.calls).toEqual([[501,0],[501,0]]);
+  expect(JSON.parse(io.files.get(path.join(cache,"qualification-worker-identity-501.json"))!)).toEqual(marker);
+});
+it.each([
+  {configuredPythonLauncherParentPid:999}, {configuredPythonLauncherParentPid:"401"},
+  {scenario:"unknown"}, {pid:470}, {pid:401}, {extra:true}, {parentPid:401},
+])("refuses malformed or foreign configured-launcher facts %#",async changes=>{
+  io.files.set(path.join(cache,"qualification-worker-identity-501.json"),JSON.stringify({pid:501,parentPid:470,
+    scenario:"headless-provided-data",configuredPythonLauncherParentPid:401,...changes}));
+  const error=await caught(()=>closeDesktopAndQualifyOwnedWorkers(app(),cache,info()));
+  expect(error).toBeInstanceOf(AggregateError);expect(JSON.parse(io.writes[0]!).status).toBe("failed");
+  expect(JSON.parse(io.writes[0]!).failureStages).toEqual(["worker-admission"]);
+  expect(io.nativeCalls).toHaveLength(1);
+});
+it("rechecks the complete configured-launcher marker after close",async()=>{
+  const marker=path.join(cache,"qualification-worker-identity-501.json");
+  io.files.set(marker,JSON.stringify({pid:501,parentPid:470,scenario:"headless-provided-data",configuredPythonLauncherParentPid:401}));
+  const owned=app(),close=owned.close.bind(owned);
+  owned.close=async()=>{await close();io.files.set(marker,JSON.stringify({pid:501,parentPid:470,scenario:"headless-provided-data",configuredPythonLauncherParentPid:999}));};
+  await expect(closeDesktopAndQualifyOwnedWorkers(owned,cache,info())).rejects.toThrow("shutdown qualification failed");
+  expect(JSON.parse(io.writes[0]!).failureStages).toEqual(["worker-exit"]);
+});
+it("rejects changed complete legacy marker bytes without echoing private fields in assertion details",async()=>{
+  const file=path.join(cache,"qualification-worker-identity-501.json"),before="synthetic-private-original",after="synthetic-private-changed";
+  io.files.set(file,JSON.stringify({pid:501,parentPid:401,privateField:before}));
+  const owned=app(),close=owned.close.bind(owned);
+  owned.close=async()=>{await close();io.files.set(file,JSON.stringify({pid:501,parentPid:401,privateField:after}));};
+  const failure=await caught(()=>closeDesktopAndQualifyOwnedWorkers(owned,cache,info()));
+  expect(failure).toBeInstanceOf(AggregateError);expect(JSON.parse(io.writes[0]!).failureStages).toEqual(["worker-exit"]);
+  for(const text of [String(failure),...(failure as AggregateError).errors.map(String),...io.writes,...attachments]) {
+    expect(text).not.toContain(before);expect(text).not.toContain(after);
+  }
+});
+it("refuses malformed marker JSON with a fixed failure instead of a private parser excerpt",async()=>{
+  const privateText="synthetic-private-malformed-marker";
+  io.files.set(path.join(cache,"qualification-worker-identity-501.json"),'{"private":"'+privateText);
+  const failure=await caught(()=>closeDesktopAndQualifyOwnedWorkers(app(),cache,info()));
+  expect(failure).toBeInstanceOf(AggregateError);expect(JSON.parse(io.writes[0]!).failureStages).toEqual(["worker-admission"]);
+  for(const text of [String(failure),...(failure as AggregateError).errors.map(String),...io.writes,...attachments])
+    expect(text).not.toContain(privateText);
+});
+it("does not use a verified launcher marker to bypass failed live native admission",async()=>{
+  liveWorker();io.nativeWorkerParent=470;
+  io.files.set(path.join(cache,"qualification-worker-identity-501.json"),JSON.stringify({pid:501,parentPid:470,
+    scenario:"headless-provided-data",configuredPythonLauncherParentPid:401}));
+  vi.mocked(process.kill).mockImplementation(()=>{if(!io.closed){io.nativeErrors.push(false);return true;}
+    throw Object.assign(new Error("Synthetic exited process."),{code:"ESRCH"});});
+  const error=await caught(()=>closeDesktopAndQualifyOwnedWorkers(app(),cache,info()));
+  expect(error).toBeInstanceOf(AggregateError);expect(JSON.parse(io.writes[0]!).failureStages).toEqual(["worker-admission"]);
+  expect(vi.mocked(process.kill).mock.calls).toEqual([[501,0]]);
+  expect(JSON.parse(io.writes[0]!).physicalWorkersNativeObserved).toBe(0);
+  expect(JSON.parse(io.writes[0]!).physicalWorkersPidAbsenceObserved).toBe(0);
 });
 it("a confirmed native exit is not overridden by an unrelated process reusing that number",async()=>{
   vi.mocked(process.kill).mockReturnValue(true);
@@ -182,7 +244,9 @@ it("import cleanup rejects unsupported host, mode and stage before any app or fi
   expect(io.reads).toBe(0);expect(io.closes).toBe(0);expect(io.evaluations).toBe(0);expect(io.writes).toHaveLength(0);
 });
 it("cleanup persistence refuses private types and unknown stage values",async()=>{
-  for(const extra of [{failureTypes:["synthetic-private-detail"]},{failureTypes:[],failureStages:["private-stage"],failures:1},{failureTypes:[],failureStage:"private-stage"}]){
+  for(const extra of [{failureTypes:["synthetic-private-detail"]},{failureTypes:[],failureStages:["private-stage"],failures:1},{failureTypes:[],failureStage:"private-stage"},
+    {failureTypes:[],physicalWorkersNativeObserved:"private-value"},
+    {failureTypes:[],physicalWorkersNativeObserved:1,physicalWorkersPidAbsenceObserved:1,physicalWorkersObserved:1}]){
     const error=await caught(()=>persistOwnedHostReport("cleanup",{sourceRevision:"source."+"a".repeat(64),status:"failed",failures:0,...extra},info()));
     expect(error).toBeInstanceOf(Error);
   }

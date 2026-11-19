@@ -12,6 +12,40 @@ class ContextExecutionRoutingTests(unittest.TestCase):
     def selected(self, paths, required):
         return {row['id']: row for row in catalog.plan(HELPERS.parents[1], paths, required, 'b' * 64)['selected']}
 
+    def test_native_cleanup_uses_exact_failure_and_restart_checks_without_borrowing_unknown_sources(self):
+        path = 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts'
+        required = ['documentation', 'headless-context-native-cleanup', 'headless-context-native-cleanup-node']
+        borrowed = self.selected([path], ['documentation'])
+        self.assertNotIn('headless-context-native-cleanup', borrowed)
+        self.assertNotIn('headless-context-native-cleanup-node', borrowed)
+        selected = self.selected([path], required)
+        self.assertEqual(selected['headless-context-native-cleanup']['argv'][-1],
+            'dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts')
+        self.assertIn('dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts',
+            selected['headless-context-native-cleanup-node']['argv'])
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('focused-tests', self.selected([path], required + ['focused-tests']))
+        self.assertIn('focused-tests', self.selected([path, path.replace('desktop-task-cleanup', 'unknown-cleanup')], required))
+        owned = self.selected(['dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts'], ['documentation'])
+        self.assertIn('headless-context-native-cleanup', owned)
+
+    def test_shared_context_workflow_requires_both_real_hosts_with_no_unknown_source_credit(self):
+        shared = 'dev-tools/scripts/qualification/visual-composer/e2e/headless-context-workflow.ts'
+        path = 'dev-tools/scripts/qualification/visual-composer/managed-headless-context.ts'
+        selected = self.selected([shared, path], ['documentation'])
+        self.assertIn('headless-context-desktop-journey', selected)
+        check = selected['headless-context-managed-journey']
+        self.assertEqual(check['argv'][-1], path)
+        self.assertEqual(check['timeout'], 600)
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('focused-tests', self.selected([shared, path], ['documentation', 'focused-tests']))
+        self.assertIn('focused-tests', self.selected([shared, path, path.replace('managed-headless-context', 'unknown-context')], ['documentation']))
+        unit = 'dev-tools/scripts/qualification/tests/managed-headless-context.unit.test.ts'
+        fixture = self.selected([unit], ['documentation'])
+        self.assertIn('headless-context-managed-fixture', fixture)
+        self.assertNotIn('headless-context-managed-journey', fixture)
+        self.assertNotIn('focused-tests', fixture)
+
     def test_dedicated_desktop_context_runs_one_actual_case_and_preserves_unknown_fallback(self):
         path = 'dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts'
         selected = self.selected([path], ['documentation'])

@@ -18,10 +18,34 @@ explicit generic requirements retain their fallback checks.
 
 # Contributor Control Plane
 
+The fixed `headless-context-managed-journey` check runs one real Managed Context
+case with a 600-second runner bound. It requires the existing bounded database
+operator's fresh `MANAGED_REFERENCE_DATABASE` and the exact installed MiniLM
+acquisition reference used by the Desktop profile. Build the current thin client
+first. The fixture verifies the relevant packaged worker files against source,
+copies the six pinned model files into a fresh owned cache, and configures the
+ordinary model reader to that same cache. It seeds only one installed-model
+record in the active owned workspace. It never seeds a source, approval, task,
+result or vector. The ordinary fixture defaults and production roots stay intact.
+
+A shared test body automatically selects both actual host checks. Each checks
+two distinct question hashes and their expected top source row, pack/RAG review
+and separate save, recorded rebuild, replay, separate display credentials,
+bounded cards, acknowledged revoke and backend continuity. Run hosts serially.
+The focused Managed fixture check covers option refusal, worker freshness,
+one-use input scope, credentials, capture and cleanup. Unknown source files and
+explicit generic requirements retain their fallback. These observations preserve
+the remaining physical failure/recovery, parent and final qualification gaps.
+
 The fixed `headless-context-desktop-journey` check runs one serial packaged
 Desktop Context case with a 720-second runner bound and a 240-second test bound.
 It uses real native pairing, app approval, official MCP, the production worker,
 saved Context bytes and an already verified local MiniLM fixture. It checks
+the exact trusted qualification endpoint triple before app launch. It retains
+the established loopback port instead of discarding it for the product's
+PID-derived default. Missing, foreign or mismatched triples deny. This fixture
+correction does not repair the separate product default-port finding or change
+a runtime deadline or memory guard. The check also covers
 pack/RAG review and separate save, both structured-row query citations, recorded
 rebuild, exact replay, current permission text, card/count correlation, separate
 window consent and revocation, and owned native shutdown. Capture stays off.
@@ -41,6 +65,23 @@ The latter exposed a source-wide duplicate key where extraction uses per-row
 chunk indices. The corrected decoder keeps distinct full numeric locations and
 still rejects identical, invalid, private or foreign citations. Managed Context,
 physical failed-build profiles and final parent qualification remain separate.
+
+The focused Context native-cleanup checks also distinguish held native worker
+observations from already-exited PID-absence observations. The complete fixed
+Headless marker must retain its exact direct or configured Windows Python
+launcher relation. A marker proves lineage, not native exit. Live-worker native
+admission failure cannot fall back to absence. The successful real Desktop
+Context case requires every observed worker to be native-backed, with none
+qualified by absence only. Existing acknowledgment and restart identities stay
+unchanged. Unknown source files and explicit generic checks keep their fallback.
+
+The offline qualification wrapper can retain a bounded startup exception class
+and numeric OS error in its exact owned cache. It never records exception text,
+arguments, paths or arbitrary class names. The bounded Desktop reader strips PID
+and rejects unknown/private fields. These facts help diagnose a future failure;
+their absence cannot explain an earlier failure. Earlier failed native reports
+and unknown-exit results stay unchanged. The original production worker, runtime
+deadlines, memory guards and ordinary fixture defaults remain in force.
 
 The exact `headless-context-artifact-lifecycle` check also runs the admitted
 Context Browser query tests alongside the actual adapter, reconciler and ordinary
