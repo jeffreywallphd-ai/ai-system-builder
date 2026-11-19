@@ -1,0 +1,26 @@
+{
+  "schema_version": "headless-model-source-task-session-observation-v1",
+  "scope": "Private owned-worker source job session before product registry, persistent storage and public plan composition",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Fresh exact candidate checks and actual separate-invocation review govern component completion. This descriptive report is not an executed receipt or parent pass.",
+  "controls": [
+    "Require an already-owned healthy worker and exact revision, manifest, transfer, identity and session capabilities. No worker startup, installer or generic task fallback.",
+    "Only an actual privately branded receiver prepared under the original probe callbacks may derive its immutable selected request once, under fresh host/business fences. A separate issued reservation repeats business admission and carries the receiver's synchronous current/phase guard through transport and credential selection to fetch/body reads. Frozen public objects and passive capture exclude hook/proxy/prototype grants.",
+    "Mint a captured job handle only after an exact accepted task/type/workspace/runtime start acknowledgement. Unknown issue retains the receiver and grants no handle, discovery, adoption or retry.",
+    "Private status always carries the original seven-field source binding, including before a receipt. Finite byte progress is advisory; invalid observations are null. Strict passive reply codecs and actual64KiB stream bounds apply across original-process fences.",
+    "ACK is derived only from the matched receiver phase; source cleanup and receiver settlement remain distinct. Bound queued cancellation selects only the original Future outside registry locks and publishes/discloses through exact row/owner checks. Running cancellation remains unsupported."
+  ],
+  "focused_observations": [
+    "Ten Node session cases cover all capability/ownership failures, receiver impersonation, original session matching, one-use immutable submission, held business denial, lost and foreign start replies, scoped progress, early ACK denial, malformed status/receipt, queued-only cancellation and actual streamed limits/worker withdrawal. A causal final-preparation-return case independently retires the receiver, marks uncertainty, withdraws business admission or invalidates it during credential selection while keeping the worker live; every variant sends zero task POSTs.",
+    "Four additional worker cases cover pre-receipt source binding and bounded counters, authenticated malformed cancellation, synchronous Future callback lock safety/replacement races and unsupported running cancellation. The related27-case source-task class passed in the permitted local environment.",
+    "The mandatory controlled actual Node-to-owned-Python Task/Handoff journey now uses the captured session for submission, scoped status/cancellation, receiver ACK/replay and final settlement. Its exact named case passed without skip. It uses synthetic selected bytes, not a downloaded or loaded model.",
+    "Restricted local execution stalled before worker tests; the same focused tests passed with local socket access. This is environment evidence, not a product guard waiver. Earlier fixture/type corrections and incomplete predecessor work remain preserved.",
+    "The first exact nine-group receipt passed eight groups but failed documentation because the context pack exceeded its fixed200line bound. Independent preflight also found the receiver guard stopped at the inner preparation return. The corrected candidate compacts the pack without dropping requirements and carries a fresh issued/business/current fence to the actual HTTP effect. The first receipt and review finding remain historical, not accepted completion."
+  ],
+  "qualification_limits": [
+    "Launch ownership and identity-file reachability do not prove native custody, physical locality, durable restart or a hard IO deadline.",
+    "The session is private runtime transport. Product Task registry ownership, durable Model save/registration, original actor/scoped-plan approval, public retries/cancellation and both-host/runtime qualification remain I7 work.",
+    "The controlled HTTP shim is not a Desktop/Managed application journey. No source model, accepted accuracy, full suite, dependency, binary, public provider or production process change is qualified here.",
+    "This component supplies no parent criterion or planned work-chunk completion. Pending parent and final qualification remain pending."
+  ]
+}

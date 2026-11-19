@@ -5,6 +5,7 @@ import {lstat, realpath, mkdir, opendir, open, unlink, rmdir, type FileHandle} f
 import path from "node:path";
 import {types} from "node:util";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
+import {isWorkspaceId} from "../../../../contracts/workspace";
 import {captureManifestExpectation, capturePassiveModelData, type RuntimeModelDownloadManifest} from "./modelDownloadManifest";
 import {captureModelSourceRuntime, readModelSourceIdentityEnvelope, verifyModelSourceIdentityMac,
   type ModelSourceIdentityProbe, type ModelSourceIdentityProof, type ModelSourceRuntimeFileFacts,
@@ -21,6 +22,11 @@ type Receipt = {readonly task_id: string; readonly handoff_id: string; readonly 
   readonly manifest_digest: string; readonly recipient_witness: string; readonly file_count: number; readonly size_bytes: number;
   readonly receipt_digest: string};
 type Phase = "preparing" | "prepared" | "issued" | "observed" | "acknowledged" | "consumed" | "settled" | "uncertain";
+export interface CapturedModelSourceBinding {
+  readonly version: "model-source-task-binding-v1";
+  readonly taskId: string; readonly acquisitionId: string; readonly handoffId: string;
+  readonly modelId: string; readonly revision: string; readonly manifestDigest: string;
+}
 interface PreparedTransfer {
   readonly version: "model-source-transfer-v1"; readonly acquisitionId: string; readonly handoffId: string;
   readonly roots: {readonly acquisition: Identity; readonly source: Identity; readonly receiver: Identity};
@@ -79,6 +85,7 @@ export async function prepareModelSourceRecipient(input: ModelSourceRecipientOpt
     const options = {...raw, cacheRoot: path.resolve(raw.cacheRoot), manifest: captureManifestExpectation(raw.manifest),
       allowedOrigins: origins(raw.allowedOrigins), identityProbe} as unknown as ModelSourceRecipientOptions;
     owner = new ModelSourceRecipient(options, CAPTURED);
+    Object.freeze(owner); // Private state stays mutable; callers cannot shadow its public face.
     owner.assertCurrent();
     const captured: unknown = options.captureCustodian(owner);
     if (types.isPromise(captured)) void Promise.prototype.then.call(captured, undefined, () => {});
@@ -119,7 +126,56 @@ export class ModelSourceRecipient {
     if (marker !== CAPTURED) throw invalid();
     this.#options = Object.freeze({...options});
   }
+  static #captured(value: unknown): ModelSourceRecipient {
+    if (!value || typeof value !== "object" || types.isProxy(value) || !(#options in value)) throw invalid();
+    return value as ModelSourceRecipient;
+  }
+  /** Inspect actual private fields, never caller methods, prototype or toJSON. */
+  static capturedBinding(value: unknown): CapturedModelSourceBinding {
+    const owner = ModelSourceRecipient.#captured(value), selected = owner.#options.manifest;
+    return capturePassiveModelData({version: "model-source-task-binding-v1", taskId: owner.#options.taskId,
+      acquisitionId: owner.#acquisitionId, handoffId: owner.#handoffId, modelId: selected.source.modelId,
+      revision: selected.source.revision, manifestDigest: selected.manifestDigest});
+  }
+  /** Private runtime transport only; this is not an actor or scoped-plan grant. */
+  static async takeTaskRequest(value: unknown, workspaceId: string, probe: ModelSourceIdentityProbe) {
+    const owner = ModelSourceRecipient.#captured(value);
+    if (!isWorkspaceId(workspaceId)) throw invalid();
+    const expected = readStrictPassiveRecord(probe, ["runtimeId", "workerStartedAt", "assertCurrent", "inspect"]);
+    const captured = owner.#options.identityProbe;
+    if (Object.keys(expected).length !== 4 || expected.runtimeId !== captured.runtimeId ||
+        expected.workerStartedAt !== captured.workerStartedAt || expected.assertCurrent !== captured.assertCurrent ||
+        expected.inspect !== captured.inspect) throw invalid();
+    return owner.#exclusive("prepared", async () => {
+      if (await owner.#options.isBusinessAllowed() !== true) throw invalid();
+      owner.assertCurrent();
+      await owner.#names(owner.#root, ["source", "receiver"]);
+      await owner.#names(owner.#source, []); await owner.#names(owner.#receiver, []);
+      await owner.#probe("roots");
+      if (await owner.#options.isBusinessAllowed() !== true) throw invalid();
+      owner.assertCurrent();
+      const manifest = owner.#options.manifest;
+      const request = capturePassiveModelData({requestId: owner.#options.taskId, taskType: "ensure-model-download" as const,
+        payload: {provider: "transformers" as const, modelId: manifest.source.modelId, revision: manifest.source.revision,
+          sourceManifest: manifest, sourceTransfer: owner.#transfer!}, metadata: {workspaceId}});
+      owner.#phase = "issued";
+      return request;
+    });
+  }
   get phase(): Phase {return this.#phase;}
+  /** Carry original receiver liveness through every transport handoff to fetch. */
+  static async dispatchTaskRequest<T>(value: unknown, send: (assertIssued: () => void) => Promise<T>): Promise<T> {
+    const owner = ModelSourceRecipient.#captured(value);
+    return owner.#exclusive("issued", async () => {
+      if (await owner.#options.isBusinessAllowed() !== true) throw invalid();
+      const assertIssued = () => {
+        if (owner.#phase !== "issued") throw invalid();
+        owner.assertCurrent();
+      };
+      assertIssued();
+      const result = await send(assertIssued); assertIssued(); return result;
+    });
+  }
   get diagnosticStage(): string {return this.#diagnosticStage;}
   get cleanupPending(): boolean {return this.#phase !== "settled";}
   /** Opaque wire data only. No path, callbacks or cleanup owner is serializable. */

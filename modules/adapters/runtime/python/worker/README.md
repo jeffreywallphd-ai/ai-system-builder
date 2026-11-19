@@ -13,6 +13,21 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+## Private source job session
+
+`ensure-model-download.source-session-v1` advertises complete immutable source
+bindings on every private source status, including queued and cancelled jobs.
+Finite `receivedBytes` and `totalBytes` are advisory progress, not verified Model
+completion or released resource credit. Invalid observed counters become null.
+The authenticated `POST /tasks/{id}/model-source/cancel` takes an exact passive
+seven-field binding, with a strict 4 KiB streamed body and duplicate-key denial.
+It rechecks the original record and owner before selecting their Future.
+Cancellation and its synchronous callbacks run outside the registry lock;
+publication compares the same record/owner afterward. A replaced row cannot
+receive the old cancellation. Only queued cancellation is supported. Running
+source custody still requires its separate exact receiver ACK and settlement.
+The launch token is not original actor or scoped-plan permission.
+
 ## Private read-only receiver identity binding
 
 `ensure-model-download.source-identity-v1` adds authenticated

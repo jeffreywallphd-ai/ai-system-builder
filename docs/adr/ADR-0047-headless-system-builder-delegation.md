@@ -1,5 +1,25 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Captured private Model source job session
+
+Compose the existing private receiver through an additive already-owned-worker
+session, not generic JSON task input or a second job registry. Require all exact
+revision/manifest/transfer/identity/session capabilities, original probe callbacks
+and fresh host/business fences. Derive one immutable issue from actual private
+receiver fields.
+An issued reservation repeats business admission after preparation and carries
+receiver/current-phase guards through credential selection to actual fetch/body
+IO. Worker liveness cannot substitute for a retired receiver. Only exact accepted
+task/type/workspace/runtime metadata yields the captured job handle; an unknown
+start cannot be discovered, adopted or retried.
+Include full source binding in each bounded private status before any receipt.
+Expose finite advisory byte counts without claiming stored Model completion.
+Bound cancellation selects only the original queued Future outside registry
+locks and publishes by exact row/owner comparison. Running cancellation remains
+unsupported. ACK still requires the receiver's verified phase, and source cleanup
+does not replace receiver settlement. This is private transport, not original
+actor/plan authority, persistent registration or product-host qualification.
+
 ### Separate filesystem representations in the private receiver
 
 Use an additive read-only binding in the existing already-owned worker for the

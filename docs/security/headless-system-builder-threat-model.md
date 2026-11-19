@@ -1,5 +1,31 @@
 # Headless System Builder threat model
 
+## Captured private Model source jobs
+
+Protect exact source selection, workspace, original worker and retained receiver
+custody across submission and asynchronous replies. Require five capabilities on
+an already-owned healthy worker and the receiver's original probe functions.
+Private class branding and frozen passive request derivation exclude JSON,
+getter/proxy/prototype and serialization grants. Fresh business/host fences and
+one-use issue exclude held/concurrent replay. An issued reservation repeats
+business admission after the inner preparation handoff and carries synchronous
+receiver/current-phase guards through credential selection to actual fetch/body
+IO. A live worker alone cannot authorize a retired receiver. Unknown issue yields no job handle,
+discovery, adoption or resubmission permission.
+
+Only exact accepted task/type/workspace/runtime metadata mints the private handle.
+Every private status binds original task/acquisition/handoff/model/pin/manifest;
+actual response reads are capped at 64 KiB and fenced across body awaits.
+Advisory byte counters cannot certify model completion or cleanup. ACK derives
+only from the matched receiver phase. Strict bound cancellation uses a 4 KiB
+duplicate-free body, selects only the captured queued Future outside locks and
+rechecks the original row/owner before publication and disclosure. Stale replies
+and callbacks cannot alter or expose a replacement record. Running cancellation
+remains unsupported. Local tests cover malformed/foreign replies, lost starts,
+held permission/body reads, cancellation callback races and the actual controlled
+producer. Actor/plan permission, product storage and public/host qualification
+remain separate; no new provider, installer or native authority is granted.
+
 ## Private Node and worker identity binding
 
 Protect the host-prepared roles, original file witnesses and proof secret.

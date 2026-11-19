@@ -183,39 +183,33 @@ test("actual owned Python Task and Handoff producer interoperate through full di
   const selected = captureManifestExpectation(ready.manifest), baseUrl = `http://127.0.0.1:${ready.port}`;
   const owned = () => {if (ended || !child.pid) throw new Error("Owned synthetic worker exited.");};
   const client = createPythonRuntimeHttpClient({baseUrl, authorizationToken: token, captureProcessOwnership: () => owned});
-  const identityProbe = await client.captureModelSourceIdentityProbe();
+  const session = await client.captureModelSourceTaskSession(), identityProbe = session.identityProbe;
   let captured: ModelSourceRecipient | undefined;
   const owner = await prepareModelSourceRecipient({cacheRoot, taskId, manifest: selected, maximumDurationSeconds: 10,
     allowedOrigins: ["https://huggingface.co"], isCurrent: () => !ended, isBusinessAllowed: async () => true,
     captureCustodian: value => {captured = value;}, identityProbe});
   assert.equal(captured, owner);
-  const transfer = owner.markIssued();
-  const call = async (endpoint: string, input?: unknown) => {
-    const response = await fetch(baseUrl + endpoint, {method: input === undefined ? "GET" : "POST",
-      headers: {authorization: "Bearer " + token, "content-type": "application/json"}, body: input === undefined ? undefined : JSON.stringify(input),
-      signal: AbortSignal.timeout(10_000)});
-    assert.equal(response.ok, true); return response.json() as Promise<Record<string, any>>;
-  };
-  // This trusted fixture owns the private profile. Generic startTask still denies it.
-  const accepted = await call("/tasks/start", {requestId: taskId, taskType: "ensure-model-download", payload: {provider: "transformers",
-    modelId: selected.source.modelId, revision: selected.source.revision, sourceManifest: selected, sourceTransfer: transfer}});
-  assert.equal(accepted.accepted, true);
+  const accepted = await session.start(owner, "33333333-3333-4333-8333-333333333333");
+  assert.equal(accepted.kind, "accepted");
+  if (accepted.kind !== "accepted") assert.fail("The actual producer must accept its captured source job.");
+  const task = accepted.task;
   const deadline = Date.now() + 8000;
-  let status = await call("/tasks/" + taskId);
-  while (["queued", "running"].includes(status.status) && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 10)); status = await call("/tasks/" + taskId);
+  let status = await task.read();
+  while (["prepared", "running"].includes(status.phase) && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 10)); status = await task.read();
   }
-  assert.equal(status.status, "succeeded");
-  const privateStatus = await call("/tasks/" + taskId + "/model-source");
-  await owner.observeReceipt(privateStatus.receipt);
-  const acknowledged = await call("/tasks/" + taskId + "/model-source/acknowledgement", owner.acknowledgement("receiver-observed"));
+  assert.equal(status.phase, "awaiting-receiver"); assert.equal(status.receivedBytes, selected.source.totalBytes);
+  assert.equal((await task.cancel()).cancelled, false);
+  await owner.observeReceipt(status.receipt);
+  const acknowledged = await task.acknowledge("receiver-observed");
+  assert.equal((await task.acknowledge("receiver-observed")).phase, "acknowledged");
   assert.equal(acknowledged.phase, "acknowledged"); await owner.confirmSenderCleanup();
   await owner.consume(async snapshot => {
     assert.ok((await readFile(path.join(snapshot, "config.json"))).length > 0);
     assert.equal((await lstat(path.join(snapshot, "model.safetensors"))).nlink, 1);
   });
   await owner.retire();
-  const settled = await call("/tasks/" + taskId + "/model-source/acknowledgement", owner.acknowledgement("receiver-settled"));
+  const settled = await task.acknowledge("receiver-settled");
   assert.equal(settled.phase, "released"); assert.equal(owner.cleanupPending, false);
   assert.deepEqual(await readdir(path.join(cacheRoot, ".aisb-model-source-transfers")), []);
 });

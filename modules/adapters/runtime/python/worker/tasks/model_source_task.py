@@ -17,6 +17,7 @@ from .local_text_generation import _resolve_huggingface_cache_root, _require_pla
 
 NAMESPACE = ".aisb-model-source-transfers"
 CAPABILITY = "ensure-model-download.source-transfer-v1"
+SESSION_CAPABILITY = "ensure-model-download.source-session-v1"
 ACK_BODY_LIMIT = 4096
 
 
@@ -98,6 +99,28 @@ async def read_acknowledgement(request) -> ModelSourceAcknowledgement:
             body.extend(chunk)
         raw = json.loads(bytes(body).decode("utf-8"), object_pairs_hook=_unique_object)
         return ModelSourceAcknowledgement.model_validate(raw)
+    except Exception:
+        raise ModelSourceTaskError() from None
+
+
+async def read_source_binding(request):
+    """Closed cancellation selector; no body field is task authority by itself."""
+    try:
+        size = request.headers.get("content-length")
+        if size is not None and (not size.isdigit() or len(size) > 10 or int(size) > ACK_BODY_LIMIT):
+            raise ModelSourceTaskError()
+        body = bytearray()
+        async for chunk in request.stream():
+            if len(chunk) > ACK_BODY_LIMIT - len(body):
+                raise ModelSourceTaskError()
+            body.extend(chunk)
+        value = json.loads(bytes(body).decode("utf-8"), object_pairs_hook=_unique_object)
+        expected = {"version", "taskId", "acquisitionId", "handoffId", "modelId", "revision", "manifestDigest"}
+        if (type(value) is not dict or set(value) != expected or value["version"] != "model-source-task-binding-v1" or
+                any(type(item) is not str or len(item) > 200 for item in value.values()) or
+                not all(valid_task_id(value[key]) for key in ("taskId", "acquisitionId", "handoffId"))):
+            raise ModelSourceTaskError()
+        return value
     except Exception:
         raise ModelSourceTaskError() from None
 
@@ -261,11 +284,22 @@ class ModelSourceTaskOwner:
 
     def _status_snapshot(self, state=None):
         state = state or self._state
+        transfer, manifest = self.selection.sourceTransfer, self.selection.sourceManifest
+        written = self._custodian.written if self._custodian is not None else 0
+        received = written if type(written) is int and 0 <= written <= manifest.source.totalBytes else None
         return {"requestId": self.task_id, "phase": state.phase, "cleanupPending": state.cleanup_pending,
+            "binding": {"version": "model-source-task-binding-v1", "taskId": self.task_id,
+                "acquisitionId": transfer.acquisitionId, "handoffId": transfer.handoffId,
+                "modelId": self.selection.modelId, "revision": self.selection.revision, "manifestDigest": manifest.manifestDigest},
+            "receivedBytes": received, "totalBytes": manifest.source.totalBytes,
             "receiverSettlementPending": state.phase == "acknowledged",
             "startAcknowledgementUnconfirmed": self._start_ack_unconfirmed,
             **({"errorCode": state.error_code} if state.error_code else {}),
             **({"receipt": asdict(state.receipt)} if state.receipt is not None else {})}
+
+    def matches_binding(self, value):
+        _strict(self._record_current)
+        return type(value) is dict and value == self._status_snapshot()["binding"]
 
     def status(self):
         _strict(self._record_current)

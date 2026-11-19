@@ -1,5 +1,27 @@
 # Python runtime adapter
 
+The private `captureModelSourceTaskSession()` requires the same already-owned
+healthy worker and all exact revision, manifest, transfer, identity and session
+capabilities. It starts or installs nothing. Only an actual captured receiver
+with that session's original probe callbacks can derive and issue its frozen
+selection once, under fresh host and business fences. JSON, prototypes and
+generic `sourceTransfer` input cannot mint this authority.
+An issued reservation repeats business admission after preparation and carries
+the synchronous original receiver/current-phase guard through credential
+selection to the actual fetch and response-body awaits. A live worker alone
+cannot authorize a retired or uncertain receiver.
+
+An exact accepted start binds a private job handle to task, acquisition, handoff,
+model, pin, manifest, workspace and worker incarnation. An unknown start returns
+no handle and permits no discovery, adoption or repeat submission. Private
+status includes that source binding even before a receipt, plus finite advisory
+byte counters. Actual response streams are limited to 64 KiB. The handle sends
+ACK only from the receiver's matched phase; sender cleanup and receiver
+settlement remain separate. Bound cancellation checks the exact original row
+and cancels only its queued Future, outside registry locks. Running cancellation
+stays unsupported. Product registry/storage and original actor/plan admission
+remain separate; this transport is not a public acquisition grant.
+
 The private Node receiver preserves its own bigint file witnesses separately
 from the worker's full five-field filesystem facts. Windows Node/Python device
 numbers must not be truncated or treated as equivalent. The already-owned

@@ -2646,3 +2646,11 @@ identical permitted run passed, followed by all twelve baseline Context worker
 cases in about two seconds. Use the permitted local test environment. Do not
 change application guards or replace the database to turn that environment
 failure into a pass. The later model-reference cases still require fresh checks.
+
+The exact Model metadata owner checks include private captured source-session
+request/status/cancellation cases and their types. The manifest worker profile
+includes all source-task tests and the mandatory actual Node-to-owned-Python
+producer case. New session source/test paths automatically select that worker
+profile; a normal Node-only run still needs no Python installation. Scoped
+progress and transport tests supply no public plan, persistent Model save,
+native/restart, model accuracy, parent increment or whole-software pass.

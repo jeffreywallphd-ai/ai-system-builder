@@ -1,5 +1,21 @@
 # Runtime Model
 
+The private Model source session captures one already-owned healthy worker and
+all five exact capabilities. It pairs only with a receiver prepared under its
+original probe callbacks; private class fields derive the frozen issue once.
+Fresh original host/business fences precede the effect.
+An issued reservation repeats business admission after preparation and carries
+the receiver/current-phase guard through credential selection to fetch/body IO.
+Worker liveness cannot substitute for a retired or uncertain receiver. Only an
+exact accepted task/type/workspace/runtime acknowledgement yields a job handle. Unknown issue
+retains custody without discovery, adoption or retry. Bound status, byte progress,
+ACK and queued-only cancellation use that original handle and process lifetime.
+Full immutable source bindings exist before and after receipt publication.
+Counters are advisory, and private bodies/streams stay bounded. Cancellation
+uses the original Future outside locks and exact row/owner publication afterward.
+Generic Model requests cannot supply this profile. Registry ownership, durable
+storage/registration and public actor/plan admission remain separate work.
+
 The private receiver identity bridge uses the same already-owned worker, not a
 new helper process or native identity discovery fallback. Node and Python expose
 different filesystem representations on Windows. Preserve their full separate

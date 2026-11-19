@@ -31,10 +31,13 @@ import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy"
 import {MODEL_SOURCE_IDENTITY_CAPABILITY, captureModelSourceProbeInput, captureModelSourceRuntime,
   readModelSourceIdentityEnvelope, type ModelSourceIdentityProbe, type ModelSourceIdentityProbeInput} from "./modelSourceIdentity";
 import {types} from "node:util";
+import {MODEL_SOURCE_SESSION_CAPABILITY, createCapturedModelSourceTaskSession, type ModelSourceTaskSession} from "./modelSourceTaskSession";
 
 export interface PythonRuntimeHttpClient {
   /** Private read-only metadata session; requires an already captured owned launch. */
   captureModelSourceIdentityProbe(): Promise<ModelSourceIdentityProbe>;
+  /** Private captured receiver transport; generic JSON Model requests cannot invoke it. */
+  captureModelSourceTaskSession(): Promise<ModelSourceTaskSession>;
   getHealthStatus(): Promise<PythonRuntimeHealthCheckResult>;
   getCapabilities(): Promise<PythonRuntimeCapabilitiesResult>;
   ensureModelDownloaded(request: {
@@ -376,7 +379,7 @@ export function createPythonRuntimeHttpClient(
       });
       assertOwnedProcess();
       let payload: unknown;
-      if (endpoint === "/models/source-identity") {
+      if (endpoint === "/models/source-identity" || requiredOwnership) {
         const reader = response.body?.getReader();
         if (!reader) throw new Error("The model receiver identity could not be confirmed.");
         const chunks: Uint8Array[] = []; let bytes = 0;
@@ -409,6 +412,20 @@ export function createPythonRuntimeHttpClient(
   };
 
   return {
+    async captureModelSourceTaskSession() {
+      const identityProbe = await this.captureModelSourceIdentityProbe(), current = identityProbe.assertCurrent;
+      current(); const capabilities = await this.getCapabilities(); current();
+      if (capabilities.runtimeId !== identityProbe.runtimeId ||
+          ["ensure-model-download.exact-revision-v1", "ensure-model-download.source-manifest-v1",
+            "ensure-model-download.source-transfer-v1", MODEL_SOURCE_SESSION_CAPABILITY].some(capability => !capabilities.capabilities.includes(capability)))
+        throw new Error("The original model download job could not be confirmed.");
+      return createCapturedModelSourceTaskSession(identityProbe, async (endpoint, init, assertReceiver) => {
+        const guard = () => {current(); assertReceiver?.();};
+        const result = await authenticatedFetch(endpoint, endpoint.startsWith("/tasks/") ? "/tasks/:requestId/model-source" : endpoint, init, guard);
+        result.assertOwnedProcess(); current();
+        return {ok: result.response.ok, payload: result.payload};
+      });
+    },
     async captureModelSourceIdentityProbe() {
       if (!captureOwnership) throw new Error("The model receiver identity could not be confirmed.");
       const original = captureOwnership();

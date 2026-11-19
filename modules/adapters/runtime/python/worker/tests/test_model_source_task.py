@@ -1,5 +1,5 @@
 """Authenticated ASGI + real disposable-file task custody; no provider or Model load."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack, redirect_stdout
 import io
 import json
@@ -276,6 +276,88 @@ class ModelSourceTaskTests(unittest.TestCase):
         result = self.client.post("/tasks/" + TASK + "/cancel").json()
         self.assertFalse(result["cancelled"]); self.assertTrue(self.owner().retains_record)
         self.complete()
+
+    def test_bound_status_exists_before_receipt_and_counters_are_advisory_finite_bytes(self):
+        entered, released = Event(), Event()
+        blocker = self.executor.submit(lambda: (entered.set(), released.wait(4)))
+        self.assertTrue(entered.wait(1))
+        try:
+            self.assertEqual(self.start().status_code, 200)
+            initial = self.private_status()
+            self.assertEqual(initial["binding"], {"version": "model-source-task-binding-v1", "taskId": TASK,
+                "acquisitionId": ACQUISITION, "handoffId": HANDOFF, "modelId": "fixture/model",
+                "revision": self.payload["revision"], "manifestDigest": self.payload["sourceManifest"]["manifestDigest"]})
+            self.assertEqual(initial["receivedBytes"], 0); self.assertNotIn("receipt", initial)
+        finally:
+            released.set(); blocker.result(timeout=4)
+        self.finished(); owner = self.owner()
+        status = self.private_status(); total = self.payload["sourceManifest"]["source"]["totalBytes"]
+        self.assertEqual(status["binding"], initial["binding"])
+        self.assertEqual(status["totalBytes"], total); self.assertEqual(status["receivedBytes"], total)
+        saved = owner._custodian.written
+        try:
+            for invalid in [True, -1, total + 1, 1.5, "private-marker"]:
+                owner._custodian.written = invalid
+                value = self.private_status()
+                self.assertIsNone(value["receivedBytes"]); self.assertNotIn("private-marker", json.dumps(value))
+        finally:
+            owner._custodian.written = saved
+        self.complete()
+
+    def test_bound_cancel_is_authenticated_strict_and_cancels_only_the_captured_queued_future(self):
+        entered, released = Event(), Event()
+        blocker = self.executor.submit(lambda: (entered.set(), released.wait(4)))
+        self.assertTrue(entered.wait(1)); target = "/tasks/" + TASK + "/model-source/cancel"
+        try:
+            self.start(); binding = self.private_status()["binding"]
+            self.assertEqual(self.client.post(target, json=binding, headers={"Authorization": "Bearer wrong"}).status_code, 401)
+            with patch.object(worker.TASK_REGISTRY[TASK]["future"], "cancel", wraps=worker.TASK_REGISTRY[TASK]["future"].cancel) as cancel:
+                for key in binding:
+                    bad = {**binding, key: "foreign"}
+                    self.assertIn(self.client.post(target, json=bad).status_code, {400, 409})
+                self.assertEqual(self.client.post(target, json={**binding, "extra": "private-marker"}).status_code, 400)
+                duplicate = json.dumps(binding)[:-1] + ',"taskId":"' + TASK + '"}'
+                self.assertEqual(self.client.post(target, content=duplicate).status_code, 400)
+                self.assertEqual(self.client.post(target, content=iter([b" " * 4096, b"x"])).status_code, 400)
+                cancel.assert_not_called()
+            future = worker.TASK_REGISTRY[TASK]["future"]
+            callbacks = []
+            def callback(_):
+                # Future callbacks execute synchronously; this would hang if cancellation held the registry lock.
+                with worker.TASK_REGISTRY_LOCK: callbacks.append("original-future")
+            future.add_done_callback(callback)
+            reply = self.client.post(target, json=binding)
+            self.assertEqual(reply.status_code, 200); self.assertTrue(reply.json()["cancelled"])
+            self.assertEqual(reply.json()["source"]["phase"], "cancelled")
+            self.assertEqual(reply.json()["source"]["binding"], binding)
+            self.assertEqual(callbacks, ["original-future"])
+            self.assertTrue(self.client.post(target, json=binding).json()["cancelled"])
+        finally:
+            released.set(); blocker.result(timeout=4)
+        self.assertEqual(self.fixture.requests, []); self.assertFalse(staging._STAGING_SLOT.locked())
+
+    def test_bound_cancel_never_changes_a_replacement_row_from_a_future_callback(self):
+        entered, released = Event(), Event()
+        blocker = self.executor.submit(lambda: (entered.set(), released.wait(4)))
+        self.assertTrue(entered.wait(1))
+        try:
+            self.start(); original = worker.TASK_REGISTRY[TASK]; binding = self.private_status()["binding"]
+            successor = worker._create_task_record(TASK, "ensure-model-download")
+            sentinel = Future(); successor["future"] = sentinel; saved = dict(successor)
+            original["future"].add_done_callback(lambda _: worker.TASK_REGISTRY.__setitem__(TASK, successor))
+            response = self.client.post("/tasks/" + TASK + "/model-source/cancel", json=binding)
+            self.assertEqual(response.status_code, 409); self.assertEqual(successor, saved)
+            self.assertIs(successor["future"], sentinel); self.assertFalse(sentinel.cancelled())
+        finally:
+            released.set(); blocker.result(timeout=4)
+        self.assertEqual(self.fixture.requests, [])
+
+    def test_bound_cancel_after_execution_is_unsupported_and_keeps_original_custody(self):
+        self.start(); self.finished(); binding = self.private_status()["binding"]
+        response = self.client.post("/tasks/" + TASK + "/model-source/cancel", json=binding)
+        self.assertEqual(response.status_code, 200); self.assertFalse(response.json()["cancelled"])
+        self.assertEqual(response.json()["source"]["phase"], "awaiting-receiver")
+        self.assertTrue(self.owner().retains_record); self.complete()
 
     def test_legacy_id_only_updates_cannot_modify_a_private_source_record(self):
         self.start(); self.finished(); record = worker.TASK_REGISTRY[TASK]

@@ -40,6 +40,7 @@ class ModelManifestRoutingTests(unittest.TestCase):
             self.assertIn('modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts', rows[name]['argv'])
             self.assertIn('modules/adapters/runtime/python/tests/model-source-recipient.unit.test.ts', rows[name]['argv'])
             self.assertIn('modules/adapters/runtime/python/tests/model-source-identity-client.unit.test.ts', rows[name]['argv'])
+            self.assertIn('modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts', rows[name]['argv'])
         self.assertIn('modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',
                       rows['headless-context-existing-runtime']['argv'])
         self.assertNotIn('completion-all', rows)

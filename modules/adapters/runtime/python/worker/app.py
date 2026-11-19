@@ -70,9 +70,11 @@ from .ocr.task_sources import CAPABILITY as OCR_TASK_CAPABILITY, task_ocr_source
 from .tasks.review_dataset import review_dataset
 from .tasks.train_model import TrainingCancellationRequested, train_model
 from .tasks.model_source_task import (
-    CAPABILITY as MODEL_SOURCE_TASK_CAPABILITY, ModelSourceTaskError, ModelSourceTaskOwner,
+    CAPABILITY as MODEL_SOURCE_TASK_CAPABILITY, SESSION_CAPABILITY as MODEL_SOURCE_SESSION_CAPABILITY,
+    ModelSourceTaskError, ModelSourceTaskOwner,
     captured_selection as capture_model_source_selection, has_source_transfer,
-    read_acknowledgement as read_model_source_acknowledgement, valid_task_id as valid_model_source_task_id,
+    read_acknowledgement as read_model_source_acknowledgement, read_source_binding,
+    valid_task_id as valid_model_source_task_id,
 )
 from .tasks.model_source_identity import (
     CAPABILITY as MODEL_SOURCE_IDENTITY_CAPABILITY, ModelSourceIdentityError,
@@ -812,6 +814,7 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "ensure-model-download.exact-revision-v1",
         "ensure-model-download.source-manifest-v1",
         MODEL_SOURCE_TASK_CAPABILITY,
+        MODEL_SOURCE_SESSION_CAPABILITY,
         MODEL_SOURCE_IDENTITY_CAPABILITY,
         "model-status",
         "unload-model",
@@ -903,6 +906,46 @@ async def acknowledge_model_source(request_id: str, request: Request):
         # Registry locks are released before hashes, links or context cleanup.
         from starlette.concurrency import run_in_threadpool
         return await run_in_threadpool(owner.acknowledge, incoming)
+    except ModelSourceTaskError:
+        return _model_source_error(409)
+
+
+def _cancel_bound_model_source(record, owner, binding):
+    if not owner.matches_binding(binding):
+        raise ModelSourceTaskError()
+    with TASK_REGISTRY_LOCK:
+        if not _source_record_current_locked(record, owner):
+            raise ModelSourceTaskError()
+        future, status = record.get("future"), record.get("status")
+    cancelled = False
+    # Future callbacks may acquire the registry lock. Cancel only the captured
+    # original Future, outside that lock, then publish by exact row/owner CAS.
+    if status == "queued" and isinstance(future, Future) and future.cancel():
+        owner.cancel_before_start()
+        if not _publish_source_task(record, owner, status="cancelled", completedAt=_now_iso()):
+            raise ModelSourceTaskError()
+        cancelled = True
+    elif status == "cancelled":
+        cancelled = True
+    return {"cancelled": cancelled, "source": owner.status()}
+
+
+@app.post("/tasks/{request_id}/model-source/cancel")
+async def cancel_bound_model_source(request_id: str, request: Request):
+    try:
+        binding = await read_source_binding(request)
+    except ModelSourceTaskError:
+        return _model_source_error(400)
+    if binding["taskId"] != request_id:
+        return _model_source_error(409)
+    with TASK_REGISTRY_LOCK:
+        record = TASK_REGISTRY.get(request_id)
+        owner = record.get("_modelSourceOwner") if record is not None else None
+    if not isinstance(owner, ModelSourceTaskOwner):
+        return _model_source_error(404)
+    try:
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(_cancel_bound_model_source, record, owner, binding)
     except ModelSourceTaskError:
         return _model_source_error(409)
 
