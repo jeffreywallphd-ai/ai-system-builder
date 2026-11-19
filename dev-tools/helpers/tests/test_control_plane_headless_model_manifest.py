@@ -20,7 +20,8 @@ class ModelManifestRoutingTests(unittest.TestCase):
         rows = self.selected(paths)
         self.assertNotIn('focused-tests', rows)
         self.assertEqual(rows['headless-model-manifest-worker']['argv'], [sys.executable, '-B', '-m', 'unittest', '-v',
-            'modules.adapters.runtime.python.worker.tests.test_model_download_manifest.ModelDownloadManifestTests'])
+            'modules.adapters.runtime.python.worker.tests.test_model_download_manifest.ModelDownloadManifestTests',
+            'modules.adapters.runtime.python.worker.tests.test_model_source_transport.ModelSourceTransportTests'])
         for name in ['headless-model-metadata-owner-unit', 'headless-model-metadata-owner-types']:
             self.assertIn('modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts', rows[name]['argv'])
         self.assertIn('modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',

@@ -13,6 +13,29 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+`ModelSourceTransferSession` is private, selected-file streaming support. The
+default origin is Hugging Face only. Additional exact origins must come from
+trusted approved scope; a redirect cannot grant its own destination. Each hop
+requires public-only DNS, pins the selected address and verifies the canonical
+TLS hostname. No cookies, authentication, environment proxy, global client
+mutation, hidden retry or SDK/Xet fallback is used.
+
+Fixed requests and 64 KiB reads enforce selected/aggregate payload limits before
+sink entry, with at most one unpublished excess-byte EOF probe. Exact EOF and
+SHA256/Git blob SHA1 precede a numeric/digest receipt. Strict currentness and the
+monotonic deadline are checked again after callbacks. One-use failed sessions
+cannot retry. The caller owns its sink and must not publish before success.
+
+The connection retains its exact socket through stdlib response detachment;
+deadline/cancel abort it even for `Connection: close`. A stalled sink keeps its
+single lease until it returns. A timed-out DNS lookup keeps the sole nonqueueing
+resolver slot until actual settlement. Unknown close acknowledgement retains
+the known connection and lease; it grants no retry or recovery authority.
+Native-uninterruptible completion and wire/header overhead are not payload or
+wall-clock guarantees. Controlled socketpair/constructor tests grant no actual
+provider/TLS/model/native or public acquisition qualification. Production
+staging, effect authorization and integration remain separate work.
+
 Optional manifest downloads validate exact source/commit/digest before effects.
 The separate path binds SDK `cache_dir` to the captured plain prepared host
 cache, selects literal files, disables implicit credentials with `token=False`,

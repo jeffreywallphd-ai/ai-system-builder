@@ -1,5 +1,12 @@
 # Python runtime adapter
 
+A separate private selected-file stream uses fixed source URLs, pinned public
+DNS/TLS destinations and trusted exact origins. It sends no credentials,
+cookies or environment proxy settings, and never retries or falls back to SDK/
+Xet transport. Payload bounds and exact hashes precede completion; the caller
+still owns staging and publication. It is not connected to the default download
+branch or a public approval operation. See the worker guide for custody limits.
+
 Private `sourceManifest` downloads require an exact source/digest and the same
 worker's `ensure-model-download.source-manifest-v1` capability before dispatch.
 The bounded async registry retains the frozen manifest before readiness;

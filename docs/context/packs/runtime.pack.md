@@ -2,7 +2,7 @@
 
 - Private manifest downloads require exact source/digest, same-worker capability and the accepted owner's frozen expectation through async completion. Reject a
   different canonical cache handle before resolution. Closed files and verified
-  reads grant no hard quota, native custody, public approval, rights or readiness.
+  reads grant no hard quota, native custody, public approval, rights or readiness. Separate private stream support bounds its own payload and holds socket/DNS/writer custody; production binding remains separate.
 
 - Pack name: `runtime`
 

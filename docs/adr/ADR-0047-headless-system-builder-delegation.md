@@ -1,5 +1,18 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private selected-file streaming boundary
+
+The I7 resource prerequisite uses an attempt-local fixed-HF transport rather
+than treating SDK progress or declared free space as enforcement. Default
+origin is Hugging Face; extra exact origins require trusted approved scope,
+not redirect data or a public self-grant. Reuse public-DNS/pinned-TLS/redirect
+rules and verified-stream sink semantics. No implicit credentials, proxies,
+global client mutation, retry, Xet fallback, scheduler or new process is added.
+Retain independent socket custody through HTTP response detachment and policy
+callback fences. DNS/writer/close uncertainty cannot credit a fresh lease.
+This private port creates/publishes no path and supplies no approval, native
+lifetime, wire-overhead, actual provider or model qualification.
+
 ### Private exact-file download protocol
 
 Approved I7 first requires an optional strict source manifest in the existing

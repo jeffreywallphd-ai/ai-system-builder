@@ -1,8 +1,9 @@
 Headless source-preview feature checks cover copied codecs, application policy
 and provider phases, real host-reader composition and exact metadata digests.
 Private manifest work also uses Model owner unit/types, existing runtime
-ownership and `headless-model-manifest-worker`. The last runs only controlled
-disposable file/SDK/failure fixtures, with no network or model load. Preserve
+ownership and `headless-model-manifest-worker`. The last runs controlled
+manifest/stream classes: disposable files, SDK/DNS/sink failures and an owned
+local socketpair HTTP-response deadline fixture, with no provider or model load. Preserve
 shared-worker-only/unknown-path fallback and ordinary revision compatibility;
 these tests do not qualify public acquisition, native custody or hard quotas.
 Related pinned SDK and Managed route profiles retain authentication, revocation,

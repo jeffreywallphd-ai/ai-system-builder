@@ -1,5 +1,14 @@
 # Runtime Model
 
+Private selected-file streaming is separate from the default SDK branch. It
+reuses verified-publication semantics: bounded immutable chunks, exact EOF/hash
+and no receipt before completion. Fixed HF URLs and trusted exact origins use
+public-only DNS and pinned TCP/canonical TLS, without ambient credentials or
+proxies. Per-hop requests and payloads are finite; deadlines abort the separately
+retained response socket. File, DNS and unconfirmed-close custody stay held until
+actual settlement. The caller owns staging/publication and approval. This adds
+no scheduler, process, provider, credential channel or public download authority.
+
 Private exact-file downloads add a strict optional manifest and same-worker
 capability to the existing runtime. A separate path binds the validated cache
 and verifies closed selected bytes without entering ordinary retry/cleanup or

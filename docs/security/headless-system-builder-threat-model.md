@@ -1,5 +1,23 @@
 # Headless System Builder threat model
 
+## Private selected-file stream
+
+Capture immutable manifest and finite deadline/request/payload bounds. Reject
+non-HTTPS, userinfo, fragments, non443 ports, unapproved exact origins, mixed or
+private DNS and redirect loops. Pin TCP to the checked public address while
+validating canonical TLS/Host. A redirect grants no authority; no authentication,
+cookies, proxy settings or global client state crosses this unauthenticated port.
+
+Check strict currentness, failure/cancel and deadline after callbacks and before
+each sink call. Bound reads before writes; exact EOF/hash precedes a receipt.
+Keep an independent socket after stdlib response detachment so timers can abort
+stalled reads. DNS cannot enqueue after a timed-out unresolved lookup; a stalled
+writer and unconfirmed close retain custody. Unknown close grants no recovery.
+No path is created/deleted/published here. Staging and current effect/resource
+authority remain caller responsibilities, and default SDK behavior is unchanged.
+Controlled fixtures prove no actual provider/TLS/model/native outcome or hard
+wire-overhead/uninterruptible-completion guarantee.
+
 ## Private exact-file Model downloads
 
 Strict manifest presence cannot fall back to an ordinary download when null,

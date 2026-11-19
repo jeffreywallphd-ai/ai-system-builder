@@ -175,6 +175,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/adapters/runtime/python/worker/tasks/model_download_manifest.py",
             "modules/adapters/runtime/python/worker/tests/test_model_download_manifest.py",
+            "modules/adapters/runtime/python/worker/tasks/model_source_transport.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_source_transport.py",
         ),
         "sources": (
             "modules/application/ports/runtime/python-runtime.port.ts",
@@ -188,11 +190,14 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
             "modules/adapters/runtime/python/worker/tasks/model_download_manifest.py",
             "modules/adapters/runtime/python/worker/tests/test_model_download_manifest.py",
+            "modules/adapters/runtime/python/worker/tasks/model_source_transport.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_source_transport.py",
             "modules/adapters/runtime/python/README.md",
             "modules/adapters/runtime/python/worker/README.md",
         ),
         "command": ("-m", "unittest", "-v",
-            "modules.adapters.runtime.python.worker.tests.test_model_download_manifest.ModelDownloadManifestTests"),
+            "modules.adapters.runtime.python.worker.tests.test_model_download_manifest.ModelDownloadManifestTests",
+            "modules.adapters.runtime.python.worker.tests.test_model_source_transport.ModelSourceTransportTests"),
     },
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (

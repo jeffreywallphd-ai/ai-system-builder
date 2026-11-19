@@ -1,0 +1,28 @@
+{
+  "schema_version": "headless-model-stream-observation-v1",
+  "scope": "Private selected-file transport; not wired to default downloads or public acquisition",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Fresh candidate-bound checks and actual separate-invocation review govern completion. This report supplies no executed or parent pass.",
+  "controls": [
+    "Validated source, finite request/deadline/payload budgets and trusted exact origins are copied before work. Default origin is Hugging Face only; redirect data cannot grant another origin. No public field or operation grants authority.",
+    "Every hop requires public-only DNS and pinned TCP with canonical Host/SNI and default certificate verification. No ambient token, cookie, proxy, global client mutation, hidden retry or SDK/Xet fallback is used.",
+    "Immutable reads are at most64KiB and bounded by the remaining selected/aggregate payload allowance plus one nonpublished EOF byte. Sink entry is fenced and bounded. Exact EOF/hash precedes a numeric/SHA256 receipt; staging/publication remain caller-owned.",
+    "One-use failed sessions cannot retry. A single file lease stays owned through writer/socket settlement. Timed-out DNS retains its sole nonqueueing slot. Unconfirmed close retains the exact known connection and lease without a recovery grant.",
+    "Policy fences recheck cancellation/failure/deadline after the callback. Independent socket custody survives stdlib Connection:close detachment; explicit TLS handshake starts only after ownership capture. Deadline/cancel uses that socket through response settlement."
+  ],
+  "controlled_observations": [
+    "Fourteen focused cases pass for selected URI/body bytes into a real temporary sink, exact delegated origin/default denial, unsafe redirects/framing, strict policies, one-use/oversize/short/hash refusal, chunk and aggregate budgets, cancellation, stalled writer custody, nonqueueing DNS and unconfirmed close.",
+    "The real stdlib HTTPResponse and an owned local socketpair reproduce connection.sock becomingNone while the body remains live. The one-second deadline aborts that detached body instead of waiting for its earlier five-second timeout. No external TLS/provider was exercised.",
+    "A separate constructor fixture checks actual pinned-address and default-certificate/SNI/explicit-handshake calls with controlled sockets. This is protocol evidence, not a successful certificate handshake."
+  ],
+  "retained_corrections": [
+    "Independent preflight found that a held currentness callback could returnTrue after cancellation/deadline and enter the final sink. The fence now rechecks its local lifetime after the callback; causal final-prewrite cancel/deadline cases prove zero sink entry.",
+    "Preflight found stdlib getresponse detaching Connection:close sockets before body completion. Independent exact socket custody, remaining-time reads and the real response/socketpair regression repair that lifetime gap. Earlier BytesIO-only fixtures did not prove it."
+  ],
+  "qualification_limits": [
+    "No actual HF/provider transfer, real certificate handshake, model weight/load, native process/lifetime or parent qualification is claimed. Existing model accuracy remains closed and was not rerun.",
+    "Payload limits are not wire/header-overhead quotas. Native-uninterruptible DNS, writer and close operations retain custody and may settle after the outward deadline; no hard completion-time claim is made.",
+    "The private transport owns no staging paths or publication. Current caller/effect authorization, owned staging, disk accounting, approved exact delegate origins, integration and real outcomes remain I7 work.",
+    "No arbitrary CDN/wildcard authority, private credential support or production fallback is introduced. Ordinary SDK downloads and existing guards are unchanged."
+  ]
+}
