@@ -1,5 +1,12 @@
 # Headless client skill
 
+A failed Context task has no review and cannot be saved. Replay its original
+approved step only to observe the same accepted task; never issue a new task
+through a hidden retry. A separately consented `show-context-task` may show its
+bounded failed status. The saved RAG remains a separate exact reference and can
+still be searched when its current source/model policy allows it. Real-host
+failure checks require actual worker acceptance, not a refusal before dispatch.
+
 Context citation locations include the source, chunk, row, span and page when
 available. A chunk index can restart in each structured row. Keep those location
 fields together; different rows with chunk zero are distinct results. Exact

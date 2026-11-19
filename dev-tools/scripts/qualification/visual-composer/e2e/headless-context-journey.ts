@@ -114,6 +114,7 @@ export async function runHeadlessContextDesktopJourney() {
       if (app && workerStarted) {
         const outcome = await closeDesktopAndQualifyOwnedWorkers(app, model.cache, test.info());
         if (journeyPassed) {
+          expect(outcome.physicalWorkersObserved).toBe(1);
           expect(outcome.physicalWorkersNativeObserved).toBeGreaterThan(0);
           expect(outcome.physicalWorkersNativeObserved).toBe(outcome.physicalWorkersObserved);
           expect(outcome.physicalWorkersPidAbsenceObserved).toBe(0);
@@ -127,7 +128,7 @@ export async function runHeadlessContextDesktopJourney() {
       schemaVersion: "headless-context-desktop-observation-v2", sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
       endpointProfile, journeyPassed, cleanupPassed, phase, facts, failures: failures.map(safeQualificationFailureType), startupFailures, runtimeFailure,
       model: "pinned-installed-MiniLM", worker: "unchanged-packaged-main",
-      managedHost: "pending", physicalFailedBuild: "pending", parentQualification: "pending"};
+      managedHost: "pending", physicalFailedBuild: facts.failedBuildObserved && facts.failedBuildReplayed && facts.savedContextPreservedAfterFailure ? "observed" : "pending", parentQualification: "pending"};
     try {
       const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID;
       expect(run).toMatch(/^[a-z0-9-]{20,80}$/);

@@ -18,6 +18,20 @@ explicit generic requirements retain their fallback checks.
 
 # Contributor Control Plane
 
+The shared Context host journey now also requires an actual started RAG task
+whose valid settings select no text column from its real CSV. It must return
+the exact accepted task as failed with no review, replay that same task, deny a
+save preview, preserve the saved RAG and answer the next real question. The
+separately consented window shows that exact failed task. Native Desktop proof
+requires one worker, so recovery cannot hide a second spawn. The finite
+`physicalFailedBuild` observation becomes `observed` only after all three
+failure/replay/preservation facts hold; it grants no parent pass.
+The focused `headless-context-failure-oracles` and strict TypeScript companion
+reject unavailable/not-started/unconfirmed starts, foreign/private/nonterminal
+tasks and changed plan/task replay. Parsing replies alone proves no physical
+execution. Both fixed actual-host checks remain required for the workflow.
+Unknown source paths and explicit generic checks retain their fallback.
+
 The `python-runtime-owned-startup` check exercises exact private proof framing,
 current-child/lifecycle and seven held-response body paths, plus real local
 healthy-listener handoff refusal and a Windows reuse-address peer against the

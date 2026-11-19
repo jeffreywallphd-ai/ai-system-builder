@@ -1392,6 +1392,44 @@
           "Earlier failures and uncertain exits stay recorded."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "55217348b0fbe73a27d2afae666e245e9ca3bf28ae4868903c947bb7dfb490e3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent fixed local runtime startup.",
+          "Both app interfaces passed real Context workflows.",
+          "The checks cover worker ownership, connection settings, response handling and shutdown."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0d7204b6681cf7988ba1b3120d3a5d5a13f02ab2811139e3b1f45fa19f13e8d5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The failed-build tests and final roadmap checks need separate evidence.",
+          "Earlier failures stay recorded."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2f468cc515c53ac5a9e3ba5e4b96b9763c565996222b6b25a8f8701000ecb39c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are startup checks.",
+          "They do not prove a connection is safe after a worker stops before the app notices.",
+          "Desktop and server shutdown checks use different forms of evidence.",
+          "Other unfinished memory and shutdown work stays separate."
+        ]
+      }
     }
   ]
 }

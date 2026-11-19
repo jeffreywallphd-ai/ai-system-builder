@@ -1,6 +1,6 @@
 {
   "schema_version": "headless-context-default-port-qualification-v1",
-  "status": "feature-observed-current-component-review-required",
+  "status": "completed",
   "work_id": "headless-context-startup-host-regression",
   "security_impact": {
     "classification": "security-relevant",
@@ -54,7 +54,7 @@
     },
     "startup_failures": []
   },
-  "verification_boundary": "All embedded observations are historical feature evidence. Fresh candidate-bound receipts and separate review must cover both Desktop profiles, actual Managed Context, owned startup/worker, port, retained lifecycle/native and repository feature gates before this component can complete. It grants no parent or final roadmap pass.",
+  "verification_boundary": "The startup component completed with18current feature-check groups and a separate review before commit907933b19. Both Desktop profiles and Managed passed on the same source. Embedded earlier observations remain historical. This grants no later failed-build, parent-increment or final roadmap qualification.",
   "remaining": [
     "Actual physical failed-build/replay qualification for increment6.",
     "Fresh exact-target increment qualification.",
@@ -139,5 +139,12 @@
     "documentation": "The runtime pack exceeded its200physical-line cap. All clauses are retained by joining paragraphs; no rule or limit changed. Two README EOF blanks were removed. Documentation and diff checks passed.",
     "managed_prerequisite": "The first Managed check failed quickly before producing a Context report after worker source changed. Later Desktop profiles rebuilt the packaged worker. A direct rerun against the current package passed. The source/package mismatch is consistent with the failure, but its exact original exception was not retained by the digest-only executor.",
     "current_execution": "The successor explicitly retains all18feature-check groups, including both Desktop profiles and Managed. A fresh complete receipt and separate review are required before component completion."
+  },
+  "completion": {
+    "commit": "907933b19f9a539c31bd279489e8c95f21dcd2ff",
+    "work_id": "headless-context-startup-host-regression",
+    "receipt_digest": "40f75f8429f8748a9278c3bc1367343ef0e51e5007817938ea887a5f92be5443",
+    "review_digest": "63bbfb8b819916abb4678695401d763130f1118fb8a0a1725fb30f7dda6d53ba",
+    "check_groups": 18
   }
 }

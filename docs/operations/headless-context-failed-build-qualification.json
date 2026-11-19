@@ -1,0 +1,103 @@
+{
+  "schema_version": "headless-context-failed-build-qualification-v1",
+  "status": "two-host-pre-refinement-observed-current-review-pending",
+  "work_id": "headless-context-failed-build-replay",
+  "profile": "Actual accepted RAG build selects no matching CSV text column; worker extraction fails before index creation.",
+  "security_impact": {
+    "classification": "security-relevant",
+    "controls": [
+      "Actual worker ACK and durable accepted plan/task binding precede failure.",
+      "Unavailable, not-started, unconfirmed, foreign, private and query-family snapshots cannot qualify.",
+      "Failed output has no review; save preview denies. Exact replay cannot become a new task.",
+      "Original saved source/RAG reference stays unchanged and answers a second grounded question.",
+      "Separate credentials and window consent permit bounded failed-task display; revoke and owned cleanup remain."
+    ],
+    "residual_limits": [
+      "This controlled extraction failure does not qualify hostile mid-index crashes or offload recovery.",
+      "Managed execution, exact parent qualification and the final aggregate suite remain separate."
+    ]
+  },
+  "desktop_observation": {
+    "run": "artifacts/qualification/visual-composer/runs/2026-11-19t01-30-47-607z-ab93d166",
+    "source_revision": "source.c157441501e1d8bd810786cfec9779bbd57a2caa083cee2ebf406d0ef7590ad0",
+    "case_milliseconds": 51132,
+    "journey_passed": true,
+    "cleanup_passed": true,
+    "facts": {
+      "packSaved": true,
+      "ragSaved": true,
+      "queryCitations": 2,
+      "queriesGrounded": 2,
+      "rebuildSaved": true,
+      "failedBuildObserved": true,
+      "failedBuildReplayed": true,
+      "savedContextPreservedAfterFailure": true,
+      "replayChecks": 9,
+      "denialChecks": 23,
+      "presentations": 5,
+      "revoked": true
+    },
+    "native_cleanup": {
+      "report": "artifacts/qualification/visual-composer/runs/2026-11-19t01-30-47-607z-ab93d166/owned-host/cleanup-930e73a65c43df43.json",
+      "status": "passed",
+      "mainExitCode": 0,
+      "willQuitAcknowledged": true,
+      "physicalWorkersObserved": 1,
+      "physicalWorkersNativeObserved": 1,
+      "physicalWorkersPidAbsenceObserved": 0,
+      "physicalWorkersAlive": 0,
+      "failures": 0
+    }
+  },
+  "verification_boundary": "This is historical feature evidence. Final current fixed checks must execute both actual hosts, oracle/type/denial and retained Context regressions, followed by independent review. No parent or full-suite pass is granted.",
+  "completed_startup_component": {
+    "commit": "907933b19f9a539c31bd279489e8c95f21dcd2ff",
+    "work_id": "headless-context-startup-host-regression",
+    "receipt_digest": "40f75f8429f8748a9278c3bc1367343ef0e51e5007817938ea887a5f92be5443",
+    "review_digest": "63bbfb8b819916abb4678695401d763130f1118fb8a0a1725fb30f7dda6d53ba",
+    "check_groups": 18
+  },
+  "owned_copy_cleanup": {
+    "report": ".local-codex/headless-provider-import-20261117/context-startup-model-copy-cleanup.json",
+    "closed_runs": 10,
+    "reclaimed_bytes": 915672050,
+    "original_acquisitions_and_reports_retained": true
+  },
+  "pending": [
+    "Fresh both-host execution with the fixed failed-task card oracle.",
+    "Independent closure of failed-context-card-state and component completion.",
+    "Fresh exact-target increment6 qualification, later roadmap work and final aggregate qualification."
+  ],
+  "pre_refinement_review": {
+    "receipt_digest": "38c9c810bdad87f3b9c1bda578bc1b417f4b78d00b6b0d4dc6cb4c00fdedc67a",
+    "check_groups": 10,
+    "all_checks_passed": true,
+    "review_digest": "61c2942417b12627b67a5bd2d73c6f65cfb50e50ac1710deac4c6a05b20a72f1",
+    "disposition": "changes-requested",
+    "finding_id": "failed-context-card-state",
+    "finding": "The failed-task card assertion derived expected text from the reread state. A state regression at presentation could pass. No product regression was observed.",
+    "correction": "Require the exact failedTaskId, failed state and null review on the presentation reread, then literal Task status: failed. on the actual card.",
+    "closure": "Pending a fresh complete receipt and explicit independent finding closure. The first passing checks do not close this component."
+  },
+  "managed_pre_refinement_observation": {
+    "report": "artifacts/qualification/visual-composer/d/managed-54c0e4ad69a2454e9b079f1296011ef2/headless-context-managed.json",
+    "source_revision": "source.2a8c4d01bd40bac07d6afdea669b05b43cca2113e52b9018e4fb49907aa4a57f",
+    "journey_passed": true,
+    "cleanup_passed": true,
+    "facts": {
+      "packSaved": true,
+      "ragSaved": true,
+      "queryCitations": 2,
+      "queriesGrounded": 2,
+      "rebuildSaved": true,
+      "failedBuildObserved": true,
+      "failedBuildReplayed": true,
+      "savedContextPreservedAfterFailure": true,
+      "replayChecks": 9,
+      "denialChecks": 23,
+      "presentations": 5,
+      "revoked": true
+    },
+    "limitation": "This successful actual flow precedes the explicit failed/null/literal card assertion. It is not final current-candidate qualification."
+  }
+}

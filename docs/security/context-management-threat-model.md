@@ -1,5 +1,18 @@
 # Context Management Threat Model
 
+## Accepted build failure and preserved saved Context
+
+The real-host regression requests a fresh RAG build with a valid settings shape
+but no matching CSV text column. Worker ACK and the durable accepted association
+must precede its failed task; unavailable, not-started or unconfirmed responses
+cannot count as physical failure evidence. Failed tasks have no review, and
+save preview denies them. Exact replay preserves the original plan/task binding
+without a retry grant. A separately consented window can show only the exact
+accepted task's bounded status. The original saved RAG reference and its next
+grounded query remain unchanged. One owned Desktop worker exits after the test.
+This controlled extraction failure does not claim hostile mid-index crash,
+offload recovery, parent or aggregate qualification. Earlier observations remain.
+
 The minimized query summary distinguishes full numeric citation locations, not
 only a source-wide chunk number. Structured rows can share chunk zero. Exact
 duplicate locations still deny even when rank or score differs; invalid numeric

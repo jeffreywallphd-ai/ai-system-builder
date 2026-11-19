@@ -2,6 +2,8 @@ import {createHash, randomUUID} from "node:crypto";
 import {expect, type Locator, type Page} from "@playwright/test";
 import type {HeadlessSavedContextReference, HeadlessContextTaskValue} from "../../../../../modules/contracts/headless";
 import {CONTEXT_FIXTURE_MODEL_RECORD} from "../headless-context-fixture";
+import {readConfirmedFailedContextBuild} from "./headless-context-failure-oracles";
+import type {HeadlessPlanStepTarget} from "../../../../../modules/contracts/headless";
 
 export type ContextCall = (name: string, args: Record<string, unknown>) => Promise<{ok?: boolean; code?: string; value?: any}>;
 export function contextLeaseRetirementConfirmed(status: Awaited<ReturnType<ContextCall>>) {
@@ -9,7 +11,8 @@ export function contextLeaseRetirementConfirmed(status: Awaited<ReturnType<Conte
     status.value?.kind === "request" && status.value.request?.status === "ended");
 }
 export const contextWorkflowFacts = () => ({packSaved: false, ragSaved: false, queryCitations: 0, queriesGrounded: 0,
-  rebuildSaved: false, replayChecks: 0, denialChecks: 0, presentations: 0, revoked: false});
+  rebuildSaved: false, failedBuildObserved: false, failedBuildReplayed: false, savedContextPreservedAfterFailure: false,
+  replayChecks: 0, denialChecks: 0, presentations: 0, revoked: false});
 
 /** The callers supply actual authenticated MCP connections and their real app UI.
  * No runtime, vector, result, approval or save substitute is accepted here. */
@@ -187,9 +190,33 @@ export async function runHeadlessContextWorkflow(options: {
   return query;
   }
   const billingQuery = await queryKnownRow("How does billing support replace an invoice?", 0);
+  reportStage("failed-build");
+  // Valid settings select no actual CSV text column. Require the production
+  // worker ACK and a failed task; a preflight refusal cannot count as proof.
+  const failedTarget = await approve({operation: "context.generate-rag", idempotencyKey: randomUUID(), name: "Synthetic failed RAG build",
+    sources, settings: {...ragSettings, textFields: ["missingColumn"]}});
+  const failedStart = await call("aisb_run_approved_build_step", failedTarget);
+  expect(failedStart).toMatchObject({ok: true, value: {kind: "started", operation: "context.generate-rag"}});
+  const failedTaskId = failedStart.value.reference.taskId as string;
+  let failedTask: Awaited<ReturnType<ContextCall>> | undefined;
+  await expect.poll(async () => {
+    const result = await call("aisb_context_task", {...workspace, selection: {kind: "plan-step", fingerprint: failedTarget.fingerprint, step: 1}});
+    expect(result).toMatchObject({ok: true, value: {taskId: failedTaskId}});
+    failedTask = result; return result.value.state;
+  }, {timeout: 30_000, intervals: [100, 250, 500], message: "An ACKed real Context build must fail without producing a review"}).toBe("failed");
+  const failedReplay = await call("aisb_run_approved_build_step", failedTarget);
+  expect(readConfirmedFailedContextBuild({target: failedTarget as HeadlessPlanStepTarget, started: failedStart, terminal: failedTask, replayed: failedReplay}))
+    .toEqual({taskId: failedTaskId});
+  facts.failedBuildObserved = true; facts.failedBuildReplayed = true; facts.replayChecks++;
+  const deniedSave = await call("aisb_preview_build_plan", {...workspace, steps: [{operation: "context.save-result", idempotencyKey: randomUUID(),
+    taskId: failedTaskId, reportFingerprint: "0".repeat(64), name: "Must not save failed Context"}]});
+  expect(deniedSave.ok).toBe(false); facts.denialChecks++;
+  expect(await call("aisb_read_context", {...workspace, contextId: rag.reference.contextId})).toEqual(rag.read);
+  reportStage("query-after-failure");
   const query = await queryKnownRow("How does account support help customers restore sign in?", 1);
   expect(query.query.queryDigest).not.toBe(billingQuery.query.queryDigest);
   facts.queriesGrounded = 2;
+  facts.savedContextPreservedAfterFailure = true;
   reportStage("rebuild");
   const rebuild = await call("aisb_preview_context_rebuild", {...workspace, reference: rag.reference});
   expect(rebuild).toMatchObject({ok: true, value: {reference: rag.reference, preview: {settings: ragSettings}}});
@@ -216,6 +243,7 @@ export async function runHeadlessContextWorkflow(options: {
     [{action: "show-context-artifact", reference: pack.reference}, "Saved context pack", pack.reference.contextId],
     [{action: "show-context-artifact", reference: rag.reference}, "Saved RAG database", rag.reference.contextId],
     [{action: "show-context-task", taskId: rebuilt.taskId}, "Context task", rebuilt.taskId],
+    [{action: "show-context-task", taskId: failedTaskId}, "Context task", failedTaskId],
     [{action: "show-context-query", taskId: query.taskId}, "Context search", query.taskId],
   ] as const) {
     const command = {target: lease, commandId: randomUUID(), intent};
@@ -231,9 +259,14 @@ export async function runHeadlessContextWorkflow(options: {
     } else {
       const task = await call("aisb_context_task", {...workspace, selection: {kind: "task", taskId: intent.taskId}});
       expect(task.ok).toBe(true);
-      await expect(shown).toContainText(task.value.review
-        ? `Review required. Sources: ${task.value.review.sourceCount}. Chunks: ${task.value.review.chunkCount}. Size: ${task.value.review.sizeBytes} bytes. Approve saving separately.`
-        : `Task status: ${task.value.state}.`);
+      if (intent.taskId === failedTaskId) {
+        expect(task).toMatchObject({ok: true, value: {taskId: failedTaskId, state: "failed", review: null}});
+        await expect(shown).toContainText("Task status: failed.");
+      } else {
+        await expect(shown).toContainText(task.value.review
+          ? `Review required. Sources: ${task.value.review.sourceCount}. Chunks: ${task.value.review.chunkCount}. Size: ${task.value.review.sizeBytes} bytes. Approve saving separately.`
+          : `Task status: ${task.value.state}.`);
+      }
     }
     await expect.poll(async () => (await present("aisb_present_in_window", command)).value).toMatchObject({kind: "command", duplicate: true, receipt: {status: "applied"}});
     expect(await present("aisb_window_context", {target: lease})).toMatchObject({ok: true, value: {context: {selection: intent}}}); facts.presentations++;

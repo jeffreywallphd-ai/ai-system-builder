@@ -167,6 +167,29 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-context-failure-oracles": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-failure-oracles.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-failure-oracles.unit.test.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-failure-oracles.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-failure-oracles.unit.test.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--", "dev-tools/scripts/qualification/tests/headless-context-failure-oracles.unit.test.ts"),
+    },
+    "headless-context-failure-types": {
+        "automatic_sources": (),
+        "companion_to": "headless-context-failure-oracles",
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-failure-oracles.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-failure-oracles.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/lib/tsc.js", "--noEmit", "--pretty", "false", "--strict", "--target", "ES2021", "--module", "CommonJS",
+            "--moduleResolution", "node", "--skipLibCheck", "--esModuleInterop",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-failure-oracles.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-failure-oracles.unit.test.ts"),
+    },
     "headless-context-native-cleanup": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",

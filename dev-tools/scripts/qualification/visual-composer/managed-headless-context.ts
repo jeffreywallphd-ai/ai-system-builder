@@ -95,7 +95,8 @@ async function main() {
       journeyPassed, cleanupPassed, workerStarted, failures: failures.map(safeQualificationFailureType),
       failureLocations: failures.map(error => error instanceof Error ? [...error.stack?.matchAll(
         /(?:headless-context-workflow|managed-headless-context)\.ts:[0-9]+:[0-9]+/g) ?? []].map(match => match[0]).slice(0, 4) : []),
-      model: "pinned-installed-MiniLM", worker: "unchanged-packaged-main", physicalFailedBuild: "pending", parentQualification: "pending"};
+      model: "pinned-installed-MiniLM", worker: "unchanged-packaged-main",
+      physicalFailedBuild: facts.failedBuildObserved && facts.failedBuildReplayed && facts.savedContextPreservedAfterFailure ? "observed" : "pending", parentQualification: "pending"};
     const body = JSON.stringify(evidence, null, 2) + "\n"; assert.ok(Buffer.byteLength(body) <= 8192);
     await writeFile(path.join(fixture.runRoot, "headless-context-managed.json"), body, {flag: "wx"});
     process.stdout.write(body);
