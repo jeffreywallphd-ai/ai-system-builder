@@ -38,5 +38,19 @@ class ModelMetadataRoutingTests(unittest.TestCase):
         self.assertIn('headless-model-metadata-owner-unit', explicit)
         self.assertNotIn('focused-tests', explicit)
 
+    def test_registry_paging_uses_only_exact_model_cases_and_preserves_unknown_fallback(self):
+        adapter = 'modules/adapters/persistence/model/createLocalModelRegistryAdapter.ts'
+        rows = self.selected([adapter, 'modules/adapters/README.md', 'modules/contracts/model/model-management-operations.ts'])
+        self.assertIn('headless-model-metadata-owner-unit', rows)
+        self.assertIn('headless-model-metadata-owner-types', rows)
+        self.assertNotIn('focused-tests', rows)
+        argv = rows['headless-model-metadata-owner-unit']['argv']
+        self.assertIn('modules/adapters/persistence/model/tests/model-registry-pagination.unit.test.ts', argv)
+        self.assertIn('modules/adapters/persistence/model/tests/local-model-registry.adapter.unit.test.ts', argv)
+        self.assertIn('modules/contracts/model/model-contracts.unit.test.ts', argv)
+        self.assertIn('focused-tests', self.selected([adapter, adapter.replace('createLocalModelRegistryAdapter', 'unknown-model-adapter')]))
+        self.assertIn('focused-tests', self.selected([adapter], ('focused-tests',)))
+        self.assertNotIn('headless-model-metadata-owner-unit', self.selected(['modules/contracts/model/model-management-operations.ts']))
+
 
 if __name__ == '__main__': unittest.main()

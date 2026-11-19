@@ -1,5 +1,14 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Model inventory pages use the existing normalized list request and capture its
+workspace, filters, tags, limits and discovery flags before awaiting I/O. The
+returned cursor names the first omitted record; the next page includes it.
+Continue with the same workspace and filters. An unknown, removed, foreign or
+ambiguous cursor fails with a fixed message; restart from the first page.
+Each request reads the current inventory, not a snapshot across requests.
+Recorded-only queries retain both discovery flags as false and do not start a
+runtime. Pagination does not rewrite model records or qualify Headless downloads.
+
 In-memory structured stores and SQLite connection wrappers serialize operations
 under an adapter-owned asynchronous transaction context. Ordinary reads/writes
 cannot join a foreign transaction; callback stores expire on exit. Typed repository

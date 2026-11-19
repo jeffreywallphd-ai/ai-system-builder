@@ -1,0 +1,33 @@
+{
+  "schema_version": "headless-model-registry-pagination-observation-v1",
+  "security_impact": "security-relevant",
+  "scope": "Recorded model inventory pagination and query capture; no new public operation or model task",
+  "work_id": "headless-model-registry-pagination",
+  "verification_checks": ["headless-model-metadata-owner-unit", "headless-model-metadata-owner-types", "headless-context-input-preview", "control-plane", "documentation", "agent-support", "architecture"],
+  "regression": {
+    "before_fix": "A real disposable registry repeated its first two records when asked to continue from the first omitted record.",
+    "focused_cases_after_fix": 7,
+    "focused_result": "passed",
+    "cases": ["Complete inclusive traversal", "Current complete filters", "Unknown and foreign cursor denial", "Removed cursor restart", "Ambiguous cursor denial", "Request mutation after I/O starts", "Existing default and maximum page bounds"],
+    "current_qualification": "Exact candidate-bound executed checks and separate review determine component completion. This observation cannot supply a pass by itself."
+  },
+  "verification_history": {
+    "earlier_failed_receipt": "f5c6030439658ce2d069e2fff063200a45583ca62b69f1f7a1c0a91444e44977",
+    "earlier_result": "The expanded Model unit group failed once; all six other groups passed. Original output digests remain recorded, but the original raw error was not retained by the runner.",
+    "diagnosis": "Unresolved: the failure did not reproduce in a direct run or four exact-command, same-environment diagnostic runs, each passing all 88 cases. No specific cause or repair of that earlier failure is claimed.",
+    "changed_assertions_or_limits": false,
+    "current_qualification": "One fresh unmodified governed check run and separate review are required. Diagnostic repeats do not replace that receipt or erase the failed attempt."
+  },
+  "controls": [
+    "The existing normalized request and detached task tags are captured before document and discovery awaits.",
+    "Cursor membership is checked only in the current workspace and complete filtered inventory; a failure exposes one fixed message.",
+    "The next cursor remains the first omitted record and is included on continuation. Each call reads a fresh inventory, not a cross-request snapshot.",
+    "Read-only traversal preserves registry bytes and recorded-only discovery flags. New tests remove only their own verified temporary directories.",
+    "Exact Model sources select related Model cases and strict types. Shared contract edits alone, unknown neighbors and explicit generic checks retain their fallback."
+  ],
+  "qualification_limits": [
+    "Disposable metadata fixtures are not actual model loading, provider, download, worker, training, output-quality or hardware evidence.",
+    "Public Model host/MCP registration and actual acquisition/training/generation remain pending.",
+    "No parent work chunk, increment or final roadmap is qualified by this component. Earlier accepted ordinary model quality is unchanged."
+  ]
+}

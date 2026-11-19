@@ -25,6 +25,23 @@ Public host/MCP binding, pinned acquisition, training/generation, physical profi
 qualification and parent/final review remain separate. Reverting this unused
 helper grants no new permission and preserves saved data and existing controls.
 
+## Recorded model inventory continuation
+
+Registry pagination captures the existing normalized workspace, filters, tags,
+cursor, page bounds and discovery flags before document or discovery awaits.
+Caller mutation after a read starts cannot change that scope or enable discovery.
+The first omitted record is included in the next page, in the current filtered
+inventory. Missing, removed, foreign and ambiguous cursor membership denies with
+a fixed message that contains no cursor or private record value. Reads preserve
+saved bytes. Default and maximum page bounds remain the existing contract values.
+Each call reads a fresh inventory; this is not a snapshot across page requests.
+Ordinary supported discovery behavior remains separate from recorded-only reads.
+The exact Model check covers actual disposable registries, request mutation,
+filtered traversal, denial, bounds and related legacy metadata flows. New fixtures
+remove only their own verified temporary directory. These observations cannot
+qualify a public Model tool, supplier, download, runtime or parent increment.
+Rollback must retain cursor refusal and captured-query isolation.
+
 ## Local runtime startup ownership
 
 The host must not infer runtime ownership from healthy HTTP or possession of a

@@ -12,6 +12,8 @@ import {
 import { basename, dirname, extname, join } from "node:path";
 
 import {
+  DEFAULT_LIST_MODELS_LIMIT,
+  normalizeListModelsRequest,
   normalizeModelInventoryRecord,
   type DeleteModelRecordRequest,
   type DeleteModelRecordResult,
@@ -462,26 +464,36 @@ export function createLocalModelRegistryAdapter(
     },
     async listModels(request: ListModelsRequest): Promise<ListModelsResult> {
       assertWorkspaceId(request.workspaceId);
+      // Capture filters, tags and discovery before document/discovery awaits.
+      const captured = normalizeListModelsRequest(request);
+      assertWorkspaceId(captured.workspaceId);
       const document = await readDocument();
-      const limit = request.limit ?? 50;
+      const limit = captured.limit ?? DEFAULT_LIST_MODELS_LIMIT;
       const normalizedModels = (document.models ?? []).map(
         normalizeModelInventoryRecord,
       );
       const includeSharedStorage =
-        request.includeDiscovered !== false ||
-        request.includeSharedStorage === true;
+        captured.includeDiscovered !== false ||
+        captured.includeSharedStorage === true;
       const sharedModels = includeSharedStorage
-        ? await discoverSharedModels(normalizedModels, request.workspaceId)
+        ? await discoverSharedModels(normalizedModels, captured.workspaceId)
         : [];
       const allModels = [...normalizedModels, ...sharedModels];
 
       const filtered = allModels.filter((model) =>
-        matchesFilters(model, request),
+        matchesFilters(model, captured),
       );
+      let start = 0;
+      if (captured.cursor !== undefined) {
+        start = filtered.findIndex(model => model.modelRecordId === captured.cursor);
+        if (start < 0 || filtered.some((model, index) => index !== start && model.modelRecordId === captured.cursor)) {
+          throw new Error("Model inventory cursor is unavailable.");
+        }
+      }
       return {
-        models: filtered.slice(0, limit),
+        models: filtered.slice(start, start + limit),
         nextCursor:
-          filtered.length > limit ? filtered[limit]?.modelRecordId : undefined,
+          filtered.length > start + limit ? filtered[start + limit]?.modelRecordId : undefined,
       };
     },
 

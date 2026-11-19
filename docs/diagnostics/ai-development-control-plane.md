@@ -1,3 +1,17 @@
+The fixed `headless-model-metadata-owner-unit` check covers the real local model
+registry alongside its private Headless owner and related Model contracts/use cases.
+Its disposable-registry cases verify inclusive first-omitted cursors, current
+filtered membership, detached query scope, fixed denial, page bounds and unchanged
+record bytes. The existing registry case also compiles the adapter with strict
+TypeScript settings; the companion check compiles the private owner/codecs,
+registry adapter and cursor fixture.
+The existing Context input-preview check also runs because it consumes this
+registry. Its controlled metadata cases start no model or worker.
+Only exact Model sources select this profile. Shared contract edits alone,
+unknown neighbors and explicitly required generic checks keep their fallback.
+This is metadata feature evidence, not model loading, public-tool, provider,
+native-resource or parent/final qualification. Accepted model accuracy stays closed.
+
 The Context increment's [qualification record](../operations/headless-context-increment-qualification.json)
 composes actual Desktop/Managed MCP journeys with the fixed local MiniLM worker
 matrix. `headless-context-current-evidence` regrades the retained raw measurements

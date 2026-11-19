@@ -27,6 +27,7 @@ export interface ListModelsRequest {
   taskTags?: ModelTaskTag[];
   search?: string;
   limit?: number;
+  /** First omitted modelRecordId from the preceding page; included in this page. */
   cursor?: string;
   includeDiscovered?: boolean;
   includeSharedStorage?: boolean;
@@ -34,6 +35,7 @@ export interface ListModelsRequest {
 
 export interface ListModelsResult {
   models: ModelInventoryRecord[];
+  /** Continue with this first omitted ID using the same workspace and filters. */
   nextCursor?: string;
 }
 
