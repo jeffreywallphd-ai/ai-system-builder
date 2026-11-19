@@ -229,11 +229,21 @@ test("JSON review UI refreshes, navigates and renders hostile text inertly", asy
   assert.equal(window.document.querySelector(".card-heading h3").textContent, "Updated JSON outcome");
   window.document.querySelector('[data-view="work_items"]').click();
   assert.match(window.document.querySelector("#items").textContent, /No work items yet/);
+  window.document.querySelector('[data-view="roadmaps"]').click();
   window.fetch = async () => { throw new Error("synthetic-private-detail"); };
   window.document.querySelector("#refresh").click();
   await pause();
   assert.equal(window.document.querySelector("#error").hidden, false);
+  assert.equal(window.document.querySelector("#connection").textContent, "Connection interrupted");
   assert.doesNotMatch(window.document.body.textContent, /synthetic-private-detail/);
+  response.source_digest = "recovered-fingerprint";
+  response.roadmaps[0].title = "Recovered JSON outcome";
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.document.querySelector("#refresh").click(); await pause();
+  assert.equal(window.document.querySelector("#connection").textContent, "Live · JSON connected");
+  assert.equal(window.document.querySelector(".card-heading h3").textContent, "Recovered JSON outcome");
+  assert.equal(window.document.querySelector("#error").textContent, "");
+  assert.equal(window.document.querySelector("#error").hidden, true);
   window.close();
 });
 

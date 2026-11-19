@@ -174,7 +174,8 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
         fixtureUnavailable = false; await page.getByRole("button", { name: "Refresh", exact: true }).click();
         await expect(page.locator("#connection")).toHaveText("Live · JSON connected");
         await expect(page.getByRole("heading", { name: "Synthetic refreshed review title", exact: true })).toBeVisible();
-        await expect(page.getByRole("alert")).not.toContainText("The local review server is unavailable.");
+        await expect(page.locator("#error")).toHaveText("");
+        await expect(page.locator("#error")).toBeHidden();
       });
     } else {
       await step("dark-default", async () => { await openCanonical(); await expect(page.locator("html")).toHaveAttribute("data-theme", "dark"); });
