@@ -1,5 +1,28 @@
 # Headless System Builder threat model
 
+## Model application admission and reusable task IDs
+
+An old or unknown download must not adopt a later job that reuses its ID. Before
+effects, require original organization/principal, ModelWrite, immutable exact
+source scope, issuance acknowledgement and an existing reconciler reservation.
+Keep unknown starts protected without status/list/cancel discovery. Accepted
+results bind exact task/workspace/repository/pin/digest and captured original
+controller methods. Shared-history eviction cannot replace that authority or
+update another job. Reject active/mismatched result handles without invoking
+hooks. Runtime exit cannot release unknown Node custody. Internal transfer
+success cannot bypass separately scoped Model registration or grant public
+plan permission. Both hosts reuse captured cache/session configuration; paths
+and callbacks stay private. No native/restart or real-model claim follows.
+The ordinary ID-only completion port must refuse source results even when its
+caller retains an older ordinary descriptor. Recheck new-task reconciler
+acceptance after approval waits, without retiring accepted cleanup authority.
+Canonical child cache configuration prevents Node/Worker alias divergence.
+Generic ID read/cancel and list refresh must not enter a source controller.
+Exclude source/preparing rows before enumeration effects and output. Reject
+generic Worker cancellation before touching any source Future: a delayed request
+from an older ID owner cannot cancel a later queued source. Original bound
+source cancellation, known-empty cleanup and unknown custody remain separate.
+
 ## Source acquisition Task and storage lifetime
 
 Protect the original source/workspace/limits, worker/host owner, temporary files

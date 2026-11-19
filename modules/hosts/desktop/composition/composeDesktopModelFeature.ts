@@ -76,6 +76,11 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
       taskReconciler: options.taskReconciler,
       runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry),
       modelDownloadCompletion: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).modelDownloadCompletionPort),
+      approvedModelSourceDownload: {async startApprovedModelSource(request, control) {
+        const port = (await options.getRuntimeTaskFeatures()).modelSourceDownloadPort;
+        if (typeof port?.startApprovedModelSource !== "function") return {kind: "unavailable"};
+        return port.startApprovedModelSource(request, control);
+      }},
       modelRegistry,
       now: options.now,
     }),

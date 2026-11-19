@@ -12,7 +12,8 @@ import {readModelDownloadSource} from "../../../../contracts/model";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import type {PythonRuntimePort} from "../../../../application/ports/runtime";
-import type {ApprovedModelSourceDownloadRequest, StoreGeneratedModelRequest, StoreGeneratedModelResult} from "../../../../application/ports/model";
+import type {ApprovedModelSourceDownloadRequest, ApprovedModelSourceDownloadTask, StoreGeneratedModelRequest, StoreGeneratedModelResult} from "../../../../application/ports/model";
+import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
 import {createLocalGeneratedModelStorageAdapter} from "../../../model/local";
 import {createPythonRuntimeTaskRegistryAdapter} from "../createPythonRuntimeTaskRegistryAdapter";
 import {createPythonRuntimeAdapterFoundation} from "../createPythonRuntimePort";
@@ -140,7 +141,14 @@ async function fixture(t: TestContext, queued = false) {
     }}},
   });
   const control = {isCurrent: () => current, stillAllowed: async () => {policyHook?.(); return allowed;}};
+  let sourceTask: ApprovedModelSourceDownloadTask | undefined;
+  const startSource = registry.startApprovedModelSource.bind(registry);
+  registry.startApprovedModelSource = async (...args) => {const result = await startSource(...args);
+    if (result.kind === "accepted") sourceTask = result.task; return result;};
   return {base, cacheRoot, request, registry, client, control, calls, fetcher, status, storage, produce, transportErrors,
+    readSourceCompletion: async () => sourceTask?.readCompleted(),
+    readSourceTask: async () => {assert.ok(sourceTask, "An accepted original handle is required."); return sourceTask.read();},
+    cancelSourceTask: async () => {assert.ok(sourceTask, "An accepted original handle is required."); return sourceTask.cancel();},
     counts: () => ({stores, sourcePosts, cleanupEffects, settlementEffects, genericReads, installations, preparations}),
     deny() {allowed = false;}, retire() {current = false;}, worker(value: boolean) {workerLive = value;},
     dropObserved() {dropObserved = true;}, dropSettled() {dropSettled = true;}, dropStart() {dropStart = true;}, dropRead() {readonlyFailure = true;},
@@ -155,13 +163,19 @@ test("source Task starts without import, then persists exact bytes and settles b
   const f = await fixture(t);
   assert.equal((await f.registry.startApprovedModelSource(f.request, f.control)).kind, "accepted", JSON.stringify({counts: f.counts(), calls: f.calls, errors: f.transportErrors}));
   assert.equal(f.counts().stores, 0, "Submission cannot block on persistent import.");
-  const completed = await f.registry.getTaskStatus(taskId); assert.equal(completed.status, "succeeded");
-  const privateCompletion = await f.registry.readCompletedModelDownload(taskId);
+  const before = f.calls.length;
+  await assert.rejects(f.registry.getTaskStatus(taskId), /captured original/);
+  await assert.rejects(f.registry.cancelTask(taskId), /captured original/);
+  assert.deepEqual((await f.registry.listTasks({workspaceId, taskTypes: [TaskType.MODEL_DOWNLOAD], includeCompleted: true})).tasks, []);
+  assert.equal(f.calls.length, before); assert.equal(f.counts().stores, 0);
+  const completed = await f.readSourceTask(); assert.equal(completed.status, "succeeded");
+  assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined);
+  const privateCompletion = await f.readSourceCompletion();
   assert.equal(privateCompletion?.verifiedManifestDigest, f.request.sourceManifest.manifestDigest);
   for (const [name, bytes] of Object.entries(data)) assert.deepEqual(await readFile(path.join(privateCompletion!.localPath, name)), bytes);
   assert.doesNotMatch(JSON.stringify(completed), /localPath|sourceTransfer|acquisitionId|receipt_digest/);
   assert.deepEqual(f.counts(), {stores: 1, sourcePosts: 1, cleanupEffects: 1, settlementEffects: 1, genericReads: 0, installations: 0, preparations: 1});
-  await f.registry.getTaskStatus(taskId); assert.equal(f.counts().stores, 1);
+  await f.readSourceTask(); assert.equal(f.counts().stores, 1);
   assert.deepEqual(await readdir(path.join(f.cacheRoot, ".aisb-model-source-transfers")), []);
 });
 
@@ -169,30 +183,90 @@ test("lost reads and both ACK replies resume only captured observation without r
   for (const variant of ["read", "observed", "settled"]) {
     const f = await fixture(t); await f.registry.startApprovedModelSource(f.request, f.control);
     if (variant === "read") f.dropRead(); if (variant === "observed") f.dropObserved(); if (variant === "settled") f.dropSettled();
-    assert.equal((await f.registry.getTaskStatus(taskId)).status, "running");
-    assert.equal((await f.registry.getTaskStatus(taskId)).status, "succeeded");
+    assert.equal((await f.readSourceTask()).status, "running");
+    assert.equal((await f.readSourceTask()).status, "succeeded");
     assert.equal(f.counts().sourcePosts, 1); assert.equal(f.counts().stores, 1); assert.equal(f.counts().cleanupEffects, 1); assert.equal(f.counts().settlementEffects, 1);
   }
+});
+
+test("captured source result survives history eviction and task-ID reuse without reading or changing the replacement", async t => {
+  const f = await fixture(t), started = await f.registry.startApprovedModelSource(f.request, f.control);
+  if (started.kind !== "accepted") assert.fail("Source start must be accepted.");
+  assert.ok(Object.isFrozen(started.task)); assert.equal((await started.task.read()).status, "succeeded");
+  const original = await started.task.readCompleted(); assert.ok(original);
+  for (let i = 0; i < 270; i++) await f.registry.startTask({requestId: "source-history-" + i,
+    workspaceId, taskType: TaskType.MODEL_TRAINING, payload: {}});
+  await f.registry.startTask({requestId: taskId, workspaceId, taskType: TaskType.MODEL_TRAINING, payload: {}});
+  const before = f.counts().genericReads;
+  assert.equal((await started.task.read()).status, "succeeded");
+  assert.deepEqual(await started.task.readCompleted(), original);
+  assert.equal((await started.task.cancel()).cancelled, false);
+  assert.equal(f.counts().genericReads, before);
+  const replacement = await f.registry.getTaskStatus(taskId); if ("recordType" in replacement) assert.fail("Replacement must remain visible.");
+  assert.equal(replacement.taskType, TaskType.MODEL_TRAINING);
+  assert.equal(f.counts().genericReads, before + 1); assert.equal(f.counts().stores, 1);
+});
+
+test("an older ordinary application descriptor cannot register a later source completion through the shared ID", async t => {
+  const f = await fixture(t); let registrations = 0;
+  const app = new ModelDownloadTasksUseCase({runtimeTaskRegistry: {...f.registry,
+    startTask: request => f.registry.startTask({...request, requestId: taskId})}, modelDownloadCompletion: f.registry,
+    modelRegistry: {async registerDownloadedModel() {registrations++; assert.fail("No source completion adoption.");}} as never});
+  await app.start({workspaceId, provider: "huggingface", modelId, revision}, {modelWriteAuthorized: true});
+  for (let i = 0; i < 270; i++) await f.registry.startTask({requestId: "ordinary-app-history-" + i,
+    workspaceId, taskType: TaskType.MODEL_TRAINING, payload: {}});
+  f.ordinaryStatus("succeeded"); await f.registry.getTaskStatus("ordinary-app-history-269");
+  const later = await f.registry.startApprovedModelSource(f.request, f.control);
+  if (later.kind !== "accepted") assert.fail("Later source admission must be exercised.");
+  assert.equal((await later.task.read()).status, "succeeded"); assert.ok(await later.task.readCompleted());
+  assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined);
+  await assert.rejects(app.complete({workspaceId, requestId: taskId}, {modelWriteAuthorized: true}), /captured original/);
+  assert.equal(registrations, 0); assert.ok(await later.task.readCompleted());
 });
 
 test("lost start remains unconfirmed without generic discovery, adoption, storage or reissue", async t => {
   const f = await fixture(t); f.dropStart();
   assert.deepEqual(await f.registry.startApprovedModelSource(f.request, f.control), {kind: "unconfirmed"});
-  assert.equal((await f.registry.getTaskStatus(taskId)).status, "unknown");
+  await assert.rejects(f.registry.getTaskStatus(taskId), /captured original/);
+  await assert.rejects(f.registry.cancelTask(taskId), /captured original/);
+  assert.deepEqual((await f.registry.listTasks({workspaceId, taskTypes: [TaskType.MODEL_DOWNLOAD], includeCompleted: true})).tasks, []);
   assert.deepEqual(await f.registry.startApprovedModelSource(f.request, f.control), {kind: "unavailable"});
   assert.equal(f.counts().sourcePosts, 1); assert.equal(f.counts().stores, 0); assert.equal(f.counts().genericReads, 0);
   assert.equal(f.calls.filter(value => value.endsWith("/model-source")).length, 0);
+});
+
+test("an old ordinary descriptor cannot read, list, cancel or register a later queued source", async t => {
+  const f = await fixture(t, true); let registrations = 0;
+  const app = new ModelDownloadTasksUseCase({runtimeTaskRegistry: {...f.registry,
+    startTask: request => f.registry.startTask({...request, requestId: taskId})}, modelDownloadCompletion: f.registry,
+    modelRegistry: {async registerDownloadedModel() {registrations++; assert.fail("No foreign source registration.");}} as never});
+  const authority = {modelWriteAuthorized: true};
+  await app.start({workspaceId, provider: "huggingface", modelId, revision}, authority);
+  for (let i = 0; i < 270; i++) await f.registry.startTask({requestId: "old-queued-source-history-" + i,
+    workspaceId, taskType: TaskType.MODEL_TRAINING, payload: {}});
+  f.ordinaryStatus("succeeded"); await f.registry.getTaskStatus("old-queued-source-history-269");
+  const source = await f.registry.startApprovedModelSource(f.request, f.control);
+  if (source.kind !== "accepted") assert.fail("Queued source must actually be admitted.");
+  const before = f.calls.length;
+  await assert.rejects(app.read({workspaceId, requestId: taskId}, authority), /captured original/);
+  assert.deepEqual((await app.list({workspaceId, includeCompleted: true}, authority)).activities, []);
+  await assert.rejects(app.cancel({workspaceId, requestId: taskId}, authority), /captured original/);
+  await assert.rejects(app.complete({workspaceId, requestId: taskId}, authority), /captured original/);
+  assert.equal(f.calls.length, before); assert.equal(f.status().phase, "prepared"); assert.equal(registrations, 0); assert.equal(f.counts().stores, 0);
+  assert.equal((await source.task.read()).status, "running");
+  assert.equal((await source.task.cancel()).cancelled, true); assert.equal((await source.task.read()).status, "cancelled");
+  assert.deepEqual(await readdir(path.join(f.cacheRoot, ".aisb-model-source-transfers")), []);
 });
 
 test("confirmed queued cancellation and empty failure retire only their own empty receiver", async t => {
   for (const variant of ["cancelled", "failed"]) {
     const f = await fixture(t, true); await f.registry.startApprovedModelSource(f.request, f.control);
     if (variant === "cancelled") {
-      const [a, b] = await Promise.all([f.registry.cancelTask(taskId), f.registry.cancelTask(taskId)]);
+      const [a, b] = await Promise.all([f.cancelSourceTask(), f.cancelSourceTask()]);
       assert.equal(a.cancelled, true); assert.equal(b.cancelled, true);
     } else f.failEmpty();
-    assert.equal((await f.registry.getTaskStatus(taskId)).status, variant);
-    assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined);
+    assert.equal((await f.readSourceTask()).status, variant);
+    assert.equal(await f.readSourceCompletion(), undefined);
     assert.equal(f.counts().stores, 0); assert.deepEqual(await readdir(path.join(f.cacheRoot, ".aisb-model-source-transfers")), []);
   }
 });
@@ -203,10 +277,10 @@ test("held import coalesces reads and original business or host withdrawal canno
     const started = new Promise<void>(resolve => {entered = resolve;}), held = new Promise<void>(resolve => {release = resolve;});
     f.storageHook(async request => {const result = await f.storage.storeGeneratedModel(request); entered(); await held; return result;});
     await f.registry.startApprovedModelSource(f.request, f.control);
-    const first = f.registry.getTaskStatus(taskId); await started;
-    const second = f.registry.getTaskStatus(taskId); if (variant === "business") f.deny(); else f.retire(); release();
+    const first = f.readSourceTask(); await started;
+    const second = f.readSourceTask(); if (variant === "business") f.deny(); else f.retire(); release();
     assert.equal((await first).status, "unknown"); assert.equal((await second).status, "unknown");
-    assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined); assert.equal(f.counts().stores, 1);
+    assert.equal(await f.readSourceCompletion(), undefined); assert.equal(f.counts().stores, 1);
     assert.ok((await readdir(path.join(f.cacheRoot, ".aisb-model-source-transfers"))).length > 0);
   }
 });
@@ -226,9 +300,9 @@ test("changed persisted bytes, foreign destinations and existing targets cannot 
       return variant === "destination" ? {...stored, localPath: f.base} : stored;
     });
     await f.registry.startApprovedModelSource(f.request, f.control);
-    const failed = await f.registry.getTaskStatus(taskId); assert.equal(failed.status, "unknown");
+    const failed = await f.readSourceTask(); assert.equal(failed.status, "unknown");
     assert.doesNotMatch(JSON.stringify(failed), /synthetic-private-storage-marker|localPath|receipt_digest/);
-    assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined); assert.equal(f.counts().stores, 1);
+    assert.equal(await f.readSourceCompletion(), undefined); assert.equal(f.counts().stores, 1);
     assert.equal(hooks, 0);
     if (variant === "existing") assert.equal(await readFile(path.join(f.cacheRoot, "models--fixture--model", "snapshots", revision, "retained-marker"), "utf8"), "keep");
   }
@@ -238,8 +312,8 @@ test("history rotation cannot evict an unsettled source owner", async t => {
   const f = await fixture(t); await f.registry.startApprovedModelSource(f.request, f.control);
   for (let i = 0; i < 270; i++) await f.registry.startTask({requestId: "ordinary-training-" + i,
     workspaceId, taskType: TaskType.MODEL_TRAINING, payload: {}});
-  assert.equal((await f.registry.getTaskStatus(taskId)).status, "succeeded");
-  assert.equal((await f.registry.readCompletedModelDownload(taskId))?.modelId, modelId);
+  assert.equal((await f.readSourceTask()).status, "succeeded");
+  assert.equal((await f.readSourceCompletion())?.modelId, modelId);
   assert.equal(f.counts().sourcePosts, 1); assert.equal(f.counts().stores, 1);
 });
 
@@ -271,9 +345,9 @@ test("ambiguous verification close and receiver unlink retain custody without re
     });
     try {
       await f.registry.startApprovedModelSource(f.request, f.control);
-      assert.equal((await f.registry.getTaskStatus(taskId)).status, "unknown");
-      assert.equal((await f.registry.getTaskStatus(taskId)).status, "unknown");
-      assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined);
+      assert.equal((await f.readSourceTask()).status, "unknown");
+      assert.equal((await f.readSourceTask()).status, "unknown");
+      assert.equal(await f.readSourceCompletion(), undefined);
       assert.equal(effects, 1); assert.equal(f.counts().stores, 1); assert.equal(f.counts().settlementEffects, 0);
       assert.ok((await readdir(path.join(f.cacheRoot, ".aisb-model-source-transfers"))).length > 0);
     } finally {restore?.(); syncBuiltinESMExports();}
@@ -288,9 +362,9 @@ test("business permission remains live at storage invocation across the final he
   });
   f.storageHook(async request => {observed.push(f.livePolicy()); return f.storage.storeGeneratedModel(request);});
   await f.registry.startApprovedModelSource(f.request, f.control);
-  assert.equal((await f.registry.getTaskStatus(taskId)).status, "unknown");
+  assert.equal((await f.readSourceTask()).status, "unknown");
   assert.deepEqual(observed, [true], "An extra allowed() return would invoke storage after permission withdrawal.");
-  assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined); assert.equal(f.counts().stores, 1);
+  assert.equal(await f.readSourceCompletion(), undefined); assert.equal(f.counts().stores, 1);
 });
 
 test("permission withdrawn during final settlement withholds completion without reopening confirmed cleanup", async t => {
@@ -298,11 +372,11 @@ test("permission withdrawn during final settlement withholds completion without 
   const started = new Promise<void>(resolve => {entered = resolve;}), held = new Promise<void>(resolve => {release = resolve;});
   f.finalAck(async () => {entered(); await held;});
   await f.registry.startApprovedModelSource(f.request, f.control);
-  const pending = f.registry.getTaskStatus(taskId); await started; f.deny(); release();
+  const pending = f.readSourceTask(); await started; f.deny(); release();
   const denied = await pending; assert.equal(denied.status, "failed");
   if ("recordType" in denied) assert.fail();
   assert.equal(denied.error?.code, "model_source_completion_denied"); assert.equal(denied.error?.retryable, false);
-  assert.equal(await f.registry.readCompletedModelDownload(taskId), undefined);
+  assert.equal(await f.readSourceCompletion(), undefined);
   assert.deepEqual(await readdir(path.join(f.cacheRoot, ".aisb-model-source-transfers")), []);
   assert.equal(f.counts().stores, 1); assert.equal(f.counts().settlementEffects, 1);
 });
@@ -319,7 +393,8 @@ test("protected pending source capacity denies new work before readiness or disp
   try {
     assert.equal((await registry.startApprovedModelSource({...f.request, requestId: randomUUID()}, f.control)).kind, "unavailable");
     await assert.rejects(registry.startTask({requestId: "ordinary-at-capacity", workspaceId, taskType: TaskType.MODEL_TRAINING, payload: {}}));
-    assert.equal((await registry.getTaskStatus(inputs[0]!.requestId)).status, "queued");
+    await assert.rejects(registry.getTaskStatus(inputs[0]!.requestId), /captured original/);
+    await assert.rejects(registry.cancelTask(inputs[0]!.requestId), /captured original/);
     assert.equal(captured, 0); assert.equal(installs, 0); assert.equal(f.counts().sourcePosts, 0);
     f.deny();
   } finally {release();}

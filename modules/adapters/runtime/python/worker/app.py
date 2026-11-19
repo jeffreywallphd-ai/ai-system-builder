@@ -14,7 +14,7 @@ import time
 from typing import Any, Callable, Literal
 import re
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -965,6 +965,10 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
         record = TASK_REGISTRY.get(request_id)
     if not record:
         return CancelPythonRuntimeTaskResult(requestId=request_id, status="unknown", cancelled=False, message="Task not found.", metadata={"runtimeId": RUNTIME_ID})
+    if isinstance(record.get("_modelSourceOwner"), ModelSourceTaskOwner):
+        # An old generic request may arrive after this ID belongs to a source.
+        # Only the exact bound source route can touch its queued Future.
+        raise HTTPException(status_code=409, detail="model-source-bound-cancellation-required")
     future = record.get("future")
     if record["status"] == "queued" and isinstance(future, Future) and future.cancel():
         owner = record.get("_modelSourceOwner")

@@ -1,5 +1,14 @@
 # Desktop host composition
 
+The existing Model download application owner has an internal approved-source
+entry. It retains original organization/principal, exact source, issuance ACK
+and a bounded reconciler lease before dispatch. Lazy runtime composition uses
+the foundation's captured cache/session with existing model storage. Missing
+support never falls back to ordinary installation. Original result handles
+survive shared task-history eviction; unknown starts are not discovered by ID.
+Source transfer does not register a Model. Public scoped plans and actual
+desktop qualification remain separate work.
+
 The separate lazy Model source owner is available only with organization
 documents and new native-consented `modelSourceRead` plan-review pairings.
 Existing registrations retain earlier permissions and need a new pairing for

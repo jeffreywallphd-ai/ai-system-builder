@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {createHash, randomBytes} from "node:crypto";
-import {spawn} from "node:child_process";
+import {spawn, spawnSync} from "node:child_process";
 import fs, {link, lstat, mkdir, mkdtemp, readFile, realpath, readdir, rm, unlink, writeFile} from "node:fs/promises";
 import {syncBuiltinESMExports} from "node:module";
 import {tmpdir} from "node:os";
@@ -8,8 +8,13 @@ import path from "node:path";
 import test, {type TestContext} from "node:test";
 import {readModelDownloadSource} from "../../../../contracts/model";
 import {createWorkspaceId} from "../../../../contracts/workspace";
+import {createOrganizationId} from "../../../../contracts/organization";
+import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
+import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
 import {createLocalGeneratedModelStorageAdapter} from "../../../model/local";
 import {createPythonRuntimeTaskRegistryAdapter} from "../createPythonRuntimeTaskRegistryAdapter";
+import {createPythonRuntimeAdapterFoundation} from "../createPythonRuntimePort";
+import type {ApprovedModelSourceDownloadTask} from "../../../../application/ports/model";
 import {prepareModelSourceRecipient, type ModelSourceRecipient, type ModelSourceRecipientOptions} from "../client/modelSourceRecipient";
 import {createPythonRuntimeHttpClient} from "../client/createPythonRuntimeHttpClient";
 import {captureManifestExpectation} from "../client/modelDownloadManifest";
@@ -183,6 +188,23 @@ test("actual owned Python Task and Handoff producer interoperate through full di
       } catch {reject(new Error("Owned fixture startup reply invalid."));}
     });
   }).finally(() => {if (timer) clearTimeout(timer);});
+  // Exercise actual Worker cache resolution with the foundation's captured child
+  // environment. No extra runtime/model is started by this bounded helper probe.
+  const workerEnvironment: {environment?: NodeJS.ProcessEnv} = {};
+  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111"},
+    supervisor: {command: "synthetic-never-launched-python", env: {...process.env, HF_HUB_CACHE: undefined,
+      HUGGINGFACE_HUB_CACHE: cacheRoot, TRANSFORMERS_CACHE: path.join(base, "different-legacy-cache")},
+      async verifyRuntimeEnvironment() {return true;}, spawnImplementation: ((_command: unknown, _args: unknown, options: {env: NodeJS.ProcessEnv}) => {
+        workerEnvironment.environment = {...options.env}; throw new Error("Synthetic stop before child launch.");}) as never}});
+  foundation.bindHostAdmission(() => {});
+  assert.ok(foundation.supervisor.startWithoutInstalling);
+  await assert.rejects(foundation.supervisor.startWithoutInstalling()); assert.ok(workerEnvironment.environment);
+  assert.equal(workerEnvironment.environment.HF_HUB_CACHE, cacheRoot);
+  const cacheProbe = spawnSync(process.env.PYTHON!, ["-B", "-c",
+    "import json; from modules.adapters.runtime.python.worker.tasks.local_text_generation import _resolve_huggingface_cache_root; print(json.dumps(str(_resolve_huggingface_cache_root())))"],
+    {env: workerEnvironment.environment, encoding: "utf8", timeout: 15000, maxBuffer: 16384, windowsHide: true});
+  assert.equal(cacheProbe.status, 0, "The actual Worker cache helper must execute.");
+  assert.equal(JSON.parse(cacheProbe.stdout.trim()), cacheRoot);
   const selected = captureManifestExpectation(ready.manifest), baseUrl = `http://127.0.0.1:${ready.port}`;
   const owned = () => {if (ended || !child.pid) throw new Error("Owned synthetic worker exited.");};
   const client = createPythonRuntimeHttpClient({baseUrl, authorizationToken: token, captureProcessOwnership: () => owned});
@@ -221,22 +243,36 @@ test("actual owned Python Task and Handoff producer interoperate through full di
     modelSource: {cacheRoot, captureSession: () => client.captureModelSourceTaskSession(),
       storage: createLocalGeneratedModelStorageAdapter({env: {HF_HUB_CACHE: cacheRoot}, maximumSourceBytes: 4096, maximumSourceFiles: 16})}});
   const acquisitionTask = "22222222-2222-4222-8222-222222222222";
-  assert.equal((await registry.startApprovedModelSource({requestId: acquisitionTask,
-    workspaceId: createWorkspaceId("workspace.actual-source-acquisition"), sourceManifest: selected,
-    maximumDurationSeconds: 10, allowedOrigins: ["https://huggingface.co"]},
-    {isCurrent: () => !ended, stillAllowed: async () => true})).kind, "accepted");
+  const acquisitionWorkspace = createWorkspaceId("workspace.actual-source-acquisition");
+  const reconciler = new OwnedTaskReconcilerService(); t.after(() => reconciler.stopObservation());
+  let issuance = 0, registrations = 0;
+  let originalSourceTask: ApprovedModelSourceDownloadTask | undefined;
+  const application = new ModelDownloadTasksUseCase({runtimeTaskRegistry: registry, modelDownloadCompletion: registry,
+    approvedModelSourceDownload: {async startApprovedModelSource(...args) {const result = await registry.startApprovedModelSource(...args);
+      if (result.kind === "accepted") originalSourceTask = result.task; return result;}}, taskReconciler: reconciler,
+    modelRegistry: {async registerDownloadedModel() {registrations++; assert.fail("A source transfer cannot implicitly register a Model.");}} as never});
+  const authority = {organizationId: createOrganizationId("org.actual-source"), principalId: "principal.actual-source", modelWriteAuthorized: true};
+  assert.equal((await application.startApprovedSource({workspaceId: acquisitionWorkspace, provider: "huggingface",
+    modelId: selected.source.modelId, revision: selected.source.revision},
+    {source: {requestId: acquisitionTask, workspaceId: acquisitionWorkspace, sourceManifest: selected,
+      maximumDurationSeconds: 10, allowedOrigins: ["https://huggingface.co"]},
+      control: {isCurrent: () => !ended, stillAllowed: async () => true}, acknowledgeIssued: async () => {issuance++; return true;}}, authority)).kind, "accepted");
   const storageDeadline = Date.now() + 8000;
-  let acquisition = await registry.getTaskStatus(acquisitionTask);
+  let acquisition = (await application.read({workspaceId: acquisitionWorkspace, requestId: acquisitionTask}, authority)).activity;
   while (["queued", "running"].includes(acquisition.status) && Date.now() < storageDeadline) {
-    await new Promise(resolve => setTimeout(resolve, 10)); acquisition = await registry.getTaskStatus(acquisitionTask);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    acquisition = (await application.read({workspaceId: acquisitionWorkspace, requestId: acquisitionTask}, authority)).activity;
   }
   assert.equal(acquisition.status, "succeeded");
   assert.doesNotMatch(JSON.stringify(acquisition), /localPath|acquisitionId|sourceTransfer|receipt_digest/);
-  const persisted = await registry.readCompletedModelDownload(acquisitionTask);
+  assert.equal(await registry.readCompletedModelDownload(acquisitionTask), undefined);
+  const persisted = await originalSourceTask?.readCompleted();
   assert.equal(persisted?.revision, selected.source.revision); assert.equal(persisted?.verifiedManifestDigest, selected.manifestDigest);
   assert.equal(persisted?.localPath, path.join(cacheRoot, "models--fixture--model", "snapshots", selected.source.revision));
   for (const file of selected.source.files) assert.equal((await lstat(path.join(persisted!.localPath, file.path))).size, file.sizeBytes);
   assert.deepEqual(await readdir(path.join(cacheRoot, ".aisb-model-source-transfers")), []);
+  await reconciler.reconcileNow(); assert.equal(reconciler.status.pending, 0); assert.equal(issuance, 1); assert.equal(registrations, 0);
+  await assert.rejects(application.complete({workspaceId: acquisitionWorkspace, requestId: acquisitionTask}, authority), /separately scoped/);
 });
 
 test("forged receipt and changed bytes cannot authorize receiver observation or consumption", async t => {

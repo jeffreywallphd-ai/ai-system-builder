@@ -259,6 +259,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
     pendingStarts.get(requestId)?.taskType === TaskType.MODEL_TRAINING;
   const maximumTrackedTasks = 256;
   const protectedSourceCount = () => [...acceptedModelDownloads.values()].filter(value => value.sourcePreparing || value.source?.retainsCustody).length;
+  const isApprovedSourceId = (id: string) => {const owner = acceptedModelDownloads.get(id); return Boolean(owner?.sourcePreparing || owner?.source);};
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
     const owner = acceptedModelDownloads.get(record.requestId);
     if (owner && (record.taskType !== TaskType.MODEL_DOWNLOAD || record.workspaceId !== owner.workspaceId)) {
@@ -317,7 +318,25 @@ export function createPythonRuntimeTaskRegistryAdapter(
         if (result.kind === "unavailable" && !entry.source.retainsCustody) {
           acceptedModelDownloads.delete(request.requestId); trackedTasks.delete(request.requestId); return result;
         }
-        rememberTask(entry.source.peek()); current(); return result;
+        rememberTask(entry.source.peek()); current();
+        if (result.kind !== "accepted") return result;
+        const original = entry.source;
+        const rememberOriginal = (record: RuntimeTaskRecord) => {
+          // The captured owner survives UI-history eviction without touching a replacement.
+          if (acceptedModelDownloads.get(request.requestId) === entry) {
+            const completed = original.completed(); if (completed) completedDownloads.set(request.requestId, completed);
+            rememberTask(record);
+          }
+          return record;
+        };
+        return {...result, task: Object.freeze({requestId: request.requestId, workspaceId: request.workspaceId,
+          modelId: request.sourceManifest.source.modelId, revision: request.sourceManifest.source.revision,
+          manifestDigest: request.sourceManifest.manifestDigest,
+          read: async () => rememberOriginal(await original.read()),
+          cancel: async () => {const result = await original.cancel(); rememberOriginal(result.record);
+            return {requestId: request.requestId, status: result.record.status, cancelled: result.cancelled};},
+          readCompleted: async () => original.completed(),
+        })};
       } catch {
         if (entry.source?.retainsCustody) {entry.sourcePreparing = false; return {kind: "unconfirmed"};}
         if (acceptedModelDownloads.get(request.requestId) === entry) {
@@ -533,14 +552,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       return result;
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
-      const source = acceptedModelDownloads.get(requestId);
-      if (source?.sourcePreparing) return {...trackedTasks.get(requestId)!};
-      if (source?.source) {
-        const record = await source.source.read();
-        if (acceptedModelDownloads.get(requestId) !== source) throw new Error(downloadIdentityError);
-        const completed = source.source.completed(); if (completed) completedDownloads.set(requestId, completed);
-        return rememberTask(record);
-      }
+      if (isApprovedSourceId(requestId)) throw new Error("Use the captured original model source handle to read its status.");
       const preparing = trackedTasks.get(requestId);
       if (preparingTasks.has(requestId) && preparing) return preparing;
       const downloadOwner = acceptedModelDownloads.get(requestId);
@@ -626,13 +638,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       });
     },
     async cancelTask(requestId: string): Promise<CancelRuntimeTaskResult> {
-      const source = acceptedModelDownloads.get(requestId);
-      if (source?.sourcePreparing) return {requestId, status: "queued", cancelled: false};
-      if (source?.source) {
-        const result = await source.source.cancel();
-        if (acceptedModelDownloads.get(requestId) !== source) throw new Error(downloadCancellationIdentityError);
-        rememberTask(result.record); return {requestId, status: result.record.status, cancelled: result.cancelled};
-      }
+      if (isApprovedSourceId(requestId)) throw new Error("Use the captured original model source handle to request cancellation.");
       const downloadOwner = acceptedModelDownloads.get(requestId);
       const wasDownload = isModelDownloadId(requestId);
       if (wasDownload && !downloadOwner) throw new Error(downloadCancellationIdentityError);
@@ -692,6 +698,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const refreshes = [...trackedTasks.values()]
         .filter(
           (task) =>
+            !isApprovedSourceId(task.requestId) &&
             task.workspaceId === request.workspaceId &&
             requestedTypes.includes(task.taskType) &&
             (task.status === "queued" ||
@@ -703,6 +710,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
         );
       await Promise.all(refreshes);
       const tasks = [...trackedTasks.values()]
+        .filter((task) => !isApprovedSourceId(task.requestId))
         .filter((task) => task.workspaceId === request.workspaceId)
         .filter((task) => requestedTypes.includes(task.taskType))
         .filter(
@@ -737,6 +745,9 @@ export function createPythonRuntimeTaskRegistryAdapter(
     async readCompletedModelDownload(
       requestId: string,
     ): Promise<CompletedModelDownload | undefined> {
+      // Source completion belongs only to its captured handle, never a shared ID.
+      const source = acceptedModelDownloads.get(requestId);
+      if (source?.sourcePreparing || source?.source) return undefined;
       const existing = completedDownloads.get(requestId);
       if (existing) return existing;
       const record = await adapter.getTaskStatus(requestId);

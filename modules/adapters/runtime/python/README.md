@@ -1,5 +1,20 @@
 # Python runtime adapter
 
+The foundation captures model-cache configuration once for both hosts, in the
+order `HF_HUB_CACHE`, `HUGGINGFACE_HUB_CACHE`, `TRANSFORMERS_CACHE`, then existing
+home/default resolution. Explicit relative roots still fail. Its trusted
+configuration factory grants no worker start or filesystem access. An accepted
+source returns a frozen original-controller result handle with exact task,
+workspace, repository, pin and manifest identity. Captured read/cancel/completion
+methods do not look up a reusable shared-history ID. Shared caches update only
+while that same original entry remains; completed original outcomes survive
+history eviction without changing a later task with the same ID.
+Generic read, cancellation and completion refuse approved-source/preparing IDs;
+generic listing excludes them before refresh and output. Only their original
+captured handle can advance the source controller. The Worker also refuses
+generic cancellation before touching a source Future, including a delayed old
+request. Exact bound source cancellation remains available.
+
 The internal `ApprovedModelSourceDownloadPort` connects a captured source job to
 the existing accepted Model Task owner. It has no default configuration and uses
 explicit installed-only preparation; missing support never selects the ordinary

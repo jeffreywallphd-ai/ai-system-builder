@@ -1,5 +1,13 @@
 # Server host composition
 
+Managed Model downloads compose the same internal approved-source application
+owner, original result handle and installed-only runtime/storage configuration
+as Desktop. The foundation captures the cache root once; the host passes it to
+existing storage without putting paths in outward activities. Original actor,
+issuance ACK and reconciler ownership precede effects. Unknown starts retain
+scope without shared-ID discovery. Transfer completion is not registration or
+public plan approval; actual Managed host qualification remains separate.
+
 The already-composed Context Browser's private query owner shares generation's
 original installed-model resolver and uses the existing reconciler admission
 fence. It does not call ordinary query/inspection or use legacy storage fallbacks.

@@ -197,7 +197,7 @@ class ModelSourceTaskTests(unittest.TestCase):
         self.assertTrue(entered.wait(1))
         try:
             self.assertEqual(self.start().status_code, 200)
-            result = self.client.post("/tasks/" + TASK + "/cancel").json()
+            result = self.client.post("/tasks/" + TASK + "/model-source/cancel", json=self.private_status()["binding"]).json()
             self.assertTrue(result["cancelled"])
         finally:
             released.set(); blocker.result(timeout=3)
@@ -273,9 +273,28 @@ class ModelSourceTaskTests(unittest.TestCase):
     def test_running_model_cancel_stays_truthfully_unsupported_while_owned_handoff_remains(self):
         self.start(); self.finished()
         # Generic succeeded does not imply cleanup or storage completion.
-        result = self.client.post("/tasks/" + TASK + "/cancel").json()
-        self.assertFalse(result["cancelled"]); self.assertTrue(self.owner().retains_record)
+        result = self.client.post("/tasks/" + TASK + "/cancel")
+        self.assertEqual(result.status_code, 409); self.assertTrue(self.owner().retains_record)
         self.complete()
+
+    def test_generic_cancel_cannot_touch_a_later_queued_source_future(self):
+        entered, released = Event(), Event()
+        blocker = self.executor.submit(lambda: (entered.set(), released.wait(4)))
+        self.assertTrue(entered.wait(1))
+        try:
+            self.assertEqual(self.start().status_code, 200)
+            current = worker.TASK_REGISTRY[TASK]
+            with patch.object(current["future"], "cancel", wraps=current["future"].cancel) as cancel:
+                denied = self.client.post("/tasks/" + TASK + "/cancel")
+                self.assertEqual(denied.status_code, 409)
+                self.assertEqual(denied.json(), {"detail": "model-source-bound-cancellation-required"})
+                cancel.assert_not_called()
+                self.assertIs(worker.TASK_REGISTRY[TASK], current)
+                self.assertEqual(self.private_status()["phase"], "prepared")
+            bound = self.client.post("/tasks/" + TASK + "/model-source/cancel", json=self.private_status()["binding"])
+            self.assertEqual(bound.status_code, 200); self.assertTrue(bound.json()["cancelled"])
+        finally:
+            released.set(); blocker.result(timeout=4)
 
     def test_bound_status_exists_before_receipt_and_counters_are_advisory_finite_bytes(self):
         entered, released = Event(), Event()

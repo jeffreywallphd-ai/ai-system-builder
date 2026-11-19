@@ -51,6 +51,7 @@ import {
   createLocalModelCheckpointResolverAdapter,
   createLocalModelFileListerAdapter,
   createLocalContextEmbeddingModelFilesAdapter,
+  createLocalGeneratedModelStorageAdapter,
 } from "../../../adapters/model/local";
 import {
   createLocalUserLibraryAssetRepositoryAdapter,
@@ -2131,6 +2132,8 @@ export function composeServerHost(
           } : {}),
         },
         {
+          modelSource: pythonRuntimeFoundation.createModelSourceDownloadConfiguration(cacheRoot =>
+            createLocalGeneratedModelStorageAdapter({env: {HF_HUB_CACHE: cacheRoot}})),
           async ensureRuntimeReadyWithoutInstalling() {
             taskReconciler.assertAccepting();
             await pythonRuntimeFoundation.supervisor.startWithoutInstalling!();
@@ -2171,6 +2174,7 @@ export function composeServerHost(
         taskReconciler,
         runtimeTaskRegistry,
         modelDownloadCompletion: pythonRuntimeTaskRegistry,
+        approvedModelSourceDownload: pythonRuntimeTaskRegistry,
         modelRegistry,
         now: options.now,
       });

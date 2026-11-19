@@ -5,6 +5,8 @@ import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
 import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
+import type {GeneratedModelStoragePort} from "../../../application/ports/model";
+import type {CreatePythonRuntimeTaskRegistryAdapterOptions} from "./createPythonRuntimeTaskRegistryAdapter";
 import { normalizePythonRuntimeLoopbackBaseUrl, resolvePythonRuntimeLoopbackEndpoint } from "./config/pythonRuntimeEndpoint";
 import type {
   CancelPythonRuntimeTaskResult,
@@ -15,6 +17,7 @@ import type {
 
 import {
   createPythonRuntimeHttpClient,
+  resolveConfiguredModelCacheRoot,
   type CreatePythonRuntimeHttpClientOptions,
 } from "./client/createPythonRuntimeHttpClient";
 import {
@@ -42,6 +45,9 @@ export interface PythonRuntimeAdapterFoundation {
   bindHostAdmission(assertAccepting: () => void): void;
   /** Trusted host-only source channel; never generic application task JSON. */
   captureModelSourceTaskSession(): Promise<ModelSourceTaskSession>;
+  /** Private captured configuration; no file, provider or runtime operation. */
+  createModelSourceDownloadConfiguration(createStorage: (cacheRoot: string) => GeneratedModelStoragePort):
+    NonNullable<CreatePythonRuntimeTaskRegistryAdapterOptions["modelSource"]>;
 }
 
 export function createPythonRuntimeAdapterFoundation(
@@ -81,6 +87,9 @@ export function createPythonRuntimeAdapterFoundation(
     hostAdmission = assertAccepting;
   };
   let ownedLaunch: object | undefined;
+  const modelSourceCacheRoot = resolveConfiguredModelCacheRoot(runtimeEnvironment);
+  // Canonicalize the captured host selection for Worker helpers and official SDKs.
+  runtimeEnvironment.HF_HUB_CACHE = modelSourceCacheRoot;
   const client = createPythonRuntimeHttpClient({
     ...options.client,
     baseUrl: clientBaseUrl,
@@ -516,10 +525,16 @@ export function createPythonRuntimeAdapterFoundation(
     unloadModels: () => client.unloadModels(),
   };
 
-  return {
+  const foundation: PythonRuntimeAdapterFoundation = {
     runtimePort,
     supervisor,
     bindHostAdmission,
+    createModelSourceDownloadConfiguration(createStorage) {
+      if (typeof createStorage !== "function") throw new TypeError("Model source storage composition is unavailable.");
+      const storage = createStorage(modelSourceCacheRoot);
+      return Object.freeze({cacheRoot: modelSourceCacheRoot,
+        captureSession: () => foundation.captureModelSourceTaskSession(), storage});
+    },
     async captureModelSourceTaskSession() {
       if (!hostAdmission) throw new Error("Model source host admission is unavailable.");
       assertHostAccepting(); assertAdmissionAvailable();
@@ -558,4 +573,5 @@ export function createPythonRuntimeAdapterFoundation(
       }});
     },
   };
+  return foundation;
 }

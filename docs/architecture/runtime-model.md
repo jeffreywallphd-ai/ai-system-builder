@@ -1,5 +1,25 @@
 # Runtime Model
 
+Approved source admission uses the existing Model download application owner.
+Copy actor/source identity, reserve bounded descriptor/reconciler ownership and
+acknowledge exact issuance before installed-only preparation. Unknown issuance
+keeps metadata without task-ID discovery. Accepted results capture original
+read/cancel/completion functions and exact source identity; shared UI history
+cannot replace that result after eviction or ID reuse. Source lists observe
+these original handles, not borrowed registry rows. The existing ordinary
+completion method cannot register a source transfer. Both hosts use the same
+captured foundation cache/session and existing storage adapter. These internal
+capabilities do not create a public plan operation or supply user approval.
+The generic ID-only completion port never returns source completions, including
+to an older ordinary descriptor. New admission rechecks reconciler acceptance
+after waits; accepted cleanup keeps its original lifetime guard. Canonicalize
+the captured cache root into child `HF_HUB_CACHE` so legacy Worker helpers and
+official cache constants agree with Node even when aliases conflict.
+Keep approved-source reads and cancellation on that handle too. Generic lists
+exclude source rows before refresh, so an old descriptor or enumeration cannot
+advance a later source. The Worker rejects generic source cancellation before
+any Future operation; only the exact bound route can cancel a queued source.
+
 The internal approved-source application port is separate from generic runtime
 task JSON. Its configured adapter uses explicit installed-only preparation and
 the existing accepted Model Task entry for one controller/receiver. Trusted

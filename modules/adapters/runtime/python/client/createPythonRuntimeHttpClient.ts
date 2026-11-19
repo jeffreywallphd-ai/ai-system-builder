@@ -129,7 +129,7 @@ export function resolveConfiguredModelCacheRoot(
   environment: NodeJS.ProcessEnv,
 ): string {
   const configured =
-    environment.HF_HUB_CACHE?.trim() || environment.TRANSFORMERS_CACHE?.trim();
+    environment.HF_HUB_CACHE?.trim() || environment.HUGGINGFACE_HUB_CACHE?.trim() || environment.TRANSFORMERS_CACHE?.trim();
   if (configured) {
     if (!path.isAbsolute(configured)) {
       throw new TypeError("Python runtime model cache root must be absolute.");

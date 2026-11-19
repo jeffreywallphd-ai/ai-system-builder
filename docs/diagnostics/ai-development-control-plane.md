@@ -2665,3 +2665,27 @@ loadable model weights or app-host qualification. Shared Model port-barrel edits
 alone and unknown files still retain generic fallback; they cannot borrow this
 specific worker profile. Keep original actor/plan/registration, native/model and
 parent/final gaps distinct from this private integration.
+
+The same fixed Model owner unit/type profiles include original application
+source admission and both-host configuration tests. Source reads, cancellation
+and reconciliation use a captured original result handle after history/ID reuse;
+unknown source listings remain cached without discovery. Exact new application
+and host files select these focused profiles; unknown files and an explicit
+generic check still retain fallback. The mandatory actual producer case now
+passes through the application owner, not just the private adapter. Run the
+server build when server composition changes. These feature checks do not
+qualify public source plans, registry save, real models, native/restart behavior
+or the parent increment. Keep full software/AI suites deferred to the approved
+final implementation boundary.
+
+Failed checks can include `check-failure-diagnostics-v1` advisory metadata.
+It contains at most eight locations in existing test files explicitly selected
+by the catalog command, plus fixed error kinds/codes and bounded failure counts.
+Only repository-relative test references survive; unselected, outside, private,
+traversing or reparse references are ignored. No raw output, assertion payload,
+test message or local absolute prefix is recorded. The two streaming tails stay
+bounded in memory and are discarded after parsing. Existing output digests,
+timeouts, process cleanup and pass/fail rules remain authoritative and unchanged.
+Use a reported test location for focused diagnosis; output text cannot grant
+qualification. Approved source jobs likewise require their original captured
+handle for read/cancel/completion; generic listing cannot refresh them.

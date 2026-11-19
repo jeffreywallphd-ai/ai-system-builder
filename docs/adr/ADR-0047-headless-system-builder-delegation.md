@@ -1,5 +1,22 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Original Model application admission and result ownership
+
+Extend the existing Model download use case and reconciler, not a second task
+scheduler. Original actor, copied source/pin/manifest/workspace, current policy
+and exact issuance acknowledgement precede installed-only effects. Bound source
+metadata survives unknown starts; do not discover an outcome from a guessed ID.
+An accepted source carries a frozen internal handle to its original controller.
+Capture its exact identity and methods before publication; shared history/ID
+reuse cannot replace status, cancellation or completion. Both hosts compose the
+foundation's once-captured cache/session with existing storage. Keep source
+transfer completion separate from scoped Model registration and public plans.
+Approved-source/preparing jobs are unavailable through generic ID read, cancel
+or completion. Filter them before generic list refresh as well as output. Only
+the original captured handle can observe or advance its controller. Worker
+generic cancellation rejects source-owned rows before touching their Future;
+the exact binding remains required even for a delayed old cancellation request.
+
 ### Source Task ownership through persistent import
 
 Use a thin internal approved-source application port, with original trusted

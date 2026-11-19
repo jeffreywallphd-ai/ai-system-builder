@@ -42,6 +42,8 @@ class ModelManifestRoutingTests(unittest.TestCase):
             self.assertIn('modules/adapters/runtime/python/tests/model-source-identity-client.unit.test.ts', rows[name]['argv'])
             self.assertIn('modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts', rows[name]['argv'])
             self.assertIn('modules/adapters/runtime/python/tests/model-source-acquisition.unit.test.ts', rows[name]['argv'])
+            self.assertIn('modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts', rows[name]['argv'])
+            self.assertIn('modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts', rows[name]['argv'])
         self.assertIn('modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',
                       rows['headless-context-existing-runtime']['argv'])
         self.assertNotIn('completion-all', rows)

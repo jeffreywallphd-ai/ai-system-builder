@@ -5,6 +5,7 @@ import {
   TaskPowerLifecycleService,
 } from "../../../application/services/runtime";
 import { createElectronPowerSuspensionBlocker } from "../../../adapters/runtime/electron";
+import {createLocalGeneratedModelStorageAdapter} from "../../../adapters/model/local";
 import { TaskType, type RuntimeCapabilityId, type StartPythonRuntimeTaskRequest } from "../../../contracts/runtime";
 import { createDesktopRuntimeTaskRegistry } from "./composeDesktopRuntimeTaskRegistry";
 
@@ -78,6 +79,10 @@ export async function composeDesktopRuntimeTaskFeature(
       } : {}),
     },
     {
+      ...(typeof options.pythonRuntimeFoundation.createModelSourceDownloadConfiguration === "function" ? {
+        modelSource: options.pythonRuntimeFoundation.createModelSourceDownloadConfiguration((cacheRoot: string) =>
+          createLocalGeneratedModelStorageAdapter({env: {HF_HUB_CACHE: cacheRoot}})),
+      } : {}),
       async ensureRuntimeReadyWithoutInstalling() {
         reconciler.assertAccepting();
         if (!supervisor.startWithoutInstalling) throw new Error("Installed-only Python runtime is unavailable.");
@@ -120,6 +125,7 @@ export async function composeDesktopRuntimeTaskFeature(
     taskReconciler: options.taskReconciler,
     runtimeTaskRegistry,
     modelDownloadCompletionPort: pythonRuntimeTaskRegistry,
+    modelSourceDownloadPort: pythonRuntimeTaskRegistry,
     runtimeCapabilityGuard,
     taskPowerLifecycle,
     powerSuspensionBlocker,

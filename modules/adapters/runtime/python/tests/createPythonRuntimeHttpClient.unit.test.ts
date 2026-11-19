@@ -76,6 +76,10 @@ describe("createPythonRuntimeHttpClient", () => {
     expect(
       resolveConfiguredModelCacheRoot({ HF_HOME: "C:\\hugging-face" }),
     ).toBe(path.resolve("C:\\hugging-face", "hub"));
+    expect(resolveConfiguredModelCacheRoot({HUGGINGFACE_HUB_CACHE: "C:\\legacy-model-cache"})).toBe(path.resolve("C:\\legacy-model-cache"));
+    expect(resolveConfiguredModelCacheRoot({HF_HUB_CACHE: "C:\\first", HUGGINGFACE_HUB_CACHE: "C:\\second", TRANSFORMERS_CACHE: "C:\\third"})).toBe(path.resolve("C:\\first"));
+    expect(resolveConfiguredModelCacheRoot({HUGGINGFACE_HUB_CACHE: "C:\\second", TRANSFORMERS_CACHE: "C:\\third"})).toBe(path.resolve("C:\\second"));
+    expect(() => resolveConfiguredModelCacheRoot({HUGGINGFACE_HUB_CACHE: "relative-cache"})).toThrow();
   });
 
   it("calls POST /tasks/start", async () => {

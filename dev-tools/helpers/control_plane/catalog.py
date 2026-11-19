@@ -253,6 +253,8 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (
+            "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
             "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
             "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/adapters/runtime/python/client/modelSourceRecipient.ts",
@@ -290,6 +292,11 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_download_revision.py",
         ),
         "sources": (
+            "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
+            "modules/hosts/desktop/composition/composeDesktopRuntimeTaskFeature.ts",
+            "modules/hosts/desktop/composition/composeDesktopModelFeature.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
             "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
             "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/adapters/runtime/python/client/modelSourceRecipient.ts",
@@ -364,6 +371,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/README.md",
         ),
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-source-recipient.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts",
@@ -392,6 +401,11 @@ PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-types": {
         "companion_to": "headless-model-metadata-owner-unit",
         "sources": (
+            "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
+            "modules/hosts/desktop/composition/composeDesktopRuntimeTaskFeature.ts",
+            "modules/hosts/desktop/composition/composeDesktopModelFeature.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
             "modules/adapters/runtime/python/client/modelDownloadManifest.ts",
             "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/adapters/runtime/python/client/modelSourceRecipient.ts",
@@ -437,6 +451,8 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
             "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-download-manifest.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-source-recipient.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts",

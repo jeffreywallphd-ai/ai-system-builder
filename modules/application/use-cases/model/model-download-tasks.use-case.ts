@@ -14,9 +14,16 @@ import {
   normalizeListModelDownloadTasksRequest,
   normalizeModelDownloadTaskIdentity,
   normalizeModelInventoryRecord,
+  readModelDownloadSource,
 } from "../../../contracts/model";
+import {createHash} from "node:crypto";
+import {types} from "node:util";
+import {isOrganizationId} from "../../../contracts/organization";
+import {isWorkspaceId} from "../../../contracts/workspace";
+import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
 import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
-import type { ModelDownloadCompletionPort, ModelRegistryPort } from "../../ports/model";
+import type { ModelDownloadCompletionPort, ModelRegistryPort, ApprovedModelSourceDownloadPort,
+  ApprovedModelSourceDownloadRequest, ApprovedModelSourceDownloadControl, ApprovedModelSourceDownloadTask } from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 
@@ -24,7 +31,19 @@ interface DownloadDescriptor {
   readonly request: ReturnType<typeof normalizeDownloadModelRequest>;
   readonly startedAt: string;
   readonly authority: ModelDownloadAuthority;
+  readonly source?: {readonly input: ApprovedModelSourceDownloadRequest; readonly control: ApprovedModelSourceDownloadControl;
+    phase: "issuing" | "accepted" | "unconfirmed"; task?: ApprovedModelSourceDownloadTask;
+    nativeTerminal: boolean; failed: boolean; leaseStarted: boolean};
 }
+
+/** Internal original-plan admission. Data and callbacks alone do not grant approval. */
+export interface ApprovedModelDownloadAdmission {
+  readonly source: ApprovedModelSourceDownloadRequest;
+  readonly control: ApprovedModelSourceDownloadControl;
+  readonly acknowledgeIssued: () => Promise<boolean>;
+}
+export type ApprovedModelDownloadStart = {readonly kind: "accepted"; readonly value: StartModelDownloadTaskResult} |
+  {readonly kind: "unavailable"} | {readonly kind: "unconfirmed"};
 
 /** Supplied by the authenticated host, never copied from request payloads. */
 export interface ModelDownloadAuthority {
@@ -46,9 +65,11 @@ export class ModelDownloadTasksUseCase {
     modelRegistry: ModelRegistryPort;
     now?: () => string;
     taskReconciler?: OwnedTaskReconcilerService;
+    approvedModelSourceDownload?: ApprovedModelSourceDownloadPort;
   }) {}
 
   public async start(request: StartModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<StartModelDownloadTaskResult> {
+    if (this.protectedSources() >= 100) throw new Error("Model source outcomes must be reviewed before starting another download.");
     const normalized = structuredClone(normalizeDownloadModelRequest(request));
     const owner = captureAuthority(authority);
     const lease = this.dependencies.taskReconciler?.reserve();
@@ -126,11 +147,110 @@ export class ModelDownloadTasksUseCase {
     } catch (error) { lease?.release(); throw error; }
   }
 
+  public async startApprovedSource(rawRequest: StartModelDownloadTaskRequest, rawAdmission: ApprovedModelDownloadAdmission,
+    rawAuthority: ModelDownloadAuthority): Promise<ApprovedModelDownloadStart> {
+    let parsed: ReturnType<typeof captureSourceAdmission>, normalized: ReturnType<typeof normalizeDownloadModelRequest>, owner: ModelDownloadAuthority;
+    try {
+      parsed = captureSourceAdmission(rawAdmission);
+      normalized = structuredClone(normalizeDownloadModelRequest(passiveSourceData(rawRequest) as StartModelDownloadTaskRequest));
+      if (types.isProxy(rawAuthority)) return {kind: "unavailable"};
+      const authority = readStrictPassiveRecord(rawAuthority, ["organizationId", "principalId", "modelWriteAuthorized"]);
+      owner = captureAuthority({organizationId: typeof authority.organizationId === "string" ? authority.organizationId : undefined,
+        principalId: typeof authority.principalId === "string" ? authority.principalId : undefined, modelWriteAuthorized: authority.modelWriteAuthorized === true});
+      if (!isOrganizationId(owner.organizationId) || typeof owner.principalId !== "string" || !owner.principalId ||
+          owner.principalId.length > 160 || hasKnownPassiveCredential(owner.principalId) || owner.modelWriteAuthorized !== true ||
+          normalized.provider !== "huggingface" || normalized.workspaceId !== parsed.source.workspaceId ||
+          normalized.modelId !== parsed.source.sourceManifest.source.modelId || normalized.revision !== parsed.source.sourceManifest.source.revision ||
+          normalized.artifactForm !== undefined && normalized.artifactForm !== "full-model") return {kind: "unavailable"};
+    } catch {return {kind: "unavailable"};}
+    const id = parsed.source.requestId, port = this.dependencies.approvedModelSourceDownload, reconciler = this.dependencies.taskReconciler;
+    if (!port || !reconciler || this.descriptors.has(id) || this.observedOwners.has(id) || this.protectedSources() >= 100) return {kind: "unavailable"};
+    let lease: ReturnType<OwnedTaskReconcilerService["reserve"]>;
+    try {lease = reconciler.reserve();} catch {return {kind: "unavailable"};}
+    const descriptor: DownloadDescriptor = {request: normalized, startedAt: this.now(), authority: owner,
+      source: {input: parsed.source, control: parsed.control, phase: "issuing", nativeTerminal: false, failed: false, leaseStarted: false}};
+    this.descriptors.set(id, descriptor); this.observedOwners.set(id, descriptor);
+    const current = () => {
+      const result: unknown = parsed.control.isCurrent();
+      if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+      return result === true && this.descriptors.get(id) === descriptor && this.observedOwners.get(id) === descriptor;
+    };
+    const admissionCurrent = () => {
+      try {reconciler.assertAccepting(); return current();} catch {return false;}
+    };
+    const unavailable = (): ApprovedModelDownloadStart => {
+      if (this.descriptors.get(id) === descriptor) this.descriptors.delete(id);
+      if (this.observedOwners.get(id) === descriptor) this.observedOwners.delete(id);
+      lease.release(); return {kind: "unavailable"};
+    };
+    const observe = () => {
+      if (descriptor.source!.leaseStarted) return;
+      lease.start(async () => {
+        if (descriptor.source!.nativeTerminal) {this.releaseSourceObserver(id, descriptor); return true;}
+        if (descriptor.source!.phase !== "accepted") return false; // No guessed-ID discovery after an unknown issue.
+        const record = await descriptor.source!.task!.read();
+        this.assertCurrentDescriptor(id, descriptor);
+        this.observeSourceTerminal(id, descriptor, record);
+        if (descriptor.source!.nativeTerminal) this.releaseSourceObserver(id, descriptor);
+        return descriptor.source!.nativeTerminal;
+      }, async () => {
+        if (descriptor.source!.phase === "accepted" && !descriptor.source!.nativeTerminal)
+          await descriptor.source!.task!.cancel();
+      }, async () => {
+        // An owned worker exit is not Node receiver/IO cleanup proof.
+        if (!descriptor.source!.nativeTerminal) throw new Error("Original model source cleanup remains unconfirmed.");
+        this.releaseSourceObserver(id, descriptor);
+      });
+      descriptor.source!.leaseStarted = true;
+    };
+    let acknowledging = false;
+    try {
+      if (!admissionCurrent() || await parsed.control.stillAllowed() !== true || !admissionCurrent()) return unavailable();
+      acknowledging = true;
+      if (await parsed.acknowledgeIssued() !== true) return unavailable();
+      if (!admissionCurrent() || await parsed.control.stillAllowed() !== true || !admissionCurrent()) return unavailable();
+      const result = await port.startApprovedModelSource(parsed.source, Object.freeze({isCurrent: current, stillAllowed: parsed.control.stillAllowed}));
+      if (!current()) throw new Error("Model source admission is no longer current.");
+      if (result.kind === "unavailable") return unavailable();
+      if (result.kind !== "accepted" || result.value.requestId !== id || !["queued", "running"].includes(result.value.status ?? ""))
+        throw new Error("The original model source start could not be confirmed.");
+      descriptor.source!.task = captureSourceTask(result.task, parsed.source);
+      descriptor.source!.phase = "accepted"; observe(); this.pruneDescriptors();
+      return {kind: "accepted", value: {activity: {requestId: id, workspaceId: normalized.workspaceId!, modelId: normalized.modelId,
+        displayName: normalized.displayName ?? normalized.modelId, status: result.value.status!, startedAt: descriptor.startedAt, updatedAt: descriptor.startedAt}}};
+    } catch {
+      if (!acknowledging) return unavailable();
+      descriptor.source!.phase = "unconfirmed";
+      try {observe();} catch { /* Original metadata/native owner remains protected. */ }
+      return {kind: "unconfirmed"};
+    }
+  }
+
+  private protectedSources(): number {
+    return [...this.descriptors.values()].filter(value => value.source && !(value.source.nativeTerminal && value.source.failed)).length;
+  }
+  private releaseSourceObserver(id: string, descriptor: DownloadDescriptor): void {
+    if (this.observedOwners.get(id) === descriptor) this.observedOwners.delete(id);
+  }
+  private observeSourceTerminal(id: string, descriptor: DownloadDescriptor, record: Awaited<ReturnType<RuntimeTaskRegistryPort["getTaskStatus"]>>): void {
+    if (!descriptor.source || "recordType" in record || record.requestId !== id || record.workspaceId !== descriptor.request.workspaceId ||
+        record.taskType !== TaskType.MODEL_DOWNLOAD) throw new Error("Model source task identity could not be confirmed.");
+    if (["succeeded", "failed", "cancelled"].includes(record.status)) {
+      descriptor.source.nativeTerminal = true; descriptor.source.failed = record.status !== "succeeded";
+    }
+  }
+  private pendingSourceActivity(id: string, descriptor: DownloadDescriptor): ModelDownloadTaskActivity {
+    return {requestId: id, workspaceId: descriptor.request.workspaceId!, modelId: descriptor.request.modelId,
+      displayName: descriptor.request.displayName ?? descriptor.request.modelId, status: "unknown", startedAt: descriptor.startedAt, updatedAt: descriptor.startedAt};
+  }
+
   public async read(request: ReadModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<ReadModelDownloadTaskResult> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
-    const task = await this.dependencies.runtimeTaskRegistry.getTaskStatus(normalized.requestId);
+    if (descriptor.source && descriptor.source.phase !== "accepted") return {activity: this.pendingSourceActivity(normalized.requestId, descriptor)};
+    const task = descriptor.source ? await descriptor.source.task!.read() : await this.dependencies.runtimeTaskRegistry.getTaskStatus(normalized.requestId);
     this.assertCurrentDescriptor(normalized.requestId, descriptor);
+    if (descriptor.source) this.observeSourceTerminal(normalized.requestId, descriptor, task);
     if ("recordType" in task || task.requestId !== normalized.requestId || task.taskType !== TaskType.MODEL_DOWNLOAD || task.workspaceId !== normalized.workspaceId) {
       throw new Error("Model download task was not found in this workspace.");
     }
@@ -144,26 +264,35 @@ export class ModelDownloadTasksUseCase {
     // tenant cannot use a shared workspace label to observe or finalize work.
     const owned = new Map([...this.descriptors].filter(([, d]) => d.request.workspaceId === normalized.workspaceId && sameAuthority(d.authority, owner)));
     if (!owned.size) return { activities: [] };
-    const result = await this.dependencies.runtimeTaskRegistry.listTasks({
+    const ordinary = new Map([...owned].filter(([, descriptor]) => !descriptor.source));
+    const result = ordinary.size ? await this.dependencies.runtimeTaskRegistry.listTasks({
       workspaceId: normalized.workspaceId,
       taskTypes: [TaskType.MODEL_DOWNLOAD],
       includeCompleted: normalized.includeCompleted,
       limit: normalized.limit,
-    });
+    }) : {tasks: []};
     const activities: ModelDownloadTaskActivity[] = [];
     for (const task of result.tasks) {
-      const descriptor = owned.get(task.requestId);
+      const descriptor = ordinary.get(task.requestId);
       if ("recordType" in task || task.taskType !== TaskType.MODEL_DOWNLOAD || !descriptor || this.descriptors.get(task.requestId) !== descriptor || task.workspaceId !== normalized.workspaceId) continue;
       activities.push(await this.toActivity(task, descriptor));
     }
-    return { activities };
+    for (const [id, descriptor] of owned) {
+      if (!descriptor.source || this.descriptors.get(id) !== descriptor) continue;
+      const activity = descriptor.source.phase === "accepted"
+        ? (await this.read({requestId: id, workspaceId: normalized.workspaceId}, owner)).activity
+        : this.pendingSourceActivity(id, descriptor);
+      if (normalized.includeCompleted !== false || !["succeeded", "failed", "cancelled"].includes(activity.status)) activities.push(activity);
+    }
+    return { activities: activities.slice(0, normalized.limit) };
   }
 
   public async cancel(request: CancelModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<CancelModelDownloadTaskResult> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
     const owner = captureAuthority(authority);
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
-    const cancellation = await this.dependencies.runtimeTaskRegistry.cancelTask(normalized.requestId);
+    if (descriptor.source && descriptor.source.phase !== "accepted") return {activity: this.pendingSourceActivity(normalized.requestId, descriptor), cancelled: false};
+    const cancellation = descriptor.source ? await descriptor.source.task!.cancel() : await this.dependencies.runtimeTaskRegistry.cancelTask(normalized.requestId);
     this.assertCurrentDescriptor(normalized.requestId, descriptor);
     if (cancellation.requestId !== normalized.requestId) {
       throw new Error("Model download cancellation could not be confirmed.");
@@ -200,6 +329,7 @@ export class ModelDownloadTasksUseCase {
     const owner = captureAuthority(authority);
     if (owner.modelWriteAuthorized !== true) throw new Error("Model write authority is required to register a download.");
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
+    if (descriptor.source) throw new Error("This source download requires a separately scoped Model registration.");
     const task = await this.dependencies.runtimeTaskRegistry.getTaskStatus(normalized.requestId);
     this.assertCurrentDescriptor(normalized.requestId, descriptor);
     if ("recordType" in task || task.requestId !== normalized.requestId || task.taskType !== TaskType.MODEL_DOWNLOAD || task.workspaceId !== normalized.workspaceId || task.status !== "succeeded") {
@@ -278,7 +408,7 @@ export class ModelDownloadTasksUseCase {
 
   private pruneDescriptors(): void {
     while (this.descriptors.size > 100) {
-      const oldest = this.descriptors.keys().next().value;
+      const oldest = [...this.descriptors].find(([, value]) => !value.source || value.source.nativeTerminal && value.source.failed)?.[0];
       if (typeof oldest !== "string") return;
       this.descriptors.delete(oldest);
       this.finalizedModels.delete(oldest);
@@ -339,4 +469,66 @@ function captureAuthority(authority: ModelDownloadAuthority): ModelDownloadAutho
 
 function sameAuthority(recorded: ModelDownloadAuthority, current: ModelDownloadAuthority): boolean {
   return recorded.organizationId === current.organizationId && recorded.principalId === current.principalId;
+}
+
+function passiveSourceData(raw: unknown): unknown {
+  let nodes = 0;
+  const inspect = (value: unknown, depth = 0) => {
+    if (++nodes > 4096 || depth > 12) throw new Error("Model source input exceeds its bound.");
+    if (!value || typeof value !== "object") return;
+    if (types.isProxy(value)) throw new Error("Active model source input is unavailable.");
+    const prototype = Object.getPrototypeOf(value);
+    if (Array.isArray(value) ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null)
+      throw new Error("Active model source input is unavailable.");
+    const keys = Reflect.ownKeys(value);
+    if (keys.length > (Array.isArray(value) ? 1025 : 128)) throw new Error("Model source input exceeds its bound.");
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !("value" in descriptor)) throw new Error("Active model source input is unavailable.");
+      inspect(descriptor.value, depth + 1);
+    }
+  };
+  inspect(raw); return copyBoundedPassiveData(raw);
+}
+function freezeSourceData<T>(value: T): T {
+  if (value && typeof value === "object") {for (const child of Object.values(value)) freezeSourceData(child); Object.freeze(value);}
+  return value;
+}
+function captureSourceAdmission(raw: ApprovedModelDownloadAdmission): ApprovedModelDownloadAdmission {
+  if (types.isProxy(raw)) throw new Error("Model source admission is unavailable.");
+  const outer = readStrictPassiveRecord(raw, ["source", "control", "acknowledgeIssued"]);
+  if (Object.keys(outer).length !== 3 || typeof outer.acknowledgeIssued !== "function" || types.isProxy(outer.acknowledgeIssued) || types.isProxy(outer.control))
+    throw new Error("Model source admission is unavailable.");
+  const control = readStrictPassiveRecord(outer.control, ["isCurrent", "stillAllowed"]);
+  if (Object.keys(control).length !== 2 || typeof control.isCurrent !== "function" || typeof control.stillAllowed !== "function" ||
+      types.isProxy(control.isCurrent) || types.isProxy(control.stillAllowed)) throw new Error("Model source admission is unavailable.");
+  const source = readStrictPassiveRecord(passiveSourceData(outer.source), ["requestId", "workspaceId", "sourceManifest", "maximumDurationSeconds", "allowedOrigins"]);
+  if (Object.keys(source).length !== 5 || typeof source.requestId !== "string" ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(source.requestId) || !isWorkspaceId(source.workspaceId) ||
+      !Number.isSafeInteger(source.maximumDurationSeconds) || (source.maximumDurationSeconds as number) < 1 ||
+      (source.maximumDurationSeconds as number) > 3600 || !Array.isArray(source.allowedOrigins) || source.allowedOrigins.length < 1 ||
+      source.allowedOrigins.length > 4 || source.allowedOrigins.some(origin => typeof origin !== "string" || origin.length > 300 ||
+        !/^https:\/\/[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(origin) || new URL(origin).hostname.includes("..")) ||
+      !source.allowedOrigins.includes("https://huggingface.co") || new Set(source.allowedOrigins).size !== source.allowedOrigins.length)
+    throw new Error("Model source admission is unavailable.");
+  const manifest = readStrictPassiveRecord(source.sourceManifest, ["source", "manifestDigest"]);
+  if (Object.keys(manifest).length !== 2) throw new Error("Model source admission is unavailable.");
+  const selected = manifest.source as {modelId?: unknown; revision?: unknown};
+  const normalized = readModelDownloadSource(selected, {provider: "huggingface", modelId: String(selected?.modelId), revision: String(selected?.revision)});
+  if (manifest.manifestDigest !== "sha256:" + createHash("sha256").update(JSON.stringify(normalized), "utf8").digest("hex"))
+    throw new Error("Model source admission is unavailable.");
+  return Object.freeze({source: freezeSourceData({...source, sourceManifest: {source: normalized, manifestDigest: manifest.manifestDigest}}) as unknown as ApprovedModelSourceDownloadRequest,
+    control: Object.freeze({isCurrent: control.isCurrent, stillAllowed: control.stillAllowed}) as ApprovedModelSourceDownloadControl,
+    acknowledgeIssued: outer.acknowledgeIssued as ApprovedModelDownloadAdmission["acknowledgeIssued"]});
+}
+
+function captureSourceTask(raw: ApprovedModelSourceDownloadTask, source: ApprovedModelSourceDownloadRequest): ApprovedModelSourceDownloadTask {
+  if (!raw || types.isProxy(raw)) throw new Error("The original source result owner is unavailable.");
+  const task = readStrictPassiveRecord(raw, ["requestId", "workspaceId", "modelId", "revision", "manifestDigest", "read", "cancel", "readCompleted"]);
+  if (Object.keys(task).length !== 8 || task.requestId !== source.requestId || task.workspaceId !== source.workspaceId ||
+      task.modelId !== source.sourceManifest.source.modelId || task.revision !== source.sourceManifest.source.revision ||
+      task.manifestDigest !== source.sourceManifest.manifestDigest ||
+      [task.read, task.cancel, task.readCompleted].some(value => typeof value !== "function" || types.isProxy(value)))
+    throw new Error("The original source result owner is unavailable.");
+  return Object.freeze({...task}) as unknown as ApprovedModelSourceDownloadTask;
 }
