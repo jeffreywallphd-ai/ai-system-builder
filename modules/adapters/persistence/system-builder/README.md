@@ -1,5 +1,25 @@
 # Saved System Builder and Headless plan persistence
 
+Private Model download task records use separate task/plan indexes and namespaces
+from ordinary Model, Data and Context work. Capture strict passive effect/scope
+data before store awaits. Bind exact organization, actor, client, host, workspace,
+plan, step, full canonical request digest (including the request key) and an
+independently checked normalized source digest. Root-owned reservation/issuance
+and fixed record revisions prevent another start. Unknown reserved/issued history
+remains unconfirmed and exposes no accepted task ID. Only the original trusted
+call can classify a known non-start; history or missing runtime status is not
+proof. Accepted outcomes replay without replacement. Both point indexes must
+agree; no enumeration, cross-client adoption or other-domain receipt is allowed.
+The metadata helper does not authorize approval, runtime dispatch or outward
+publication. Its eventual host must enforce current exact admission approval/
+policy for reservation and issuance in their owning transaction. First acceptance
+or known-non-start recording uses the exact trusted original call and identity;
+it can retain an admitted outcome after outward access ends. Status/response
+publication separately requires current reader authority.
+Reuse the existing Model application/reconciler/captured handle for actual work.
+The existing receipt ceiling remains unchanged; no public host or native pass is
+enabled by the ledger.
+
 Model download reviews use closed version-3 records with one private step/digest
 binding per exact Model selection. New proposals require both fresh owned policy
 and source validation and an explicit trusted metadata-only binder. Finish provider

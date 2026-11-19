@@ -1,5 +1,25 @@
 # Runtime Model
 
+The private Model plan task ledger retains one original approved attempt under
+root-owned transactions and the exact organization partition. It copies passive
+effect/scope data before awaits and normalizes the full Model request. The owner
+digest includes its request key, contract version and operation, separately from
+the independently checked source manifest digest. Both exact task and plan point
+indexes must agree with immutable actor/client/host/workspace/step ownership.
+Reserved/issued uncertainty remains unconfirmed without discovery, accepted ID
+exposure or another UUID/start. The original trusted call may record known
+non-start; metadata/history cannot establish physical non-execution. Accepted
+business outcomes and terminal non-start retain their original attempt across
+newer approval revisions. Read publication still requires current authority.
+The helper owns metadata only, not approval, dispatch, physical status or native
+cleanup. Its eventual host must enforce exact current admission policy/approval
+for reservation and issuance in their owning transaction. First acceptance or
+known-non-start recording uses the exact trusted original call/identity and can
+retain an admitted outcome after outward access ends. Status/publication needs
+current reader authority. Compose the existing Model application/reconciler.
+The receipt ceiling is unchanged; Model namespaces cannot adopt Data or Context
+work. Actual host/task/status/save integration remains pending.
+
 Model download proposal preparation is a metadata-only application boundary.
 The opt-in v11 plan records an exact normalized source/pin/manifest/license and
 explicit transfer origins/byte/time scope. An independent provider read must

@@ -1,5 +1,25 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Exact Model download task receipts
+
+Reuse the existing root-owned receipt/index pattern with private Model-only
+namespaces. Capture complete passive request/scope data before store awaits;
+normalize the Model request and independently check its source digest. The
+ownership hash binds the full canonical request, including request key, version
+and operation. Keep exact actor/client/host/workspace/plan/step and both task/plan
+indexes immutable. Reservation and acknowledged issuance admit at most one
+original attempt within the existing metadata receipt limit. Reserved/issued
+uncertainty never yields accepted identity, discovery or another start. Only the
+original trusted owning call may classify known non-start; unknown history is
+not evidence. Accepted outcomes remain replayable after outward access ends,
+but the eventual host must enforce current reader policy for publication. Exact
+current admission approval/policy belongs to reservation/issuance transactions;
+first acceptance/non-start recording uses the exact trusted original call and
+identity, separately from outward access. Reuse the original Model use case,
+reconciler and captured runtime handle; this ledger is not a new scheduler or
+runtime authority. Data/Context receipts and ordinary tasks cannot be adopted.
+Physical/model/host/status/scoped-save and final qualification remain separate.
+
 ### Exact Model transfer proposal and approval data
 
 Use a separate opt-in v11 download preview, retaining v1-v10 fingerprints. It

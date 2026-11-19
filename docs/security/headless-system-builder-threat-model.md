@@ -1,5 +1,25 @@
 # Headless System Builder threat model
 
+## Private Model task identity and uncertain starts
+
+Bind one exact Model attempt to original actor/client/host/workspace/plan/step,
+full canonical request (including its request key) and independently checked
+source digest. Copy passive data before waits and reject active objects without
+hooks. Both private point indexes must match the same immutable owner and record
+revision. No unindexed/history/foreign-domain or cross-client adoption is allowed.
+Root-owned transactions keep reservation/index/count writes atomic; the eventual
+host must enforce current exact admission approval/policy and its before-commit
+lifetime fence for reservation and issuance. First acceptance or known-non-start
+recording uses the exact trusted original call/identity and can retain an already
+admitted outcome after outward access ends. The ledger grants no dispatch authority.
+An interrupted reservation or issuance stays unconfirmed, without another UUID,
+accepted task ID or guessed-ID read/cancel. Only the original trusted owning call
+may record known non-start; neither absence nor timeout/history proves it.
+Accepted outcome recording is separate from current outward authorization.
+Current policy must precede publication/status and actual Model work must use the
+existing application/reconciler/captured handle. The unchanged bounded metadata
+history supplies no provider, physical cleanup, native restart or parent proof.
+
 ## Exact Model transfer proposal data
 
 An agent's inline source selection or digest is untrusted data. Resolve and

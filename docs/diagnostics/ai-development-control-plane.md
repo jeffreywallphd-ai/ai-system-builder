@@ -2714,3 +2714,10 @@ failures whose causes remain unknown. No assertion/output text or local path is
 added to governed diagnostic records.
 The focused Model unit command also retains the existing plan/operation store
 file for v1/v2 approval, replay, SQLite, system and Data-step compatibility.
+
+Exact Model task-ledger source/tests also select these focused unit/type groups.
+They exercise Model-only point ownership, passive copying, complete request/source
+digests, one reservation/issuance, conservative uncertainty, trusted non-start,
+atomic rollback, count bounds and actual temporary SQLite reopen. Shared files
+and unknown paths keep existing fallback. These metadata checks cannot qualify
+live dispatch, public status, Model save, provider/host/native work or a parent.
