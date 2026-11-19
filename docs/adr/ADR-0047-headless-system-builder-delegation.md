@@ -1,5 +1,17 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+The approved model increment first adds a private metadata compiler over the
+existing organization-scoped ModelRegistry seam. Finite inventory/record codecs
+copy only recorded safe facts and identify runtime/supply checks as unperformed.
+Current actor/workspace/model authority must surround reads and outward data.
+Inventory disables ambient discovery and shared storage; point reads require the
+recorded-only method. No legacy lookup, runtime, provider, filesystem or task
+fallback is introduced. Unselected private path/card/metadata descriptors are not
+evaluated. This preparatory component does not advertise new transport/MCP
+operations or grant acquisition, execution, save, external transfer, publication
+or window control. Public integration and exact pinned acquisition retain the
+existing approval, policy, host and qualification boundaries.
+
 Approved local query implementation stays inside the retained Context Browser
 and existing installed-only query port. Private admission binds exact saved
 bytes, original source/model witnesses and current trusted issue/accept policy.

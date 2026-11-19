@@ -1,5 +1,30 @@
 # Headless System Builder threat model
 
+## Private recorded-model metadata preparation
+
+Security-relevant metadata preparation protects model paths, cards, arbitrary
+metadata, credentials, workspace/actor identity and runtime resources. The private
+owner has only organization-scoped recorded metadata ports. Requests are copied
+and decoded against finite selector schemas; results independently validate exact
+workspace/record identity, timestamps, enums, counts and numeric fields. Unknown
+or private result fields, accessors, duplicate records, invalid cursors and false
+readiness/supply assertions deny. Current principal/organization/workspace and
+policy are checked around asynchronous reads and before return. A captured
+synchronous liveness/actor fence is checked at each read/return handoff after an
+awaited gate, including nested-microtask retirement. Later caller or callback
+mutation cannot retarget a request. Adapter Proxies, including list containers,
+rows, arrays and selected nested tags, are rejected before owner reflection.
+Trusted producer Promise resolution remains outside that reflection boundary.
+Selected data descriptors are copied
+without reading private path/card/metadata fields. Inventory disables discovery
+and shared storage; absent recorded-only point support has no legacy fallback.
+Malformed/foreign adapter data and failures expose no partial record or raw error.
+No runtime, provider, task, filesystem or write port exists in this component.
+It cannot verify model supply or compatibility from a saved label or timestamp.
+Public host/MCP binding, pinned acquisition, training/generation, physical profile
+qualification and parent/final review remain separate. Reverting this unused
+helper grants no new permission and preserves saved data and existing controls.
+
 ## Local runtime startup ownership
 
 The host must not infer runtime ownership from healthy HTTP or possession of a

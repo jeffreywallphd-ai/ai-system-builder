@@ -1,6 +1,7 @@
 export * from "./browse-models.use-case";
 export * from "./get-model-details.use-case";
 export * from "./list-models.use-case";
+export * from "./headless-model-metadata.use-case";
 export * from "./save-model-reference.use-case";
 export * from "./download-model.use-case";
 export * from "./model-download-tasks.use-case";

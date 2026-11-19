@@ -55,6 +55,7 @@ export * from "./headless-dataset-result-plan";
 export * from "./headless-data-local-file";
 export * from "./headless-data-provider-file";
 export * from "./headless-data-app-selection";
+export * from "./headless-model-metadata";
 export { readAppHeadlessLocalFileSelectionValue } from "./headless-data-app-selection";
 export * from "./desktop-system-change-poll";
 export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";

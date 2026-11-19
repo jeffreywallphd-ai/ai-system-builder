@@ -167,6 +167,46 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-model-metadata-owner-unit": {
+        "automatic_sources": (
+            "modules/contracts/headless/headless-model-metadata.ts",
+            "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
+            "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-metadata.unit.test.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/headless-model-metadata.ts",
+            "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/contracts/README.md",
+            "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-metadata.unit.test.ts",
+            "modules/application/use-cases/model/index.ts",
+            "modules/application/use-cases/README.md",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
+            "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
+            "modules/application/use-cases/model/tests/headless-model-metadata.unit.test.ts",
+            "modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts",
+            "modules/application/use-cases/tests/model-browse-details.use-cases.unit.test.ts",
+            "modules/application/use-cases/model/tests/list-models.use-case.unit.test.ts"),
+    },
+    "headless-model-metadata-owner-types": {
+        "companion_to": "headless-model-metadata-owner-unit",
+        "sources": (
+            "modules/contracts/headless/headless-model-metadata.ts",
+            "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
+            "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-metadata.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
+            "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/contracts/headless/headless-model-metadata.ts",
+            "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
+            "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-metadata.unit.test.ts"),
+    },
     "headless-context-current-evidence": {
         "interpreter": "python",
         "automatic_sources": (

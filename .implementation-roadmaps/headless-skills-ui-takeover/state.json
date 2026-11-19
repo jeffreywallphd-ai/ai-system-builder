@@ -601,7 +601,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "models-training-and-generation",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -2101,6 +2101,24 @@
       "recordedAt": "2026-11-19T02:25:15Z",
       "sequence": 109,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "a0e08ff727df0d748908646327311baa0b0f15ddeb4ba379f675c3ef7f562f9a",
+      "recordedAt": "2026-11-19T02:29:17Z",
+      "sequence": 110,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "e86f04ea7392a353153127df277c0e335de9e1d7acc53d730a3700b5fff166ea",
+      "recordedAt": "2026-11-19T02:29:17Z",
+      "sequence": 111,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "cf152d586d6524007114a80a069d69d640932178002d0877989d8d2221e6a332",
+      "recordedAt": "2026-11-19T02:29:18Z",
+      "sequence": 112,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -3312,11 +3330,130 @@
       "id": "models-training-and-generation",
       "number": 7,
       "objective": "Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The merged roadmap and both approval modes/channels are already approved; no new provider, engine, runtime topology, arbitrary loader or automatic purchasing is authorized.",
+          "Use existing authorized installed model assets and configured provider authority. A new model, paid action, external transfer/publication or unresolved security-policy change requires its existing explicit direction rather than hidden fallback.",
+          "Compatible availability is a measured supported profile, not a promise for all models/hardware. Preserve genuine unavailable qualification; technical pending is agent work unless a specific human action is required.",
+          "Latest user direction is feature-focused testing while implementing increments, followed by one combined comprehensive roadmap qualification boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "models",
+            "outcome": "A paired client can inspect permitted persisted models and configured-provider provenance/license/revision/format, preview exact download/resource scope and run one explicitly approved supported acquisition with durable scoped task status, safe retry/cancellation semantics and unchanged ordinary downloads.",
+            "title": "Prepare and acquire exact supported models"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "train-evaluate",
+            "outcome": "An exact approved dataset version and compatible pinned base feed the existing supported training task. Base/recipe/data/hardware/task/output lineage remains traceable, validation and fixed evaluation are separate, and a trained candidate requires separate save. Missing resources or unsupported profiles stay explicit.",
+            "title": "Fine-tune, evaluate and review authorized outputs"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "generate-and-reveal",
+            "outcome": "Existing supported text/image tasks and output import use current scoped approval, safe transient inputs and exact task lineage. Separately authorized Desktop/Managed windows show exact model inventory/download/training/generated-artifact outcomes and revoke stops presentation without losing independent work.",
+            "title": "Generate and show exact model outcomes"
+          }
+        ],
+        "completionTests": [
+          "Actual stdio MCP client on packaged Desktop and authenticated Managed browser exercises the supported small pinned acquisition, declared local training/evaluation, generation/output import, task recovery/resource refusal and separate revocable status reveals. No fake accepted task, weights, worker or output can substitute for a claimed physical pass.",
+          "Predeclare task-specific baseline/quality/format/data/resource expectations before observation. Retain original accepted model-size accuracy policy, existing guard/deadline/native/offload controls and failed history; report each profile/device/method truthfully.",
+          "Run only this increment's relevant feature tests, builds/docs/dependency-direction gates and independent exact-criterion review. Reserve the combined standard/end-to-end/AI suite for after all roadmap implementation increments."
+        ],
+        "documentation": [
+          "Model/runtime contracts and application/host READMEs",
+          "ADR0047, Headless threat model and runtime architecture/profile boundaries",
+          "Portable skill/MCP schemas and both host permission disclosures",
+          "Bounded genuine task/quality/resource/cleanup qualification reports"
+        ],
+        "fingerprint": "17380c01d38a9bdad5a634080af464058728b6765e8e6a5b14e409b1615516b5",
+        "focusedTests": [
+          "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
+          "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
+          "Finite training/generation settings, source/model substitution, admission/memory shortfall, protected prompt/data exclusion, review-before-save, failed/ambiguous tasks and current egress/consent/revoke fences.",
+          "Focused source-compatible application/worker/adapter/host and paired UI tests, real supported task profile with original safety controls and owned lifecycle/cleanup proof. No accepted ordinary Qwen accuracy rerun."
+        ],
+        "recordedAt": "2026-11-19T02:29:18Z",
+        "rollback": "Disable only newly advertised model/training/generation delegation and related presentation. Preserve ordinary app functionality, exact accepted task custody, installed models, dataset versions, reviewed candidates, receipts and all existing cleanup/resource/security controls.",
+        "steps": [
+          "Define strict bounded model metadata/preview/task contracts and private exact model witnesses. Bind persisted-only inventory and configured provider metadata to current actor/client/workspace/model authority. Extend the existing approved download path with immutable revision/integrity/resource admission and durable accepted-task lineage; no public raw path or worker error.",
+          "Compile exact saved dataset version/artifact and base-model witnesses into finite supported training/validation settings. Admit one current approved task through the existing owner, retain base/recipe/data/hardware/task lineage, expose minimized status and separate explicit result save. Evaluate a declared supported small profile against a fixed baseline, with honest unsupported/resource refusal outcomes.",
+          "Use existing approved text/image generation owners with bounded transient prompt handling and exact task/result lineage. Add finite model/download/training/generated-artifact presentation selectors to the existing consent/revoke delivery protocol on both hosts. Run the real scoped MCP/app workflows and relevant denial/cleanup tests before exact criterion qualification."
+        ],
+        "summary": "Deliver three integrated model outcomes: prepare and acquire an exact compatible model; fine-tune and evaluate authorized data with review before save; generate and reveal exact outcomes under separate revocable window consent. Reuse the existing host application/runtime owners and exact approved-plan receipt protocol."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-19T02:29:17Z",
+          "risks": [
+            "Security-relevant: protect saved model/dataset bytes, tokens, transient prompts, checkpoints, output paths and host resources. Current actor/client/organization/workspace, exact source/model revision and plan authority must surround proposal, issuance, ACK, status, review, save, replay and disclosure.",
+            "Provider cards/config/license strings and generated outputs are untrusted data. Minimize metadata, distinguish unknown/non-open licenses, never execute remote code or convert retrieved instructions into tool effects, and never serialize secrets, paths, raw worker errors or protected sample text.",
+            "A model id or mutable branch is not an immutable revision. Carry exact provider/revision/format/integrity and resource policy through the approved download path; preserve ordinary compatible callers and reject substitutions before loading or registering.",
+            "Passive reads must not initialize runtime/model dependencies, discover ambient files, install packages, transfer weights or start tasks. Provider metadata requests and actual downloads retain their distinct explicit authority and fail-closed current policy.",
+            "Training inputs require exact dataset version/digest and recorded compatible base witnesses; finite settings cannot admit custom code, remote loaders, arbitrary destinations or external publication. Preserve result-review-before-save and host-owned staging/cancellation/cleanup.",
+            "Readiness, task completion, structural validation and output quality are different facts. Use genuinely supported installed profiles, fixed predeclared training/evaluation fixtures and real worker/host proof; document unavailable profiles instead of passing a stand-in.",
+            "Keep accepted ordinary Qwen quality criteria closed; no repeat of their fixed accuracy suite. New task-specific training/evaluation/generation evidence does not revoke the user-approved model-size expectations.",
+            "Use existing memory/storage guards and sanitized numeric shortfalls with notification-center integration. No new native/offload lease, authority relaxation, automatic retry, provider supplier, download or broad all-software suite is granted by a feature check."
+          ],
+          "sources": [
+            {
+              "title": "Accepted headless delegation and finite approvals",
+              "url": "docs/adr/ADR-0047-headless-system-builder-delegation.md"
+            },
+            {
+              "title": "Current model/runtime placement, lifecycle and memory controls",
+              "url": "docs/architecture/runtime-model.md"
+            },
+            {
+              "title": "Headless threat and protected-content boundaries",
+              "url": "docs/security/headless-system-builder-threat-model.md"
+            },
+            {
+              "title": "Model registry metadata and artifact owners",
+              "url": "modules/application/ports/model/model-registry.port.ts"
+            },
+            {
+              "title": "Desktop model feature composition",
+              "url": "modules/hosts/desktop/composition/composeDesktopModelFeature.ts"
+            },
+            {
+              "title": "Model download admission and lifecycle owner",
+              "url": "modules/application/use-cases/model/model-download-tasks.use-case.ts"
+            },
+            {
+              "title": "Training base/dataset/review and saved-output owner",
+              "url": "modules/application/use-cases/model/train-model.use-case.ts"
+            },
+            {
+              "title": "Current safe download/runtime implementation",
+              "url": "modules/adapters/runtime/python/worker/tasks/local_text_generation.py"
+            },
+            {
+              "title": "Existing actual training-host qualification profile",
+              "url": "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py"
+            }
+          ],
+          "summary": "Security-relevant continuation inside accepted ADR0047 and the existing Model/Runtime application owners. ModelRegistryPort already supplies passive persisted point reads and listing with discovery/shared-storage disabled. Existing host Model features compose browse/details, download task, training review/save/cancel and validation owners; image generation has its own retained owner. Headless must expose minimized typed metadata and exact approved task effects rather than ordinary raw contracts or runtime paths. Provider model details retain the immutable Hub SHA privately in metadata, but ordinary download commands currently do not propagate that revision to the worker: an approved pinned path must carry and verify it without changing existing unpinned callers. Training already separates result review from save, and its original dataset/base-model/staging/resource ownership must remain. Reuse current plan modes/channels and one-use ACK/exact-replay machinery. No new provider, engine, model download, paid effect or runtime topology is selected by this research."
+        }
+      ],
       "rollback": "Turn off model and generation delegation, end related presentation and preserve task cleanup, installed assets and result metadata under their owning policies.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-19T02:29:17Z",
+      "status": "implementing",
       "title": "Manage models, fine-tune and generate outputs",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -3566,6 +3703,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "ready",
-  "updatedAt": "2026-11-19T02:25:15Z"
+  "status": "executing",
+  "updatedAt": "2026-11-19T02:29:18Z"
 }

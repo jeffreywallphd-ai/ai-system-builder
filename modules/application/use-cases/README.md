@@ -4,6 +4,23 @@
 
 Use cases in this folder own application orchestration and remain adapter-agnostic.
 
+`ReadHeadlessModelMetadataUseCase` is a private persisted-only metadata owner.
+It binds the captured organization and current principal/workspace, copies the
+request, disables discovery/shared storage on inventory reads and requires the
+recorded-only point lookup without a legacy fallback. Current policy surrounds
+reads and outward projection. A captured synchronous liveness fence and actor
+check run at the actual read/return handoffs after each awaited policy gate.
+Adapter Proxies are rejected before owner reflection, including nested tags.
+It selects own data descriptors for declared
+metadata; private path/card/metadata fields are not evaluated. Contaminated,
+malformed or revoked responses expose no partial inventory. It has no runtime,
+provider, task, filesystem or write port. This component alone supplies no public
+Headless operation, verified supply/readiness or parent roadmap pass.
+The bounded `headless-model-metadata-owner-unit` and
+`headless-model-metadata-owner-types` checks cover this component and related
+model/read-contract compatibility. Their exact source mapping retains generic
+verification for unknown paths or an explicitly requested generic check.
+
 `ReadHeadlessDatasetMetadataUseCase` minimizes the existing authorized dataset
 point-read and comparison results. Its host supplies current plan-review authority
 around each read. It admits at most 16 sequential point reads and never scans

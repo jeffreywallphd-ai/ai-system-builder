@@ -1,0 +1,24 @@
+{
+  "schema_version": "headless-model-metadata-owner-observation-v1",
+  "scope": "Strict codecs and private persisted-only application metadata owner; no public host/MCP operation or actual model task",
+  "security_impact": "security-relevant",
+  "verification_checks": ["headless-model-metadata-owner-unit", "headless-model-metadata-owner-types", "control-plane", "documentation", "agent-support", "architecture"],
+  "observations": [
+    "Twenty focused contract/owner cases cover no public operation admission, malformed/private/unknown input, exact correlation, copied targets, revoked or unknown policy, callback substitution, changed actor, nested-microtask liveness retirement, malformed async-fence rejection draining, Proxy-before-reflection denial, private accessor non-evaluation, missing recorded-only support, contaminated data, sparse/accessor arrays and adapter failure; current candidate-bound verification records their result.",
+    "Strict TypeScript checking passes for the four new source/test files under ES2021/CommonJS with no emitted output.",
+    "The existing thirty model download/browse/inventory baseline cases passed on the unchanged base implementation; current candidate-bound feature verification and separate independent review still govern this component."
+  ],
+  "controls": [
+    "Captured organization and current principal/workspace/policy plus a synchronous liveness fence precede actual metadata I/O and outward projection after each awaited gate.",
+    "Copied finite schemas minimize recorded identities, source/form/format, tags and numeric metadata; runtime and supply checks remain not-checked.",
+    "Inventory disables discovery and shared storage; point reads require recorded-only lookup with no legacy fallback.",
+    "Own data descriptors exclude private paths/cards/metadata and reject selected accessors without evaluating them.",
+    "No runtime, provider, filesystem, task, download, write or external effect port is supplied."
+  ],
+  "qualification_limits": [
+    "Unit fixtures are not real model, worker, app, MCP or hardware evidence.",
+    "Public integration and registry cursor execution remain pending; these codecs alone do not advertise those operations.",
+    "Pinned download, source/format/license integrity, training/evaluation, generation, display/revoke and parent/final roadmap qualification remain separate.",
+    "No accepted ordinary model-accuracy check, memory/offload policy or dependency changed."
+  ]
+}

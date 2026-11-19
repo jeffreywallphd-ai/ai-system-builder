@@ -2,8 +2,8 @@
 
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
-- Status: `ready`
-- Updated: `2026-11-19T02:25:15Z`
+- Status: `executing`
+- Updated: `2026-11-19T02:29:18Z`
 
 ## Objective
 
@@ -140,7 +140,7 @@ The user selected both approval modes, available in chat and in the app. The hos
 | 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `completed` |
 | 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `completed` |
 | 6: Build and test RAG databases and context packs | Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results. | data-acquisition-and-datasets | `completed` |
-| 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `pending` |
+| 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `implementing` |
 | 8: Select, plan and create reusable assets | Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component. | models-training-and-generation | `pending` |
 | 9: Compose, build, test and publish systems | Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation | `pending` |
 | 10: Qualify coverage across the app | Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation, compose-build-test-publish | `pending` |
@@ -429,7 +429,7 @@ Disable agent Context admission and revoke related presentation. Retain saved an
 ## Increment 7: Manage models, fine-tune and generate outputs
 
 - Id: `models-training-and-generation`
-- Status: `pending`
+- Status: `implementing`
 - Dependencies: `rag-and-context`
 
 Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits.
