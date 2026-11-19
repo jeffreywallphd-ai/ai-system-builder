@@ -3,8 +3,12 @@ let data = null;
 let view = "roadmaps";
 let lastDigest = "";
 let disclosureRepository = null;
+let disclosureIdentityDigest = null;
 const incrementChoices = new Map();
 let incrementIdentities = new Map();
+const pageSizes = { roadmaps: 3, work_items: 25, evaluations: 25, feedback: 25 };
+const pageRequests = Object.fromEntries(Object.keys(pageSizes).map(key => [key, { page: 1, roadmap: "", increment: "", work: "" }]));
+let linkedIncrement = null;
 const incrementKey = (roadmap, increment, history = null) => JSON.stringify([data.repository_id || "", roadmap, history, increment]);
 const names = { roadmaps: "Roadmaps", work_items: "Work items", evaluations: "Evaluations", feedback: "Feedback" };
 const themePreferenceKey = "aisb-review-theme-v1";
@@ -54,8 +58,18 @@ function incrementDelivery(increment) {
 function chunkDelivery() {
   return el("p", "Delivery time: Not recorded · Execution records do not identify individual chunks.", "small delivery-time");
 }
-function selectView(next, query = "", increment = null) {
+function selectView(next, query = "", increment = null, work = null) {
   view = next;
+  if (work !== null && !data?.pagination) query = work;
+  if (data?.pagination) {
+    const parts = query.split("/");
+    pageRequests[next] = { page: 1, roadmap: next === "roadmaps" ? query : parts[0],
+      increment: next === "work_items" ? parts[1] || "" : "", work: work || "" };
+    linkedIncrement = next === "roadmaps" && increment !== null ? { roadmap: query, increment } : null;
+    document.querySelector("#search").value = "";
+    refresh();
+    return;
+  }
   if (next === "roadmaps" && increment !== null) {
     const key = incrementKey(query, increment);
     if (incrementIdentities.get(key) === 1) incrementChoices.set(key, true);
@@ -316,7 +330,7 @@ function criteriaList(criteria, chunks = []) {
         local.append(el("p", `${readable(s.status)}: ${s.scope}`, "small"));
         local.append(el("p", `Receipt ${s.receipt_digest.slice(0, 12)} · Review ${s.review_digest.slice(0, 12)}`, "small"));
         for (const limit of s.limitations) local.append(el("p", limit, "small"));
-        local.append(action("View supporting work", () => selectView("work_items", s.work_id)));
+        local.append(action("View supporting work", () => selectView("work_items", "", null, s.work_id)));
       }
       detail.append(local);
     }
@@ -340,7 +354,7 @@ function chunkBody(chunk, criteria) {
   return body;
 }
 function linkedWorkCriteria(item) {
-  const increment = data.roadmaps.find(roadmap => roadmap.id === item.roadmap_id)
+  const increment = (data.pagination ? data.work_item_roadmaps : data.roadmaps).find(roadmap => roadmap.id === item.roadmap_id)
     ?.increments?.find(row => row.id === item.increment_id);
   const fallback = Array.isArray(item.criteria) ? item.criteria : [];
   const ids = Array.isArray(item.criteria_ids) ? item.criteria_ids : fallback.map(row => row.id);
@@ -357,7 +371,7 @@ function roadmapSections(parent, records, query) {
     section.setAttribute("aria-labelledby", heading.id); section.append(heading);
     if (!records.some(item => completedRoadmap(item) === complete)) {
       const empty = el("div", undefined, "empty");
-      empty.append(el("p", query ? `No matching ${key} roadmaps. Try a different title or outcome.` : complete ? "No completed roadmaps yet." : "No open roadmaps."));
+      empty.append(el("p", query ? `No matching ${key} roadmaps on this page. Try a different title or outcome.` : data.pagination ? `No ${key} roadmaps on this page.` : complete ? "No completed roadmaps yet." : "No open roadmaps."));
       section.append(empty);
     }
     sections[key] = section; parent.append(section);
@@ -366,35 +380,43 @@ function roadmapSections(parent, records, query) {
 }
 function render() {
   if (!data) return;
+  if (data.pagination && data.pagination.view !== view) return;
   if (disclosureRepository !== (data.repository_id || "")) {
     incrementChoices.clear();
     disclosureRepository = data.repository_id || "";
   }
   incrementIdentities = new Map();
-  const countIdentity = key => incrementIdentities.set(key, (incrementIdentities.get(key) || 0) + 1);
+  const countIdentity = (key, unique = true) => incrementIdentities.set(key, (incrementIdentities.get(key) || 0) + (unique === false ? 2 : 1));
   for (const roadmap of data.roadmaps) {
-    for (const increment of roadmap.increments || []) countIdentity(incrementKey(roadmap.id, increment.id));
+    for (const increment of roadmap.increments || []) countIdentity(incrementKey(roadmap.id, increment.id), increment.disclosure_unique);
     for (const history of roadmap.merged_history || []) {
-      countIdentity(incrementKey(roadmap.id, null, history.id));
-      for (const increment of history.increments || []) countIdentity(incrementKey(roadmap.id, increment.id, history.id));
+      countIdentity(incrementKey(roadmap.id, null, history.id), history.disclosure_unique);
+      for (const increment of history.increments || []) countIdentity(incrementKey(roadmap.id, increment.id, history.id), increment.disclosure_unique);
     }
   }
   // Use the complete incoming view, before search or section filtering. An
   // ambiguous identity cannot inherit another row's manual choice or focus.
-  for (const key of incrementChoices.keys()) if (incrementIdentities.get(key) !== 1) incrementChoices.delete(key);
-  for (const key of Object.keys(names)) document.querySelector(`#count-${key}`).textContent = data[key].length;
+  for (const key of incrementChoices.keys()) if (incrementIdentities.has(key) && incrementIdentities.get(key) !== 1 || !data.pagination && !incrementIdentities.has(key)) incrementChoices.delete(key);
+  if (linkedIncrement) {
+    const key = incrementKey(linkedIncrement.roadmap, linkedIncrement.increment);
+    if (incrementIdentities.get(key) === 1) incrementChoices.set(key, true);
+    linkedIncrement = null;
+  }
+  for (const key of Object.keys(names)) document.querySelector(`#count-${key}`).textContent = data.totals?.[key] ?? data[key].length;
+  document.querySelectorAll(".nav").forEach(b => { b.classList.toggle("active", b.dataset.view === view); b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false"); });
   document.querySelector("#heading").textContent = names[view];
   const all = data[view];
   const done = all.filter(i => view === "roadmaps" ? completedRoadmap(i) : ["completed", "complete", "closed", "final-approved"].includes(i.status)).length;
   const active = all.filter(i => view === "roadmaps" ? roadmapDisplayStatus(i) === "in-progress" : ["executing", "active", "verifying", "prepared"].includes(i.status)).length;
-  const summary = document.querySelector("#summary"); summary.replaceChildren(metric(all.length, "Total records"), metric(active, "In progress"), metric(done, "Completed"), metric(all.reduce((n, i) => n + (i.blocker_count || 0), 0), "Human actions needed"));
+  const summary = document.querySelector("#summary"); summary.replaceChildren(metric(data.pagination?.total_records ?? all.length, "Total records"), metric(active, data.pagination ? "In progress on page" : "In progress"), metric(done, data.pagination ? "Completed on page" : "Completed"), metric(all.reduce((n, i) => n + (i.blocker_count || 0), 0), data.pagination ? "Human actions on page" : "Human actions needed"));
   const query = document.querySelector("#search").value.toLowerCase();
   const selected = all.filter(i => JSON.stringify([i.title, i.id, i.objective, i.outcome, i.roadmap_title, i.increment_title, i.criteria_ids, i.merged_history]).toLowerCase().includes(query));
   const items = document.querySelector("#items"); items.replaceChildren();
+  if (data.pagination) items.append(pageControls());
   if (view === "roadmaps") items.append(roadmapStatusLegend());
   const sections = view === "roadmaps" ? roadmapSections(items, selected, query) : null;
   if (view === "work_items" && data.inventory?.execution_records_truncated && Number.isSafeInteger(data.inventory.execution_records_shown) && Number.isSafeInteger(data.inventory.execution_records_total)) items.append(el("p", `Showing the newest ${data.inventory.execution_records_shown} of ${data.inventory.execution_records_total} scoped execution records; the remaining records are outside this bounded display.`, "small inventory-limit"));
-  if (!selected.length && !sections) { const empty = el("div", undefined, "empty"); empty.append(el("h2", query ? "No matching work" : `No ${names[view].toLowerCase()} yet`), el("p", query ? "Try a different title or outcome." : "New JSON records will appear here as the workflow creates them.")); items.append(empty); }
+  if (!selected.length && !sections) { const empty = el("div", undefined, "empty"); const filtered = data.pagination?.roadmap || data.pagination?.work; empty.append(el("h2", query || filtered ? "No matching work" : `No ${names[view].toLowerCase()} yet`), el("p", filtered ? "No records match this selection. Use Show all to browse saved records." : query ? "Try a different title or outcome." : "New JSON records will appear here as the workflow creates them.")); items.append(empty); }
   // The API orders by normalized first creation time. A stable partition preserves
   // that chronology (including ties and undated records) within each section.
   for (const item of selected) {
@@ -486,6 +508,49 @@ function render() {
   document.querySelector("#fingerprint").textContent = `Source ${data.source_digest.slice(0, 12)}`;
 }
 let fetching = false;
+let refreshQueued = false;
+function pageControls() {
+  const paging = data.pagination;
+  const controls = el("nav", undefined, "pagination"); controls.setAttribute("aria-label", `${names[view]} pages`);
+  const move = direction => { view = paging.view; pageRequests[view].page = paging.page + direction; refresh(); };
+  const previous = action("Previous page", () => move(-1)); previous.disabled = paging.page <= 1;
+  const next = action("Next page", () => move(1)); next.disabled = paging.page >= paging.total_pages;
+  controls.append(previous, el("span", `Page ${paging.page} of ${paging.total_pages} · ${paging.total_records} records`, "page-count"), next,
+    el("span", "Search filters this page. All records remain saved.", "small"));
+  if (paging.roadmap || paging.work) controls.append(el("span", paging.work ? "Showing the selected supporting-work record." : paging.increment ? "Showing work for the selected increment." : "Showing the selected roadmap.", "small"), action(`Show all ${names[view].toLowerCase()}`, () => selectView(paging.view)));
+  return controls;
+}
+function pageUrl() {
+  const request = pageRequests[view];
+  return `/api/review?view=${view}&page=${request.page}${request.roadmap ? `&roadmap=${encodeURIComponent(request.roadmap)}` : ""}${request.increment ? `&increment=${encodeURIComponent(request.increment)}` : ""}${request.work ? `&work=${encodeURIComponent(request.work)}` : ""}`;
+}
+function validatePage(value, requestedView, requested) {
+  if (!Object.hasOwn(value, "pagination")) {
+    if (Object.hasOwn(value, "totals") || Object.hasOwn(value, "work_item_roadmaps")) throw new Error("incomplete page contract");
+    return; // Complete legacy representation remains readable.
+  }
+  const p = value.pagination;
+  const keys = ["view", "page", "page_size", "total_records", "total_pages", "roadmap", "increment", "work"];
+  const count = n => Number.isSafeInteger(n) && n >= 0 && n <= 3000000;
+  if (!p || typeof p !== "object" || Array.isArray(p) || Object.keys(p).length !== keys.length
+    || keys.some(key => !Object.hasOwn(p, key)) || p.view !== requestedView || p.roadmap !== requested.roadmap || p.increment !== requested.increment || p.work !== requested.work
+    || typeof value.disclosure_digest !== "string" || !/^[a-f0-9]{64}$/.test(value.disclosure_digest)
+    || p.page_size !== pageSizes[requestedView] || !count(p.total_records) || !count(p.total_pages) || !count(p.page)
+    || p.total_pages !== Math.max(1, Math.ceil(p.total_records / p.page_size)) || p.page !== Math.min(requested.page, p.total_pages)
+    || !value.totals || Object.keys(value.totals).length !== Object.keys(pageSizes).length
+    || Object.keys(pageSizes).some(key => !count(value.totals[key]) || !Array.isArray(value[key])
+      || value[key].length !== (key === requestedView ? Math.min(p.page_size, Math.max(0, p.total_records - (p.page - 1) * p.page_size)) : 0))
+    || value.totals[requestedView] < p.total_records || !requested.roadmap && !requested.work && value.totals[requestedView] !== p.total_records || !Array.isArray(value.work_item_roadmaps) || value.work_item_roadmaps.length > 25
+    || requestedView !== "work_items" && value.work_item_roadmaps.length !== 0
+    || requested.roadmap && value[requestedView].some(row => row?.[requestedView === "roadmaps" ? "id" : "roadmap_id"] !== requested.roadmap
+      || requested.increment && row.increment_id !== requested.increment)
+    || requested.work && value.work_items.some(row => row?.id !== requested.work)) throw new Error("page contract");
+}
+function observeDisclosureIdentity(next) {
+  if (disclosureRepository !== (next.repository_id || "") || next.pagination && disclosureIdentityDigest !== next.disclosure_digest) incrementChoices.clear();
+  disclosureRepository = next.repository_id || "";
+  disclosureIdentityDigest = next.pagination ? next.disclosure_digest : null;
+}
 function reviewNotice(diagnostics) {
   const messages = [];
   const limits = diagnostics.filter(row => row?.code === "projection.execution-records-truncated");
@@ -506,7 +571,19 @@ function expandedReviewWorkItems(value) {
   if (value.work_item_format !== "roadmap-chunk-refs-v1") throw new Error("work format");
   const fields = ["id", "source", "roadmap_id", "increment_id", "chunk_id", "increment_number", "chunk_number", "created_at"];
   const index = new Map();
-  for (const roadmap of value.roadmaps) for (const increment of roadmap.increments) for (const chunk of increment.chunks) {
+  const parents = value.pagination ? value.work_item_roadmaps : value.roadmaps;
+  if (value.pagination) {
+    const seen = new Set();
+    for (const parent of parents) {
+      if (!parent || typeof parent.id !== "string" || !parent.id || seen.has(parent.id) || !Array.isArray(parent.increments) || !parent.increments.length || parent.increments.length > 25) throw new Error("work parents");
+      seen.add(parent.id); const increments = new Set();
+      for (const increment of parent.increments) {
+        if (!increment || typeof increment.id !== "string" || !increment.id || increments.has(increment.id) || !Array.isArray(increment.chunks) || !increment.chunks.length || increment.chunks.length > 25) throw new Error("work parents");
+        increments.add(increment.id);
+      }
+    }
+  }
+  for (const roadmap of parents) for (const increment of roadmap.increments) for (const chunk of increment.chunks) {
     const id = [roadmap.id, increment.id, chunk.id].join("/");
     if (index.has(id)) throw new Error("ambiguous work item");
     const criteria = increment.criteria.filter(c => chunk.criteria_ids.includes(c.id))
@@ -530,15 +607,20 @@ function expandedReviewWorkItems(value) {
   return expanded;
 }
 async function refresh() {
-  if (fetching) return; fetching = true;
+  if (fetching) { refreshQueued = true; return; } fetching = true;
+  const requestedView = view, requested = { ...pageRequests[view] }, url = pageUrl();
   try {
-    const response = await fetch("/api/review", { cache: "no-store", credentials: "omit",
+    const response = await fetch(url, { cache: "no-store", credentials: "omit",
       headers: { "X-Review-Work-Items": "roadmap-chunk-refs-v1" } });
     if (!response.ok) throw new Error("unavailable");
     const next = await response.json();
     if (next.schema_version !== "development-review-v1") throw new Error("schema");
+    validatePage(next, requestedView, requested);
     const workItems = expandedReviewWorkItems(next);
+    observeDisclosureIdentity(next);
+    if (url !== pageUrl()) { refreshQueued = true; return; }
     data = { ...next, work_items: workItems };
+    if (next.pagination) pageRequests[view].page = next.pagination.page;
     if (lastDigest !== data.source_digest) { lastDigest = data.source_digest; render(); }
     document.querySelector("#connection").textContent = "Live · JSON connected";
     document.querySelector("#updated").textContent = `Checked ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
@@ -548,7 +630,7 @@ async function refresh() {
   } catch {
     document.querySelector("#connection").textContent = "Connection interrupted";
     const error = document.querySelector("#error"); error.hidden = false; error.textContent = "The local review server is unavailable. Retry, or start it using the documented review-site command.";
-  } finally { fetching = false; }
+  } finally { fetching = false; if (refreshQueued) { refreshQueued = false; refresh(); } }
 }
 initializeTheme();
 document.querySelectorAll(".nav").forEach(button => button.addEventListener("click", () => selectView(button.dataset.view)));

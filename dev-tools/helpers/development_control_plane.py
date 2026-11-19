@@ -9,7 +9,7 @@ from pathlib import Path
 
 from control_plane.common import read_json, relative
 from control_plane.contracts import ControlError, success
-from control_plane.projection import expanded_review_work_items, project
+from control_plane.projection import PAGE_SIZES, expanded_review_work_items, project, review_content
 from control_plane.records import Records
 from control_plane.storage import confined_path
 from control_plane.work import Work
@@ -23,6 +23,8 @@ def parser():
     sub.add_parser("recover")
     review_data = sub.add_parser("review-data")
     review_data.add_argument("--compact", action="store_true")
+    review_data.add_argument("--view", choices=PAGE_SIZES)
+    review_data.add_argument("--page", type=int, default=1)
     start = sub.add_parser("start")
     start.add_argument("--from", dest="input", required=True)
     start.add_argument("--invocation", required=True)
@@ -63,10 +65,13 @@ def main(argv=None):
     try:
         work = Work(root)
         if args.command == "status":
-            data = project(root, compact_work_items=True)
+            data = review_content(root, compact_work_items=True, paginated=True)
             result = {"state_revision": data["local_revision"], "work_items": expanded_review_work_items(data), "recovery_required": work.records.journal.exists(), "roadmaps": [{"id": r["id"], "status": r["status"], "current_increment": r["current_increment"]} for r in data["roadmaps"]]}
         elif args.command == "review-data":
-            result = project(root, compact_work_items=args.compact)
+            if not args.view and args.page != 1:
+                raise ValueError("A view is required for paging.")
+            options = {"page": {"view": args.view, "page": args.page}} if args.view else {}
+            result = project(root, compact_work_items=args.compact, **options)
         elif args.command == "recover":
             result = {"recovered": work.records.recover()}
         elif args.command == "start":

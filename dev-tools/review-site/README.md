@@ -2,6 +2,47 @@
 
 # Dynamic Development Review
 
+The browser requests server pages from `/api/review?view=roadmaps&page=1`.
+Roadmaps use three records per page; Work items, Evaluations and Feedback use
+25. Previous/Next controls show the current page, page count and exact matching
+record count. Search filters the current page. Open roadmaps precede completed
+roadmaps across page boundaries; each section retains newest-first creation
+order. Page navigation preserves manual increment choices for this visit.
+Linked navigation uses exact optional `roadmap` and `increment` selectors, with
+a Show all action to leave that filter. A missing selection is an explicit empty
+page. If records shrink, a request past the end returns the new last page.
+Supporting-work links use a separate exact `work` selector, so an older execution
+can be opened directly from any page. It cannot be combined with parent selectors.
+Paged execution, evaluation and feedback views select from every saved record
+in the bounded source store; their legacy 1,000/200 display caps do not apply.
+Every page also carries a digest of global public disclosure identities/counts.
+An observed identity change clears remembered panel choices, including when a
+duplicate appears and disappears while viewing another page. Ordinary page or
+status changes preserve those choices.
+
+Each page is sliced from one complete bounded-source projection before final
+2 MiB byte admission. Selected roadmap records retain all criteria, support,
+chunks and merged history. Work-item pages carry only the exact selected chunks
+under `work_item_roadmaps`, with their complete owning criteria and support.
+Compact references must reconstruct exactly those chunks in the same reply.
+Malformed, duplicate or foreign joins reject the refresh. An oversized page
+fails closed; no page row is removed to make its advertised counts fit.
+`pagination` binds the view, selectors, page, fixed size and matching counts;
+`totals` reports all four unfiltered collection counts. Execution inventory in
+paged responses describes the source collection, not the current page size.
+
+The query grammar permits only the four fixed views, a canonical positive page
+integer up to 1,000,000 and optional bounded exact roadmap/increment identifiers.
+Increment requires Work items and a roadmap. Unknown, duplicate, escaped,
+malformed, excessive or incompatible arguments are refused before projection.
+The optional `work` identifier is bounded to 80 characters and Work items only.
+Other routes still reject query strings. Host, Origin, fetch-site, read-only,
+response-byte and inert-rendering controls remain unchanged. The no-query legacy
+contract remains available with its original whole-response admission behavior.
+For bounded technical data, use `review-data --compact --view roadmaps --page 1`.
+`status` reads the bounded-source snapshot directly, so HTTP collection growth
+cannot conceal operator recovery or work status.
+
 The production server shows reviewed user descriptions from
 `docs/operations/roadmap-user-descriptions.json`. Purpose, requirement bullets,
 agent action and completion proof replace technical criterion prose. The same
@@ -16,7 +57,8 @@ Other proposal/chunk execution detail retains its existing structured ownership.
 Text limits count Unicode code points in admission and rendering; invalid Unicode
 is refused. File and HTTP limits continue to count encoded bytes.
 
-The final response uses compact JSON and the existing 2 MiB limit. The server
+The final response uses compact JSON and the existing 2 MiB limit. For the legacy
+unpaged representation, the server
 checks the exact bytes it sends, after user descriptions are added. If more space
 is needed, only older execution-history rows can leave this response. The page
 retains every roadmap, merged history, planned work chunk, criterion and support
@@ -49,7 +91,7 @@ python dev-tools/helpers/development_control_plane.py review-site start
 ```
 
 Share the returned verified loopback URL with the user. The buildless UI polls
-`/api/review` every five seconds. `development-review-v1` derives only from
+the selected `/api/review` page every five seconds. `development-review-v1` derives only from
 versioned roadmap JSON and local controller JSON. No Markdown parsing, build,
 external fonts, analytics, credentials or hosting service is required.
 

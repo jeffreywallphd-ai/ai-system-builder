@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from control_plane.common import digest
-from control_plane.projection import (CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, chunk_reference,
-    encode_review_projection, expanded_review_work_items, project, roadmap_chunk_work_items)
+from control_plane.projection import (CHUNK_REFERENCE_FORMAT, PAGE_SIZES, REVIEW_MAX_BYTES, chunk_reference,
+    encode_review_projection, expanded_review_work_items, project, review_content, roadmap_chunk_work_items)
 from control_plane.records import Records
 from control_plane.user_presentation import (REFERENCE, REFERENCE_MAX_BYTES, REFERENCE_MAX_ROWS, SUPPORT_REFERENCE,
     UNAVAILABLE, apply_user_descriptions, compact_user_project, user_project)
@@ -314,26 +314,22 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
         self.assertTrue(all(p.stat().st_size <= 2 * 1024 * 1024 for p in sources))
         before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
         with patch('control_plane.projection.Records.load', side_effect=lambda: Records.empty()):
-            technical = project(repository, compact_work_items=True)
-            user = compact_user_project(repository)
-            # The browser requests references. The older duplicated format
-            # must refuse when even its essential canonical rows cannot fit.
-            essential_legacy = {
-                'roadmaps': technical['roadmaps'],
-                'work_items': expanded_review_work_items(technical),
-            }
-            if len(encode_review_projection(essential_legacy)) > REVIEW_MAX_BYTES:
-                with self.assertRaisesRegex(ValueError, r'^Review projection exceeds its bound\.$'):
-                    project(repository)
-            else:
-                legacy = project(repository)
-                self.assertEqual(legacy['roadmaps'], technical['roadmaps'])
-                self.assertEqual(expanded_review_work_items(legacy), expanded_review_work_items(technical))
+            technical = review_content(repository, compact_work_items=True, paginated=True)
+            user = apply_user_descriptions(repository, copy.deepcopy(technical))
+            # Whole-response clients retain their original exact byte refusal.
+            for compact in (False, True):
+                raw = review_content(repository, compact_work_items=compact)
+                if len(encode_review_projection({**raw, 'source_digest': '0' * 64})) > REVIEW_MAX_BYTES:
+                    with self.assertRaisesRegex(ValueError, r'^Review projection exceeds its bound\.$'):
+                        project(repository, compact_work_items=compact)
+                else:
+                    legacy = project(repository, compact_work_items=compact)
+                    self.assertEqual(legacy['roadmaps'], technical['roadmaps'])
+                    self.assertEqual(expanded_review_work_items(legacy), expanded_review_work_items(technical))
         self.assertEqual(technical['work_item_format'], CHUNK_REFERENCE_FORMAT)
         self.assertEqual(user['work_item_format'], CHUNK_REFERENCE_FORMAT)
         self.assertEqual(technical['diagnostics'], [])
         self.assertEqual(user['diagnostics'], [])
-        self.assertLessEqual(len(encode_review_projection(user)), REVIEW_MAX_BYTES)
 
         def canonical_facts(value):
             result = copy.deepcopy(value)
@@ -352,7 +348,7 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
                             support.pop('limitations', None)
                 for history in roadmap.get('merged_history', []):
                     visit(history)
-            for roadmap in result['roadmaps']:
+            for roadmap in [*result['roadmaps'], *result.get('work_item_roadmaps', [])]:
                 visit(roadmap)
             for row in result['work_items']:
                 row.pop('roadmap_title', None)
@@ -360,6 +356,20 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
             return result
 
         self.assertEqual(canonical_facts(user), canonical_facts(technical))
+        # Every selected record is reachable with complete technical/user facts.
+        with patch('control_plane.projection.Records.load', side_effect=lambda: Records.empty()):
+            for view, size in PAGE_SIZES.items():
+                seen = []
+                for number in range(1, max(1, (len(technical[view]) + size - 1) // size) + 1):
+                    page = {'view': view, 'page': number}
+                    technical_page = project(repository, compact_work_items=True, page=page)
+                    user_page = compact_user_project(repository, page=page)
+                    self.assertEqual(user_page['diagnostics'], [])
+                    self.assertEqual(canonical_facts(user_page), canonical_facts(technical_page))
+                    self.assertLessEqual(len(encode_review_projection(user_page)), REVIEW_MAX_BYTES)
+                    self.assertEqual(user_page['pagination']['total_records'], len(technical[view]))
+                    seen.extend(row['id'] for row in user_page[view])
+                self.assertCountEqual(seen, [row['id'] for row in technical[view]])
         def all_roadmaps(rows):
             for row in rows:
                 yield row

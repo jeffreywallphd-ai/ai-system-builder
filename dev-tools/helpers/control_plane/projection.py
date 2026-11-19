@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from datetime import datetime, timezone
+from collections import Counter
 import json
 import math
+import re
 
 from .common import digest, now, read_json, safe_text
 from .contracts import ControlError
@@ -18,6 +20,72 @@ REVIEW_MAX_BYTES = 2 * 1024 * 1024
 CHUNK_REFERENCE_FORMAT = "roadmap-chunk-refs-v1"
 CHUNK_REFERENCE_FIELDS = ("id", "source", "roadmap_id", "increment_id", "chunk_id",
                           "increment_number", "chunk_number", "created_at")
+PAGE_SIZES = {"roadmaps": 3, "work_items": 25, "evaluations": 25, "feedback": 25}
+
+
+def review_page(value: dict, *, view: str, page: int, roadmap: str = "", increment: str = "", work: str = "") -> dict:
+    """Slice a single source snapshot before wire admission; selectors grant no authority."""
+    if (view not in PAGE_SIZES or type(page) is not int or not 1 <= page <= 1000000
+            or type(roadmap) is not str or type(increment) is not str or type(work) is not str
+            or (increment and (not roadmap or view != "work_items"))
+            or (work and (view != "work_items" or roadmap or increment))
+            or (roadmap and view not in {"roadmaps", "work_items"})):
+        raise ValueError("Unsupported review page.")
+    if any(selector and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}", selector)
+           for selector in (roadmap, increment, work)):
+        raise ValueError("Unsupported review selector.")
+    totals = {key: len(value[key]) for key in PAGE_SIZES}
+    rows = value[view]
+    if view == "roadmaps":
+        rows = sorted(rows, key=lambda row: row["status"] in {"completed", "complete", "final-approved"})
+    if roadmap:
+        rows = [row for row in rows if row.get("id" if view == "roadmaps" else "roadmap_id") == roadmap
+                and (not increment or row.get("increment_id") == increment)]
+    if work:
+        rows = [row for row in rows if row.get("id") == work]
+    size, total = PAGE_SIZES[view], len(rows)
+    pages = max(1, (total + size - 1) // size)
+    # A saved page can disappear during polling. Return the new last page with
+    # explicit metadata rather than inventing an empty/missing record.
+    actual = min(page, pages)
+    selected = rows[(actual - 1) * size:actual * size]
+    identities = Counter()
+    for parent in value["roadmaps"]:
+        identities.update((parent["id"], None, item["id"]) for item in parent["increments"])
+        for history in parent.get("merged_history", []):
+            identities[parent["id"], history["id"], None] += 1
+            identities.update((parent["id"], history["id"], item["id"]) for item in history["increments"])
+
+    def disclosed(parent, owner=None):
+        owner_id, history_id = (parent["id"], None) if owner is None else (owner, parent["id"])
+        return {**parent, "disclosure_unique": identities[owner_id, history_id, None] == 1 if owner else True,
+                "increments": [{**item, "disclosure_unique": identities[owner_id, history_id, item["id"]] == 1}
+                               for item in parent["increments"]],
+                "merged_history": [disclosed(history, owner_id) for history in parent.get("merged_history", [])]}
+    if view == "roadmaps":
+        selected = [disclosed(parent) for parent in selected]
+    result = {**value, **{key: [] for key in PAGE_SIZES}, view: selected,
+              "pagination": {"view": view, "page": actual, "page_size": size,
+                             "total_records": total, "total_pages": pages,
+                             "roadmap": roadmap, "increment": increment, "work": work}, "totals": totals,
+              "disclosure_digest": digest({json.dumps(key, separators=(",", ":")): count for key, count in identities.items()}),
+              "work_item_roadmaps": []}
+    if view == "work_items":
+        wanted = {(row["roadmap_id"], row["increment_id"], row["chunk_id"])
+                  for row in selected if row.get("source") == "roadmap-chunk"}
+        for parent in value["roadmaps"]:
+            increments = []
+            for item in parent["increments"]:
+                chunks = [chunk for chunk in item["chunks"] if (parent["id"], item["id"], chunk["id"]) in wanted]
+                if chunks:
+                    increments.append({**item, "chunks": chunks})
+            if increments:
+                # Exact selected chunks and complete owning criteria/support.
+                # Merged history stays on its full roadmap page.
+                result["work_item_roadmaps"].append({**parent, "increments": increments, "merged_history": []})
+    if "work_item_format" in result:
+        expanded_review_work_items(result)
+    return result
 
 
 def roadmap_chunk_work_items(roadmaps: list) -> list:
@@ -54,7 +122,25 @@ def expanded_review_work_items(value: dict) -> list:
     if value["work_item_format"] != CHUNK_REFERENCE_FORMAT:
         raise ValueError("Unsupported review work-item format.")
     try:
-        canonical = roadmap_chunk_work_items(value["roadmaps"])
+        parents = value["work_item_roadmaps"] if "pagination" in value else value["roadmaps"]
+        if "pagination" in value:
+            if type(parents) is not list or len(parents) > 25:
+                raise ValueError("Invalid review parents.")
+            parent_ids = set()
+            for parent in parents:
+                if (type(parent) is not dict or type(parent.get("id")) is not str or not parent["id"]
+                        or parent["id"] in parent_ids or type(parent.get("increments")) is not list
+                        or not 1 <= len(parent["increments"]) <= 25):
+                    raise ValueError("Ambiguous review parents.")
+                parent_ids.add(parent["id"])
+                increment_ids = set()
+                for increment in parent["increments"]:
+                    if (type(increment) is not dict or type(increment.get("id")) is not str or not increment["id"]
+                            or increment["id"] in increment_ids or type(increment.get("chunks")) is not list
+                            or not 1 <= len(increment["chunks"]) <= 25):
+                        raise ValueError("Ambiguous review parents.")
+                    increment_ids.add(increment["id"])
+        canonical = roadmap_chunk_work_items(parents)
         index = {row["id"]: row for row in canonical}
         if len(index) != len(canonical):
             raise ValueError("Ambiguous review work items.")
@@ -103,6 +189,9 @@ def bound_review_projection(value: dict) -> dict:
     result = stamped(value)
     if len(encode_review_projection(result)) <= REVIEW_MAX_BYTES:
         return result
+    if "pagination" in value:
+        # A page is an exact slice; trimming rows would falsify its boundaries.
+        raise ValueError("Review projection exceeds its bound.")
     works = value["work_items"]
     executions = [row for row in works if row.get("source") == "execution"]
     inventory = value["inventory"]
@@ -262,7 +351,8 @@ def open_blocker_details(state):
     return result
 
 
-def project(root: Path, *, compact_work_items: bool = False) -> dict:
+def review_content(root: Path, *, compact_work_items: bool = False, paginated: bool = False) -> dict:
+    """Internal bounded-source snapshot, not an admitted HTTP response."""
     if type(compact_work_items) is not bool:
         raise ValueError("Choose a supported review representation.")
     roadmaps, diagnostics, blocker_sources, increment_targets, delivery_targets = [], [], {}, {}, {}
@@ -363,7 +453,7 @@ def project(root: Path, *, compact_work_items: bool = False) -> dict:
     execution_records = sorted(state["work_items"].values(), key=lambda w: w["spec"]["work_id"])
     execution_records.sort(key=lambda w: creation_time(w.get("created_at")) or creation_time((w.get("events") or [{}])[0].get("at")) or "", reverse=True)
     executions = []
-    for w in execution_records[:1000]:
+    for w in (execution_records if paginated else execution_records[:1000]):
         # The browser displays success, falling back to problem. Keep agent-only
         # context and unknown notes in canonical records, outside the response.
         summary = {key: safe_text(w["spec"]["outcome"][key], 1000)
@@ -372,12 +462,18 @@ def project(root: Path, *, compact_work_items: bool = False) -> dict:
         executions[-1]["metrics"] = delivery(w)
         executions[-1]["source"] = "execution"
         executions[-1]["created_at"] = creation_time(w.get("created_at")) or creation_time((w.get("events") or [{}])[0].get("at"))
-    trials = [{"id": safe_text(t["trial_id"], 80), "task_id": safe_text(t["task_id"], 80), "status": t["status"], "evidence_kind": t.get("evidence_kind", "unavailable"), "result": t.get("result", {}).get("status", "ungraded")} for t in list(state["trials"].values())[:200]]
-    for projected, trial in zip(trials, list(state["trials"].values())[:200]):
+    trial_records = list(state["trials"].values())
+    if not paginated:
+        trial_records = trial_records[:200]
+    trials = [{"id": safe_text(t["trial_id"], 80), "task_id": safe_text(t["task_id"], 80), "status": t["status"], "evidence_kind": t.get("evidence_kind", "unavailable"), "result": t.get("result", {}).get("status", "ungraded")} for t in trial_records]
+    for projected, trial in zip(trials, trial_records):
         run = trial.get("run", {})
         projected["attempt_count"] = len(trial.get("attempts", []))
         projected["run"] = {"model": safe_text(run.get("model", "unavailable")), "assurance": safe_text(run.get("assurance", "unavailable")), "infrastructure_status": safe_text(run.get("infrastructure_status", "unavailable")), **{k: run.get(k) for k in ("duration_ms", "retries", "input_tokens", "output_tokens", "cost_usd")}}
-    feedback = [{"id": safe_text(f["id"], 80), "work_id": safe_text(f["work_id"], 80), "summary": safe_text(f["summary"]), "status": f["status"], "regression": safe_text(f.get("regression", "unlinked"), 160)} for f in list(state["feedback"].values())[:200]]
+    feedback_records = list(state["feedback"].values())
+    if not paginated:
+        feedback_records = feedback_records[:200]
+    feedback = [{"id": safe_text(f["id"], 80), "work_id": safe_text(f["work_id"], 80), "summary": safe_text(f["summary"]), "status": f["status"], "regression": safe_text(f.get("regression", "unlinked"), 160)} for f in feedback_records]
     content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"], "inventory": {"execution_records_total": execution_total, "execution_records_shown": 0, "execution_records_truncated": False}}
     if compact_work_items:
         content["work_item_format"] = CHUNK_REFERENCE_FORMAT
@@ -388,7 +484,7 @@ def project(root: Path, *, compact_work_items: bool = False) -> dict:
     shown = 0
     for row in executions:
         addition = len(json.dumps(row).encode("utf-8")) + 2
-        if size + addition > REVIEW_MAX_BYTES - 4096:
+        if not paginated and size + addition > REVIEW_MAX_BYTES - 4096:
             break
         works.append(row)
         size += addition
@@ -400,4 +496,9 @@ def project(root: Path, *, compact_work_items: bool = False) -> dict:
     works.sort(key=lambda w: w["created_at"] or "", reverse=True)
     content["generated_at"] = now()
     content["repository_id"] = digest(str(root.resolve()))
-    return bound_review_projection(content)
+    return content
+
+
+def project(root: Path, *, compact_work_items: bool = False, page: dict | None = None) -> dict:
+    content = review_content(root, compact_work_items=compact_work_items, paginated=page is not None)
+    return bound_review_projection(review_page(content, **page) if page is not None else content)

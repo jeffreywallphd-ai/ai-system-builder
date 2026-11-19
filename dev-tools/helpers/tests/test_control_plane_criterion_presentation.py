@@ -8,11 +8,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 HELPERS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HELPERS))
 from control_plane.criterion_presentation import BLOCKER_REFERENCE, REFERENCE, apply_presentations
-from control_plane.projection import CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, encode_review_projection, expanded_review_work_items, project
+from control_plane.projection import CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, encode_review_projection, expanded_review_work_items, project, review_content
+from control_plane.records import Records
 
 
 class CriterionPresentationTests(unittest.TestCase):
@@ -361,26 +363,32 @@ class CriterionPresentationTests(unittest.TestCase):
 
     def test_current_repository_response_deduplicates_linked_criteria_without_losing_canonical_detail(self):
         root = Path(__file__).resolve().parents[3]
-        compact = project(root, compact_work_items=True)
         chunk_rows = lambda value: [row for row in expanded_review_work_items(value) if row['source'] == 'roadmap-chunk']
-        self.assertEqual(compact['work_item_format'], CHUNK_REFERENCE_FORMAT)
-        self.assertTrue(chunk_rows(compact))
-        formats = [compact]
-        essential_legacy = {'roadmaps': compact['roadmaps'], 'work_items': chunk_rows(compact)}
-        if len(encode_review_projection(essential_legacy)) > REVIEW_MAX_BYTES:
-            with self.assertRaisesRegex(ValueError, r'^Review projection exceeds its bound\.$'):
-                project(root)
-        else:
-            legacy = project(root)
-            self.assertEqual(compact['roadmaps'], legacy['roadmaps'])
-            self.assertEqual(chunk_rows(compact), chunk_rows(legacy))
-            formats.insert(0, legacy)
+        with patch.object(Records, 'load', side_effect=Records.empty):
+            source = review_content(root, compact_work_items=True, paginated=True)
+            expected = chunk_rows(source)
+            self.assertTrue(expected)
+            formats = [project(root, compact_work_items=True, page={'view': 'work_items', 'page': number})
+                       for number in range(1, (len(source['work_items']) + 24) // 25 + 1)]
+            self.assertEqual([row for value in formats for row in chunk_rows(value)], expected)
+            for compact in (False, True):
+                raw = review_content(root, compact_work_items=compact)
+                essential = {'roadmaps': raw['roadmaps'], 'work_items': [row for row in raw['work_items'] if row['source'] == 'roadmap-chunk']}
+                if len(encode_review_projection(essential)) > REVIEW_MAX_BYTES:
+                    with self.assertRaisesRegex(ValueError, r'^Review projection exceeds its bound\.$'):
+                        project(root, compact_work_items=compact)
+                else:
+                    legacy = project(root, compact_work_items=compact)
+                    self.assertEqual(chunk_rows(legacy), expected)
+                    formats.append(legacy)
+        originals = {(roadmap['id'], increment['id']): increment for roadmap in source['roadmaps'] for increment in roadmap['increments']}
         for value in formats:
             with self.subTest(format=value.get('work_item_format', 'legacy')):
                 self.assertLessEqual(len(encode_review_projection(value)), REVIEW_MAX_BYTES)
                 for work in chunk_rows(value):
-                    roadmap = next(row for row in value['roadmaps'] if row['id'] == work['roadmap_id'])
+                    roadmap = next(row for row in value.get('work_item_roadmaps', value['roadmaps']) if row['id'] == work['roadmap_id'])
                     increment = next(row for row in roadmap['increments'] if row['id'] == work['increment_id'])
+                    self.assertEqual(increment['criteria'], originals[(roadmap['id'], increment['id'])]['criteria'])
                     for criterion in work['criteria']:
                         self.assertLessEqual(set(criterion), {'id', 'outcome', 'qualification', 'evaluation_mode'})
                         original = next(row for row in increment['criteria'] if row['id'] == criterion['id'])

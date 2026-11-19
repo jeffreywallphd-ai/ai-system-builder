@@ -334,7 +334,7 @@ class OperationalUiProfile(unittest.TestCase):
         paths = ['dev-tools/scripts/qualification/visual-composer/image-generation-host-oracles.ts', 'dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.mjs', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-input-records.ts', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.mjs', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-server-entry.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/config/playwright.image-host-desktop.config.ts', 'dev-tools/config/playwright.image-host-thin.config.ts', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts']
         borrowed = ['dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.d.mts', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.d.mts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.d.mts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-main-cleanup.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs']
         self.assertEqual(self.profile()["test_paths"][65:74], ['dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts'])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[46:64], paths)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[43:61], paths)
         for source in paths + borrowed:
             self.assertIn(source, self.profile()["source_paths"])
             if source in borrowed: self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -364,7 +364,7 @@ class OperationalUiProfile(unittest.TestCase):
         new = ["dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs",
                "dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py"]
         self.assertEqual(self.profile()["test_paths"][63:65], new)
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[44:46], new)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[41:43], new)
         borrowed = ["dev-tools/scripts/qualification/observe_windows_process_exit.py",
                     "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.mjs",
                     "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"]
@@ -392,7 +392,7 @@ class OperationalUiProfile(unittest.TestCase):
         import copy
         paths = ['apps/desktop/src/renderer/features/image-generation/hooks/image-generation-draft-state.ts', 'apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts', 'apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts']
         self.assertEqual(self.profile()['test_paths'][62:63], [paths[1]])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[41:44], paths)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[38:41], paths)
         for source in paths:
             for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
                 with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='image-draft-profile-') as directory:
@@ -412,7 +412,7 @@ class OperationalUiProfile(unittest.TestCase):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts', 'dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts', 'dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs', 'dev-tools/scripts/qualification/visual-composer/training-host-prerequisites.py', 'dev-tools/scripts/qualification/visual-composer/training-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py', 'dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py', 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py', 'dev-tools/config/playwright.training-host.config.ts']
         self.assertEqual(self.profile()['test_paths'][58:62], ['dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py', 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py'])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[29:41], paths)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[26:38], paths)
         declaration='dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.d.mts'
         self.assertIn(declaration,self.profile()['source_paths'])
         self.assertNotIn(declaration,catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])
@@ -440,7 +440,7 @@ class OperationalUiProfile(unittest.TestCase):
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 78)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -482,7 +482,7 @@ class OperationalUiProfile(unittest.TestCase):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 78)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -508,7 +508,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 78)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -591,23 +591,28 @@ class OperationalUiProfile(unittest.TestCase):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts', 'dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts', 'dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts', 'dev-tools/config/playwright.review-site.config.ts']
         self.assertEqual(self.profile()['test_paths'][56], paths[2])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[22:26], paths)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[22], paths[3])
+        review = json.loads((ROOT / CONFIG).read_bytes())['profiles']['review-site']
+        self.assertEqual(review['test_paths'], ['dev-tools/scripts/testing/control-plane-guard.unit.test.mjs', paths[2]])
         for source in paths:
             for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
                 with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='review-browser-profile-') as directory:
-                    root=Path(directory);profile=copy.deepcopy(self.profile())
+                    name = 'operational-ui' if source == paths[3] else 'review-site'
+                    root=Path(directory);profile=copy.deepcopy(self.profile() if name == 'operational-ui' else review)
                     if incomplete:
                         profile['source_paths'].remove(source)
                         if source in profile['test_paths']:profile['test_paths'].remove(source)
-                    self.fixture(root,profile)
+                    config = root / CONFIG; config.parent.mkdir(parents=True)
+                    config.write_text(json.dumps({'schema_version': 'contributor-check-profiles-v1', 'profiles': {name: profile}}))
                     ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
-                    self.assertIn('operational-ui',ids);self.assertEqual('focused-tests' in ids,generic)
+                    self.assertIn(name,ids);self.assertEqual('focused-tests' in ids,generic)
+                    self.assertNotIn('review-site' if name == 'operational-ui' else 'operational-ui', ids)
 
     def test_website_host_sources_preserve_finite_routing_and_borrowed_guards(self):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts', 'dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
         self.assertEqual(self.profile()['test_paths'][57:58], [paths[2]])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[26:29], paths)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[23:26], paths)
         borrowed = 'dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts'
         self.assertIn(borrowed, self.profile()['source_paths'])
         self.assertNotIn(borrowed, catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])
@@ -722,7 +727,7 @@ class OperationalUiProfile(unittest.TestCase):
         self.assertNotIn(entry,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         additions=[source for source in SETTINGS_AUTOMATIC if source != entry]
         self.assertEqual(len(additions),11)
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[64:75],additions)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[61:72],additions)
         for source in additions:
             self.assertIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
             self.assertIn(source,self.profile()["source_paths"])

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { get, type ClientRequest } from "node:http";
 import path from "node:path";
-import { allowReviewSiteRequest, allowReviewSiteReferenceRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_ORIGIN, REVIEW_SITE_READ_TIMEOUT_MS, REVIEW_SITE_SECURITY_HEADERS, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, reviewRouteHeaders, verifyReviewSiteStatus, type ReviewBrowserCase } from "../review-site-oracles";
+import { allowReviewSiteRequest, allowReviewSiteReferenceRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_FIRST_PAGE, REVIEW_SITE_TARGET_PAGE, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_ORIGIN, REVIEW_SITE_READ_TIMEOUT_MS, REVIEW_SITE_SECURITY_HEADERS, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, reviewRouteHeaders, verifyReviewSiteStatus, type ReviewBrowserCase } from "../review-site-oracles";
 
 const unavailable = () => new Error("The local review browser test prerequisite is unavailable.");
 // Node's direct HTTP client has no ambient proxy/cookie/redirect behavior. Stop
@@ -51,6 +51,7 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
   }
   let failed = false, cleanupPassed = true, denied = false, requestCount = 0, scriptFailed = false;
   let fixtureBody: string | undefined, fixtureUnavailable = false;
+  let latestRoadmaps: { id: string; status: string }[] = [];
   const scriptError = () => { scriptFailed = true; };
   const guard = async (route: Route) => {
     try {
@@ -58,15 +59,18 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
       const request = route.request(), headers = request.headers();
       const credential = ["authorization", "proxy-authorization", "cookie"].some(name => Object.prototype.hasOwnProperty.call(headers, name));
       if (++requestCount > 128 || !allowReviewSiteRequest(request.method(), request.url(), credential, request.redirectedFrom() !== null)) { denied = true; await route.abort(); return; }
-      const routePath = new URL(request.url()).pathname;
+      const requested = new URL(request.url()), routePath = requested.pathname + requested.search;
+      const pathname = requested.pathname;
       if (!allowReviewSiteReferenceRequest(routePath, headers["x-review-work-items"])) { denied = true; await route.abort(); return; }
-      if (request.url() === `${REVIEW_SITE_ORIGIN}/api/review` && fixtureBody !== undefined) {
+      if (routePath === REVIEW_SITE_FIRST_PAGE && fixtureBody !== undefined) {
         const body = Buffer.from(fixtureUnavailable ? '{"error":"synthetic-private-review-response"}' : fixtureBody);
         if (body.length > REVIEW_SITE_MAX_BYTES) throw unavailable();
         await route.fulfill({ status: fixtureUnavailable ? 503 : 200, headers: { ...REVIEW_SITE_SECURITY_HEADERS, "content-type": "application/json; charset=utf-8", "content-length": String(body.length) }, body });
       } else {
-        const maximum = routePath === "/api/review" ? REVIEW_SITE_MAX_BYTES : ["/api/status", "/favicon.ico"].includes(routePath) ? 4096 : 512 * 1024;
+        const maximum = pathname === "/api/review" ? REVIEW_SITE_MAX_BYTES : ["/api/status", "/favicon.ico"].includes(pathname) ? 4096 : 512 * 1024;
         const reply = await read(routePath, maximum);
+        if (pathname === "/api/review" && requested.searchParams.get("view") === "roadmaps")
+          latestRoadmaps = (parseReviewSiteJson(reply.body) as { roadmaps: { id: string; status: string }[] }).roadmaps;
         if (closing) await route.abort(); else await route.fulfill(reply);
       }
     } catch { if (!closing) denied = true; try { await route.abort(); } catch { /* Failure or owned shutdown is already recorded. */ } }
@@ -79,7 +83,7 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
     context = await page.context();
     if (info.project.name !== "thin-chrome" || context.pages().length !== 1 || (await context.cookies()).length) throw unavailable();
     page.on("pageerror", scriptError); listening = true; await context.route("**/*", guard);
-    let canonical: unknown;
+    let canonical: unknown, targetCanonical: unknown;
     await step("server-verified", async () => {
       repositoryId = reviewRepositoryId(realpathSync.native(process.cwd()));
       verifyReviewSiteStatus(parseReviewSiteJson((await read("/api/status", 4096)).body, 4096), repositoryId);
@@ -87,12 +91,13 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
         const local = readFileSync(path.join("dev-tools/review-site", file!)); frozenAssets.set(route!, Buffer.from(local));
         const actual = await read(route!, 512 * 1024); if (!actual.body.equals(local)) throw unavailable();
       }
-      canonical = parseReviewSiteJson((await read("/api/review", REVIEW_SITE_MAX_BYTES)).body);
-      captureReviewProjection(canonical, repositoryId);
+      canonical = parseReviewSiteJson((await read(REVIEW_SITE_FIRST_PAGE, REVIEW_SITE_MAX_BYTES)).body);
+      targetCanonical = parseReviewSiteJson((await read(REVIEW_SITE_TARGET_PAGE, REVIEW_SITE_MAX_BYTES)).body);
+      captureReviewProjection(targetCanonical, repositoryId);
       const representation = Object.getOwnPropertyDescriptor(canonical as object, "work_item_format");
       if (!representation || !("value" in representation) || !allowReviewSiteReferenceRequest("/api/review", representation.value)) throw unavailable();
     });
-    const facts = captureReviewProjection(canonical, reviewRepositoryId(realpathSync.native(process.cwd())));
+    const facts = captureReviewProjection(targetCanonical, reviewRepositoryId(realpathSync.native(process.cwd())));
     const roadmapCard = () => page.locator("article.card").filter({ has: page.getByText(facts.roadmapId, { exact: true }) });
     const increment = () => roadmapCard().locator(":scope > details.increment").nth(facts.incrementIndex);
     async function openCanonical() {
@@ -101,11 +106,20 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
       await expect(page.getByRole("heading", { name: "Roadmaps", exact: true })).toBeVisible();
     }
     if (kind === "live") {
-      await step("canonical-view-opened", openCanonical);
+      await step("canonical-view-opened", async () => {
+        await openCanonical();
+        for (let pageNumber = 1; pageNumber <= 67 && !await roadmapCard().count(); pageNumber++) {
+          const next = page.getByRole("button", { name: "Next page", exact: true });
+          if (!await next.isEnabled()) throw unavailable();
+          const prior = await page.locator(".page-count").textContent();
+          await next.click(); await expect(page.locator(".page-count")).not.toHaveText(prior!);
+        }
+        await expect(roadmapCard()).toHaveCount(1);
+      });
       await step("sections-ordered", async () => {
         await expect(page.getByRole("region", { name: "Roadmap status key", exact: true })).toBeVisible();
-        await expect(page.locator("#open-roadmaps > article.card > .card-heading .record-id")).toHaveText([...facts.openIds]);
-        await expect(page.locator("#completed-roadmaps > article.card > .card-heading .record-id")).toHaveText([...facts.completedIds]);
+        await expect(page.locator("#open-roadmaps > article.card > .card-heading .record-id")).toHaveText(latestRoadmaps.filter(row => !["completed", "complete", "final-approved"].includes(row.status)).map(row => row.id));
+        await expect(page.locator("#completed-roadmaps > article.card > .card-heading .record-id")).toHaveText(latestRoadmaps.filter(row => ["completed", "complete", "final-approved"].includes(row.status)).map(row => row.id));
         expect(await page.locator("#items > section").evaluateAll(rows => rows.map(row => row.id))).toEqual(["", "open-roadmaps", "completed-roadmaps"]);
       });
       await step("criteria-and-support-reviewed", async () => {
@@ -125,7 +139,14 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
       await step("linked-work-opened", async () => {
         await increment().getByRole("button", { name: "View these work items", exact: true }).click();
         await expect(page.getByRole("heading", { name: "Work items", exact: true })).toBeVisible();
-        await expect(page.locator("#items > article.card > .card-heading .record-id")).toHaveText([...facts.chunkWorkIds]);
+        const seen: string[] = [];
+        for (let pageNumber = 1; pageNumber <= 4; pageNumber++) {
+          await expect(page.locator("#heading")).toHaveText("Work items");
+          seen.push(...await page.locator("#items > article.card > .card-heading .record-id").allTextContents());
+          const next = page.getByRole("button", { name: "Next page", exact: true }); if (!await next.isEnabled()) break;
+          const prior = await page.locator(".page-count").textContent(); await next.click(); await expect(page.locator(".page-count")).not.toHaveText(prior!);
+        }
+        expect(seen).toEqual([...facts.chunkWorkIds]);
       });
       await step("parent-returned", async () => {
         await page.getByRole("button", { name: "View parent increment", exact: true }).first().click();
@@ -137,7 +158,7 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
       await step("canonical-copy-opened", openCanonical);
       await step("refresh-observed", async () => {
         const copy = structuredClone(canonical) as { source_digest: string; roadmaps: { id: string; title: string }[] };
-        copy.roadmaps.find(row => row.id === facts.roadmapId)!.title = "Synthetic refreshed review title";
+        copy.roadmaps[0]!.title = "Synthetic refreshed review title";
         copy.source_digest = createHash("sha256").update("review-browser-controlled-refresh-v1").digest("hex");
         fixtureBody = JSON.stringify(copy); if (Buffer.byteLength(fixtureBody) > REVIEW_SITE_MAX_BYTES) throw unavailable();
         await page.getByRole("button", { name: "Refresh", exact: true }).click();

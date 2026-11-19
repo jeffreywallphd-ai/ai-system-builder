@@ -17,11 +17,36 @@ the former full work row from that same snapshot. Unknown formats and missing,
 duplicate, ambiguous or altered joins fail closed before display replacement.
 This is a transport representation, not a new authority or persistence model.
 The legacy no-header representation remains available. The browser selects the
-finite format through one exact header on the existing fixed read-only route;
-there is no caller path, query selection or new endpoint. Exact encoded-byte
+finite format through one exact header on the existing fixed read-only route.
+The browser uses bounded server paging on that route; no caller path or new
+endpoint is introduced. Exact encoded-byte
 limits, complete canonical history, source-bound plain copy, qualification and
 truthful execution-record admission remain unchanged. Wire digests identify the
 transmitted object; reconstructed display rows grant no technical pass.
+
+The optional query contract admits only fixed `view`/positive `page` arguments
+and exact bounded `roadmap`/`increment` navigation selectors. Sizes are fixed at
+three roadmaps or 25 work/evaluation/feedback records. Derive counts and order
+from one complete bounded-source snapshot, format source-bound user descriptions,
+then select pages before the unchanged final 2 MiB admission. Open roadmaps come
+first, retaining creation order within open/completed sections. A page contains
+complete selected roadmap history, criteria and support. Work pages carry exact
+selected canonical chunks with complete owning criteria under `work_item_roadmaps`;
+references join only that same-page canonical set. No row may be trimmed after
+page selection. Unknown/duplicate/encoded/incompatible selectors, corrupt joins
+and oversized pages fail closed. Explicit page/totals metadata distinguishes a
+selected empty set or clamped last page from a missing record. Legacy no-query
+responses keep their original contract and whole-response admission. The local
+CLI supports explicit technical pages; operator status bypasses HTTP byte
+admission while retaining bounded canonical source reads and redaction.
+An exact `work` selector opens one scoped supporting execution directly and is
+mutually exclusive with parent selectors. Paged executions, trials and feedback
+retain every row admitted by bounded canonical source reads before page selection;
+legacy unpaged display caps remain separate. Each page binds a global digest of
+public disclosure identities/counts. Browser-local choices reset on observed
+identity changes, including ambiguity changes on other pages; page and status
+changes alone preserve choices. Same-page parent joins reject duplicate or empty
+parent/increment shadows before evidence resolution.
 
 The fixed superseded Run & Test draft may fold beneath the completed Publish
 lifecycle owner only with an exact frozen unapproved/unstarted source, dedicated

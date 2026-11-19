@@ -32,6 +32,31 @@ explicit generic requirements retain their fallback checks.
 
 # Contributor Control Plane
 
+The review browser now requests bounded server pages. Use Previous/Next for
+Roadmaps and Work items; their controls show exact matching totals and page
+counts. Search applies to the current page. Open Roadmaps come first across
+pages, followed by Completed Roadmaps in each section's original creation order.
+Linked work/parent actions use exact filters with a Show all action. All selected
+criteria, support and merged history stay complete. Page selection happens before
+the unchanged 2 MiB response limit; oversized pages still fail closed.
+For agent inspection use `review-data --compact --view roadmaps --page 1` (or
+`--view work_items`). The legacy unpaged command retains its complete-response
+bound. `status` reads bounded canonical sources directly and remains useful when
+the whole review collection no longer fits one HTTP response. Pagination neither
+changes saved history nor grants completion, qualification or approval.
+Supporting-work links use an exact scoped-record selector, including for older
+records beyond the current page. Paged execution, evaluation and feedback lists
+retain all bounded-source records. Manual panel choices survive ordinary paging
+and status refreshes; a global public-identity/count change resets them so an
+off-page ambiguity cannot later revive an old choice.
+
+The `review-site` source-owned check includes the exact browser proxy/oracle
+unit file alongside the existing DOM/controller guard. Its three exact browser
+source/test triggers moved from automatic `operational-ui` selection. Explicit
+`operational-ui` requirements, retained operational members, unknown sources and
+explicit generic requirements keep their existing coverage. The profile runs
+source tests only; no actual browser, application or model pass is implied.
+
 The shared Context host journey now also requires an actual started RAG task
 whose valid settings select no text column from its real CSV. It must return
 the exact accepted task as failed with no review, replay that same task, deny a

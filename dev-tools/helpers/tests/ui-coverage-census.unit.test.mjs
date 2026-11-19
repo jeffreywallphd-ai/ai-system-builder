@@ -1107,6 +1107,7 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  ({map,result}=reviewPaginationCensusLegacyView(map,result));
   // The JSON map is unchanged between comparisons. Recompute for every call.
   const mapDigest = sha(JSON.stringify(map));
   if (mapDigest === "676d5e0f549cfc404293b65fae974f7bc76ad3278c3a9cec6c7d27112a2bb026") {
@@ -1683,6 +1684,49 @@ function headlessPackagedCensusLegacyView(map, result) {
   assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(prior));
   return {map: prior, result};
 }
+// Exact paging definitions remain prospective. All prior pins and historical
+// validators keep their genuine earlier map; no execution is granted here.
+const pendingReviewPaginationCensus=Object.freeze({
+  priorCommit:"ebef1c959045adf02dddb515a57d34e9ec405cd2",
+  priorMap:"676d5e0f549cfc404293b65fae974f7bc76ad3278c3a9cec6c7d27112a2bb026",
+  currentMap:"dd1ef0bcc050238b08f8827dd4141500842800d2a3876a48f0021bc9a52d6f95",
+  baseline:"be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+});
+const pendingReviewPaginationDefinitions=Object.freeze([
+  {path:"dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",committed:"d7e8ae80ae01a66e8503a2433cfc3007910ed048e29826d37683fad54707c070",candidate:"9f8619a422690a340855bcfc68d525d7250615f2b5c9cbdcad20e5b287a54c36",facts_sha256:"5bc9d842b8c71f36bb23c4931e41086e5ccf5c37a53ea93c8aa91db8f058de4d"},
+  {path:"dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",committed:"bc5bd6a1b736fd0196371ad532a3998edc3eff78fa9d7ef200b2881ab86bbafe",candidate:"a48a843dd522e0977d2545ab68feb6d7bbded9bfb8be658323da608207bccaeb",facts_sha256:"0d2fa31b814a613c7dda992c404e846dfc12e1a33a23917c417e4ac1dbc06d18"},
+  {path:"dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",committed:"55681ac62036d60b180316aa424871ab39775c1c358b39e9e2a35e08b12b4538",candidate:"f0d7cbe70addc3e79aa8897a9a2aa0359678fc9a7b2c48664e7b25b5b72a9fe4",facts_sha256:"0d57226f8b06a3bfff1b0b58aa065036466116175a6e72c9dea26f70944967b4"},
+  {path:"dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",committed:"42e2cbdf99dc92d9cc4d89806138b71c2123157582be11ea0bc2d7419f9107f3",candidate:"ba4d30d0e1b8a553c874802733f701b7bf7657e1cf69f529a70775bb5ef5fd97",facts_sha256:"08cf2bf8236559df83f10b976f093b48707da450e0294d9c007f92b65b6c973d"},
+].map(Object.freeze));
+let reviewPaginationPriorText; // Immutable authenticated Git data only, never a working file.
+function reviewPaginationCensusLegacyView(map,result){
+  const definitions=pendingReviewPaginationDefinitions, paths=new Set(definitions.map(row=>row.path));
+  if(!map.sources.some(row=>definitions.some(pin=>pin.path===row.path&&pin.candidate===row.facts.sha256)))return{map,result};
+  assert.equal(map.source_baseline,pendingReviewPaginationCensus.baseline);
+  // Recheck the complete incoming document on every call. Cache only the
+  // immutable prior Git witness, as the existing historical guards do.
+  assert.equal(sha(JSON.stringify(map)),pendingReviewPaginationCensus.currentMap);
+  if(reviewPaginationPriorText===undefined){
+    const bytes=historicalSource(pendingReviewPaginationCensus.priorCommit,censusDocument);
+    const prior=JSON.parse(bytes),expected=structuredClone(prior);
+    assert.equal(sha(JSON.stringify(prior)),pendingReviewPaginationCensus.priorMap);
+    for(const pin of definitions){
+      const rows=map.sources.filter(row=>row.path===pin.path),old=expected.sources.filter(row=>row.path===pin.path);
+      assert.equal(rows.length,1);assert.equal(old.length,1);
+      assert.equal(rows[0].committed_sha256,pin.committed);assert.equal(old[0].committed_sha256,pin.committed);
+      assert.equal(pin.committed,sha(historicalSource(map.source_baseline,pin.path)));
+      assert.equal(rows[0].facts.sha256,pin.candidate);assert.equal(sha(JSON.stringify(rows[0].facts)),pin.facts_sha256);
+      assert.notEqual(pin.candidate,pin.committed);old[0].facts=structuredClone(rows[0].facts);
+    }
+    assert.deepEqual(map,expected,"Only the four exact working facts may change; all history, pins, scenarios and qualification stay intact.");
+    reviewPaginationPriorText=bytes.toString("utf8");
+  }
+  const gaps=definitions.map(pin=>({kind:"unreviewed-source-drift",source:pin.path}));
+  const owns=gap=>gap.kind==="unreviewed-source-drift"&&paths.has(gap.source);
+  const ordered=rows=>rows.map(row=>JSON.stringify(row)).sort();
+  assert.deepEqual(ordered(result.gaps.filter(owns)),ordered(gaps));
+  return{map:JSON.parse(reviewPaginationPriorText),result:{...result,gaps:result.gaps.filter(gap=>!owns(gap))}};
+}
 function committedCensusLegacyView(map,result){
   ({map,result}=headlessPackagedCensusLegacyView(map,result));
   ({map,result}=navigationCensusLegacyView(map,result));
@@ -1724,6 +1768,28 @@ function assertCompleteCurrentSourceDrift(map,result){
   const historical=committedCensusLegacyView(map,result);
   assertBrowserReferenceSourceDrift(historical.map,historical.result);
 }
+
+test("paging census admits only four exact prospective facts and preserves original pins and history",()=>{
+  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8")),result={gaps:sourceDrift(map)};
+  const prior=JSON.parse(historicalSource(pendingReviewPaginationCensus.priorCommit,censusDocument));
+  const restored=reviewPaginationCensusLegacyView(map,result);
+  assert.deepEqual(restored.map,prior);assert.deepEqual(restored.result.gaps,sourceDrift(prior));
+  restored.map.sources[0].facts.bytes++;
+  assert.deepEqual(reviewPaginationCensusLegacyView(map,result).map,prior,"Historical witnesses are returned defensively.");
+  for(const pin of pendingReviewPaginationDefinitions){
+    for(const mutate of [row=>{row.facts.sha256="0".repeat(64);},row=>{row.facts.assertionCount++;},row=>{row.committed_sha256="0".repeat(64);},row=>{row.facts.bytes++;}]){
+      const changed=structuredClone(map);mutate(changed.sources.find(row=>row.path===pin.path));
+      assert.throws(()=>reviewPaginationCensusLegacyView(changed,result));
+    }
+    assert.throws(()=>reviewPaginationCensusLegacyView(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
+  assert.throws(()=>reviewPaginationCensusLegacyView(map,{gaps:[...result.gaps,result.gaps.find(row=>row.source===pendingReviewPaginationDefinitions[0].path)]}));
+  const changed=structuredClone(map);changed.full_testing_status="passed";
+  assert.throws(()=>reviewPaginationCensusLegacyView(changed,result));
+  const foreign=structuredClone(map);foreign.source_baseline="0".repeat(40);
+  assert.throws(()=>reviewPaginationCensusLegacyView(foreign,result));
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:[...result.gaps,{kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"}]}));
+});
 
 function assertBrowserReferenceSourceDrift(map,result){
   const legacy=reviewBrowserLegacyView(map,result);
@@ -1962,7 +2028,7 @@ test("checks the current repository map against original scope and actual source
     if (row.facts.sha256 !== row.committed_sha256) {
       // Composed SHA/full-facts/Git guards admit only their exact prospective
       // definitions; a pathname alone never exempts an oracle from drift.
-      assert([...trainingDefinitionsFor(map),...pendingReviewBrowserDefinitions].some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
+      assert([...trainingDefinitionsFor(map),...pendingReviewBrowserDefinitions,...pendingReviewPaginationDefinitions].some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
       assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===source));
     } else assert.equal(row.facts.sha256,row.committed_sha256);
     assert(map.scenarios.find(s=>s.id===id).behavior_links.every(link=>link.assertion_sources.includes(source)));

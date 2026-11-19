@@ -232,10 +232,14 @@ class ChunkReferenceTests(unittest.TestCase):
         for arguments, expected_compact in ((["review-data"], False), (["review-data", "--compact"], True), (["status"], True)):
             with self.subTest(arguments=arguments):
                 output = io.StringIO()
-                with patch.object(cli, "Work", return_value=fake_work), patch.object(cli, "project", return_value=value) as project, contextlib.redirect_stdout(output):
+                with patch.object(cli, "Work", return_value=fake_work), patch.object(cli, "project", return_value=value) as project, patch.object(cli, "review_content", return_value=value) as content, contextlib.redirect_stdout(output):
                     code = cli.main(arguments)
                 self.assertEqual(code, 0)
-                self.assertEqual(project.call_args.kwargs, {"compact_work_items": expected_compact})
+                if arguments == ["status"]:
+                    project.assert_not_called()
+                    self.assertEqual(content.call_args.kwargs, {"compact_work_items": True, "paginated": True})
+                else:
+                    self.assertEqual(project.call_args.kwargs, {"compact_work_items": expected_compact})
                 result = json.loads(output.getvalue())["data"]
                 if arguments == ["status"]:
                     self.assertEqual(result["work_items"], expanded_review_work_items(value))

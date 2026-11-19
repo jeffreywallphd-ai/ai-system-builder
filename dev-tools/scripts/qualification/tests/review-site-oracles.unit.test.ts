@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { allowReviewSiteRequest, allowReviewSiteReferenceRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_SECURITY_HEADERS, REVIEW_SITE_TARGET, REVIEW_SITE_WORK_ITEM_FORMAT, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, reviewRouteHeaders, verifyReviewSiteStatus } from "../visual-composer/review-site-oracles";
+import { allowReviewSiteRequest, allowReviewSiteReferenceRequest, assertReviewRequirementText, captureReviewPage, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_FIRST_PAGE, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_SECURITY_HEADERS, REVIEW_SITE_TARGET, REVIEW_SITE_WORK_ITEM_FORMAT, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, reviewRouteHeaders, verifyReviewSiteStatus } from "../visual-composer/review-site-oracles";
 
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyReviewSiteBrowser } from "../visual-composer/e2e/review-site-journey";
@@ -22,6 +22,54 @@ test("admits only exact fixed-origin GET routes without credentials or redirects
   assert.equal(allowReviewSiteRequest("POST", "http://127.0.0.1:8766/"), false);
   assert.equal(allowReviewSiteRequest("GET", "http://127.0.0.1:8766/", true), false);
   assert.equal(allowReviewSiteRequest("GET", "http://127.0.0.1:8766/", false, true), false);
+});
+test("admits only the exact bounded paging grammar and preserves reference headers", () => {
+  for (const route of [REVIEW_SITE_FIRST_PAGE, "/api/review?view=work_items&page=2", "/api/review?view=work_items&page=1&work=support-work", `/api/review?view=work_items&page=1&roadmap=${R}&increment=${I}`]) {
+    assert.equal(allowReviewSiteRequest("GET", `http://127.0.0.1:8766${route}`), true);
+    assert.equal(reviewRouteHeaders(route)["X-Review-Work-Items"], REVIEW_SITE_WORK_ITEM_FORMAT);
+    assert.equal(allowReviewSiteReferenceRequest(route, REVIEW_SITE_WORK_ITEM_FORMAT), true);
+    assert.equal(allowReviewSiteReferenceRequest(route, undefined), false);
+  }
+  for (const query of ["view=roadmaps", "page=1", "view=unknown&page=1", "view=roadmaps&page=0", "view=roadmaps&page=01", "view=roadmaps&page=1000001",
+    "view=roadmaps&page=%31", "view=roadmaps&page=1&page=2", "view=roadmaps&page=1&size=999", "view=roadmaps&page=1&increment=one",
+    "view=feedback&page=1&roadmap=owner", "view=work_items&page=1&roadmap=../private", "view=roadmaps&page=1&",
+    "view=roadmaps&page=1&work=owner", "view=work_items&page=1&work=one&roadmap=owner", "view=work_items&page=1&work=%31"]) {
+    const route = `/api/review?${query}`;
+    assert.equal(allowReviewSiteRequest("GET", `http://127.0.0.1:8766${route}`), false);
+    assert.throws(() => reviewRouteHeaders(route));
+    assert.equal(allowReviewSiteReferenceRequest(route, REVIEW_SITE_WORK_ITEM_FORMAT), false);
+  }
+  assert.equal(allowReviewSiteRequest("GET", "http://127.0.0.1:8766/api/status?view=roadmaps&page=1"), false);
+});
+
+test("admits bounded page facts and rejects corrupt counts, selectors and canonical chunk joins", () => {
+  const page = { ...projection(), work_item_format: REVIEW_SITE_WORK_ITEM_FORMAT, work_items: [], evaluations: [], feedback: [],
+    work_item_roadmaps: [], disclosure_digest: HASH, totals: { roadmaps: 2, work_items: 1, evaluations: 0, feedback: 0 },
+    pagination: { view: "roadmaps", page: 1, page_size: 3, total_records: 2, total_pages: 1, roadmap: "", increment: "", work: "" } };
+  captureReviewPage(page, HASH, REVIEW_SITE_FIRST_PAGE);
+  assert.deepEqual(captureReviewProjection(page, HASH).chunkWorkIds, [`${R}/${I}/piece`]);
+  for (const change of [{ page: true }, { total_pages: 2 }, { total_records: 3 }, { page_size: 1000 }, { roadmap: "foreign" }, { extra: "synthetic-private" }])
+    assert.throws(() => captureReviewPage({ ...page, pagination: { ...page.pagination, ...change } }, HASH, REVIEW_SITE_FIRST_PAGE));
+  assert.throws(() => captureReviewPage({ ...page, roadmaps: [] }, HASH, REVIEW_SITE_FIRST_PAGE));
+  const parent = projection().roadmaps[0]!;
+  const work = { id: `${R}/${I}/piece`, source: "roadmap-chunk", roadmap_id: R, increment_id: I, chunk_id: "piece", increment_number: 1,
+    chunk_number: 1, created_at: "2026-01-01T00:00:00Z" };
+  const works = { ...page, roadmaps: [], work_items: [work], work_item_roadmaps: [{ ...parent,
+    increments: parent.increments.map(inc => ({ ...inc, number: 1, chunks: [{ id: "piece", chunk_number: 1, created_at: work.created_at }] })) }],
+    pagination: { view: "work_items", page: 1, page_size: 25, total_records: 1, total_pages: 1, roadmap: "", increment: "", work: "" } };
+  const route = "/api/review?view=work_items&page=1";
+  captureReviewPage(works, HASH, route);
+  for (const invalid of [{ ...works, work_item_roadmaps: [] }, { ...works, work_items: [work, work] },
+    { ...works, work_item_roadmaps: [{ ...works.work_item_roadmaps[0], increments: [] }, ...works.work_item_roadmaps] },
+    { ...works, work_items: [{ ...work, chunk_number: true }] }, { ...works, work_items: [{ ...work, roadmap_id: "foreign" }] }])
+    assert.throws(() => captureReviewPage(invalid, HASH, route));
+  const bytes = encode(works), headers = { ...REVIEW_SITE_SECURITY_HEADERS, "content-type": "application/json; charset=utf-8", "content-length": String(bytes.length) };
+  assert.equal(captureReviewSiteReply(route, 200, headers, bytes, HASH).status, 200);
+  const selected = { ...works, work_item_roadmaps: [], work_items: [{ id: "support-work", source: "execution" }],
+    pagination: { ...works.pagination, work: "support-work" } };
+  captureReviewPage(selected, HASH, route + "&work=support-work");
+  assert.throws(() => captureReviewPage(selected, HASH, route + "&work=foreign"));
+  assert.throws(() => captureReviewPage({ ...works, disclosure_digest: "invalid" }, HASH, route));
 });
 test("bounds UTF8/JSON reads and keeps malformed response content out of errors", () => {
   assert.deepEqual(parseReviewSiteJson(encode({ ok: true })), { ok: true });

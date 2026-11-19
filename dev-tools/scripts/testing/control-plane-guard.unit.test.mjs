@@ -24,6 +24,111 @@ const humanIssue = (needed, prevents, action) => ({
     done_when: "The agent has checked and recorded the requested result." },
 });
 
+test("review pages navigate exact slices, retain disclosure choices and reject corrupt paging or joins", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const roads = Array.from({ length: 7 }, (_, n) => ({ id: `road-${n}`, title: `Roadmap ${n}`, objective: "Keep complete details",
+    status: n < 4 ? "executing" : "completed", evidence_policy: "declarative-legacy", increments: [{ id: "one", number: 1,
+      title: "Increment", objective: "Preserve criteria", status: "implementing", actively_worked: n === 1,
+      chunks_complete: 0, chunks_planned: 6, criteria: [{ id: "guard", description: "Full acceptance detail", outcome: "pending" }],
+      chunks: Array.from({ length: 6 }, (_, c) => ({ id: `chunk-${c}`, chunk_number: c + 1, title: `Component ${n}/${c}`,
+        created_at: "2026-11-10T00:00:00Z", outcome: "Keep the result", status: "planned", is_next: c === 0, criteria_ids: ["guard"], tests: [] })) }] }));
+  const works = roads.flatMap(r => r.increments.flatMap(i => i.chunks.map(c => ({ id: `${r.id}/${i.id}/${c.id}`, source: "roadmap-chunk",
+    roadmap_id: r.id, increment_id: i.id, chunk_id: c.id, increment_number: i.number, chunk_number: c.chunk_number, created_at: c.created_at }))));
+  roads[0].increments[0].criteria[0].supporting_work = [{ status: "reviewed-local-snapshot", work_id: "older-support-work",
+    scope: "Recorded local source support", limitations: ["Current parent qualification remains pending"], receipt_digest: "a".repeat(64), review_digest: "b".repeat(64) }];
+  works.push({ id: "older-support-work", source: "execution", title: "Older supporting execution", status: "complete", outcome: { success: "Preserve the reviewed source" } });
+  let mutate = null, lastResponse, identityRevision = 0;
+  const urls = [];
+  window.fetch = async url => {
+    urls.push(url);
+    const query = new URL(url, window.location.href).searchParams, view = query.get("view"), size = view === "roadmaps" ? 3 : 25;
+    const parent = query.get("roadmap") || "", increment = query.get("increment") || "", work = query.get("work") || "";
+    const all = (view === "roadmaps" ? roads : view === "work_items" ? works : []).filter(row => (!parent || (view === "roadmaps" ? row.id : row.roadmap_id) === parent) && (!work || row.id === work));
+    const pages = Math.max(1, Math.ceil(all.length / size)), page = Math.min(Number(query.get("page")), pages);
+    const selected = all.slice((page - 1) * size, page * size);
+    const response = { schema_version: "development-review-v1", repository_id: "pages-fixture", source_digest: `${url}-${all.length}-${identityRevision}-${roads.map(r => r.status).join(",")}-${mutate ? "invalid" : "valid"}`,
+      disclosure_digest: identityRevision.toString(16).padStart(64, "0"),
+      work_item_format: "roadmap-chunk-refs-v1", roadmaps: view === "roadmaps" ? selected : [], work_items: view === "work_items" ? selected : [],
+      evaluations: [], feedback: [], diagnostics: [], totals: { roadmaps: roads.length, work_items: works.length, evaluations: 0, feedback: 0 },
+      pagination: { view, page, page_size: size, total_records: all.length, total_pages: pages, roadmap: parent, increment, work },
+      work_item_roadmaps: view === "work_items" ? roads.filter(r => selected.some(w => w.roadmap_id === r.id)).map(r => ({ ...r,
+        increments: r.increments.map(i => ({ ...i, chunks: i.chunks.filter(c => selected.some(w => w.id === `${r.id}/${i.id}/${c.id}`)) })) })) : [] };
+    lastResponse = structuredClone(response);
+    if (mutate) mutate(response);
+    return { ok: true, json: async () => structuredClone(response) };
+  };
+  window.setInterval = () => 1;
+  const button = text => [...window.document.querySelectorAll("button")].find(b => b.textContent === text);
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.match(window.document.querySelector(".page-count").textContent, /Page 1 of 3.*7 records/);
+    assert.equal(button("Previous page").disabled, true);
+    assert.equal(window.document.querySelectorAll("article.card").length, 3);
+    assert.equal(window.document.querySelectorAll("details.increment")[1].open, true);
+    window.document.querySelector("details.increment > summary").click(); await pause();
+    window.document.querySelector("details.local-support > summary").click(); await pause();
+    button("View supporting work").click(); await pause();
+    assert.match(urls.at(-1), /view=work_items&page=1&work=older-support-work$/);
+    assert.equal(window.document.querySelectorAll("article.card").length, 1);
+    assert.match(window.document.querySelector("#items").textContent, /Older supporting execution/);
+    window.document.querySelector('[data-view="roadmaps"]').click(); await pause();
+    button("Next page").click(); await pause();
+    assert.match(window.document.querySelector("#open-roadmaps").textContent, /Roadmap 3/);
+    assert.match(window.document.querySelector("#completed-roadmaps").textContent, /Roadmap 4.*Roadmap 5/);
+    button("Previous page").click(); await pause();
+    assert.equal(window.document.querySelector("details.increment").open, true);
+    button("Next page").click(); await pause();
+    roads.push(structuredClone(roads[0])); identityRevision++;
+    window.document.querySelector("#refresh").click(); await pause();
+    roads.pop(); identityRevision++;
+    window.document.querySelector("#refresh").click(); await pause();
+    button("Previous page").click(); await pause();
+    assert.equal(window.document.querySelector("details.increment").open, false);
+    window.document.querySelector("details.increment > summary").click(); await pause();
+    roads[0].status = "ready"; window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(window.document.querySelector("details.increment").open, true);
+    window.document.querySelector('[data-view="work_items"]').click(); await pause();
+    assert.equal(window.document.querySelectorAll("article.card").length, 25);
+    button("Next page").click(); await pause();
+    assert.equal(window.document.querySelectorAll("article.card").length, 18);
+    assert.equal(button("Next page").disabled, true);
+    assert.match(window.document.querySelector("#items").textContent, /Full acceptance detail/);
+    button("View parent increment").click(); await pause();
+    assert.match(urls.at(-1), /view=roadmaps&page=1&roadmap=road-4/);
+    assert.equal(window.document.querySelector("details.increment").open, true);
+    button("Show all roadmaps").click(); await pause();
+    const retained = window.document.querySelector("#items").textContent;
+    for (const change of [v => { delete v.pagination; }, v => { v.pagination.total_pages++; },
+      v => { v.pagination.page_size = 1000; }, v => { v.pagination.page = true; },
+      v => { v.pagination.view = "work_items"; }, v => { v.pagination.extra = "synthetic-private-note"; },
+      v => { v.roadmaps.pop(); }, v => { v.totals.roadmaps = -1; }]) {
+      mutate = change; window.document.querySelector("#refresh").click(); await pause();
+      assert.equal(window.document.querySelector("#connection").textContent, "Connection interrupted");
+      assert.equal(window.document.querySelector("#items").textContent, retained);
+      assert.doesNotMatch(window.document.body.textContent, /synthetic-private-note/);
+    }
+    mutate = null; window.document.querySelector('[data-view="work_items"]').click(); await pause();
+    const workRetained = window.document.querySelector("#items").textContent;
+    for (const change of [v => { v.work_item_roadmaps = []; }, v => { v.work_items[0].roadmap_id = "foreign"; },
+      v => { v.work_item_roadmaps.unshift({ ...v.work_item_roadmaps[0], increments: [] }); },
+      v => { v.work_items[0].chunk_number = true; }, v => { v.work_items[0] = { ...v.work_items[1] }; }]) {
+      mutate = change; window.document.querySelector("#refresh").click(); await pause();
+      assert.equal(window.document.querySelector("#connection").textContent, "Connection interrupted");
+      assert.equal(window.document.querySelector("#items").textContent, workRetained);
+    }
+    assert.equal(lastResponse.pagination.view, "work_items");
+    mutate = null; window.document.querySelector("#refresh").click(); await pause();
+    button("Next page").click(); await pause();
+    works.splice(0); window.document.querySelector("#refresh").click(); await pause();
+    assert.match(window.document.querySelector(".page-count").textContent, /Page 1 of 1.*0 records/);
+    assert.equal(button("Previous page").disabled, true); assert.equal(button("Next page").disabled, true);
+    assert.equal(window.document.querySelectorAll("article.card").length, 0);
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(urls.at(-1), /view=work_items&page=1$/);
+  } finally { window.close(); }
+});
+
 test("review UI expands canonical chunk references and preserves refresh navigation and inert text", async () => {
   const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
   const { window } = dom;
@@ -41,7 +146,7 @@ test("review UI expands canonical chunk references and preserves refresh navigat
   window.setInterval = () => 1;
   try {
     window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
-    assert.equal(requests[0].url, "/api/review");
+    assert.equal(requests[0].url, "/api/review?view=roadmaps&page=1");
     assert.equal(requests[0].options.headers["X-Review-Work-Items"], "roadmap-chunk-refs-v1");
     assert.equal(requests[0].options.credentials, "omit");
     window.document.querySelector('[data-view="work_items"]').click();

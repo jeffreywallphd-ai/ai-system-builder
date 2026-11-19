@@ -97,6 +97,32 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
+Review paging adds only bounded read selectors on the existing loopback route.
+Use fixed page sizes and allowlisted views with canonical positive integers and
+bounded exact parent identifiers; reject unknown/duplicate/encoded/incompatible
+arguments before projection. Select from one source snapshot before final byte
+admission and stamp exact page/count/filter facts into its digest. A selected
+roadmap retains all history/criteria/support. Work references join only exact
+same-reply selected chunks and full owning criteria; missing, duplicate, foreign
+or altered joins fail closed. Never trim rows from an advertised page to fit.
+Cross-page disclosure choices cannot transfer through ambiguous identities;
+selectors and presentation never grant approval or qualification. Existing Host,
+Origin, fetch-site, CSP, fixed assets, no CORS/mutation and sanitized errors remain.
+Whole-page overflow still returns unavailable. Source read bounds remain in the
+internal operator path, which does not inherit the HTTP response-size failure.
+The optional exact `work` selector is an inert 80-character scoped-record lookup,
+allowed only for Work items and incompatible with parent selectors. Paged trials,
+feedback and execution rows are collected from bounded source reads before slicing,
+so old display caps cannot silently make records unreachable. A digest of global
+public disclosure identity/count pairs invalidates saved local choices whenever
+the observed identity set changes, including off-page duplicate appearance and
+removal. It exposes no claim, path or authority and stays stable across ordinary
+page/status changes. Empty or duplicate canonical parent/increment shadows reject
+the complete compact refresh before they can change linked evidence.
+Focused real HTTP and DOM tests cover malformed selectors, origin/read-only
+denial, bounds, page counts, exact joins and navigation. Cooperative same-user
+trust and the separate real-browser/application qualification limits remain.
+
 | Boundary and failure | Owning control | Evidence |
 | --- | --- | --- |
 | Work expands scope or edits acceptance after starting | Strict work schema, frozen specification digest, exact path scopes, active approved roadmap binding | Scope and acceptance-drift denial tests |
