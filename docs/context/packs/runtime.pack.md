@@ -2,7 +2,7 @@
 
 - Private manifest downloads require exact source/digest, same-worker capability and the accepted owner's frozen expectation through async completion. Reject a
   different canonical cache handle before resolution. Closed files and verified
-  reads grant no hard quota, native custody, public approval, rights or readiness. Private streams/staging bound payloads and retain custody. Exact paired-link handoff requires a separate one-use trusted receiver observation before source unlink; task/Node/publication binding and restart/native proof remain separate.
+  reads grant no hard quota, native custody, public approval, rights or readiness. Private streams/staging bound payloads and retain custody. The authenticated private Task owns paired-link custody through exact receiver observation, sender cleanup and separate receiver settlement; generic Node requests cannot self-grant this profile. Node/publication binding and restart/native proof remain separate.
 
 - Pack name: `runtime`
 

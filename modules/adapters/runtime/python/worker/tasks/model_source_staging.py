@@ -99,6 +99,7 @@ class _Staging:
         self.consumer_active = False
         self.handoff = None
         self.handoff_reservation = Lock()
+        self.cleanup_confirmed = False
         for path in reversed((prepared_root, *prepared_root.parents)):
             self.session.assert_current()
             facts = path.lstat()
@@ -285,7 +286,8 @@ class _Staging:
 @contextmanager
 def stage_model_source(manifest: ModelDownloadManifest, *, prepared_root: Path, maximum_payload_bytes: int,
                        maximum_duration_seconds: int, allowed_origins: tuple[str, ...] = ("https://huggingface.co",),
-                       is_current: Callable[[], bool] = lambda: True) -> Iterator[StagedModelSource]:
+                       is_current: Callable[[], bool] = lambda: True,
+                       capture_custodian: Callable[[object], None] | None = None) -> Iterator[StagedModelSource]:
     """Temporary read-only custody only; no retained data adoption or publication."""
     global _RETAINED_STAGING
     if not _STAGING_SLOT.acquire(blocking=False):
@@ -293,13 +295,22 @@ def stage_model_source(manifest: ModelDownloadManifest, *, prepared_root: Path, 
     owner = None
     try:
         owner = _Staging(manifest, prepared_root, maximum_payload_bytes, maximum_duration_seconds, allowed_origins, is_current)
+        if capture_custodian is not None:
+            import inspect
+            captured = capture_custodian(owner)
+            if inspect.iscoroutine(captured):
+                captured.close()
+            if captured is not None:
+                raise ModelSourceStagingError()
+            owner.live()
         yield owner.fill()
     except Exception:
         raise ModelSourceStagingError() from None
     finally:
         if owner is not None:
             owner.consumer_active = False
-        if owner is None or owner.cleanup():
+            owner.cleanup_confirmed = owner.cleanup()
+        if owner is None or owner.cleanup_confirmed:
             _STAGING_SLOT.release()
         else:
             _RETAINED_STAGING = owner

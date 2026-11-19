@@ -13,6 +13,38 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+## Private Model transfer task
+
+`sourceTransfer` is an async-only internal profile advertised as
+`ensure-model-download.source-transfer-v1`. Capture the strict manifest, pin,
+finite origins/duration, UUIDs and decimal root identities before queueing.
+Resolve only prepared `source` and `receiver` directories in the fixed
+`.aisb-model-source-transfers/<acquisitionId>` namespace below the trusted HF
+cache. No request supplies a path. Windows uses an extended-length spelling of
+that trusted root while preserving canonical, plain-directory and identity
+checks. The generic Node Model client rejects this reserved input; a future
+private Node owner must prepare and consume it.
+
+The existing launch token protects private `GET /tasks/{id}/model-source` and
+`POST /tasks/{id}/model-source/acknowledgement`. ACK bodies have a 4 KiB streaming
+limit, reject duplicate/unknown fields and expose fixed safe errors. This token
+authenticates the runtime host, not the original actor or a Model approval.
+No callbacks, paths, private owners or model handles enter generic task output.
+
+The original Task record owns the source context after result serialization.
+`receiver-observed` binds exact acquisition/handoff/receipt/witness values once;
+it permits only the existing positively owned sender cleanup. `acknowledged`
+still retains the record so a lost reply can be read without another unlink.
+Only `receiver-settled` reports that the host saved the ACK outcome and finished
+its own receiver custody; it retires metadata without file IO. Unknown ACK or
+cleanup stays retained. One predicate applies this custody to pruning, reuse,
+capacity and model unload. Queued cancellation needs actual Future cancellation;
+running Model cancellation remains unsupported. Original-record checks prevent
+late results, submit replies and legacy updates from modifying a successor.
+No registry lock spans file IO or ACK callbacks. See
+`docs/operations/headless-model-source-task-qualification.json` for controlled
+evidence and remaining Node, provider, native, host and parent qualification.
+
 `ModelSourceHandoff` is an explicit private addition to ordinary read-only
 staging. A trusted host captures an empty prepared recipient root, canonical
 ancestor identities, exact task/nonce and separate host-lifetime/ACK-observation
@@ -41,7 +73,8 @@ changed parents poison the handoff and retain remaining names and custody.
 The receiver tree is never deleted here. After a qualified local ACK, only the
 original owned skeleton is cleaned. Receiver files remain temporary/read-only
 under their host owner's lifetime; ACK grants no Model registration or public
-effect. Future task ACK/Node/storage binding must preserve that authority.
+effect. The task owner above preserves this ACK authority; future Node/storage
+binding must do the same.
 No native hostile-writer fence, directory-fsync/restart durability, physical
 cross-volume support, external provider/model or parent qualification follows.
 

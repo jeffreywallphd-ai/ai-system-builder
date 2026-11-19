@@ -1,5 +1,20 @@
 # Runtime Model
 
+The private source-transfer capability composes the paired-link primitives with
+the existing authenticated async Task registry. Capture strict selection and
+root identities before queueing; resolve only prepared UUID directories in a
+fixed trusted HF-cache namespace. Windows long-path spelling changes no identity
+or directory policy. The original record owns source context and receiver ACK
+through task completion. Sender cleanup and receiver metadata settlement are
+distinct observations. Until settlement, custody prevents pruning/replacement,
+counts toward capacity and excludes model unload. Exact replay reads state
+without repeated effects; late callbacks cannot write into a reused record.
+Keep file IO outside registry locks and policy callbacks outside control locks.
+Bounded private routes require the existing launch token; that host credential
+is not actor/plan approval. Generic Node Model requests cannot supply this
+reserved profile. Node creation/import, public admission and actual model/host
+qualification remain separate.
+
 Private source handoff reuses exclusive hardlink publication semantics instead
 of assuming a portable no-replace directory rename. It reserves one source
 handoff before callbacks and one receiver ACK observation. Only an exact fresh
@@ -8,9 +23,9 @@ Recorded paired inode/link facts and full verification precede a minimized
 receipt; its serialization is not receiver acknowledgement. A separately trusted
 host observation permits only known source-name unlink with proven link-count
 transition. Uncertainty retains remaining names/custody, not retry authority.
-Ordinary single-link cleanup is unchanged. This local primitive does not compose
-a worker-task ACK channel, Node owner, durable restart ledger or persistent
-publication/Model registration; those stay explicit integration work.
+Ordinary single-link cleanup is unchanged. The local primitive itself does not
+compose a worker-task ACK channel; the owner above does so. Node ownership,
+durable restart and persistent Model registration remain explicit work.
 
 Private source staging composes selected-file streaming into context-scoped
 read-only temporary custody. One staging lease spans policy, exclusive writes,

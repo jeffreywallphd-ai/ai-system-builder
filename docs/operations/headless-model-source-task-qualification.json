@@ -1,0 +1,32 @@
+{
+  "schema_version": "headless-model-source-task-observation-v1",
+  "scope": "Private authenticated worker Task custody and receiver acknowledgement, before Node/public Model acquisition integration",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Fresh exact candidate checks and actual separate-invocation review govern component completion. This descriptive report supplies no executed or parent pass.",
+  "controls": [
+    "Capture the strict exact manifest, pin, finite bounds/origins, UUID task/acquisition/handoff and expected decimal directory identities before queueing. Resolve only prepared plain canonical source/receiver roots below the trusted fixed HF-cache namespace, never a caller path.",
+    "Retain the source context and handoff in the original existing Task record, not another holding map. One custody predicate governs capacity, pruning, task reuse and model unload after generic task success.",
+    "The existing runtime launch token protects finite private status and 4 KiB streamed ACK routes. Duplicate/unknown/malformed input returns fixed safe failures; generic status and logs carry no paths, private objects, callbacks or model handles.",
+    "Exact receiver-observed ACK consumes one source cleanup attempt. Acknowledged records remain retained until a distinct receiver-settled observation confirms the host saved the outcome and finished its own custody. Replayed or competing ACKs read saved/in-progress state without repeating file effects.",
+    "Original record/owner/runtime-incarnation comparisons fence publication, status and ACK after waits. Registry locks never span file IO; control locks never invoke registry callbacks. Unknown native/cleanup/submit acknowledgement retains the original custody without reissue or recovery.",
+    "Private transfers deny synchronous/SDK fallback. Every ordinary Node Model payload is detached into bounded passive frozen data before property reads or serialization. Reserved sourceTransfer, toJSON/accessor/proxy hooks deny before transport; later target mutation cannot change dispatch. Ordinary JSON omission behavior and queued-only Model cancellation remain compatible."
+  ],
+  "controlled_observations": [
+    "Twenty-three new worker cases use actual authenticated ASGI routes, owned queue/Task records and disposable same-volume files with controlled provider responses. No external provider/model load is exercised.",
+    "Tests cover complete source/receiver transfer, separate sender cleanup and receiver settlement, authentication, malformed/oversized/duplicate ACK, wrong namespace, queued cancellation, retained capacity/pruning/unload and unchanged running Model cancellation.",
+    "Lost ACK replies and effect-then-thrown unlink retain the correct outcome without repeated unlink. Held ACK permits status/read-only replay without lock inversion. Unknown submit before queue retains the original reservation; submit-effect-then-throw preserves the actual original job without a second issue.",
+    "Causal replacement tests hold submit return, execute return, ACK control and legacy running cancel while the original record retires; old continuations cannot overwrite or disclose a successor.",
+    "Prequeue mutation and source-root replacement preserve original selection or deny before provider bytes. A real disposable path beyond Windows MAX_PATH completes with unchanged identities after trusted extended-length spelling."
+  ],
+  "retained_corrections": [
+    "The first controlled run failed before writing files because the deeply nested trusted Windows namespace exceeded ordinary MAX_PATH. The resolver now converts only its trusted absolute cache root to extended-length native IO spelling while retaining all canonical/plain-directory/identity checks. Earlier failures remain local evidence.",
+    "Independent preflight found request-ID-only publication and legacy running cancellation could affect a replacement record. Exact original-record comparisons now guard those paths, with held causal regressions. Pure ACK replay and settlement also recheck original ownership after waiting for control and before/after disclosure.",
+    "Independent preflight found an ordinary unmanifested Node payload could add reserved transfer input during JSON serialization after inspection. All Model payloads now use detached passive data; zero-IO hook/getter/proxy tests and held target-mutation tests cover the correction. The unfinished17path work is preserved and released; an18path successor owns and rechecks the entire candidate plus HTTP client correction."
+  ],
+  "qualification_limits": [
+    "This is private worker protocol evidence, not a Node prepared-root factory, cross-language identity/locality proof, accepted actor/plan admission, persistent Model import/registration or public acquisition feature.",
+    "Receiver settlement trusts the existing authenticated host. Unknown retained data has no automatic adoption, deletion, retry, disk credit or restart permission.",
+    "Controlled ordinary filesystem calls and injected failures do not prove hostile native immutability, crash/directory-fsync durability, physical cross-volume support or hard completion deadlines.",
+    "No new provider, dependency, model download, engine, process or scheduler is added. Accepted model accuracy stays closed. Both app hosts, actual provider/model/runtime and I7 parent/chunk qualification remain pending."
+  ]
+}

@@ -26,8 +26,77 @@ function payload() {
 const capability = "ensure-model-download.source-manifest-v1";
 const response = (value: unknown) => ({ok: true, status: 200, json: async () => value});
 
+test("generic model requests cannot grant private transfer data or trigger its getters", async () => {
+  let getters = 0, traps = 0;
+  const inherited = Object.assign(Object.create({sourceTransfer: {}}), payload());
+  const accessor = {...payload()};
+  Object.defineProperty(accessor, "sourceTransfer", {get() {getters++; return {};}});
+  const prototypeProxy = new Proxy({}, {has() {traps++; return true;}, getOwnPropertyDescriptor() {traps++; return undefined;}});
+  const proxiedPrototype = Object.assign(Object.create(prototypeProxy), payload());
+  for (const input of [{...payload(), sourceTransfer: null}, {...payload(), sourceTransfer: {}},
+    {provider: "transformers", modelId, sourceTransfer: {}}, inherited, accessor, proxiedPrototype]) {
+    let calls = 0;
+    const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: auth,
+      fetchImplementation: (async () => {calls++; throw new Error("No transport");}) as never});
+    await assert.rejects(client.startTask({requestId: "private-transfer-denied", taskType: "ensure-model-download", payload: input}));
+    await assert.rejects(client.ensureModelDownloaded(input as never));
+    assert.equal(calls, 0);
+  }
+  assert.equal(getters, 0); assert.equal(traps, 0);
+});
+
 test("normalized manifest digest retains the independently checked Python wire vector", () => {
   assert.equal(payload().sourceManifest.manifestDigest, "sha256:13c6493fcd0112708cb2bf37b4aebb2124ae07c40ce41dfa85614fc5d533d8e9");
+});
+
+test("ordinary model payloads reject serialization hooks and late getters before any IO", async () => {
+  let hooks = 0, getters = 0, traps = 0;
+  const injected = {provider: "transformers", modelId, sourceTransfer: {version: "synthetic-marker"}};
+  const ownHook = {provider: "transformers", modelId, toJSON() {hooks++; return injected;}};
+  const callableHook = Object.assign(() => undefined, {toJSON() {hooks++; return injected;}});
+  const inheritedHook = Object.assign(Object.create({toJSON() {hooks++; return injected;}}), {provider: "transformers", modelId});
+  const revisionGetter = {provider: "transformers", modelId};
+  Object.defineProperty(revisionGetter, "revision", {enumerable: true, get() {
+    getters++; Object.assign(revisionGetter, {sourceTransfer: {}}); return undefined;
+  }});
+  const nestedProxy = {provider: "transformers", modelId, taskTags: [new Proxy({}, {
+    getPrototypeOf() {traps++; return Object.prototype;}, ownKeys() {traps++; return [];},
+  })]};
+  for (const input of [ownHook, callableHook, inheritedHook, revisionGetter, nestedProxy]) {
+    let calls = 0;
+    const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: auth,
+      fetchImplementation: (async () => {calls++; throw new Error("No transport");}) as never});
+    await assert.rejects(client.startTask({requestId: "ordinary-hooks-denied", taskType: "ensure-model-download", payload: input}));
+    await assert.rejects(client.ensureModelDownloaded(input as never));
+    assert.equal(calls, 0);
+  }
+  assert.equal(hooks, 0); assert.equal(getters, 0); assert.equal(traps, 0);
+});
+
+test("ordinary Model JSON shape is detached and frozen before capability waits and serialization", async () => {
+  const input = {provider: "transformers", modelId, revision, taskTags: ["text-generation"], inferenceMode: undefined};
+  const selected = captureModelManifestPayload(input);
+  assert.notEqual(selected.payload, input); assert.ok(Object.isFrozen(selected.payload));
+  assert.ok(Object.isFrozen(selected.payload.taskTags));
+  assert.equal(JSON.stringify(selected.payload), JSON.stringify(input));
+  let entered!: () => void, release!: () => void, posts = 0;
+  const started = new Promise<void>(resolve => {entered = resolve;});
+  const held = new Promise<void>(resolve => {release = resolve;});
+  const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: auth,
+    fetchImplementation: (async (url: unknown, options?: RequestInit) => {
+      if (String(url).endsWith("/capabilities")) {entered(); await held; return response({runtimeId: "synthetic-runtime",
+        capabilities: ["ensure-model-download.exact-revision-v1"]});}
+      posts++; const body = JSON.parse(String(options?.body));
+      assert.deepEqual(body.payload, {provider: "transformers", modelId, revision, taskTags: ["text-generation"]});
+      assert.equal(body.requestId, "ordinary-owned-copy");
+      return response({requestId: body.requestId, taskType: "ensure-model-download", accepted: true, status: "queued"});
+    }) as never});
+  const operation = client.startTask({requestId: "ordinary-owned-copy", taskType: "ensure-model-download", payload: input});
+  await started;
+  input.modelId = "fixture/changed"; input.taskTags.push("changed");
+  Object.assign(input, {sourceTransfer: {}, toJSON() {return {sourceTransfer: {}};}});
+  release(); await operation; assert.equal(posts, 1);
+  assert.equal(selected.payload.modelId, modelId); assert.deepEqual(selected.payload.taskTags, ["text-generation"]);
 });
 
 test("strict source presence rejects malformed, forged or executable data before any transport", async () => {

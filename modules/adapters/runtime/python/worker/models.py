@@ -142,6 +142,56 @@ class ModelDownloadManifest(_Strict):
         return self
 
 
+_SOURCE_UUID = r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+
+
+class ModelSourceDirectoryIdentity(_Strict):
+    device: str = Field(pattern=r"^(?:0|[1-9][0-9]{0,38})$")
+    inode: str = Field(pattern=r"^[1-9][0-9]{0,38}$")
+
+
+class ModelSourcePreparedRoots(_Strict):
+    acquisition: ModelSourceDirectoryIdentity
+    source: ModelSourceDirectoryIdentity
+    receiver: ModelSourceDirectoryIdentity
+
+
+class ModelSourceTransferSelection(_Strict):
+    version: Literal["model-source-transfer-v1"]
+    acquisitionId: str = Field(pattern=_SOURCE_UUID)
+    handoffId: str = Field(pattern=_SOURCE_UUID)
+    roots: ModelSourcePreparedRoots
+    maximumDurationSeconds: Annotated[StrictInt, Field(ge=1, le=3600)]
+    allowedOrigins: tuple[str, ...]
+
+    @field_validator("allowedOrigins", mode="before")
+    @classmethod
+    def fixed_exact_origins(cls, value: Any):
+        from urllib.parse import urlsplit
+        if type(value) is not list or not 1 <= len(value) <= 4:
+            raise ValueError("Invalid model transfer destinations.")
+        selected = []
+        for origin in value:
+            if type(origin) is not str or len(origin) > 300 or re.fullmatch(
+                    r"https://[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?(?::443)?/?", origin) is None:
+                raise ValueError("Invalid model transfer destinations.")
+            host = urlsplit(origin).hostname
+            if not host or len(host) > 253 or ".." in host or host.endswith("."):
+                raise ValueError("Invalid model transfer destinations.")
+            selected.append("https://" + host)
+        if len(set(selected)) != len(selected) or "https://huggingface.co" not in selected:
+            raise ValueError("Invalid model transfer destinations.")
+        return tuple(selected)
+
+
+class ModelSourceAcknowledgement(_Strict):
+    phase: Literal["receiver-observed", "receiver-settled"]
+    acquisitionId: str = Field(pattern=_SOURCE_UUID)
+    handoffId: str = Field(pattern=_SOURCE_UUID)
+    receiptDigest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    recipientWitness: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+
+
 class EnsureModelDownloadRequest(BaseModel):
     provider: Literal["transformers"]
     modelId: str
@@ -150,6 +200,14 @@ class EnsureModelDownloadRequest(BaseModel):
     taskTags: list[str] | None = None
     artifactForm: str | None = None
     sourceManifest: ModelDownloadManifest | None = None
+    sourceTransfer: ModelSourceTransferSelection | None = None
+
+    @field_validator("sourceTransfer", mode="before")
+    @classmethod
+    def reject_explicit_null_transfer(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("Model transfer selection must be explicit and exact.")
+        return value
 
     @field_validator("sourceManifest", mode="before")
     @classmethod
@@ -163,6 +221,9 @@ class EnsureModelDownloadRequest(BaseModel):
         if self.sourceManifest is not None and (self.sourceManifest.source.modelId != self.modelId or
                 self.sourceManifest.source.revision != self.revision or self.artifactForm not in (None, "full-model")):
             raise ValueError("Model source manifest does not match the request.")
+        if self.sourceTransfer is not None and (self.sourceManifest is None or self.revision is None or
+                self.inferenceMode is not None or self.taskTags is not None or self.artifactForm not in (None, "full-model")):
+            raise ValueError("Model transfer requires the exact supported manifest task.")
         return self
 
     @field_validator("revision", mode="before")

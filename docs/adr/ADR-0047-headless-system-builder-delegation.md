@@ -1,5 +1,24 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private source transfer in the existing Task owner
+
+Keep retained Model source custody in the original authenticated async Task
+record, rather than a second holding registry. Capture the strict selection
+before queueing. Accept only opaque UUIDs and expected decimal identities for
+an already prepared fixed namespace below the trusted cache; no caller path or
+synchronous/SDK fallback. The generic Node client cannot supply this profile.
+
+Separate exact one-use receiver observation from later receiver settlement.
+Observation permits positively owned sender cleanup; the record remains until
+the host saves the result and completes its receiver custody. Replay reads the
+saved/in-progress state without another IO attempt. Unknown settlement retains
+custody and does not authorize retry or recovery. Apply one retention predicate
+to capacity, pruning, reuse and unload, with original-record comparisons before
+late publication. Keep native IO outside registry locks. The runtime launch
+token protects the bounded private ACK/status routes but grants no original
+actor approval, persistent Model registration or public acquisition. Node and
+full-host integration remain separate I7 work.
+
 ### Private source-to-storage handoff prerequisite
 
 Use the existing exclusive file-link publication semantics for the same-volume

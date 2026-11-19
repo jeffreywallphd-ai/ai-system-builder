@@ -549,7 +549,7 @@ export function createPythonRuntimeHttpClient(
     async startTask(request: StartPythonRuntimeTaskRequest) {
       assertRuntimeRequestId(request.requestId);
       const selection = request.taskType === "ensure-model-download" ? captureModelManifestPayload(request.payload) : {payload: request.payload};
-      if (selection.manifest) request = {...request, payload: selection.payload};
+      if (request.taskType === "ensure-model-download") request = {...request, payload: selection.payload};
       const body = request.payload;
       const revision = request.taskType === "ensure-model-download" && body !== null && typeof body === "object" && !Array.isArray(body)
         ? normalizeModelDownloadRevision((body as {revision?: unknown}).revision) : undefined;

@@ -1,5 +1,36 @@
 # Headless System Builder threat model
 
+## Private Model task custody and acknowledgement
+
+Protect exact source selection, prepared roots, original task ownership and
+retained files. Freeze strict transfer input before queueing. Accept opaque UUIDs
+and decimal identities, not paths; bind plain canonical namespace ancestors
+again when staging captures custody. Trusted Windows long-path spelling must
+not relax those checks. Deny malformed/null transfer input, synchronous fallback
+and generic Node transfer self-grants before effects. Detach all Model payloads
+into bounded passive frozen data before property reads or serialization. Deny
+toJSON/accessor/proxy hooks without invoking them; always dispatch the copy.
+
+Require the existing runtime launch token and bound streamed ACK bodies to 4 KiB
+with duplicate/unknown-field denial. Return finite safe phases and diagnostics;
+exclude paths, callbacks and private owner objects from generic output/logs.
+This host authentication is not original actor, plan or provider authority.
+
+The exact original Task owns context and immutable status after worker success.
+One receiver observation binds the acquisition, handoff, receipt and witness.
+Source cleanup precedes acknowledgement; separate receiver settlement retires
+only metadata after the host confirms its own work. Lost replies and concurrent
+ACKs read saved/in-progress state, never repeat unlink. Unknown syscall or
+cleanup retains custody and capacity. Pruning, task reuse and model unload use
+the same predicate. Recheck original record identity after waits and before
+publication/disclosure; old generic continuations cannot mutate a private row.
+No registry lock spans file IO, and no control lock invokes registry callbacks.
+
+Residual limits: receiver settlement trusts the authenticated host. This protocol
+does not qualify a Node consumer, cross-language filesystem locality, persistent
+import/registration, hostile native immutability or durable restart. No external
+model, app-host, public-tool or parent pass follows from controlled task tests.
+
 ## Private paired-link storage handoff
 
 Protect temporary model bytes, recipient namespace and one-use ownership.
@@ -28,8 +59,8 @@ does not permit model import/registration or a new transfer.
 
 Residual limits: paired links share mutable bytes. Read-only cooperative custody
 is not native immutability, a hostile-writer fence, directory-fsync or restart
-proof. This local observation callback is not the future worker-task/Node ACK
-channel. No external provider/model/native/host/public or parent pass follows.
+proof. This local callback is composed by the private task owner above, not yet
+by a Node owner. No external provider/model/native/host/public or parent pass follows.
 
 ## Private temporary Model staging
 

@@ -8,6 +8,26 @@ export interface RuntimeModelDownloadManifest {
   readonly manifestDigest: string;
 }
 const invalid = () => new Error("The selected model source manifest is invalid.");
+
+/** Reject proxy traps before the shared passive copier inspects nested objects. */
+function assertPassiveModelInput(input: unknown): void {
+  let nodes = 0;
+  const inspect = (value: unknown, depth: number): void => {
+    if (++nodes > 4096 || depth > 12) throw invalid();
+    if (value === null || typeof value !== "object") return;
+    if (types.isProxy(value)) throw invalid();
+    const prototype = Object.getPrototypeOf(value);
+    if (Array.isArray(value) ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) throw invalid();
+    const keys = Reflect.ownKeys(value);
+    if (keys.length > (Array.isArray(value) ? 1025 : 128)) throw invalid();
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !("value" in descriptor)) throw invalid();
+      inspect(descriptor.value, depth + 1);
+    }
+  };
+  inspect(input, 0);
+}
 export function freezeCapturedModelData<T>(value: T): T {
   if (value && typeof value === "object") {
     for (const child of Object.values(value)) freezeCapturedModelData(child);
@@ -18,16 +38,22 @@ export function freezeCapturedModelData<T>(value: T): T {
 
 /** Presence is strict; caller objects cannot change the source while capability checks wait. */
 export function captureModelManifestPayload<T>(input: T): {payload: T; manifest?: RuntimeModelDownloadManifest} {
-  if (!input || typeof input !== "object") return {payload: input};
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw invalid();
   if (types.isProxy(input)) throw invalid();
-  const property = Object.getOwnPropertyDescriptor(input, "sourceManifest");
-  if (!property) {
-    if ("sourceManifest" in input) throw invalid();
-    return {payload: input};
+  // A generic request cannot grant a private source recipient or ACK channel.
+  // Inspect descriptors only, including prototypes, without invoking getters
+  // or proxy traps; the new private owner will supply its own admitted path.
+  let current: object | null = input;
+  for (let depth = 0; current !== null; depth++) {
+    if (depth >= 32 || types.isProxy(current) || Object.getOwnPropertyDescriptor(current, "sourceTransfer")) throw invalid();
+    current = Object.getPrototypeOf(current) as object | null;
   }
-  if (!("value" in property)) throw invalid();
+  const property = Object.getOwnPropertyDescriptor(input, "sourceManifest");
+  if (!property && "sourceManifest" in input || property && !("value" in property)) throw invalid();
   try {
+    assertPassiveModelInput(input);
     const raw = copyBoundedPassiveData(input) as Record<string, unknown>;
+    if (!property) return {payload: freezeCapturedModelData(raw) as T};
     if (raw.provider !== "transformers" || typeof raw.modelId !== "string" || raw.artifactForm !== undefined && raw.artifactForm !== "full-model") throw invalid();
     const revision = normalizeModelDownloadRevision(raw.revision);
     if (revision === undefined) throw invalid();

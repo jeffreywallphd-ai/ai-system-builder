@@ -16,6 +16,8 @@ import re
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 
 from .models import (
     CancelPythonRuntimeTaskResult,
@@ -67,6 +69,11 @@ from .ocr.protocol import OcrContractError, OcrUnavailable
 from .ocr.task_sources import CAPABILITY as OCR_TASK_CAPABILITY, task_ocr_sources
 from .tasks.review_dataset import review_dataset
 from .tasks.train_model import TrainingCancellationRequested, train_model
+from .tasks.model_source_task import (
+    CAPABILITY as MODEL_SOURCE_TASK_CAPABILITY, ModelSourceTaskError, ModelSourceTaskOwner,
+    captured_selection as capture_model_source_selection, has_source_transfer,
+    read_acknowledgement as read_model_source_acknowledgement, valid_task_id as valid_model_source_task_id,
+)
 
 RUNTIME_ID = getenv("PYTHON_RUNTIME_ID", "python-sidecar")
 WORKER_VERSION = getenv("PYTHON_RUNTIME_WORKER_VERSION", "0.1.0")
@@ -207,20 +214,53 @@ async def require_launch_authentication(request: Request, call_next):
     return await call_next(request)
 
 
+def _model_source_error(status_code=409):
+    return JSONResponse(status_code=status_code, content={"error": {
+        "code": "model_source_task_unconfirmed", "message": "The model file transfer could not be confirmed.", "retryable": False}})
+
+
+@app.exception_handler(RequestValidationError)
+async def sanitize_model_source_validation(request: Request, error: RequestValidationError):
+    body = error.body
+    if has_source_transfer(body) or type(body) is dict and has_source_transfer(body.get("payload")):
+        return _model_source_error(422)
+    return await request_validation_exception_handler(request, error)
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _task_retains_custody(task) -> bool:
+    owner = task.get("_modelSourceOwner")
+    return task.get("status") in {"queued", "running"} or isinstance(owner, ModelSourceTaskOwner) and owner.retains_record
+
+
+def _source_record_current_locked(record, owner) -> bool:
+    return (isinstance(owner, ModelSourceTaskOwner) and TASK_REGISTRY.get(owner.task_id) is record and
+            record.get("_modelSourceOwner") is owner and
+            record.get("_modelSourceIncarnation") == (RUNTIME_ID, WORKER_STARTED_AT))
+
+
+def _publish_source_task(record, owner, **updates) -> bool:
+    with TASK_REGISTRY_LOCK:
+        if not _source_record_current_locked(record, owner):
+            return False
+        record.update(updates)
+        record["updatedAt"] = _now_iso()
+        return True
+
+
 def _active_task_count() -> int:
     with TASK_REGISTRY_LOCK:
-        return sum(1 for task in TASK_REGISTRY.values() if task["status"] in {"queued", "running"})
+        return sum(_task_retains_custody(task) for task in TASK_REGISTRY.values())
 
 
 def _prune_terminal_tasks_locked() -> None:
     terminal_ids = [
         request_id
         for request_id, task in TASK_REGISTRY.items()
-        if task.get("status") in {"succeeded", "failed", "cancelled"}
+        if task.get("status") in {"succeeded", "failed", "cancelled"} and not _task_retains_custody(task)
     ]
     while len(terminal_ids) > TASK_MAX_RETAINED:
         TASK_REGISTRY.pop(terminal_ids.pop(0), None)
@@ -267,17 +307,22 @@ def _update_task(request_id: str, **updates: Any) -> None:
         task = TASK_REGISTRY.get(request_id)
         if task is None:
             return
+        # Legacy ID-only continuations cannot write a private successor record.
+        if isinstance(task.get("_modelSourceOwner"), ModelSourceTaskOwner):
+            return
         task.update(updates)
         task["updatedAt"] = _now_iso()
 
 
 def _build_task_status_result(record: dict[str, Any]) -> PythonRuntimeTaskStatusResult:
+    owner = record.get("_modelSourceOwner")
+    data = owner.generic_result() if isinstance(owner, ModelSourceTaskOwner) and record.get("data") is not None else record.get("data")
     return PythonRuntimeTaskStatusResult(
         requestId=record["requestId"],
         taskType=record.get("taskType"),
         status=record["status"],
         progress=record.get("progress"),
-        data=record.get("data"),
+        data=data,
         error=record.get("error"),
         startedAt=record.get("startedAt"),
         updatedAt=record.get("updatedAt"),
@@ -289,6 +334,8 @@ def _build_task_status_result(record: dict[str, Any]) -> PythonRuntimeTaskStatus
 def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
     if request.taskType == "ensure-model-download":
         payload = EnsureModelDownloadRequest.model_validate(request.payload)
+        if payload.sourceTransfer is not None:
+            raise ModelSourceTaskError()
         def on_model_download_progress(progress: dict[str, Any]) -> None:
             _update_task(request.requestId, progress=progress)
 
@@ -563,6 +610,8 @@ def _ensure_model_download_data(
     request: EnsureModelDownloadRequest,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
+    if request.sourceTransfer is not None:
+        raise ModelSourceTaskError()
     provider, model_id, revision = request.provider, request.modelId, request.revision
     source_manifest = request.sourceManifest.model_dump(mode="json") if request.sourceManifest is not None else None
     availability = ensure_generation_model_downloaded(
@@ -599,6 +648,14 @@ def _ensure_model_download_data(
 
 
 def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult:
+    selection = capture_model_source_selection(request.payload)
+    if selection is not None:
+        if request.taskType != "ensure-model-download" or not valid_model_source_task_id(request.requestId):
+            raise ModelSourceTaskError()
+        # Capture the supported immutable selection/metadata before queueing.
+        request = StartPythonRuntimeTaskRequest(requestId=request.requestId, taskType=request.taskType,
+            payload=selection.model_dump(mode="json", exclude_none=True), metadata=_safe_task_metadata(request.metadata),
+            timeoutMs=request.timeoutMs)
     with TASK_REGISTRY_LOCK:
         if MODEL_UNLOAD_IN_PROGRESS:
             raise RuntimeError("Generation model cleanup is in progress. Retry after completion.")
@@ -606,40 +663,57 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             raise RuntimeError("Runtime task request identifier is invalid.")
         _prune_terminal_tasks_locked()
         existing = TASK_REGISTRY.get(request.requestId)
-        if existing and existing.get("status") in {"queued", "running"}:
+        if existing and (_task_retains_custody(existing) or isinstance(existing.get("_modelSourceOwner"), ModelSourceTaskOwner)):
             raise RuntimeError("Runtime task request identifier is already active.")
         active_count = sum(
             1
             for task in TASK_REGISTRY.values()
-            if task.get("status") in {"queued", "running"}
+            if _task_retains_custody(task)
         )
         if active_count >= TASK_MAX_ACTIVE:
             raise RuntimeError("Python runtime task queue is at capacity.")
-        TASK_REGISTRY[request.requestId] = _create_task_record(
+        record = _create_task_record(
             request.requestId,
             request.taskType,
             request.metadata,
         )
+        if selection is not None:
+            original_id = request.requestId
+            incarnation = (RUNTIME_ID, WORKER_STARTED_AT)
+            def original_record_current():
+                with TASK_REGISTRY_LOCK:
+                    return _source_record_current_locked(record, owner)
+            owner = ModelSourceTaskOwner(original_id, selection, record_current=original_record_current)
+            record["_modelSourceOwner"] = owner
+            record["_modelSourceIncarnation"] = incarnation
+        TASK_REGISTRY[request.requestId] = record
+
+    def publish(**updates):
+        if selection is not None:
+            return _publish_source_task(record, owner, **updates)
+        _update_task(request.requestId, **updates)
+        return True
 
     def task_wrapper() -> None:
-        _update_task(request.requestId, status="running")
         try:
-            data = _run_task(request)
+            if not publish(status="running"):
+                return
+            data = owner.execute() if selection is not None else _run_task(request)
             with TASK_REGISTRY_LOCK:
+                if selection is not None and not _source_record_current_locked(record, owner):
+                    return
                 cancellation_requested = TASK_REGISTRY.get(
                     request.requestId,
                     {},
                 ).get("cancellationRequested") is True
             if cancellation_requested:
-                _update_task(
-                    request.requestId,
+                publish(
                     status="cancelled",
                     data=None,
                     completedAt=_now_iso(),
                 )
             else:
-                _update_task(
-                    request.requestId,
+                publish(
                     status="succeeded",
                     data=data,
                     completedAt=_now_iso(),
@@ -650,14 +724,15 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             ContextGenerationCancellationRequested,
             ContextArtifactOperationCancellationRequested,
         ):
-            _update_task(
-                request.requestId,
+            publish(
                 status="cancelled",
                 data=None,
                 error=None,
                 completedAt=_now_iso(),
             )
         except Exception as error:
+            if selection is not None and not original_record_current():
+                return
             error_code = _safe_task_error_code(error)
             error_stage = _safe_task_error_stage(error)
             print(
@@ -673,8 +748,7 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                 ),
                 flush=True,
             )
-            _update_task(
-                request.requestId,
+            publish(
                 status="failed",
                 error=PythonRuntimeError(
                     code=error_code,
@@ -688,18 +762,33 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             )
         finally:
             with TASK_REGISTRY_LOCK:
-                _prune_terminal_tasks_locked()
+                if selection is None or _source_record_current_locked(record, owner):
+                    _prune_terminal_tasks_locked()
 
-    future = TASK_EXECUTOR.submit(task_wrapper)
-    _update_task(request.requestId, future=future)
+    try:
+        future = TASK_EXECUTOR.submit(task_wrapper)
+    except Exception:
+        if selection is not None:
+            owner.issue_unconfirmed()
+            raise ModelSourceTaskError() from None
+        raise
+    if not publish(future=future):
+        raise ModelSourceTaskError()
     with TASK_REGISTRY_LOCK:
-        record = TASK_REGISTRY[request.requestId]
+        if selection is not None:
+            if not _source_record_current_locked(record, owner):
+                raise ModelSourceTaskError()
+            reply_record = record
+        else:
+            reply_record = TASK_REGISTRY[request.requestId]
+            if isinstance(reply_record.get("_modelSourceOwner"), ModelSourceTaskOwner):
+                raise ModelSourceTaskError()
     accepted_status = (
-        record["status"]
-        if record["status"] in {"queued", "running"}
+        reply_record["status"]
+        if reply_record["status"] in {"queued", "running"}
         else "running"
     )
-    return StartPythonRuntimeTaskResult(requestId=request.requestId, taskType=request.taskType, accepted=True, status=accepted_status, startedAt=record["startedAt"], updatedAt=record["updatedAt"], metadata=record["metadata"])
+    return StartPythonRuntimeTaskResult(requestId=request.requestId, taskType=request.taskType, accepted=True, status=accepted_status, startedAt=reply_record["startedAt"], updatedAt=reply_record["updatedAt"], metadata=reply_record["metadata"])
 
 
 @app.get("/health", response_model=PythonRuntimeHealthCheckResult)
@@ -718,6 +807,7 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "ensure-model-download",
         "ensure-model-download.exact-revision-v1",
         "ensure-model-download.source-manifest-v1",
+        MODEL_SOURCE_TASK_CAPABILITY,
         "model-status",
         "unload-model",
         "dataset-preparation.auto-inference-mode",
@@ -740,8 +830,48 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
 
 
 @app.post("/tasks/start", response_model=StartPythonRuntimeTaskResult)
-def start_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult:
-    return _start_async_task(request)
+def start_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult | JSONResponse:
+    try:
+        return _start_async_task(request)
+    except ModelSourceTaskError:
+        return _model_source_error(400)
+
+
+def _model_source_task_owner(request_id):
+    if not valid_model_source_task_id(request_id):
+        return None
+    with TASK_REGISTRY_LOCK:
+        record = TASK_REGISTRY.get(request_id)
+        owner = record.get("_modelSourceOwner") if record is not None else None
+    return owner if isinstance(owner, ModelSourceTaskOwner) else None
+
+
+@app.get("/tasks/{request_id}/model-source")
+def read_model_source_status(request_id: str):
+    owner = _model_source_task_owner(request_id)
+    if owner is None:
+        return _model_source_error(404)
+    try:
+        return owner.status()
+    except ModelSourceTaskError:
+        return _model_source_error(409)
+
+
+@app.post("/tasks/{request_id}/model-source/acknowledgement")
+async def acknowledge_model_source(request_id: str, request: Request):
+    owner = _model_source_task_owner(request_id)
+    if owner is None:
+        return _model_source_error(404)
+    try:
+        incoming = await read_model_source_acknowledgement(request)
+    except ModelSourceTaskError:
+        return _model_source_error(400)
+    try:
+        # Registry locks are released before hashes, links or context cleanup.
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(owner.acknowledge, incoming)
+    except ModelSourceTaskError:
+        return _model_source_error(409)
 
 
 @app.get("/tasks/{request_id}", response_model=PythonRuntimeTaskStatusResult)
@@ -761,7 +891,14 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
         return CancelPythonRuntimeTaskResult(requestId=request_id, status="unknown", cancelled=False, message="Task not found.", metadata={"runtimeId": RUNTIME_ID})
     future = record.get("future")
     if record["status"] == "queued" and isinstance(future, Future) and future.cancel():
-        _update_task(request_id, status="cancelled", completedAt=_now_iso())
+        owner = record.get("_modelSourceOwner")
+        if isinstance(owner, ModelSourceTaskOwner):
+            owner.cancel_before_start()
+            if not _publish_source_task(record, owner, status="cancelled", completedAt=_now_iso()):
+                return CancelPythonRuntimeTaskResult(requestId=request_id, status="unknown", cancelled=False,
+                    message="Task is no longer available.", metadata={"runtimeId": RUNTIME_ID})
+        else:
+            _update_task(request_id, status="cancelled", completedAt=_now_iso())
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Cancelled queued task.", metadata=record.get("metadata"))
     if record["status"] == "cancelled":
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Task is already cancelled.", metadata=record.get("metadata"))
@@ -774,6 +911,9 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
         }:
             with TASK_REGISTRY_LOCK:
                 current = TASK_REGISTRY.get(request_id)
+                if current is not record:
+                    return CancelPythonRuntimeTaskResult(requestId=request_id, status="unknown", cancelled=False,
+                        message="Task is no longer available.", metadata={"runtimeId": RUNTIME_ID})
                 if current is not None:
                     current["cancellationRequested"] = True
                     current["progress"] = {
@@ -807,6 +947,8 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
 
 @app.post("/models/ensure-downloaded", response_model=EnsureModelDownloadResult, response_model_exclude_unset=True)
 def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDownloadResult | JSONResponse:
+    if request.sourceTransfer is not None:
+        return _model_source_error(409)
     started_at = time.monotonic()
     print(
         json.dumps(
@@ -882,7 +1024,7 @@ def unload_models() -> UnloadModelsResult | JSONResponse:
     global MODEL_UNLOAD_IN_PROGRESS
     from .tasks.local_model_offload import OffloadAdmissionError
     with TASK_REGISTRY_LOCK:
-        active_task_count = sum(task.get("status") in {"queued", "running"} for task in TASK_REGISTRY.values())
+        active_task_count = sum(_task_retains_custody(task) for task in TASK_REGISTRY.values())
         if active_task_count > 0 or MODEL_UNLOAD_IN_PROGRESS:
             return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_unload_blocked", message="Cannot unload generation model while a runtime task or cleanup is active.", details={"activeTaskCount": active_task_count}, retryable=True).model_dump(mode="json")})
         MODEL_UNLOAD_IN_PROGRESS = True

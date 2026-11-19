@@ -1,12 +1,24 @@
 # Python runtime adapter
 
+The private worker capability `ensure-model-download.source-transfer-v1` binds
+one captured transfer to its original authenticated async Task record. That
+record retains the source context after task success. An exact receiver-observed
+ACK permits sender cleanup; a separate receiver-settled ACK retires the record
+only after the host has saved that outcome and finished its own custody work.
+Lost replies permit read-only status or exact ACK replay, never repeated file
+effects. Pending or uncertain custody counts toward capacity and prevents
+pruning, replacement and model unload. The generic Node client rejects reserved
+`sourceTransfer` input and active serialization hooks before transport, and always
+dispatches detached passive Model data. Node preparation/import, original actor
+approval and public acquisition are separate integration work.
+
 An explicit private handoff can link a staged closed manifest into an exact
 fresh same-volume recipient namespace. It does not copy or replace files.
 The sender retains custody until the trusted receiver observes the complete
 bound receipt. Only then are known source names removed. An unconfirmed or
 changed outcome retains remaining names and custody. This is a local primitive;
-the worker-task ACK channel, Node ownership and persistent Model save remain
-separate work.
+the worker-task owner below composes its ACK channel, while Node ownership and
+persistent Model save remain separate work.
 
 The private temporary source-staging context composes that transport with
 exclusive bounded file writes, acknowledged close and exact-file verification.

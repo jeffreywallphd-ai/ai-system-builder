@@ -2,7 +2,7 @@ Headless source-preview feature checks cover copied codecs, application policy
 and provider phases, real host-reader composition and exact metadata digests.
 Private manifest work also uses Model owner unit/types, existing runtime
 ownership and `headless-model-manifest-worker`. The last runs controlled
-manifest/stream/staging/handoff classes: disposable files, SDK/DNS/sink failures and an owned
+manifest/stream/staging/handoff/task classes: disposable files, SDK/DNS/sink failures and an owned
 local socketpair HTTP-response deadline fixture, with no provider or model load. Preserve
 shared-worker-only/unknown-path fallback and ordinary revision compatibility;
 these tests do not qualify public acquisition, native custody or hard quotas.
@@ -13,7 +13,11 @@ cache lookup unchanged. No persistent Model path or restart ledger is qualified.
 Handoff cases add actual same-volume paired links, occupied/EXDEV/error refusal,
 lost link/unlink acknowledgement, changed shared bytes, foreign data, one-use
 source/ACK races and stalled trusted observations. The local callback proves no
-cross-process receiver ACK, Node ownership or persistent Model publication.
+Node ownership or persistent Model publication. The private authenticated Task
+profile adds real ASGI/queue/ACK fixtures, strict streamed bodies, finite phases,
+lost replies, exact record reuse fences, held callbacks and long Windows paths.
+Sender cleanup and receiver settlement remain separate. Related existing task,
+download and unload cases preserve omission behavior; no full/model suite runs.
 Related pinned SDK and Managed route profiles retain authentication, revocation,
 original-target correlation and independent reply checks. The portable31tool
 plan catalog stays within32 and discloses provider/key use separately from saved
