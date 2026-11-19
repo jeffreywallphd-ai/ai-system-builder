@@ -1,5 +1,36 @@
 # Headless System Builder threat model
 
+## Private paired-link storage handoff
+
+Protect temporary model bytes, recipient namespace and one-use ownership.
+Require a trusted host-captured empty canonical same-volume root, stable
+ancestors and exact task/nonce/manifest. A private capture marker separates this
+authority object from decoded data; it is not authenticated cross-process proof.
+Reserve the source handoff before external callbacks/metadata and ACK observation
+once, so competing attempts cannot create two recipient inventories.
+Scope closure during a held preparation callback must retain original custody;
+the final post-callback lifetime check denies new recipient effects.
+
+Exclusive hardlinks refuse occupied names/EXDEV without copy/overwrite fallback.
+Only the exact recorded source/receiver pair may change from one to two links;
+changed bytes, extra links, foreign entries, altered parents and stale host
+custody deny. Close and complete manifest/inode/size/mtime/hash evidence precedes
+the minimized receipt. Use lossless decimal identity strings in its root witness.
+Receipt/authority mutation, truthy or async observations grant no ACK.
+
+A trusted receiver observation must be copied/bound to the original complete
+receipt. Recheck its host and all bytes/identities after callbacks and immediately
+before source unlink. Prove the paired two-to-one transition; never remove the
+recipient. Unknown or partial native effects retain remaining names and lease
+without automatic retry, inferred adoption or quota credit. A stalled observation
+retains custody. Cleanup ownership is separate from expired source egress and
+does not permit model import/registration or a new transfer.
+
+Residual limits: paired links share mutable bytes. Read-only cooperative custody
+is not native immutability, a hostile-writer fence, directory-fsync or restart
+proof. This local observation callback is not the future worker-task/Node ACK
+channel. No external provider/model/native/host/public or parent pass follows.
+
 ## Private temporary Model staging
 
 Protect prepared host roots, retained data and task/resource custody. Capture

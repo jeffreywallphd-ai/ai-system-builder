@@ -13,6 +13,38 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+`ModelSourceHandoff` is an explicit private addition to ordinary read-only
+staging. A trusted host captures an empty prepared recipient root, canonical
+ancestor identities, exact task/nonce and separate host-lifetime/ACK-observation
+callbacks. A decoded request or worker receipt cannot supply those callbacks.
+Source handoff ownership is reserved before any callback or metadata work; a
+second constructor cannot enter recipient effects. ACK observation also has a
+separate one-use reservation. A context that ends during preparation retains
+custody until settlement; post-callback scope checks prevent late creation.
+
+Atomic exclusive same-volume hardlinks create only selected closed files.
+Occupied paths and cross-device errors deny without copy, overwrite or unlink
+fallback. Exact recorded names and inode/size/mtime/hash facts must prove
+`nlink 1 -> 2 -> 1`; legitimate link/unlink ctime transitions are recaptured.
+Ordinary staging still requires a single link. Root witness numbers use decimal
+strings to avoid future Node integer loss; no cross-language protocol is claimed.
+
+All links and the complete manifest precede a minimized private receipt. The
+trusted receiver must separately observe that exact receipt once; callback or
+receipt mutation denies. Fresh complete byte/identity checks precede removal
+of known source names. Receiver host custody controls this cleanup separately
+from expired source egress authority. A held ACK retains both sides and the
+staging lease; returning a receipt never releases it.
+
+Unknown link/unlink acknowledgement, extra links/files, shared-byte mutation or
+changed parents poison the handoff and retain remaining names and custody.
+The receiver tree is never deleted here. After a qualified local ACK, only the
+original owned skeleton is cleaned. Receiver files remain temporary/read-only
+under their host owner's lifetime; ACK grants no Model registration or public
+effect. Future task ACK/Node/storage binding must preserve that authority.
+No native hostile-writer fence, directory-fsync/restart durability, physical
+cross-volume support, external provider/model or parent qualification follows.
+
 `stage_model_source` owns one private temporary tree under an existing trusted
 canonical host directory. It reserves its nonqueueing lease before policy or
 filesystem work and retains it across transfer, read-only consumer use and

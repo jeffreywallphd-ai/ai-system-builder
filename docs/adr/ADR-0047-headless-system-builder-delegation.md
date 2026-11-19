@@ -1,5 +1,27 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private source-to-storage handoff prerequisite
+
+Use the existing exclusive file-link publication semantics for the same-volume
+private profile. Capture the trusted recipient namespace and lifetime/ACK
+observation before effects. Reserve one source handoff before callbacks; reserve
+ACK once. Preserve the complete closed manifest through exact paired
+`nlink 1 -> 2 -> 1` ownership. No directory replacement or copy fallback is
+introduced. Unknown syscall acknowledgement cannot be inferred from path
+existence or retried.
+
+Receipt production and receiver observation are separate. After the exact
+trusted observation, reverify all bytes/identities before removing only known
+source names. Receiver host custody governs cleanup independently of source
+egress expiry and never grants new model/business effects. Foreign changes or
+uncertainty retain remaining data and custody. Keep ordinary read-only staging
+strict; no generic multi-link allowance is added.
+
+This synchronous local primitive does not establish cross-process task ACK,
+Node lifetime, cache/registry publication, directory-fsync or crash/restart
+durability. Native hostile-writer, provider/model/host and parent qualification
+remain separate. The default runtime and ordinary SDK downloads do not change.
+
 ### Private temporary source custody
 
 Compose the existing I7 stream and manifest protocols in a synchronous,

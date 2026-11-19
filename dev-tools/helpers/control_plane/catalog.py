@@ -179,6 +179,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_source_transport.py",
             "modules/adapters/runtime/python/worker/tasks/model_source_staging.py",
             "modules/adapters/runtime/python/worker/tests/test_model_source_staging.py",
+            "modules/adapters/runtime/python/worker/tasks/model_source_handoff.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_source_handoff.py",
         ),
         "sources": (
             "modules/application/ports/runtime/python-runtime.port.ts",
@@ -196,13 +198,16 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_source_transport.py",
             "modules/adapters/runtime/python/worker/tasks/model_source_staging.py",
             "modules/adapters/runtime/python/worker/tests/test_model_source_staging.py",
+            "modules/adapters/runtime/python/worker/tasks/model_source_handoff.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_source_handoff.py",
             "modules/adapters/runtime/python/README.md",
             "modules/adapters/runtime/python/worker/README.md",
         ),
         "command": ("-m", "unittest", "-v",
             "modules.adapters.runtime.python.worker.tests.test_model_download_manifest.ModelDownloadManifestTests",
             "modules.adapters.runtime.python.worker.tests.test_model_source_transport.ModelSourceTransportTests",
-            "modules.adapters.runtime.python.worker.tests.test_model_source_staging.ModelSourceStagingTests"),
+            "modules.adapters.runtime.python.worker.tests.test_model_source_staging.ModelSourceStagingTests",
+            "modules.adapters.runtime.python.worker.tests.test_model_source_handoff.ModelSourceHandoffTests"),
     },
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (

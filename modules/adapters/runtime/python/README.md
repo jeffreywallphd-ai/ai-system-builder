@@ -1,5 +1,13 @@
 # Python runtime adapter
 
+An explicit private handoff can link a staged closed manifest into an exact
+fresh same-volume recipient namespace. It does not copy or replace files.
+The sender retains custody until the trusted receiver observes the complete
+bound receipt. Only then are known source names removed. An unconfirmed or
+changed outcome retains remaining names and custody. This is a local primitive;
+the worker-task ACK channel, Node ownership and persistent Model save remain
+separate work.
+
 The private temporary source-staging context composes that transport with
 exclusive bounded file writes, acknowledged close and exact-file verification.
 Its trusted prepared root is passed explicitly to validation; global HF paths

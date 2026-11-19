@@ -1,0 +1,32 @@
+{
+  "schema_version": "headless-model-handoff-observation-v1",
+  "scope": "Private synchronous same-volume paired-link custody, not a worker-task ACK or persistent Model publication",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Fresh exact candidate checks and actual separate-invocation review govern component completion. This descriptive report supplies no executed or parent pass.",
+  "controls": [
+    "A trusted host-captured empty canonical receiver root, ancestors, task/nonce and separate host/ACK-observation callbacks precede effects. No decoded caller object or returned receipt supplies that authority.",
+    "One nonqueueing source handoff reservation is installed before callbacks/metadata. A distinct one-use ACK reservation prevents competing observations/unlinks.",
+    "Atomic exclusive same-volume links publish the exact closed files without copy or replacement. Recorded same-inode pairs prove single-to-double-to-single link transitions while size/mtime/hash stay fixed and legitimate ctime transitions are captured.",
+    "The complete manifest and minimized bound receipt precede any trusted receiver observation. Receipt/root/authority mutations and nonboolean/async acknowledgements deny. Identity witnesses use lossless decimal strings, without claiming a Node protocol.",
+    "Fresh complete bytes/identities after the observer precede known source-name unlink. Host-owned cleanup is separate from expired source egress. Unknown or partial syscalls retain remaining source/recipient names and the lease, never retry or delete the receiver."
+  ],
+  "controlled_observations": [
+    "Twenty-eight focused handoff cases pass with real disposable same-volume files and controlled effect/ACK failures. The existing eighteen staging cases remain compatible.",
+    "Positive receipt/ACK preserves exact bytes and inode identity, proves link-count transitions and removes only the owned original skeleton. A returned receipt without receiver observation retains custody.",
+    "Occupied targets, controlled EXDEV, mid-manifest failure and effect-then-thrown link/unlink acknowledgement cannot overwrite, copy, retry or remove receiver data.",
+    "Changed shared bytes, a third link, foreign source/receiver files, renamed parents, closed context, uncaptured authority, receipt mutation and observer retirement deny.",
+    "Held constructor and ACK callbacks with competing callers prove one inventory/observation and no competing creation or unlink. A held ACK retains custody past source egress expiry, then permits only positively owned cleanup.",
+    "Closing the source context during the final precreation callback retains original bytes and lease until actual preparation settlement; the resumed constructor cannot create recipient data after its scope has ended."
+  ],
+  "retained_corrections": [
+    "Independent preflight found constructor ownership was installed after callbacks and source verification, allowing two attempts to enter recipient effects. A per-source nonqueueing reservation now precedes all callbacks/metadata; the causal competing-recipient case proves the correction.",
+    "ACK has its own one-use reservation and competing-observer regression. Receipt field snapshots and source context lifetime are rechecked after callbacks; preparation settlement prevents early lease credit. Identity witness numbers are consistently lossless."
+  ],
+  "qualification_limits": [
+    "These are ordinary same-volume disposable-file OS calls and controlled failures. EXDEV is injected; physical cross-volume/native platform qualification is not claimed.",
+    "Receiver files remain temporary and read-only under their owning host lifecycle. Link presence, a receipt and local ACK grant no persistent Model reference, import/registration, runtime readiness or quality.",
+    "Hardlinks share mutable bytes. Cooperative guards do not prove hostile native immutability, directory-fsync/crash/restart durability or a hard deadline for uninterruptible IO/observation.",
+    "Future worker-task ACK, captured Node ownership, resource/import/registration and public plan wiring remain I7 work. The worker cannot release sender custody merely because it serialized this receipt.",
+    "No new provider, engine, credentials, scheduler, process or holding map is added. Ordinary SDK downloads and accepted model accuracy are unchanged; no external/model/host/public/parent/chunk pass is claimed."
+  ]
+}

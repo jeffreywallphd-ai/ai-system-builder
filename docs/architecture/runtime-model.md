@@ -1,5 +1,17 @@
 # Runtime Model
 
+Private source handoff reuses exclusive hardlink publication semantics instead
+of assuming a portable no-replace directory rename. It reserves one source
+handoff before callbacks and one receiver ACK observation. Only an exact fresh
+same-volume namespace can receive the complete closed selected manifest.
+Recorded paired inode/link facts and full verification precede a minimized
+receipt; its serialization is not receiver acknowledgement. A separately trusted
+host observation permits only known source-name unlink with proven link-count
+transition. Uncertainty retains remaining names/custody, not retry authority.
+Ordinary single-link cleanup is unchanged. This local primitive does not compose
+a worker-task ACK channel, Node owner, durable restart ledger or persistent
+publication/Model registration; those stay explicit integration work.
+
 Private source staging composes selected-file streaming into context-scoped
 read-only temporary custody. One staging lease spans policy, exclusive writes,
 fsync/close, integrity verification, consumer use and positively owned cleanup.

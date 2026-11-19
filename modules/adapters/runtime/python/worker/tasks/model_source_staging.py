@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 from pathlib import Path
 import shutil
@@ -70,6 +70,7 @@ class StagedModelSource:
     manifest_digest: str
     size_bytes: int
     file_count: int
+    _custodian: object = field(default=None, repr=False, compare=False)
 
 
 class _Staging:
@@ -95,6 +96,9 @@ class _Staging:
         self.written = 0
         self.stage_root: Path | None = None
         self.snapshot: Path | None = None
+        self.consumer_active = False
+        self.handoff = None
+        self.handoff_reservation = Lock()
         for path in reversed((prepared_root, *prepared_root.parents)):
             self.session.assert_current()
             facts = path.lstat()
@@ -236,10 +240,16 @@ class _Staging:
         for record in self.files:
             self.check_file(record)
         self.session.assert_current()
+        self.consumer_active = True
         return StagedModelSource(self.stage_root, self.snapshot, self.manifest.manifestDigest,
-            self.written, len(self.files))
+            self.written, len(self.files), self)
 
     def cleanup(self) -> bool:
+        if self.handoff is not None and not self.handoff.preparation_settled:
+            return False
+        if (self.handoff is not None and self.handoff.recipient_effects_started and
+                (not self.handoff.acknowledged or self.handoff.failed)):
+            return False
         if self.uncertain or any(record.descriptor is not None or record.close_uncertain for record in self.files):
             return False
         try:
@@ -287,6 +297,8 @@ def stage_model_source(manifest: ModelDownloadManifest, *, prepared_root: Path, 
     except Exception:
         raise ModelSourceStagingError() from None
     finally:
+        if owner is not None:
+            owner.consumer_active = False
         if owner is None or owner.cleanup():
             _STAGING_SLOT.release()
         else:
