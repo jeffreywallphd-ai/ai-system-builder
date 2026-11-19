@@ -323,6 +323,27 @@ class ModelSourceTaskOwner:
                 raise ModelSourceTaskError()
             self._state = _State("cancelled", False, False)
 
+    def identity_probe_scope(self):
+        from .model_source_identity import capture_identity_scope
+        _strict(self._record_current)
+        state = self._state
+        if (state.phase not in {"awaiting-receiver", "acknowledged"} or state.receipt is None or
+                self._prepared is None or self._custodian is None or self._handoff is None):
+            raise ModelSourceTaskError()
+        transfer = self.selection.sourceTransfer
+        manifest = self.selection.sourceManifest
+        ancestors = {record.path: record.identity for record in self._custodian.ancestors}
+        receiver = self._handoff._receiver
+        roots = (ancestors[self._prepared[0]], ancestors[self._prepared[1]], receiver.ancestors[-1][1])
+        def current():
+            return (self._record_current() is True and self._state is state and
+                self.selection.sourceTransfer is transfer and self.selection.sourceManifest is manifest)
+        scope = capture_identity_scope(task_id=self.task_id, acquisition_id=transfer.acquisitionId,
+            handoff_id=transfer.handoffId, root=self._prepared[0], roots=roots, manifest=manifest,
+            links=2 if state.phase == "awaiting-receiver" else 1, current=current)
+        _strict(current)
+        return scope
+
     def issue_unconfirmed(self):
         with self._control:
             # A raised submit can have queued the exact original job. Preserve

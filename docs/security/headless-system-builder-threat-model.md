@@ -1,5 +1,36 @@
 # Headless System Builder threat model
 
+## Private Node and worker identity binding
+
+Protect the host-prepared roles, original file witnesses and proof secret.
+Node bigint facts and full five-field Python facts are different evidence;
+never truncate, coerce or adopt a worker identity as local ownership. The private
+client captures one already-owned launch and rechecks it around HTTP/body
+awaits. Missing worker/capability never starts or installs one. Initial roles
+are empty; snapshot reads require the original Task state/selection/phase.
+Strict requests contain no path/file list and are stream-bounded to 4 KiB;
+responses are stream-bounded to 64 KiB. No registry lock spans file IO.
+
+Capture the custodian before creating the exclusive no-follow 32-byte proof.
+Require plain single-link identity, exact bounded bytes, fsync/close and stable
+per-API before/after facts. Preserve ctime separately for path/descriptor APIs.
+Unknown close retains resource custody and the worker's sole probe slot.
+The secret never enters HTTP, arguments, logs, records or provider credentials.
+A closed domain-separated sorted-ASCII HMAC binds version, phase, fresh challenge,
+task/acquisition/handoff, actual worker incarnation, full role/file facts and
+manifest. Node validates schema and timing-safe MAC before metadata observation,
+then rechecks its local root/proof identities. Old/wrong challenges, worker
+changes, altered roles/proof bytes and unexpected fields deny.
+
+Keep both original file witnesses across receipt, sender cleanup, consumption
+and retirement. Same approved bytes at a different inode cannot be adopted.
+Allow only the explicit paired link-count/ctime transition. A held probe or
+consumer excludes retirement; positively known inventories alone permit removal.
+Unknown close/unlink/callback never authorizes retries, adoption or disk credit.
+HMAC proves shared secret-file reachability, not native custody or physical
+locality. This private protocol grants no original actor/plan authority,
+persistent import/registration, durable restart or public/host/parent pass.
+
 ## Private Model task custody and acknowledgement
 
 Protect exact source selection, prepared roots, original task ownership and

@@ -192,6 +192,16 @@ class ModelSourceAcknowledgement(_Strict):
     recipientWitness: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
 
 
+class ModelSourceIdentityProbeRequest(_Strict):
+    phase: Literal["roots", "snapshot"]
+    taskId: str = Field(pattern=_SOURCE_UUID)
+    acquisitionId: str = Field(pattern=_SOURCE_UUID)
+    handoffId: str = Field(pattern=_SOURCE_UUID)
+    challenge: str = Field(pattern=r"^[a-f0-9]{64}$")
+    runtimeId: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+    workerStartedAt: str = Field(min_length=20, max_length=48)
+
+
 class EnsureModelDownloadRequest(BaseModel):
     provider: Literal["transformers"]
     modelId: str

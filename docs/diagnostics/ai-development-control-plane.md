@@ -18,6 +18,25 @@ profile adds real ASGI/queue/ACK fixtures, strict streamed bodies, finite phases
 lost replies, exact record reuse fences, held callbacks and long Windows paths.
 Sender cleanup and receiver settlement remain separate. Related existing task,
 download and unload cases preserve omission behavior; no full/model suite runs.
+The same worker profile also covers the read-only identity bridge: streamed
+request bounds, authentication/incarnation, actual five-field producer receipts,
+delayed Node-created proof writes, per-API ctime, changed roles/Task records,
+held probes and unknown close. Model owner unit/types add the private Node
+custodian/client and a controlled owned Python HTTP-to-ASGI Task/Handoff journey.
+That actual producer fixture keeps Node and Python identities at full width,
+verifies challenge/MAC before metadata, observes sender link transitions and
+retires only known receiver/proof data. Negative cases cover replay/MAC/root/
+marker replacement, stale body/worker, same-byte foreign inodes, held consumers
+and lost native acknowledgements. The fixture uses only existing installed
+tools and synthetic provider bytes; its HTTP shim is not a product host pass.
+The mandatory worker class supplies its exact installed Python and a process-local
+test-only gate to the fixed Node producer case. It bounds the child/output and
+requires the exact named pass, rejecting zero tests, a skipped/TODO target or
+suite/child failure. Node-only standard runs keep the pure receiver tests and
+explicitly skip only that integration; affected receiver/client/fixture sources
+always route to the mandatory worker profile. No environment preparation occurs.
+Preserve ordinary request checks and unknown/shared-source fallback. No source
+model, accepted accuracy, physical/native, public or parent qualification follows.
 Related pinned SDK and Managed route profiles retain authentication, revocation,
 original-target correlation and independent reply checks. The portable31tool
 plan catalog stays within32 and discloses provider/key use separately from saved

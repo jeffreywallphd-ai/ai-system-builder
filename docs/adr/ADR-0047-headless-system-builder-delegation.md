@@ -1,5 +1,26 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Separate filesystem representations in the private receiver
+
+Use an additive read-only binding in the existing already-owned worker for the
+private same-volume profile. Do not compose a new binary/process, coerce Node
+device numbers into Python facts, or weaken either side's current identity
+checks. A fixed fresh host namespace and exclusive closed single-link proof,
+fresh challenge and exact worker incarnation bind separately typed full facts
+under a domain-separated canonical MAC. The secret stays in private owned
+memory/file; the response contains no path. This is reachability evidence,
+not native/physical locality or authority for a Model effect.
+
+Initial roles stay empty and snapshot reads require the original Task's captured
+selection/phase. Bound body, response, inventory and native-handle work; unknown
+close retains the sole probe reservation. Node must verify the MAC before
+metadata observation, match the actual five-field Python handoff receipt and
+keep both original file witnesses across sender cleanup and one-use consumption.
+Only the explicitly proven link-count/ctime transition is allowed. Cleanup stays
+known-only and host-owned; unknown outcomes grant no retry/adoption/restart.
+Product Task composition, original actor/plan admission and persistent Model
+registration remain separate implementation/qualification work.
+
 ### Private source transfer in the existing Task owner
 
 Keep retained Model source custody in the original authenticated async Task

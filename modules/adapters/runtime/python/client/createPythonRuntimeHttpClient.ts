@@ -28,8 +28,13 @@ import {
 } from "../protocol/pythonRuntimeHttpProtocol";
 import { normalizePythonRuntimeLoopbackBaseUrl } from "../config/pythonRuntimeEndpoint";
 import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
+import {MODEL_SOURCE_IDENTITY_CAPABILITY, captureModelSourceProbeInput, captureModelSourceRuntime,
+  readModelSourceIdentityEnvelope, type ModelSourceIdentityProbe, type ModelSourceIdentityProbeInput} from "./modelSourceIdentity";
+import {types} from "node:util";
 
 export interface PythonRuntimeHttpClient {
+  /** Private read-only metadata session; requires an already captured owned launch. */
+  captureModelSourceIdentityProbe(): Promise<ModelSourceIdentityProbe>;
   getHealthStatus(): Promise<PythonRuntimeHealthCheckResult>;
   getCapabilities(): Promise<PythonRuntimeCapabilitiesResult>;
   ensureModelDownloaded(request: {
@@ -343,8 +348,10 @@ export function createPythonRuntimeHttpClient(
     endpoint: string,
     diagnosticEndpoint: string,
     init: RequestInit,
+    requiredOwnership?: () => void,
   ): Promise<{ response: Response; payload: unknown; assertOwnedProcess: () => void }> => {
-    const assertOwnedProcess = captureOwnership?.() ?? (() => {});
+    const owned = captureOwnership?.() ?? (() => {});
+    const assertOwnedProcess = () => {owned(); requiredOwnership?.();};
     assertOwnedProcess();
     const authorizationToken = (
       options.authorizationTokenProvider?.() ?? options.authorizationToken
@@ -352,6 +359,7 @@ export function createPythonRuntimeHttpClient(
     if (!authorizationToken || authorizationToken.length < 32) {
       throw new Error("Python runtime launch authentication is unavailable.");
     }
+    assertOwnedProcess();
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
@@ -367,7 +375,25 @@ export function createPythonRuntimeHttpClient(
         signal: controller.signal,
       });
       assertOwnedProcess();
-      const payload = await parseJsonResponseSafe(response);
+      let payload: unknown;
+      if (endpoint === "/models/source-identity") {
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("The model receiver identity could not be confirmed.");
+        const chunks: Uint8Array[] = []; let bytes = 0;
+        try {
+          for (;;) {
+            assertOwnedProcess(); const next = await reader.read(); assertOwnedProcess();
+            if (next.done) break;
+            bytes += next.value.byteLength;
+            if (bytes > 64 * 1024) throw new Error("The model receiver identity could not be confirmed.");
+            chunks.push(new Uint8Array(next.value));
+          }
+          payload = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(Buffer.concat(chunks)));
+        } catch {
+          try {await reader.cancel();} catch { /* No new metadata/effect permission. */ }
+          throw new Error("The model receiver identity could not be confirmed.");
+        } finally {reader.releaseLock();}
+      } else payload = await parseJsonResponseSafe(response);
       assertOwnedProcess();
       return { response, payload, assertOwnedProcess };
     } catch (error) {
@@ -383,6 +409,31 @@ export function createPythonRuntimeHttpClient(
   };
 
   return {
+    async captureModelSourceIdentityProbe() {
+      if (!captureOwnership) throw new Error("The model receiver identity could not be confirmed.");
+      const original = captureOwnership();
+      if (typeof original !== "function") throw new Error("The model receiver identity could not be confirmed.");
+      const current = () => {
+        const value: unknown = original();
+        if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+        if (value !== undefined) throw new Error("The model receiver identity could not be confirmed.");
+      };
+      current();
+      const health = await this.getHealthStatus(); current();
+      if (health.healthy !== true || health.status.status !== "ready") throw new Error("The model receiver identity could not be confirmed.");
+      const runtime = captureModelSourceRuntime({runtimeId: health.status.runtimeId, workerStartedAt: health.status.workerStartedAt});
+      const capabilities = await this.getCapabilities(); current();
+      if (capabilities.runtimeId !== runtime.runtimeId || !capabilities.capabilities.includes(MODEL_SOURCE_IDENTITY_CAPABILITY))
+        throw new Error("The model receiver identity could not be confirmed.");
+      return Object.freeze({...runtime, assertCurrent: current, inspect: async (raw: ModelSourceIdentityProbeInput) => {
+        const input = captureModelSourceProbeInput(raw); current();
+        const {response, payload, assertOwnedProcess} = await authenticatedFetch("/models/source-identity", "/models/source-identity",
+          {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({...input, ...runtime})}, current);
+        assertOwnedProcess(); current();
+        if (!response.ok) throw new Error("The model receiver identity could not be confirmed.");
+        return readModelSourceIdentityEnvelope(payload, input, runtime);
+      }});
+    },
     async getHealthStatus() {
       const { response, payload, assertOwnedProcess } = await authenticatedFetch("/health", "/health", {
         method: "GET",

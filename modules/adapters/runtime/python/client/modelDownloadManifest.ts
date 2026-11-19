@@ -28,6 +28,14 @@ function assertPassiveModelInput(input: unknown): void {
   };
   inspect(input, 0);
 }
+
+/** Internal Model data only: never execute a proxy, getter or serialization hook. */
+export function capturePassiveModelData<T>(input: T): T {
+  try {
+    assertPassiveModelInput(input);
+    return freezeCapturedModelData(copyBoundedPassiveData(input)) as T;
+  } catch {throw invalid();}
+}
 export function freezeCapturedModelData<T>(value: T): T {
   if (value && typeof value === "object") {
     for (const child of Object.values(value)) freezeCapturedModelData(child);
@@ -51,8 +59,7 @@ export function captureModelManifestPayload<T>(input: T): {payload: T; manifest?
   const property = Object.getOwnPropertyDescriptor(input, "sourceManifest");
   if (!property && "sourceManifest" in input || property && !("value" in property)) throw invalid();
   try {
-    assertPassiveModelInput(input);
-    const raw = copyBoundedPassiveData(input) as Record<string, unknown>;
+    const raw = capturePassiveModelData(input) as Record<string, unknown>;
     if (!property) return {payload: freezeCapturedModelData(raw) as T};
     if (raw.provider !== "transformers" || typeof raw.modelId !== "string" || raw.artifactForm !== undefined && raw.artifactForm !== "full-model") throw invalid();
     const revision = normalizeModelDownloadRevision(raw.revision);
@@ -68,7 +75,7 @@ export function captureModelManifestPayload<T>(input: T): {payload: T; manifest?
 
 export function captureManifestExpectation(value: unknown): RuntimeModelDownloadManifest {
   try {
-    const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["source", "manifestDigest"]);
+    const raw = readStrictPassiveRecord(capturePassiveModelData(value), ["source", "manifestDigest"]);
     const source = raw.source as Record<string, unknown>;
     if (!source || typeof source !== "object" || Array.isArray(source)) throw invalid();
     const selected = captureModelManifestPayload({provider: "transformers", modelId: source.modelId,

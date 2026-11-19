@@ -1,5 +1,25 @@
 # Python runtime adapter
 
+The private Node receiver preserves its own bigint file witnesses separately
+from the worker's full five-field filesystem facts. Windows Node/Python device
+numbers must not be truncated or treated as equivalent. The already-owned
+worker can provide a bounded read-only challenge binding through
+`ensure-model-download.source-identity-v1`; capturing that client session never
+starts or installs a worker. An exclusive closed 32-byte proof file, fresh
+challenge, exact worker incarnation and domain-separated canonical HMAC bind
+the fixed prepared roles and original Task's selected snapshot facts. The
+secret is never sent, logged or serialized. This proves secret-file reachability,
+not physical locality, native custody or permission to download/save a Model.
+
+Node verifies this binding before accepting runtime metadata, then matches the
+actual full handoff receipt and closed local bytes. Both original file witnesses
+survive sender cleanup, consumption and retirement; only the explicit paired
+link-count/ctime transition is allowed. The host captures the actual custodian
+before effects. A held consumer/probe or unknown file/close/unlink outcome retains
+custody; cleanup removes only complete positively owned inventories. Generic
+request fields cannot grant this private owner. Persistent storage, public
+approval and product-host composition remain separate I7 work.
+
 The private worker capability `ensure-model-download.source-transfer-v1` binds
 one captured transfer to its original authenticated async Task record. That
 record retains the source context after task success. An exact receiver-observed
@@ -9,7 +29,7 @@ Lost replies permit read-only status or exact ACK replay, never repeated file
 effects. Pending or uncertain custody counts toward capacity and prevents
 pruning, replacement and model unload. The generic Node client rejects reserved
 `sourceTransfer` input and active serialization hooks before transport, and always
-dispatches detached passive Model data. Node preparation/import, original actor
+dispatches detached passive Model data. Production Node Task/import wiring, original actor
 approval and public acquisition are separate integration work.
 
 An explicit private handoff can link a staged closed manifest into an exact

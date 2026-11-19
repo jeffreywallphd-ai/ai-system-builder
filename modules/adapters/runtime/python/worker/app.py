@@ -74,6 +74,10 @@ from .tasks.model_source_task import (
     captured_selection as capture_model_source_selection, has_source_transfer,
     read_acknowledgement as read_model_source_acknowledgement, valid_task_id as valid_model_source_task_id,
 )
+from .tasks.model_source_identity import (
+    CAPABILITY as MODEL_SOURCE_IDENTITY_CAPABILITY, ModelSourceIdentityError,
+    read_identity_request, inspect_model_source_identity,
+)
 
 RUNTIME_ID = getenv("PYTHON_RUNTIME_ID", "python-sidecar")
 WORKER_VERSION = getenv("PYTHON_RUNTIME_WORKER_VERSION", "0.1.0")
@@ -808,6 +812,7 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "ensure-model-download.exact-revision-v1",
         "ensure-model-download.source-manifest-v1",
         MODEL_SOURCE_TASK_CAPABILITY,
+        MODEL_SOURCE_IDENTITY_CAPABILITY,
         "model-status",
         "unload-model",
         "dataset-preparation.auto-inference-mode",
@@ -844,6 +849,34 @@ def _model_source_task_owner(request_id):
         record = TASK_REGISTRY.get(request_id)
         owner = record.get("_modelSourceOwner") if record is not None else None
     return owner if isinstance(owner, ModelSourceTaskOwner) else None
+
+
+@app.post("/models/source-identity")
+async def read_model_source_identity(request: Request):
+    def denied(status):
+        return JSONResponse(status_code=status, content={"error": {"code": "model_source_identity_unconfirmed",
+            "message": "The model receiver identity could not be confirmed.", "retryable": False}})
+    try:
+        incoming = await read_identity_request(request)
+    except ModelSourceIdentityError:
+        return denied(400)
+    runtime_id, started_at = RUNTIME_ID, WORKER_STARTED_AT
+    if incoming.runtimeId != runtime_id or incoming.workerStartedAt != started_at:
+        return denied(409)
+    try:
+        scope = None
+        if incoming.phase == "snapshot":
+            owner = _model_source_task_owner(incoming.taskId)
+            if owner is None:
+                return denied(404)
+            scope = owner.identity_probe_scope()
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(inspect_model_source_identity, incoming,
+            runtime_id=runtime_id, worker_started_at=started_at,
+            is_current=lambda: RUNTIME_ID == runtime_id and WORKER_STARTED_AT == started_at,
+            scope=scope)
+    except (ModelSourceIdentityError, ModelSourceTaskError):
+        return denied(409)
 
 
 @app.get("/tasks/{request_id}/model-source")

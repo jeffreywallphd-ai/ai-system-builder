@@ -13,6 +13,33 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+## Private read-only receiver identity binding
+
+`ensure-model-download.source-identity-v1` adds authenticated
+`POST /models/source-identity`. Its strict streamed request is at most 4 KiB and
+contains only fixed phase, opaque task/acquisition/handoff, fresh challenge and
+the exact existing worker incarnation. It accepts no path or file list and
+cannot start a task. Initial source/receiver roles must be empty. Snapshot reads
+require the original Task owner's captured state, manifest, roots and phase
+before and after IO; registry locks never span file reads.
+
+A fixed namespace sibling `<acquisitionId>.proof` holds exactly 32 host-created
+bytes. Plain single-link identity, bounded EOF/read, acknowledged close and full
+before/after facts precede HMAC output. Compare common path/descriptor facts
+across APIs and preserve each API's own ctime baseline; Windows 3.14 exposes
+different meanings. One nonqueueing probe slot lasts through actual settlement.
+Unknown close retains the slot and its resource, without retry or handle credit.
+The closed canonical sorted-ASCII MAC binds version/phase/challenge, exact
+worker/task/roles, all five Python identity fields and selected file facts. It
+excludes the secret and paths. The Node consumer must keep its exact local
+bigint identities separately and verify the MAC before metadata observation.
+This is read-only interoperability/reachability evidence, not physical-locality,
+hostile-native, durable-restart, Model effect or public approval authority.
+The focused worker tests also run the exact controlled Node producer journey
+with `sys.executable` and a test-only process-local opt-in. They require its named
+pass without a skipped target. Node-only standard tests need no Python worker;
+they retain pure receiver coverage and explicitly skip that integration.
+
 ## Private Model transfer task
 
 `sourceTransfer` is an async-only internal profile advertised as

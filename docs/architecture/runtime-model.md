@@ -1,5 +1,24 @@
 # Runtime Model
 
+The private receiver identity bridge uses the same already-owned worker, not a
+new helper process or native identity discovery fallback. Node and Python expose
+different filesystem representations on Windows. Preserve their full separate
+witnesses, joined only by the closed read-only challenge protocol: fixed fresh
+namespace, exact owned launch incarnation, captured single-link proof file,
+fresh challenge and canonical domain-separated MAC. Root metadata observation
+cannot grant acquisition/ACK/storage authority; snapshot metadata comes only
+from the original accepted Task owner. No caller path or file list is accepted.
+
+The private Node custodian verifies its local closed bytes and actual Python
+handoff receipt using those separate witnesses. Original file identities persist
+across phases; only proven paired link-count/ctime changes are allowed. Reserve
+consumer/IO lifetime before callbacks. Known receiver/proof cleanup is separate
+from business consent; uncertain IO retains custody and cannot be retried.
+Capturing a probe requires an already owned healthy capable worker and never
+starts/installs one. The controlled HTTP-to-ASGI journey qualifies this private
+protocol, not Desktop/Managed composition, physical locality, native fencing,
+durable restart, public admission or persistent Model publication.
+
 The private source-transfer capability composes the paired-link primitives with
 the existing authenticated async Task registry. Capture strict selection and
 root identities before queueing; resolve only prepared UUID directories in a
