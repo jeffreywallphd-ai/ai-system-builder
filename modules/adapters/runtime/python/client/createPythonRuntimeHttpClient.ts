@@ -59,6 +59,8 @@ export interface CreatePythonRuntimeHttpClientOptions {
   baseUrl: string;
   authorizationToken?: string;
   authorizationTokenProvider?: () => string;
+  /** Private managed-foundation guard. Capture and recheck the same owned launch. */
+  captureProcessOwnership?: () => (() => void);
   fetchImplementation?: typeof fetch;
   defaultTaskTimeoutMs?: number;
   transportRequestTimeoutMs?: number;
@@ -132,6 +134,7 @@ export function resolveConfiguredModelCacheRoot(
 async function resolveModelCacheHandle(
   cacheRoot: string,
   modelHandle: string,
+  assertCurrent: () => void = () => {},
 ): Promise<string> {
   if (
     modelHandle.length > 1_024 ||
@@ -158,18 +161,22 @@ async function resolveModelCacheHandle(
     );
   }
   const rootStats = await lstat(cacheRoot);
+  assertCurrent();
   if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
     throw new TypeError("Python runtime model cache root is invalid.");
   }
   const canonicalRoot = await realpath(cacheRoot);
+  assertCurrent();
   let candidate = canonicalRoot;
   for (const segment of segments) {
     candidate = path.join(candidate, segment);
     const stats = await lstat(candidate);
+    assertCurrent();
     if (stats.isSymbolicLink() || !stats.isDirectory()) {
       throw new TypeError("Python runtime model cache handle is invalid.");
     }
     candidate = await realpath(candidate);
+    assertCurrent();
     const relativeCandidate = path.relative(canonicalRoot, candidate);
     if (
       relativeCandidate.startsWith("..") ||
@@ -187,6 +194,7 @@ async function mapModelDownloadPayload(
   endpoint: string,
   payload: unknown,
   cacheRoot: string,
+  assertCurrent: () => void = () => {},
 ) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error(
@@ -209,7 +217,9 @@ async function mapModelDownloadPayload(
   const localPath = await resolveModelCacheHandle(
     cacheRoot,
     record.modelHandle,
+    assertCurrent,
   );
+  assertCurrent();
   return {
     provider: "transformers" as const,
     modelId: record.modelId,
@@ -287,6 +297,7 @@ export function createPythonRuntimeHttpClient(
   options: CreatePythonRuntimeHttpClientOptions,
 ): PythonRuntimeHttpClient {
   const fetcher = options.fetchImplementation ?? fetch;
+  const captureOwnership = options.captureProcessOwnership;
   const modelCacheRoot = resolveConfiguredModelCacheRoot(
     options.environment ?? process.env,
   );
@@ -315,7 +326,9 @@ export function createPythonRuntimeHttpClient(
     endpoint: string,
     diagnosticEndpoint: string,
     init: RequestInit,
-  ): Promise<Response> => {
+  ): Promise<{ response: Response; payload: unknown; assertOwnedProcess: () => void }> => {
+    const assertOwnedProcess = captureOwnership?.() ?? (() => {});
+    assertOwnedProcess();
     const authorizationToken = (
       options.authorizationTokenProvider?.() ?? options.authorizationToken
     )?.trim();
@@ -328,7 +341,7 @@ export function createPythonRuntimeHttpClient(
       transportRequestTimeoutMs,
     );
     try {
-      return await fetcher(`${baseUrl}${endpoint}`, {
+      const response = await fetcher(`${baseUrl}${endpoint}`, {
         ...init,
         headers: {
           ...(init.headers as Readonly<Record<string, string>> | undefined),
@@ -336,6 +349,10 @@ export function createPythonRuntimeHttpClient(
         },
         signal: controller.signal,
       });
+      assertOwnedProcess();
+      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
+      return { response, payload, assertOwnedProcess };
     } catch (error) {
       if (controller.signal.aborted) {
         throw new Error(
@@ -350,10 +367,10 @@ export function createPythonRuntimeHttpClient(
 
   return {
     async getHealthStatus() {
-      const response = await authenticatedFetch("/health", "/health", {
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch("/health", "/health", {
         method: "GET",
       });
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       return mapRuntimeResponsePayload(
         "/health",
         response,
@@ -363,12 +380,12 @@ export function createPythonRuntimeHttpClient(
     },
 
     async getCapabilities() {
-      const response = await authenticatedFetch(
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch(
         "/capabilities",
         "/capabilities",
         { method: "GET" },
       );
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       return mapRuntimeResponsePayload(
         "/capabilities",
         response,
@@ -378,6 +395,8 @@ export function createPythonRuntimeHttpClient(
     },
 
     async ensureModelDownloaded(request) {
+      const assertCurrent = captureOwnership?.() ?? (() => {});
+      assertCurrent();
       assertHuggingFaceModelId(request.modelId);
       const requestId = `model-download-${randomUUID()}`;
       await this.startTask({
@@ -387,28 +406,36 @@ export function createPythonRuntimeHttpClient(
         timeoutMs: modelDownloadTimeoutMs,
       });
 
+      assertCurrent();
       const deadline = Date.now() + modelDownloadTimeoutMs;
       let recoverablePollFailureCount = 0;
       while (Date.now() <= deadline) {
+        assertCurrent();
         let status: PythonRuntimeTaskStatusResult;
         try {
           status = await this.readTaskStatus(requestId);
+          assertCurrent();
         } catch (error) {
+          assertCurrent();
           if (!isRecoverableRuntimePollError(error)) {
             throw error;
           }
 
           recoverablePollFailureCount += 1;
           await delay(modelDownloadPollIntervalMs);
+          assertCurrent();
           continue;
         }
 
         if (status.status === "succeeded") {
-          return await mapModelDownloadPayload(
+          const result = await mapModelDownloadPayload(
             "/tasks/:requestId",
             status.data,
             modelCacheRoot,
+            assertCurrent,
           );
+          assertCurrent();
+          return result;
         }
         if (status.status === "failed" || status.status === "cancelled") {
           const message =
@@ -417,9 +444,12 @@ export function createPythonRuntimeHttpClient(
           throw new Error(`Python runtime model download failed: ${message}`);
         }
         await delay(modelDownloadPollIntervalMs);
+        assertCurrent();
       }
 
+      assertCurrent();
       await this.cancelTask(requestId).catch(() => undefined);
+      assertCurrent();
       throw new Error(
         `Python runtime model download timed out after ${modelDownloadTimeoutMs}ms${
           recoverablePollFailureCount > 0
@@ -438,12 +468,12 @@ export function createPythonRuntimeHttpClient(
     },
 
     async getModelStatus() {
-      const response = await authenticatedFetch(
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch(
         "/models/status",
         "/models/status",
         { method: "GET" },
       );
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       return mapRuntimeResponsePayload(
         "/models/status",
         response,
@@ -453,7 +483,7 @@ export function createPythonRuntimeHttpClient(
     },
 
     async unloadModels() {
-      const response = await authenticatedFetch(
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch(
         "/models/unload",
         "/models/unload",
         {
@@ -463,7 +493,7 @@ export function createPythonRuntimeHttpClient(
           },
         },
       );
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       if (
         !response.ok &&
         payload &&
@@ -491,7 +521,7 @@ export function createPythonRuntimeHttpClient(
         Math.max(request.timeoutMs ?? defaultTaskTimeoutMs, 1_000),
         24 * 60 * 60 * 1_000,
       );
-      const response = await authenticatedFetch(
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch(
         "/tasks/start",
         "/tasks/start",
         {
@@ -502,7 +532,7 @@ export function createPythonRuntimeHttpClient(
           body: JSON.stringify(mapStartTaskRequest({ ...request, timeoutMs })),
         },
       );
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       return mapRuntimeResponsePayload(
         "/tasks/start",
         response,
@@ -512,12 +542,12 @@ export function createPythonRuntimeHttpClient(
     },
     async readTaskStatus(requestId: string) {
       assertRuntimeRequestId(requestId);
-      const response = await authenticatedFetch(
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch(
         `/tasks/${encodeURIComponent(requestId)}`,
         "/tasks/:requestId",
         { method: "GET" },
       );
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       return mapRuntimeResponsePayload(
         "/tasks/:requestId",
         response,
@@ -527,7 +557,7 @@ export function createPythonRuntimeHttpClient(
     },
     async cancelTask(requestId: string) {
       assertRuntimeRequestId(requestId);
-      const response = await authenticatedFetch(
+      const { response, payload, assertOwnedProcess } = await authenticatedFetch(
         `/tasks/${encodeURIComponent(requestId)}/cancel`,
         "/tasks/:requestId/cancel",
         {
@@ -537,7 +567,7 @@ export function createPythonRuntimeHttpClient(
           },
         },
       );
-      const payload = await parseJsonResponseSafe(response);
+      assertOwnedProcess();
       return mapRuntimeResponsePayload(
         "/tasks/:requestId/cancel",
         response,

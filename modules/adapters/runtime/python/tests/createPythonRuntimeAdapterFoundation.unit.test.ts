@@ -10,6 +10,7 @@ import {
 } from "../../../../testing/node-test";
 import { createPythonRuntimeAdapterFoundation } from "../createPythonRuntimePort";
 import { createPythonRuntimeStartupDiagnostics } from "../pythonRuntimeStartupDiagnostics";
+import { OWNED_RUNTIME_READY_PREFIX } from "../supervisor/ownedPythonRuntimeProof";
 
 const TOKENS = [
   "initial-runtime-token-0123456789abcdef",
@@ -64,7 +65,7 @@ describe("createPythonRuntimeAdapterFoundation", () => {
       try {
         assert.equal((await fixture.foundation.runtimePort.readTaskStatus("sibling")).status, "failed");
         assert.equal(fixture.children.length, 2); assert.equal(fixture.ordinaryPreparations, 0); assert.equal(fixture.installedProbes, 2);
-        if (pending) {release(response(200, {requestId: "uncertain-context", taskType: "generate-context-artifact", accepted: true, status: "queued"})); await attempted;}
+        if (pending) {release(response(200, {requestId: "uncertain-context", taskType: "generate-context-artifact", accepted: true, status: "queued"})); await assert.rejects(attempted, /ownership/);}
         assert.equal((await fixture.foundation.runtimePort.readTaskStatus("uncertain-context")).status, "failed");
       } finally {
         if (pending) release(response(200, {requestId: "uncertain-context", taskType: "generate-context-artifact", accepted: true, status: "queued"}));
@@ -572,7 +573,7 @@ describe("createPythonRuntimeAdapterFoundation", () => {
     const fixture = ownedTaskFixture();
     await fixture.foundation.supervisor.start();
     fixture.duringAdmission = () => fixture.children[0]!.emit("exit", 23, null);
-    await fixture.start("admission-race");
+    await assert.rejects(fixture.start("admission-race"), /ownership/);
     assert.equal((await fixture.foundation.runtimePort.readTaskStatus("admission-race")).error?.code, "python_runtime_worker_exited");
   });
 
@@ -630,6 +631,7 @@ describe("createPythonRuntimeAdapterFoundation", () => {
         };
         child.stdout = new PassThrough();
         child.stderr = new PassThrough();
+        queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env?.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:" + options.env?.PYTHON_RUNTIME_PORT + "\n"));
         child.kill = (signal) => {
           processAlive = false;
           queueMicrotask(() => child.emit("exit", 0, signal ?? "SIGTERM"));
@@ -668,7 +670,7 @@ describe("createPythonRuntimeAdapterFoundation", () => {
 
     expect(spawnedTokens).toEqual([TOKENS[1], TOKENS[2]]);
     expect(spawnedTokens[0]).not.toBe(spawnedTokens[1]);
-    expect(observedAuthorization).toContain(`Bearer ${TOKENS[0]}`);
+    expect(observedAuthorization).not.toContain(`Bearer ${TOKENS[0]}`);
     expect(observedAuthorization).toContain(`Bearer ${TOKENS[1]}`);
     expect(observedAuthorization).toContain(`Bearer ${TOKENS[2]}`);
     expect(JSON.stringify(events)).not.toContain("launch-token");
@@ -700,6 +702,7 @@ describe("createPythonRuntimeAdapterFoundation", () => {
         };
         child.stdout = new PassThrough();
         child.stderr = new PassThrough();
+        queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env?.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:" + options.env?.PYTHON_RUNTIME_PORT + "\n"));
         child.kill = (signal) => {
           processAlive = false;
           queueMicrotask(() => child.emit("exit", 0, signal ?? "SIGTERM"));
@@ -777,22 +780,22 @@ describe("createPythonRuntimeAdapterFoundation", () => {
   });
 });
 
-it("does not rotate a launch token for attached, skipped or capability-refused starts", async () => {
+it("never trusts a healthy unowned listener or discloses its initial token before spawn", async () => {
   for (const refused of [false, true]) {
-    let generated = 0, spawned = 0;
+    let generated = 0, spawned = 0, fetched = 0;
     const diagnostics = createPythonRuntimeStartupDiagnostics();
     const foundation = createPythonRuntimeAdapterFoundation({
       client: { baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url, init) => {
+        fetched++;
         assert.equal((init?.headers as Record<string, string>)?.authorization, `Bearer ${TOKENS[0]}`);
         return String(url).endsWith("/capabilities") ? response(200, { runtimeId: "fixture", capabilities: [] }) : response(200, { healthy: true, status: { runtimeId: "fixture", status: "ready" } });
       }) as never },
       supervisor: { command: "synthetic", requiredCapabilities: refused ? ["missing"] : [], onStartupEvent: diagnostics.event,
         spawnImplementation: (() => { spawned++; throw new Error("must not spawn"); }) as never },
-      generateAuthorizationToken: () => { assert.equal(generated++, 0); return TOKENS[0]!; },
+      generateAuthorizationToken: () => TOKENS[generated++]!,
     });
-    if (refused) await assert.rejects(foundation.supervisor.start(), /missing required capability/);
-    else { await foundation.supervisor.start(); await foundation.supervisor.start(); assert.equal(diagnostics.read().attempt, 1); }
-    assert.equal(generated, 1); assert.equal(spawned, 0);
+    await assert.rejects(foundation.supervisor.start(), /failed during startup/);
+    assert.equal(generated, 2); assert.equal(spawned, 1); assert.equal(fetched, 0);
     assert.equal(JSON.stringify(diagnostics.read()).includes(TOKENS[0]!), false);
   }
 });
@@ -841,11 +844,12 @@ function ownedTaskFixture() {
     supervisor: { command: "python", args: ["main.py"], startupTimeoutMs: 100, healthCheckIntervalMs: 1,
       async verifyRuntimeEnvironment() {fixture.installedProbes++; return fixture.verifyInstalled();},
       async prepareRuntimeEnvironment() {fixture.ordinaryPreparations++;},
-      spawnImplementation: (() => {
+      spawnImplementation: ((_command, _args, options) => {
         const child = new EventEmitter() as typeof children[number];
         processAlive = true;
         child.once("exit", () => { processAlive = false; });
         child.stdout = new PassThrough(); child.stderr = new PassThrough();
+        queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env?.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:" + options.env?.PYTHON_RUNTIME_PORT + "\n"));
         child.kill = signal => { queueMicrotask(() => child.emit("exit", 0, signal ?? "SIGTERM")); return true; };
         children.push(child); return child;
       }) as never },

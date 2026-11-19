@@ -1354,6 +1354,44 @@
           "Production safety limits and older staging files are unchanged."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "35bfe4d3d5a51dae923e84e52cec30d7e280ea73d97edd3269a5028753bf1c53",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Both real app interfaces passed the shared Context feature tests.",
+          "The agent checked17test groups and a separate review.",
+          "This covers saved Context, grounded searches, approvals, replay, display and shutdown."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c6a5bd1dd1b083c3121e5656506ae38e5522c038d4a3ed99a6f7b29329fd3394",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Default Desktop startup and failed-build recovery need separate tests.",
+          "This component does not close the increment or the roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1a607a6b587257e37233bfb975a9f76b1e77e7fca2857a44209c698f17fa801b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop tests observed native worker handles.",
+          "Server tests confirmed the expected worker relationship and its later absence.",
+          "These are different forms of evidence.",
+          "Earlier failures and uncertain exits stay recorded."
+        ]
+      }
     }
   ]
 }

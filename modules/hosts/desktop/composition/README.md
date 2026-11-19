@@ -1,5 +1,18 @@
 # Desktop host composition
 
+Desktop resolves one immutable Python runtime endpoint during explicit lazy
+foundation composition. Explicit valid loopback settings retain their meaning.
+Without a configured port or base URL, the network adapter asks the OS for a
+nonprivileged `127.0.0.1` port and closes its temporary listener before launch.
+Both client and child receive that same endpoint. Passive status never selects
+a port. Selection proves availability at that time, not a reservation through
+worker startup; authenticated readiness and owned lifecycle checks still apply.
+Do not restore the old PID-derived default in active composition.
+The managed adapter also requires its current child's private bound-ready proof
+before health or business HTTP. A healthy unowned responder cannot establish
+readiness. Worker-exclusive binding and captured launch fences are adapter
+controls, not renderer authority or a retry grant.
+
 The retained Context Browser's private query owner receives the same original
 installed-model resolver as generation and the existing reconciler's admission
 fence. It requires exact saved bytes and source/model policy before installed-only

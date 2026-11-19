@@ -18,6 +18,33 @@ explicit generic requirements retain their fallback checks.
 
 # Contributor Control Plane
 
+The `python-runtime-owned-startup` check exercises exact private proof framing,
+current-child/lifecycle and seven held-response body paths, plus real local
+healthy-listener handoff refusal and a Windows reuse-address peer against the
+worker's exclusive socket. These physical startup cases use the actual worker
+bootstrap with a small synthetic ASGI app to avoid model imports. They do not
+stand in for actual Context, model or app authorization. The separate real-host
+profiles run the current full worker. `python-runtime-owned-worker` tests bind
+proof, failure, standalone compatibility and existing bootstrap/authentication.
+The managed foundation cannot opt out of proof or attach before spawning.
+The guard correlates the private nonce and exact canonical endpoint, captures the
+launch through fetch/body/download awaits, and preserves cached terminal results.
+Old unknown-exit and uncertain-task ownership remain. This is startup ownership
+under trusted-worker/exclusive-bind assumptions, not continuing mutual auth.
+
+The fixed `headless-context-default-port` check runs the same one real packaged
+Desktop Context case through a no-argument launcher. It removes HOST, PORT and
+BASE_URL from the child environment and records `os-selected-default` in the
+bounded observation. It retains installed-input verification, separate approvals,
+real queries and native worker shutdown. It does not replace the explicit-port
+profile. Missing model input still fails with zero matches, never a skip/pass.
+The focused `python-runtime-port-node` and `python-runtime-port-composition`
+checks cover real listener release, occupied-port avoidance, configuration
+refusal, canceled allocation, sanitized failures and matching client/worker
+composition. Borrowed shared roots require explicit check selection; unknown
+neighbors and explicitly requested generic checks retain their fallback.
+These are feature checks, separate from parent and final roadmap qualification.
+
 The fixed `headless-context-managed-journey` check runs one real Managed Context
 case with a 600-second runner bound. It requires the existing bounded database
 operator's fresh `MANAGED_REFERENCE_DATABASE` and the exact installed MiniLM

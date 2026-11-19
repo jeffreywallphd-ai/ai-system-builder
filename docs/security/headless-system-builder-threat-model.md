@@ -1,5 +1,23 @@
 # Headless System Builder threat model
 
+## Local runtime startup ownership
+
+The host must not infer runtime ownership from healthy HTTP or possession of a
+client bearer. Managed foundations skip all pre-spawn HTTP. The trusted worker
+binds one non-reusable loopback socket itself, verifies Windows exclusive
+ownership, and emits a fresh nonce-correlated bounded private stdout proof only
+after Uvicorn listens on the exact endpoint. The exact current child and startup
+must supply proof before any runtime HTTP. Stop/failure/exit retire the launch;
+fetch, body parsing and asynchronous download continuation retain the same launch.
+No caller option may downgrade the managed foundation to generic attachment.
+
+A foreign healthy listener winning the port handoff causes owned startup to
+fail before HTTP. Wrong/stale/oversized/incomplete or stderr frames do not grant
+authority. Raw frames, nonces, tokens and environment values stay out of public
+diagnostics. This is startup ownership under trusted-worker and exclusive-bind
+assumptions, not ongoing mutual authentication after unobserved worker exit.
+Native retirement and unknown task/process custody remain independent controls.
+
 ## Passive Context question preparation
 
 The existing Context Browser also has a private admitted query owner. Trusted

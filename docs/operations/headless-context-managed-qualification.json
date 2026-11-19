@@ -503,5 +503,13 @@
     "local_result": ".local-codex/headless-provider-import-20261117/context-controller-full-refined.log",
     "sha256": "9fdfc423f3be7cdd387511642b2d564fedcce2324c85767284499b4da0a9e376",
     "scope": "Complete controller feature regression after the shared-source routing correction. Final current-candidate selected verification remains required after the private-marker/census refinement; no parent pass."
+  },
+  "completed_shared_host_component": {
+    "commit": "53d021799005b92088851bcc48b16cacd26235fd",
+    "work_id": "headless-context-host-qualification",
+    "receipt_digest": "293cdc498d754a1758e7528701c56dd921a5daadb1577b3daf72db72c00eb694",
+    "review_digest": "eac30c92f2e95e3c99bc64440f3f10a4bb749dfd6d0cceefc3902fd63adf3cd8",
+    "check_groups": 17,
+    "limits": "Both actual Context host components passed and were independently reviewed. Desktop default-port, physical failed-build/recovery, parent and final aggregate qualification were not granted by that component."
   }
 }

@@ -442,6 +442,17 @@ privileged-port configuration. `PYTHON_RUNTIME_BASE_URL`,
 `PYTHON_RUNTIME_HOST`, and `PYTHON_RUNTIME_PORT` may select only a consistent
 loopback endpoint; they cannot convert the managed sidecar into a remote runtime.
 
+Desktop resolves this endpoint once during explicit lazy foundation composition.
+With no configured port or base URL, its network adapter selects an OS-admitted
+nonprivileged loopback port instead of deriving one from the process ID. The
+bounded temporary listener closes before worker startup. One immutable result
+supplies both the client and child environment; passive status selects nothing.
+Explicit settings are validated before selection and retain their canonical
+meaning. This is availability selection, not atomic reservation or authority to
+attach to another process. Existing authenticated readiness and owned lifecycle
+checks remain required. A handoff collision must not trigger an automatic retry
+of uncertain work or bypass an unresolved worker-exit fence.
+
 Each supervisor spawn receives a new cryptographically random launch token in
 the child-only `PYTHON_RUNTIME_AUTH_TOKEN` environment. The HTTP client reads the
 current token for every request and sends it as a bearer credential. The worker
@@ -451,6 +462,25 @@ must never enter logs, readiness snapshots, public diagnostics, renderer state,
 or process-wide environment mutation. A newly composed foundation therefore
 cannot attach to an ambient or spoofed loopback service that does not possess
 its launch identity.
+
+Bearer authentication alone does not prove server ownership. A managed
+foundation therefore performs no HTTP before its exact current child proves
+successful socket binding over its owned stdout pipe. It never uses the generic
+supervisor's pre-spawn attachment path. The worker binds an exclusive,
+non-reusable IPv4 loopback socket, verifies Windows `SO_EXCLUSIVEADDRUSE`, passes
+that socket directly to its own Uvicorn server, and emits a bounded frame only
+after the server listens at the exact host and port. A fresh per-spawn child-only
+nonce correlates the proof; it never enters logs or public payloads.
+
+The foundation forces this mode and fences every HTTP response through JSON
+parsing and asynchronous download continuation against the same captured launch.
+Stop, startup failure and owned exit retire the proof synchronously. Cached
+terminal task results remain local. An older worker without the protocol stays
+unavailable instead of falling back to attachment. Standalone supervisor
+compatibility confers no managed-foundation authority. This proof closes initial
+listener adoption under trusted-child and exclusive-bind assumptions. It does
+not claim continuing mutual authentication after an exit that the host has not
+yet observed, or supersede native lifecycle qualification.
 
 ADR-0013 is the canonical cross-host runtime ownership ADR.
 

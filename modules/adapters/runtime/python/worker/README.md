@@ -1410,3 +1410,18 @@ retryable. Known completed decoder-output validation can still use bounded repai
 Model-free tests cover ordinary and constrained generation, all shared views,
 original exception identity and retained ownership. Actual native borrower, worker
 and resource qualification remains separate. Standard generation is unchanged.
+## Owned startup proof
+
+For a managed launch, `main.py` receives a fresh private startup nonce. It binds
+one non-reusable IPv4 loopback socket itself, verifies `SO_EXCLUSIVEADDRUSE` on
+Windows, and passes the socket directly to Uvicorn with one worker. Only after
+Uvicorn listens on the exact configured endpoint does it emit the fixed bounded
+stdout proof. App lifespan startup, HTTP responses and marker files are not proof.
+Wrong configuration, bind collision or unavailable exclusive ownership fails
+before proof. The nonce and raw frame must never enter diagnostics or API output.
+No cross-process socket transfer or network protocol downgrade is introduced.
+
+Standalone launch without a proof nonce retains its prior behavior, but managed
+foundations will not adopt that listener. The proof establishes startup ownership
+under trusted-worker/exclusive-bind assumptions, not continuing mutual network
+authentication or native exit qualification.

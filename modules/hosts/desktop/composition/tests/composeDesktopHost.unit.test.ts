@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 
 import {
   describe,
@@ -1103,7 +1105,7 @@ describe("installed-only Desktop Context composition", () => {
     await expect(foundation.supervisor.startWithoutInstalling!()).rejects.toThrow("Background task lifecycle is unavailable");
   });
 
-  for (const held of ["verifier", "health", "launch-token"] as const) {
+  for (const held of ["verifier", "launch-token"] as const) {
     it(`installed-only Desktop retirement during ${held} prevents every new worker spawn`, async () => {
       const {createPythonRuntimeAdapterFoundation} = await import("../../../../adapters/runtime/python");
       const {composeDesktopRuntimeTaskFeature} = await import("../composeDesktopRuntimeTaskFeature");
@@ -1117,8 +1119,7 @@ describe("installed-only Desktop Context composition", () => {
           return "synthetic-private-test-token-long-enough-" + tokens;
         },
         client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async () => {
-          if (held === "health") {entered(); await gate;}
-          return {ok: false, status: 401, json: async () => ({error: {code: "runtime_auth_required"}})};
+          throw new Error("The managed host must not probe before spawning.");
         }) as never},
         supervisor: {command: "python", args: ["inert-test-worker.py"], startupTimeoutMs: 100, healthCheckIntervalMs: 1,
           async verifyRuntimeEnvironment() {if (held === "verifier") {entered(); await gate;} return true;},
@@ -1136,6 +1137,48 @@ describe("installed-only Desktop Context composition", () => {
       await foundation.supervisor.stop();
     });
   }
+
+  it("installed-only Desktop retirement during owned health prevents task dispatch and retry", async () => {
+    const {createPythonRuntimeAdapterFoundation} = await import("../../../../adapters/runtime/python");
+    const {OWNED_RUNTIME_READY_PREFIX} = await import("../../../../adapters/runtime/python/supervisor/ownedPythonRuntimeProof");
+    const {composeDesktopRuntimeTaskFeature} = await import("../composeDesktopRuntimeTaskFeature");
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    let entered!: () => void, release!: () => void, nativeSpawns = 0, dispatches = 0, preparations = 0;
+    const waiting = new Promise<void>(resolve => {entered = resolve;});
+    const gate = new Promise<void>(resolve => {release = resolve;});
+    const foundation = createPythonRuntimeAdapterFoundation({
+      client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url) => {
+        if (String(url).endsWith("/tasks/start")) dispatches++;
+        entered(); await gate;
+        return {ok: true, status: 200, json: async () => ({healthy: true, status: {runtimeId: "python-sidecar", status: "ready"}})};
+      }) as never},
+      supervisor: {command: "synthetic-owned-worker", startupTimeoutMs: 100, healthCheckIntervalMs: 1,
+        async verifyRuntimeEnvironment() {return true;},
+        async prepareRuntimeEnvironment() {preparations++;},
+        spawnImplementation: ((_command, _args, options) => {
+          nativeSpawns++;
+          const child = new EventEmitter() as EventEmitter & {stdout: PassThrough; stderr: PassThrough; kill: () => boolean};
+          child.stdout = new PassThrough(); child.stderr = new PassThrough();
+          child.kill = () => {queueMicrotask(() => child.emit("exit", 0, null)); return true;};
+          queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env?.PYTHON_RUNTIME_STARTUP_PROOF
+            + " 127.0.0.1:" + options.env?.PYTHON_RUNTIME_PORT + "\n"));
+          return child;
+        }) as never},
+    });
+    const feature = await composeDesktopRuntimeTaskFeature({pythonRuntimeFoundation: foundation, taskReconciler: reconciler,
+      imageRuntimeTaskRegistry: {}, runtimeReadiness: {}});
+    const input = {requestId: "owned-health-retirement", workspaceId: "workspace.installed" as never,
+      taskType: TaskType.CONTEXT_GENERATION, payload: {kind: "markdown-context-pack"}};
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const pending = feature.runtimeTaskRegistry.startTaskWithoutInstalling(input);
+    try {
+      await Promise.race([waiting, new Promise((_, reject) => {timer = setTimeout(() => reject(new Error("Owned health fixture was not reached.")), 1000);})]);
+      reconciler.stopAccepting(); release();
+      expect(await pending).toEqual({kind: "unavailable"});
+      expect(await feature.runtimeTaskRegistry.startTaskWithoutInstalling({...input, requestId: "no-retry"})).toEqual({kind: "unavailable"});
+      expect(nativeSpawns).toBe(1); expect(dispatches).toBe(0); expect(preparations).toBe(0);
+    } finally {clearTimeout(timer); release(); await pending; await foundation.supervisor.stop();}
+  });
 
   const request = {requestId: "installed-context", workspaceId: "workspace.installed" as never,
     taskType: TaskType.CONTEXT_GENERATION, payload: {kind: "markdown-context-pack"}};

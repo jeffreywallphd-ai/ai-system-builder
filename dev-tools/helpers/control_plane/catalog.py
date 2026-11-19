@@ -220,6 +220,93 @@ PUBLISHED_FORM_CHECKS = {
         "command": ("--import", "tsx", "--test", "--", "dev-tools/scripts/qualification/tests/managed-headless-context.unit.test.ts",
             "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs"),
     },
+    "python-runtime-owned-startup": {
+        "automatic_sources": (
+            "modules/adapters/runtime/python/supervisor/ownedPythonRuntimeProof.ts",
+            "modules/adapters/runtime/python/tests/ownedPythonRuntimeProof.unit.test.ts",
+            "modules/adapters/runtime/python/tests/ownedPythonRuntimeStartup.unit.test.ts",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/supervisor/ownedPythonRuntimeProof.ts",
+            "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+            "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeHttpClient.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
+            "modules/adapters/runtime/python/tests/ownedPythonRuntimeProof.unit.test.ts",
+            "modules/adapters/runtime/python/tests/ownedPythonRuntimeStartup.unit.test.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--",
+            "modules/adapters/runtime/python/tests/ownedPythonRuntimeProof.unit.test.ts",
+            "modules/adapters/runtime/python/tests/ownedPythonRuntimeStartup.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeHttpClient.unit.test.ts"),
+    },
+    "python-runtime-owned-worker": {
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/main.py",
+            "modules/adapters/runtime/python/worker/tests/test_owned_startup.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/worker/main.py",
+            "modules/adapters/runtime/python/worker/tests/test_main.py",
+            "modules/adapters/runtime/python/worker/tests/test_owned_startup.py",
+            "modules/adapters/runtime/python/worker/README.md",
+        ),
+        "interpreter": "python",
+        "command": ("-B", "-m", "unittest",
+            "modules.adapters.runtime.python.worker.tests.test_owned_startup",
+            "modules.adapters.runtime.python.worker.tests.test_main",
+            "modules.adapters.runtime.python.worker.tests.test_worker_authentication"),
+    },
+    "headless-context-default-port": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/headless-context-default-port.mjs",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/headless-context-default-port.mjs",
+            "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts",
+        ),
+        "command": ("--preserve-symlinks", "--preserve-symlinks-main", "dev-tools/scripts/qualification/visual-composer/headless-context-default-port.mjs"),
+        "timeout": 720,
+    },
+    "python-runtime-port-node": {
+        "automatic_sources": (
+            "modules/adapters/runtime/python/network/selectPythonRuntimeEndpoint.ts",
+            "modules/adapters/runtime/python/tests/selectPythonRuntimeEndpoint.socket.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-default-port.unit.test.mjs",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/network/selectPythonRuntimeEndpoint.ts",
+            "modules/adapters/runtime/python/index.ts",
+            "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts",
+            "modules/hosts/desktop/composition/composeDesktopHost.ts",
+            "modules/hosts/desktop/composition/tests/desktopPythonStartupDiagnostics.unit.test.ts",
+            "modules/adapters/runtime/python/tests/selectPythonRuntimeEndpoint.socket.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-default-port.unit.test.mjs",
+        ),
+        "command": ("--import", "tsx", "--test", "--",
+            "modules/adapters/runtime/python/tests/selectPythonRuntimeEndpoint.socket.unit.test.ts",
+            "modules/adapters/runtime/python/tests/pythonRuntimeEndpoint.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktopPythonRuntimeHelpers.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktopPythonStartupDiagnostics.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/headless-context-default-port.unit.test.mjs"),
+    },
+    "python-runtime-port-composition": {
+        "automatic_sources": (
+            "modules/adapters/runtime/python/tests/selectPythonRuntimeEndpoint.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopPythonRuntimeFeature.unit.test.ts",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/network/selectPythonRuntimeEndpoint.ts",
+            "modules/adapters/runtime/python/index.ts",
+            "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts",
+            "modules/adapters/runtime/python/tests/selectPythonRuntimeEndpoint.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopPythonRuntimeFeature.unit.test.ts",
+        ),
+        "command": ("dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/adapters/runtime/python/tests/selectPythonRuntimeEndpoint.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopPythonRuntimeFeature.unit.test.ts"),
+    },
     "headless-context-desktop-journey": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/e2e/headless-context-journey.ts",

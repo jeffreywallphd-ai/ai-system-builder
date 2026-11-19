@@ -31,6 +31,16 @@
 
 ## Host-Owned Runtime Guidance
 
+- The managed Python adapter requires private current-child bound-ready proof
+  before HTTP and never adopts a healthy pre-spawn responder. Keep worker socket
+  exclusivity and captured launch/body fences; passive status must not launch.
+
+- Explicit lazy Python foundation composition captures one endpoint for client
+  and worker. With no port/base URL setting, use the bounded OS-selected loopback
+  port adapter. Passive reads select no port. The temporary listener closes
+  before launch; availability selection is not an atomic reservation or process
+  authority. Retain authentication and uncertain worker/task lifecycle guards.
+
 - Desktop local runtime roots are desktop-owned and separate from server runtime roots by default.
 - Published systems use one host-derived contained SQLite database per opaque
   runtime instance. IPC/renderers never receive paths or database handles, and

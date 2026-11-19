@@ -4,6 +4,8 @@ import importlib
 import importlib.machinery
 import importlib.util
 import sys
+import re
+import socket
 from os import getenv
 from pathlib import Path
 from types import ModuleType
@@ -79,12 +81,50 @@ def _resolve_launch_configuration() -> tuple[str, int]:
     return host, port
 
 
+def _run_runtime(host: str, port: int) -> None:
+    nonce = getenv("PYTHON_RUNTIME_STARTUP_PROOF", "")
+    if not nonce:
+        # Standalone launch remains possible; a managed host will not adopt it.
+        uvicorn.run(app, host=host, port=port, reload=False, access_log=False)
+        return
+    if not re.fullmatch(r"[a-f0-9]{64}", nonce):
+        raise RuntimeError("Python runtime ownership proof is unavailable.")
+
+    class OwnedServer(uvicorn.Server):
+        async def startup(self, sockets=None):
+            await super().startup(sockets=sockets)
+            if not self.started:
+                return
+            servers = getattr(self, "servers", ())
+            bound = [socket for server in servers for socket in (server.sockets or ())]
+            if (len(bound) != 1 or host != "127.0.0.1"
+                    or bound[0].getsockname() != (host, port)):
+                raise RuntimeError("Python runtime listening socket ownership is unavailable.")
+            # Private current-child stdout only, after Uvicorn has bound. No
+            # HTTP response, app lifespan callback or marker file supplies proof.
+            print("AISB_OWNED_RUNTIME_READY_V1 " + nonce + " " + host + ":" + str(port), flush=True)
+
+    if host != "127.0.0.1" or not 1024 <= port <= 65535:
+        raise RuntimeError("Python runtime listening socket ownership is unavailable.")
+    # The worker itself binds the socket. No cross-process handle transfer and
+    # no SO_REUSEADDR/SO_REUSEPORT allow another listener to share this endpoint.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as owned_socket:
+        owned_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        if sys.platform == "win32":
+            if not hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                raise RuntimeError("Python runtime exclusive socket ownership is unavailable.")
+            owned_socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            if owned_socket.getsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE) != 1:
+                raise RuntimeError("Python runtime exclusive socket ownership is unavailable.")
+        if (owned_socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) != 0
+                or (hasattr(socket, "SO_REUSEPORT")
+                    and owned_socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) != 0)):
+            raise RuntimeError("Python runtime exclusive socket ownership is unavailable.")
+        owned_socket.bind((host, port))
+        server = OwnedServer(uvicorn.Config(app, host=host, port=port, workers=1, reload=False, access_log=False))
+        server.run(sockets=[owned_socket])
+
+
 if __name__ == "__main__":
     runtime_host, runtime_port = _resolve_launch_configuration()
-    uvicorn.run(
-        app,
-        host=runtime_host,
-        port=runtime_port,
-        reload=False,
-        access_log=False,
-    )
+    _run_runtime(runtime_host, runtime_port)

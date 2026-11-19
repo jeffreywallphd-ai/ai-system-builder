@@ -1,0 +1,143 @@
+{
+  "schema_version": "headless-context-default-port-qualification-v1",
+  "status": "feature-observed-current-component-review-required",
+  "work_id": "headless-context-startup-host-regression",
+  "security_impact": {
+    "classification": "security-relevant",
+    "boundary": "Host-owned loopback endpoint and child lifecycle",
+    "controls": [
+      "Validate explicit loopback configuration before network I/O.",
+      "Capture one immutable endpoint for client and child.",
+      "Close the bounded temporary listener before launch.",
+      "Preserve launch authentication, no-install admission, task uncertainty and owned-exit fences.",
+      "Managed foundation forces exact-current-child proof and skips all pre-spawn HTTP.",
+      "Worker-local non-reusable socket and verified Windows exclusive binding precede Uvicorn bound-ready emission.",
+      "Bounded private frame correlates fresh child-only nonce plus exact canonical endpoint; no HTTP or stderr proof.",
+      "Same captured launch is checked through fetch, body parsing and asynchronous download continuation; stop/failure/exit retire it.",
+      "Cached terminal results and uncertain task/worker custody remain; standalone generic attachment cannot downgrade the foundation."
+    ],
+    "residual_risk": [
+      "Startup proof assumes trusted packaged worker code and exclusive binding. It is not continuing mutual authentication after an exit the host has not observed.",
+      "OS port admission is availability, not a reservation through spawn. Missing/foreign bind proof fails before HTTP.",
+      "A socket close not acknowledged by the deadline rejects availability while cleanup observation remains; late closure cannot supply success.",
+      "Genuine parent physical failed-build/recovery, exact-target and final aggregate qualification remain separate."
+    ]
+  },
+  "observation": {
+    "run": "artifacts/qualification/visual-composer/runs/2026-11-19t00-35-36-002z-411ce09b",
+    "source_revision": "source.aa77297806c60c6663d580e30734f9ed9c96a50f46415e77cbbe0de8acbf2a19",
+    "endpoint_profile": "os-selected-default",
+    "journey_passed": true,
+    "cleanup_passed": true,
+    "case_milliseconds": 48809,
+    "facts": {
+      "packSaved": true,
+      "ragSaved": true,
+      "queryCitations": 2,
+      "queriesGrounded": 2,
+      "rebuildSaved": true,
+      "replayChecks": 8,
+      "denialChecks": 21,
+      "presentations": 4,
+      "revoked": true
+    },
+    "native_cleanup": {
+      "report": "artifacts/qualification/visual-composer/runs/2026-11-19t00-35-36-002z-411ce09b/owned-host/cleanup-930e73a65c43df43.json",
+      "status": "passed",
+      "mainExitCode": 0,
+      "willQuitAcknowledged": true,
+      "physicalWorkersObserved": 1,
+      "physicalWorkersNativeObserved": 1,
+      "physicalWorkersPidAbsenceObserved": 0,
+      "physicalWorkersAlive": 0,
+      "failures": 0
+    },
+    "startup_failures": []
+  },
+  "verification_boundary": "All embedded observations are historical feature evidence. Fresh candidate-bound receipts and separate review must cover both Desktop profiles, actual Managed Context, owned startup/worker, port, retained lifecycle/native and repository feature gates before this component can complete. It grants no parent or final roadmap pass.",
+  "remaining": [
+    "Actual physical failed-build/replay qualification for increment6.",
+    "Fresh exact-target increment qualification.",
+    "Later approved Headless increments and final aggregate suite."
+  ],
+  "history": "Retain earlier failed runs and denied PID-port probes. No original startup exception was captured; the port probes do not prove every earlier refusal had one cause.",
+  "superseded_unqualified_work": [
+    {
+      "work_id": "headless-context-default-port",
+      "reason": "Independent review found that existing healthy HTTP attachment did not prove runtime ownership. Preserve the initial port observation; no completion granted."
+    },
+    {
+      "work_id": "headless-context-owned-port-startup",
+      "reason": "Its adopted-source plan did not explicitly select the unchanged default-port launcher. Scope and all original obligations carry into a successor that explicitly requires every check, including both Desktop profiles."
+    },
+    {
+      "work_id": "headless-context-owned-startup-qualification",
+      "receipt_digest": "3d916c1a4f2e9ad642b37472d72b97c373a5341829f8c27608ae12517241958f",
+      "passed_check_groups": 15,
+      "total_check_groups": 18,
+      "failures": [
+        {
+          "check_id": "headless-context-managed-journey",
+          "status": "failed"
+        },
+        {
+          "check_id": "headless-context-installed-host",
+          "status": "timed-out"
+        },
+        {
+          "check_id": "documentation",
+          "status": "failed"
+        }
+      ],
+      "reason": "Add exact host regression test scope before replacing the obsolete pre-spawn health wait. Preserve all18checks and every prior observation. No timeout, guard or parent criterion changed."
+    }
+  ],
+  "owned_proof_draft_observation": {
+    "run": "artifacts/qualification/visual-composer/runs/2026-11-19t00-52-44-564z-68e74139",
+    "source_revision": "source.b41be87341eea711ac6e9464dd34a42410aa1d831d7b4332d411746c1f2ae63a",
+    "case_milliseconds": 47354,
+    "journey_passed": true,
+    "cleanup_passed": true,
+    "facts": {
+      "packSaved": true,
+      "ragSaved": true,
+      "queryCitations": 2,
+      "queriesGrounded": 2,
+      "rebuildSaved": true,
+      "replayChecks": 8,
+      "denialChecks": 21,
+      "presentations": 4,
+      "revoked": true
+    },
+    "limitation": "This historical actual run includes private bound-ready proof and exclusive binding, but predates the final exact-endpoint frame and exited-child refinement. Current final execution is still required."
+  },
+  "controlled_feature_evidence": {
+    "physical_startup": "Real current worker bootstrap with a tiny ASGI fixture denied a foreign healthy listener with zero HTTP. A separate reuse-address peer could not bind the owned Windows socket. This isolates startup and does not stand in for Context or app authorization.",
+    "lifecycle": "Current guarded HTTP paths, held response bodies, changed launch, nonce/endpoint framing, no downgrade, stop/exit, cached terminal and restrictive recovery checks are fixed catalog tests. Final exact-candidate verification must rerun them.",
+    "retained_failure": "The first physical fixture cleanup reached a Windows EBUSY after process exit. The fixture now waits for child pipe closure and permits only bounded filesystem retry. The failed log remains; its old fixture is not adopted or deleted."
+  },
+  "current_packaged_worker_managed_observation": {
+    "report": "artifacts/qualification/visual-composer/d/managed-f337393ae9284e3f8f944a609338784a/headless-context-managed.json",
+    "source_revision": "source.e61c7faadbabf070ae780436f9ef18156fe632cb7c8187c76b96401107a66a5f",
+    "journey_passed": true,
+    "cleanup_passed": true,
+    "facts": {
+      "packSaved": true,
+      "ragSaved": true,
+      "queryCitations": 2,
+      "queriesGrounded": 2,
+      "rebuildSaved": true,
+      "replayChecks": 8,
+      "denialChecks": 21,
+      "presentations": 4,
+      "revoked": true
+    },
+    "boundary": "Actual production worker, browser/OIDC/TLS/PostgreSQL/MCP and pinned installed MiniLM. Verified worker lineage and PID absence remain distinct from a held native worker handle; parent and final qualification remain pending."
+  },
+  "verification_refinements": {
+    "host_fixture": "The previous installed-host test waited for pre-spawn HTTP, which the managed foundation now forbids. Verifier/token retirement still proves zero spawn; the new owned post-proof health fixture proves no business POST, no installer and no retry after host retirement. All13focused host cases passed.",
+    "documentation": "The runtime pack exceeded its200physical-line cap. All clauses are retained by joining paragraphs; no rule or limit changed. Two README EOF blanks were removed. Documentation and diff checks passed.",
+    "managed_prerequisite": "The first Managed check failed quickly before producing a Context report after worker source changed. Later Desktop profiles rebuilt the packaged worker. A direct rerun against the current package passed. The source/package mismatch is consistent with the failure, but its exact original exception was not retained by the digest-only executor.",
+    "current_execution": "The successor explicitly retains all18feature-check groups, including both Desktop profiles and Managed. A fresh complete receipt and separate review are required before component completion."
+  }
+}

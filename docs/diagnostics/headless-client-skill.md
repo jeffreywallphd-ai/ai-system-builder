@@ -27,7 +27,10 @@ Earlier Desktop pack starts returned “not started” before task dispatch.
 Later direct checks confirmed that Windows denies both failed ports selected
 from the app process ID. The qualification fixture now retains its established
 test endpoint instead of using that product default. The product default-port
-repair remains separate pending work. No old exception was retained, so the
+repair now uses one OS-selected loopback endpoint for client and worker. The
+separate [default-port feature observation](../operations/headless-context-default-port-qualification.json)
+retains an actual Desktop run with no explicit endpoint and native worker exit.
+Current component review and parent qualification remain distinct. No old exception was retained, so the
 port finding does not prove a sole cause for every historical refusal.
 A separate cleanup defect rejected the verified Windows Python launcher
 relationship. The corrected test distinguishes native exit from process absence

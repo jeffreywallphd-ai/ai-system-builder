@@ -451,3 +451,41 @@ restrictive work has actually finished, ordinary recovery retains its prior
 behavior. Focused tests use simulated worker/process replies, actual foundation
 and Desktop composition, and a static Managed-root configuration check. They do
 not qualify physical processes, real Context/model execution or public plan use.
+
+## Host-selected Desktop endpoint
+
+The network adapter `selectPythonRuntimeLoopbackEndpoint` validates explicit
+configuration before opening a socket. If no port or base URL is configured,
+it binds a temporary exclusive loopback listener on port zero, captures the
+OS-selected nonprivileged port, destroys incoming connections, and closes the
+listener before returning an immutable endpoint. Selection has a five-second
+deadline. Errors return a fixed message. It changes no process environment.
+If retirement remains unconfirmed at the deadline, selection rejects without a
+usable endpoint and retains its cleanup callbacks. A late close cannot turn that
+failure into success.
+
+Desktop lazy composition snapshots its environment once and uses the returned
+endpoint for both client and worker. Selection is not an atomic reservation
+across child startup. It grants no ambient-process, retry, task or installation
+authority. Launch-token authentication, current host admission, uncertain task
+ownership and stop/recovery rules remain separate controls.
+
+Managed foundations require an exact current-child bound-ready proof before any
+HTTP, including health and capabilities. They never attach before spawning.
+The worker binds a non-reusable socket itself, verifies Windows
+`SO_EXCLUSIVEADDRUSE`, and emits one bounded private stdout frame only after
+Uvicorn listens on that exact endpoint. A fresh child-only nonce correlates the
+frame. The supervisor accepts it only from its current child and startup; wrong,
+oversized, stale, stderr and incomplete frames grant nothing. Neither the nonce
+nor raw frame enters diagnostics. Proof and health share the startup budget.
+
+The client captures one owned launch through fetch, JSON parsing and asynchronous
+download polling/mapping. Stop, failure and exit invalidate it. Completed local
+task overrides remain readable without HTTP. Generic standalone supervisor
+attachment remains a separate compatibility mode; the foundation cannot opt out
+of owned startup. An older worker without proof fails readiness.
+
+This is startup ownership under a trusted worker and exclusive-bind assumption,
+not continuing cryptographic server authentication after an unobserved exit.
+No HTTP response or bearer-token echo establishes ownership. Uncertain process
+or task cleanup still prevents safe retry; port selection cannot clear it.

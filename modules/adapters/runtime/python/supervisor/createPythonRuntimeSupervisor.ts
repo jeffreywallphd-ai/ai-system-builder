@@ -1,5 +1,7 @@
 import { ChildProcess, spawn, type SpawnOptions } from "node:child_process";
 import { platform } from "node:os";
+import { randomBytes } from "node:crypto";
+import { createOwnedPythonRuntimeProof } from "./ownedPythonRuntimeProof";
 import { terminateOwnedProcess } from "../../shared/terminateOwnedProcess";
 
 import type { PythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
@@ -14,6 +16,7 @@ export interface PythonRuntimeSupervisorEvent {
     | "start-skipped"
     | "attached"
     | "spawned"
+    | "owned-ready"
     | "health-probe-failed"
     | "health-unhealthy"
     | "capability-mismatch"
@@ -63,6 +66,8 @@ export interface CreatePythonRuntimeSupervisorOptions {
     env: NodeJS.ProcessEnv;
   }) => void | Promise<void>;
   startupTimeoutMs?: number;
+  /** Managed foundations require current child bind proof; HTTP is not identity. */
+  requireOwnedStartupProof?: boolean;
   healthCheckIntervalMs?: number;
   runtimeClient: Pick<PythonRuntimeHttpClient, "getHealthStatus"> &
     Partial<Pick<PythonRuntimeHttpClient, "getCapabilities">>;
@@ -82,6 +87,7 @@ export function createPythonRuntimeSupervisor(
   options: CreatePythonRuntimeSupervisorOptions,
 ): PythonRuntimeSupervisor {
   const startupTimeoutMs = options.startupTimeoutMs ?? 5_000;
+  const requireOwnedStartupProof = options.requireOwnedStartupProof === true;
   const healthCheckIntervalMs = options.healthCheckIntervalMs ?? 100;
   const spawnImplementation = options.spawnImplementation ?? spawn;
   const requiredCapabilities = [...(options.requiredCapabilities ?? [])];
@@ -101,6 +107,7 @@ export function createPythonRuntimeSupervisor(
   try { const observer = options.onStartupEvent; if (typeof observer === "function") startupObserver = observer; } catch { /* Optional observer. */ }
 
   let childProcess: ChildProcess | undefined;
+  let boundReadyProcess: ChildProcess | undefined;
   let startupToken: object | undefined;
   const observeStartup = (type: PythonStartupEvent["type"], token = startupToken) => {
     if (!token) return;
@@ -218,13 +225,14 @@ export function createPythonRuntimeSupervisor(
     return `${base} ${details.join(" ")}`;
   };
 
-  const applyChildExitBinding = (processHandle: ChildProcess) => {
+  const applyChildExitBinding = (processHandle: ChildProcess, proof?: ReturnType<typeof createOwnedPythonRuntimeProof>) => {
     const onTerminal = (code: number | null, signal: NodeJS.Signals | null) => {
       if (childProcess !== processHandle) return;
       const exitDetail = `Python runtime process exited during lifecycle (code=${String(code ?? "null")}, signal=${String(signal ?? "null")}).`;
       const startupFailed = status === "failed";
       if (!startupFailed) lastStartupFailure = exitDetail;
       childProcess = undefined;
+      boundReadyProcess = undefined;
       attachedToExistingRuntime = false;
       status = startupFailed ? "failed" : "stopped";
       emitEvent("process-exit", exitDetail, { code, signal });
@@ -250,6 +258,11 @@ export function createPythonRuntimeSupervisor(
 
       stream.on("data", (chunk: string | Buffer) => {
         if (childProcess !== processHandle) return;
+        if (source === "stdout" && status === "starting" && processHandle.exitCode == null && processHandle.signalCode == null
+          && proof?.push(chunk) && boundReadyProcess !== processHandle) {
+          boundReadyProcess = processHandle;
+          emitEvent("owned-ready", "The owned Python worker confirmed its listening socket.");
+        }
         const text = chunk.toString();
         const summary = appendRuntimeOutput(source, text);
         if (summary) {
@@ -374,12 +387,16 @@ export function createPythonRuntimeSupervisor(
   const startHealthPolling = async (assertCurrent: () => void, owner: ChildProcess) => {
     const assertOwned = () => {
       assertCurrent();
-      if (childProcess !== owner) throw new Error("Python runtime exited before health check completed.");
+      if (childProcess !== owner || owner.exitCode != null || owner.signalCode != null) throw new Error("Python runtime exited before health check completed.");
       assertRuntimeStillStarting();
     };
     const startedAt = Date.now();
     while (Date.now() - startedAt < startupTimeoutMs) {
       assertOwned();
+      if (requireOwnedStartupProof && boundReadyProcess !== owner) {
+        await delay(healthCheckIntervalMs);
+        continue;
+      }
       try {
         const health = await runtimeClient.getHealthStatus();
         assertOwned();
@@ -501,7 +518,7 @@ export function createPythonRuntimeSupervisor(
 
       status = "starting";
       observeStartup("health", operationToken);
-      if (await tryAttachToExistingRuntime(assertCurrent)) {
+      if (!requireOwnedStartupProof && await tryAttachToExistingRuntime(assertCurrent)) {
         assertCurrent();
         observeStartup("ready", operationToken);
         return;
@@ -559,6 +576,12 @@ export function createPythonRuntimeSupervisor(
       }
 
       assertCurrent();
+      const ownedNonce = requireOwnedStartupProof ? randomBytes(32).toString("hex") : undefined;
+      const ownedProof = ownedNonce ? createOwnedPythonRuntimeProof(ownedNonce, {
+        host: runtimeEnvironment.PYTHON_RUNTIME_HOST ?? "", port: runtimeEnvironment.PYTHON_RUNTIME_PORT ?? "",
+      }) : undefined;
+      if (ownedNonce) launchEnvironment.PYTHON_RUNTIME_STARTUP_PROOF = ownedNonce;
+      boundReadyProcess = undefined;
       try {
         attachedToExistingRuntime = false;
         childProcess = spawnImplementation(command, args, {
@@ -577,7 +600,7 @@ export function createPythonRuntimeSupervisor(
           startFailureMessage("Python runtime failed during startup."),
         );
       }
-      applyChildExitBinding(childProcess);
+      applyChildExitBinding(childProcess, ownedProof);
       emitEvent("spawned", "Python runtime process spawned.");
 
       observeStartup("health", operationToken);
@@ -600,6 +623,7 @@ export function createPythonRuntimeSupervisor(
       if (stopFlight) return stopFlight;
       observeStartup("retired");
       lifecycleGeneration++;
+      boundReadyProcess = undefined;
       emitEvent("stop-requested", "Stopping Python runtime process.");
       if (!childProcess) {
         if (attachedToExistingRuntime) {

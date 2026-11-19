@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
+import { normalizePythonRuntimeLoopbackBaseUrl, resolvePythonRuntimeLoopbackEndpoint } from "./config/pythonRuntimeEndpoint";
 import type {
   CancelPythonRuntimeTaskResult,
   PythonRuntimeTaskStatusResult,
@@ -23,11 +24,11 @@ import {
 export interface CreatePythonRuntimePortOptions {
   client: Omit<
     CreatePythonRuntimeHttpClientOptions,
-    "authorizationToken" | "authorizationTokenProvider"
+    "authorizationToken" | "authorizationTokenProvider" | "captureProcessOwnership"
   >;
   supervisor: Omit<
     CreatePythonRuntimeSupervisorOptions,
-    "runtimeClient" | "prepareLaunchEnvironment"
+    "runtimeClient" | "prepareLaunchEnvironment" | "requireOwnedStartupProof"
   >;
   generateAuthorizationToken?: () => string;
 }
@@ -55,8 +56,13 @@ export function createPythonRuntimeAdapterFoundation(
     return token.trim();
   };
   authorizationToken = assertStrongToken(authorizationToken);
+  const clientBaseUrl = normalizePythonRuntimeLoopbackBaseUrl(options.client.baseUrl);
+  const endpoint = resolvePythonRuntimeLoopbackEndpoint({env: options.supervisor.env ?? {}, defaultPort: new URL(clientBaseUrl).port});
+  if (endpoint.baseUrl !== clientBaseUrl) throw new TypeError("Python runtime worker and client endpoints must match.");
   const runtimeEnvironment: NodeJS.ProcessEnv = {
     ...(options.supervisor.env ?? {}),
+    PYTHON_RUNTIME_HOST: endpoint.host,
+    PYTHON_RUNTIME_PORT: endpoint.port,
   };
   let hostAdmission: (() => void) | undefined;
   const assertHostAccepting = () => {
@@ -70,10 +76,20 @@ export function createPythonRuntimeAdapterFoundation(
     if (hostAdmission || typeof assertAccepting !== "function") throw new Error("Python host admission is already bound or invalid.");
     hostAdmission = assertAccepting;
   };
+  let ownedLaunch: object | undefined;
   const client = createPythonRuntimeHttpClient({
     ...options.client,
+    baseUrl: clientBaseUrl,
     environment: runtimeEnvironment,
     authorizationTokenProvider: () => authorizationToken,
+    captureProcessOwnership() {
+      const captured = ownedLaunch;
+      const assertCurrent = () => {
+        if (!captured || captured !== ownedLaunch) throw new Error("Python runtime process ownership is unavailable.");
+      };
+      assertCurrent();
+      return assertCurrent;
+    },
   });
   const trackedTasks = new Map<
     string,
@@ -160,7 +176,10 @@ export function createPythonRuntimeAdapterFoundation(
       context.env.PYTHON_RUNTIME_AUTH_TOKEN = authorizationToken;
     },
     runtimeClient: client,
+    requireOwnedStartupProof: true,
     onEvent: (event) => {
+      if (["start-requested", "startup-timeout", "process-exit", "process-error", "stop-requested", "stop-complete"].includes(event.type)) ownedLaunch = undefined;
+      if (event.type === "owned-ready") ownedLaunch = {};
       // The supervisor emits this only for its currently owned process handle.
       // HTTP uncertainty and events from a previous generation cannot supply it.
       if (event.type === "process-exit") {
@@ -331,6 +350,9 @@ export function createPythonRuntimeAdapterFoundation(
         }
         return result;
       } catch (error) {
+        if (admissionEpoch !== ownedExitEpoch && !terminalOverrides.has(request.requestId)) {
+          rememberOwnedExit(request.requestId, request.taskType);
+        }
         if (admission && datasetAdmissions.get(request.requestId) === admission) admission.phase = "uncertain";
         if (installedAdmission && installedContextAdmissions.get(request.requestId) === installedAdmission) installedAdmission.phase = "uncertain";
         throw error;
@@ -406,7 +428,14 @@ export function createPythonRuntimeAdapterFoundation(
       const admission = datasetAdmissions.get(requestId);
       const installedAdmission = installedContextAdmissions.get(requestId);
       const observationEpoch = ownedExitEpoch;
-      const result = await client.cancelTask(requestId);
+      let result: CancelPythonRuntimeTaskResult;
+      try { result = await client.cancelTask(requestId); }
+      catch (error) {
+        const terminal = terminalOverrides.get(requestId);
+        if (!terminal) throw error;
+        return { requestId, taskType: terminal.taskType, status: terminal.status,
+          cancelled: terminal.status === "cancelled" };
+      }
       const afterCancelOverride = terminalOverrides.get(requestId);
       if (afterCancelOverride) {
         return { requestId, taskType: afterCancelOverride.taskType,

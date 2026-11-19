@@ -35,7 +35,9 @@ async function settings(app: ElectronApplication, page: Page) {
 
 export async function runHeadlessContextDesktopJourney() {
   test.setTimeout(240_000);
-  const root = process.cwd(), endpoint = contextFixtureRuntimeEndpoint(process.env), profile = prepareHeadlessDesktopProfile("plan-review");
+  const endpointProfile = process.env.VISUAL_COMPOSER_CONTEXT_ENDPOINT_PROFILE ?? "explicit-qualification";
+  if (endpointProfile !== "explicit-qualification" && endpointProfile !== "os-selected-default") throw new Error("Invalid Context endpoint profile.");
+  const root = process.cwd(), endpoint = endpointProfile === "os-selected-default" ? {} : contextFixtureRuntimeEndpoint(process.env), profile = prepareHeadlessDesktopProfile("plan-review");
   const model = await installContextFixtureModel(root, profile.dataRoot, process.env.VISUAL_COMPOSER_CONTEXT_MODEL_ACQUISITION);
   const python = process.env.PYTHON;
   expect(typeof python === "string" && path.isAbsolute(python)).toBe(true);
@@ -45,6 +47,10 @@ export async function runHeadlessContextDesktopJourney() {
     PYTHON_RUNTIME_ARGS: "-u " + path.join(root, "dev-tools/scripts/qualification/visual-composer/headless-dataset-runtime-worker.py"),
     PYTHON_RUNTIME_WORKER_DIR: path.join(root, "out/ai-system-builder-win32-x64/resources/worker"),
     AISB_HEADLESS_DATASET_QUALIFICATION: "1", HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", HF_DATASETS_OFFLINE: "1", PIP_NO_INDEX: "1"};
+  if (endpointProfile === "os-selected-default") {
+    for (const key of ["PYTHON_RUNTIME_HOST", "PYTHON_RUNTIME_PORT", "PYTHON_RUNTIME_BASE_URL"]) delete (env as NodeJS.ProcessEnv)[key];
+    expect(["PYTHON_RUNTIME_HOST", "PYTHON_RUNTIME_PORT", "PYTHON_RUNTIME_BASE_URL"].map(key => (env as NodeJS.ProcessEnv)[key])).toEqual([undefined, undefined, undefined]);
+  }
   const lifetime = assetApplicationLifetime<ElectronApplication>();
   let app: ElectronApplication | undefined, client: Client | undefined, display: Client | undefined;
   let workerStarted = false, phase = "launch", journeyPassed = false, cleanupPassed = false;
@@ -119,7 +125,7 @@ export async function runHeadlessContextDesktopJourney() {
     try { startupFailures = await readContextFixtureStartupFailures(root, profile.dataRoot); } catch (error) { failures.push(error); }
     const observation = {
       schemaVersion: "headless-context-desktop-observation-v2", sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
-      journeyPassed, cleanupPassed, phase, facts, failures: failures.map(safeQualificationFailureType), startupFailures, runtimeFailure,
+      endpointProfile, journeyPassed, cleanupPassed, phase, facts, failures: failures.map(safeQualificationFailureType), startupFailures, runtimeFailure,
       model: "pinned-installed-MiniLM", worker: "unchanged-packaged-main",
       managedHost: "pending", physicalFailedBuild: "pending", parentQualification: "pending"};
     try {

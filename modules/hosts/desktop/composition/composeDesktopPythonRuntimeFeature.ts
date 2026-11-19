@@ -3,8 +3,6 @@ import type { createPythonRuntimeStartupDiagnostics } from "../../../adapters/ru
 import type { DesktopPythonRuntimeLogEntry } from "../../../contracts/ipc";
 import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../../contracts/runtime";
 import {
-  resolvePythonRuntimeBaseUrl,
-  resolvePythonRuntimeHostAndPort,
   classifyPythonRuntimeStdioLogLevel,
   shouldPreparePythonRuntimeWorkerDependencies,
   type DesktopPythonRuntimeFeature,
@@ -36,12 +34,13 @@ export async function composeDesktopPythonRuntimeFeature(
     preparePythonRuntimeEnvironment,
     createPythonRuntimeStartupDiagnostics,
     checkPythonRuntimeInstallationAsync,
+    selectPythonRuntimeLoopbackEndpoint,
   } = await import("../../../adapters/runtime/python");
   const diagnostics = options.startupDiagnostics ?? createPythonRuntimeStartupDiagnostics();
-  const pythonRuntimeEndpoint = resolvePythonRuntimeHostAndPort();
-  const pythonRuntimeBaseUrl = resolvePythonRuntimeBaseUrl();
+  const environment = { ...process.env };
+  const pythonRuntimeEndpoint = await selectPythonRuntimeLoopbackEndpoint({ env: environment });
   const configuredPythonRuntimeStartupTimeoutMs = Number(
-    process.env.PYTHON_RUNTIME_STARTUP_TIMEOUT_MS,
+    environment.PYTHON_RUNTIME_STARTUP_TIMEOUT_MS,
   );
   const pythonRuntimeStartupTimeoutMs =
     Number.isFinite(configuredPythonRuntimeStartupTimeoutMs) &&
@@ -49,21 +48,21 @@ export async function composeDesktopPythonRuntimeFeature(
       ? configuredPythonRuntimeStartupTimeoutMs
       : PYTHON_RUNTIME_STARTUP_TIMEOUT_MS_DEFAULT;
   const pythonRuntimeEnvironment = {
-    ...process.env,
+    ...environment,
     PYTHON_RUNTIME_HOST: pythonRuntimeEndpoint.host,
     PYTHON_RUNTIME_PORT: pythonRuntimeEndpoint.port,
-    ...(process.env.HF_HUB_DISABLE_XET
-      ? { HF_HUB_DISABLE_XET: process.env.HF_HUB_DISABLE_XET }
+    ...(environment.HF_HUB_DISABLE_XET
+      ? { HF_HUB_DISABLE_XET: environment.HF_HUB_DISABLE_XET }
       : {}),
     HF_HUB_DISABLE_SYMLINKS_WARNING:
-      process.env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
+      environment.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
   };
   const { command: pythonRuntimeCommand, cwd: pythonRuntimeWorkerDirectory, args } =
     options.launch ?? resolveDesktopPythonRuntimeLaunch();
   const shouldPrepareDependencies =
     shouldPreparePythonRuntimeWorkerDependencies(pythonRuntimeCommand);
   const foundation = createPythonRuntimeAdapterFoundation({
-    client: { baseUrl: pythonRuntimeBaseUrl },
+    client: { baseUrl: pythonRuntimeEndpoint.baseUrl },
     supervisor: {
       command: pythonRuntimeCommand,
       args: [...args],

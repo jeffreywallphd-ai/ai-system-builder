@@ -15,6 +15,54 @@ import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy"
 
 const RUNTIME_TOKEN = "runtime-test-token-0123456789abcdef";
 
+describe("captured runtime HTTP ownership", () => {
+  const operations = [
+    ["health", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.getHealthStatus()],
+    ["capabilities", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.getCapabilities()],
+    ["models", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.getModelStatus()],
+    ["unload", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.unloadModels()],
+    ["start", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.startTask({requestId: "owned", taskType: "train-model", payload: {}})],
+    ["read", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.readTaskStatus("owned")],
+    ["cancel", (client: ReturnType<typeof createPythonRuntimeHttpClient>) => client.cancelTask("owned")],
+  ] as const;
+  for (const [name, invoke] of operations) {
+    it(`rejects a ${name} body completed after its exact launch changed`, async () => {
+      let incarnation = {}, release!: (value: unknown) => void, entered!: () => void;
+      const reading = new Promise<void>(resolve => {entered = resolve;});
+      const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: RUNTIME_TOKEN,
+        captureProcessOwnership() {
+          const captured = incarnation;
+          return () => {if (captured !== incarnation) throw new Error("Synthetic ownership changed.");};
+        },
+        fetchImplementation: (async () => ({ok: true, status: 200, json: () => {
+          entered(); return new Promise(resolve => {release = resolve;});
+        }})) as never,
+      });
+      const pending = invoke(client), refused = expect(pending).rejects.toThrow("ownership changed");
+      await reading; incarnation = {}; release({}); await refused;
+    });
+  }
+  it("does not continue a model download poll under a replacement launch", async () => {
+    let incarnation = {}, reads = 0, posted = 0, requestId = "";
+    const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: RUNTIME_TOKEN,
+      modelDownloadPollIntervalMs: 20,
+      captureProcessOwnership() {const captured = incarnation; return () => {
+        if (captured !== incarnation) throw new Error("Synthetic ownership changed.");
+      };},
+      fetchImplementation: (async (url, init) => {
+        if (String(url).endsWith("/tasks/start")) {
+          posted++; requestId = JSON.parse(String(init?.body)).requestId;
+          return {ok: true, status: 200, json: async () => ({requestId, taskType: "ensure-model-download", accepted: true, status: "queued"})};
+        }
+        reads++; setTimeout(() => {incarnation = {};}, 1);
+        return {ok: true, status: 200, json: async () => ({requestId, taskType: "ensure-model-download", status: "running"})};
+      }) as never,
+    });
+    await expect(client.ensureModelDownloaded({provider: "transformers", modelId: "synthetic/model"})).rejects.toThrow("ownership changed");
+    expect(posted).toBe(1); expect(reads).toBe(1);
+  });
+});
+
 function fetchCalls(fetcher: unknown): Array<[string, RequestInit]> {
   return (fetcher as { mock: { calls: Array<[string, RequestInit]> } }).mock
     .calls;

@@ -190,7 +190,6 @@ import {
 } from "./featureLifecycle";
 import {
   createUnavailablePythonRuntimeStatus,
-  resolvePythonRuntimeBaseUrl,
   type DesktopPythonRuntimeFeature,
 } from "./desktopPythonRuntimeHelpers";
 import {
@@ -559,7 +558,7 @@ export function composeDesktopHost(
         feature.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
         recordHostMemorySnapshot(
           "desktop.host.python-runtime-foundation.compose.after",
-          { baseUrlConfigured: Boolean(resolvePythonRuntimeBaseUrl()) },
+          { baseUrlConfigured: true },
         );
         pythonRuntimeFoundation = feature;
         return feature;

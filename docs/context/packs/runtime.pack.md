@@ -27,8 +27,7 @@
   confuse advisory total capacity with free VRAM, Torch readiness, admission or
   native/offload ownership. See the runtime architecture and worker README.
 
-- For the two exact pinned Qwen CPU/chat/Standard trials, memory admission uses user-directed3GiB/3.5GiB estimates only after safe-weight hash and size checks;
-  all other profiles retain conservative admission. Read the runtime model and offline qualification guide before extending or interpreting these estimates.
+- For the two exact pinned Qwen CPU/chat/Standard trials, memory admission uses user-directed3GiB/3.5GiB estimates only after safe-weight hash and size checks; all other profiles retain conservative admission. Read the runtime model and offline qualification guide before extending or interpreting these estimates.
 
 - Node.js + TypeScript is the default core runtime path.
 - Python/ComfyUI and other runtimes are adapter paths under `modules/adapters/runtime`.
@@ -47,8 +46,7 @@
 - The worker startup dependency probe includes the exact patched PyArrow pin
   required for bounded Parquet input/output; Parquet support must not depend on
   an uninstalled training-only requirements file.
-- Managed Python setup includes the exact Context LanceDB requirements. Explicit
-  RAG create/inspect/query repeats the asynchronous one-flight exact-version/import
+- Managed Python setup includes the exact Context LanceDB requirements. Explicit RAG create/inspect/query repeats the asynchronous one-flight exact-version/import
   probe and bounded install/re-probe with fixed progress. Passive reads never install.
 - Desktop honors the configured interpreter, then prefers Python 3.10–3.13 for
   the optional decoder or 3.14 for the core worker. Development can provision it locally. Desktop verifies it before shell admission.
@@ -91,6 +89,8 @@
 
 ## Runtime Readiness Rules
 
+- Managed foundations skip pre-spawn HTTP and require the exact current child's bounded private bound-ready proof. The worker uses a non-reusable socket and verified Windows exclusive binding before Uvicorn emits proof. Capture the same launch through response bodies and asynchronous download continuation; stop/error/exit retire it. No bearer response or generic attach fallback proves process ownership. Preserve native/uncertain cleanup requirements.
+- Desktop selects an OS-admitted loopback port only during explicit lazy composition when port/base URL are unset. Validate configuration first and use one captured endpoint for client and worker. Temporary socket retirement does not reserve the port across spawn or prove worker identity. Passive reads, authentication, no-install admission and uncertain lifecycle guards stay intact.
 - Capability ids cover Python runtime, ComfyUI runtime, image generation, dataset preparation, model training, model validation, and model publishing.
 - Model publishing may be composed as a readiness capability while still reporting unavailable/not implemented until a task implementation exists.
 - Readiness snapshots are host-scoped and should read each top-level provider at most once per snapshot.
