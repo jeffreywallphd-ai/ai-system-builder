@@ -1,5 +1,17 @@
 # Runtime Model
 
+Private source staging composes selected-file streaming into context-scoped
+read-only temporary custody. One staging lease spans policy, exclusive writes,
+fsync/close, integrity verification, consumer use and positively owned cleanup.
+Trusted prepared-root and ancestor identities are rechecked; immediate lifetime
+fences follow containment/file checks before new effects. An already-entered
+native operation retains custody through settlement. The shared verifier takes
+an explicit private root and live hash fence rather than mutating HF globals.
+Foreign/changed data or unknown settlement retains bytes and lease without
+deletion or retry credit. This component supplies no persistent model reference,
+cache publication, durable restart ledger, native hostile-writer fence, public
+effect authority or actual provider/model/host qualification.
+
 Private selected-file streaming is separate from the default SDK branch. It
 reuses verified-publication semantics: bounded immutable chunks, exact EOF/hash
 and no receipt before completion. Fixed HF URLs and trusted exact origins use

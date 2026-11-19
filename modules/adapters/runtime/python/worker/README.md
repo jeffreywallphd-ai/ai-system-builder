@@ -13,6 +13,30 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+`stage_model_source` owns one private temporary tree under an existing trusted
+canonical host directory. It reserves its nonqueueing lease before policy or
+filesystem work and retains it across transfer, read-only consumer use and
+confirmed cleanup. Strict currentness brackets ancestor checks and immediately
+precedes new mkdir/open/write/fsync and consumer handoff. Already-entered native
+I/O may settle late; it does not grant a replacement owner.
+
+Only exclusive plain single-link files receive immutable bounded chunks.
+Acknowledged short writes, total bytes, fsync and close precede verification.
+The manifest verifier accepts an explicit private root and live hash fence;
+it never changes the global HF environment or trusts a supplied public path.
+Closed files, index membership, EOF and exact hashes precede the temporary yield.
+The original omitted-root cache behavior remains unchanged.
+
+Cleanup inspects the complete fixed tree and removes only recorded fresh
+identities. An extra/replaced/linked entry, changed parent, uncertain close or
+unsettled transport retains known bytes and its lease. A failed close is not
+retried with a possibly reused descriptor number. This owner never deletes
+retained history, recursively cleans an uncertain tree, publishes cache/registry
+records or grants recovery authority. Its cooperative guards are not a hostile
+native filesystem fence, durable restart accounting or persistent path contract.
+Production task/publication binding and actual provider/model/host qualification
+remain separate work; current accuracy results stay closed.
+
 `ModelSourceTransferSession` is private, selected-file streaming support. The
 default origin is Hugging Face only. Additional exact origins must come from
 trusted approved scope; a redirect cannot grant its own destination. Each hop

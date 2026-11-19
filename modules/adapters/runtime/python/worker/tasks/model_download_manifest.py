@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import os
+from pathlib import Path
 import stat
-from typing import Any
+from typing import Any, Callable
 
 from ..models import ModelDownloadManifest, MAX_MODEL_DOWNLOAD_SOURCE_FILES as MAX_SOURCE_FILES
 
@@ -49,13 +51,22 @@ def _unique_json_object(pairs):
     return result
 
 
-def verify_snapshot(manifest: ModelDownloadManifest, local_path: str, *, allow_missing: bool = False) -> bool:
+def verify_snapshot(manifest: ModelDownloadManifest, local_path: str, *, allow_missing: bool = False,
+                    private_cache_root: Path | None = None, fence: Callable[[], None] | None = None) -> bool:
     """Verify selected bytes at this read; this is not a durable native file fence."""
     from .local_text_generation import _selected_transformers_snapshot, _resolve_transformers_snapshot_file
 
     try:
+        def check_current():
+            if fence is not None:
+                result = fence()
+                if inspect.iscoroutine(result):
+                    result.close()
+                if result is not None:
+                    raise ModelDownloadManifestError()
+        check_current()
         source = manifest.source
-        root, repository = _selected_transformers_snapshot(source.modelId, local_path)
+        root, repository = _selected_transformers_snapshot(source.modelId, local_path, cache_root=private_cache_root)
         if root.name != source.revision:
             raise ModelDownloadManifestError()
         root_before = _identity(root.lstat())
@@ -70,6 +81,7 @@ def verify_snapshot(manifest: ModelDownloadManifest, local_path: str, *, allow_m
             raise ModelDownloadManifestError()
         index_bytes: bytes | None = None
         for name in sorted(names):
+            check_current()
             expected = selected[name]
             visible = root / name
             visible_before = _identity(visible.lstat())
@@ -83,6 +95,7 @@ def verify_snapshot(manifest: ModelDownloadManifest, local_path: str, *, allow_m
             if name == "model.safetensors.index.json" and expected.sizeBytes > MAX_INDEX_BYTES:
                 raise ModelDownloadManifestError()
             captured = bytearray() if name == "model.safetensors.index.json" else None
+            check_current()
             fd = os.open(resolved, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
             with os.fdopen(fd, "rb") as stream:
                 opened = _identity(os.fstat(stream.fileno()))
@@ -94,14 +107,18 @@ def verify_snapshot(manifest: ModelDownloadManifest, local_path: str, *, allow_m
                     raise ModelDownloadManifestError()
                 remaining = expected.sizeBytes
                 while remaining:
+                    check_current()
                     part = stream.read(min(BLOCK_BYTES, remaining))
+                    check_current()
                     if not part:
                         raise ModelDownloadManifestError()
                     remaining -= len(part); checksum.update(part)
                     if captured is not None:
                         captured.extend(part)
+                check_current()
                 if stream.read(1) or _identity(os.fstat(stream.fileno())) != opened:
                     raise ModelDownloadManifestError()
+                check_current()
             if (checksum.hexdigest() != expected.integrity.digest or _identity(resolved.lstat()) != _identity(before) or
                     _identity(visible.lstat()) != visible_before or
                     _resolve_transformers_snapshot_file(root, repository, name) != resolved):
@@ -119,6 +136,7 @@ def verify_snapshot(manifest: ModelDownloadManifest, local_path: str, *, allow_m
                 raise ModelDownloadManifestError()
         elif names == set(selected) and "model.safetensors" not in names:
             raise ModelDownloadManifestError()
+        check_current()
         if _identity(root.lstat()) != root_before:
             raise ModelDownloadManifestError()
         return names == set(selected)

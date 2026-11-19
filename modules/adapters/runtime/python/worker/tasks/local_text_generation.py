@@ -871,11 +871,15 @@ def _require_plain_cache_directory(path: Path) -> None:
         raise ValueError("Model cache directory is invalid")
 
 
-def _selected_transformers_snapshot(model_id: str, local_path: str) -> tuple[Path, Path]:
+def _selected_transformers_snapshot(model_id: str, local_path: str, *, cache_root: Path | None = None) -> tuple[Path, Path]:
     _assert_huggingface_model_id(model_id)
-    cache = _resolve_huggingface_cache_root()
+    cache = _resolve_huggingface_cache_root() if cache_root is None else cache_root
     if cache is None:
         raise ValueError("Selected model cache is unavailable")
+    if cache_root is not None:
+        if not isinstance(cache, Path) or not cache.is_absolute() or cache.resolve(strict=True) != cache:
+            raise ValueError("Selected private model root is invalid")
+        _require_plain_cache_directory(cache)
     cache = cache.resolve(strict=True)
     repository = cache / f"models--{model_id.replace('/', '--')}"
     snapshots = repository / "snapshots"

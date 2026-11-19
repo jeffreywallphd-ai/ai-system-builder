@@ -2,10 +2,14 @@ Headless source-preview feature checks cover copied codecs, application policy
 and provider phases, real host-reader composition and exact metadata digests.
 Private manifest work also uses Model owner unit/types, existing runtime
 ownership and `headless-model-manifest-worker`. The last runs controlled
-manifest/stream classes: disposable files, SDK/DNS/sink failures and an owned
+manifest/stream/staging classes: disposable files, SDK/DNS/sink failures and an owned
 local socketpair HTTP-response deadline fixture, with no provider or model load. Preserve
 shared-worker-only/unknown-path fallback and ordinary revision compatibility;
 these tests do not qualify public acquisition, native custody or hard quotas.
+Staging cases also cover real temporary bytes/hardlink refusal, short writes,
+fsync/close/consumer failures, held-writer custody and causal metadata-delay
+retirement with no late write or fsync. Explicit-root integrity keeps ordinary
+cache lookup unchanged. No persistent Model path or restart ledger is qualified.
 Related pinned SDK and Managed route profiles retain authentication, revocation,
 original-target correlation and independent reply checks. The portable31tool
 plan catalog stays within32 and discloses provider/key use separately from saved

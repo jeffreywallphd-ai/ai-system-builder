@@ -1,5 +1,13 @@
 # Python runtime adapter
 
+The private temporary source-staging context composes that transport with
+exclusive bounded file writes, acknowledged close and exact-file verification.
+Its trusted prepared root is passed explicitly to validation; global HF paths
+and ordinary downloads do not change. Read-only consumer use ends with the
+context. Unknown ownership or settlement retains bytes and custody, without
+granting persistent access, reuse or recovery.
+This is not persistent Model storage, cache publication or public acquisition.
+
 A separate private selected-file stream uses fixed source URLs, pinned public
 DNS/TLS destinations and trusted exact origins. It sends no credentials,
 cookies or environment proxy settings, and never retries or falls back to SDK/

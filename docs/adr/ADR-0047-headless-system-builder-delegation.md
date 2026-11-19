@@ -1,5 +1,22 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private temporary source custody
+
+Compose the existing I7 stream and manifest protocols in a synchronous,
+context-managed staging owner. Require a prepared trusted canonical root, fresh
+exclusive children, bounded acknowledged writes, fsync/close and exact closed
+integrity before a temporary read-only yield. Pass root authority explicitly;
+do not alter global cache/environment state. One lease spans the entire consumer
+and confirmed cleanup. Bracket containment with currentness and fence each new
+effect after potentially slow metadata checks.
+
+Only positively recorded new entries may be removed. Unknown identity, extra
+files, links or unsettled IO retain bytes/custody; a failed close never retries
+its descriptor. Persistent storage/publication and application effect authority
+remain separate owners. This private composition changes no ordinary route and
+does not qualify native races, restart accounting, actual providers/models/hosts,
+public acquisition or I7 completion.
+
 ### Private selected-file streaming boundary
 
 The I7 resource prerequisite uses an attempt-local fixed-HF transport rather

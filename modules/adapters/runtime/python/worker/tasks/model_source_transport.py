@@ -209,6 +209,10 @@ class ModelSourceTransferSession:
             except BaseException:
                 self._cancel_close_failed.set()
 
+    def assert_current(self) -> None:
+        """Private composition fence; it adds no task or filesystem authority."""
+        self._fence()
+
     def _fence(self):
         if self._cancelled.is_set() or self._failed.is_set():
             raise ModelSourceTransferError("not_current")

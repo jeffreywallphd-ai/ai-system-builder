@@ -1,0 +1,28 @@
+{
+  "schema_version": "headless-model-staging-observation-v1",
+  "scope": "Private context-scoped temporary Model source custody, not connected to default downloads or a public acquisition operation",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Completion requires fresh exact candidate-bound checks and actual separate-invocation review. This descriptive record supplies no executed or parent pass.",
+  "controls": [
+    "The staging lease is reserved before current policy or filesystem work. An immutable manifest, finite payload/duration/origins and prepared canonical root/ancestor identities are captured. No root creation or shared cache mutation is authorized.",
+    "Exclusive no-follow plain single-link files receive bounded immutable chunks with exact positive short-write accounting. Currentness brackets metadata and immediately precedes each creation/write/fsync and final temporary consumer handoff.",
+    "Fsync and independently confirmed close precede closed exact-file/index/EOF/hash verification. The private root and live integrity fence are explicit parameters; global HF cache/environment and ordinary omitted-root semantics remain unchanged.",
+    "One lease spans transfer, read-only consumer use and complete positively owned cleanup. Unknown close/identity, foreign entries or unsettled transport retain bytes and custody without retry. A possibly reused descriptor is never closed a second time."
+  ],
+  "controlled_observations": [
+    "Eighteen focused staging cases pass with real disposable files and controlled provider/IO faults, including a real hardlink denial and exact temporary bytes.",
+    "Tests cover limits/unprepared roots/free capacity, held consumer custody, policy withdrawal, acknowledged short writes/no progress, fsync/close failures, consumer exception, unknown extra/replaced data, renamed parents, changed bytes/index escape and unsettled transport.",
+    "Causal cancel/expiry during the final file check proves zero subsequent write/fsync. Controlled already-entered write remains owned after deadline until it actually returns, then confirmed cleanup removes only known files.",
+    "Truthy/async integrity fences deny before file open. The default root still uses the original cache resolver; a private-root verification does not call that global resolver."
+  ],
+  "retained_corrections": [
+    "Independent preflight identified that filesystem metadata could block after the currentness fence, allowing a late new effect. Immediate post-metadata fences and causal zero-effect regressions correct the handoff. Earlier direct tests alone did not prove that delay.",
+    "Constructor currentness now precedes root metadata and each ancestor. Unknown close acknowledgement retains the exact file state without attempting a reused descriptor."
+  ],
+  "qualification_limits": [
+    "Permitted read-only consumer use is limited to the context. Confirmed cleanup removes its files; uncertainty may retain bytes without granting persistent access, reuse or recovery. This is not a durable Model reference, registry entry, cache publication or effect approval.",
+    "Cooperative-local identity/containment checks are not a hostile native race fence, durable crash/restart accounting or hard completion-time guarantee for native filesystem operations. Unknown retained data remains untouched.",
+    "No actual external TLS/provider transfer, model weights/load/quality, real application host, public acquisition, native/offload or parent/chunk qualification is claimed. Accepted accuracy checks were not rerun.",
+    "Production task/publication/resource binding, exact approved delegate origins and physical outcomes remain I7 work. No new provider, engine, credential path, scheduler or process is added."
+  ]
+}

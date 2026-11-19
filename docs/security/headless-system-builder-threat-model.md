@@ -1,5 +1,29 @@
 # Headless System Builder threat model
 
+## Private temporary Model staging
+
+Protect prepared host roots, retained data and task/resource custody. Capture
+the manifest/finite limits, reserve a sole staging lease before work and require
+plain canonical ancestor identities. Exclusive single-link files and bounded
+immutable bytes prevent path takeover, overwrite and unchecked sink growth.
+Short writes require exact positive acknowledgement; fsync/confirmed close and
+closed manifest/index/EOF/hash verification precede a read-only temporary yield.
+Explicit root injection cannot change global cache authority.
+
+Slow metadata must not admit new effects after expiry: currentness brackets
+containment and is checked immediately before creation, writes, fsync and yield.
+Already-entered filesystem calls retain custody until settlement. Unknown close
+is not retried with a reused fd. Cleanup independently proves the complete fixed
+owned tree before removing any bytes; foreign/replaced/linked entries, changed
+parents and uncertain socket/file settlement retain bytes and the staging lease.
+The consumer has no persistent path, publication, registration or recovery grant.
+
+Residual scope: these cooperative-local identity checks are not a native
+hostile-writer fence, durable crash/restart ledger or hard filesystem completion
+deadline. No existing cache/retained offload tree is adopted, moved or removed.
+Private controlled file/transport tests grant no actual external TLS/provider,
+model load/quality, host, public effect or parent qualification.
+
 ## Private selected-file stream
 
 Capture immutable manifest and finite deadline/request/payload bounds. Reject
