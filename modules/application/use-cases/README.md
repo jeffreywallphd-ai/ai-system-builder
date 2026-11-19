@@ -16,6 +16,18 @@ cleanup uncertainty remains unconfirmed rather than receiving deadline credit.
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The private `ModelDownloadTasksUseCase.peekApprovedSourceReview` reads only the
+original captured cached completion after accepted successful terminal source
+work. It checks exact actor/workspace ownership and original host lifetime before
+and after awaits, validates model/pin/manifest/download confirmation and returns
+detached frozen finite historical metadata. It never returns the cache path,
+refreshes worker status, inspects files, registers or retires a source. Historical
+selected-byte verification does not establish current file authority, model
+readiness or license rights. Ordinary source completion still refuses automatic
+registration. The eventual headless host must independently enforce the exact
+ledger client/plan and current ModelRead/publication policy; former ModelWrite
+is not a read grant or requirement. Public host/task/save integration stays pending.
+
 `PreviewHeadlessModelSourceUseCase` prepares a source through the private Model
 port. It captures exact actor/client/workspace/host and copied request targets,
 requires fresh current permission before provider work and egress, and supplies

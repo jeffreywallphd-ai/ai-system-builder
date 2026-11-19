@@ -34,5 +34,21 @@ export interface ApprovedModelSourceDownloadTask {
   /** Cached original completion only; never discovers or advances a different task. */
   readonly readCompleted: () => Promise<CompletedModelDownload | undefined>;
 }
+
+/** Historical selected-byte completion only; never current file or save authority. */
+export interface ApprovedModelSourceDownloadReview {
+  readonly requestId: string;
+  readonly workspaceId: WorkspaceId;
+  readonly modelId: string;
+  readonly revision: string;
+  readonly manifestDigest: string;
+  readonly format: ModelDownloadSource["format"];
+  readonly license: ModelDownloadSource["license"];
+  readonly selectedFileCount: number;
+  readonly totalBytes: number;
+  readonly fromCache: boolean;
+  readonly selectedFilesVerification: "verified-at-completion";
+  readonly runtimeReadiness: "not-checked";
+}
 export type ApprovedModelSourceDownloadStart = Exclude<InstalledRuntimeTaskStart, {kind: "accepted"}> |
   {readonly kind: "accepted"; readonly value: StartRuntimeTaskResult; readonly task: ApprovedModelSourceDownloadTask};

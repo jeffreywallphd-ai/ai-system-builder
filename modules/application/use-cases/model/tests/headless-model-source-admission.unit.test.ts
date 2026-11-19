@@ -27,6 +27,7 @@ function fixture(t: TestContext) {
   const events: string[] = [], records = new Map<string, RuntimeTaskRecord>();
   let acknowledge: (() => Promise<boolean>) | undefined;
   let dispatch: ((r: ApprovedModelSourceDownloadRequest, c: ApprovedModelSourceDownloadControl) => Promise<any>) | undefined;
+  let completed: unknown, completionReads = 0, completionReader: (() => Promise<unknown>) | undefined;
   const admission: ApprovedModelDownloadAdmission = {source: sourceRequest, control: {isCurrent: () => current, stillAllowed: async () => allowed},
     async acknowledgeIssued() {acks++; events.push("ack"); return acknowledge ? acknowledge() : true;}};
   const dependencies = {
@@ -40,7 +41,7 @@ function fixture(t: TestContext) {
         revision: r.sourceManifest.source.revision, manifestDigest: r.sourceManifest.manifestDigest,
         read: async () => {reads++; return {...original};},
         cancel: async () => {cancels++; return {requestId: r.requestId, status: original.status, cancelled: false};},
-        readCompleted: async () => undefined});
+        readCompleted: async () => {completionReads++; return (completionReader ? await completionReader() : completed) as never;}});
       const result = dispatch ? await dispatch(r, c) : {kind: "accepted" as const, value: {requestId: r.requestId, status: "running" as const}};
       return result.kind === "accepted" ? {task, ...result} : result;
     }},
@@ -57,8 +58,136 @@ function fixture(t: TestContext) {
   return {request, sourceRequest, admission, authority, reconciler, useCase, records, dependencies, events,
     counts: () => ({acks, starts, reads, cancels, registered, ordinary, lists}),
     acknowledge(value: typeof acknowledge) {acknowledge = value;}, dispatch(value: typeof dispatch) {dispatch = value;},
+    completed(value: unknown) {completed = value;}, readCompletion(value: typeof completionReader) {completionReader = value;},
+    completionReads: () => completionReads,
     deny() {allowed = false;}, retire() {current = false;}};
 }
+
+function completionFor(f: ReturnType<typeof fixture>) {
+  return {provider: "transformers", modelId, revision, verifiedManifestDigest: f.sourceRequest.sourceManifest.manifestDigest,
+    downloaded: true, fromCache: false, localPath: "synthetic-private-cache-not-for-display"};
+}
+async function succeedSource(f: ReturnType<typeof fixture>, admission = f.admission) {
+  assert.equal((await f.useCase.startApprovedSource(f.request, admission, f.authority)).kind, "accepted");
+  f.completed(completionFor(f)); f.records.get(taskId)!.status = "succeeded";
+  await f.useCase.read({workspaceId, requestId: taskId}, f.authority); await f.reconciler.reconcileNow();
+  assert.equal(f.reconciler.status.pending, 0);
+}
+
+test("cached source review returns detached finite historical verification without paths, refresh, save or retirement", async t => {
+  for (const fromCache of [false, true]) {
+    const f = fixture(t); await succeedSource(f); f.completed({...completionFor(f), fromCache});
+    const before = f.counts(), review = await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority);
+    assert.deepEqual(review, {requestId: taskId, workspaceId, modelId, revision,
+      manifestDigest: f.sourceRequest.sourceManifest.manifestDigest, format: "transformers-safetensors", license: {kind: "unknown"},
+      selectedFileCount: 3, totalBytes: 6, fromCache, selectedFilesVerification: "verified-at-completion", runtimeReadiness: "not-checked"});
+    assert.deepEqual(f.counts(), before); assert.equal(f.completionReads(), 1);
+    assert.doesNotMatch(JSON.stringify(review), /localPath|synthetic-private-cache|registered|fileAuthority/);
+    assert.ok(Object.isFrozen(review)); assert.ok(Object.isFrozen(review?.license));
+    const again = await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority);
+    assert.deepEqual(again, review); assert.notEqual(again, review); assert.notEqual(again?.license, review?.license);
+    await assert.rejects(f.useCase.complete({workspaceId, requestId: taskId}, f.authority), /separately scoped/);
+    assert.deepEqual(f.counts(), before);
+  }
+});
+
+test("source review preserves declared non-open licensing without asserting rights or readiness", async t => {
+  const f = fixture(t);
+  const source = readModelDownloadSource({...f.sourceRequest.sourceManifest.source,
+    license: {kind: "provider-declared", identifier: "proprietary"}}, {provider: "huggingface", modelId, revision});
+  (f.sourceRequest as {sourceManifest: typeof f.sourceRequest.sourceManifest}).sourceManifest = {
+    source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")};
+  await succeedSource(f);
+  const review = await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority);
+  assert.deepEqual(review?.license, {kind: "provider-declared", identifier: "proprietary"});
+  assert.equal(review?.runtimeReadiness, "not-checked"); assert.doesNotMatch(JSON.stringify(review), /rightsGranted|runtimeReady/);
+});
+
+test("ordinary, unknown, running and unsuccessful source states cannot read cached source completion", async t => {
+  for (const state of ["ordinary", "unknown", "running", "failed", "cancelled"] as const) {
+    const f = fixture(t);
+    if (state === "ordinary") await f.useCase.start(f.request, f.authority);
+    else {
+      if (state === "unknown") f.dispatch(async () => ({kind: "unconfirmed"}));
+      await f.useCase.startApprovedSource(f.request, f.admission, f.authority);
+      if (state === "failed" || state === "cancelled") {
+        f.records.get(taskId)!.status = state; await f.useCase.read({workspaceId, requestId: taskId}, f.authority);
+      }
+    }
+    f.completed(completionFor(f)); const before = f.counts();
+    assert.equal(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: state === "ordinary" ? "ordinary" : taskId}, f.authority), undefined);
+    assert.deepEqual(f.counts(), before); assert.equal(f.completionReads(), 0);
+  }
+});
+
+test("a successful task without exact cached byte confirmation is not a verified source review", async t => {
+  const changes = [undefined, {provider: "huggingface"}, {modelId: "fixture/other"}, {revision: "d".repeat(40)},
+    {verifiedManifestDigest: "sha256:" + "d".repeat(64)}, {verifiedManifestDigest: undefined}, {revision: undefined},
+    {downloaded: false}, {fromCache: "true"}, {localPath: ""}, {localPath: undefined}, {runtimeReady: true}];
+  for (const patch of changes) {
+    const f = fixture(t); await succeedSource(f);
+    f.completed(patch === undefined ? undefined : {...completionFor(f), ...patch});
+    const before = f.counts();
+    assert.equal(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority), undefined);
+    assert.deepEqual(f.counts(), before); assert.equal(f.completionReads(), 1);
+  }
+});
+
+test("cached active results and private completion errors cannot run validation hooks or escape as review", async t => {
+  const f = fixture(t); await succeedSource(f); let hooks = 0;
+  const getter = Object.defineProperty(completionFor(f), "revision", {enumerable: true, get() {hooks++; return revision;}});
+  const proxy = new Proxy(completionFor(f), {getPrototypeOf() {hooks++; return null;}, ownKeys() {hooks++; return [];}});
+  for (const result of [getter, proxy]) {
+    f.completed(result); assert.equal(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority), undefined);
+  }
+  f.readCompletion(async () => {throw new Error("Synthetic private completion detail.");});
+  assert.equal(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority), undefined);
+  assert.equal(hooks, 0); assert.equal(f.counts().registered, 0);
+});
+
+test("cached source review requires the original actor/workspace but does not reuse former write approval as read policy", async t => {
+  const f = fixture(t); await succeedSource(f); f.deny();
+  for (const authority of [{...f.authority, organizationId: createOrganizationId("foreign.org")}, {...f.authority, principalId: "foreign.actor"}])
+    await assert.rejects(f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, authority), /not found/);
+  await assert.rejects(f.useCase.peekApprovedSourceReview({workspaceId: createWorkspaceId("foreign.workspace"), requestId: taskId}, f.authority), /not found/);
+  assert.equal(f.completionReads(), 0);
+  const before = f.counts();
+  assert.ok(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, {...f.authority, modelWriteAuthorized: false}));
+  assert.deepEqual(f.counts(), before); assert.equal(f.completionReads(), 1);
+});
+
+test("retired, thrown and asynchronous original host currentness deny before cached completion reads", async t => {
+  const f = fixture(t); let mode: "current" | "retired" | "throw" | "async" = "current";
+  const admission: ApprovedModelDownloadAdmission = {...f.admission, control: {...f.admission.control, isCurrent: () => {
+    if (mode === "throw") throw new Error("Synthetic host retirement.");
+    if (mode === "async") return Promise.reject(new Error("Synthetic asynchronous currentness.")) as never;
+    return mode === "current";
+  }}};
+  await succeedSource(f, admission);
+  for (const state of ["retired", "throw", "async"] as const) {
+    mode = state; assert.equal(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority), undefined);
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.completionReads(), 0);
+});
+
+test("held cached review keeps original callback/request ownership and host retirement fences late output", async t => {
+  for (const retire of [false, true]) {
+    const f = fixture(t); await succeedSource(f);
+    let entered!: () => void, release!: () => void;
+    const held = new Promise<void>(done => {release = done;}), started = new Promise<void>(done => {entered = done;});
+    f.readCompletion(async () => {entered(); await held; return completionFor(f);});
+    const request = {workspaceId, requestId: taskId}, authority = {...f.authority};
+    const pending = f.useCase.peekApprovedSourceReview(request, authority); await started;
+    Object.assign(request, {workspaceId: createWorkspaceId("foreign.workspace"), requestId: "foreign"});
+    Object.assign(authority, {principalId: "foreign.actor"});
+    (f.admission.control as {isCurrent: () => boolean}).isCurrent = () => false;
+    if (retire) {f.retire(); (f.admission.control as {isCurrent: () => boolean}).isCurrent = () => true;}
+    release(); const review = await pending;
+    if (retire) assert.equal(review, undefined); else assert.equal(review?.workspaceId, workspaceId);
+    assert.equal(f.counts().registered, 0);
+  }
+});
 
 test("original actor and issuance acknowledgement precede the exact source port and independent lease", async t => {
   const f = fixture(t);

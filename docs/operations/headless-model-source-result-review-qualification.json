@@ -1,0 +1,23 @@
+{
+  "schema_version": "headless-model-source-review-observation-v1",
+  "scope": "Private original-owner historical completion metadata before public status and scoped Model save",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Fresh exact candidate verification and actual separate-invocation review govern component completion. This descriptive record grants no public capability or increment/chunk pass.",
+  "controls": [
+    "Extend the existing Model source application port with finite historical review data and the original Model download use case with a cached-only peek. No new scheduler, runtime path, provider or dependency is introduced.",
+    "Require exact original actor/workspace descriptor, accepted successful terminal source and original literal host currentness around awaits. Thrown, asynchronous or retired currentness denies; native Promise rejection is observed without granting liveness. Original captured callbacks and copied request identity stay authoritative.",
+    "Use only the original captured task.readCompleted cache. Validate passive exact provider/model/pin/manifest/download/fromCache/path-shape data against the original source. Ordinary, unknown, running, failed/cancelled, absent, malformed, active or substituted completion cannot yield review.",
+    "Return fresh detached frozen model/version/format/license/digest/count/byte/cache metadata with verified-at-completion and not-checked readiness markers. Never return localPath, raw error/result or a current filesystem, license-rights, readiness, cleanup or save grant.",
+    "No worker status refresh, shared-ID discovery, filesystem inspection, dependency initialization, generic completion, registry write or source retirement occurs. Ordinary complete remains source-denied. The eventual headless host must independently prove exact ledger client/plan and current ModelRead/publication policy; former ModelWrite is neither a read grant nor a requirement for historical metadata."
+  ],
+  "focused_observations": [
+    "Eight new application cases plus the twelve original source-admission cases passed 20/20 with strict scoped TypeScript. They cover finite frozen metadata, fresh copied output, cache/non-open license data, ordinary/unknown/running/failed/cancelled exclusion, twelve malformed/mismatched completion variants, active results without validation hooks, private error suppression, actor/workspace isolation, historical read after former write permission ends, strict host lifetime and held result/callback/request ownership.",
+    "Counters prove cached peeks do not refresh/read worker status, enumerate, start, cancel, register or retire work. The only additional operation is the original captured completion cache read. A valid review does not permit ordinary automatic completion/registration.",
+    "The actual existing registry/controller source was inspected: the captured handle delegates readCompleted to original.completed, which returns a cached completion copy without advancing status or consulting shared history. The twenty application fixtures use that original-handle contract without model inference or provider requests. Related automatically selected Worker protocol cases separately exercise synthetic source transport/staging/task/identity behavior, including an owned Node/Python producer; those checks do not qualify real model inference or offload. Final exact selected coverage and independent review remain authoritative."
+  ],
+  "qualification_limits": [
+    "Historical selected-byte verification is not a fresh check of mutable cached files or readiness. Any later save/load must use its own scoped authority and existing current resource controls.",
+    "No headless client/plan/read-policy composition, public transport/SDK/MCP/status/cancel, Model save, new production transfer or runtime activation is enabled.",
+    "Actual provider/stdio/desktop/browser/model/training/generation/native/restart and final combined qualification remain separate. Accepted accuracy checks are not rerun. Parent/chunk progress remains pending and primary evidence import still requires a separately reviewed solution for its full bounded store."
+  ]
+}

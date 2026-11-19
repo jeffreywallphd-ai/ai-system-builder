@@ -1,5 +1,19 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Historical Model source completion review
+
+Expose finite historical completion metadata through the original Model
+application descriptor and captured cached task handle. Require accepted
+successful terminal source state, exact actor/workspace and literal original
+host lifetime around awaits. Validate passive cached completion against exact
+provider/model/pin/manifest/download facts, then return detached frozen metadata
+without local paths. No status refresh, generic ID lookup, filesystem/runtime
+work, registration or retirement belongs in this read. Verification at completion
+is not current file authority, readiness or rights. The eventual headless host
+must enforce exact ledger client/plan and current ModelRead/publication policy;
+former ModelWrite cannot supply that read grant. Keep public capabilities and
+separate scoped Model save unavailable until integrated and qualified.
+
 ### Exact Model download task receipts
 
 Reuse the existing root-owned receipt/index pattern with private Model-only

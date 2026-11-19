@@ -1,5 +1,21 @@
 # Headless System Builder threat model
 
+## Cached Model completion review
+
+Historical source review must use the original accepted successful terminal
+descriptor and captured cached completion, not reusable shared task history.
+Check exact actor/workspace and literal original host lifetime before/after
+awaits; thrown/async/retired currentness denies. Copy strict passive completion
+data and match provider/model/pin/manifest/download confirmation. Active, missing,
+extra, mismatched, unknown or unsuccessful data yields no verified review.
+Return only frozen finite historical metadata: no local path, raw error or result,
+current file authority, runtime readiness, license rights or registration grant.
+This read cannot refresh a task, discover/initialize dependencies, inspect files,
+write the registry or retire custody. Original write permission is separate from
+current read authorization. The eventual headless host must prove exact original
+ledger client/plan and current ModelRead before publication. Public source task,
+save and real host/native/model qualification remain pending.
+
 ## Private Model task identity and uncertain starts
 
 Bind one exact Model attempt to original actor/client/host/workspace/plan/step,

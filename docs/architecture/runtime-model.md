@@ -1,5 +1,18 @@
 # Runtime Model
 
+`peekApprovedSourceReview` is a private cached-only Model application read. It
+requires the original actor/workspace descriptor, accepted successful terminal
+source and literal original host currentness before and after awaiting the
+captured task's cached completion. Strict passive result validation matches
+provider/model/pin/manifest/download confirmation. The returned frozen finite
+metadata excludes local paths and raw output. Verification is historical at task
+completion, not a current file fence, runtime readiness, rights or registration.
+The read performs no worker refresh/discovery, filesystem/runtime setup, generic
+completion, registry write or source retirement. Former write permission cannot
+stand in for current read policy. The eventual headless host must prove exact
+ledger client/plan and current ModelRead/publication authority separately. No
+public Model capability or physical/model/parent qualification is added.
+
 The private Model plan task ledger retains one original approved attempt under
 root-owned transactions and the exact organization partition. It copies passive
 effect/scope data before awaits and normalizes the full Model request. The owner

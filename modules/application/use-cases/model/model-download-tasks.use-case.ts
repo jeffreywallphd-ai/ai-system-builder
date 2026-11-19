@@ -23,7 +23,8 @@ import {isWorkspaceId} from "../../../contracts/workspace";
 import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
 import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
 import type { ModelDownloadCompletionPort, ModelRegistryPort, ApprovedModelSourceDownloadPort,
-  ApprovedModelSourceDownloadRequest, ApprovedModelSourceDownloadControl, ApprovedModelSourceDownloadTask } from "../../ports/model";
+  ApprovedModelSourceDownloadRequest, ApprovedModelSourceDownloadControl, ApprovedModelSourceDownloadTask,
+  ApprovedModelSourceDownloadReview } from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 
@@ -242,6 +243,43 @@ export class ModelDownloadTasksUseCase {
   private pendingSourceActivity(id: string, descriptor: DownloadDescriptor): ModelDownloadTaskActivity {
     return {requestId: id, workspaceId: descriptor.request.workspaceId!, modelId: descriptor.request.modelId,
       displayName: descriptor.request.displayName ?? descriptor.request.modelId, status: "unknown", startedAt: descriptor.startedAt, updatedAt: descriptor.startedAt};
+  }
+
+  /** Original cached completion only. The host must separately authorize the
+   * current reader and, for headless use, the exact ledger client/plan identity.
+   * This never refreshes a task, inspects files, registers or retires a source. */
+  public async peekApprovedSourceReview(request: ReadModelDownloadTaskRequest,
+    authority: ModelDownloadAuthority = {}): Promise<ApprovedModelSourceDownloadReview | undefined> {
+    const normalized = normalizeModelDownloadTaskIdentity(request);
+    const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
+    const source = descriptor.source;
+    if (!source || source.phase !== "accepted" || !source.nativeTerminal || source.failed || !source.task) return;
+    const mayRead = () => {
+      try {
+        const alive: unknown = source.control.isCurrent();
+        if (types.isPromise(alive)) void Promise.prototype.then.call(alive, undefined, () => {});
+        return alive === true && descriptor.source === source && source.phase === "accepted" &&
+          source.nativeTerminal && !source.failed && this.descriptors.get(normalized.requestId) === descriptor;
+      } catch {return false;}
+    };
+    try {
+      if (!mayRead()) return;
+      const completed = await source.task.readCompleted();
+      this.assertCurrentDescriptor(normalized.requestId, descriptor);
+      if (!mayRead() || completed === undefined) return;
+      const result = readStrictPassiveRecord(passiveSourceData(completed), ["provider", "modelId", "revision",
+        "verifiedManifestDigest", "downloaded", "fromCache", "localPath"]);
+      const selected = source.input.sourceManifest;
+      if (result.provider !== "transformers" || result.modelId !== selected.source.modelId ||
+          result.revision !== selected.source.revision || result.verifiedManifestDigest !== selected.manifestDigest ||
+          result.downloaded !== true || typeof result.fromCache !== "boolean" ||
+          typeof result.localPath !== "string" || !result.localPath.trim() || !mayRead()) return;
+      return freezeSourceData({requestId: normalized.requestId, workspaceId: normalized.workspaceId,
+        modelId: selected.source.modelId, revision: selected.source.revision, manifestDigest: selected.manifestDigest,
+        format: selected.source.format, license: structuredClone(selected.source.license),
+        selectedFileCount: selected.source.files.length, totalBytes: selected.source.totalBytes, fromCache: result.fromCache,
+        selectedFilesVerification: "verified-at-completion", runtimeReadiness: "not-checked"});
+    } catch {return;}
   }
 
   public async read(request: ReadModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<ReadModelDownloadTaskResult> {
