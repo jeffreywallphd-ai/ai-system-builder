@@ -13,6 +13,7 @@ import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHos
 export {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 
 import {readHeadlessContextReadRequest, type HeadlessContextReadRequest} from "./headless-context-preview";
+import {HEADLESS_MODEL_READ_OPERATIONS, isHeadlessModelReadOperation, readHeadlessModelMetadataRequest, type HeadlessModelMetadataRequest} from "./headless-model-metadata";
 import {readHeadlessContextTaskRequest, type HeadlessContextTaskRequest} from "./headless-context-task";
 import {readHeadlessContextSavedRequest, type HeadlessContextSavedRequest} from "./headless-context-result-plan";
 import {readHeadlessContextRebuildRequest, type HeadlessContextRebuildRequest} from "./headless-context-rebuild";
@@ -38,6 +39,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "conversation-tasks.read",
   "plan.capabilities",
   ...HEADLESS_DATA_READ_OPERATIONS,
+  ...HEADLESS_MODEL_READ_OPERATIONS,
   "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query",
 ] as const);
 
@@ -69,6 +71,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 };
 
 export type HeadlessReadRequest =
+  | HeadlessModelMetadataRequest
   | HeadlessContextQueryPreviewRequest
   | HeadlessContextRebuildRequest
   | HeadlessContextSavedRequest
@@ -173,6 +176,7 @@ export function parseHeadlessReadRequest(
   if (!isHeadlessReadOperation(operation)) return { ok: false, code: "headless.unsupported-operation" };
 
   const version = HEADLESS_CONTRACT_VERSION;
+  if (isHeadlessModelReadOperation(operation)) return readHeadlessModelMetadataRequest(value, currentHost);
   if (operation === "context.task") return readHeadlessContextTaskRequest(value, currentHost);
   if (operation === "context.saved") return readHeadlessContextSavedRequest(value, currentHost);
   if (operation === "context.preview-rebuild") return readHeadlessContextRebuildRequest(value, currentHost);

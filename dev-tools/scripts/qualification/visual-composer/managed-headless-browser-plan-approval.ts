@@ -221,6 +221,7 @@ async function main() {
       "aisb_host_describe",
       "aisb_ingestion_status",
       "aisb_list_templates",
+      "aisb_model_metadata",
       "aisb_plan_capabilities",
       "aisb_preview_build_plan",
       "aisb_preview_context_generation",

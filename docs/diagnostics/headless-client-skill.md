@@ -1,5 +1,22 @@
 # Headless client skill
 
+## Inspect saved model metadata
+
+Use the portable [Model guide](../../skills/control-ai-system-builder/references/models.md)
+and generated tool catalog from the same repository revision. A plan-review
+connection can use `aisb_model_metadata` when the host advertises the requested
+`models.inventory` or `models.record` read. Keep the exact workspace and current
+host incarnation. A page has at most32records; its next cursor names the first
+record on the next page. A stale cursor needs a fresh first page. A provider
+`modelId` does not replace a saved `modelRecordId`.
+
+The host checks current model read permission before loading the passive reader
+and before returning data. Saved status proves no current file availability,
+memory capacity, runtime compatibility, license rights or output quality.
+Both verification fields remain `not-checked`. These reads grant no download,
+training, generation, publication or window control. Controlled composition,
+HTTP/TLS and SDK fixtures remain separate from actual-app/model qualification.
+
 The [Context qualification record](../operations/headless-context-increment-qualification.json)
 keeps actual two-host workflow observations separate from the measured local
 MiniLM worker profile. The fixed evidence check requires the current product

@@ -1,12 +1,14 @@
 # Contracts
 
-The private Headless model-metadata family defines finite persisted-inventory
+The Headless model-metadata family defines finite persisted-inventory
 and exact-record selectors. Its copied results contain only recorded model
 identities, timestamps, source/form/format, task tags and bounded numeric facts.
 Runtime readiness and supply verification are explicitly `not-checked`.
-These codecs grant no public operation, provider call, file discovery, download,
-task, model execution or save. Public read/MCP wiring and exact approved model
-acquisition remain separate implementation work.
+The public read protocol admits only `models.inventory` (1 to 32 records with an
+optional exact cursor) and `models.record`. Paired plan-review clients need
+current workspace and model read permission. These reads grant no provider call,
+file discovery, download, task, model execution or save. Exact approved model
+acquisition and actual app/model qualification remain separate work.
 
 `context.preview-query` accepts an exact saved RAG reference and a transient
 question of at most 2,000 characters. Its strict result contains the exact UTF8

@@ -1,3 +1,11 @@
+The fixed `headless-model-metadata-owner-unit` check also covers public Model
+metadata composition in both host readers. Its strict companion includes those
+readers, the pinned document factory and synchronous currentness helper. Related
+Desktop, Managed route and MCP checks cover the actual protocol fixtures and
+portable skill/catalog. Exact Model selection avoids unrelated application and
+persistence suites; unknown sources and explicit generic requests retain fallback.
+Focused fixtures do not qualify actual app hosts, model loading or I7 closure.
+
 The fixed `headless-model-metadata-owner-unit` check covers the real local model
 registry alongside its private Headless owner and related Model contracts/use cases.
 Its disposable-registry cases verify inclusive first-omitted cursors, current

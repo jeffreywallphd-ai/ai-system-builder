@@ -1,5 +1,16 @@
 # Local desktop tools over MCP
 
+`aisb_model_metadata` is one plan-review-only domain tool on Desktop and Managed
+connections. Its strict `selection` is either `inventory` (limit1–32 and optional
+exact next cursor) or `record` (one returned `modelRecordId`). It maps only to
+`models.inventory` and `models.record`; the SDK independently validates the exact
+workspace, record, page bounds and passive result fields. Ordinary read, editing,
+conversation and window clients do not discover it. It starts no provider,
+download, scan, model or task. Runtime readiness and supply verification remain
+`not-checked`. Install the entire portable client skill, including
+`references/models.md` and generated `mcp-tools.json`, from the same revision.
+Protocol fixtures do not supply actual-app or Model runtime qualification.
+
 `aisb_preview_context_query` is a plan-review-only passive read. It accepts one
 exact saved RAG reference, up to 2,000 question characters, explicit CPU/CUDA and
 at most 20 results. The app returns only the exact question hash, recorded model

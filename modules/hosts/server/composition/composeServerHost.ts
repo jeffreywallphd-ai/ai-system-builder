@@ -1733,6 +1733,10 @@ export function composeServerHost(
               const {composeHeadlessContextPreview} = await import("../../shared/composition/headlessContextPreview");
               return composeHeadlessContextPreview(organizationDocuments, registerOptions.storageRootDirectory);
             } : undefined,
+            getModelMetadata: organizationDocuments ? async () => {
+              const {composeHeadlessModelMetadata} = await import("../../shared/composition/headlessModelMetadata");
+              return composeHeadlessModelMetadata(organizationDocuments, registerOptions.storageRootDirectory);
+            } : undefined,
             getDatasetInputs: organizationDocuments ? async () => {
               const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
               const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");

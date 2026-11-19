@@ -1,5 +1,12 @@
 # Context Pack: Server Host
 
+- Headless saved-model reads require plan-review and current workspace/model
+  policy. The shared lazy factory pins the active organization document facade
+  to a concrete partition before registry reads; it never creates Model/runtime
+  features. Actor/currentness and exact reply checks surround awaits. Managed
+  API and MCP independently minimize/correlate replies. Recorded status grants
+  no runtime, supply, license or quality qualification.
+
 - Pack name: `server-host`
 
 ## Purpose

@@ -1,5 +1,20 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Recorded Model metadata transport
+
+The approved I7 Model family exposes `models.inventory` and `models.record`
+through one `aisb_model_metadata` plan-review tool, within the existing32-tool
+discovery bound. Both actual host bootstraps lazily construct the passive owner
+over a pinned organization partition. Ordinary clients gain no Model read.
+Capture request/actor authority before awaits; require synchronous currentness
+and fresh workspace/model policy around lazy ownership, read and egress. Each
+host, Managed route and SDK validates the minimized exact-target response.
+Inventory is bounded32 with inclusive first-omitted cursors. Saved status grants
+no file/runtime/supply/license/quality or effect authority. There is no fallback
+to active Model composition, provider requests or filesystem discovery. Actual
+app/runtime and parent qualification remain distinct; rollback removes exposure
+while preserving saved records, audit history and the private owner's controls.
+
 The approved model increment first adds a private metadata compiler over the
 existing organization-scoped ModelRegistry seam. Finite inventory/record codecs
 copy only recorded safe facts and identify runtime/supply checks as unperformed.

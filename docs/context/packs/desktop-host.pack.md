@@ -1,5 +1,11 @@
 # Context Pack: Desktop Host
 
+- Headless saved-model reads use `composeHeadlessModelMetadata` lazily, never the
+  Model feature/runtime. Plan-review, workspace/model policy and immediate
+  current-grant fences surround ownership/read/egress. The shared factory pins
+  the organization store; the host revalidates passive exact-target replies.
+  Metadata is not runtime, supply, license or model-output qualification.
+
 - Pack name: `desktop-host`
 
 ## Purpose

@@ -73,6 +73,18 @@ test("literal host catalog checks reject computed, duplicate, unsorted or ambigu
     'expect(names).toEqual(["aisb_a"]); expect(names).toEqual(["aisb_b"]);',
   ]) assert.throws(() => literalHostPlanTools("synthetic.expected.ts", "plan-review", value));
 });
+test("portable Model guidance binds finite passive tools and separates recorded IDs from runtime authority", () => {
+  const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
+  const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8");
+  assert.ok(skill.includes("references/models.md"));
+  for (const mode of catalog.modes)
+    assert.equal(mode.tools.includes("aisb_model_metadata"), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
+  for (const text of ["aisb_host_describe", "models.inventory", "models.record", "nextCursor", "first record on the next page",
+    "fresh first page", "modelRecordId", "modelId", "runtimeReadiness", "supplyVerification", "not-checked", "license rights",
+    "same repository revision", "1 to 32", "generic HTTP, shell or filesystem", "approvals"])
+    assert.ok(guide.includes(text), `Missing Model client boundary: ${text}`);
+});
+
 test("portable Context guidance and discovery separate metadata from execution and model readiness", () => {
   const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
   const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");

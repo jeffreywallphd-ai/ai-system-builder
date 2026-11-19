@@ -52,6 +52,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let statusExtra = false;
   let withdrawStatus = false;
   let mutateQueryRequest = false;
+  let mutateModelRequest = false;
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -78,8 +79,17 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     isCurrent: identity => identity === planIdentity && current,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "models.inventory" || request.operation === "models.record") {
+        if (withdrawStatus) current = false;
+        if (mutateModelRequest) Object.assign(request.input, {workspaceId: "substituted-workspace"});
+        const model = {modelRecordId: statusMismatch ? "model.other" : "model.synthetic", updatedAt: "2026-11-19T00:00:00.000Z",
+          source: "local", lifecycleStatus: "downloaded", artifactForm: "full-model", provider: "huggingface", taskTags: ["text-generation"]};
+        return {ok: true, operation: request.operation, value: {workspaceId: statusMismatch ? "foreign" : request.input.workspaceId,
+          ...(request.operation === "models.inventory" ? {models: [model]} : {model}),
+          runtimeReadiness: "not-checked", supplyVerification: "not-checked", ...(statusExtra ? {localPath: "private/model"} : {})}} as never;
+      }
       if (request.operation === "context.task") {
         if (withdrawStatus) current = false;
         return {ok: true, operation: request.operation, value: {
@@ -289,6 +299,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       query: "Synthetic private question", maximumResults: 5, embeddingDevice: "cpu"}],
       ["context.preview-rebuild", {reference: {workspaceId, contextId: hostIncarnationId,
       taskId: hostIncarnationId, kind: "markdown-context-pack", artifactDigest: "sha256:" + "a".repeat(64)}}],
+      ["models.inventory", {limit: 1}], ["models.record", {modelRecordId: "model.synthetic"}],
       ["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
       sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
       settings: {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
@@ -300,6 +311,11 @@ test("managed plan routes admit only exact proposals, status and an approved ste
         const changed = await request(query, "fixture-plan", readRoute);
         assert.equal(changed.status, 503); assert.doesNotMatch(JSON.stringify(changed.body), /Synthetic private|substituted private/);
         mutateQueryRequest = false;
+      }
+      if (operation === "models.inventory" || operation === "models.record") {
+        mutateModelRequest = true;
+        assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
+        mutateModelRequest = false;
       }
       statusMismatch = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
       statusMismatch = false; statusExtra = true; assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);

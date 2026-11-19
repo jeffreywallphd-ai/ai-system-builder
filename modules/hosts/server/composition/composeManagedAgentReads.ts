@@ -4,6 +4,9 @@ import type {ReadHeadlessContextSavedUseCase} from "../../../application/use-cas
 import type {ReadHeadlessContextRebuildUseCase} from "../../../application/use-cases/context-management";
 import type {PreviewHeadlessContextQueryUseCase} from "../../../application/use-cases/context-management";
 import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
+import {isHeadlessModelReadOperation, readHeadlessModelMetadataRequest, readHeadlessModelInventory, readHeadlessModelRecord} from "../../../contracts/headless";
+import type {ReadHeadlessModelMetadataUseCase} from "../../../application/use-cases/model";
+import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
@@ -30,6 +33,7 @@ export function composeManagedAgentReads(options: {
   readonly ingestionTasks?: ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0];
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
+  readonly getModelMetadata?: () => Promise<Pick<ReadHeadlessModelMetadataUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
   readonly getContextRebuildInputs?: () => Promise<Pick<ReadHeadlessContextRebuildUseCase, "execute">>;
@@ -38,20 +42,33 @@ export function composeManagedAgentReads(options: {
   readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
 }) {
-  return async (request: HeadlessReadRequest, identity: Pick<OrganizationRequestContext, "principalId" | "organizationId"> &
+  return async (request: HeadlessReadRequest, suppliedIdentity: Pick<OrganizationRequestContext, "principalId" | "organizationId"> &
     { readonly purpose?: "agent" | "plan-review"; readonly registeredClientId?: string },
     isCurrent: () => boolean): Promise<HeadlessReadResult> => {
+    const identity = {organizationId: suppliedIdentity.organizationId, principalId: suppliedIdentity.principalId,
+      purpose: suppliedIdentity.purpose, registeredClientId: suppliedIdentity.registeredClientId};
+    const sameIdentity = () => suppliedIdentity.organizationId === identity.organizationId && suppliedIdentity.principalId === identity.principalId &&
+      suppliedIdentity.purpose === identity.purpose && suppliedIdentity.registeredClientId === identity.registeredClientId;
     const current = () => {
+      if (!sameIdentity() || !isHeadlessReadCurrent(isCurrent)) return false;
       const context = options.contexts.getCurrentOrganizationContext();
-      return isCurrent() && context?.principalId === identity.principalId && context.organizationId === identity.organizationId;
+      return sameIdentity() && context?.principalId === identity.principalId && context.organizationId === identity.organizationId;
     };
     if (!current()) return denied;
-    const {operation, input} = request;
+    const modelRequest = isHeadlessModelReadOperation(request.operation) ? readHeadlessModelMetadataRequest(request, options.hostIncarnationId) : undefined;
+    if (modelRequest && !modelRequest.ok) return modelRequest;
+    if (modelRequest?.ok) {
+      Object.freeze(modelRequest.request.input);
+      Object.freeze(modelRequest.request);
+    }
+    const capturedRequest = modelRequest?.ok ? modelRequest.request : request;
+    const {operation, input} = capturedRequest;
     if (operation === "host.describe") {
       // Discovery gives the host identity only. Operator configuration supplies
       // the exact workspace for later requests without enumerating tenant data.
       return {ok: true, operation, value: {version: HEADLESS_CONTRACT_VERSION, hostIncarnationId: options.hostIncarnationId,
         workspaces: [], operations: [
+          ...(identity.purpose === "plan-review" && options.getModelMetadata ? ["models.inventory", "models.record"] as const : []),
           ...(identity.purpose === "plan-review" && options.getContextInputs ? ["context.models", "context.preview-generation"] as const : []),
           ...(identity.purpose === "plan-review" && options.getContextTask ? ["context.task"] as const : []),"host.describe", "templates.list", "systems.read",
           ...(identity.purpose === "plan-review" && options.getContextSaved ? ["context.saved"] as const : []),
@@ -63,11 +80,11 @@ export function composeManagedAgentReads(options: {
           ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskReview ? ["data.dataset-task-review"] as const : [])]}};
     }
-    if (operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
+    if (operation !== "models.inventory" && operation !== "models.record" && operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
         operation !== "data.ingestion-status" && operation !== "data.dataset-versions" && operation !== "data.compare-dataset-versions" &&
         operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status" && operation !== "data.dataset-task-review")
       return {ok: false, code: "headless.unsupported-operation"};
-    if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && identity.purpose !== "plan-review") return denied;
+    if ((isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && identity.purpose !== "plan-review") return denied;
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
     const authorized = async (workspaceId: WorkspaceId,
       requestedOperation: HeadlessReadRequest["operation"] | HeadlessSystemManagementRequest["operation"] = operation,
@@ -80,7 +97,7 @@ export function composeManagedAgentReads(options: {
         await options.authorization.authorizeWorkspaceOperation({
           workspace, operation: `headless.${requestedOperation}`,
           requiredScopes: queryModel ? ["workspace:read", "artifact:read", "model:read"] : requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
-            : operation === "context.models" ? ["workspace:read", "model:read"]
+            : operation === "context.models" || isHeadlessModelReadOperation(operation) ? ["workspace:read", "model:read"]
             : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
             : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
             : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"] : ["workspace:read", "asset:read"],
@@ -90,6 +107,27 @@ export function composeManagedAgentReads(options: {
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "models.inventory" || operation === "models.record") {
+        if (!options.getModelMetadata) return {ok: false, code: "headless.unsupported-operation"};
+        const metadata = await options.getModelMetadata();
+        const allowed = async () => current() && await authorized(input.workspaceId) && current();
+        if (!await allowed() || !current()) return denied;
+        const result = await metadata.execute(capturedRequest, {hostIncarnationId: options.hostIncarnationId,
+          context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
+          stillAllowed: allowed, isCurrent: current});
+        if (!await allowed() || !current()) return denied;
+        if (!result.ok) return result.code === "headless.forbidden" ? denied
+          : result.code === "headless.not-found" ? {ok: false, code: "headless.not-found"} : unavailable;
+        if (operation === "models.inventory" && result.operation === operation) {
+          const value = readHeadlessModelInventory(result.value, input);
+          return value ? {ok: true, operation, value} : unavailable;
+        }
+        if (operation === "models.record" && result.operation === operation && capturedRequest.operation === operation) {
+          const value = readHeadlessModelRecord(result.value, capturedRequest.input);
+          return value ? {ok: true, operation, value} : unavailable;
+        }
+        return unavailable;
+      }
       if (operation === "context.preview-query") {
         if (!options.getContextQueryPreview) return {ok: false, code: "headless.unsupported-operation"};
         if (!identity.registeredClientId) return denied;
@@ -137,7 +175,7 @@ export function composeManagedAgentReads(options: {
       if (operation === "context.models" || operation === "context.preview-generation") {
         if (!options.getContextInputs) return {ok: false, code: "headless.unsupported-operation"};
         const inputs = await options.getContextInputs();
-        const result = await inputs.execute(request, {hostIncarnationId: options.hostIncarnationId,
+        const result = await inputs.execute(capturedRequest, {hostIncarnationId: options.hostIncarnationId,
           context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
           stillAllowed: () => authorized(input.workspaceId)});
         if (!current() || !await authorized(input.workspaceId)) return denied;
@@ -173,7 +211,7 @@ export function composeManagedAgentReads(options: {
       if (operation === "data.preview-dataset-preparation") {
         if (!options.getDatasetInputs) return {ok: false, code: "headless.unsupported-operation"};
         const inputs = await options.getDatasetInputs();
-        const result = await inputs.execute(request, {hostIncarnationId: options.hostIncarnationId,
+        const result = await inputs.execute(capturedRequest, {hostIncarnationId: options.hostIncarnationId,
           context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
           stillAllowed: () => authorized(input.workspaceId),
         });
@@ -185,7 +223,7 @@ export function composeManagedAgentReads(options: {
       if (operation === "data.dataset-versions" || operation === "data.compare-dataset-versions") {
         if (!options.getDatasetQueries) return {ok: false, code: "headless.unsupported-operation"};
         const queries = await options.getDatasetQueries();
-        const result = await queries.execute(request, {
+        const result = await queries.execute(capturedRequest, {
           context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
           stillAllowed: () => authorized(input.workspaceId),
         });
@@ -193,7 +231,7 @@ export function composeManagedAgentReads(options: {
       }
       if (operation === "data.ingestion-status") {
         if (!options.ingestionTasks) return {ok: false, code: "headless.unsupported-operation"};
-        const result = await new ReadHeadlessIngestionStatusUseCase(options.ingestionTasks).execute(request, {
+        const result = await new ReadHeadlessIngestionStatusUseCase(options.ingestionTasks).execute(capturedRequest, {
           context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
           stillAllowed: () => authorized(input.workspaceId),
         });

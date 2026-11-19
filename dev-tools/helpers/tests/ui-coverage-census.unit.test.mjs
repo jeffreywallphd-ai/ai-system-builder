@@ -1697,8 +1697,46 @@ const pendingReviewRecoveryDefinitions=Object.freeze([
   {path:"dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",committed:"bc5bd6a1b736fd0196371ad532a3998edc3eff78fa9d7ef200b2881ab86bbafe",previous_candidate:"a48a843dd522e0977d2545ab68feb6d7bbded9bfb8be658323da608207bccaeb",candidate:"a4f6c1f884d755a1afe64bd09f1e4bb7ff9ec1a55c534591e38c2ca64b39d354",facts_sha256:"42b88acdce80245767657bfa188bfe5394e62b6e10b4bbf3b3f305f9f0585ea7"},
   {path:"dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",committed:"d7e8ae80ae01a66e8503a2433cfc3007910ed048e29826d37683fad54707c070",previous_candidate:"9f8619a422690a340855bcfc68d525d7250615f2b5c9cbdcad20e5b287a54c36",candidate:"a6b2b3a4a5b31c2a970c5910e2db0e1c493dfc66c67b2d15e26201a6c394159e",facts_sha256:"258d6201d5a5419b69e9f9269f8fab84a555a091976841a82ceb3c2e4c9c6b65"},
 ].map(Object.freeze));
+const pendingModelMetadataCensus=Object.freeze({
+  priorCommit:"82f778296099e9c61858c47ced135b2aa042fedd",
+  priorMap:"38086249fb266f23cac347239ba5ee92ab1c2d52af6ea60de12f716f041d5637",
+  currentMap:"ec490ef7f571815ba980f5499ea5b9dd310080aa23dba39e295fa25d164b27d4",
+  baseline:"be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+  sourceCommit:"6ce8b3255a935f3a02e65f902a2989b31a417bf6",
+  path:"dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+  committed:"798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd",
+  previous:"646425ca130ed60578afb105e35d7250bd8c74d99552bdf35a2c55eab42309b2",
+  candidate:"b059797939519aa269510165d2a948394fd54e7d03478dea11bb074ea23fde61",
+  facts:"084b29f308163d631acaa35fa4ad69df426cabb4071354c5bead3d97e5bd9d72",
+});
+let modelMetadataPriorText;
+function modelMetadataCensusLegacyView(map,result){
+  const pin=pendingModelMetadataCensus;
+  if(!map.sources.some(row=>row.path===pin.path&&row.facts.sha256===pin.candidate))return{map,result};
+  assert.equal(map.source_baseline,pin.baseline);
+  assert.equal(sha(JSON.stringify(map)),pin.currentMap);
+  assert.deepEqual(result.gaps.filter(gap=>gap.kind==="unreviewed-source-drift"&&gap.source===pin.path),
+    [{kind:"unreviewed-source-drift",source:pin.path}]);
+  if(modelMetadataPriorText===undefined){
+    const bytes=historicalSource(pin.priorCommit,censusDocument),prior=JSON.parse(bytes),expected=structuredClone(prior);
+    assert.equal(sha(JSON.stringify(prior)),pin.priorMap);
+    const rows=map.sources.filter(row=>row.path===pin.path),old=expected.sources.filter(row=>row.path===pin.path);
+    assert.equal(rows.length,1);assert.equal(old.length,1);
+    assert.equal(rows[0].committed_sha256,pin.committed);assert.equal(old[0].committed_sha256,pin.committed);
+    // This source was added after the global baseline. Use its existing genuine
+    // per-source witness; never manufacture a blob at the older map baseline.
+    assert.equal(sha(historicalSource(pin.sourceCommit,pin.path)),pin.committed);
+    assert.equal(old[0].facts.sha256,pin.previous);
+    assert.equal(rows[0].facts.sha256,pin.candidate);assert.equal(sha(JSON.stringify(rows[0].facts)),pin.facts);
+    old[0].facts=structuredClone(rows[0].facts);
+    assert.deepEqual(map,expected,"Only the exact Model tool expectation changes. Every pin, scenario, execution and historical gap remains.");
+    modelMetadataPriorText=bytes.toString("utf8");
+  }
+  return{map:JSON.parse(modelMetadataPriorText),result};
+}
 let reviewRecoveryPriorText;
 function recoveryAssertionCensusLegacyView(map,result){
+  ({map,result}=modelMetadataCensusLegacyView(map,result));
   const definitions=pendingReviewRecoveryDefinitions;
   if(!map.sources.some(row=>definitions.some(pin=>pin.path===row.path&&pin.candidate===row.facts.sha256)))return{map,result};
   assert.equal(map.source_baseline,pendingReviewRecoveryCensus.baseline);
@@ -1808,6 +1846,23 @@ function assertCompleteCurrentSourceDrift(map,result){
   const historical=committedCensusLegacyView(map,result);
   assertBrowserReferenceSourceDrift(historical.map,historical.result);
 }
+
+test("Model tool discovery facts preserve actual pins, prior census and qualification gaps",()=>{
+  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8")),result={gaps:sourceDrift(map)},pin=pendingModelMetadataCensus;
+  const prior=JSON.parse(historicalSource(pin.priorCommit,censusDocument));
+  const restored=modelMetadataCensusLegacyView(map,result);
+  assert.deepEqual(restored.map,prior);assert.deepEqual(restored.result,result);
+  for(const mutate of [copy=>{copy.sources.find(row=>row.path===pin.path).facts.assertionCount++;},
+    copy=>{copy.sources.find(row=>row.path===pin.path).committed_sha256="0".repeat(64);},
+    copy=>{copy.scenarios[0].execution_status="passed";},copy=>{copy.full_testing_status="passed";}]){
+    const changed=structuredClone(map);mutate(changed);
+    assert.throws(()=>modelMetadataCensusLegacyView(changed,result));
+  }
+  assert.throws(()=>modelMetadataCensusLegacyView(map,{gaps:result.gaps.filter(gap=>gap.source!==pin.path)}));
+  assert.throws(()=>modelMetadataCensusLegacyView(map,{gaps:[...result.gaps,result.gaps.find(gap=>gap.source===pin.path)]}));
+  restored.map.sources[0].facts.bytes++;
+  assert.deepEqual(modelMetadataCensusLegacyView(map,result).map,prior);
+});
 
 test("paging census admits only four exact prospective facts and preserves original pins and history",()=>{
   const published=JSON.parse(fs.readFileSync(censusDocument,"utf8"));

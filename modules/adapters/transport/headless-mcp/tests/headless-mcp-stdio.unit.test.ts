@@ -17,7 +17,7 @@ import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   UI_PRESENTATION_ACTIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
-import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest, HeadlessContextQueryPreviewRequest} from "../../../../contracts/headless";
+import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest, HeadlessContextQueryPreviewRequest, HeadlessModelMetadataRequest} from "../../../../contracts/headless";
 import {normalizeDatasetVersionId} from "../../../../contracts/dataset";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
@@ -34,7 +34,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
-const planReviewTools = ["aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_preview_context_query", "aisb_context_task", "aisb_read_context", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
+const planReviewTools = ["aisb_model_metadata", "aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_preview_context_query", "aisb_context_task", "aisb_read_context", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation", "aisb_dataset_task_status", "aisb_dataset_task_review"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
@@ -63,6 +63,10 @@ function contextPreview(input: {workspaceId: unknown; name: unknown; sources: re
 }
 const contextSettings = {kind: "markdown-context-pack", cleaningPreset: "standard", chunkCharacters: 500,
   overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]};
+const modelSummary = {modelRecordId: "model.synthetic", updatedAt: "2026-11-19T00:00:00.000Z", source: "local",
+  lifecycleStatus: "downloaded", artifactForm: "full-model", provider: "huggingface", taskTags: ["text-generation"]};
+const modelInventory = {workspaceId, models: [modelSummary], runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
+const modelRecord = {workspaceId, model: modelSummary, runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
 const ragSettings = {kind: "rag-database", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"],
   modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", batchSize: 4, device: "cpu",
   sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
@@ -175,6 +179,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       if (input.operation === "context.task") {
         const payload = JSON.stringify({ok: true, operation: input.operation,
           value: {...contextTaskValue, ...(invalidStatusReply ? {sourceText: "synthetic private source"} : {})}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.inventory" || input.operation === "models.record") {
+        const value = input.operation === "models.inventory" ? modelInventory : modelRecord;
+        const payload = JSON.stringify({ok: true, operation: input.operation, value: {...value,
+          ...(invalidStatusReply ? {localPath: "private/model"} : {})}});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -385,6 +396,20 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     displacedCapabilities = true;
     assert.deepEqual(await capabilities(), {ok:false, code:"headless.unavailable"});
     const planner = await connect({NODE_EXTRA_CA_CERTS:ca,AISB_HEADLESS_ENABLE_PLAN_REVIEW:"1"});
+    for (const [selection, expected] of [[{kind: "inventory", limit: 1}, {ok: true, operation: "models.inventory", value: modelInventory}],
+      [{kind: "record", modelRecordId: "model.synthetic"}, {ok: true, operation: "models.record", value: modelRecord}]] as const) {
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase, selection}})), expected);
+      invalidStatusReply = true;
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase, selection}})), {ok: false, code: "headless.unavailable"});
+      invalidStatusReply = false;
+    }
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase,
+      selection: {kind: "record", modelRecordId: "model.other"}}})), {ok: false, code: "headless.unavailable"});
+    const beforeInvalidModel = requests.length;
+    for (const selection of [{kind: "inventory", limit: 33}, {kind: "record", modelRecordId: "../private"},
+      {kind: "record", modelRecordId: "model.synthetic", localPath: "private/model"}, {kind: "download", modelId: "example/model"}])
+      assert.equal((await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase, selection}})).isError, true);
+    assert.equal(requests.length, beforeInvalidModel);
     const preparation = {...planBase, sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
       split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"};
@@ -584,6 +609,9 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       if (decoded.request.operation === "data.dataset-versions") return {ok: true, operation: decoded.request.operation,
         value: {workspaceId, datasetId: decoded.request.input.datasetId, versions: [datasetSummary],
           ...(statusExtra ? {path: "private"} : {})}};
+      if (decoded.request.operation === "models.inventory" || decoded.request.operation === "models.record") return {ok: true,
+        operation: decoded.request.operation, value: {...(decoded.request.operation === "models.inventory" ? modelInventory : modelRecord),
+          ...(statusExtra ? {localPath: "private/model"} : {})}} as never;
       if (decoded.request.operation === "context.models") return {ok: true, operation: decoded.request.operation,
         value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}};
       if (decoded.request.operation === "context.preview-generation") return {ok: true, operation: decoded.request.operation,
@@ -782,6 +810,14 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
       split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"};
     const contextInput = {hostIncarnationId, workspaceId, name: "Synthetic context", sources: datasetPreparation.sources.map(source => ({kind: "ingestion-file", ...source})), settings: contextSettings};
+    assert.deepEqual(await call("aisb_model_metadata", {hostIncarnationId, workspaceId, selection: {kind: "inventory", limit: 1}}),
+      {ok: true, operation: "models.inventory", value: modelInventory});
+    assert.deepEqual(await call("aisb_model_metadata", {hostIncarnationId, workspaceId, selection: {kind: "record", modelRecordId: "model.synthetic"}}),
+      {ok: true, operation: "models.record", value: modelRecord});
+    statusExtra = true;
+    assert.deepEqual(await call("aisb_model_metadata", {hostIncarnationId, workspaceId, selection: {kind: "inventory", limit: 1}}),
+      {ok: false, code: "headless.unavailable"});
+    statusExtra = false;
     assert.deepEqual(await call("aisb_context_models", {hostIncarnationId, workspaceId}), {ok: true, operation: "context.models",
       value: {workspaceId, models: [], truncated: false, runtimeReadiness: "not-checked"}});
     assert.deepEqual(await call("aisb_preview_context_generation", contextInput), {ok: true, operation: "context.preview-generation", value: contextPreview(contextInput)});
@@ -1007,6 +1043,66 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   } finally {
     await client.close();
     await connector.close();
+  }
+});
+
+test("Desktop Model forwarding retains exact dispatched targets across a held TLS response", {timeout: 12_000}, async () => {
+  const {createHeadlessMcpReadForwarder} = await import("../createHeadlessMcpReadForwarder.mjs");
+  const certificate = await selfsigned.generate([{name: "commonName", value: "127.0.0.1"}], {
+    keySize: 2048, extensions: [{name: "subjectAltName", altNames: [{type: 7, ip: "127.0.0.1"}]}],
+  });
+  let received: (body: unknown, respond: (value: unknown) => void) => void = () => assert.fail("Unexpected request");
+  let count = 0;
+  const listener = createServer({key: certificate.private, cert: certificate.cert}, (incoming, response) => {
+    assert.equal(incoming.url, "/aisb-headless/v1/read");
+    const chunks: Buffer[] = [];
+    incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
+    incoming.once("end", () => {
+      count++;
+      received(JSON.parse(Buffer.concat(chunks).toString("utf8")), value => {
+        const payload = JSON.stringify(value);
+        response.writeHead(200, {"Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+      });
+    });
+  });
+  try {
+    await new Promise<void>(resolve => listener.listen(0, "127.0.0.1", resolve));
+    const address = listener.address(); assert.ok(address && typeof address === "object");
+    const pin = new X509Certificate(certificate.cert).fingerprint256.replaceAll(":", "").toLowerCase();
+    const forward = createHeadlessMcpReadForwarder("https://127.0.0.1:" + address.port, pin, "A".repeat(43), false, false, false, true);
+    assert.ok(forward);
+    async function held(request: HeadlessModelMetadataRequest, change: Record<string, unknown>, value: unknown, expected: unknown) {
+      let report!: (body: unknown) => void;
+      let respond!: (value: unknown) => void;
+      const dispatched = new Promise<unknown>(resolve => {report = resolve;});
+      received = (body, send) => {respond = send; report(body);};
+      const original = structuredClone(request);
+      const pending = forward!(request);
+      assert.deepEqual(await dispatched, original);
+      Object.assign(request.input, change);
+      respond({ok: true, operation: original.operation, value});
+      assert.deepEqual(await pending, expected);
+    }
+    const foreign = createWorkspaceId("substituted-model-workspace");
+    for (const operation of ["models.inventory", "models.record"] as const) {
+      for (const substitute of [false, true]) {
+        const request = operation === "models.inventory" ? {version, operation, input: {hostIncarnationId, workspaceId, limit: 1}}
+          : {version, operation, input: {hostIncarnationId, workspaceId, modelRecordId: "model.synthetic"}};
+        const value = operation === "models.inventory" ? modelInventory : modelRecord;
+        const changedValue = substitute ? {...value, workspaceId: foreign,
+          ...(operation === "models.record" ? {model: {...modelSummary, modelRecordId: "model.other"}} : {})} : value;
+        await held(request, {workspaceId: foreign, ...(operation === "models.inventory" ? {limit: 32, cursor: "model.other"} : {modelRecordId: "model.other"})},
+          changedValue, substitute ? {ok: false, code: "headless.unavailable"} : {ok: true, operation, value});
+      }
+    }
+    await held({version, operation: "models.inventory", input: {hostIncarnationId, workspaceId, limit: 1}}, {limit: 2},
+      {...modelInventory, models: [modelSummary, {...modelSummary, modelRecordId: "model.other"}]}, {ok: false, code: "headless.unavailable"});
+    await held({version, operation: "models.inventory", input: {hostIncarnationId, workspaceId, limit: 1, cursor: "model.first"}},
+      {cursor: "model.changed"}, {...modelInventory, nextCursor: "model.first"}, {ok: false, code: "headless.unavailable"});
+    assert.equal(count, 6, "One dispatch per case; no hidden retry");
+  } finally {
+    listener.closeAllConnections();
+    await new Promise<void>(resolve => listener.close(() => resolve()));
   }
 });
 

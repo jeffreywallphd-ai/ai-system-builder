@@ -4,6 +4,12 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Baseline
 
+- Headless saved-model selection uses the portable
+  `skills/control-ai-system-builder/references/models.md` guide and the generated
+  tool catalog from the same revision. Add the affected host pack and security
+  sources for the plan-review ModelRead, tenant and reply boundary. Metadata
+  discovery grants no model runtime, download or license qualification.
+
 - Contributor workflow work requests start at `AGENTS.md` and
   `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its
   JSON-backed review server and share the verified link. Use `docs-standards`

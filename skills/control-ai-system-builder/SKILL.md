@@ -28,6 +28,11 @@ use [Build from a written request](references/build-plans.md). It covers the
 supported plan connections, exact resources, approval choices, ordered
 execution and recovery. Open it before preparing a plan.
 
+For saved model selection, read [Recorded model metadata](references/models.md).
+Use `aisb_model_metadata` only on a plan-review connection that advertises the
+matching read operation. Inventory and exact-record reads start no model or
+download and prove no readiness, license, supply verification or output quality.
+
 For a Context or RAG request, use [Prepare Context inputs, packs and RAG](references/context-inputs.md)
 before selecting saved sources or an embedding model. A metadata preview does
 not start processing or prove that a model is ready. The guide also covers

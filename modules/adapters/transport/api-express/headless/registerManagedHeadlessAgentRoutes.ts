@@ -11,6 +11,7 @@ import {
   readHeadlessDatasetTaskReviewValue,
   readHeadlessContextTaskValue,
   readHeadlessContextSavedValue,
+  isHeadlessModelReadOperation, readHeadlessModelMetadataRequest, readHeadlessModelInventory, readHeadlessModelRecord,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -229,7 +230,7 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    const dataRead = (isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
+    const dataRead = (isHeadlessModelReadOperation(parsed.request.operation) || isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
       parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-query" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
@@ -238,13 +239,18 @@ async function respond<Agent>(
       return {target: {...target, reference: {...target.reference}},
         digest: "sha256:" + createHash("sha256").update(query, "utf8").digest("hex")};
     })() : undefined;
+    // Keep an independent target so a faulty handler cannot change correlation.
+    const modelProof = isHeadlessModelReadOperation(parsed.request.operation)
+      ? readHeadlessModelMetadataRequest(parsed.request, handlers.hostIncarnationId) : undefined;
+    if (modelProof && !modelProof.ok) return failure(response, 400, "headless.invalid-request");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
     if (!result.ok) {
       const code = readFailures.has(result.code) ? result.code : "headless.unavailable";
       return failure(response, requestErrorStatus(code), code);
     }
-    if (result.operation !== parsed.request.operation || (questionProof && result.operation !== "context.preview-query"))
+    if (result.operation !== parsed.request.operation || (questionProof && result.operation !== "context.preview-query") ||
+        (modelProof?.ok && result.operation !== modelProof.request.operation))
       return failure(response, 503, "headless.unavailable");
     if (result.operation === "host.describe") {
       const {version, hostIncarnationId, workspaces} = result.value;
@@ -253,8 +259,18 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
-          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessDataReadOperation(operation) ||
+          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) ||
             isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") : [])]}});
+    }
+    if (result.operation === "models.inventory") {
+      if (!modelProof?.ok || modelProof.request.operation !== result.operation) return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessModelInventory(result.value, modelProof.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
+    }
+    if (result.operation === "models.record") {
+      if (!modelProof?.ok || modelProof.request.operation !== result.operation) return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessModelRecord(result.value, modelProof.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "context.preview-query") {
       if (!questionProof) return failure(response, 503, "headless.unavailable");

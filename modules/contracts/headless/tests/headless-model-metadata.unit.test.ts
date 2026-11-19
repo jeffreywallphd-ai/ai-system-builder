@@ -13,9 +13,14 @@ const model = {modelRecordId: "model.synthetic", updatedAt: "2026-11-19T00:00:00
 const observed = {runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
 const inventory = () => ({workspaceId, models: [structuredClone(model)], ...observed});
 
-test("private preparation does not advertise or admit a public model operation", () => {
+test("the public protocol admits only the finite recorded Model metadata selectors", () => {
   for (const operation of ["models.inventory", "models.record"] as const) {
-    assert.equal((HEADLESS_READ_OPERATIONS as readonly string[]).includes(operation), false);
+    const input = operation === "models.record" ? {...target, modelRecordId: model.modelRecordId} : target;
+    assert.equal((HEADLESS_READ_OPERATIONS as readonly string[]).includes(operation), true);
+    assert.deepEqual(parseHeadlessReadRequest({version, operation, input}, hostIncarnationId),
+      {ok: true, request: {version, operation, input}});
+  }
+  for (const operation of ["models.download", "models.train", "models.provider", "models.delete"]) {
     assert.deepEqual(parseHeadlessReadRequest({version, operation, input: target}, hostIncarnationId),
       {ok: false, code: "headless.unsupported-operation"});
   }

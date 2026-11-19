@@ -1,5 +1,22 @@
 # Headless System Builder threat model
 
+## Paired recorded-model reads
+
+`models.inventory` and `models.record` add an outward metadata boundary through
+the existing paired plan-review connection and one finite MCP domain tool.
+Protect credentials/private model fields, tenant/workspace/actor identity and
+runtime resources. Deny ordinary client purposes, missing ModelRead, retargeted
+requests/actors, revoked or asynchronous currentness, false readiness, private
+reply fields, foreign records and oversized/duplicate pages. Capture targets
+before awaits and recheck current permission at lazy composition, storage and
+egress. Pin the organization facade to a concrete document partition, disable
+discovery and supply no feature/runtime/provider/task ports. Independently
+decode exact bounded replies in the host, Managed API and SDK. Existing TLS,
+credential, transport-byte and tool-count limits remain. Controlled fixtures
+prove these local paths; actual-app, model execution, supplier/license and
+parent qualification require separate evidence. Rollback removes public reads
+without weakening the private owner or changing records/history.
+
 ## Private recorded-model metadata preparation
 
 Security-relevant metadata preparation protects model paths, cards, arbitrary

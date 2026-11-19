@@ -212,6 +212,22 @@ function addSystemBuilderTools(server: McpServer) {
     contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
     artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)});
   if (enablePlanReview) {
+    const modelRecordId = z.string().refine(headless.isHeadlessModelRecordId);
+    const modelSelection = z.discriminatedUnion("kind", [
+      z.strictObject({kind: z.literal("inventory"), limit: z.number().int().min(1).max(headless.HEADLESS_MODEL_METADATA_LIMIT).optional(),
+        cursor: modelRecordId.optional()}),
+      z.strictObject({kind: z.literal("record"), modelRecordId}),
+    ]);
+    server.registerTool("aisb_model_metadata", {
+      description: "Read recorded model metadata for this workspace. Select inventory (at most 32 per page) or one exact record. No files, paths, model cards, discovery, download, runtime or provider calls. Saved status proves no runtime readiness, supply verification, license or quality; both verification fields remain not-checked.",
+      inputSchema: z.strictObject({...workspaceTarget, selection: modelSelection}), annotations: queryHints,
+    }, ({selection, ...target}, context) => {
+      const {kind, ...selector} = selection;
+      const parsed = headless.readHeadlessModelMetadataRequest({version,
+        operation: kind === "inventory" ? "models.inventory" : "models.record", input: {...target, ...selector}},
+        target.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     const contextSettings = z.discriminatedUnion("kind", [
       contextPackSettings,
       contextRagSettings,

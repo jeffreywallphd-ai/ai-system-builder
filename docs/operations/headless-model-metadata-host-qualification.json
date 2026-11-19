@@ -1,0 +1,29 @@
+{
+  "schema_version": "headless-model-metadata-host-observation-v1",
+  "scope": "Public recorded-model reads through both purpose-specific host readers, Managed API and one plan-review MCP domain tool; controlled feature fixtures only",
+  "security_impact": "security-relevant",
+  "verification_checks": ["headless-model-metadata-owner-unit", "headless-model-metadata-owner-types", "headless-desktop-read-provider", "managed-headless-agent-server", "headless-desktop-pinned-mcp", "managed-headless-agent-routes", "control-plane", "documentation", "agent-support", "architecture"],
+  "evidence_policy": "Current candidate-bound executed receipts and separate-invocation review govern this component. This document describes scope and controls; it is not an executed receipt or an increment pass.",
+  "controls": [
+    "Both actual host bootstraps lazily use the shared passive owner over a concrete organization document partition. No Model feature, runtime, provider, task or file discovery is composed.",
+    "Copied exact request and actor targets, plan-review purpose, workspace/model permission and immediate boolean currentness fence ownership, reads and egress. Async, throwing, unknown, revoked or retargeted currentness denies.",
+    "Inventory is bounded to 32 records and uses the existing qualified inclusive cursor. Exact-record lookup remains recorded-only. Host, Managed API and SDK independently validate and correlate minimized replies.",
+    "One plan-review-only MCP tool remains within the existing 32-tool limit. Portable skill installation includes its Model reference and generated catalog from the same revision.",
+    "Prospective real-host discovery definition facts preserve the authentic earlier source pins, full census history, unrun host observations and all existing technical gaps. A source definition is not execution evidence."
+  ],
+  "retained_failures": [
+    "The independent reviewer found Model copying in only the Managed wrapper, leaving Desktop reply correlation exposed to caller mutation across transport awaits. Copying now occurs at shared ingress and a held-response regression exercises both original-target success and substituted-target denial.",
+    "The first governed receipt e8f3df76265002238a62d856492b2a3f5ca52e29b40d31ef4e497064eb00ee03 passed eleven groups but failed coverage-census and control-plane groups. Census diagnostics found an attempted source lookup at a global baseline that predates that file; the added adapter now authenticates the existing genuine per-source Git witness without changing its pin or global baseline. The control-plane group includes that census command; its retained diagnostic run passed 506 cases with one pre-existing opt-in native skip after the repair. The original failed receipt remains; current corrected-source verification and separate review are required.",
+    "Initial host integration compilation exposed discriminant narrowing errors; explicit finite operation checks and detached request dispatch corrected them.",
+    "An initial new-fixture positive reply used an unsupported lifecycle enum; the fixture now uses the existing downloaded status without changing validation.",
+    "Sandboxed HTTP/TLS checks could not connect to their temporary localhost servers. The same focused tests were run with authorized local network access; the earlier failures remain in local logs.",
+    "The first accessible transport run passed its behavioral cases and failed only the expected stale generated discovery reference. The reference was regenerated from actual credential-free SDK discovery.",
+    "The earlier registry component retains its independently reviewed, unresolved original failed unit attempt and later successful fresh receipt; this component does not reinterpret that cause."
+  ],
+  "qualification_limits": [
+    "Controlled document-store, purpose-specific composition, HTTP/TLS and real SDK/stdio fixtures are feature evidence; they do not establish actual Desktop or Managed app Model journeys.",
+    "Recorded lifecycle and numeric facts prove no current bytes, runtime readiness, supply integrity, license rights, memory capacity or output quality. Runtime and supply fields remain not-checked.",
+    "Download, training/evaluation, generation, consented model/task presentation, hardware/native cleanup and parent/final qualification remain separate I7 work.",
+    "No I7 package, parent criterion or final roadmap completion is granted by this component. Accepted ordinary model accuracy, memory/offload policy, dependencies and security limits remain unchanged."
+  ]
+}

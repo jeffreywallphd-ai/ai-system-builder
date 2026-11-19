@@ -56,6 +56,8 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
   required: z.boolean(), minimum: z.number().optional(), maximum: z.number().optional(),
   maximumLength: z.number().int().positive().optional(), options: z.array(workflowId).min(1).max(32).optional() });
 const resultValue = {
+  "models.inventory": z.unknown(),
+  "models.record": z.unknown(),
   // These two finite shapes use the shared exact-target passive decoders below.
   "context.task": z.unknown(),
   "context.saved": z.unknown(),
@@ -142,7 +144,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_MODEL_READ_OPERATIONS, ...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -256,12 +258,19 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    // Both Desktop and Managed callers must lose their mutable request reference
+    // before transport awaits. Correlate only against this exact dispatched copy.
+    if (input.operation === "models.inventory" || input.operation === "models.record") {
+      const copied = headless.readHeadlessModelMetadataRequest(input, input.input.hostIncarnationId);
+      if (!copied.ok) return copied;
+      input = copied.request;
+    }
     if (input.operation === "context.preview-query") {
       const copied = headless.readHeadlessContextQueryPreviewRequest(input, input.input.hostIncarnationId);
       if (!copied.ok) return {ok: false, code: "headless.invalid-request"};
       input = copied.request;
     }
-    if ((headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-query" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
+    if ((headless.isHeadlessModelReadOperation(input.operation) || headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-query" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -414,6 +423,14 @@ function createForwarder(options: {
       const expected = z.strictObject({ ok: z.literal(true), operation: z.literal(input.operation), value: resultValue[input.operation] });
       const parsed = expected.safeParse(raw);
       if (!parsed.success) return unavailable;
+      if (input.operation === "models.inventory") {
+        const value = headless.readHeadlessModelInventory(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
+      if (input.operation === "models.record") {
+        const value = headless.readHeadlessModelRecord(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
       if (input.operation === "context.preview-query") {
         const expected = "sha256:" + createHash("sha256").update(input.input.query, "utf8").digest("hex");
         const value = headless.readHeadlessContextQueryPreviewValue(parsed.data.value, input.input, expected);

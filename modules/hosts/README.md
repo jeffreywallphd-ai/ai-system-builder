@@ -1,5 +1,15 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Headless `models.inventory` and `models.record` use the shared passive
+`composeHeadlessModelMetadata` factory. Both real bootstraps load it lazily after
+the purpose-specific readers check workspace/model authority. It pins one
+organization document partition, uses recorded-only ModelRegistry reads and
+supplies no Model feature, runtime, task or provider. The readers capture actor
+and request targets before awaits, require immediate boolean currentness, repeat
+authorization before egress and independently decode minimized replies. Recorded
+status is not readiness or supply qualification. Actual-host qualification is
+separate from focused composition fixtures.
+
 Generation snapshots in desktop and server copy only the optional sanitized
 accelerator total from the current authenticated Python capabilities response.
 They do not query an ambient GPU or carry a prior worker's total across reads.

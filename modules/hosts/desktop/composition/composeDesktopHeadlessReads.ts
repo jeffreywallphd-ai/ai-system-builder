@@ -4,6 +4,9 @@ import type {ReadHeadlessContextSavedUseCase} from "../../../application/use-cas
 import type {ReadHeadlessContextRebuildUseCase} from "../../../application/use-cases/context-management";
 import type {PreviewHeadlessContextQueryUseCase} from "../../../application/use-cases/context-management";
 import {isHeadlessContextReadOperation, readHeadlessContextModels, readHeadlessContextPreview} from "../../../contracts/headless";
+import {isHeadlessModelReadOperation, readHeadlessModelInventory, readHeadlessModelRecord} from "../../../contracts/headless";
+import type {ReadHeadlessModelMetadataUseCase} from "../../../application/use-cases/model";
+import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
@@ -73,6 +76,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly getIngestionTasks?: () => Promise<ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0]>;
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
+  readonly getModelMetadata?: () => Promise<Pick<ReadHeadlessModelMetadataUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
   readonly getContextRebuildInputs?: () => Promise<Pick<ReadHeadlessContextRebuildUseCase, "execute">>;
@@ -82,10 +86,13 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
-  const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges,
+  const { hostIncarnationId, identity: suppliedIdentity, workspaceRepository, authorization, getUseCases, committedChanges,
     workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen } = dependencies;
+  const identity = {organizationId: suppliedIdentity.organizationId, principalId: suppliedIdentity.principalId};
+  const sameIdentity = () => suppliedIdentity.organizationId === identity.organizationId && suppliedIdentity.principalId === identity.principalId;
 
   const supports = (operation: HeadlessReadOperation) => {
+    if (isHeadlessModelReadOperation(operation)) return Boolean(dependencies.getModelMetadata);
     if (operation === "context.preview-query") return Boolean(dependencies.getContextQueryPreview);
     if (operation === "context.preview-rebuild") return Boolean(dependencies.getContextRebuildInputs);
     if (operation === "context.saved") return Boolean(dependencies.getContextSaved);
@@ -113,7 +120,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         operation: `headless.${operation}`,
         requiredScopes: queryModel ? ["workspace:read", "artifact:read", "model:read"] : requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
-          : operation === "context.models" ? ["workspace:read", "model:read"]
+          : operation === "context.models" || isHeadlessModelReadOperation(operation) ? ["workspace:read", "model:read"]
           : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
           : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
           : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"]
@@ -129,26 +136,32 @@ export function composeDesktopHeadlessReads(dependencies: {
 
   return async (request, getCurrentGrant) => {
     try {
+      const parsed = parseHeadlessReadRequest(request, hostIncarnationId);
+      if (parsed.ok && isHeadlessModelReadOperation(parsed.request.operation)) {
+        Object.freeze(parsed.request.input);
+        Object.freeze(parsed.request);
+      }
       const current = async () => {
-        if (!isOpen()) return undefined;
+        if (!isOpen() || !sameIdentity()) return undefined;
         const grant = await getCurrentGrant();
-        return isOpen() && grant?.registeredClientId &&
+        return isOpen() && sameIdentity() && grant?.registeredClientId &&
           grant.organizationId === identity.organizationId && grant.principalId === identity.principalId
           ? grant : undefined;
       };
       const grant = await current();
       if (!grant) return forbidden;
-      const parsed = parseHeadlessReadRequest(request, hostIncarnationId);
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
+      const modelRead = isHeadlessModelReadOperation(operation), modelFence = grant.isCurrent;
       if (!grant.operations.includes(operation)) return forbidden;
-      if ((isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && grant.planReview !== true) return forbidden;
+      if ((modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && grant.planReview !== true) return forbidden;
+      if (modelRead && !isHeadlessReadCurrent(modelFence)) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
-          (!(isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") || latest.planReview === true && latest.isCurrent?.() !== false) &&
+          (!(modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") || latest.planReview === true && (modelRead ? isHeadlessReadCurrent(latest.isCurrent) : latest.isCurrent?.() !== false)) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -171,7 +184,7 @@ export function composeDesktopHeadlessReads(dependencies: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
               op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
-              (!(isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved" || op === "context.preview-query" || op === "context.preview-rebuild") || latest.planReview === true)),
+              (!(isHeadlessModelReadOperation(op) || isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved" || op === "context.preview-query" || op === "context.preview-rebuild") || latest.planReview === true)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -225,6 +238,28 @@ export function composeDesktopHeadlessReads(dependencies: {
           const queryResult = result.ok && "query" in result.value;
           return await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation, false, queryResult) &&
             isOpen() && grant.isCurrent?.() !== false ? result : forbidden;
+        }
+        case "models.inventory":
+        case "models.record": {
+          const currentModel = () => isOpen() && sameIdentity() && isHeadlessReadCurrent(modelFence);
+          if (!dependencies.getModelMetadata || !currentModel()) return forbidden;
+          const metadata = await dependencies.getModelMetadata();
+          const allowed = async () => currentModel() && Boolean(await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation)) && currentModel();
+          if (!await allowed() || !currentModel()) return forbidden;
+          const result = await metadata.execute(parsed.request, {hostIncarnationId,
+            context: {...identity, workspaceId}, stillAllowed: allowed, isCurrent: currentModel});
+          if (!await allowed() || !currentModel()) return forbidden;
+          if (!result.ok) return result.code === "headless.forbidden" ? forbidden
+            : result.code === "headless.not-found" ? {ok: false, code: "headless.not-found"} : unavailable;
+          if (operation === "models.inventory" && result.operation === operation) {
+            const value = readHeadlessModelInventory(result.value, input);
+            return value ? {ok: true, operation, value} : unavailable;
+          }
+          if (operation === "models.record" && result.operation === operation) {
+            const value = readHeadlessModelRecord(result.value, input);
+            return value ? {ok: true, operation, value} : unavailable;
+          }
+          return unavailable;
         }
         case "context.models":
         case "context.preview-generation": {

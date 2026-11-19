@@ -33,6 +33,8 @@ test("accepts only the declared finite read inputs and returns a detached reques
     } },
     "conversation-tasks.read": { ...scope, sessionId: "session.1", turnId: "turn.1" },
     "plan.capabilities": scope,
+    "models.inventory": {...scope, limit: 2, cursor: "model.record-1"},
+    "models.record": {...scope, modelRecordId: "model.record-1"},
     "context.models": scope,
     "context.task": {...scope, selection: {kind: "task", taskId: host}},
     "context.saved": {...scope, contextId: host},
