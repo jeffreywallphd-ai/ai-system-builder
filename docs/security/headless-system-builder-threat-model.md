@@ -1,5 +1,25 @@
 # Headless System Builder threat model
 
+## Exact Model transfer proposal data
+
+An agent's inline source selection or digest is untrusted data. Resolve and
+compare normalized provider metadata under the original source-read scope before
+entering the proposal transaction, and bind it there. Do not infer transfer or
+ModelWrite from metadata consent, a provider card, license label or prepared
+object. Reject active input and changed actor/client/workspace/host/policy at
+Node preparation boundaries. Preserve copied targets and original callbacks.
+Review views must reconstruct exact sites, selected bytes/files, duration and
+separate effects; forged/missing limits cannot become approval. Escape labels
+and show unknown/non-open licenses without granting rights. Public HTTPS origin
+data is a proposed allowlist, not supplier authority or a bypass of runtime DNS,
+redirect, integrity and resource controls. Disk estimates grant no reservation
+or hard quota. Current unsupported hosts and step/saved-source paths deny these
+operations, rather than falling through to generic system writes.
+Bind public-without-credentials transfer explicitly. Saved metadata access must
+not imply file authentication; private/gated transfer has no qualified secure
+seam. Do not turn byte/time limits into a promise of physical termination or
+cleanup when the native outcome is uncertain.
+
 ## Model application admission and reusable task IDs
 
 An old or unknown download must not adopt a later job that reuses its ID. Before

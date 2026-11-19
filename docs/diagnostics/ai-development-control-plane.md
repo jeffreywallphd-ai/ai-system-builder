@@ -2689,3 +2689,14 @@ timeouts, process cleanup and pass/fail rules remain authoritative and unchanged
 Use a reported test location for focused diagnosis; output text cannot grant
 qualification. Approved source jobs likewise require their original captured
 handle for read/cancel/completion; generic listing cannot refresh them.
+
+The exact Model owner checks also cover the opt-in v11 download-plan codec,
+guarded provider preparation and shared popup/chat transfer disclosure. The new
+Model source/test files select those profiles; shared plan/approval files alone
+do not borrow Model-specific coverage. Required related Context/browser profiles
+preserve their existing workflows. Golden previews for v1-v10 were captured from
+the clean predecessor and must not be regenerated from the candidate to hide a
+fingerprint change. UI evidence exercises both approval modes/channels but is
+not a real provider, task, host or parent qualification. Keep actual host flags,
+stored source bindings and execution disabled until separately composed and
+qualified. An unknown path or explicit generic request retains fallback.

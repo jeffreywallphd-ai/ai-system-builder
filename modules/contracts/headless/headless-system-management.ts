@@ -18,6 +18,7 @@ import {HEADLESS_CONTEXT_QUERY_MAX_CHARACTERS} from "./headless-context-query-pr
 import {CONTEXT_GENERATION_LIMITS} from "../context-management";
 import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEADLESS_DATASET_MAX_ROWS_PER_SOURCE} from "./headless-dataset-preparation";
 import type { HeadlessSemanticBatchRequest } from "./headless-semantic-batch";
+import {readHeadlessModelDownloadPlanRequest, type HeadlessModelDownloadPlanRequest} from "./headless-model-download-plan";
 
 interface ManagementTarget {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -41,7 +42,8 @@ export type HeadlessSystemManagementRequest =
 
 type PreQueryBuildPlanRequest = HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest | HeadlessProviderFileSavePlanRequest |
   HeadlessLocalDatasetPlanRequest | HeadlessDatasetResultSavePlanRequest | HeadlessContextGenerationPlanRequest | HeadlessContextResultSavePlanRequest;
-export type HeadlessBuildPlanRequest = PreQueryBuildPlanRequest | HeadlessContextQueryPlanRequest;
+type PreModelBuildPlanRequest = PreQueryBuildPlanRequest | HeadlessContextQueryPlanRequest;
+export type HeadlessBuildPlanRequest = PreModelBuildPlanRequest | HeadlessModelDownloadPlanRequest;
 type PreContextResultBuildPlanRequest = Exclude<PreQueryBuildPlanRequest, HeadlessContextResultSavePlanRequest>;
 type LegacyBuildPlanRequest = Exclude<PreContextResultBuildPlanRequest, HeadlessContextGenerationPlanRequest>;
 export interface HeadlessBuildPlanCapabilities {
@@ -53,6 +55,7 @@ export interface HeadlessBuildPlanCapabilities {
   readonly allowContextRagGeneration?: boolean;
   readonly allowContextResultSave?: boolean;
   readonly allowContextQuery?: boolean;
+  readonly allowModelDownload?: boolean;
 }
 
 /** Serialize the saved effect without the connection identity or its receipt key. */
@@ -81,9 +84,11 @@ const CONTEXT_RAG_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v7";
 const CONTEXT_RESULT_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v8";
 const CONTEXT_REBUILD_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v9";
 const CONTEXT_QUERY_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v10";
+const MODEL_DOWNLOAD_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v11";
 const proposalFields = ["operation", "idempotencyKey", "name", "templateId", "systemId",
   "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision", "sources", "recipe", "split", "qualityPreset",
-  "reportFingerprint", "outputBaseName", "settings", "rebuildOf", "reference", "queryDigest", "modelRecordId", "modelUpdatedAt", "maximumResults", "embeddingDevice"];
+  "reportFingerprint", "outputBaseName", "settings", "rebuildOf", "reference", "queryDigest", "modelRecordId", "modelUpdatedAt", "maximumResults", "embeddingDevice",
+  "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode"];
 
 /** A decoded request carries data only. The running host supplies and checks identity. */
 export function parseHeadlessSystemManagementRequest(value: unknown, host: HeadlessHostIncarnationId):
@@ -198,6 +203,18 @@ function projectBuildPlanStep(request: PreQueryBuildPlanRequest) {
               : request.operation === "data.save-local-source" ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request);
 }
 
+function projectModelDownloadPlanStep({operation, input: {hostIncarnationId: _host, workspaceId: _workspace, ...input}}:
+  HeadlessModelDownloadPlanRequest) {
+  return {operation, input, effect: "download-model-files" as const, externalProviderCalls: "required" as const, modelCalls: 0 as const,
+    maximumTotalBytes: input.sourceManifest.source.totalBytes, temporaryStorageEstimateBytes: input.sourceManifest.source.totalBytes * 2,
+    maximumDurationSeconds: input.maximumDurationSeconds, explicitSaveRequired: true as const, loadsModel: false as const,
+    writesModelRegistry: false as const, fileTransferAccess: "public-without-credentials" as const};
+}
+function projectAnyBuildPlanStep(request: HeadlessBuildPlanRequest) {
+  return request.operation === "models.download" ? projectModelDownloadPlanStep(request) : request.operation === "context.query"
+    ? projectContextQueryPlanStep(request) : projectBuildPlanStep(request);
+}
+
 type PlanScope = { readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId };
 type PlanPreview<V, Step> = PlanScope & {
   readonly version: V;
@@ -220,7 +237,8 @@ type MixedPreview = PlanPreview<typeof LOCAL_FILE_PLAN_PREVIEW_VERSION, SystemSt
   PlanPreview<typeof CONTEXT_RAG_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep | DatasetResultStep | ContextPackStep | ContextRagStep> |
   PlanPreview<typeof CONTEXT_RESULT_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep>> |
   PlanPreview<typeof CONTEXT_REBUILD_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep>> |
-  PlanPreview<typeof CONTEXT_QUERY_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep> | ReturnType<typeof projectContextQueryPlanStep>>;
+  PlanPreview<typeof CONTEXT_QUERY_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep> | ReturnType<typeof projectContextQueryPlanStep>> |
+  PlanPreview<typeof MODEL_DOWNLOAD_PLAN_PREVIEW_VERSION, ReturnType<typeof projectAnyBuildPlanStep>>;
 type PlanSuccess<Request, Preview> = { readonly ok: true; readonly scope: PlanScope; readonly requests: readonly Request[];
   readonly preview: Preview };
 type PlanFailure = typeof invalid | { readonly ok: false; readonly code: "headless.host-changed" };
@@ -249,10 +267,13 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
     const datasetSources = new Set<string>();
     const savedDatasets = new Set<string>();
     const savedContexts = new Set<string>();
+    const selectedModels = new Set<string>();
     for (const step of steps) {
       const { operation, ...fields } = readStrictPassiveRecord(step, proposalFields);
       const input = { version: HEADLESS_CONTRACT_VERSION, operation, input: { ...scope, ...fields } };
-      const decoded = operation === "data.save-local-source" && options?.allowLocalFileSave
+      const decoded = operation === "models.download" && options?.allowModelDownload
+        ? readHeadlessModelDownloadPlanRequest(input, host)
+        : operation === "data.save-local-source" && options?.allowLocalFileSave
         ? readHeadlessLocalFileSavePlanRequest(input, host)
         : operation === "data.save-provider-source" && options?.allowProviderFileSave
           ? readHeadlessProviderFileSavePlanRequest(input, host)
@@ -295,6 +316,11 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       } else if (request.operation === "context.save-result") {
         if (savedContexts.has(request.input.taskId)) return invalid;
         savedContexts.add(request.input.taskId);
+      } else if (request.operation === "models.download") {
+        const selected = request.input.sourceManifest.source;
+        const key = selected.modelId + "@" + selected.revision;
+        if (selectedModels.has(key)) return invalid;
+        selectedModels.add(key);
       } else if (request.operation !== "systems.create" && request.operation !== "context.query") {
         // A saved revision cannot be reused after a previous change to that system.
         if (renamedSystems.has(request.input.systemId)) return invalid;
@@ -303,10 +329,13 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       proposed.push(request);
     }
     const previewScope = { ...scope, approval: "required" as const };
-    if (proposed.some(request => request.operation === "context.query")) return {ok: true, scope, requests: proposed,
+    if (selectedModels.size) return {ok: true, scope, requests: proposed,
+      preview: {version: MODEL_DOWNLOAD_PLAN_PREVIEW_VERSION, ...previewScope, steps: proposed.map(projectAnyBuildPlanStep)}};
+    const preModelRequests = proposed.filter((request): request is PreModelBuildPlanRequest => request.operation !== "models.download");
+    if (preModelRequests.some(request => request.operation === "context.query")) return {ok: true, scope, requests: preModelRequests,
       preview: {version: CONTEXT_QUERY_PLAN_PREVIEW_VERSION, ...previewScope,
-        steps: proposed.map(request => request.operation === "context.query" ? projectContextQueryPlanStep(request) : projectBuildPlanStep(request))}};
-    const allRequests = proposed.filter((request): request is PreQueryBuildPlanRequest => request.operation !== "context.query");
+        steps: preModelRequests.map(request => request.operation === "context.query" ? projectContextQueryPlanStep(request) : projectBuildPlanStep(request))}};
+    const allRequests = preModelRequests.filter((request): request is PreQueryBuildPlanRequest => request.operation !== "context.query");
     if (allRequests.some(request => (request.operation === "context.generate-pack" || request.operation === "context.generate-rag") && request.input.rebuildOf))
       return {ok: true, scope, requests: allRequests, preview: {version: CONTEXT_REBUILD_PLAN_PREVIEW_VERSION,
         ...previewScope, steps: allRequests.map(projectBuildPlanStep)}};

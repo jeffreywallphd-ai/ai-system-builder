@@ -1,7 +1,8 @@
 import { copyBoundedPassiveData, readStrictPassiveRecord } from "../shared";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { isDesktopHeadlessClientId, isDesktopHeadlessFingerprint } from "./desktop-headless-pairing";
-import { isHeadlessHostIncarnationId } from "./headless-read-request";
+import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "./headless-read-request";
+import {readHeadlessModelDownloadPlanRequest} from "./headless-model-download-plan";
 import { readHeadlessPlanReviewAgentResult, readHeadlessPlanReviewDecisionChoice,
   type HeadlessPlanReviewAgentResult, type HeadlessPlanReviewDecisionChoice } from "./headless-plan-review-wire";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
@@ -108,15 +109,26 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
       const { operation, input, effect, externalProviderCalls, ...limits } = readStrictPassiveRecord(step,
         ["operation", "input", "effect", "externalProviderCalls", "modelCalls", "maximumSourceBytes", "maximumTotalBytes",
           "maximumRowsPerSource", "outputFormat", "reviewRequired", "immutableVersion", "maximumSources", "maximumChunks",
-          "explicitSaveRequired", "maximumArtifactBytes", "exactReviewRequired", "maximumQueryCharacters", "writesSavedData"]);
+          "explicitSaveRequired", "maximumArtifactBytes", "exactReviewRequired", "maximumQueryCharacters", "writesSavedData",
+          "temporaryStorageEstimateBytes", "maximumDurationSeconds", "loadsModel", "writesModelRegistry", "fileTransferAccess"]);
       const dataset = operation === "data.prepare-local-dataset";
       const resultSave = operation === "data.save-prepared-dataset";
       const contextPack = operation === "context.generate-pack";
       const contextRag = operation === "context.generate-rag";
       const contextSave = operation === "context.save-result";
       const contextQuery = operation === "context.query";
+      const modelDownload = operation === "models.download";
+      const model = modelDownload ? readHeadlessModelDownloadPlanRequest({version: HEADLESS_CONTRACT_VERSION, operation,
+        input: {...readStrictPassiveRecord(input, ["idempotencyKey", "name", "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode"]),
+          hostIncarnationId, workspaceId}}, hostIncarnationId) : undefined;
       const contextGeneration = contextPack || contextRag;
-      if (contextQuery ? !exactLimitFields(limits, ["modelCalls", "maximumArtifactBytes", "maximumQueryCharacters", "outputFormat", "writesSavedData"]) ||
+      if (modelDownload ? !model?.ok || !exactLimitFields(limits, ["modelCalls", "maximumTotalBytes", "temporaryStorageEstimateBytes",
+          "maximumDurationSeconds", "explicitSaveRequired", "loadsModel", "writesModelRegistry", "fileTransferAccess"]) || limits.modelCalls !== 0 ||
+          limits.maximumTotalBytes !== model.request.input.sourceManifest.source.totalBytes ||
+          limits.temporaryStorageEstimateBytes !== model.request.input.sourceManifest.source.totalBytes * 2 ||
+          limits.maximumDurationSeconds !== model.request.input.maximumDurationSeconds || limits.explicitSaveRequired !== true ||
+          limits.loadsModel !== false || limits.writesModelRegistry !== false || limits.fileTransferAccess !== "public-without-credentials" :
+          contextQuery ? !exactLimitFields(limits, ["modelCalls", "maximumArtifactBytes", "maximumQueryCharacters", "outputFormat", "writesSavedData"]) ||
           limits.modelCalls !== "required" || limits.maximumArtifactBytes !== CONTEXT_GENERATION_LIMITS.maximumArtifactBytes ||
           limits.maximumQueryCharacters !== HEADLESS_CONTEXT_QUERY_MAX_CHARACTERS || limits.outputFormat !== "citation-summary" || limits.writesSavedData !== false :
           contextSave ? !exactLimitFields(limits, ["modelCalls", "maximumArtifactBytes", "exactReviewRequired"]) ||
@@ -135,10 +147,11 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
         throw new Error("Invalid processing limits.");
       const providerFile = operation === "data.save-provider-source";
       const savingFile = operation === "data.save-local-source" || providerFile;
-      if (effect !== (contextQuery ? "query-saved-context" : contextSave ? "save-reviewed-context" : contextRag ? "generate-rag-database" : contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
-          externalProviderCalls !== (providerFile ? "required" : 0))
+      if (effect !== (modelDownload ? "download-model-files" : contextQuery ? "query-saved-context" : contextSave ? "save-reviewed-context" : contextRag ? "generate-rag-database" : contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
+          externalProviderCalls !== (providerFile || modelDownload ? "required" : 0))
         throw new Error("Invalid approval effects.");
-      const fields = readStrictPassiveRecord(input, contextQuery ? ["idempotencyKey", "reference", "queryDigest", "modelRecordId", "modelUpdatedAt", "maximumResults", "embeddingDevice"] :
+      const fields = readStrictPassiveRecord(input, modelDownload ? ["idempotencyKey", "name", "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode"] :
+        contextQuery ? ["idempotencyKey", "reference", "queryDigest", "modelRecordId", "modelUpdatedAt", "maximumResults", "embeddingDevice"] :
         contextSave ? ["idempotencyKey", "taskId", "reportFingerprint", "name"] :
         contextGeneration ? ["idempotencyKey", "name", "sources", "settings", "rebuildOf"] :
         dataset ? ["idempotencyKey", "sources", "recipe", "split", "qualityPreset"] :

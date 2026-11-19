@@ -1,5 +1,18 @@
 # Contracts
 
+The opt-in `models.download` proposal uses a distinct v11 plan preview with an
+exact pinned safe-format source selection, metadata digest, declared license,
+explicit HTTPS transfer sites and existing byte/time limits. Temporary disk
+space is an estimate. It grants no transfer, byte/readiness result, license
+rights, Model registration or loading by itself. Node preparation independently
+rechecks provider metadata before any future owned proposal transaction. Both
+approval channels reconstruct the exact effects and limits. Existing host
+capabilities, proposal storage and execution remain disabled for this operation
+until their original source bindings are composed; v1-v10 stay byte-exact.
+The fixed transfer profile is public files without credentials. Saved provider
+access can check metadata; private/gated transfer has no qualified credential
+seam here. A duration limit is not a claim of confirmed physical IO stop.
+
 Headless `models.preview-source` is a separate provider metadata selector on a
 paired plan-review connection. Strict target/result codecs keep exact host,
 workspace, qualified model ID and optional commit. They retain the normalized

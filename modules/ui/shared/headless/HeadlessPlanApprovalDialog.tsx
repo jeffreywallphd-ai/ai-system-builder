@@ -199,7 +199,8 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const ragProcessing = view.preview.steps.some(step => step.operation === "context.generate-rag");
   const contextSaving = view.preview.steps.some(step => step.operation === "context.save-result");
   const contextQuerying = view.preview.steps.some(step => step.operation === "context.query");
-  const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying;
+  const modelDownloading = view.preview.steps.some(step => step.operation === "models.download");
+  const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying || modelDownloading;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
@@ -241,8 +242,15 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Return only source references, scores and citation locations. Source excerpts and question text are not returned.</li>
         <li>This search does not save or publish data. Model downloads, installation and window control need separate permission.</li>
       </> : null}
-      <li>Limit of {state.stepCount} {contextQuerying ? state.stepCount === 1 ? "work item" : "work items" : `${processing ? "" : "saved "}${state.stepCount === 1 ? "change" : "changes"}`} for this plan.</li>
-      {providerReads
+      {modelDownloading ? <>
+        <li>Download only the exact model files and versions listed below to AI System Builder’s model cache.</li>
+        <li>Allow saved Hugging Face access to check model details. File transfers use public access only. Files that require a token are not supported.</li>
+        <li>Transfers can use only the allowed sites shown for each download. The app checks the listed byte and time limits. If stopping cannot be confirmed, the outcome stays unconfirmed.</li>
+        <li>The disk space amount is an estimate, not a reservation.</li>
+        <li>This request does not add the downloaded model to the Models list, run it, train it, or publish it. Those actions need separate approval.</li>
+      </> : null}
+      <li>Limit of {state.stepCount} {contextQuerying || modelDownloading ? state.stepCount === 1 ? "work item" : "work items" : `${processing ? "" : "saved "}${state.stepCount === 1 ? "change" : "changes"}`} for this plan.</li>
+      {modelDownloading ? <li>Outside file transfers are required. This request makes no paid model calls.</li> : providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
         : <li>No outside service calls or provider charges.</li>}
     </ul>
@@ -251,7 +259,26 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     </time>.</p>
     <ol aria-label="Requested changes">
       {view.preview.steps.map((step, index) => <li key={step.input.idempotencyKey}>
-        {step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ? <>
+        {step.operation === "models.download" ? <>
+          <strong>Download model files: {step.input.name}</strong>
+          <div>Model: {step.input.sourceManifest.source.modelId}</div>
+          <div style={{overflowWrap: "anywhere"}}>Exact version: <code>{step.input.sourceManifest.source.revision}</code></div>
+          <div>Format: Transformers safetensors.</div>
+          <div>File access: Public files without credentials. Private or gated file downloads are unavailable in this workflow.</div>
+          <div>{step.input.sourceManifest.source.license.kind === "provider-declared"
+            ? <>License reported by the provider: {step.input.sourceManifest.source.license.identifier}.</>
+            : "License: Not reported by the provider."} A download does not confirm license rights.</div>
+          <div>Selected file bytes: {step.maximumTotalBytes.toLocaleString()}.</div>
+          <div>Disk space estimate during transfer: {step.temporaryStorageEstimateBytes.toLocaleString()} bytes. Final files use about {step.maximumTotalBytes.toLocaleString()} bytes.</div>
+          <div>Time limit: {Math.floor(step.maximumDurationSeconds / 60)} minutes {step.maximumDurationSeconds % 60} seconds.</div>
+          {step.input.inferenceMode ? <div>Planned use: {step.input.inferenceMode}.</div> : null}
+          <ul aria-label="Allowed download sites">{step.input.allowedOrigins.map(origin => <li key={origin}><code>{origin}</code></li>)}</ul>
+          <details><summary>Selected files ({step.input.sourceManifest.source.files.length})</summary>
+            <ul>{step.input.sourceManifest.source.files.map(file => <li key={file.path}>{file.path}: {file.sizeBytes.toLocaleString()} bytes.</li>)}</ul>
+            <div style={{overflowWrap: "anywhere"}}>Source fingerprint: <code>{step.input.sourceManifest.manifestDigest}</code></div>
+          </details>
+          <div>File integrity and runtime support are not yet checked. Adding or running this model needs separate approval.</div>
+        </> : step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ? <>
           <strong>{step.operation === "data.save-provider-source"
             ? "Save the selected Hugging Face source in Data" : "Save the selected file in Data"}</strong>
           <div>File reference {step.input.fileId}</div>

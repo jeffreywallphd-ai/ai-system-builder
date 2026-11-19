@@ -1,5 +1,23 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Exact Model transfer proposal and approval data
+
+Use a separate opt-in v11 download preview, retaining v1-v10 fingerprints. It
+contains the complete normalized safe-format selection, exact pin/metadata
+digest/license, explicit HTTPS sites and bounded bytes/duration. Metadata-only
+consent cannot authorize weight transfer. Prepare a fresh matching provider
+snapshot before the owned proposal transaction; bind it there under the original
+actor/client/workspace/host. The application compiler has no transaction, runtime,
+task, filesystem or registry port. Its data is not approval or byte/readiness
+proof. Shared popup/chat review shows all transfer permissions in either approval
+mode; unknown/non-open licenses are allowed as declared metadata. Registry save,
+loading, training and publication stay separate. Keep real host/store/execution
+support disabled until exact source bindings and ownership are integrated.
+Bind public-without-credentials file access in the preview and reconstruct it
+in approval codecs. Saved access is metadata-only; private/gated transfer remains
+unavailable. Describe byte/time enforcement without claiming physical stop when
+native IO or cleanup is unconfirmed.
+
 ### Original Model application admission and result ownership
 
 Extend the existing Model download use case and reconciler, not a second task

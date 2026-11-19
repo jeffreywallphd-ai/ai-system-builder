@@ -14,5 +14,6 @@ export * from "./train-model.use-case";
 
 export * from "./validate-model.use-case";
 export * from "./publish-model.use-case";
+export * from "./headless-model-download-preview.use-case";
 export * from "./reveal-model-in-folder.use-case";
 export * from "./list-model-files.use-case";

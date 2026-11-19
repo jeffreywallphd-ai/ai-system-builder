@@ -93,6 +93,8 @@ export async function prepareStructuredHeadlessPlanStep(
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
     const request = approved.requests[step - 1];
+    // Source execution stays disabled until its original private binding is composed.
+    if (request?.operation === "models.download" || approved.requests.some(candidate => candidate.operation === "models.download")) return;
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
@@ -107,6 +109,7 @@ export async function prepareStructuredHeadlessPlanStep(
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
       if (!previous) return;
+      if (previous.operation === "models.download") return;
       const received = previous.operation === "data.save-local-source"
         ? await readCommittedStructuredLocalFilePlanEffect(partition, localFileEffect(target, previous, index + 1))
         : previous.operation === "data.save-provider-source"

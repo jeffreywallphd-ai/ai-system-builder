@@ -1,5 +1,19 @@
 # Application Use Cases
 
+`PrepareHeadlessModelDownloadPlanUseCase` copies a strict exact-source proposal,
+captures original actor/client/workspace/host and source-read controls, and
+independently matches the existing provider preview and canonical digest. It
+rejects active values before reflection and retains original callbacks across
+awaits. Unknown/non-open license metadata remains declared data, not rights.
+Its frozen output still requires download approval and byte/runtime checks.
+It has no transaction, filesystem, task, runtime or registry dependency. Future
+hosts must prepare provider metadata outside their owned proposal transaction,
+then bind that exact preparation under fresh original scope inside it. This
+component alone enables no public transfer or registration capability.
+Its file-transfer profile is public without credentials; saved access remains
+metadata-only, and private/gated acquisition stays unavailable. Native stop or
+cleanup uncertainty remains unconfirmed rather than receiving deadline credit.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `PreviewHeadlessModelSourceUseCase` prepares a source through the private Model

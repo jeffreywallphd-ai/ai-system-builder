@@ -1,5 +1,20 @@
 # Runtime Model
 
+Model download proposal preparation is a metadata-only application boundary.
+The opt-in v11 plan records an exact normalized source/pin/manifest/license and
+explicit transfer origins/byte/time scope. An independent provider read must
+match it under original actor/client/workspace/host/source-read controls before
+a host enters its owned proposal transaction. Bind that preparation privately
+inside the transaction; do not fetch provider data there. A disk estimate is
+not a hard reservation. Proposal, human transfer approval, accepted source task,
+stored byte verification, Model registration and runtime readiness are distinct.
+Current hosts/store/step paths remain disabled until those bindings and execution
+are composed. Older previews and ordinary workflows retain their exact meaning.
+The fixed file-transfer profile is public without credentials. Metadata may use
+saved provider access; private/gated acquisition requires a separately qualified
+secure seam. Byte/time guards do not prove physical stop or cleanup; uncertainty
+retains its original unconfirmed outcome and custody.
+
 Approved source admission uses the existing Model download application owner.
 Copy actor/source identity, reserve bounded descriptor/reconciler ownership and
 acknowledge exact issuance before installed-only preparation. Unknown issuance

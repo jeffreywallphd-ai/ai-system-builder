@@ -270,6 +270,8 @@ export async function validateHeadlessPlanSavedSources(
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
+    // No provider IO or source authority can be inferred inside this transaction.
+    if (operation === "models.download") return false;
     if (operation === "context.query") {
       if (!validateContextQuery) return false;
       const eligible = await validateContextQuery(request);
