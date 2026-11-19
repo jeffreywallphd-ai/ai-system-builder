@@ -20,6 +20,25 @@ not imply file authentication; private/gated transfer has no qualified secure
 seam. Do not turn byte/time limits into a promise of physical termination or
 cleanup when the native outcome is uncertain.
 
+Version-3 private review records require explicit trusted source binding plus
+fresh owned policy/source validation. The binder must compare pre-transaction
+provider preparation to detached exact actor/client/host/workspace/plan/request
+data. Inline digests cannot self-attest verification. Independently recompute
+source SHA-256, require complete ordered Model step coverage, reject active/extra
+facts and preserve optional RAG witnesses. Current liveness/deadline fences must
+discard all writes together. Decisions/replay preserve facts without another
+provider call or replacement. Version downgrade, missing/changed bindings and
+cross-target reads deny; snapshots omit private binding rows. Existing hosts stay
+unconfigured and step execution refuses the whole Model plan. A stored proof is
+historical metadata, never new approval, acquisition, registration or native proof.
+
+Legacy Model JSON publication uses the existing exclusive temporary document
+writer and bounded Windows sharing-conflict retry. Retry only the same source/
+destination rename; never delete the target, copy over it or reinterpret another
+error as success. Persistent denial preserves old bytes and cleans only the exact
+new temporary file. The original serial queue and structured-store path remain
+intact; this compatibility repair grants no source or native ownership proof.
+
 ## Model application admission and reusable task IDs
 
 An old or unknown download must not adopt a later job that reuses its ID. Before

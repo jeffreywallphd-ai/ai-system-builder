@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
+import fsPromises, {mkdtemp, readFile, readdir, rm, writeFile} from "node:fs/promises";
+import {syncBuiltinESMExports} from "node:module";
 import {tmpdir} from "node:os";
 import {basename, dirname, join, resolve} from "node:path";
 import {test} from "node:test";
@@ -143,5 +144,63 @@ test("model inventory retains existing contract page limits with inclusive curso
     const ordinary = await adapter.listModels(query({limit: undefined}));
     assert.equal(ordinary.models.length, DEFAULT_LIST_MODELS_LIMIT);
     assert.equal(ordinary.nextCursor, defaulted.nextCursor);
+  });
+});
+
+test("legacy Model writes reuse bounded exact Windows publication retries and preserve permanently denied bytes", {skip: process.platform !== "win32"}, async context => {
+  for (const code of ["EPERM", "EBUSY", "EACCES"]) await withRegistry(async ({adapter, filePath}) => {
+    const rename = fsPromises.rename;
+    let expectedBytes = await readFile(filePath), failures = 2;
+    const mode: {value: "transient" | "permanent" | "normal"} = {value: "transient"};
+    const attempts: [string, string][] = [];
+    const replaced = context.mock.method(fsPromises, "rename", async (from: Parameters<typeof rename>[0], to: Parameters<typeof rename>[1]) => {
+      if (resolve(String(to)) === filePath) {
+        attempts.push([String(from), String(to)]);
+        if (mode.value === "permanent" || mode.value === "transient" && failures > 0) {
+          failures--; assert.deepEqual(await readFile(filePath), expectedBytes);
+          throw Object.assign(new Error("Synthetic sharing conflict."), {code});
+        }
+      }
+      return rename(from, to);
+    });
+    syncBuiltinESMExports();
+    try {
+      await adapter.saveModelReference({workspaceId: workspace, modelRecordId: "retry-success", provider: "huggingface", modelId: "synthetic/retry"});
+      assert.equal(attempts.length, 3); assert.deepEqual(attempts[0], attempts[1]); assert.deepEqual(attempts[1], attempts[2]);
+      expectedBytes = await readFile(filePath);
+      attempts.length = 0; mode.value = "permanent";
+      await assert.rejects(adapter.saveModelReference({workspaceId: workspace, modelRecordId: "retry-denied",
+        provider: "huggingface", modelId: "synthetic/denied"}), {code});
+      assert.equal(attempts.length, 4); for (const pair of attempts) assert.deepEqual(pair, attempts[0]);
+      assert.deepEqual(await readFile(filePath), expectedBytes);
+      assert.deepEqual(await readdir(dirname(filePath)), ["models.json"], "Only the exact fresh temporary file is cleaned up.");
+      mode.value = "normal";
+      await adapter.saveModelReference({workspaceId: workspace, modelRecordId: "after-denial", provider: "huggingface", modelId: "synthetic/recovered"});
+      const records = await adapter.listModels(query({limit: 20}));
+      assert.ok(records.models.some(row => row.modelRecordId === "retry-success"));
+      assert.ok(records.models.some(row => row.modelRecordId === "after-denial"));
+      assert.equal(records.models.some(row => row.modelRecordId === "retry-denied"), false);
+    } finally {replaced.mock.restore(); syncBuiltinESMExports();}
+  });
+});
+
+test("legacy Model publication does not retry non-sharing failures or damage the saved registry", async context => {
+  for (const code of ["EIO", "ENOENT"]) await withRegistry(async ({adapter, filePath}) => {
+    const rename = fsPromises.rename, before = await readFile(filePath); let attempts = 0;
+    const replaced = context.mock.method(fsPromises, "rename", async (from: Parameters<typeof rename>[0], to: Parameters<typeof rename>[1]) => {
+      if (resolve(String(to)) === filePath) {
+        attempts++; throw Object.assign(new Error("Synthetic non-sharing publication failure."), {code});
+      }
+      return rename(from, to);
+    });
+    syncBuiltinESMExports();
+    try {
+      await assert.rejects(adapter.saveModelReference({workspaceId: workspace, modelRecordId: "not-saved", provider: "huggingface",
+        modelId: "synthetic/not-saved"}), {code});
+      assert.equal(attempts, 1); assert.deepEqual(await readFile(filePath), before);
+      assert.deepEqual(await readdir(dirname(filePath)), ["models.json"]);
+    } finally {replaced.mock.restore(); syncBuiltinESMExports();}
+    await adapter.saveModelReference({workspaceId: workspace, modelRecordId: "recovered", provider: "huggingface", modelId: "synthetic/recovered"});
+    assert.ok((await adapter.listModels(query({limit: 20}))).models.some(row => row.modelRecordId === "recovered"));
   });
 });

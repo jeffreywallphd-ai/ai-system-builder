@@ -11,12 +11,33 @@ actor/client/workspace/host. The application compiler has no transaction, runtim
 task, filesystem or registry port. Its data is not approval or byte/readiness
 proof. Shared popup/chat review shows all transfer permissions in either approval
 mode; unknown/non-open licenses are allowed as declared metadata. Registry save,
-loading, training and publication stay separate. Keep real host/store/execution
-support disabled until exact source bindings and ownership are integrated.
+loading, training and publication stay separate. Keep real host/execution support
+disabled until exact source bindings and task ownership are integrated.
 Bind public-without-credentials file access in the preview and reconstruct it
 in approval codecs. Saved access is metadata-only; private/gated transfer remains
 unavailable. Describe byte/time enforcement without claiming physical stop when
 native IO or cleanup is unconfirmed.
+
+### Private Model source review persistence
+
+Extend the existing review owner with version-3 records, without rewriting version-1
+or version-2 history. Require the existing fresh owned validation and an explicit
+trusted metadata-only Model binder. It receives detached exact target/requests and
+must compare previously prepared provider facts; no provider IO belongs in a
+retriable transaction. Store only strict ordered step/manifest-digest facts, checked
+against an independently computed normalized source SHA-256 and exact preview
+fingerprint. Preserve optional distinct RAG model witnesses across decisions and
+replay. Public snapshots omit bindings. Unconfigured readers/decision owners and
+all current execution of Model-containing plans deny. Historical source facts
+are neither a fresh provider read nor transfer, ModelWrite, task or save authority.
+
+Model registry JSON compatibility publication reuses the existing shared document
+writer and its accepted bounded Windows sharing-conflict handling. Preserve the
+Model serial queue, exact destination, exclusive temporary file, four-rename
+maximum and fixed 25/50/100 ms waits only for Windows EPERM/EBUSY/EACCES. Permanent
+or non-sharing failure cannot delete/copy over the saved registry or claim success.
+This fixes an observed native write failure without changing structured database
+semantics or granting Model acquisition/registration/native authority.
 
 ### Original Model application admission and result ownership
 

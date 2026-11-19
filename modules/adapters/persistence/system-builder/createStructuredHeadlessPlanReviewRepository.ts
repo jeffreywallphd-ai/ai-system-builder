@@ -14,6 +14,7 @@ import { copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRec
 import { isWorkspaceId } from "../../../contracts/workspace";
 import type { StructuredDocumentStore } from "../shared";
 import { HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE } from "./createStructuredHeadlessOperationStore";
+import {readModelDownloadReviewBindings, type ModelDownloadReviewBinding} from "./headlessModelDownloadReviewBindings";
 
 const REVIEWS = "headless/system-builder/plan-reviews";
 const COUNTS = "headless/system-builder/plan-review-counts";
@@ -30,7 +31,14 @@ type Action = "propose" | "read" | "decide";
 type Proposal = Extract<ReturnType<typeof parseHeadlessBuildPlanProposal>, { ok: true }>;
 export interface ContextPlanModelBinding {readonly step: number; readonly model: ApprovedContextEmbeddingModelWitness;}
 type RecordValue = {readonly version: 1; readonly proposal: unknown; readonly state: HeadlessPlanReviewState} |
-  {readonly version: 2; readonly proposal: unknown; readonly state: HeadlessPlanReviewState; readonly contextModels: readonly ContextPlanModelBinding[]};
+  {readonly version: 2; readonly proposal: unknown; readonly state: HeadlessPlanReviewState; readonly contextModels: readonly ContextPlanModelBinding[]} |
+  {readonly version: 3; readonly proposal: unknown; readonly state: HeadlessPlanReviewState;
+    readonly modelDownloads: readonly ModelDownloadReviewBinding[]; readonly contextModels?: readonly ContextPlanModelBinding[]};
+
+/** Metadata only inside the owned transaction. Provider IO must have finished
+ * before propose(); compare that prepared data to this exact target and selection. */
+export type BindModelDownloadReviews = (partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget,
+  requests: readonly HeadlessBuildPlanRequest[]) => Promise<readonly ModelDownloadReviewBinding[] | undefined>;
 
 function readContextModels(value: unknown, requests: readonly HeadlessBuildPlanRequest[]): readonly ContextPlanModelBinding[] | undefined {
   try {
@@ -64,6 +72,7 @@ export function createStructuredHeadlessPlanReviewRepository(
     Promise<readonly ContextPlanModelBinding[] | undefined>,
   allowContextResultSave = false,
   allowContextQuery = false,
+  bindModelDownloads?: BindModelDownloadReviews,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -112,17 +121,22 @@ export function createStructuredHeadlessPlanReviewRepository(
         allowProviderFileSave && Boolean(validateNewProposal), allowLocalDatasetPreparation && Boolean(validateNewProposal),
         allowDatasetResultSave && Boolean(validateNewProposal), allowContextPackGeneration && Boolean(validateNewProposal),
         allowContextRagGeneration && Boolean(validateNewProposal), allowContextResultSave && Boolean(validateNewProposal),
-        allowContextQuery && Boolean(validateNewProposal));
+        allowContextQuery && Boolean(validateNewProposal), Boolean(bindModelDownloads && validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
       return run(input, "propose", async (store, target, key, requireFresh) => {
         const existing = await readReview(store, target, key);
+        if (existing?.record.version === 3 && !bindModelDownloads) return denied;
         if (existing) return requireFresh(existing.state.expiresAt) ? snapshot(existing) : expired;
         const eligible = validateNewProposal ? await validateNewProposal(store) : true;
         if (eligible === "stale") return { ok: false, code: "stale" } as const;
         if (!eligible || !input.isCurrent()) return denied;
         const hasRag = proposal.requests.some(request => request.operation === "context.generate-rag");
-        const contextModels = hasRag ? readContextModels(await bindContextModels?.(store, proposal.requests), proposal.requests) : undefined;
+        const contextModels = hasRag ? readContextModels(await bindContextModels?.(store, structuredClone(proposal.requests)), proposal.requests) : undefined;
         if ((hasRag && !contextModels) || !input.isCurrent()) return denied;
+        const hasDownloads = proposal.requests.some(request => request.operation === "models.download");
+        const modelDownloads = hasDownloads ? readModelDownloadReviewBindings(await bindModelDownloads?.(
+          store, structuredClone(target), structuredClone(proposal.requests)), proposal.requests) : undefined;
+        if ((hasDownloads && !modelDownloads) || !input.isCurrent()) return denied;
         const countKey = sha256(JSON.stringify(scopeParts(target)));
         const count = await store.readDocument(COUNTS, countKey);
         const used = count ? readStrictPassiveRecord(count.value, ["value"]).value : 0;
@@ -139,7 +153,8 @@ export function createStructuredHeadlessPlanReviewRepository(
         const raw = {
           ...proposal.scope, steps: proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })),
         };
-        const record: RecordValue = contextModels ? {version: 2, proposal: raw, state, contextModels} : {version: 1, proposal: raw, state};
+        const record: RecordValue = modelDownloads ? {version: 3, proposal: raw, state, modelDownloads,
+          ...(contextModels ? {contextModels} : {})} : contextModels ? {version: 2, proposal: raw, state, contextModels} : {version: 1, proposal: raw, state};
         await store.writeDocument(REVIEWS, key, record, { expectedRevision: 0 });
         await store.writeDocument(COUNTS, countKey, { value: used + 1 }, { expectedRevision: count?.revision ?? 0 });
         await store.writeDocument(APPROVAL_LIST, list.key, { requests: [{
@@ -152,6 +167,7 @@ export function createStructuredHeadlessPlanReviewRepository(
       return run(input, "read", async (store, target, key, requireFresh) => {
         const review = await readReview(store, target, key);
         if (!review) return denied;
+        if (review.record.version === 3 && !bindModelDownloads) return denied;
         return requireFresh(review.state.expiresAt) ? snapshot(review) : expired;
       });
     },
@@ -159,6 +175,7 @@ export function createStructuredHeadlessPlanReviewRepository(
       return run(input, "decide", async (store, target, key, requireFresh) => {
         const review = await readReview(store, target, key);
         if (!review) return denied;
+        if (review.record.version === 3 && !bindModelDownloads) return denied;
         if (!requireFresh(review.state.expiresAt)) return expired;
         const previous = review.state;
         const outcome = input.update({ ...previous });
@@ -198,10 +215,10 @@ function sha256(value: string) { return createHash("sha256").update(value, "utf8
 
 function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowLocalFileSave: boolean, allowProviderFileSave = false,
   allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false, allowContextRagGeneration = false,
-  allowContextResultSave = false, allowContextQuery = false) {
+  allowContextResultSave = false, allowContextQuery = false, allowModelDownload = false) {
   const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId,
     { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration,
-      allowContextResultSave, allowContextQuery });
+      allowContextResultSave, allowContextQuery, allowModelDownload });
   if (proposal.ok && proposal.scope.workspaceId === target.scope.workspaceId &&
       sha256(JSON.stringify(proposal.preview)) === target.fingerprint) return proposal;
 }
@@ -209,16 +226,22 @@ function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowL
 async function readReview(store: StructuredDocumentStore, target: HeadlessPlanReviewTarget, key: string) {
   const document = await store.readDocument(REVIEWS, key);
   if (!document) return;
-  const raw = readStrictPassiveRecord(document.value, ["version", "proposal", "state", "contextModels"]);
+  const raw = readStrictPassiveRecord(document.value, ["version", "proposal", "state", "contextModels", "modelDownloads"]);
   const {version, proposal, state} = raw;
-  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true, true);
+  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true, true, version === 3);
   if (!parsed) throw new Error("Stored plan review is unavailable.");
   const normalizedState = readState(state, document.revision, parsed.requests.length);
-  const contextModels = version === 2 ? readContextModels(raw.contextModels, parsed.requests) : undefined;
-  if ((version === 1 && ("contextModels" in raw || parsed.requests.some(request => request.operation === "context.generate-rag"))) ||
-      (version === 2 ? !contextModels : version !== 1)) throw new Error("Stored plan review is unavailable.");
-  const record: RecordValue = version === 2 && contextModels ? {version: 2, proposal, state: normalizedState, contextModels}
-    : {version: 1, proposal, state: normalizedState};
+  const hasRag = parsed.requests.some(request => request.operation === "context.generate-rag");
+  const contextModels = version === 2 || version === 3 && hasRag ? readContextModels(raw.contextModels, parsed.requests) : undefined;
+  const modelDownloads = version === 3 ? readModelDownloadReviewBindings(raw.modelDownloads, parsed.requests) : undefined;
+  if ((version === 1 && ("contextModels" in raw || hasRag)) ||
+      (version !== 3 && "modelDownloads" in raw) ||
+      (version === 2 && !contextModels) ||
+      (version === 3 && (!modelDownloads || (hasRag ? !contextModels : "contextModels" in raw))) ||
+      (version !== 1 && version !== 2 && version !== 3)) throw new Error("Stored plan review is unavailable.");
+  const record: RecordValue = version === 3 && modelDownloads ? {version: 3, proposal, state: normalizedState, modelDownloads,
+    ...(contextModels ? {contextModels} : {})} : version === 2 && contextModels ? {version: 2, proposal, state: normalizedState, contextModels}
+      : {version: 1, proposal, state: normalizedState};
   return { proposal, preview: parsed.preview, requests: parsed.requests,
     state: normalizedState, record };
 }
@@ -242,7 +265,7 @@ export async function readStructuredRecordedContextGeneration(partition: Structu
   const request = review?.requests[step - 1];
   if (!request || (request.operation !== "context.generate-pack" && request.operation !== "context.generate-rag") ||
       sha256(serializeHeadlessMutationInput(request)) !== expectedInputDigest) return;
-  const model = review!.record.version === 2 ? review!.record.contextModels.find(binding => binding.step === step)?.model : undefined;
+  const model = review!.record.version !== 1 ? review!.record.contextModels?.find(binding => binding.step === step)?.model : undefined;
   if (request.operation === "context.generate-rag" && !model) return;
   return {request: structuredClone(request) as HeadlessContextGenerationPlanRequest,
     ...(model ? {embeddingModel: structuredClone(model)} : {})};
@@ -273,7 +296,7 @@ export async function readStructuredApprovedPlan(
   if (state.revision !== expectedRevision || !state.lastChannel || step > state.approvedSteps ||
       (state.status !== "approved" && !(state.status === "pending" && state.mode === "each-change"))) return;
   return { expiresAt: state.expiresAt, requests: review.requests,
-    contextModels: review.record.version === 2 ? review.record.contextModels : [] };
+    contextModels: review.record.version !== 1 ? review.record.contextModels ?? [] : [] };
 }
 
 /** Serializes a real new write against approval changes, without changing its public decision revision. */

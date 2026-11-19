@@ -92,6 +92,9 @@ export async function prepareStructuredHeadlessPlanStep(
     const partition = owner.forOrganization(target.scope.organizationId);
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
+    // A persisted review is not a qualified executor. Refuse the entire plan,
+    // including earlier ordinary steps, until the Model task owner is supplied.
+    if (approved.requests.some(candidate => candidate.operation === "models.download")) return;
     const request = approved.requests[step - 1];
     // Source execution stays disabled until its original private binding is composed.
     if (request?.operation === "models.download" || approved.requests.some(candidate => candidate.operation === "models.download")) return;

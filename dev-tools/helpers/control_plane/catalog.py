@@ -253,6 +253,8 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (
+            "modules/adapters/persistence/system-builder/headlessModelDownloadReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
             "modules/contracts/headless/headless-model-download-plan.ts",
             "modules/contracts/headless/tests/headless-model-download-plan.unit.test.ts",
             "modules/application/use-cases/model/headless-model-download-preview.use-case.ts",
@@ -297,6 +299,10 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_download_revision.py",
         ),
         "sources": (
+            "modules/adapters/persistence/system-builder/headlessModelDownloadReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository.ts",
+            "modules/adapters/persistence/system-builder/README.md",
             "modules/contracts/headless/headless-model-download-plan.ts",
             "modules/contracts/headless/tests/headless-model-download-plan.unit.test.ts",
             "modules/application/use-cases/model/headless-model-download-preview.use-case.ts",
@@ -386,6 +392,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/README.md",
         ),
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
             "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-download-plan.unit.test.ts",
@@ -419,6 +427,10 @@ PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-types": {
         "companion_to": "headless-model-metadata-owner-unit",
         "sources": (
+            "modules/adapters/persistence/system-builder/headlessModelDownloadReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository.ts",
+            "modules/adapters/persistence/system-builder/README.md",
             "modules/contracts/headless/headless-model-download-plan.ts",
             "modules/contracts/headless/tests/headless-model-download-plan.unit.test.ts",
             "modules/application/use-cases/model/headless-model-download-preview.use-case.ts",
@@ -479,6 +491,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
             "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
             "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-model-source-hosts.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-download-plan.unit.test.ts",

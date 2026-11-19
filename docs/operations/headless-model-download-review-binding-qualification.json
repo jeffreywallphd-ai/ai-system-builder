@@ -1,0 +1,39 @@
+{
+  "schema_version": "headless-model-download-review-binding-observation-v1",
+  "scope": "Private saved review source binding and related legacy Model atomic-write reliability before host download execution",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Current candidate-bound checks and actual independent review govern component completion. This descriptive record grants no public capability, increment or work-chunk pass.",
+  "work_lineage": {
+    "current_work": "headless-model-review-binding-stable-writes",
+    "released_predecessor": "headless-model-download-review-binding",
+    "reason": "Expand explicit ownership from the 13-file review component to all 16 carried/added files before repairing a reproduced existing registry-write defect. All current files require fresh exact-source qualification and independent review.",
+    "preserved_failed_receipt": "6e116fc4751e894a060849a6e1c69421737deced75562a497579fb1e077a0ec7"
+  },
+  "controls": [
+    "Extend the original root-owned review transaction with closed version-3 records. New Model proposals require the existing owned policy/source validator and an explicit trusted metadata-only binder; a proposal capability or inline provider-metadata label alone is insufficient.",
+    "Provider preparation must finish before entering the retriable transaction. The binder compares prepared facts to detached exact original actor/client/host/workspace/plan/request copies. Storage independently recomputes SHA-256 over normalized source metadata and requires strict ordered step/digest coverage, without source bytes, credentials, provider or runtime IO.",
+    "Binding rows reject active/accessor/proxy/extra fields without hook execution and are copied/frozen. No body, private provider payload, token, local path or runtime authority is added to those rows.",
+    "Existing actor/deadline fences discard all proposed writes together. Replay retains immutable original facts without another binder invocation or implicit replacement. Approval and revocation preserve private facts, while public snapshots omit binding rows.",
+    "Version-1 and version-2 history and preview fingerprints remain unchanged. Version-3 must contain at least one Model step with complete bindings and exactly the distinct RAG witnesses it requires. Version downgrade, missing or changed facts and cross-target reads deny.",
+    "Unconfigured review readers and decision owners deny Model records. Actual Desktop and Managed host flags remain unconfigured. Current step execution refuses every Model-containing plan, including an earlier ordinary system step, so saved metadata cannot become an incomplete executor or generic system mutation.",
+    "Historical source facts are not renewed provider validation, transfer consent, ModelWrite, runtime readiness, task issuance, registration/save, physical cleanup or parent qualification. The public-without-credentials transfer boundary and all existing limits stay unchanged.",
+    "Legacy Model JSON writes keep their original queue and exact destination and reuse the shared document writer's existing exclusive-temporary atomic publication. Only Windows EPERM/EBUSY/EACCES retry: at most four renames with fixed 25/50/100 ms waits. No target delete/copy, non-sharing retry or success inference is added. Permanent denial keeps prior saved bytes; only this write's fresh temporary file is cleaned. Structured database writes retain their original path."
+  ],
+  "focused_observations": [
+    "Focused persistence scenarios cover absent binder/validator, missing/empty/duplicated/wrong-step/extra/different-digest rows, a proposal and binder repeating the same false source digest, active rows/arrays without hooks, detached target/request mutation and copied private facts.",
+    "Owned-transaction scenarios cover policy/source refusal before binding, actor retirement after binding and immediately before commit, atomic absence of every proposed record, replay, exact actor/client/host/workspace/fingerprint isolation and deadline expiry.",
+    "Mixed Model/system/RAG scenarios retain separate Context model witnesses and historical generation lineage, deny missing/mismatched RAG facts, preserve source rows through popup approval/chat revocation and reject stored schema/digest/step tampering.",
+    "A real temporary SQLite database is closed and reopened before concurrent popup/chat approval. Exactly one decision commits; the competing revision is stale and the private Model binding survives. The test closes the database and removes only its fresh owned fixture directory.",
+    "Current execution refuses both Model and earlier ordinary steps in an approved Model-containing plan. Related legacy Context and original Model checks remain part of the exact selected coverage. Strict scoped TypeScript and six related catalog-routing tests passed during iteration.",
+    "Independent preflight identified that the existing Context binding callback could mutate original requests before Model binding. Both callbacks now receive detached request data. The regression alters nested Model license/digest, removes Model coverage and reorders a mixed plan inside that callback, then checks exact source/RAG facts, unchanged preview and successful stored fingerprint reread. The earlier passing-check receipt is preserved; only the fixed candidate can receive final review.",
+    "A later candidate check failed one existing Model pagination case. The isolated case and four exact full-command diagnostics passed without source changes. A diagnostic-only compile-location capture then reproduced a native EPERM on the registry's atomic rename. The explicit successor scope preserves that failure and repairs the known write defect; this does not establish the cause of earlier hash-only failures.",
+    "Deterministic native rename injection covers EPERM/EBUSY/EACCES transient success with identical source/destination, four-attempt permanent denial preserving bytes, exact temporary cleanup, usable queue recovery and immediate EIO/ENOENT refusal. The 11 review cases and nine pagination/write cases passed 20/20 in the focused Windows run. Strict mock callback types were corrected after that run; scoped TypeScript passed. Final candidate checks and review remain authoritative.",
+    "The original plan/operation persistence file passed 23/23 cases directly, including v1 approvals/races/revocation, SQLite reopen, old system mutation and Data step ordering. The focused Model unit catalog now includes that exact file, with a routing assertion, so final receipt coverage also retains legacy owner compatibility.",
+    "The first expanded-scope receipt passed all source/type/Context/helper/architecture groups but rejected an oversized Context pack. The summary was condensed within the unchanged physical-line cap; the failed receipt is retained. Only subsequent complete current-candidate verification can qualify this work."
+  ],
+  "qualification_limits": [
+    "The trusted binder/provider preparation composition remains a future host responsibility. Synthetic persistence fixtures prove record and transaction controls, not an actual provider read or live model download.",
+    "No host capability/transport/SDK/MCP activation, source task reservation/issuance/status/cancel, scoped Model registration/save, model load/training/generation or accepted model-accuracy rerun is included.",
+    "Real provider/stdio/desktop/browser/model/native/restart and final combined qualification remain separate. Parent and chunk status remain pending; primary control-plane store capacity still prevents importing isolated local completion receipts without a separately reviewed storage-policy solution."
+  ]
+}

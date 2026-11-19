@@ -31,6 +31,13 @@ Each request reads the current inventory, not a snapshot across requests.
 Recorded-only queries retain both discovery flags as false and do not start a
 runtime. Pagination does not rewrite model records or qualify Headless downloads.
 
+Legacy Model JSON publication reuses the shared document-record writer and the
+existing Model write queue. Temporary files open exclusively. Windows sharing
+conflicts retry only the same atomic rename, with four attempts and 25/50/100 ms
+waits at most. Persistent denial and non-sharing errors keep prior saved bytes;
+cleanup removes only that write's fresh temporary file. No target delete/copy or
+policy bypass is allowed. Structured database writes keep their original path.
+
 In-memory structured stores and SQLite connection wrappers serialize operations
 under an adapter-owned asynchronous transaction context. Ordinary reads/writes
 cannot join a foreign transaction; callback stores expire on exit. Typed repository

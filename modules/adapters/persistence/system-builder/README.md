@@ -1,5 +1,23 @@
 # Saved System Builder and Headless plan persistence
 
+Model download reviews use closed version-3 records with one private step/digest
+binding per exact Model selection. New proposals require both fresh owned policy
+and source validation and an explicit trusted metadata-only binder. Finish provider
+preparation before entering the transaction. The binder receives detached exact
+target/request copies; match those to the prepared original actor/client/host/
+workspace/source. Independently recompute the normalized source digest in storage.
+Inline metadata claims and a capability flag alone cannot attest provider checks.
+Decisions and replay retain bindings; snapshots omit them. Optional RAG witnesses
+remain distinct and intact. Versions 1 and 2 keep their schemas and fingerprints.
+Unconfigured readers/decision owners deny Model records. Actual hosts remain
+unconfigured, and existing execution refuses the entire Model-containing plan,
+including earlier ordinary steps. Historical verification grants no transfer,
+task, registration, loading, restart or parent qualification authority.
+
+Related Model JSON compatibility writes reuse the existing shared atomic
+document writer's bounded Windows sharing-conflict retry policy. This does not
+change structured review transactions, receipt evidence or source authority.
+
 Private Context rebuild lineage uses the committed saved-resource index, accepted
 task point/plan indexes and exact historical proposal input digest. Historical
 definitions and model witnesses are data only; no original approval or task

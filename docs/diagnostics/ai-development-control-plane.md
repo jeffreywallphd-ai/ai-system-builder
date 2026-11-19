@@ -2698,5 +2698,19 @@ preserve their existing workflows. Golden previews for v1-v10 were captured from
 the clean predecessor and must not be regenerated from the candidate to hide a
 fingerprint change. UI evidence exercises both approval modes/channels but is
 not a real provider, task, host or parent qualification. Keep actual host flags,
-stored source bindings and execution disabled until separately composed and
-qualified. An unknown path or explicit generic request retains fallback.
+public execution disabled until separately composed and qualified. The focused
+Model owner profiles also cover private version-3 review binding, SQLite reopen,
+approval races, rollback, source-digest integrity, mixed RAG witnesses and whole-
+plan execution denial. Only the exact new binding source/test files select those
+profiles automatically; shared review/store files retain related profiles and
+unknown-path or explicit generic fallback. Existing hosts remain unconfigured.
+
+The related Model pagination profile includes deterministic Windows sharing-
+conflict and permanent/nonretryable publication failures. A native EPERM during
+legacy Model JSON rename was reproduced while diagnosing an intermittent check.
+The adapter now reuses the existing bounded atomic document writer. Preserve
+failed receipts and distinguish reproduced native errors from earlier hash-only
+failures whose causes remain unknown. No assertion/output text or local path is
+added to governed diagnostic records.
+The focused Model unit command also retains the existing plan/operation store
+file for v1/v2 approval, replay, SQLite, system and Data-step compatibility.

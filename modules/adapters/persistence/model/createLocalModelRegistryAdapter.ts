@@ -4,10 +4,7 @@ import {
   mkdir,
   readFile,
   readdir,
-  rename,
   stat,
-  unlink,
-  writeFile,
 } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 
@@ -138,14 +135,9 @@ export function createLocalModelRegistryAdapter(
       return;
     }
     await mkdir(dirname(options.filePath), { recursive: true });
-    const temporaryPath = `${options.filePath}.${process.pid}.${randomUUID()}.tmp`;
-    try {
-      await writeFile(temporaryPath, JSON.stringify(document, null, 2), "utf8");
-      await rename(temporaryPath, options.filePath);
-    } catch (error) {
-      await unlink(temporaryPath).catch(() => undefined);
-      throw error;
-    }
+    // Preserve the JSON compatibility queue and exact destination while sharing
+    // exclusive temporary publication and bounded Windows sharing-conflict retry.
+    await writeDocumentRecord({rootDirectory: dirname(options.filePath)}, basename(options.filePath), document);
   }
 
   function assertWorkspaceId(

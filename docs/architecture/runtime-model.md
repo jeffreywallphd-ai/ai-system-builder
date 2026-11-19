@@ -8,12 +8,26 @@ a host enters its owned proposal transaction. Bind that preparation privately
 inside the transaction; do not fetch provider data there. A disk estimate is
 not a hard reservation. Proposal, human transfer approval, accepted source task,
 stored byte verification, Model registration and runtime readiness are distinct.
-Current hosts/store/step paths remain disabled until those bindings and execution
-are composed. Older previews and ordinary workflows retain their exact meaning.
+The review store supports private version-3 source bindings only with an explicit
+trusted binder and owned source validation. Exact ordered step/digest facts must
+match an independently hashed normalized source. Provider IO stays outside the
+transaction; the callback compares prepared metadata to detached exact target and
+request copies. Decisions/replay retain those facts and optional RAG witnesses;
+snapshots omit private bindings. Versions 1/2 retain their original schemas.
+Real hosts remain unconfigured, and existing execution refuses the entire Model
+plan, including earlier ordinary steps, until its task owner is integrated.
+Older previews and ordinary workflows retain their exact meaning.
 The fixed file-transfer profile is public without credentials. Metadata may use
 saved provider access; private/gated acquisition requires a separately qualified
 secure seam. Byte/time guards do not prove physical stop or cleanup; uncertainty
 retains its original unconfirmed outcome and custody.
+
+Legacy Model registry JSON writes keep their original serial queue and reuse
+the shared exclusive-temporary atomic document writer. Its existing Windows
+EPERM/EBUSY/EACCES policy retries the same rename at most four times with bounded
+25/50/100 ms waits. Permanent/non-sharing denial preserves the old destination;
+there is no delete/copy fallback. Cleanup owns only the fresh temporary file.
+Structured database Model writes keep their original path and commit semantics.
 
 Approved source admission uses the existing Model download application owner.
 Copy actor/source identity, reserve bounded descriptor/reconciler ownership and
