@@ -15,9 +15,20 @@ import { createOrganizationId } from "../../../../../contracts/organization";
 import { type AuthContext, createSecurityApplicationError } from "../../../../../contracts/security";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../../contracts/workspace";
+import {readModelDownloadSource} from "../../../../../contracts/model";
 import { MANAGED_HEADLESS_AGENT_PATHS, resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
 import { createExpressSecurityMiddleware } from "../../security/createExpressSecurityMiddleware";
 import { registerManagedHeadlessAgentRoutes, type ManagedAgentRouteHandlers } from "../registerManagedHeadlessAgentRoutes";
+
+function modelSourcePreview(workspaceId: string) {
+  const source = readModelDownloadSource({provider: "huggingface", modelId: "Qwen/synthetic-model", revision: "a".repeat(40),
+    format: "transformers-safetensors", license: {kind: "unknown"},
+    files: ["config.json", "model.safetensors", "tokenizer.json"].map(path => ({path, sizeBytes: 10,
+      integrity: {algorithm: path.endsWith("safetensors") ? "sha256" : "git-blob-sha1", digest: "b".repeat(path.endsWith("safetensors") ? 64 : 40)}})),
+    totalBytes: 30, excludedFileCount: 0, sourceVerification: "provider-metadata", bytesVerification: "not-checked", runtimeReadiness: "not-checked"},
+  {provider: "huggingface", modelId: "Qwen/synthetic-model"});
+  return {workspaceId, source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex"), downloadApprovalRequired: true};
+}
 
 test("managed agent routes stay exact in the central deny-by-default API", () => {
   for (const [kind, path] of Object.entries(MANAGED_HEADLESS_AGENT_PATHS)) {
@@ -37,6 +48,8 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
   const planIdentity = {role:"plan-review" as const};
   let enabled = true;
+  let allowModelSourceRead: boolean | undefined = true;
+  let sourceReads = 0;
   let publish = true;
   let current = true;
   let calls = 0;
@@ -72,6 +85,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     hostIncarnationId,
     allowLocalFileSave:supportsLocalSave,
     allowContextPackGeneration: true,
+    allowModelSourceRead,
     identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" ||
       kind === "local-file-preview" || kind === "provider-file-preview" || kind === "read") &&
       request.organizationHeader === organizationId &&
@@ -79,8 +93,16 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     isCurrent: identity => identity === planIdentity && current,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.preview-source", "models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "models.preview-source") {
+        sourceReads++;
+        if (withdrawStatus) current = false;
+        if (mutateModelRequest) Object.assign(request.input, {workspaceId: "substituted-workspace", modelId: "Qwen/substituted"});
+        return {ok: true, operation: request.operation, value: {...modelSourcePreview(request.input.workspaceId),
+          ...(statusMismatch ? {manifestDigest: "sha256:" + "f".repeat(64)} : {}),
+          ...(statusExtra ? {localPath: "private/model"} : {})}} as never;
+      }
       if (request.operation === "models.inventory" || request.operation === "models.record") {
         if (withdrawStatus) current = false;
         if (mutateModelRequest) Object.assign(request.input, {workspaceId: "substituted-workspace"});
@@ -299,6 +321,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       query: "Synthetic private question", maximumResults: 5, embeddingDevice: "cpu"}],
       ["context.preview-rebuild", {reference: {workspaceId, contextId: hostIncarnationId,
       taskId: hostIncarnationId, kind: "markdown-context-pack", artifactDigest: "sha256:" + "a".repeat(64)}}],
+      ["models.preview-source", {modelId: "Qwen/synthetic-model", revision: "a".repeat(40)}],
       ["models.inventory", {limit: 1}], ["models.record", {modelRecordId: "model.synthetic"}],
       ["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
       sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
@@ -306,13 +329,26 @@ test("managed plan routes admit only exact proposals, status and an approved ste
         overlapCharacters: 50, maximumChunks: 100, textFields: ["text"]}}]] as const) {
       const query = {version: HEADLESS_CONTRACT_VERSION, operation, input: {...scope, ...target}};
       assert.equal((await request(query, "fixture-plan", readRoute)).status, 200);
+      if (operation === "models.preview-source") {
+        const before = sourceReads;
+        for (const flag of [undefined, false]) {
+          allowModelSourceRead = flag;
+          assert.equal((await request(query, "fixture-plan", readRoute)).status, 400);
+          assert.equal(sourceReads, before);
+          const description = await request({version: HEADLESS_CONTRACT_VERSION, operation: "host.describe", input: {}},
+            "fixture-plan", readRoute);
+          assert.equal(description.body.value.operations.includes("models.preview-source"), false);
+          assert.equal(description.body.value.operations.includes("models.inventory"), true);
+        }
+        allowModelSourceRead = true;
+      }
       if (operation === "context.preview-query") {
         mutateQueryRequest = true;
         const changed = await request(query, "fixture-plan", readRoute);
         assert.equal(changed.status, 503); assert.doesNotMatch(JSON.stringify(changed.body), /Synthetic private|substituted private/);
         mutateQueryRequest = false;
       }
-      if (operation === "models.inventory" || operation === "models.record") {
+      if (operation === "models.preview-source" || operation === "models.inventory" || operation === "models.record") {
         mutateModelRequest = true;
         assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
         mutateModelRequest = false;

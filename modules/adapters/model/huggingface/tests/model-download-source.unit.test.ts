@@ -204,3 +204,80 @@ test("total metadata budget applies across otherwise valid bounded pages", async
       {headers: pages < 4 ? {Link: `<${next}>; rel="next"`} : {}});
   });
 });
+
+test("delegated policy/currentness refuses before SDK or credential access", async () => {
+  let imports = 0, tokenReads = 0;
+  const owner = createHuggingFaceModelBrowseDetailsAdapter({officialHubClientLoader: async () => {imports++; throw new Error("not called");},
+    accessTokenProvider: () => {tokenReads++; return undefined;}});
+  for (const control of [
+    {isCurrent: () => false, stillAllowed: async () => true},
+    {isCurrent: () => true, stillAllowed: async () => false},
+    {isCurrent: () => Promise.resolve(true), stillAllowed: async () => true},
+    {isCurrent: () => Promise.reject(new Error("synthetic rejected fence")), stillAllowed: async () => true},
+    {isCurrent: () => true, stillAllowed: async () => 1},
+    {isCurrent: () => true, stillAllowed: async () => true, maximumDurationMs: 20_001},
+  ]) await assert.rejects(owner.inspectModelDownloadSource(request, control as never), safeError);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(imports, 0); assert.equal(tokenReads, 0);
+});
+
+test("nested-microtask retirement cannot cross policy-to-SDK or policy-to-credential handoffs", async () => {
+  for (const stage of ["sdk", "credential"]) {
+    let current = true, policies = 0, imports = 0, tokens = 0;
+    const client = {listModels: async function* () {}, modelInfo: async () => ({name: modelId, sha: revision}), listFiles: async function* () {}};
+    const owner = createHuggingFaceModelBrowseDetailsAdapter({officialHubClientLoader: async () => {imports++; return client;},
+      accessTokenProvider: () => {tokens++; return undefined;}});
+    await assert.rejects(owner.inspectModelDownloadSource(request, {isCurrent: () => current, stillAllowed: async () => {
+      if (++policies === (stage === "sdk" ? 1 : 2))
+        queueMicrotask(() => queueMicrotask(() => {current = false;}));
+      return true;
+    }}), safeError);
+    assert.equal(imports, stage === "sdk" ? 0 : 1); assert.equal(tokens, 0);
+  }
+});
+
+test("revocation while credentials resolve cannot begin a provider request", async () => {
+  let release!: (value: undefined) => void, current = true;
+  const held = new Promise<undefined>(resolve => {release = resolve;});
+  await withFetch(async calls => {
+    const owner = createHuggingFaceModelBrowseDetailsAdapter({accessTokenProvider: () => held});
+    const pending = owner.inspectModelDownloadSource(request, {isCurrent: () => current, stillAllowed: async () => current});
+    await new Promise(resolve => setImmediate(resolve));
+    current = false; release(undefined);
+    await assert.rejects(pending, safeError);
+    assert.equal(calls.length, 0);
+  });
+});
+
+test("fresh delegated policy is required before following provider pagination", async () => {
+  let permitted = true;
+  const next = `https://huggingface.co/api/models/${modelId}/tree/${revision}?recursive=true&expand=false&cursor=next`;
+  await withFetch(async calls => {
+    await assert.rejects(createHuggingFaceModelBrowseDetailsAdapter().inspectModelDownloadSource(request,
+      {isCurrent: () => true, stillAllowed: async () => permitted}), safeError);
+    assert.equal(calls.length, 2);
+  }, url => {
+    if (!url.pathname.includes("/tree/")) return Response.json(metadata());
+    permitted = false;
+    return Response.json(tree(), {headers: {Link: `<${next}>; rel="next"`}});
+  });
+});
+
+test("delegated callers can narrow the existing deadline without overlapping a late credential read", async context => {
+  context.mock.timers.enable({apis: ["setTimeout"]});
+  let release!: (value: undefined) => void;
+  const held = new Promise<undefined>(resolve => {release = resolve;});
+  await withFetch(async calls => {
+    const owner = createHuggingFaceModelBrowseDetailsAdapter({accessTokenProvider: () => held});
+    const control = {isCurrent: () => true, stillAllowed: async () => true, maximumDurationMs: 10_000};
+    const failure = assert.rejects(owner.inspectModelDownloadSource(request, control), safeError);
+    await new Promise(resolve => setImmediate(resolve));
+    context.mock.timers.tick(9_999);
+    assert.equal(calls.length, 0);
+    context.mock.timers.tick(1); await failure;
+    await assert.rejects(owner.inspectModelDownloadSource(request, control), safeError);
+    release(undefined); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(calls.length, 0);
+    assert.equal((await owner.inspectModelDownloadSource(request, control)).revision, revision);
+  });
+});

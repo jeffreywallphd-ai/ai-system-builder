@@ -388,6 +388,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       "aisb_list_workflows",
       "aisb_list_workspaces",
       "aisb_model_metadata",
+      "aisb_model_workflow",
       "aisb_plan_capabilities",
       "aisb_prepare_workflow",
       "aisb_preview_build_plan",

@@ -2267,6 +2267,7 @@ export function composeDesktopHost(
                 digest: (value) => createHmac("sha256", cursorKey).update(value).digest("hex"),
               });
             })() : undefined;
+          let headlessModelSource: Promise<import("../../../application/use-cases/model").PreviewHeadlessModelSourceUseCase> | undefined;
           headlessReadHandler = composeDesktopHeadlessReads({
             hostIncarnationId,
             identity,
@@ -2309,6 +2310,12 @@ export function composeDesktopHost(
               const {composeHeadlessModelMetadata} = await import("../../shared/composition/headlessModelMetadata");
               return composeHeadlessModelMetadata(organizationDocuments, registerOptions.storageRootDirectory);
             } : undefined,
+            getModelSource: organizationDocuments ? () => headlessModelSource ??= (async () => {
+              const [{composeHeadlessModelSourcePreview}, {createHuggingFaceModelBrowseDetailsAdapter}] = await Promise.all([
+                import("../../shared/composition/headlessModelSourcePreview"), import("../../../adapters/model/huggingface")]);
+              return composeHeadlessModelSourcePreview(organizationDocuments,
+                createHuggingFaceModelBrowseDetailsAdapter({accessTokenProvider: () => tokenConfigStore.getToken()}));
+            })() : undefined,
             getDatasetInputs: organizationDocuments ? async () => {
               const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
               const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");
@@ -2421,6 +2428,7 @@ export function composeDesktopHost(
             headlessConnection = composeDesktopHeadlessConnection({
               documents: organizationDocuments,
               identity,
+              ...(organizationDocuments ? {allowNewModelSourcePairings: true as const} : {}),
               workspaces: startupWorkspaceShell.workspaceRepository,
               authorization: workspaceAuthorization,
               read: headlessReadHandler,

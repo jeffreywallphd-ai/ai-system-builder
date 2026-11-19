@@ -17,8 +17,9 @@ import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   UI_PRESENTATION_ACTIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
-import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest, HeadlessContextQueryPreviewRequest, HeadlessModelMetadataRequest} from "../../../../contracts/headless";
+import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest, HeadlessContextQueryPreviewRequest, HeadlessModelMetadataRequest, HeadlessModelSourcePreviewRequest} from "../../../../contracts/headless";
 import {normalizeDatasetVersionId} from "../../../../contracts/dataset";
+import {readModelDownloadSource} from "../../../../contracts/model";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
@@ -34,7 +35,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
-const planReviewTools = ["aisb_model_metadata", "aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_preview_context_query", "aisb_context_task", "aisb_read_context", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
+const planReviewTools = ["aisb_model_workflow", "aisb_model_metadata", "aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_preview_context_query", "aisb_context_task", "aisb_read_context", "aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation", "aisb_dataset_task_status", "aisb_dataset_task_review"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
@@ -67,6 +68,15 @@ const modelSummary = {modelRecordId: "model.synthetic", updatedAt: "2026-11-19T0
   lifecycleStatus: "downloaded", artifactForm: "full-model", provider: "huggingface", taskTags: ["text-generation"]};
 const modelInventory = {workspaceId, models: [modelSummary], runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
 const modelRecord = {workspaceId, model: modelSummary, runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
+function modelSourcePreview() {
+  const source = readModelDownloadSource({provider: "huggingface", modelId: "Qwen/synthetic-model", revision: "a".repeat(40),
+    format: "transformers-safetensors", license: {kind: "unknown"},
+    files: ["config.json", "model.safetensors", "tokenizer.json"].map(path => ({path, sizeBytes: 10,
+      integrity: {algorithm: path.endsWith("safetensors") ? "sha256" : "git-blob-sha1", digest: "b".repeat(path.endsWith("safetensors") ? 64 : 40)}})),
+    totalBytes: 30, excludedFileCount: 0, sourceVerification: "provider-metadata", bytesVerification: "not-checked", runtimeReadiness: "not-checked"},
+  {provider: "huggingface", modelId: "Qwen/synthetic-model"});
+  return {workspaceId, source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex"), downloadApprovalRequired: true};
+}
 const ragSettings = {kind: "rag-database", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"],
   modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", batchSize: 4, device: "cpu",
   sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
@@ -179,6 +189,12 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       if (input.operation === "context.task") {
         const payload = JSON.stringify({ok: true, operation: input.operation,
           value: {...contextTaskValue, ...(invalidStatusReply ? {sourceText: "synthetic private source"} : {})}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.preview-source") {
+        const payload = JSON.stringify({ok: true, operation: input.operation, value: {...modelSourcePreview(),
+          ...(invalidStatusReply ? {manifestDigest: "sha256:" + "f".repeat(64)} : {})}});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -405,10 +421,27 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     }
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase,
       selection: {kind: "record", modelRecordId: "model.other"}}})), {ok: false, code: "headless.unavailable"});
+    const sourceSelection = {kind: "source", modelId: "Qwen/synthetic-model", revision: "a".repeat(40)};
+    const sourceTool = (await planner.listTools()).tools.find(tool => tool.name === "aisb_model_workflow");
+    assert.equal(sourceTool?.annotations?.readOnlyHint, true);
+    assert.equal(sourceTool?.annotations?.openWorldHint, true);
+    assert.equal(sourceTool?.annotations?.destructiveHint, false);
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection: sourceSelection}})),
+      {ok: true, operation: "models.preview-source", value: modelSourcePreview()});
+    invalidStatusReply = true;
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection: sourceSelection}})),
+      {ok: false, code: "headless.unavailable"});
+    invalidStatusReply = false;
+    for (const selection of [{...sourceSelection, modelId: "Qwen/other"}, {...sourceSelection, revision: "b".repeat(40)}])
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection}})),
+        {ok: false, code: "headless.unavailable"});
     const beforeInvalidModel = requests.length;
     for (const selection of [{kind: "inventory", limit: 33}, {kind: "record", modelRecordId: "../private"},
       {kind: "record", modelRecordId: "model.synthetic", localPath: "private/model"}, {kind: "download", modelId: "example/model"}])
       assert.equal((await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase, selection}})).isError, true);
+    assert.equal(requests.length, beforeInvalidModel);
+    for (const selection of [{...sourceSelection, kind: "download"}, {...sourceSelection, revision: "main"}, {...sourceSelection, localPath: "private/model"}])
+      assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection}})).isError, true);
     assert.equal(requests.length, beforeInvalidModel);
     const preparation = {...planBase, sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
@@ -550,6 +583,7 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     documents: platform.forOrganization(organizationId), identity,
     canReadWorkspace: async target => target === workspaceId,
     canReviewPlans: async target => target === workspaceId,
+    allowNewModelSourcePairings: true,
   });
   const store = createStructuredHeadlessPlanReviewRepository(platform, async (_owner, target) =>
     target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
@@ -609,6 +643,8 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       if (decoded.request.operation === "data.dataset-versions") return {ok: true, operation: decoded.request.operation,
         value: {workspaceId, datasetId: decoded.request.input.datasetId, versions: [datasetSummary],
           ...(statusExtra ? {path: "private"} : {})}};
+      if (decoded.request.operation === "models.preview-source") return {ok: true, operation: decoded.request.operation,
+        value: {...modelSourcePreview(), ...(statusExtra ? {manifestDigest: "sha256:" + "f".repeat(64)} : {})}} as never;
       if (decoded.request.operation === "models.inventory" || decoded.request.operation === "models.record") return {ok: true,
         operation: decoded.request.operation, value: {...(decoded.request.operation === "models.inventory" ? modelInventory : modelRecord),
           ...(statusExtra ? {localPath: "private/model"} : {})}} as never;
@@ -814,7 +850,11 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       {ok: true, operation: "models.inventory", value: modelInventory});
     assert.deepEqual(await call("aisb_model_metadata", {hostIncarnationId, workspaceId, selection: {kind: "record", modelRecordId: "model.synthetic"}}),
       {ok: true, operation: "models.record", value: modelRecord});
+    assert.deepEqual(await call("aisb_model_workflow", {hostIncarnationId, workspaceId, selection: {kind: "source", modelId: "Qwen/synthetic-model", revision: "a".repeat(40)}}),
+      {ok: true, operation: "models.preview-source", value: modelSourcePreview()});
     statusExtra = true;
+    assert.deepEqual(await call("aisb_model_workflow", {hostIncarnationId, workspaceId, selection: {kind: "source", modelId: "Qwen/synthetic-model", revision: "a".repeat(40)}}),
+      {ok: false, code: "headless.unavailable"});
     assert.deepEqual(await call("aisb_model_metadata", {hostIncarnationId, workspaceId, selection: {kind: "inventory", limit: 1}}),
       {ok: false, code: "headless.unavailable"});
     statusExtra = false;
@@ -1071,7 +1111,7 @@ test("Desktop Model forwarding retains exact dispatched targets across a held TL
     const pin = new X509Certificate(certificate.cert).fingerprint256.replaceAll(":", "").toLowerCase();
     const forward = createHeadlessMcpReadForwarder("https://127.0.0.1:" + address.port, pin, "A".repeat(43), false, false, false, true);
     assert.ok(forward);
-    async function held(request: HeadlessModelMetadataRequest, change: Record<string, unknown>, value: unknown, expected: unknown) {
+    async function held(request: HeadlessModelMetadataRequest | HeadlessModelSourcePreviewRequest, change: Record<string, unknown>, value: unknown, expected: unknown) {
       let report!: (body: unknown) => void;
       let respond!: (value: unknown) => void;
       const dispatched = new Promise<unknown>(resolve => {report = resolve;});
@@ -1099,7 +1139,16 @@ test("Desktop Model forwarding retains exact dispatched targets across a held TL
       {...modelInventory, models: [modelSummary, {...modelSummary, modelRecordId: "model.other"}]}, {ok: false, code: "headless.unavailable"});
     await held({version, operation: "models.inventory", input: {hostIncarnationId, workspaceId, limit: 1, cursor: "model.first"}},
       {cursor: "model.changed"}, {...modelInventory, nextCursor: "model.first"}, {ok: false, code: "headless.unavailable"});
-    assert.equal(count, 6, "One dispatch per case; no hidden retry");
+    for (const substitution of ["none", "target", "digest"]) {
+      const value = modelSourcePreview(), altered = structuredClone(value);
+      if (substitution === "target") Object.assign(altered.source, {modelId: "Qwen/changed"});
+      if (substitution === "digest") altered.manifestDigest = "sha256:" + "f".repeat(64);
+      await held({version, operation: "models.preview-source", input: {hostIncarnationId, workspaceId,
+        modelId: "Qwen/synthetic-model", revision: "a".repeat(40)}},
+      {workspaceId: foreign, modelId: "Qwen/changed", revision: "b".repeat(40)}, altered,
+      substitution === "none" ? {ok: true, operation: "models.preview-source", value} : {ok: false, code: "headless.unavailable"});
+    }
+    assert.equal(count, 9, "One dispatch per case; no hidden retry");
   } finally {
     listener.closeAllConnections();
     await new Promise<void>(resolve => listener.close(() => resolve()));
@@ -1551,7 +1600,7 @@ test("official stdio client finds finite read tools and uses the already running
         assert.equal(Boolean(described.isError), false);
         assert.deepEqual(resultText(described), {
           ok: true, operation: "host.describe", value: { version, hostIncarnationId, workspaces: [workspaceId],
-            operations: HEADLESS_READ_OPERATIONS },
+            operations: HEADLESS_READ_OPERATIONS.filter(operation => operation !== "models.preview-source") },
         });
         const read = await client.callTool({ name: "aisb_read_system", arguments: { hostIncarnationId, workspaceId, systemId } });
         assert.deepEqual(resultText(read), { ok: true, operation: "systems.read", value: { systemId, name: "Fixture system", revision: 4, status: "draft" } });

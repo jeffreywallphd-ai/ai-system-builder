@@ -1,5 +1,24 @@
 # Runtime Model
 
+Model source access has a distinct consent capability. Legacy Desktop pairings
+retain their previous permissions; new trusted native plan-review consent may
+grant source reads. Managed access requires the explicit default-off operator
+switch and exact verified plan registration. A separate Desktop HTTP lifetime
+fence and immediate synchronous checks after policy awaits prevent late SDK,
+credential or provider work without tying accepted task lifetimes to the client.
+
+Headless Model source preview composes the private inspector through a separate
+lazy organization-pinned application owner. It copies request/actor/client/host
+scope before awaits and requires fresh model-read and provider-credential-use
+authority around ownership, credential access, requests/pages and egress. The
+private inspector's optional trusted controls can narrow its deadline and never
+expand it. The public profile uses4seconds inside retained5second Desktop/SDK
+and12second Managed route guards; slow sources safely remain unavailable. The
+saved inventory owner stays provider-free. Source preview carries normalized
+metadata, a separately checked metadata digest and explicit download approval
+requirement. This does not establish local bytes, license rights, loadability,
+memory fit or output quality, and creates no task or acquisition permission.
+
 Private Model source inspection reuses the configured Hugging Face adapter's
 lazy official SDK and secure credential supplier. It resolves a captured
 repository and optional immutable pin with `modelInfo`, then uses `listFiles`

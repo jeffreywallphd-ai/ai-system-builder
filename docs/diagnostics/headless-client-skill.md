@@ -1,5 +1,27 @@
 # Headless client skill
 
+## Inspect a model source
+
+On Desktop, pair again through the updated native consent if the existing
+client lacks model-source access. This consent lists provider and saved-key
+use. On Managed hosts, the operator must enable
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ=1` for the separate
+plan-review registration. Existing connections keep their old permissions;
+the agent cannot grant this access to itself. No model is downloaded by this
+metadata check. Disconnecting a Desktop read ends its provider-work authority.
+
+A plan-review connection with `models.preview-source` can use
+`aisb_model_workflow`, selecting `kind:source`, a qualified `owner/model` and an
+optional exact40-lowercase-hex commit. This can use the app's configured Hugging
+Face credential for bounded metadata requests. Current model and credential-use
+permission are required; the key stays in the app. The tool returns selected
+file/hash/size information and declared or unknown licensing, including non-open
+declarations. `manifestDigest` covers metadata only. Local bytes, license rights,
+loadability and runtime readiness remain unverified, and download approval is
+still required. Public provider work fits4seconds within existing route limits;
+an unavailable source must not trigger an alternate HTTP/file tool or guard
+change. Install the whole skill and generated catalog from the same revision.
+
 ## Inspect saved model metadata
 
 Use the portable [Model guide](../../skills/control-ai-system-builder/references/models.md)

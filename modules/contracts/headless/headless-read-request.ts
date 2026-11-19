@@ -18,6 +18,7 @@ import {readHeadlessContextTaskRequest, type HeadlessContextTaskRequest} from ".
 import {readHeadlessContextSavedRequest, type HeadlessContextSavedRequest} from "./headless-context-result-plan";
 import {readHeadlessContextRebuildRequest, type HeadlessContextRebuildRequest} from "./headless-context-rebuild";
 import {readHeadlessContextQueryPreviewRequest, type HeadlessContextQueryPreviewRequest} from "./headless-context-query-preview";
+import {readHeadlessModelSourcePreviewRequest, type HeadlessModelSourcePreviewRequest} from "./headless-model-source-preview";
 
 export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
   "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation", "data.dataset-task-status", "data.dataset-task-review",
@@ -40,6 +41,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "plan.capabilities",
   ...HEADLESS_DATA_READ_OPERATIONS,
   ...HEADLESS_MODEL_READ_OPERATIONS,
+  "models.preview-source",
   "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query",
 ] as const);
 
@@ -71,6 +73,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 };
 
 export type HeadlessReadRequest =
+  | HeadlessModelSourcePreviewRequest
   | HeadlessModelMetadataRequest
   | HeadlessContextQueryPreviewRequest
   | HeadlessContextRebuildRequest
@@ -177,6 +180,7 @@ export function parseHeadlessReadRequest(
 
   const version = HEADLESS_CONTRACT_VERSION;
   if (isHeadlessModelReadOperation(operation)) return readHeadlessModelMetadataRequest(value, currentHost);
+  if (operation === "models.preview-source") return readHeadlessModelSourcePreviewRequest(value, currentHost);
   if (operation === "context.task") return readHeadlessContextTaskRequest(value, currentHost);
   if (operation === "context.saved") return readHeadlessContextSavedRequest(value, currentHost);
   if (operation === "context.preview-rebuild") return readHeadlessContextRebuildRequest(value, currentHost);

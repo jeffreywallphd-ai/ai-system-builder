@@ -8,6 +8,12 @@
   no runtime, supply, license or quality qualification.
 
 - Pack name: `server-host`
+- `models.preview-source` reuses the configured credential-aware provider through
+  a separate lazy organization-pinned owner. It needs the default-off operator
+  switch `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ=1` and exact
+  verified plan registration. Existing client access does not expand. Current model/credential
+  policy fences every request and egress; API/SDK recheck the metadata digest.
+  Its4second profile grants no download, byte, rights or runtime qualification.
 
 ## Purpose
 

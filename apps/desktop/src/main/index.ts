@@ -393,7 +393,7 @@ app.whenReady().then(async () => {
               ? "The new client can create, rename, copy and edit saved systems in this workspace."
               : canConverse ? "The client can read saved systems in this workspace. It can also send messages to conversation sessions already approved for this workspace. It cannot approve a session or edit saved systems."
                 : canPresent ? "The client can read saved systems and ask to show saved resources in one window. You must accept each request in that window."
-                : canPropose ? "The client can read saved systems and ask you to approve proposed changes. You decide which changes the app may make."
+                : canPropose ? "The client can:\n- Read saved systems and model records.\n- Read model source details on Hugging Face with the saved provider key, when permitted.\n- Ask you to approve proposed changes.\nYou decide which changes the app may make. Reading source details does not approve a model download or run."
                   : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
             buttons: ["Cancel", "Create pairing code"], defaultId: 0, cancelId: 0, noLink: true,
           });

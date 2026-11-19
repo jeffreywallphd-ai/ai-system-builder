@@ -9,6 +9,10 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
   tool catalog from the same revision. Add the affected host pack and security
   sources for the plan-review ModelRead, tenant and reply boundary. Metadata
   discovery grants no model runtime, download or license qualification.
+  The separate `models.preview-source`/`aisb_model_workflow` selector adds
+  credential-bearing provider metadata reads. Include security and the affected
+  host/runtime packs for its current-policy, exact-source and metadata-digest
+  boundaries; source preview grants no model effect or byte/runtime pass.
 
 - Contributor workflow work requests start at `AGENTS.md` and
   `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its

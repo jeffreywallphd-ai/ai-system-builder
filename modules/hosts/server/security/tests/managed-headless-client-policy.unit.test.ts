@@ -30,6 +30,34 @@ const verifiedClient = (clientId = browser, typed = true, claimedClients = [clie
   return verifier.verifyToken({token: "fixture-token", now: new Date(1_000)});
 };
 
+test("model source use needs a new explicit operator switch and the exact verified plan client", async () => {
+  const plan = "controlled-plan";
+  const key = "AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ";
+  const env = {...input.env, AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID: plan};
+  const auth = await verifiedClient(plan);
+  const request = {purpose: "plan-review" as const, auth,
+    organization: {...organization, principalId: auth.principal.principalId}, organizationHeader: organization.organizationId};
+  for (const flag of [undefined, "0", "1"]) {
+    const policy = resolveManagedHeadlessClientPolicy({...input, env: {...env, [key]: flag}, now: () => 1_000})!;
+    assert.equal(policy.modelSourceReadAvailable, flag === "1");
+    const registration = policy.identify(request);
+    assert.ok(registration?.purpose === "plan-review");
+    assert.equal(registration.modelSourceRead, flag === "1" ? true : undefined);
+    // Unverified properties on a credential cannot replace its private issuer-verification binding.
+    assert.equal(policy.identify({...request, auth: {...auth, modelSourceRead: true} as typeof auth}), undefined);
+    for (const purpose of ["agent", "browser"] as const) {
+      const ordinary = await verifiedClient(purpose === "agent" ? agent : browser);
+      const registration = policy.identify({...request, purpose, auth: ordinary,
+        organization: {...organization, principalId: ordinary.principal.principalId}});
+      assert.ok(registration);
+      assert.equal("modelSourceRead" in registration, false);
+    }
+  }
+  for (const flag of ["true", "yes", " 1", "", "2"])
+    assert.throws(() => resolveManagedHeadlessClientPolicy({...input, env: {...env, [key]: flag}}), /explicit bounded switch/);
+  assert.throws(() => resolveManagedHeadlessClientPolicy({...input, env: {...input.env, [key]: "1"}}), /separate plan-review registration/);
+});
+
 test("managed classification is opt-in and fails closed on incomplete or ambiguous startup bindings", () => {
   assert.equal(resolveManagedHeadlessClientPolicy({env: {}, oidcIssuer: issuer}), undefined);
   for (const value of [undefined, "", " controlled-browser", agent, "x".repeat(257)]) {

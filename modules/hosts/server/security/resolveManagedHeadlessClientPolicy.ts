@@ -17,7 +17,7 @@ export type ManagedHeadlessBrowserIdentity = RegistrationIdentity & {
   readonly credentialBinding: VerifiedOidcCredentialBinding;
 };
 type Registration = (RegistrationIdentity & {readonly purpose: "agent"}) | ManagedHeadlessBrowserIdentity;
-export type ManagedPlanReviewRegistration = RegistrationIdentity & { readonly purpose: "plan-review" };
+export type ManagedPlanReviewRegistration = RegistrationIdentity & { readonly purpose: "plan-review"; readonly modelSourceRead?: true };
 
 /** An issuer-verified client binding distinguishes callers. Application policy still grants access. */
 export function resolveManagedHeadlessClientPolicy(options: {
@@ -28,6 +28,11 @@ export function resolveManagedHeadlessClientPolicy(options: {
   const agent = options.env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID;
   const browser = options.env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID;
   const plan = options.env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID;
+  const sourceFlag = options.env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ;
+  if (sourceFlag !== undefined && sourceFlag !== "0" && sourceFlag !== "1")
+    throw new Error("Managed Model source access requires an explicit bounded switch.");
+  if (sourceFlag === "1" && plan === undefined)
+    throw new Error("Managed Model source access requires a separate plan-review registration.");
   if (agent === undefined && browser === undefined && plan === undefined) return undefined;
   const { oidcIssuer, now = Date.now } = options;
   if (!oidcIssuer || !isOidcAccessTokenClientId(agent) || !isOidcAccessTokenClientId(browser) || agent === browser)
@@ -41,6 +46,7 @@ export function resolveManagedHeadlessClientPolicy(options: {
   };
   return Object.freeze({
     planReviewAvailable: plan !== undefined,
+    modelSourceReadAvailable: sourceFlag === "1",
     planReviewRegisteredClientId: registered["plan-review"]?.id,
     isPlanReviewCredential(auth?: AuthContext): boolean {
       return plan !== undefined && auth?.authenticated === true && auth.authMethod === "oidc-bearer" &&
@@ -70,7 +76,7 @@ export function resolveManagedHeadlessClientPolicy(options: {
       if (purpose === "agent") return Object.freeze({...identity, purpose});
       const credentialBinding = getVerifiedOidcCredentialBinding(auth);
       if (purpose === "plan-review") return credentialBinding && matchVerifiedOidcClient(auth, client.clientId) === "exact" ?
-        Object.freeze({...identity, purpose}) : undefined;
+        Object.freeze({...identity, purpose, ...(sourceFlag === "1" ? {modelSourceRead: true as const} : {})}) : undefined;
       if (credentialBinding) return Object.freeze({...identity, purpose, credentialBinding});
     },
   });

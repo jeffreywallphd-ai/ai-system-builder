@@ -2,6 +2,15 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+`PreviewHeadlessModelSourceUseCase` prepares a source through the private Model
+port. It captures exact actor/client/workspace/host and copied request targets,
+requires fresh current permission before provider work and egress, and supplies
+trusted page/credential policy controls. A four-second public budget fits the
+retained five-second Desktop/SDK routes; the private default remains20seconds.
+The result hashes normalized provider metadata, keeps byte/runtime checks pending
+and always requires separate download approval. No task, download or runtime
+owner is available to this use case.
+
 Use cases in this folder own application orchestration and remain adapter-agnostic.
 
 Pinned Model downloads carry one strict copied revision through both synchronous

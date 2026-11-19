@@ -60,8 +60,10 @@ import type {HeadlessContextSavedValue} from "./headless-context-result-plan";
 import type {HeadlessContextRebuildValue} from "./headless-context-rebuild";
 import type {HeadlessContextQueryPreviewValue} from "./headless-context-query-preview";
 import type {HeadlessModelInventory, HeadlessModelRecord} from "./headless-model-metadata";
+import type {HeadlessModelSourcePreview} from "./headless-model-source-preview";
 
 export type HeadlessReadResult =
+  | {readonly ok: true; readonly operation: "models.preview-source"; readonly value: HeadlessModelSourcePreview}
   | {readonly ok: true; readonly operation: "models.inventory"; readonly value: HeadlessModelInventory}
   | {readonly ok: true; readonly operation: "models.record"; readonly value: HeadlessModelRecord}
   | {readonly ok: true; readonly operation: "context.preview-query"; readonly value: HeadlessContextQueryPreviewValue}

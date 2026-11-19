@@ -44,6 +44,9 @@ export interface DesktopHeadlessAuthoringWireGrant extends Pick<LegacyGrant, "or
   readonly conversation?: true;
   readonly presentation?: true;
   readonly planReview?: true;
+  readonly modelSourceRead?: true;
+  /** Read-request liveness only; independent accepted work must not use it. */
+  readonly isReadCurrent?: () => boolean;
   readonly isPresentationCurrent?: () => boolean;
   readonly isCurrent?: () => boolean;
 }
@@ -469,7 +472,17 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       // An accepted conversation has its own host-owned task lifecycle. A
       // disconnected request does not revoke that authority or cancel the task.
       result = readHeadlessApprovedTurnResult(await execute(input, { grant, currentGrant: () => currentGrant(false), fingerprint }));
-    } else result = await dependencies.read(body, currentGrant);
+    } else {
+      const sourceRead = !!body && typeof body === "object" && "operation" in body && body.operation === "models.preview-source";
+      if (sourceRead && (initialGrant.planReview !== true || initialGrant.modelSourceRead !== true || !grantIsCurrent(initialGrant, true))) {
+        fail(response, 403, "headless.forbidden"); return;
+      }
+      const readCurrent = () => admitting() && !response.destroyed && !response.writableEnded;
+      result = await dependencies.read(body, async () => {
+        const grant = await currentGrant();
+        return grant && readCurrent() ? {...grant, isReadCurrent: readCurrent} : undefined;
+      });
+    }
     const finalGrant = await currentGrant();
     if (!admitting() || response.destroyed) return;
     if (!finalGrant || !grantIsCurrent(finalGrant, requiresFence)) {

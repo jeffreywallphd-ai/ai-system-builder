@@ -35,3 +35,41 @@ advertised capabilities and approvals. These two reads grant none of them.
 If a capability is absent, report what is unavailable. Do not substitute a
 generic HTTP, shell or filesystem call. Revocation or a host change requires
 fresh authorized discovery; an old successful read is not continuing authority.
+
+## Inspect a provider source
+
+Use a newly consented Desktop plan-review pairing that lists provider/key use,
+or a Managed plan registration whose operator enabled
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ=1`. Older pairings keep
+their prior access; neither a request nor an asserted token claim grants this
+additional permission. If unavailable, describe the required user/operator
+action without requesting a token in chat. A Desktop disconnection ends read
+authority but does not cancel separately accepted tasks.
+
+1. Use `aisb_host_describe` on the current plan-review connection. Continue only
+   if it advertises `models.preview-source`. Keep the exact host and workspace.
+2. Call `aisb_model_workflow` with `selection: {kind: "source", modelId:
+   "owner/model", revision: "<40 lowercase hex commit>"}`. Omit `revision` only
+   to resolve the provider's current head. The app returns its immutable commit.
+   A bare alias, URL, local path, branch name or arbitrary provider is not accepted.
+3. This read can contact Hugging Face with the configured provider credential.
+   Current workspace, model read and provider-credential use permission are
+   required. The key stays in the app. Revocation stops new requests and replies.
+4. Review the selected safetensors/config/tokenizer file metadata, exact sizes,
+   excluded-file count and `license`. Licensing is `provider-declared` or
+   `unknown`; non-open declarations remain visible. Neither state grants rights.
+5. `manifestDigest` hashes normalized metadata only. A file's `sha256` is a
+   provider-declared LFS hash. `git-blob-sha1` is a Git object hash, including its
+   blob header; it is not SHA256 or plain-file SHA1. No local bytes were checked.
+6. `bytesVerification` and `runtimeReadiness` stay `not-checked`.
+   `downloadApprovalRequired` is true. File names and declared formats do not
+   prove complete shards, valid indexes, loadability, memory fit or output quality.
+   Request an exact separately approved acquisition through its advertised
+   capability when available. This source read grants no download or execution.
+
+The source profile selects at most 64 top-level files and 20 GiB of declared data;
+inspection does not transfer that data. Its public provider budget is 4 seconds
+inside the existing 5-second desktop/SDK deadline. Slow or unavailable sources can
+return unavailable. Do not widen a guard or use an alternate HTTP/file tool.
+A timed-out dependency retains its slot until it settles; no replacement can
+overlap it. Ordinary saved inventory remains provider-free and separate.

@@ -288,6 +288,13 @@ ID from the same issuer. It must differ from the agent and browser client
   IDs. The plan client can read workspace information, submit or check a
   proposal, and run the next approved change. Direct authoring, approval
   decisions, and window control require separate authority.
+Provider model-source inspection is an additional permission. Leave
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ` unset or set it to `0` to
+keep previous client access without provider/key use. Set it to `1` only when
+the separate plan-review registration may use the configured Hugging Face key
+to inspect model metadata. Other values prevent startup. Agent/browser clients,
+request fields and JWT claims cannot grant this permission. Download and run
+approvals remain separate.
 Configure the issuer to identify this client in each token it issues for
 the registration. The server accepts only a typed access token with an exact
 signed client ID for plan review. It also uses a signed client ID or

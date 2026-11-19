@@ -1,5 +1,15 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Headless `models.preview-source` uses a separate lazy organization-pinned Model
+source owner. Desktop caches only that optional provider owner; Managed reuses
+its configured credential-aware Model provider. Neither path warms the active
+Model/runtime/task feature for preview. Plan-review purpose, strict currentness
+and workspace/model-read/provider-credential-use policy fence ownership, each
+provider phase and egress. Both readers verify target and normalized metadata
+digest. Model inventory/record reads remain provider-free. The source read grants
+no acquisition, byte verification, rights or readiness, and real host/model
+qualification remains separate from the controlled composition fixtures.
+
 Headless `models.inventory` and `models.record` use the shared passive
 `composeHeadlessModelMetadata` factory. Both real bootstraps load it lazily after
 the purpose-specific readers check workspace/model authority. It pins one

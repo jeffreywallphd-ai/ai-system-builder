@@ -32,6 +32,9 @@ For saved model selection, read [Recorded model metadata](references/models.md).
 Use `aisb_model_metadata` only on a plan-review connection that advertises the
 matching read operation. Inventory and exact-record reads start no model or
 download and prove no readiness, license, supply verification or output quality.
+For an exact provider source, use that guide's separate `aisb_model_workflow`
+source selector only when `models.preview-source` is advertised. It can use the
+saved provider credential for bounded metadata reads; it grants no download or run.
 
 For a Context or RAG request, use [Prepare Context inputs, packs and RAG](references/context-inputs.md)
 before selecting saved sources or an embedding model. A metadata preview does

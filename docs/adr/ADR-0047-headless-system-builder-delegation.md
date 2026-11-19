@@ -1,5 +1,30 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Scoped Model source preview
+
+Do not extend historical pairing authority. Persist `modelSourceRead:true` only
+for new plan-review pairings offered by the trusted source-capable host through
+native consent that lists provider/key use. Old records retain their previous
+operations and need new consent for source access. Managed source access
+defaults off and requires an explicit trusted operator switch plus the exact
+verified plan registration. Request or token properties cannot self-grant it.
+Desktop source reads additionally bind to a separate current HTTP lifetime.
+After asynchronous policy checks, recheck currentness synchronously at each
+lazy-owner, SDK, credential, provider and egress handoff. Preserve the independent
+lifecycle of already accepted business tasks when an HTTP client disconnects.
+
+The approved I7 workflow adds `models.preview-source` through one separate
+plan-review-only `aisb_model_workflow` source selector. Keep saved inventory and
+record reads provider-free. Both actual bootstraps select a lazy, pinned Model
+source owner using existing secure credentials. Current actor/client/workspace,
+model-read and credential-use policy surround provider phases and outward data.
+Node host/API/SDK boundaries correlate copied targets and independently hash the
+normalized metadata. No downloaded-byte, license-rights or runtime proof follows
+from that digest. The public4second source profile fits retained transport
+limits, and ordinary requests keep their deadlines. This read creates no task,
+download approval, runtime or loader; later model effects retain the approved
+plan protocol and their own actual technical qualification.
+
 ### Private source preparation for approved Model acquisition
 
 The approved I7 Model work reuses the configured Hugging Face adapter through a

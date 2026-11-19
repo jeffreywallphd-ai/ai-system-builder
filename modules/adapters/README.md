@@ -1,5 +1,14 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The Model source inspector accepts optional trusted currentness/policy controls
+from a delegated owner. It captures callbacks before awaits, requires literal
+true currentness/permission before dependency/credential access and each provider
+request, and rechecks currentness through response consumption. Callers can only
+narrow its existing20second duration. Headless preview uses4seconds inside the
+existing5second Desktop/SDK and12second Managed route guards. Its API/SDK result
+codecs correlate exact target and recompute the metadata digest; no new download
+or model effect is admitted. A timed-out dependency still retains its one slot.
+
 The configured Hugging Face Model adapter has a private source inspector. It
 reuses the lazy official SDK and existing credential supplier, and requests only
 bounded metadata for a captured exact repository/revision. Same-origin endpoint

@@ -411,6 +411,7 @@ export async function createServer(
       managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
         ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
       managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement, planReviewClientId: clientPolicy.planReviewRegisteredClientId,
+        ...(clientPolicy.modelSourceReadAvailable ? {modelSourceRead: true as const} : {}),
         browserObservationAuthorizer: passiveBrowserObserveAuthorizer} : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,
@@ -492,6 +493,7 @@ export async function createServer(
       const denied = {ok: false, code: "headless.forbidden"} as const;
       return clientPolicy && handlers ? {
         hostIncarnationId: handlers.hostIncarnationId,
+        allowModelSourceRead: clientPolicy.modelSourceReadAvailable,
         read: handlers.read,
         author: async (input, agent, current) => agent.purpose === "agent" ? handlers.author(input, agent, current) : denied,
         identify: (input, kind) => {

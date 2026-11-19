@@ -13,3 +13,11 @@ or revoke a client. The future connector may finish a pairing or verify a
 credential; it must not expose the interactive operations. A verified
 registration is still subject to current application workspace authorization.
 See ADR-0047 and the Headless System Builder threat model.
+
+Provider-source reads require a separate `modelSourceRead` consent bit. The
+trusted host may offer it only in new plan-review pairings whose native consent
+lists provider and saved-key use. Saved clients and pending pairings created
+without that permission keep their previous access after an upgrade. Pair again
+through the updated native consent to grant source access. No migration creates
+consent, and ordinary read, author, conversation or presentation grants cannot
+carry this permission. Invalid saved values fail closed without registry repair.

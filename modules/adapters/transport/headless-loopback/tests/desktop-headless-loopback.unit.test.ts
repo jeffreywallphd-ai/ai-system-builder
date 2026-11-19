@@ -14,6 +14,9 @@ import { createInMemoryStructuredDocumentStore } from "../../../persistence/shar
 import { createStructuredHeadlessPlanReviewRepository } from "../../../persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../index";
+import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../model/huggingface";
+import { composeDesktopHeadlessReads } from "../../../../hosts/desktop/composition/composeDesktopHeadlessReads";
+import { composeHeadlessModelSourcePreview } from "../../../../hosts/shared/composition/headlessModelSourcePreview";
 
 const workspaceId = createWorkspaceId("loopback-fixture-workspace");
 const organizationId = createOrganizationId("loopback-fixture-org");
@@ -24,6 +27,73 @@ const describe = JSON.stringify({ version: HEADLESS_CONTRACT_VERSION, operation:
 const readPath = "/aisb-headless/v1/read";
 const pairPath = "/aisb-headless/v1/pair";
 const authorPath = "/aisb-headless/v1/author";
+
+test("disconnecting a held source read denies lazy SDK, credentials and provider work", {timeout: 12_000}, async () => {
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(organizationId);
+  const registry = createDesktopHeadlessClientAuthority({documents, identity, canReadWorkspace: async () => true,
+    canReviewPlans: async () => true, allowNewModelSourcePairings: true});
+  const pending = await registry.beginPairing(workspaceId, () => true, "plan-review");
+  assert.equal(pending.status, "ready");
+  const paired = await registry.completePairing(pending.pairingCode);
+  assert.equal(paired.status, "paired");
+  let entered!: () => void, resume!: () => void, finished!: () => void;
+  const checking = new Promise<void>(resolve => {entered = resolve;});
+  const released = new Promise<void>(resolve => {resume = resolve;});
+  const settled = new Promise<void>(resolve => {finished = resolve;});
+  const counts = {owners: 0, sdk: 0, keys: 0, requests: 0};
+  const provider = createHuggingFaceModelBrowseDetailsAdapter({officialHubClientLoader: async () => {
+    counts.sdk++; throw new Error("A disconnected read must not initialize the SDK.");
+  }, accessTokenProvider: () => {counts.keys++; return undefined;}});
+  const owner = composeHeadlessModelSourcePreview(documents, provider);
+  const reader = composeDesktopHeadlessReads({hostIncarnationId: incarnation, identity, isOpen: () => true,
+    workspaceRepository: {async readWorkspace() {return {workspaceId, organizationId, displayName: "Source test",
+      status: "active", createdAt: "2026-11-19T00:00:00.000Z", updatedAt: "2026-11-19T00:00:00.000Z"};}},
+    authorization: {async authorizeWorkspaceOperation(input) {
+      if (input.requiredScopes?.includes("provider-credential:use")) {entered(); await released;}
+    }},
+    getUseCases() {assert.fail("Source reads must not open System Builder.");},
+    async getModelSource() {counts.owners++; return owner;},
+  });
+  let readCurrent: (() => boolean) | undefined;
+  let result: unknown;
+  const connector = await startDesktopHeadlessLoopback({registrations: registry,
+    planReview: {hostIncarnationId: incarnation, async execute() {return {ok: false, code: "headless.forbidden"};}},
+    async read(raw, getGrant) {
+      try {
+        result = await reader(raw, async () => {
+          const grant = await getGrant(); readCurrent = grant?.isReadCurrent; return grant;
+        });
+        return result as Awaited<ReturnType<typeof reader>>;
+      } finally {finished();}
+    },
+  });
+  const agent = createDesktopPinnedLoopbackAgent(connector.endpoint, connector.fingerprint);
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {counts.requests++; throw new Error("No provider request is authorized.");}) as typeof fetch;
+  const body = JSON.stringify({version: HEADLESS_CONTRACT_VERSION, operation: "models.preview-source", input: {
+    hostIncarnationId: incarnation, workspaceId, modelId: "Qwen/synthetic-model", revision: "a".repeat(40)}});
+  const client = request(new URL(readPath, connector.endpoint), {method: "POST", agent,
+    headers: {"Content-Type": "application/json", "Content-Length": Buffer.byteLength(body), Authorization: "Bearer " + paired.credential}});
+  const closed = new Promise<void>(resolve => {client.once("close", resolve);});
+  client.on("error", () => {});
+  client.setTimeout(8_000, () => client.destroy());
+  client.end(body);
+  try {
+    await Promise.race([checking, closed.then(() => {throw new Error("Fixture closed before entering source authorization.");})]);
+    assert.equal(readCurrent?.(), true);
+    client.destroy(); await closed;
+    const until = Date.now() + 2_000;
+    while (readCurrent?.() && Date.now() < until) await delay(5);
+    assert.equal(readCurrent?.(), false);
+    resume(); await settled;
+    assert.deepEqual(result, {ok: false, code: "headless.forbidden"});
+    assert.deepEqual(counts, {owners: 0, sdk: 0, keys: 0, requests: 0});
+    assert.ok(await registry.verifyCredential(paired.credential));
+  } finally {
+    resume(); client.destroy(); agent.destroy();
+    await connector.close(); registry.close(); globalThis.fetch = previousFetch;
+  }
+});
 
 test("a changed dataset preparation source returns a conflict through the pinned read route", async () => {
   const registry = createDesktopHeadlessClientAuthority({

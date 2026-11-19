@@ -1,5 +1,40 @@
 # Headless System Builder threat model
 
+## Paired provider-source preview
+
+An upgrade must not grant old clients new credential-bearing provider access.
+Require the persisted `modelSourceRead:true` permission from a newly consented
+Desktop plan pairing, or the default-off Managed operator switch and exact
+verified plan registration. Malformed values and self-asserted wire/token fields
+deny access. Capture trusted capability values; configuration mutation cannot
+upgrade an already pending pairing. Keep previous client operations available.
+Use a separate live HTTP read fence on Desktop. Recheck it synchronously after
+each policy await, immediately before owner/SDK/key/request access and egress.
+Nested microtasks and held authorization must not admit late provider work after
+withdrawal or disconnect. Accepted business work keeps its original lifecycle.
+
+`models.preview-source` adds a credential-bearing provider-read and outward
+metadata boundary. Only a current plan-review client with current workspace,
+model-read and provider-credential-use permission may enter it. Capture and
+freeze exact request/actor/client/organization/workspace/host references before
+awaits; replacement or retirement denies before provider work or disclosure.
+The source adapter receives trusted copied currentness/policy callbacks, checks
+before SDK/credential access and every provider request/page, and refuses late
+or changed ownership. Its one-active-attempt guard remains through real settlement.
+The public4second budget stays below retained5second Desktop/SDK and12second
+Managed route guards; no existing deadline is increased. Separate lazy provider
+composition cannot initialize active Model/runtime/file/task owners. Fixed safe
+errors replace adapter failures, and credential/card/config/raw/private fields
+are excluded. Finite host/API/SDK decoders verify target and recompute the hash
+of normalized metadata; a digest mismatch or false readiness/approval claim
+refuses. Source hashes and licensing remain declared, not verified local bytes,
+rights, complete/loadable formats or model quality. Native pairing copy lists
+source/key-use permission and retains separate approval for downloads and runs.
+Rollback removes the source operation/tool while preserving ordinary metadata,
+saved credentials, histories and all effect/resource guards. Controlled SDK,
+reader and transport fixtures do not grant live provider/model/host or parent
+qualification; those genuine I7 obligations remain pending.
+
 ## Private Model source inspection
 
 Protect saved provider credentials, private card/config/error text and host

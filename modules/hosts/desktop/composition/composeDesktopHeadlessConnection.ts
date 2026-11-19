@@ -23,6 +23,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   readonly conversation?: ReturnType<typeof composeDesktopHeadlessConversation>;
   readonly presentation?: Parameters<typeof startDesktopHeadlessLoopback>[0]["presentation"];
   readonly planReview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["planReview"];
+  readonly allowNewModelSourcePairings?: true;
   readonly dataPreview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["dataPreview"];
   /** Synthetic composition may exercise access without registering a dispatch handler. */
   readonly canRunConversation?: (workspaceId: WorkspaceId) => Promise<boolean>;
@@ -69,6 +70,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   const registrations = createDesktopHeadlessClientAuthority({
     documents: dependencies.documents,
     identity: dependencies.identity,
+    ...(dependencies.planReview && dependencies.allowNewModelSourcePairings === true ? {allowNewModelSourcePairings: true as const} : {}),
     canReadWorkspace: async (id) => (await readWorkspaceLabel(id)) !== undefined,
     canAuthorWorkspace: dependencies.authoring ? async (id) => (await readWorkspaceLabel(id, "author")) !== undefined : undefined,
     canRunConversation: canRunConversation ? async (id) => (await readWorkspaceLabel(id, "conversation")) !== undefined : undefined,

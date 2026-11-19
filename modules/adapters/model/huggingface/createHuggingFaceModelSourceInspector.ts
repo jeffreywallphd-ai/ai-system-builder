@@ -2,6 +2,7 @@ import {types} from "node:util";
 import {MAX_MODEL_SOURCE_FILES, MODEL_SOURCE_ANCILLARY_FILES, readModelDownloadSource, readModelDownloadSourceRequest,
   type ModelDownloadSourceFile, type ModelDownloadSourceRequest} from "../../../contracts/model";
 import type {ModelDownloadSourcePort} from "../../../application/ports/model";
+import {readStrictPassiveRecord} from "../../../contracts/shared";
 
 export interface ModelSourceHubClient {
   modelInfo(params: {name: string; revision?: string; accessToken?: string; additionalFields?: string[]; fetch?: typeof fetch}): Promise<unknown>;
@@ -31,11 +32,23 @@ export function createHuggingFaceModelSourceInspector(options: {
   readonly resolveAccessToken: () => Promise<string | undefined>;
 }): ModelDownloadSourcePort["inspectModelDownloadSource"] {
   let active = false;
-  return async raw => {
+  return async (raw, control) => {
     let request: ModelDownloadSourceRequest;
+    let currentScope: (() => boolean) | undefined, policy: (() => Promise<boolean>) | undefined;
+    let duration = maximumDurationMs;
     try {
       if (types.isProxy(raw)) throw unavailable();
       request = Object.freeze(readModelDownloadSourceRequest(raw));
+      if (control !== undefined) {
+        if (types.isProxy(control)) throw unavailable();
+        const selected = readStrictPassiveRecord(control, ["isCurrent", "stillAllowed", "maximumDurationMs"]);
+        if (typeof selected.isCurrent !== "function" || typeof selected.stillAllowed !== "function" ||
+            selected.maximumDurationMs !== undefined && (!Number.isSafeInteger(selected.maximumDurationMs) ||
+              (selected.maximumDurationMs as number) < 1 || (selected.maximumDurationMs as number) > maximumDurationMs)) throw unavailable();
+        currentScope = selected.isCurrent as () => boolean;
+        policy = selected.stillAllowed as () => Promise<boolean>;
+        duration = selected.maximumDurationMs as number | undefined ?? maximumDurationMs;
+      }
     } catch {throw unavailable();}
     if (active) throw unavailable();
     active = true;
@@ -43,19 +56,39 @@ export function createHuggingFaceModelSourceInspector(options: {
     const {signal} = controller;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_resolve, reject) => {
-      timer = setTimeout(() => {controller.abort(); reject(unavailable());}, maximumDurationMs);
+      timer = setTimeout(() => {controller.abort(); reject(unavailable());}, duration);
     });
+    const current = () => {
+      if (!currentScope) return true;
+      try {
+        const value: unknown = currentScope();
+        if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+        return value === true;
+      } catch {return false;}
+    };
+    const allowed = async () => {
+      checkLive(signal);
+      if (!current() || policy && await policy() !== true || !current()) throw unavailable();
+      checkLive(signal);
+    };
+    const fence = () => {checkLive(signal); if (!current()) throw unavailable();};
     const inspect = async () => {
+      await allowed();
+      fence();
       const client = await options.resolveHubClient();
-      checkLive(signal);
+      await allowed();
+      fence();
       if (typeof client.modelInfo !== "function" || typeof client.listFiles !== "function") throw unavailable();
+      fence();
       const accessToken = await options.resolveAccessToken();
-      checkLive(signal);
+      await allowed();
+      fence();
       let requests = 0, metadataBytes = 0;
       let revision = request.revision;
       let phase: "info" | "tree" = "info";
       const boundedFetch: typeof fetch = async (input, init) => {
-        checkLive(signal);
+        await allowed();
+        fence();
         const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
         const expected = phase === "info" ? `/api/models/${request.modelId}/revision/${request.revision ?? "HEAD"}`
           : `/api/models/${request.modelId}/tree/${revision}`;
@@ -71,8 +104,9 @@ export function createHuggingFaceModelSourceInspector(options: {
               (counts.get(key) ?? 0) > 1) throw unavailable();
         }
         if (phase === "tree" && (url.searchParams.get("recursive") !== "true" || url.searchParams.get("expand") !== "false")) throw unavailable();
+        fence();
         const response = await globalThis.fetch(url, {...init, method: "GET", body: undefined, credentials: "omit", redirect: "error", signal});
-        if (signal.aborted) {void response.body?.cancel().catch(() => {}); throw unavailable();}
+        if (signal.aborted || !current()) {void response.body?.cancel().catch(() => {}); throw unavailable();}
         const declared = response.headers.get("content-length");
         if (response.status !== 200 || response.redirected || declared !== null && (!/^\d+$/.test(declared) || Number(declared) > maxResponseBytes)) {
           void response.body?.cancel().catch(() => {}); throw unavailable();
@@ -85,6 +119,7 @@ export function createHuggingFaceModelSourceInspector(options: {
           for (;;) {
             const chunk = await reader.read();
             checkLive(signal);
+            if (!current()) throw unavailable();
             if (chunk.done) break;
             bytes += chunk.value.byteLength; metadataBytes += chunk.value.byteLength;
             if (bytes > maxResponseBytes || metadataBytes > maxMetadataBytes) throw unavailable();
@@ -99,9 +134,11 @@ export function createHuggingFaceModelSourceInspector(options: {
         return new Response(body, {status: 200, headers: {"content-type": "application/json",
           ...(response.headers.has("link") ? {link: response.headers.get("link")!} : {})}});
       };
+      fence();
       const info = await client.modelInfo({name: request.modelId, ...(request.revision ? {revision: request.revision} : {}),
         additionalFields: ["sha", "cardData"], accessToken, fetch: boundedFetch});
-      checkLive(signal);
+      await allowed();
+      fence();
       const id = own(info, "name") ?? own(info, "modelId");
       const resolved = own(info, "sha");
       if (id !== request.modelId || typeof resolved !== "string" || !/^[a-f0-9]{40}$/.test(resolved) ||
@@ -112,9 +149,11 @@ export function createHuggingFaceModelSourceInspector(options: {
         ? {kind: "provider-declared" as const, identifier: license} : {kind: "unknown" as const};
       const names = new Set<string>(), files: ModelDownloadSourceFile[] = [];
       let rows = 0, excludedFileCount = 0;
+      fence();
       for await (const row of client.listFiles({repo: {type: "model", name: request.modelId}, revision,
         recursive: true, expand: false, accessToken, fetch: boundedFetch})) {
         checkLive(signal);
+        if (!current()) throw unavailable();
         if (++rows > maxRows) throw unavailable();
         const type = own(row, "type"), path = own(row, "path");
         if (!relativePath(path) || type !== "file" && type !== "directory" || names.has(path.toLowerCase())) throw unavailable();
@@ -131,7 +170,8 @@ export function createHuggingFaceModelSourceInspector(options: {
         if (lfs !== undefined && own(lfs, "size") !== sizeBytes || typeof digest !== "string") throw unavailable();
         files.push({path, sizeBytes: sizeBytes as number, integrity: {algorithm: lfs === undefined ? "git-blob-sha1" : "sha256", digest}});
       }
-      checkLive(signal);
+      await allowed();
+      fence();
       return readModelDownloadSource({provider: "huggingface", modelId: request.modelId, revision, format: "transformers-safetensors",
         license: declaration, files, totalBytes: files.reduce((sum, file) => sum + file.sizeBytes, 0), excludedFileCount,
         sourceVerification: "provider-metadata", bytesVerification: "not-checked", runtimeReadiness: "not-checked"}, request);

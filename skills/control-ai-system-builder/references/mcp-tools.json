@@ -146,6 +146,7 @@
         "aisb_list_workflows",
         "aisb_list_workspaces",
         "aisb_model_metadata",
+        "aisb_model_workflow",
         "aisb_plan_capabilities",
         "aisb_prepare_workflow",
         "aisb_preview_build_plan",
@@ -178,6 +179,7 @@
         "aisb_ingestion_status",
         "aisb_list_templates",
         "aisb_model_metadata",
+        "aisb_model_workflow",
         "aisb_plan_capabilities",
         "aisb_preview_build_plan",
         "aisb_preview_context_generation",
@@ -1047,6 +1049,50 @@
                 "additionalProperties": false
               }
             ]
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "selection"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_model_workflow",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "selection": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "source"
+              },
+              "modelId": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 193
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$"
+              }
+            },
+            "required": [
+              "kind",
+              "modelId"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [

@@ -7,6 +7,12 @@
   Metadata is not runtime, supply, license or model-output qualification.
 
 - Pack name: `desktop-host`
+- `models.preview-source` has a separate cached lazy provider owner. It requires
+  newly consented `modelSourceRead` permission, a live HTTP read fence, current
+  plan-review/model/credential-use policy and exact target/metadata-digest checks.
+  Legacy clients keep prior access; re-pair through native consent for source/key use.
+  Its4second provider profile preserves the5second route. This read starts no
+  model/task and grants no download, byte, rights or runtime qualification.
 
 ## Purpose
 

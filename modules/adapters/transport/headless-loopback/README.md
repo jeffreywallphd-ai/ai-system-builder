@@ -8,6 +8,11 @@ fingerprint supplied by the desktop before the request attaches to the TLS
 socket. It accepts compact UTF-8 JSON over POST at fixed routes for one-use
 pairing, finite reads, and capabilities that the host has enabled. Requests
 after pairing require the scoped client credential.
+Each read also receives a trusted HTTP lifetime fence. Source inspection checks
+it after asynchronous authorization and immediately before lazy SDK, credential
+and provider access. A disconnected or finished response cannot start late
+provider work. This ephemeral fence is separate from registration authority and
+does not cancel independently accepted business tasks on client disconnect.
 Requests with another Host, an Origin, or forwarding headers are denied.
 Do not use the connector through a browser, reverse proxy, or remote relay.
 

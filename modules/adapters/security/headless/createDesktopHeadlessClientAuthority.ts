@@ -17,7 +17,7 @@ const CREDENTIAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
 const CLIENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const READ_PERMISSIONS: readonly HeadlessReadOperation[] = HEADLESS_READ_OPERATIONS;
+const READ_PERMISSIONS: readonly HeadlessReadOperation[] = Object.freeze(HEADLESS_READ_OPERATIONS.filter(operation => operation !== "models.preview-source"));
 
 type DesktopIdentity = Pick<LocalIdentityProfile, "organizationId" | "principalId">;
 type ClientRecord = {
@@ -27,10 +27,13 @@ type ClientRecord = {
   readonly credentialDigest: string;
   readonly expiresAt: number;
   readonly access?: Exclude<DesktopHeadlessClientAccess, "read">;
+  /** Present only after new explicit native source/key-use consent. Legacy stays absent. */
+  readonly modelSourceRead?: true;
 };
 type Pairing = {
   readonly workspaceId: WorkspaceId;
   readonly access: DesktopHeadlessClientAccess;
+  readonly modelSourceRead?: true;
   readonly codeDigest: string;
   readonly expiresAt: number;
   remainingAttempts: number;
@@ -49,10 +52,13 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
   readonly canRunConversation?: (workspaceId: WorkspaceId) => Promise<boolean>;
   readonly canPresent?: (workspaceId: WorkspaceId) => Promise<boolean>;
   readonly canReviewPlans?: (workspaceId: WorkspaceId) => Promise<boolean>;
+  /** Trusted updated native-confirmation wiring only; never a renderer/wire assertion. */
+  readonly allowNewModelSourcePairings?: true;
   readonly now?: () => number;
 }) {
   const { documents, canReadWorkspace, now = Date.now } = dependencies;
   const { organizationId, principalId } = dependencies.identity;
+  const allowModelSources = dependencies.allowNewModelSourcePairings === true;
   if (documents.organizationId !== organizationId || !principalId) throw new Error("Desktop client authority is unavailable.");
   let pending: Pairing | undefined;
   let generation = 0;
@@ -81,6 +87,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
         const expiresAt = now() + PAIRING_TTL_MS;
         pending = {
           workspaceId, access, expiresAt, codeDigest: digest("pairing", pairingCode), remainingAttempts: MAX_PAIRING_ATTEMPTS,
+          ...(access === "plan-review" && allowModelSources ? {modelSourceRead: true as const} : {}),
         };
         return { status: "ready", pairingCode, expiresAt } as const;
       } catch {
@@ -108,6 +115,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
           credentialDigest: digest("credential", credential),
           expiresAt: now() + CREDENTIAL_TTL_MS,
           ...(selected.access !== "read" ? { access: selected.access } : {}),
+          ...(selected.access === "plan-review" && selected.modelSourceRead === true ? {modelSourceRead: true as const} : {}),
         };
         const saved = await documents.runInTransaction(async (transaction) => {
           const { clients, revision } = await readRegistry(transaction);
@@ -124,7 +132,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
             selected.expiresAt <= now() ||
             !clients.some((entry) => entry.registeredClientId === client.registeredClientId &&
               entry.credentialDigest === client.credentialDigest && entry.principalId === principalId &&
-              entry.workspaceId === selected.workspaceId && entry.access === client.access && entry.expiresAt > now())) return denied;
+              entry.workspaceId === selected.workspaceId && entry.access === client.access && entry.modelSourceRead === client.modelSourceRead && entry.expiresAt > now())) return denied;
         return { status: "paired", credential, registeredClientId: client.registeredClientId,
           expiresAt: client.expiresAt, access: selected.access } as const;
       } catch {
@@ -161,10 +169,11 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
             (await canUseWorkspace(client.workspaceId, client.access) !== true || !isCurrent())) return undefined;
         return {
           organizationId, principalId, registeredClientId: client.registeredClientId,
-          workspaceIds: [client.workspaceId], operations: READ_PERMISSIONS,
+          workspaceIds: [client.workspaceId], operations: client.access === "plan-review" && client.modelSourceRead === true ? HEADLESS_READ_OPERATIONS : READ_PERMISSIONS,
           authoring: client.access === "author" && dependencies.canAuthorWorkspace ? DESKTOP_HEADLESS_AUTHORING_OPERATIONS : [],
           ...(client.access === "conversation" ? { conversation: true as const } : {}),
           ...(client.access === "plan-review" ? { planReview: true as const } : {}),
+          ...(client.access === "plan-review" && client.modelSourceRead === true ? {modelSourceRead: true as const} : {}),
           ...(presentation ? {
             presentation: true as const, isPresentationCurrent,
           } : {}),
@@ -268,6 +277,7 @@ function validRecord(value: unknown): value is ClientRecord {
   const keys = Object.keys(value);
   const fields = ["registeredClientId", "principalId", "workspaceId", "credentialDigest", "expiresAt"];
   if (isDesktopHeadlessClientAccess(record.access) && record.access !== "read") fields.push("access");
+  if (record.access === "plan-review" && record.modelSourceRead === true) fields.push("modelSourceRead");
   if (keys.length !== fields.length || keys.some((field) => !fields.includes(field))) return false;
   return typeof record.registeredClientId === "string" && record.registeredClientId.length === 36 &&
     CLIENT_ID_PATTERN.test(record.registeredClientId) &&

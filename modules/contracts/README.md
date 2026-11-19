@@ -1,5 +1,12 @@
 # Contracts
 
+Headless `models.preview-source` is a separate provider metadata selector on a
+paired plan-review connection. Strict target/result codecs keep exact host,
+workspace, qualified model ID and optional commit. They retain the normalized
+source and a metadata-only `manifestDigest`, with `downloadApprovalRequired:true`.
+Node host/API/SDK boundaries independently recompute that digest. This grants no
+download, loading, byte integrity, license rights or model-readiness result.
+
 Model source-inspection codecs bind an exact Hugging Face repository/revision to
 at most64 selected top-level Transformers safetensors/config/tokenizer files
 within the existing20GiB default ceiling. They distinguish provider SHA256 from

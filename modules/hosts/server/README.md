@@ -1,5 +1,12 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Headless Model provider-source inspection defaults off. The trusted application
+must set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_MODEL_SOURCE_READ=1` and configure a
+separate plan-review client. Only that exact issuer-verified client receives the
+source capability; a request or claimed JWT property cannot grant it. Existing
+registrations keep previous access with the switch unset or `0`. The optional
+host source owner and API route require this same switch and application policy.
+
 The existing Context Browser now also owns private admitted queries through the
 original safe-model resolver, strict saved bytes and installed-only query port.
 Both current policy and existing shutdown admission fence are required. Runtime

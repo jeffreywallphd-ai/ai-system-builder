@@ -39,6 +39,31 @@ const at = "2026-11-13T00:00:00.000Z";
 const hostIncarnationId = "632cfa6b-c323-419a-b2bd-5880b1f34858";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 
+test("desktop connection forwards only the explicit trusted new-pairing source permission", async () => {
+  for (const allow of [undefined, true] as const) {
+    let source: true | undefined;
+    const connection = composeDesktopHeadlessConnection({
+      documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+      identity: {organizationId, principalId: "source-owner", principalDisplayName: "Source owner", createdAt: at, updatedAt: at},
+      workspaces: {async readWorkspace() {return {organizationId, workspaceId, displayName: "Source workspace", status: "active",
+        createdAt: at, updatedAt: at};}},
+      authorization: {async authorizeWorkspaceOperation() {}}, allowNewModelSourcePairings: allow,
+      planReview: {hostIncarnationId, async execute() {return {ok: false, code: "headless.forbidden"};}},
+      async read(_raw, getGrant) {source = (await getGrant())?.modelSourceRead; return {ok: false, code: "headless.forbidden"};},
+    });
+    try {
+      const pairing = await connection.beginPairing(workspaceId, () => true, "plan-review");
+      assert.equal(pairing.status, "ready");
+      const address = {endpoint: pairing.endpoint, fingerprint: pairing.fingerprint};
+      const paired = await call(address, "pair", {pairingCode: pairing.pairingCode});
+      const credential = paired.result.value?.credential;
+      assert.ok(credential);
+      await call(address, "read", {version: HEADLESS_CONTRACT_VERSION, operation: "host.describe", input: {}}, credential);
+      assert.equal(source, allow);
+    } finally {await connection.close();}
+  }
+});
+
 function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read" | "window" | "plan-review" | "plan-step", input: object, credential?: string) {
   const body = JSON.stringify(input);
   return new Promise<{ status: number; result: { value?: { credential?: string; registeredClientId?: string } } }>((resolve, reject) => {

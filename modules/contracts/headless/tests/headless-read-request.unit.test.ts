@@ -35,6 +35,7 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "plan.capabilities": scope,
     "models.inventory": {...scope, limit: 2, cursor: "model.record-1"},
     "models.record": {...scope, modelRecordId: "model.record-1"},
+    "models.preview-source": {...scope, modelId: "Qwen/synthetic-model", revision: "a".repeat(40)},
     "context.models": scope,
     "context.task": {...scope, selection: {kind: "task", taskId: host}},
     "context.saved": {...scope, contextId: host},

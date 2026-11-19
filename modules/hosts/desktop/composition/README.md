@@ -1,5 +1,13 @@
 # Desktop host composition
 
+The separate lazy Model source owner is available only with organization
+documents and new native-consented `modelSourceRead` plan-review pairings.
+Existing registrations retain earlier permissions and need a new pairing for
+this provider/key-use permission. Source dispatch requires both current
+registration and the live HTTP read fence after authorization; accepted tasks
+keep their independent lifecycle. SDK, credential, request and egress call sites
+check currentness synchronously after awaited policy checks.
+
 Desktop resolves one immutable Python runtime endpoint during explicit lazy
 foundation composition. Explicit valid loopback settings retain their meaning.
 Without a configured port or base URL, the network adapter asks the OS for a

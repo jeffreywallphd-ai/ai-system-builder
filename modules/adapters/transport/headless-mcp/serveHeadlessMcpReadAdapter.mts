@@ -212,6 +212,17 @@ function addSystemBuilderTools(server: McpServer) {
     contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
     artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)});
   if (enablePlanReview) {
+    server.registerTool("aisb_model_workflow", {
+      description: "Inspect a captured Hugging Face owner/model source before requesting download approval. Source inspection can contact Hugging Face with the configured provider credential under current workspace permission. It returns an immutable revision, a finite safe-format file list, provider-declared or unknown license and sizes. manifestDigest hashes metadata only. No model bytes, download approval, model run, rights or readiness verification is supplied. Saved inventory stays in aisb_model_metadata.",
+      inputSchema: z.strictObject({...workspaceTarget, selection: z.strictObject({kind: z.literal("source"),
+        modelId: z.string().min(3).max(193), revision: z.string().regex(/^[a-f0-9]{40}$/).optional()})}),
+      annotations: {...queryHints, openWorldHint: true},
+    }, ({selection, ...target}, context) => {
+      const {kind: _kind, ...source} = selection;
+      const parsed = headless.readHeadlessModelSourcePreviewRequest({version, operation: "models.preview-source", input: {...target, ...source}},
+        target.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     const modelRecordId = z.string().refine(headless.isHeadlessModelRecordId);
     const modelSelection = z.discriminatedUnion("kind", [
       z.strictObject({kind: z.literal("inventory"), limit: z.number().int().min(1).max(headless.HEADLESS_MODEL_METADATA_LIMIT).optional(),

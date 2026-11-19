@@ -400,7 +400,7 @@ export interface ComposeServerHostOptions {
     readonly authorize: Pick<AuthorizeOperationService, "execute">;
   };
   managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserObservationAuthorizer?: AuthorizeOperationService;
-    readonly planReviewClientId?: string };
+    readonly planReviewClientId?: string; readonly modelSourceRead?: true };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -1736,6 +1736,11 @@ export function composeServerHost(
             getModelMetadata: organizationDocuments ? async () => {
               const {composeHeadlessModelMetadata} = await import("../../shared/composition/headlessModelMetadata");
               return composeHeadlessModelMetadata(organizationDocuments, registerOptions.storageRootDirectory);
+            } : undefined,
+            getModelSource: organizationDocuments && options.managedHeadlessAgent.modelSourceRead === true ? async () => {
+              const {composeHeadlessModelSourcePreview} = await import("../../shared/composition/headlessModelSourcePreview");
+              // Deferred until host initialization is complete; reuse its credential-aware provider.
+              return composeHeadlessModelSourcePreview(organizationDocuments, huggingFaceModelBrowseDetails);
             } : undefined,
             getDatasetInputs: organizationDocuments ? async () => {
               const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");

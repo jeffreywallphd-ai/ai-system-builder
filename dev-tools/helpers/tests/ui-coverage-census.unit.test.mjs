@@ -1709,8 +1709,46 @@ const pendingModelMetadataCensus=Object.freeze({
   candidate:"b059797939519aa269510165d2a948394fd54e7d03478dea11bb074ea23fde61",
   facts:"084b29f308163d631acaa35fa4ad69df426cabb4071354c5bead3d97e5bd9d72",
 });
+// The additional source-inspection tool changes one exact, still-prospective
+// Desktop tool-list definition. This mapping retains every original gap/pass.
+const pendingModelSourcePreviewCensus=Object.freeze({
+  priorCommit:"9b2baf04b89583d48f5fe78c74ac51744752e388",
+  priorMap:"ec490ef7f571815ba980f5499ea5b9dd310080aa23dba39e295fa25d164b27d4",
+  currentMap:"bbee13075f2001d3ba20a36f142d733b905abdc055a660766efe67e1e416c1f8",
+  baseline:"be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+  sourceCommit:"6ce8b3255a935f3a02e65f902a2989b31a417bf6",
+  path:"dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+  committed:"798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd",
+  previous:"b059797939519aa269510165d2a948394fd54e7d03478dea11bb074ea23fde61",
+  candidate:"a311b9c5cb4543d42be108c506a8ab82df5cf85fba31e4dc1111e6df0bce1bdf",
+  facts:"0651a719c811f92a0fc6ee663bf735459cda23275a58c9d1f0747ad36c0d301a",
+});
+let modelSourcePreviewPriorText;
+function modelSourcePreviewCensusLegacyView(map,result){
+  const pin=pendingModelSourcePreviewCensus;
+  if(!map.sources.some(row=>row.path===pin.path&&row.facts.sha256===pin.candidate))return{map,result};
+  assert.equal(map.source_baseline,pin.baseline);assert.equal(sha(JSON.stringify(map)),pin.currentMap);
+  assert.deepEqual(result.gaps.filter(gap=>gap.kind==="unreviewed-source-drift"&&gap.source===pin.path),
+    [{kind:"unreviewed-source-drift",source:pin.path}]);
+  if(modelSourcePreviewPriorText===undefined){
+    const bytes=historicalSource(pin.priorCommit,censusDocument),prior=JSON.parse(bytes),expected=structuredClone(prior);
+    assert.equal(sha(JSON.stringify(prior)),pin.priorMap);
+    const rows=map.sources.filter(row=>row.path===pin.path),old=expected.sources.filter(row=>row.path===pin.path);
+    assert.equal(rows.length,1);assert.equal(old.length,1);
+    assert.equal(rows[0].committed_sha256,pin.committed);assert.equal(old[0].committed_sha256,pin.committed);
+    assert.equal(sha(historicalSource(pin.sourceCommit,pin.path)),pin.committed);
+    assert.equal(sha(historicalSource(pin.priorCommit,pin.path)),pin.previous);
+    assert.equal(old[0].facts.sha256,pin.previous);
+    assert.equal(rows[0].facts.sha256,pin.candidate);assert.equal(sha(JSON.stringify(rows[0].facts)),pin.facts);
+    old[0].facts=structuredClone(rows[0].facts);
+    assert.deepEqual(map,expected,"Only the exact additional tool expectation changes; no execution or qualification is granted.");
+    modelSourcePreviewPriorText=bytes.toString("utf8");
+  }
+  return{map:JSON.parse(modelSourcePreviewPriorText),result};
+}
 let modelMetadataPriorText;
 function modelMetadataCensusLegacyView(map,result){
+  ({map,result}=modelSourcePreviewCensusLegacyView(map,result));
   const pin=pendingModelMetadataCensus;
   if(!map.sources.some(row=>row.path===pin.path&&row.facts.sha256===pin.candidate))return{map,result};
   assert.equal(map.source_baseline,pin.baseline);

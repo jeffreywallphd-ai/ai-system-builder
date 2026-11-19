@@ -1,5 +1,16 @@
 # Local desktop tools over MCP
 
+`aisb_model_workflow` adds one finite plan-review-only source selector, keeping
+Desktop plan discovery at31tools within the existing32bound. It maps only
+`selection.kind:source` to `models.preview-source`. The qualified repository and
+optional exact commit are copied before awaits. The SDK verifies exact replies
+and recomputes `manifestDigest` over normalized provider metadata. Source reads
+can contact Hugging Face with the configured credential under current policy;
+the key, model card, raw config and private errors never enter replies. Returned
+hashes/license/format/size remain provider metadata, with no byte/readiness,
+rights, download or execution pass. The new tool sets the open-world annotation;
+saved inventory stays in the unchanged provider-free metadata tool below.
+
 `aisb_model_metadata` is one plan-review-only domain tool on Desktop and Managed
 connections. Its strict `selection` is either `inventory` (limit1–32 and optional
 exact next cursor) or `record` (one returned `modelRecordId`). It maps only to

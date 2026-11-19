@@ -85,6 +85,18 @@ test("portable Model guidance binds finite passive tools and separates recorded 
     assert.ok(guide.includes(text), `Missing Model client boundary: ${text}`);
 });
 
+test("portable source guidance discloses provider use and keeps source metadata separate from model execution", () => {
+  const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
+  const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8");
+  assert.ok(skill.includes("aisb_model_workflow"));
+  for (const mode of catalog.modes)
+    assert.equal(mode.tools.includes("aisb_model_workflow"), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
+  for (const text of ["models.preview-source", "owner/model", "provider credential", "key stays in the app", "manifestDigest",
+    "provider-declared", "unknown", "non-open", "git-blob-sha1", "blob header", "bytesVerification", "not-checked",
+    "downloadApprovalRequired", "4 seconds", "5-second", "retains its slot", "no download or execution"])
+    assert.ok(guide.includes(text), `Missing source client boundary: ${text}`);
+});
+
 test("portable Context guidance and discovery separate metadata from execution and model readiness", () => {
   const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
   const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");

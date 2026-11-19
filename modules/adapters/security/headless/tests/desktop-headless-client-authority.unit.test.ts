@@ -17,6 +17,60 @@ const otherIdentity = { ...identity, principalId: "other-fixture-principal" };
 const storeNamespace = "headless-client-authority";
 const denied = { status: "denied" };
 
+test("new source consent never upgrades a saved or already pending plan-review pairing", async () => {
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
+  const options = {documents, identity, canReadWorkspace: async () => true, canReviewPlans: async () => true,
+    allowNewModelSourcePairings: undefined as true | undefined};
+  const legacy = createDesktopHeadlessClientAuthority(options);
+  const pending = await legacy.beginPairing(workspaceId, () => true, "plan-review");
+  assert.equal(pending.status, "ready");
+  options.allowNewModelSourcePairings = true;
+  const oldClient = await legacy.completePairing(pending.pairingCode);
+  assert.equal(oldClient.status, "paired");
+  const saved = await documents.readDocument(storeNamespace, "clients-v1");
+  const upgraded = createDesktopHeadlessClientAuthority(options);
+  const oldGrant = await upgraded.verifyCredential(oldClient.credential);
+  assert.ok(oldGrant?.planReview);
+  assert.equal(oldGrant.modelSourceRead, undefined);
+  assert.ok(oldGrant.operations.includes("models.inventory"));
+  assert.equal(oldGrant.operations.includes("models.preview-source"), false);
+  assert.deepEqual(await documents.readDocument(storeNamespace, "clients-v1"), saved);
+
+  for (const access of ["read", "plan-review"] as const) {
+    const code = await upgraded.beginPairing(workspaceId, () => true, access);
+    assert.equal(code.status, "ready");
+    const client = await upgraded.completePairing(code.pairingCode);
+    assert.equal(client.status, "paired");
+    const grant = await upgraded.verifyCredential(client.credential);
+    assert.ok(grant);
+    assert.equal(grant.modelSourceRead, access === "plan-review" ? true : undefined);
+    assert.equal(grant.operations.includes("models.preview-source"), access === "plan-review");
+  }
+  legacy.close(); upgraded.close();
+});
+
+test("source consent rejects malformed saved capabilities without repairing or granting them", async () => {
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
+  const options = {documents, identity, canReadWorkspace: async () => true, canReviewPlans: async () => true,
+    allowNewModelSourcePairings: true as const};
+  const authority = createDesktopHeadlessClientAuthority(options);
+  const pending = await authority.beginPairing(workspaceId, () => true, "plan-review");
+  assert.equal(pending.status, "ready");
+  const client = await authority.completePairing(pending.pairingCode);
+  assert.equal(client.status, "paired");
+  const saved = await documents.readDocument(storeNamespace, "clients-v1");
+  assert.ok(saved && Array.isArray(saved.value) && saved.value.length === 1);
+  for (const mutation of [{modelSourceRead: false}, {modelSourceRead: "true"}, {access: "read"}, {access: "author"}]) {
+    const value = [{...saved.value[0], ...mutation}];
+    await documents.writeDocument(storeNamespace, "clients-v1", value);
+    const recovered = createDesktopHeadlessClientAuthority(options);
+    assert.equal(await recovered.verifyCredential(client.credential), undefined);
+    assert.deepEqual((await documents.readDocument(storeNamespace, "clients-v1"))?.value, value);
+    recovered.close();
+  }
+  authority.close();
+});
+
 test("authoring requires its own current permission and old grants remain read-only", async () => {
   const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
   let canAuthor = false;

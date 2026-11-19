@@ -12,6 +12,7 @@ import {
   readHeadlessContextTaskValue,
   readHeadlessContextSavedValue,
   isHeadlessModelReadOperation, readHeadlessModelMetadataRequest, readHeadlessModelInventory, readHeadlessModelRecord,
+  readHeadlessModelSourcePreviewRequest, readHeadlessModelSourcePreviewValue,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -65,6 +66,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly allowContextRagGeneration?: boolean;
   readonly allowContextResultSave?: boolean;
   readonly allowContextQuery?: boolean;
+  readonly allowModelSourceRead?: boolean;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -230,7 +232,7 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    const dataRead = (isHeadlessModelReadOperation(parsed.request.operation) || isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
+    const dataRead = ((parsed.request.operation === "models.preview-source" && handlers.allowModelSourceRead === true) || isHeadlessModelReadOperation(parsed.request.operation) || isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
       parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-query" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
@@ -242,6 +244,9 @@ async function respond<Agent>(
     // Keep an independent target so a faulty handler cannot change correlation.
     const modelProof = isHeadlessModelReadOperation(parsed.request.operation)
       ? readHeadlessModelMetadataRequest(parsed.request, handlers.hostIncarnationId) : undefined;
+    const sourceProof = parsed.request.operation === "models.preview-source"
+      ? readHeadlessModelSourcePreviewRequest(parsed.request, handlers.hostIncarnationId) : undefined;
+    if (sourceProof && !sourceProof.ok) return failure(response, 400, "headless.invalid-request");
     if (modelProof && !modelProof.ok) return failure(response, 400, "headless.invalid-request");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
@@ -250,7 +255,7 @@ async function respond<Agent>(
       return failure(response, requestErrorStatus(code), code);
     }
     if (result.operation !== parsed.request.operation || (questionProof && result.operation !== "context.preview-query") ||
-        (modelProof?.ok && result.operation !== modelProof.request.operation))
+        (modelProof?.ok && result.operation !== modelProof.request.operation) || (sourceProof?.ok && result.operation !== sourceProof.request.operation))
       return failure(response, 503, "headless.unavailable");
     if (result.operation === "host.describe") {
       const {version, hostIncarnationId, workspaces} = result.value;
@@ -259,8 +264,15 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
-          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) ||
+          ...(handlers.planReview ? result.value.operations.filter(operation => operation === "models.preview-source" && handlers.allowModelSourceRead === true || isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) ||
             isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") : [])]}});
+    }
+    if (result.operation === "models.preview-source") {
+      if (!sourceProof?.ok) return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessModelSourcePreviewValue(result.value, sourceProof.request.input);
+      const digest = value ? "sha256:" + createHash("sha256").update(JSON.stringify(value.source), "utf8").digest("hex") : undefined;
+      return value && value.manifestDigest === digest ? send(response, {ok: true, operation: result.operation, value})
+        : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "models.inventory") {
       if (!modelProof?.ok || modelProof.request.operation !== result.operation) return failure(response, 503, "headless.unavailable");

@@ -1,3 +1,16 @@
+Headless source-preview feature checks cover copied codecs, application policy
+and provider phases, real host-reader composition and exact metadata digests.
+Related pinned SDK and Managed route profiles retain authentication, revocation,
+original-target correlation and independent reply checks. The portable31tool
+plan catalog stays within32 and discloses provider/key use separately from saved
+inventory. A four-second public provider profile preserves existing route limits.
+Controlled fixtures grant no actual provider, model, full-host or parent pass.
+Source-preview work that changes pairing or read lifetime also requires the
+Desktop activation and Managed client-policy profiles. These exercise legacy
+authority preservation, explicit new source consent/operator opt-in and actual
+pinned-loopback disconnect behavior. Do not replace those checks with only
+codec/provider stubs, and do not bind accepted business tasks to read lifetime.
+
 The fixed Model owner unit/type checks also cover private exact source inspection,
 including real installed-SDK request construction against synthetic bounded fetch
 fixtures and ordinary provider regressions. The finite borrowed source set keeps
