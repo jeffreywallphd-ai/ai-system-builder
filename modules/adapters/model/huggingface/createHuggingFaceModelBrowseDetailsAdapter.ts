@@ -1,4 +1,5 @@
-import type { ModelBrowsePort, ModelDetailsPort } from "../../../application/ports/model";
+import type { ModelBrowsePort, ModelDetailsPort, ModelDownloadSourcePort } from "../../../application/ports/model";
+import {createHuggingFaceModelSourceInspector, type ModelSourceHubClient} from "./createHuggingFaceModelSourceInspector";
 import {
   normalizeBrowseModelsResult,
   normalizeGetModelDetailsResult,
@@ -96,10 +97,12 @@ interface HuggingFaceModelHubClient {
   }): AsyncIterable<HuggingFaceModelListEntry> | Promise<Iterable<HuggingFaceModelListEntry>>;
   modelInfo(params: {
     name: string;
+    revision?: string;
     accessToken?: string;
     additionalFields?: string[];
     fetch?: HuggingFaceFetch;
   }): Promise<HuggingFaceModelInfo>;
+  listFiles?: ModelSourceHubClient["listFiles"];
 }
 
 export interface CreateHuggingFaceModelBrowseDetailsAdapterOptions {
@@ -495,7 +498,7 @@ function readNextHuggingFaceCursor(linkHeader: string | null): string | undefine
 
 export function createHuggingFaceModelBrowseDetailsAdapter(
   options: CreateHuggingFaceModelBrowseDetailsAdapterOptions = {},
-): ModelBrowsePort & ModelDetailsPort {
+): ModelBrowsePort & ModelDetailsPort & ModelDownloadSourcePort {
   const fallbackAccessToken = options.accessToken;
   const logger=options.logger;
   const accessTokenProvider = options.accessTokenProvider;
@@ -573,9 +576,9 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
 
     if (!lazyHubClient) {
       logger?.info("hf.adapter.dynamic_import.start",{});
-      lazyHubClient = officialHubClientLoader().then((c)=>{logger?.info("hf.adapter.dynamic_import.success",{hasListModels:typeof c.listModels==="function",hasModelInfo:typeof c.modelInfo==="function"}); return c;}).catch((error) => {logger?.warn("hf.adapter.dynamic_import.failure",{message:error instanceof Error?error.message:String(error)});
+      lazyHubClient = officialHubClientLoader().then((c)=>{logger?.info("hf.adapter.dynamic_import.success",{hasListModels:typeof c.listModels==="function",hasModelInfo:typeof c.modelInfo==="function"}); return c;}).catch(() => {logger?.warn("hf.adapter.dynamic_import.failure",{code:"model-client-unavailable"});
         throw new HuggingFaceModelClientUnavailableError(
-          `Failed to initialize @huggingface/hub client: ${error instanceof Error ? error.message : String(error)}.`,
+          "Failed to initialize @huggingface/hub client.",
         );
       });
     }
@@ -620,6 +623,8 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
         throw mappedError;
       }
     },
+
+    inspectModelDownloadSource: createHuggingFaceModelSourceInspector({resolveHubClient, resolveAccessToken}),
 
     async getModelDetails(request: GetModelDetailsRequest): Promise<GetModelDetailsResult> {
       try {

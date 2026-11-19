@@ -19,3 +19,4 @@ export * from "./model-download-task";
 export * from "./model-training";
 
 export * from "./model-publishing";
+export * from "./model-download-source";

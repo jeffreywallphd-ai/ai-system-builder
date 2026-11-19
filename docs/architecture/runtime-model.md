@@ -1,5 +1,22 @@
 # Runtime Model
 
+Private Model source inspection reuses the configured Hugging Face adapter's
+lazy official SDK and secure credential supplier. It resolves a captured
+repository and optional immutable pin with `modelInfo`, then uses `listFiles`
+against the confirmed commit. A separate thin application port returns selected
+Transformers safetensors/config/tokenizer metadata, declared/unknown license,
+exact sizes and distinct provider SHA256 versus Git-blob-SHA1 algorithms.
+The profile admits at most64 selected files and the existing20GiB default. The
+adapter limits one active attempt, five metadata requests,256 rows,512KiB per response,2MiB total and
+20seconds including dependency/credential waits. Only exact captured HTTPS
+Hugging Face info/tree endpoints and bounded same-target pagination can receive
+credentials. Redirects, substitution, malformed/incomplete manifests and late
+work refuse with fixed diagnostics. No weight, filesystem, runtime, task,
+approval or public Headless operation is composed here. Source metadata is not
+immutable byte verification, license rights, hardware compatibility or quality.
+A timed-out dependency retains its slot until settlement; no replacement can
+overlap unresolved work, and abort fences prevent late I/O.
+
 An optional exact40-lowercase-hex `revision` binds a Model download request to one
 repository commit. Core normalization and captured runtime-client input retain
 that selection before awaits. A pinned start requires the current worker's

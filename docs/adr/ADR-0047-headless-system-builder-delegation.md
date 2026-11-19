@@ -1,5 +1,16 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private source preparation for approved Model acquisition
+
+The approved I7 Model work reuses the configured Hugging Face adapter through a
+thin source-inspection port. Bounded official-SDK metadata resolves exact source,
+selected safe file hashes/sizes and declared/unknown licensing. It does not add
+a provider, runtime, public Headless read/effect, download, approval or loader.
+Existing ordinary browse/details remain separate. Exact byte/format/resource
+admission, current plan authority and actual-host/model qualification are still
+required before delegated acquisition can close. See the runtime model and
+Headless threat model for the fixed source-inspection controls and limits.
+
 ### Recorded Model metadata transport
 
 The approved I7 Model family exposes `models.inventory` and `models.record`

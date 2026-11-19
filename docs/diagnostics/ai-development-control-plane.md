@@ -1,3 +1,9 @@
+The fixed Model owner unit/type checks also cover private exact source inspection,
+including real installed-SDK request construction against synthetic bounded fetch
+fixtures and ordinary provider regressions. The finite borrowed source set keeps
+unknown/shared-only and explicitly requested generic checks. No external provider,
+weight, runtime or Headless effect is exercised or qualified by those fixtures.
+
 The fixed Model owner unit/type checks also cover optional revision propagation
 through the existing download lifecycle and its HTTP client. The bounded
 `headless-context-model-worker` command adds only the controlled revision class

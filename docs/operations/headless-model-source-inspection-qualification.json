@@ -1,0 +1,24 @@
+{
+  "schema_version": "headless-model-source-inspection-observation-v1",
+  "scope": "Private configured-provider source metadata prerequisite for approved Headless Model acquisition",
+  "security_impact": "security-relevant",
+  "evidence_policy": "Current candidate-bound executed receipts and separate independent review determine component completion. This document supplies no executed or parent pass.",
+  "controls": [
+    "Strict copied repository/revision requests precede lazy SDK and credential awaits. The existing configured official SDK and secure credential supplier remain authoritative.",
+    "Only exact captured HTTPS Hugging Face model-info/tree endpoints can receive credentials. Redirects, foreign or substituted revision pagination refuse before forwarding. One active attempt, five requests,256 rows,512KiB per response,2MiB total and20seconds bound metadata, including waits and late results. Timed-out dependencies retain their slot until settlement and cannot overlap a replacement or issue late I/O.",
+    "At most64 selected top-level Transformers safetensors/config/tokenizer files fit the existing20GiB default ceiling. Exact identity/revision, required files, distinct SHA256/Git-blob-SHA1 metadata, duplicate-safe paths, sizes and totals validate. Excluded files never become an approved file set.",
+    "License data is provider-declared or unknown; non-open declarations remain recorded without granting rights or accepting terms. Local bytes and runtime readiness remain explicitly unperformed.",
+    "Fixed failure messages and sanitized lazy-import diagnostics exclude provider/private error text. Ordinary browse/details regressions remain; no task, model, filesystem, runtime, public Headless operation or effect is added."
+  ],
+  "retained_failures": [
+    "The first focused run exposed fixture issues: Node assert.rejects regular expressions included the Error prefix, a synthetic provider credential lacked the official SDK's required prefix, and strict types caught narrowed mutable fixture literals plus an unknown-return mock type. Fixtures now assert exact message fields, use an explicitly synthetic correctly shaped value and preserve mutation assertions with explicit types. Product controls were not relaxed.",
+    "The first routing fixture omitted the existing mandatory nonempty requested check list. It now requests documentation while testing automatic feature selection; production admission and unknown-source fallback are unchanged."
+  ],
+  "qualification_limits": [
+    "A timed-out dependency keeps the same adapter instance unavailable until actual settlement; there is no overlapping replacement or implicit retry. A missing permanent dependency remains a safe unavailable result.",
+    "Metadata presence and extension classification do not prove a complete loadable model, supported architecture, index references or safe file bytes. Those checks remain required at manifest-bound acquisition and runtime admission.",
+    "The real installed SDK is exercised against controlled synthetic fetch responses. No live provider, model download, model load, actual app/host, native cleanup, accuracy or parent/package qualification is claimed.",
+    "Provider metadata, TLS and an immutable repository revision are not signed supplier authenticity, verified local bytes, license rights or hardware/runtime quality evidence.",
+    "Public scoped preview, exact manifest-bound approval/download admission, durable task status, training/evaluation, generation and host qualification remain I7 work."
+  ]
+}

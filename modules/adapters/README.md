@@ -1,5 +1,18 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The configured Hugging Face Model adapter has a private source inspector. It
+reuses the lazy official SDK and existing credential supplier, and requests only
+bounded metadata for a captured exact repository/revision. Same-origin endpoint
+and pagination checks precede credential-bearing fetch; redirects refuse.
+One active attempt, five requests,256 rows,512KiB per response,2MiB total metadata and20seconds bound
+each attempt. At most64 selected safe-format files fit the existing20GiB default;
+unsafe/alternate files remain excluded. Recorded SHA256/Git-blob-SHA1 metadata
+does not prove local bytes, license rights or runtime readiness. No model, task,
+runtime or filesystem operation occurs. Ordinary browse/details remain separate;
+lazy import failure diagnostics now omit raw exception text.
+Timed-out dependencies retain their one slot until they settle; abort fences
+late I/O, and a replacement cannot overlap their unresolved work.
+
 Model inventory pages use the existing normalized list request and capture its
 workspace, filters, tags, limits and discovery flags before awaiting I/O. The
 returned cursor names the first omitted record; the next page includes it.

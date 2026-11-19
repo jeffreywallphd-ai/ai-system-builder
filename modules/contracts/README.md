@@ -1,5 +1,13 @@
 # Contracts
 
+Model source-inspection codecs bind an exact Hugging Face repository/revision to
+at most64 selected top-level Transformers safetensors/config/tokenizer files
+within the existing20GiB default ceiling. They distinguish provider SHA256 from
+Git-blob SHA1 and require exact sizes, totals and required files. License data is
+provider-declared or unknown; no rights or byte/runtime verification is inferred.
+The thin application port is private preparation, with no Headless operation,
+download, approval, loading or save authority.
+
 Model downloads accept an optional exact40-lowercase-hex repository `revision`.
 Omission retains the ordinary unpinned request shape. A pinned result must carry
 the worker-confirmed revision before registration. Recorded download provenance

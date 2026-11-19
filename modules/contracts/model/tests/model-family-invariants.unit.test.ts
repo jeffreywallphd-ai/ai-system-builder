@@ -12,8 +12,11 @@ describe("model family invariants", () => {
       "MAX_BROWSE_MODELS_LIMIT",
       "MAX_LIST_MODEL_FILES",
       "MAX_LIST_MODELS_LIMIT",
+      "MAX_MODEL_SOURCE_FILES",
+      "MAX_MODEL_SOURCE_BYTES",
       "MODEL_BROWSE_PROVIDERS",
       "MODEL_INFERENCE_MODES",
+      "MODEL_SOURCE_ANCILLARY_FILES",
       "MODEL_TRAINING_METHODS",
       "MODEL_TRAINING_STATUSES",
       "MODEL_VALIDATION_STATUSES",
@@ -48,6 +51,8 @@ describe("model family invariants", () => {
       "normalizeValidateModelRequest",
       "normalizeUpdateModelRecordRequest",
       "recommendModelInferenceMode",
+      "readModelDownloadSourceRequest",
+      "readModelDownloadSource",
     ].sort());
   });
 });

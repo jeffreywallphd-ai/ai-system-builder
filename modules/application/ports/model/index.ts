@@ -12,3 +12,4 @@ export * from "./model-checkpoint-resolver.port";
 export * from "./model-location-revealer.port";
 export * from "./model-file-lister.port";
 export * from "./model-local-files-delete.port";
+export * from "./model-download-source.port";

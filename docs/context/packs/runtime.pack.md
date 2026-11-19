@@ -60,7 +60,7 @@
   task, and never count as a cache hit. Structured download progress is
   rate-limited and replaces unstructured stderr progress. Generation `skip` applies only
   to explicit source no-candidate results; load, decoder, output, inference,
-  dependency, and unexpected runtime failures stop with sanitized reason codes. Exact download pins require worker support and confirmation.
+  dependency, and unexpected runtime failures stop with sanitized reason codes. Exact download pins require worker support and confirmation. Private Model source inspection is bounded provider metadata, not byte, license or runtime qualification.
 - Desktop IPC and authenticated server HTTP expose the same asynchronous start/read/cancel lifecycle. Workspace ownership is recorded at start and every status read or cancellation must fail closed for another workspace.
 - Model training emits progress for every completed microbatch. Runtime success
   remains staged until an explicit workspace-scoped save or discard action;

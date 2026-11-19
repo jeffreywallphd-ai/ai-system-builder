@@ -1,5 +1,27 @@
 # Headless System Builder threat model
 
+## Private Model source inspection
+
+Protect saved provider credentials, private card/config/error text and host
+resources. The configured provider and secure credential owner remain trusted;
+repository metadata, links, file names, hashes and license claims are untrusted.
+Validate/copy the repository and optional exact pin before dependency/credential
+awaits. Reuse the existing official SDK; no arbitrary host, supplier, URL or
+runtime initializer is introduced. Restrict every credential-bearing fetch to
+the captured HTTPS Hugging Face info/tree endpoint and current confirmed commit.
+Deny redirects, foreign or changed-target pagination, duplicate/unsafe paths,
+substituted identity/revision, oversized/incomplete manifests and digest confusion.
+Bound one active attempt, five requests,256 rows,512KiB per response,2MiB total,20seconds and64 selected
+files under the existing20GiB default. Abort/discard late I/O; late dependency or
+credential completion cannot begin another request. Unsettled timed-out dependencies
+retain their slot, preventing overlapping replacement work. Fixed errors and import
+diagnostics omit private failure text. Licensing stays provider-declared/unknown,
+including non-open declarations; this grants no rights or automatic term consent.
+Controlled installed-SDK fixtures cover the boundary without real provider or
+model calls. No downloaded-byte integrity, live provider, runtime, host, Headless
+effect or parent qualification is supplied. Rollback removes the optional port
+without weakening ordinary downloads or erasing saved metadata/history.
+
 ## Exact Model acquisition source prerequisite
 
 The existing download lifecycle accepts an optional exact repository commit.

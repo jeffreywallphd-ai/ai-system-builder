@@ -169,6 +169,10 @@ HEADLESS_MCP_SOURCES = (
 PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (
+            "modules/contracts/model/model-download-source.ts",
+            "modules/contracts/model/tests/model-download-source.unit.test.ts",
+            "modules/adapters/model/huggingface/createHuggingFaceModelSourceInspector.ts",
+            "modules/adapters/model/huggingface/tests/model-download-source.unit.test.ts",
             "modules/contracts/headless/headless-model-metadata.ts",
             "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
             "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
@@ -184,6 +188,14 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_download_revision.py",
         ),
         "sources": (
+            "modules/contracts/model/model-download-source.ts",
+            "modules/contracts/model/index.ts",
+            "modules/contracts/model/tests/model-download-source.unit.test.ts",
+            "modules/application/ports/model/model-download-source.port.ts",
+            "modules/application/ports/model/index.ts",
+            "modules/adapters/model/huggingface/createHuggingFaceModelSourceInspector.ts",
+            "modules/adapters/model/huggingface/createHuggingFaceModelBrowseDetailsAdapter.ts",
+            "modules/adapters/model/huggingface/tests/model-download-source.unit.test.ts",
             "modules/contracts/headless/headless-model-metadata.ts",
             "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
             "modules/contracts/headless/index.ts",
@@ -230,6 +242,9 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/README.md",
         ),
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/contracts/model/tests/model-download-source.unit.test.ts",
+            "modules/adapters/model/huggingface/tests/model-download-source.unit.test.ts",
+            "modules/adapters/model/huggingface/tests/createHuggingFaceModelBrowseDetailsAdapter.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
             "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
             "modules/application/use-cases/model/tests/headless-model-metadata.unit.test.ts",
@@ -246,6 +261,12 @@ PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-types": {
         "companion_to": "headless-model-metadata-owner-unit",
         "sources": (
+            "modules/contracts/model/model-download-source.ts",
+            "modules/contracts/model/tests/model-download-source.unit.test.ts",
+            "modules/application/ports/model/model-download-source.port.ts",
+            "modules/adapters/model/huggingface/createHuggingFaceModelSourceInspector.ts",
+            "modules/adapters/model/huggingface/createHuggingFaceModelBrowseDetailsAdapter.ts",
+            "modules/adapters/model/huggingface/tests/model-download-source.unit.test.ts",
             "modules/contracts/headless/headless-model-metadata.ts",
             "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
             "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
@@ -268,6 +289,9 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
             "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/contracts/model/tests/model-download-source.unit.test.ts",
+            "modules/application/ports/model/model-download-source.port.ts",
+            "modules/adapters/model/huggingface/tests/model-download-source.unit.test.ts",
             "modules/contracts/headless/headless-model-metadata.ts",
             "modules/contracts/headless/tests/headless-model-metadata.unit.test.ts",
             "modules/application/use-cases/model/headless-model-metadata.use-case.ts",
