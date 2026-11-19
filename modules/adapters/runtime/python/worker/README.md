@@ -13,6 +13,16 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+The host's source acquisition now treats this worker's successful task as an
+intermediate transfer. Its existing Model Task entry owns Node receipt/hash
+verification, one-use persistent import, known receiver cleanup and the separate
+receiver-settled ACK. Positive queued cancellation or failed/no-cleanup status can
+retire only a known empty receiver through its original captured job. Unknown
+start/IO/close remains retained; no raw status object grants cleanup. The host
+keeps that owner across shared timeout recovery and actual worker exit, and
+admits no second unsettled source acquisition. These controls do not change
+ordinary download/training policy or establish native/durable restart proof.
+
 ## Private source job session
 
 `ensure-model-download.source-session-v1` advertises complete immutable source
@@ -64,8 +74,8 @@ Resolve only prepared `source` and `receiver` directories in the fixed
 `.aisb-model-source-transfers/<acquisitionId>` namespace below the trusted HF
 cache. No request supplies a path. Windows uses an extended-length spelling of
 that trusted root while preserving canonical, plain-directory and identity
-checks. The generic Node Model client rejects this reserved input; a future
-private Node owner must prepare and consume it.
+checks. The generic Node Model client rejects this reserved input; the private
+Node source owner prepares and consumes it through the separate captured channel.
 
 The existing launch token protects private `GET /tasks/{id}/model-source` and
 `POST /tasks/{id}/model-source/acknowledgement`. ACK bodies have a 4 KiB streaming

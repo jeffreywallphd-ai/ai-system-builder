@@ -1,5 +1,39 @@
 # Python runtime adapter
 
+The internal `ApprovedModelSourceDownloadPort` connects a captured source job to
+the existing accepted Model Task owner. It has no default configuration and uses
+explicit installed-only preparation; missing support never selects the ordinary
+installer or SDK path. Copy exact source/workspace/limits and separate trusted
+host/business controls before awaits. These callbacks are not user approval.
+Ordinary starts reserve the same tracker before POST and compare that original
+reservation before publishing a late ACK; an old reply cannot replace source
+custody, even after terminal-cache rotation.
+
+The original `acceptedModelDownloads` entry retains its actual controller and
+receiver before effects. The foundation's existing task tracker retains at most
+one unsettled source acquisition, matching the worker stage slot. History rotation,
+sibling timeout/cancellation and even actual worker exit cannot erase that
+custody. Protected capacity denies new work before preparation/dispatch. Confirmed
+settlement restores ordinary recovery policy; source admission installs nothing.
+
+Worker success is not stored Model completion. The owner verifies its closed
+receipt and sender cleanup, consumes the receiver once through the existing
+generated-model storage port, and verifies the exact original repository/pin
+destination, complete inventory and bounded closed file hashes/identities. Only
+known Node retirement and separate receiver-settled acknowledgement publish the
+private completion.
+Storage invocation and final completion each recheck original business permission
+in their effect continuation. A final denial withholds completion and further
+import while retaining the positive facts of already confirmed cleanup.
+Captured reads and exact ACK replay may resolve lost replies; download, import
+and native cleanup are never repeated. A positively bound
+cancelled/failed empty job may retire only its own known empty receiver. Unknown
+start, IO, publication or close retains custody and grants no adoption or retry.
+The storage checks retain the existing cooperative filesystem boundary; they do
+not establish native hostile-writer fencing or restart durability. Public plan
+admission, original actor permission, Model registration and actual app/model
+qualification remain separate I7 work.
+
 The private `captureModelSourceTaskSession()` requires the same already-owned
 healthy worker and all exact revision, manifest, transfer, identity and session
 capabilities. It starts or installs nothing. Only an actual captured receiver
@@ -39,8 +73,9 @@ survive sender cleanup, consumption and retirement; only the explicit paired
 link-count/ctime transition is allowed. The host captures the actual custodian
 before effects. A held consumer/probe or unknown file/close/unlink outcome retains
 custody; cleanup removes only complete positively owned inventories. Generic
-request fields cannot grant this private owner. Persistent storage, public
-approval and product-host composition remain separate I7 work.
+request fields cannot grant this private owner. The Task owner above composes
+private storage. Public approval/registration and actual product-host/model
+qualification remain separate I7 work.
 
 The private worker capability `ensure-model-download.source-transfer-v1` binds
 one captured transfer to its original authenticated async Task record. That
@@ -51,8 +86,9 @@ Lost replies permit read-only status or exact ACK replay, never repeated file
 effects. Pending or uncertain custody counts toward capacity and prevents
 pruning, replacement and model unload. The generic Node client rejects reserved
 `sourceTransfer` input and active serialization hooks before transport, and always
-dispatches detached passive Model data. Production Node Task/import wiring, original actor
-approval and public acquisition are separate integration work.
+dispatches detached passive Model data. Private Node Task/import wiring is
+composed above; original actor approval, public acquisition/registration and
+actual-host qualification remain separate integration work.
 
 An explicit private handoff can link a staged closed manifest into an exact
 fresh same-volume recipient namespace. It does not copy or replace files.

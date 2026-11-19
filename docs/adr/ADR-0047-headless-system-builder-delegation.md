@@ -1,5 +1,31 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Source Task ownership through persistent import
+
+Use a thin internal approved-source application port, with original trusted
+controls separate from copied passive source data. Compose only explicit
+installed-only preparation and the existing generated-model storage port.
+Retain the per-job controller/receiver in `acceptedModelDownloads` and use the
+foundation's existing task tracker, not another holding registry or scheduler.
+One unsettled acquisition matches the worker's stage slot. Protected history,
+shared recovery and actual process exit cannot clear uncertain Node custody.
+Ordinary starts reserve the original tracker before POST and publish by identity
+after awaits, including after terminal-cache rotation. Check original business
+permission directly at storage invocation and after final settlement before
+completion. A final denial does not reopen positively confirmed cleanup facts.
+
+Worker success is intermediate. Closed receipt and actual sender cleanup precede
+one-use import. Reverify the canonical original repository/pin, complete inventory
+and bounded closed hashes/identities before known receiver retirement and separate
+worker settlement can publish private completion. Preserve existing cooperative
+storage limits; do not claim native hostile-writer fencing or durable restart.
+Lost reads and exact ACK replay observe the original saved outcome; they cannot
+download, import or unlink again. A captured original job may retire a positively
+cancelled/failed empty receiver, never a raw status document. Unknown publication,
+IO, close or start retains custody and grants no adoption/retry. These are private
+integration controls; public plan/actor admission, Model registration and actual
+application/model qualification remain separate I7 work.
+
 ### Captured private Model source job session
 
 Compose the existing private receiver through an additive already-owned-worker
@@ -38,8 +64,8 @@ metadata observation, match the actual five-field Python handoff receipt and
 keep both original file witnesses across sender cleanup and one-use consumption.
 Only the explicitly proven link-count/ctime transition is allowed. Cleanup stays
 known-only and host-owned; unknown outcomes grant no retry/adoption/restart.
-Product Task composition, original actor/plan admission and persistent Model
-registration remain separate implementation/qualification work.
+Private Task/storage composition is defined above. Original actor/plan admission,
+Model registration and actual-host qualification remain separate work.
 
 ### Private source transfer in the existing Task owner
 
@@ -57,8 +83,8 @@ custody and does not authorize retry or recovery. Apply one retention predicate
 to capacity, pruning, reuse and unload, with original-record comparisons before
 late publication. Keep native IO outside registry locks. The runtime launch
 token protects the bounded private ACK/status routes but grants no original
-actor approval, persistent Model registration or public acquisition. Node and
-full-host integration remain separate I7 work.
+actor approval, persistent Model registration or public acquisition. Public and
+actual-host integration remain separate I7 work.
 
 ### Private source-to-storage handoff prerequisite
 

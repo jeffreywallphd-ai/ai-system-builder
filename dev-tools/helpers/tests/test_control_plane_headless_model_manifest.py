@@ -41,6 +41,7 @@ class ModelManifestRoutingTests(unittest.TestCase):
             self.assertIn('modules/adapters/runtime/python/tests/model-source-recipient.unit.test.ts', rows[name]['argv'])
             self.assertIn('modules/adapters/runtime/python/tests/model-source-identity-client.unit.test.ts', rows[name]['argv'])
             self.assertIn('modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts', rows[name]['argv'])
+            self.assertIn('modules/adapters/runtime/python/tests/model-source-acquisition.unit.test.ts', rows[name]['argv'])
         self.assertIn('modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',
                       rows['headless-context-existing-runtime']['argv'])
         self.assertNotIn('completion-all', rows)
@@ -51,6 +52,9 @@ class ModelManifestRoutingTests(unittest.TestCase):
         shared = self.selected(['modules/adapters/runtime/python/worker/models.py'], ['architecture'])
         self.assertNotIn('headless-model-manifest-worker', shared)
         self.assertIn('focused-tests', shared)
+        shared_index = self.selected(['modules/application/ports/model/index.ts'], ['architecture'])
+        self.assertNotIn('headless-model-manifest-worker', shared_index)
+        self.assertIn('focused-tests', shared_index)
 
     def test_unknown_sources_and_explicit_generic_checks_retain_fallback(self):
         sources = list(catalog.PUBLISHED_FORM_CHECKS['headless-model-manifest-worker']['sources'])

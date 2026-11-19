@@ -1,5 +1,39 @@
 # Headless System Builder threat model
 
+## Source acquisition Task and storage lifetime
+
+Protect the original source/workspace/limits, worker/host owner, temporary files
+and persisted selected model bytes. Copy passive input and capture trusted
+controls before awaits. The internal application port is not public JSON or user
+approval. Missing installed-only readiness/session/storage support grants no
+installer, SDK fallback or source effect. The existing Model Task entry and
+foundation tracker own custody before effects; one unsettled acquisition matches
+the worker stage slot. Capacity denial precedes preparation. History rotation,
+sibling cancellation/timeouts and worker exit cannot remove uncertain ownership.
+Reserve ordinary starts before POST; late publication must still match that
+original tracker after terminal-cache rotation. Require direct fresh business
+checks at storage invocation and final completion, not an earlier helper return.
+Late denial withholds completion while preserving positively known cleanup.
+
+Require actual receipt/hash and sender unlink proof before one-use import through
+the existing storage port. Derive the exact trusted repository/pin destination;
+reject existing targets, foreign returns, extra/missing data, links, changed
+identity or bytes and active serialization. Recheck complete inventory and file
+baselines after bounded closed hashing, under original host/business fences.
+Only known receiver retirement plus exact original worker settlement can publish
+private completion. Repeated captured reads/ACKs may resolve a lost reply, never
+repeat source issue, import or unlink. Only the actual job's positively bound
+cancelled/failed empty phase authorizes known-empty retirement. Unknown effects
+retain actual owners/resources; no adoption, recursive unknown cleanup or credit.
+
+Focused tests include lost replies, held policy/host withdrawal, concurrent polls
+and cancellation, protected capacity/history, source-worker exit and corruption
+or foreign storage returns. A mandatory actual owned Python producer-to-Node
+Task/storage journey uses synthetic bytes. Existing storage remains cooperative;
+no native hostile-writer fence, atomic no-replace or crash/restart durability is
+claimed. Original actor/plan approval, Model registration, public/actual-host and
+model qualification remain separate. Accepted accuracy tests remain closed.
+
 ## Captured private Model source jobs
 
 Protect exact source selection, workspace, original worker and retained receiver

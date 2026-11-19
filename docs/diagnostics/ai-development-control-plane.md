@@ -2654,3 +2654,14 @@ producer case. New session source/test paths automatically select that worker
 profile; a normal Node-only run still needs no Python installation. Scoped
 progress and transport tests supply no public plan, persistent Model save,
 native/restart, model accuracy, parent increment or whole-software pass.
+
+The same exact Model checks now include internal approved-source acquisition,
+Task custody, existing storage, known-empty terminal retirement and their strict
+types. The existing-runtime profile retains ordinary foundation/registry/router
+regressions. New acquisition source/test paths also select the mandatory actual
+producer profile, whose exact Node case now runs a second real Python source job
+through the existing Task registry and storage adapter. Synthetic bytes are not
+loadable model weights or app-host qualification. Shared Model port-barrel edits
+alone and unknown files still retain generic fallback; they cannot borrow this
+specific worker profile. Keep original actor/plan/registration, native/model and
+parent/final gaps distinct from this private integration.

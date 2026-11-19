@@ -7,6 +7,9 @@ import {tmpdir} from "node:os";
 import path from "node:path";
 import test, {type TestContext} from "node:test";
 import {readModelDownloadSource} from "../../../../contracts/model";
+import {createWorkspaceId} from "../../../../contracts/workspace";
+import {createLocalGeneratedModelStorageAdapter} from "../../../model/local";
+import {createPythonRuntimeTaskRegistryAdapter} from "../createPythonRuntimeTaskRegistryAdapter";
 import {prepareModelSourceRecipient, type ModelSourceRecipient, type ModelSourceRecipientOptions} from "../client/modelSourceRecipient";
 import {createPythonRuntimeHttpClient} from "../client/createPythonRuntimeHttpClient";
 import {captureManifestExpectation} from "../client/modelDownloadManifest";
@@ -211,6 +214,28 @@ test("actual owned Python Task and Handoff producer interoperate through full di
   await owner.retire();
   const settled = await task.acknowledge("receiver-settled");
   assert.equal(settled.phase, "released"); assert.equal(owner.cleanupPending, false);
+  assert.deepEqual(await readdir(path.join(cacheRoot, ".aisb-model-source-transfers")), []);
+  // A second actual producer job reaches the existing product Task owner and
+  // storage adapter. Neither source bytes nor a completed Task are seeded.
+  const registry = createPythonRuntimeTaskRegistryAdapter(client, {async ensureRuntimeReadyWithoutInstalling() {},
+    modelSource: {cacheRoot, captureSession: () => client.captureModelSourceTaskSession(),
+      storage: createLocalGeneratedModelStorageAdapter({env: {HF_HUB_CACHE: cacheRoot}, maximumSourceBytes: 4096, maximumSourceFiles: 16})}});
+  const acquisitionTask = "22222222-2222-4222-8222-222222222222";
+  assert.equal((await registry.startApprovedModelSource({requestId: acquisitionTask,
+    workspaceId: createWorkspaceId("workspace.actual-source-acquisition"), sourceManifest: selected,
+    maximumDurationSeconds: 10, allowedOrigins: ["https://huggingface.co"]},
+    {isCurrent: () => !ended, stillAllowed: async () => true})).kind, "accepted");
+  const storageDeadline = Date.now() + 8000;
+  let acquisition = await registry.getTaskStatus(acquisitionTask);
+  while (["queued", "running"].includes(acquisition.status) && Date.now() < storageDeadline) {
+    await new Promise(resolve => setTimeout(resolve, 10)); acquisition = await registry.getTaskStatus(acquisitionTask);
+  }
+  assert.equal(acquisition.status, "succeeded");
+  assert.doesNotMatch(JSON.stringify(acquisition), /localPath|acquisitionId|sourceTransfer|receipt_digest/);
+  const persisted = await registry.readCompletedModelDownload(acquisitionTask);
+  assert.equal(persisted?.revision, selected.source.revision); assert.equal(persisted?.verifiedManifestDigest, selected.manifestDigest);
+  assert.equal(persisted?.localPath, path.join(cacheRoot, "models--fixture--model", "snapshots", selected.source.revision));
+  for (const file of selected.source.files) assert.equal((await lstat(path.join(persisted!.localPath, file.path))).size, file.sizeBytes);
   assert.deepEqual(await readdir(path.join(cacheRoot, ".aisb-model-source-transfers")), []);
 });
 

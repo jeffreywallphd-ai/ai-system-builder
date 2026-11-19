@@ -1,5 +1,29 @@
 # Runtime Model
 
+The internal approved-source application port is separate from generic runtime
+task JSON. Its configured adapter uses explicit installed-only preparation and
+the existing accepted Model Task entry for one controller/receiver. Trusted
+callbacks retain original host/business scope; they do not supply user consent.
+Reserve ownership before effects. The foundation's existing tracker retains one
+unsettled source acquisition across sibling recovery and actual worker exit.
+Protected history cannot be evicted; capacity refusal precedes new effects.
+Ordinary starts reserve their original tracker before POST and compare it before
+late ACK publication. Terminal-cache rotation cannot let an old ACK replace a
+new source owner. Direct business checks precede storage invocation and final
+completion; a final denial withholds completion without reopening known cleanup.
+
+Keep worker transfer success distinct from persistent completion. Verify the
+closed receiver receipt and actual sender unlink transition, consume storage
+once under original policy, and reverify the exact repository/pin destination,
+inventory, bounded hashes and original file identities. The existing storage
+adapter retains cooperative publication semantics; no native no-replace/fence or
+restart proof is inferred. Publish a private completed download only after known
+Node cleanup and exact receiver settlement. Lost captured reads/ACKs may observe
+saved state, never repeat download/import/unlink. Only an original job's positively
+bound cancelled/failed empty phase can authorize known-empty receiver retirement.
+Unknown effects retain ownership and cannot be adopted or retried. Public plan
+admission, Model registration and actual app/model qualification remain separate.
+
 The private Model source session captures one already-owned healthy worker and
 all five exact capabilities. It pairs only with a receiver prepared under its
 original probe callbacks; private class fields derive the frozen issue once.
@@ -31,9 +55,9 @@ across phases; only proven paired link-count/ctime changes are allowed. Reserve
 consumer/IO lifetime before callbacks. Known receiver/proof cleanup is separate
 from business consent; uncertain IO retains custody and cannot be retried.
 Capturing a probe requires an already owned healthy capable worker and never
-starts/installs one. The controlled HTTP-to-ASGI journey qualifies this private
-protocol, not Desktop/Managed composition, physical locality, native fencing,
-durable restart, public admission or persistent Model publication.
+starts/installs one. The controlled HTTP-to-ASGI journey also exercises the
+private Task/storage integration above, not Desktop/Managed composition, physical
+locality, native fencing, durable restart, public admission or Model registration.
 
 The private source-transfer capability composes the paired-link primitives with
 the existing authenticated async Task registry. Capture strict selection and
@@ -47,8 +71,8 @@ without repeated effects; late callbacks cannot write into a reused record.
 Keep file IO outside registry locks and policy callbacks outside control locks.
 Bounded private routes require the existing launch token; that host credential
 is not actor/plan approval. Generic Node Model requests cannot supply this
-reserved profile. Node creation/import, public admission and actual model/host
-qualification remain separate.
+reserved profile. Public admission/registration and actual model/host qualification
+remain separate from the private Node Task/import composition above.
 
 Private source handoff reuses exclusive hardlink publication semantics instead
 of assuming a portable no-replace directory rename. It reserves one source
@@ -59,7 +83,7 @@ receipt; its serialization is not receiver acknowledgement. A separately trusted
 host observation permits only known source-name unlink with proven link-count
 transition. Uncertainty retains remaining names/custody, not retry authority.
 Ordinary single-link cleanup is unchanged. The local primitive itself does not
-compose a worker-task ACK channel; the owner above does so. Node ownership,
+compose a worker-task ACK channel; the owner above does so. Native Node custody,
 durable restart and persistent Model registration remain explicit work.
 
 Private source staging composes selected-file streaming into context-scoped

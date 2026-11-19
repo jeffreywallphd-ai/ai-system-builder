@@ -138,14 +138,19 @@ export class ModelSourceRecipient {
       revision: selected.source.revision, manifestDigest: selected.manifestDigest});
   }
   /** Private runtime transport only; this is not an actor or scoped-plan grant. */
-  static async takeTaskRequest(value: unknown, workspaceId: string, probe: ModelSourceIdentityProbe) {
+  static assertPreparedSession(value: unknown, workspaceId: string, probe: ModelSourceIdentityProbe): void {
     const owner = ModelSourceRecipient.#captured(value);
-    if (!isWorkspaceId(workspaceId)) throw invalid();
+    if (!isWorkspaceId(workspaceId) || owner.#phase !== "prepared") throw invalid();
     const expected = readStrictPassiveRecord(probe, ["runtimeId", "workerStartedAt", "assertCurrent", "inspect"]);
     const captured = owner.#options.identityProbe;
     if (Object.keys(expected).length !== 4 || expected.runtimeId !== captured.runtimeId ||
         expected.workerStartedAt !== captured.workerStartedAt || expected.assertCurrent !== captured.assertCurrent ||
         expected.inspect !== captured.inspect) throw invalid();
+    owner.assertCurrent();
+  }
+  static async takeTaskRequest(value: unknown, workspaceId: string, probe: ModelSourceIdentityProbe) {
+    ModelSourceRecipient.assertPreparedSession(value, workspaceId, probe);
+    const owner = ModelSourceRecipient.#captured(value);
     return owner.#exclusive("prepared", async () => {
       if (await owner.#options.isBusinessAllowed() !== true) throw invalid();
       owner.assertCurrent();
@@ -174,6 +179,18 @@ export class ModelSourceRecipient {
       };
       assertIssued();
       const result = await send(assertIssued); assertIssued(); return result;
+    });
+  }
+  /** The captured job supplies this guard after its own exact terminal read. */
+  static async retireTerminalEmpty(value: unknown, assertTerminal: () => void): Promise<void> {
+    const owner = ModelSourceRecipient.#captured(value);
+    return owner.#exclusive("issued", async () => {
+      assertTerminal(); owner.assertCurrent();
+      await owner.#checkRoots(); await owner.#names(owner.#root, ["source", "receiver"]);
+      await owner.#names(owner.#source, []); await owner.#names(owner.#receiver, []);
+      await owner.#probe("roots"); assertTerminal(); owner.assertCurrent();
+      await owner.#retireDirectories(); await owner.#retireProof();
+      assertTerminal(); owner.assertCurrent(); owner.#phase = "settled";
     });
   }
   get diagnosticStage(): string {return this.#diagnosticStage;}

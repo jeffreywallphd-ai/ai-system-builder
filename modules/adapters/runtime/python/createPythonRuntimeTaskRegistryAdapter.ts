@@ -3,6 +3,8 @@ import type { PythonRuntimePort } from "../../../application/ports/runtime";
 import type {
   CompletedModelDownload,
   ModelDownloadCompletionPort,
+  ApprovedModelSourceDownloadPort,
+  GeneratedModelStoragePort,
 } from "../../../application/ports/model";
 import { randomUUID } from "node:crypto";
 import { types } from "node:util";
@@ -23,6 +25,8 @@ import { TaskType } from "../../../contracts/runtime";
 import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPolicy";
 import {copyBoundedPassiveData} from "../../../contracts/shared";
 import {captureModelManifestPayload, freezeCapturedModelData, type RuntimeModelDownloadManifest} from "./client/modelDownloadManifest";
+import {captureApprovedModelSourceRequest, captureModelSourceControl, createModelSourceAcquisition, type ModelSourceAcquisition} from "./client/modelSourceAcquisition";
+import type {ModelSourceTaskSession} from "./client/modelSourceTaskSession";
 
 const downloadIdentityError = "Model download status did not match its accepted task.";
 const downloadCancellationIdentityError = "Model download cancellation did not match its accepted task.";
@@ -172,6 +176,8 @@ function mapProgress(
 }
 
 export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
+  /** Trusted composition only; no default, installer or generic-task fallback. */
+  modelSource?: {readonly cacheRoot: string; readonly captureSession: () => Promise<ModelSourceTaskSession>; readonly storage: GeneratedModelStoragePort};
   /** Explicit noninstalling preparation; no fallback to ensureRuntimeReady. */
   ensureRuntimeReadyWithoutInstalling?: (request: StartRuntimeTaskRequest) => Promise<void>;
   ensureRuntimeReady?: (
@@ -183,7 +189,7 @@ export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
 }
 
 export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
-  ModelDownloadCompletionPort;
+  ModelDownloadCompletionPort & ApprovedModelSourceDownloadPort;
 
 function snapshotInstalledContextRequest(raw: StartRuntimeTaskRequest): StartRuntimeTaskRequest {
   let nodes = 0, bytes = 0;
@@ -234,9 +240,12 @@ export function createPythonRuntimeTaskRegistryAdapter(
   options: CreatePythonRuntimeTaskRegistryAdapterOptions = {},
 ): PythonRuntimeTaskRegistryAdapter {
   const ensureWithoutInstalling = options.ensureRuntimeReadyWithoutInstalling;
+  const sourceOptions = options.modelSource ? Object.freeze({...options.modelSource,
+    storage: Object.freeze({storeGeneratedModel: options.modelSource.storage.storeGeneratedModel.bind(options.modelSource.storage)})}) : undefined;
   const trackedTasks = new Map<string, RuntimeTaskRecord>();
   // Status records are replaceable. This owner identifies one accepted start.
-  const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId; readonly sourceManifest?: RuntimeModelDownloadManifest }>();
+  const acceptedModelDownloads = new Map<string, {readonly workspaceId: WorkspaceId; readonly sourceManifest?: RuntimeModelDownloadManifest;
+    sourcePreparing?: boolean; source?: ModelSourceAcquisition}>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
   const preparingTasks = new Set<string>();
   const installedContextIds = new Set<string>();
@@ -249,6 +258,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
     trackedTasks.get(requestId)?.taskType === TaskType.MODEL_TRAINING ||
     pendingStarts.get(requestId)?.taskType === TaskType.MODEL_TRAINING;
   const maximumTrackedTasks = 256;
+  const protectedSourceCount = () => [...acceptedModelDownloads.values()].filter(value => value.sourcePreparing || value.source?.retainsCustody).length;
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
     const owner = acceptedModelDownloads.get(record.requestId);
     if (owner && (record.taskType !== TaskType.MODEL_DOWNLOAD || record.workspaceId !== owner.workspaceId)) {
@@ -257,7 +267,10 @@ export function createPythonRuntimeTaskRegistryAdapter(
     trackedTasks.delete(record.requestId);
     trackedTasks.set(record.requestId, record);
     while (trackedTasks.size > maximumTrackedTasks) {
-      const oldest = trackedTasks.keys().next().value;
+      const oldest = [...trackedTasks.keys()].find(id => {
+        const owner = acceptedModelDownloads.get(id);
+        return !owner?.sourcePreparing && !owner?.source?.retainsCustody;
+      });
       if (typeof oldest !== "string") break;
       trackedTasks.delete(oldest);
       acceptedModelDownloads.delete(oldest);
@@ -267,6 +280,52 @@ export function createPythonRuntimeTaskRegistryAdapter(
   };
 
   const adapter: PythonRuntimeTaskRegistryAdapter = {
+    async startApprovedModelSource(raw, rawControl) {
+      let request, control;
+      try {request = captureApprovedModelSourceRequest(raw); control = captureModelSourceControl(rawControl);}
+      catch {return {kind: "unavailable"};}
+      if (!sourceOptions || !ensureWithoutInstalling || protectedSourceCount() + pendingStarts.size >= maximumTrackedTasks || trackedTasks.has(request.requestId) || pendingStarts.has(request.requestId) ||
+          acceptedModelDownloads.has(request.requestId) || installedContextIds.has(request.requestId)) return {kind: "unavailable"};
+      // Only terminal custody-free history can make room for this new admission.
+      if (trackedTasks.size >= maximumTrackedTasks || acceptedModelDownloads.size >= maximumTrackedTasks) {
+        const removable = [...trackedTasks].find(([id, record]) => ["succeeded", "failed", "cancelled"].includes(record.status) &&
+          !acceptedModelDownloads.get(id)?.sourcePreparing && !acceptedModelDownloads.get(id)?.source?.retainsCustody)?.[0];
+        if (!removable) return {kind: "unavailable"};
+        trackedTasks.delete(removable); acceptedModelDownloads.delete(removable); completedDownloads.delete(removable);
+      }
+      const entry: {readonly workspaceId: WorkspaceId; readonly sourceManifest: RuntimeModelDownloadManifest;
+        sourcePreparing?: boolean; source?: ModelSourceAcquisition} = {workspaceId: request.workspaceId, sourceManifest: request.sourceManifest, sourcePreparing: true};
+      acceptedModelDownloads.set(request.requestId, entry);
+      rememberTask({requestId: request.requestId, workspaceId: request.workspaceId, taskType: TaskType.MODEL_DOWNLOAD,
+        status: "queued", concurrencyClass: "io", queuedAt: new Date().toISOString()});
+      const current = () => {
+        const value: unknown = control.isCurrent();
+        if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+        if (value !== true || acceptedModelDownloads.get(request.requestId) !== entry) throw new Error(downloadIdentityError);
+        return true;
+      };
+      try {
+        current(); if (await control.stillAllowed() !== true) throw new Error(downloadIdentityError); current();
+        await ensureWithoutInstalling({requestId: request.requestId, workspaceId: request.workspaceId, taskType: TaskType.MODEL_DOWNLOAD,
+          concurrencyClass: "io", payload: {provider: "transformers", modelId: request.sourceManifest.source.modelId, revision: request.sourceManifest.source.revision}});
+        current(); if (await control.stillAllowed() !== true) throw new Error(downloadIdentityError); current();
+        const session = await sourceOptions.captureSession(); current();
+        entry.source = createModelSourceAcquisition({request, control: {isCurrent: current, stillAllowed: control.stillAllowed},
+          cacheRoot: sourceOptions.cacheRoot, session, storage: sourceOptions.storage});
+        entry.sourcePreparing = false;
+        const result = await entry.source.start(); current();
+        if (result.kind === "unavailable" && !entry.source.retainsCustody) {
+          acceptedModelDownloads.delete(request.requestId); trackedTasks.delete(request.requestId); return result;
+        }
+        rememberTask(entry.source.peek()); current(); return result;
+      } catch {
+        if (entry.source?.retainsCustody) {entry.sourcePreparing = false; return {kind: "unconfirmed"};}
+        if (acceptedModelDownloads.get(request.requestId) === entry) {
+          acceptedModelDownloads.delete(request.requestId); trackedTasks.delete(request.requestId);
+        }
+        return {kind: "unavailable"};
+      }
+    },
     async startTaskWithoutInstalling(rawRequest) {
       // Snapshot before any await or preparation. This is an internal transport
       // restriction, not approval of the application command or local model.
@@ -275,7 +334,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const requestId = request.requestId!;
       const startInstalledTask = runtimePort.startTaskWithoutInstalling?.bind(runtimePort);
       if (!ensureWithoutInstalling || !startInstalledTask || trackedTasks.has(requestId) || pendingStarts.has(requestId) || installedContextIds.has(requestId) ||
-          pendingStarts.size >= maximumTrackedTasks || installedContextIds.size >= maximumTrackedTasks) return {kind: "unavailable"};
+          pendingStarts.size + protectedSourceCount() >= maximumTrackedTasks || installedContextIds.size >= maximumTrackedTasks) return {kind: "unavailable"};
       const admission = {taskType: request.taskType};
       pendingStarts.set(requestId, admission);
       try { await ensureWithoutInstalling(request); }
@@ -321,7 +380,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
         throw new Error(trainingStartIdentityError);
       }
       if (acceptedModelDownloads.has(requestId) || pendingStarts.has(requestId)) throw new Error(downloadIdentityError);
-      if (pendingStarts.size >= maximumTrackedTasks) throw new Error("Python runtime task admission is at capacity.");
+      if (pendingStarts.size + protectedSourceCount() >= maximumTrackedTasks) throw new Error("Python runtime task admission is at capacity.");
       const pythonTaskType = toPythonTaskType(taskType);
       const modelDownload = taskType === TaskType.MODEL_DOWNLOAD;
       const isContextTask =
@@ -474,6 +533,14 @@ export function createPythonRuntimeTaskRegistryAdapter(
       return result;
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
+      const source = acceptedModelDownloads.get(requestId);
+      if (source?.sourcePreparing) return {...trackedTasks.get(requestId)!};
+      if (source?.source) {
+        const record = await source.source.read();
+        if (acceptedModelDownloads.get(requestId) !== source) throw new Error(downloadIdentityError);
+        const completed = source.source.completed(); if (completed) completedDownloads.set(requestId, completed);
+        return rememberTask(record);
+      }
       const preparing = trackedTasks.get(requestId);
       if (preparingTasks.has(requestId) && preparing) return preparing;
       const downloadOwner = acceptedModelDownloads.get(requestId);
@@ -559,6 +626,13 @@ export function createPythonRuntimeTaskRegistryAdapter(
       });
     },
     async cancelTask(requestId: string): Promise<CancelRuntimeTaskResult> {
+      const source = acceptedModelDownloads.get(requestId);
+      if (source?.sourcePreparing) return {requestId, status: "queued", cancelled: false};
+      if (source?.source) {
+        const result = await source.source.cancel();
+        if (acceptedModelDownloads.get(requestId) !== source) throw new Error(downloadCancellationIdentityError);
+        rememberTask(result.record); return {requestId, status: result.record.status, cancelled: result.cancelled};
+      }
       const downloadOwner = acceptedModelDownloads.get(requestId);
       const wasDownload = isModelDownloadId(requestId);
       if (wasDownload && !downloadOwner) throw new Error(downloadCancellationIdentityError);

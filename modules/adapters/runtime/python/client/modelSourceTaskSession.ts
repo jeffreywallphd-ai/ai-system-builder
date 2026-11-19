@@ -20,6 +20,8 @@ export interface CapturedModelSourceTask {
   read(): Promise<ModelSourceTaskStatus>;
   acknowledge(phase: "receiver-observed" | "receiver-settled"): Promise<ModelSourceTaskStatus>;
   cancel(): Promise<{readonly cancelled: boolean; readonly source: ModelSourceTaskStatus}>;
+  /** Only this captured job can establish a positively terminal empty receiver. */
+  retireEmptyReceiver(): Promise<void>;
 }
 export interface ModelSourceTaskSession {
   readonly identityProbe: ModelSourceIdentityProbe;
@@ -90,6 +92,13 @@ export function createCapturedModelSourceTaskSession(identityProbe: ModelSourceI
     const base = "/tasks/" + binding.taskId + "/model-source";
     const parse = (raw: unknown) => sourceStatus(raw, binding, bytes, files);
     const task: CapturedModelSourceTask = Object.freeze({requestId: binding.taskId, workspaceId, binding,
+      async retireEmptyReceiver() {
+        current(); const reply = await request(base); if (!reply.ok) throw fail();
+        const terminal = parse(reply.payload);
+        if (!["cancelled", "failed"].includes(terminal.phase) || terminal.cleanupPending ||
+            terminal.receiverSettlementPending || terminal.receipt || terminal.startAcknowledgementUnconfirmed) throw fail();
+        await ModelSourceRecipient.retireTerminalEmpty(receiver, current); current();
+      },
       async read() {
         try {const reply = await request(base); if (!reply.ok) throw fail(); return parse(reply.payload);} catch {throw fail();}
       },

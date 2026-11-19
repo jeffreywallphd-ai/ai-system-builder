@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
+import {ModelSourceRecipient} from "./client/modelSourceRecipient";
+import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
 import { normalizePythonRuntimeLoopbackBaseUrl, resolvePythonRuntimeLoopbackEndpoint } from "./config/pythonRuntimeEndpoint";
 import type {
   CancelPythonRuntimeTaskResult,
@@ -38,6 +40,8 @@ export interface PythonRuntimeAdapterFoundation {
   supervisor: PythonRuntimeSupervisor;
   /** Trusted host composition, once only. It can add a guard, never replace it. */
   bindHostAdmission(assertAccepting: () => void): void;
+  /** Trusted host-only source channel; never generic application task JSON. */
+  captureModelSourceTaskSession(): Promise<ModelSourceTaskSession>;
 }
 
 export function createPythonRuntimeAdapterFoundation(
@@ -93,7 +97,7 @@ export function createPythonRuntimeAdapterFoundation(
   });
   const trackedTasks = new Map<
     string,
-    { taskType: string; deadline: number }
+    { taskType: string; deadline: number; sourceReceiver?: ModelSourceRecipient }
   >();
   // A disconnected POST can already have started non-cancellable Dataset work.
   // Retain only identity/lifecycle facts, never request payloads, until proven done.
@@ -185,7 +189,8 @@ export function createPythonRuntimeAdapterFoundation(
       if (event.type === "process-exit") {
         ownedExitEpoch++;
         for (const [requestId, tracked] of trackedTasks) {
-          rememberOwnedExit(requestId, tracked.taskType);
+          if (tracked.sourceReceiver) tracked.sourceReceiver.retainUncertainty();
+          else rememberOwnedExit(requestId, tracked.taskType);
         }
         for (const requestId of datasetAdmissions.keys()) {
           if (!terminalOverrides.has(requestId)) {
@@ -197,7 +202,7 @@ export function createPythonRuntimeAdapterFoundation(
         }
         datasetAdmissions.clear();
         installedContextAdmissions.clear();
-        trackedTasks.clear();
+        for (const [requestId, tracked] of trackedTasks) if (!tracked.sourceReceiver) trackedTasks.delete(requestId);
         recoveryUncertain = false;
       }
       if (event.type === "health-ready") recoveryUncertain = false;
@@ -226,7 +231,7 @@ export function createPythonRuntimeAdapterFoundation(
     targetRequestId: string | undefined,
     targetStatus: "cancelled" | "failed",
   ) => {
-    if (datasetAdmissions.size) return false;
+    if (datasetAdmissions.size || [...trackedTasks.values()].some(value => value.sourceReceiver)) return false;
     if (recoveryInFlight) return recoveryInFlight;
     if (recoveryUncertain) throw new Error("Python runtime recovery has not been confirmed.");
     const recoveringTasks = [...trackedTasks];
@@ -326,6 +331,10 @@ export function createPythonRuntimeAdapterFoundation(
         }
         datasetAdmissions.set(request.requestId, admission);
       }
+      // Reserve the original existing tracker before POST. A held ordinary ACK
+      // must neither admit a same-ID source nor replace a later original owner.
+      const tracker = {taskType: request.taskType, deadline: Date.now() + boundedTaskTimeout(request)};
+      trackedTasks.set(request.requestId, tracker);
       try {
         const result = await client.startTask(request);
         assertReplyIdentity(request.requestId, result, request.taskType);
@@ -334,8 +343,8 @@ export function createPythonRuntimeAdapterFoundation(
             (result.status !== "queued" && result.status !== "running")))
           throw new Error("Installed-only Python task acceptance was not confirmed.");
         if (admissionEpoch !== ownedExitEpoch) {
-          if (!terminalOverrides.has(request.requestId)) rememberOwnedExit(request.requestId, request.taskType);
-        } else if ((admission && datasetAdmissions.get(request.requestId) !== admission) ||
+          if (!trackedTasks.has(request.requestId) && !terminalOverrides.has(request.requestId)) rememberOwnedExit(request.requestId, request.taskType);
+        } else if (trackedTasks.get(request.requestId) !== tracker || (admission && datasetAdmissions.get(request.requestId) !== admission) ||
                    (installedAdmission && installedContextAdmissions.get(request.requestId) !== installedAdmission)) {
           // An exact terminal read/cancellation can beat the POST acknowledgement.
           return result;
@@ -343,18 +352,19 @@ export function createPythonRuntimeAdapterFoundation(
           if (admission) admission.phase = "accepted";
           if (installedAdmission) installedAdmission.phase = "accepted";
           terminalOverrides.delete(request.requestId);
-          trackedTasks.set(request.requestId, {
-            taskType: request.taskType,
-            deadline: Date.now() + boundedTaskTimeout(request),
-          });
+          trackedTasks.set(request.requestId, tracker);
         }
         return result;
       } catch (error) {
-        if (admissionEpoch !== ownedExitEpoch && !terminalOverrides.has(request.requestId)) {
+        if (admissionEpoch !== ownedExitEpoch && !trackedTasks.has(request.requestId) && !terminalOverrides.has(request.requestId)) {
           rememberOwnedExit(request.requestId, request.taskType);
         }
         if (admission && datasetAdmissions.get(request.requestId) === admission) admission.phase = "uncertain";
         if (installedAdmission && installedContextAdmissions.get(request.requestId) === installedAdmission) installedAdmission.phase = "uncertain";
+        // Preserve the established ordinary failed-start policy. This frame has
+        // finished; it may remove only its own reservation, never a replacement.
+        // Dataset/installed-only unknown admissions keep their existing guards.
+        if (!admission && !installedAdmission && trackedTasks.get(request.requestId) === tracker) trackedTasks.delete(request.requestId);
         throw error;
       }
   };
@@ -364,6 +374,7 @@ export function createPythonRuntimeAdapterFoundation(
     startTaskWithoutInstalling: typeof supervisorInputs.verifyRuntimeEnvironment === "function"
       ? request => startTask(request, true) : undefined,
     readTaskStatus: async (requestId) => {
+      if (trackedTasks.get(requestId)?.sourceReceiver) throw new Error("Use the captured model source job to read its status.");
       const override = terminalOverrides.get(requestId);
       if (override) return override;
       const tracked = trackedTasks.get(requestId);
@@ -410,6 +421,7 @@ export function createPythonRuntimeAdapterFoundation(
       return status;
     },
     cancelTask: async (requestId): Promise<CancelPythonRuntimeTaskResult> => {
+      if (trackedTasks.get(requestId)?.sourceReceiver) throw new Error("Use the captured model source job to request cancellation.");
       const override = terminalOverrides.get(requestId);
       if (override) {
         return {
@@ -508,5 +520,42 @@ export function createPythonRuntimeAdapterFoundation(
     runtimePort,
     supervisor,
     bindHostAdmission,
+    async captureModelSourceTaskSession() {
+      if (!hostAdmission) throw new Error("Model source host admission is unavailable.");
+      assertHostAccepting(); assertAdmissionAvailable();
+      const original = await client.captureModelSourceTaskSession();
+      assertHostAccepting(); assertAdmissionAvailable(); original.identityProbe.assertCurrent();
+      return Object.freeze({identityProbe: original.identityProbe, async start(receiver: unknown, workspaceId: string) {
+        assertHostAccepting(); assertAdmissionAvailable(); original.identityProbe.assertCurrent();
+        ModelSourceRecipient.assertPreparedSession(receiver, workspaceId, original.identityProbe);
+        const binding = ModelSourceRecipient.capturedBinding(receiver);
+        if (trackedTasks.has(binding.taskId) || terminalOverrides.has(binding.taskId) || datasetAdmissions.has(binding.taskId) ||
+            installedContextAdmissions.has(binding.taskId) || [...trackedTasks.values()].some(value => value.sourceReceiver) ||
+            trackedTasks.size >= maximumDatasetAdmissions) throw new Error("Model source custody must be settled before another acquisition.");
+        const sourceReceiver = receiver as ModelSourceRecipient;
+        const retained = {taskType: "ensure-model-download", deadline: Date.now() + sourceReceiver.transfer.maximumDurationSeconds * 1000, sourceReceiver};
+        trackedTasks.set(binding.taskId, retained);
+        // Preserve this original owner even after an unknown POST or actual worker exit.
+        const started = await original.start(receiver, workspaceId);
+        if (started.kind !== "accepted") return started;
+        let settled = false;
+        const release = () => {
+          original.identityProbe.assertCurrent();
+          if (settled) return;
+          if (trackedTasks.get(binding.taskId) !== retained || retained.sourceReceiver.phase !== "settled")
+            throw new Error("Model source custody could not be settled.");
+          trackedTasks.delete(binding.taskId); settled = true;
+        };
+        const task: CapturedModelSourceTask = Object.freeze({...started.task,
+          async acknowledge(phase: "receiver-observed" | "receiver-settled") {
+            const reply = await started.task.acknowledge(phase);
+            if (phase === "receiver-settled" && reply.phase === "released") release();
+            return reply;
+          },
+          async retireEmptyReceiver() {await started.task.retireEmptyReceiver(); release();},
+        });
+        return {kind: "accepted" as const, task};
+      }});
+    },
   };
 }
