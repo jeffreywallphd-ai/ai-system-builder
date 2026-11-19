@@ -1,3 +1,14 @@
+The fixed Model owner unit/type checks also cover optional revision propagation
+through the existing download lifecycle and its HTTP client. The bounded
+`headless-context-model-worker` command adds only the controlled revision class
+beside its existing Context schema/generation fixtures. These tests import the
+worker without loading a model; the controlled provider returns disposable
+synthetic directories. Use an existing qualified worker Python for its installed
+schema dependencies and the existing pinned test tools. Source selection is not
+weight, supplier, license, hardware or actual-app qualification. Exact borrowed
+source coverage never suppresses unknown impact or an explicitly requested
+generic check.
+
 The fixed `headless-model-metadata-owner-unit` check also covers public Model
 metadata composition in both host readers. Its strict companion includes those
 readers, the pinned document factory and synchronous currentness helper. Related

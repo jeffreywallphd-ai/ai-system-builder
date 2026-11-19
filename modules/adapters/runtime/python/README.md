@@ -1,5 +1,20 @@
 # Python runtime adapter
 
+The existing model-download request supports an optional exact repository commit
+through `revision`. The client captures pinned input before transport awaits and
+requires the worker to confirm the same model/revision.
+Before either download path dispatches a pinned task, the shared client requires
+`ensure-model-download.exact-revision-v1` from the same current worker. Missing
+support denies before acquisition. Pinned targets survive this capability await.
+The worker passes the requested revision to cache lookup and acquisition,
+validates the exact repository
+snapshot location and returns a revision only after confirmation. A substituted
+snapshot denies with a fixed non-retryable error; it cannot trigger floating
+fallback, cache deletion, hidden retry or replacement of an unpinned alias.
+Unpinned wire fields and ordinary cache/transfer behavior remain compatible.
+Existing byte/file/format guards remain authoritative. These are source-selection
+controls; they are not immutable-byte, license, model/runtime or native proof.
+
 The private admitted Context query can notify its exact cleanup observer only
 after the existing owner removes staging. The callback is copied with admission,
 is optional for existing callers and runs at most once. Cleanup failure sends

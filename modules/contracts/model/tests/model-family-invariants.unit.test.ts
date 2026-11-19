@@ -32,6 +32,7 @@ describe("model family invariants", () => {
       "normalizeModelBrowseItem",
       "normalizeModelBrowseProvider",
       "normalizeModelDetails",
+      "normalizeModelDownloadRevision",
       "normalizeModelDownloadTaskIdentity",
       "normalizeModelInferenceMode",
       "normalizeModelInventoryRecord",

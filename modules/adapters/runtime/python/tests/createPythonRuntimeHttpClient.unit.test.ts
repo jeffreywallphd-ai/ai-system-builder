@@ -49,7 +49,7 @@ describe("captured runtime HTTP ownership", () => {
       captureProcessOwnership() {const captured = incarnation; return () => {
         if (captured !== incarnation) throw new Error("Synthetic ownership changed.");
       };},
-      fetchImplementation: (async (url, init) => {
+      fetchImplementation: (async (url: unknown, init?: RequestInit) => {
         if (String(url).endsWith("/tasks/start")) {
           posted++; requestId = JSON.parse(String(init?.body)).requestId;
           return {ok: true, status: 200, json: async () => ({requestId, taskType: "ensure-model-download", accepted: true, status: "queued"})};
@@ -163,6 +163,96 @@ describe("createPythonRuntimeHttpClient", () => {
     expect(
       "executeTask" in (client as unknown as Record<string, unknown>),
     ).toBe(false);
+  });
+
+  it("captures pinned targets before a held dispatch and requires exact worker confirmation", async () => {
+    const revision = "a".repeat(40);
+    const modelCacheRoot = await mkdtemp(path.join(tmpdir(), "aisb-python-pinned-cache-"));
+    const modelHandle = `models--fixture--model/snapshots/${revision}`;
+    await mkdir(path.join(modelCacheRoot, ...modelHandle.split("/")), {recursive: true});
+    try {
+      for (const [observed, modelId] of [[undefined, "fixture/model"], ["b".repeat(40), "fixture/model"],
+        [revision, "fixture/model"], [revision, "fixture/foreign"], ["main", "fixture/model"]] as const) {
+        let sent!: () => void, release!: () => void;
+        const started = new Promise<void>(resolve => {sent = resolve;});
+        const held = new Promise<void>(resolve => {release = resolve;});
+        let requestId = "";
+        const fetcher = testDouble.fn(async (_url: unknown, options?: RequestInit) => {
+          if (String(_url).endsWith("/capabilities")) return {ok: true, status: 200,
+            json: async () => ({runtimeId: "synthetic-runtime", capabilities: ["ensure-model-download.exact-revision-v1"]})};
+          const body = options?.body ? JSON.parse(String(options.body)) : undefined;
+          if (body) {
+            expect(body.payload.modelId).toBe("fixture/model");
+            expect(body.payload.revision).toBe(revision);
+            requestId = body.requestId;
+            sent(); await held;
+            return {ok: true, status: 200, json: async () => ({requestId, taskType: "ensure-model-download", accepted: true, status: "queued"})};
+          }
+          return {ok: true, status: 200, json: async () => ({requestId, taskType: "ensure-model-download", status: "succeeded",
+            data: {provider: "transformers", modelId, downloaded: false, fromCache: true, modelHandle,
+              ...(observed === undefined ? {} : {revision: observed})}})};
+        });
+        const client = createPythonRuntimeHttpClient({baseUrl: "http://localhost:8000", authorizationToken: RUNTIME_TOKEN,
+          fetchImplementation: fetcher as never, modelDownloadPollIntervalMs: 1, environment: {HF_HUB_CACHE: modelCacheRoot}});
+        const request = {provider: "transformers" as const, modelId: "fixture/model", revision};
+        const pending = client.ensureModelDownloaded(request);
+        await started;
+        request.revision = "c".repeat(40); request.modelId = "fixture/changed";
+        release();
+        if (observed === revision && modelId === "fixture/model") expect((await pending).revision).toBe(revision);
+        else await expect(pending).rejects.toThrow();
+        expect(fetcher).toHaveBeenCalledTimes(3);
+      }
+      const fetcher = testDouble.fn();
+      const client = createPythonRuntimeHttpClient({baseUrl: "http://localhost:8000", authorizationToken: RUNTIME_TOKEN,
+        fetchImplementation: fetcher as never, environment: {HF_HUB_CACHE: modelCacheRoot}});
+      await expect(client.ensureModelDownloaded({provider: "transformers", modelId: "fixture/model", revision: "main"})).rejects.toThrow("exact repository commit");
+      expect(fetcher).not.toHaveBeenCalled();
+    } finally {
+      const relative = path.relative(path.resolve(tmpdir()), path.resolve(modelCacheRoot));
+      if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("Unexpected fixture cleanup target");
+      await rm(modelCacheRoot, {recursive: true, force: true});
+    }
+  });
+
+  it("denies unsupported pinned workers before dispatch and detaches targets across capability waits", async () => {
+    const revision = "a".repeat(40);
+    const unsupported = testDouble.fn(async () => ({ok: true, status: 200,
+      json: async () => ({runtimeId: "synthetic-runtime", capabilities: ["ensure-model-download"]})}));
+    const oldClient = createPythonRuntimeHttpClient({baseUrl: "http://localhost:8000", authorizationToken: RUNTIME_TOKEN,
+      fetchImplementation: unsupported as never});
+    await expect(oldClient.startTask({requestId: "pinned-unsupported", taskType: "ensure-model-download",
+      payload: {provider: "transformers", modelId: "fixture/model", revision}})).rejects.toThrow("unavailable for this worker");
+    expect(unsupported).toHaveBeenCalledTimes(1);
+    expect(String(fetchCalls(unsupported)[0]?.[0])).toContain("/capabilities");
+
+    for (const revoke of [false, true]) {
+      let enter!: () => void, release!: () => void, current = true;
+      const entered = new Promise<void>(resolve => {enter = resolve;});
+      const held = new Promise<void>(resolve => {release = resolve;});
+      const fetcher = testDouble.fn(async (url: unknown, init?: RequestInit) => {
+        if (String(url).endsWith("/capabilities")) return {ok: true, status: 200, json: async () => {
+          enter(); await held;
+          return {runtimeId: "synthetic-runtime", capabilities: ["ensure-model-download.exact-revision-v1"]};
+        }};
+        expect(JSON.parse(String(init?.body))).toMatchObject({requestId: "pinned-original",
+          payload: {modelId: "fixture/model", revision}});
+        return {ok: true, status: 200, json: async () => ({requestId: "pinned-original", taskType: "ensure-model-download", accepted: true, status: "queued"})};
+      });
+      const client = createPythonRuntimeHttpClient({baseUrl: "http://localhost:8000", authorizationToken: RUNTIME_TOKEN,
+        fetchImplementation: fetcher as never, captureProcessOwnership: () => () => {
+          if (!current) throw new Error("Synthetic ownership changed.");
+        }});
+      const request = {requestId: "pinned-original", taskType: "ensure-model-download" as const,
+        payload: {provider: "transformers", modelId: "fixture/model", revision}};
+      const pending = client.startTask(request);
+      const denied = revoke ? expect(pending).rejects.toThrow("ownership changed") : undefined;
+      await entered;
+      request.requestId = "pinned-replaced"; request.payload.revision = "b".repeat(40); request.payload.modelId = "fixture/foreign";
+      current = !revoke; release();
+      if (revoke) {await denied; expect(fetcher).toHaveBeenCalledTimes(1);}
+      else {expect((await pending).requestId).toBe("pinned-original"); expect(fetcher).toHaveBeenCalledTimes(2);}
+    }
   });
 
   it("runs model downloads through async task polling instead of a long request", async () => {

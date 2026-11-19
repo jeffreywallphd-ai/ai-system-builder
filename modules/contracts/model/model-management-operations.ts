@@ -60,6 +60,8 @@ export interface DownloadModelRequest {
   modelRecordId?: string;
   provider: ModelBrowseProvider;
   modelId: string;
+  /** Exact repository commit; absent preserves the ordinary download policy. */
+  revision?: string;
   displayName?: string;
   inferenceMode?: ModelInferenceMode;
   taskTags?: ModelTaskTag[];
@@ -72,6 +74,7 @@ export interface DownloadModelResult {
   download: {
     provider: "transformers";
     modelId: string;
+    revision?: string;
     downloaded: boolean;
     fromCache: boolean;
     localPath: string;
@@ -263,12 +266,21 @@ export function normalizeSaveModelReferenceRequest(request: SaveModelReferenceRe
   };
 }
 
+export function normalizeModelDownloadRevision(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length !== 40 || !/^[a-f0-9]{40}$/.test(value))
+    throw new TypeError("Model download revision must be an exact repository commit.");
+  return value;
+}
+
 export function normalizeDownloadModelRequest(request: DownloadModelRequest): DownloadModelRequest {
+  const revision = normalizeModelDownloadRevision(request.revision);
   return {
     workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeOptionalText(request.modelRecordId),
     provider: normalizeModelBrowseProvider(request.provider),
     modelId: normalizeRequiredText(request.modelId, "modelId"),
+    ...(revision === undefined ? {} : {revision}),
     displayName: normalizeOptionalText(request.displayName),
     inferenceMode: typeof request.inferenceMode === "string" ? normalizeModelInferenceMode(request.inferenceMode) : undefined,
     taskTags: normalizeModelTaskTags(request.taskTags),

@@ -80,6 +80,7 @@ class GenerationModelAvailability:
     from_cache: bool
     local_path: str | None = None
     cache_handle: str | None = None
+    revision: str | None = None
 
 
 class GenerationRuntimeDependencyError(RuntimeError):
@@ -104,6 +105,14 @@ class GenerationModelDownloadInvalidError(RuntimeError):
     error_code = "model_download_invalid_snapshot"
     stage = "generation"
     retryable = True
+
+
+class GenerationModelDownloadRevisionError(RuntimeError):
+    """A requested exact source was not confirmed; retained bytes stay intact."""
+
+    error_code = "model_download_revision_mismatch"
+    stage = "generation"
+    retryable = False
 
 
 class GenerationModelLoadError(RuntimeError):
@@ -629,8 +638,12 @@ def _resolve_snapshot_download_profile(
     return GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE
 
 
-def _snapshot_download_kwargs(profile: HuggingFaceSnapshotDownloadProfile) -> dict[str, Any]:
+def _snapshot_download_kwargs(profile: HuggingFaceSnapshotDownloadProfile, revision: str | None = None) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
+    if revision is not None:
+        if type(revision) is not str or re.fullmatch(r"[a-f0-9]{40}", revision) is None:
+            raise ValueError("Model download revision must be an exact repository commit.")
+        kwargs["revision"] = revision
     if profile.allow_patterns:
         kwargs["allow_patterns"] = list(profile.allow_patterns)
     if profile.ignore_patterns:
@@ -711,6 +724,21 @@ def _validate_huggingface_snapshot_path(local_path: str) -> None:
         raise RuntimeError("Hugging Face snapshot is outside the host-owned cache root.") from error
     if not snapshot_path.is_dir():
         raise RuntimeError("Hugging Face snapshot is not a directory.")
+
+
+def _validate_requested_model_snapshot(local_path: str, model_id: str, revision: str | None) -> None:
+    if revision is None:
+        return
+    cache_root = _resolve_huggingface_cache_root()
+    if cache_root is None:
+        raise GenerationModelDownloadRevisionError("Pinned model download revision could not be confirmed.")
+    try:
+        expected = cache_root.resolve(strict=True) / ("models--" + model_id.replace("/", "--")) / "snapshots" / revision
+        candidate = Path(local_path)
+        if candidate != expected or candidate.resolve(strict=True) != expected:
+            raise GenerationModelDownloadRevisionError("Pinned model download revision could not be confirmed.")
+    except OSError:
+        raise GenerationModelDownloadRevisionError("Pinned model download revision could not be confirmed.") from None
 
 
 def _to_huggingface_snapshot_handle(local_path: str) -> str:
@@ -1287,9 +1315,15 @@ def ensure_generation_model_downloaded(
         raise ValueError(f"Unsupported generation model provider: {model_config.provider}")
     _assert_huggingface_model_id(model_config.modelId)
 
+    revision = download_context.get("revision") if download_context is not None else None
+    if download_context is not None and "revision" in download_context and (
+        type(revision) is not str or re.fullmatch(r"[a-f0-9]{40}", revision) is None
+    ):
+        raise ValueError("Model download revision must be an exact repository commit.")
+
     configure_huggingface_download_environment()
     download_profile = _resolve_snapshot_download_profile(model_config, download_context)
-    snapshot_kwargs = _snapshot_download_kwargs(download_profile)
+    snapshot_kwargs = _snapshot_download_kwargs(download_profile, revision)
 
     try:
         from huggingface_hub import snapshot_download
@@ -1321,6 +1355,7 @@ def ensure_generation_model_downloaded(
             local_files_only=True,
             **snapshot_kwargs,
         )
+        _validate_requested_model_snapshot(local_path, model_config.modelId, revision)
         _validate_huggingface_snapshot_path(local_path)
         cache_candidate_path = local_path
         _validate_snapshot_profile_result(model_config, download_profile, local_path)
@@ -1340,7 +1375,8 @@ def ensure_generation_model_downloaded(
             fileCount=cache_stats["fileCount"],
             totalBytes=cache_stats["totalBytes"],
         )
-        _RESOLVED_MODEL_REFERENCES[model_config.modelId] = local_path
+        if revision is None:
+            _RESOLVED_MODEL_REFERENCES[model_config.modelId] = local_path
         return GenerationModelAvailability(
             provider=model_config.provider,
             model_id=model_config.modelId,
@@ -1348,7 +1384,10 @@ def ensure_generation_model_downloaded(
             from_cache=True,
             local_path=local_path,
             cache_handle=_to_huggingface_snapshot_handle(local_path),
+            revision=revision,
         )
+    except GenerationModelDownloadRevisionError:
+        raise
     except Exception as error:
         _emit_model_download_event(
             "runtime.model_download.cache_check.missed",
@@ -1404,13 +1443,15 @@ def ensure_generation_model_downloaded(
                             **snapshot_kwargs,
                         )
                     download_failure_stage = "validation"
+                    _validate_requested_model_snapshot(local_path, model_config.modelId, revision)
                     _validate_huggingface_snapshot_path(local_path)
                     _validate_snapshot_profile_result(model_config, download_profile, local_path)
                     download_failure_stage = "transfer"
                     break
                 except Exception as error:
                     if (
-                        _is_huggingface_download_policy_failure(error)
+                        isinstance(error, GenerationModelDownloadRevisionError)
+                        or _is_huggingface_download_policy_failure(error)
                         or attempt_number >= DEFAULT_HUGGINGFACE_DOWNLOAD_ATTEMPTS
                     ):
                         raise
@@ -1451,7 +1492,8 @@ def ensure_generation_model_downloaded(
             totalBytes=after_stats["totalBytes"],
             downloadedMissingFiles=downloaded_missing_files,
         )
-        _RESOLVED_MODEL_REFERENCES[model_config.modelId] = local_path
+        if revision is None:
+            _RESOLVED_MODEL_REFERENCES[model_config.modelId] = local_path
         return GenerationModelAvailability(
             provider=model_config.provider,
             model_id=model_config.modelId,
@@ -1459,7 +1501,10 @@ def ensure_generation_model_downloaded(
             from_cache=cache_candidate_path is not None and not downloaded_missing_files,
             local_path=local_path,
             cache_handle=_to_huggingface_snapshot_handle(local_path),
+            revision=revision,
         )
+    except GenerationModelDownloadRevisionError:
+        raise
     except Exception as error:
         cache_directory = _resolve_huggingface_repo_cache_directory(model_config.modelId)
         failure_cache_stats = _snapshot_file_stats(cache_directory)

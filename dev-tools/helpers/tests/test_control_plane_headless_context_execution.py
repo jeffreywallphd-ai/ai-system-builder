@@ -305,7 +305,8 @@ class ContextExecutionRoutingTests(unittest.TestCase):
         self.assertTrue(any(value.endswith('/approved-context-model-reference.unit.test.ts') for value in command))
         self.assertTrue(any(value.endswith('/context-embedding-model-files.unit.test.ts') for value in command))
         self.assertEqual(selected['headless-context-model-worker']['argv'], [sys.executable, '-B', '-m', 'unittest', '-v',
-            'modules.adapters.runtime.python.worker.tests.test_context_generation.ContextGenerationTests'])
+            'modules.adapters.runtime.python.worker.tests.test_context_generation.ContextGenerationTests',
+            'modules.adapters.runtime.python.worker.tests.test_model_download_revision.ModelDownloadRevisionTests'])
         self.assertIn('focused-tests', self.selected(paths + ['modules/adapters/model/local/unknown-context-model.ts'],
             ['headless-context-owned-start']))
         self.assertIn('focused-tests', self.selected(paths, ['headless-context-owned-start', 'focused-tests']))

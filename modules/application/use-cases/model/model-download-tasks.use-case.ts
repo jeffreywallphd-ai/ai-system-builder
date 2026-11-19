@@ -60,6 +60,7 @@ export class ModelDownloadTasksUseCase {
         payload: {
           provider: "transformers",
           modelId: normalized.modelId,
+          ...(normalized.revision === undefined ? {} : {revision: normalized.revision}),
           inferenceMode: normalized.inferenceMode,
           taskTags: normalized.taskTags ? [...normalized.taskTags] : undefined,
           artifactForm: normalized.artifactForm,
@@ -227,6 +228,9 @@ export class ModelDownloadTasksUseCase {
       if (!completion?.localPath || completion.modelId !== descriptor.request.modelId) {
         throw new Error("Model download completion data is unavailable.");
       }
+      if (descriptor.request.revision !== undefined && completion.revision !== descriptor.request.revision) {
+        throw new Error("Pinned model download revision could not be confirmed.");
+      }
       const registered = await this.dependencies.modelRegistry.registerDownloadedModel({
         modelRecordId: descriptor.request.modelRecordId,
         workspaceId: descriptor.request.workspaceId,
@@ -242,6 +246,7 @@ export class ModelDownloadTasksUseCase {
           ...descriptor.request.metadata,
           download: {
             provider: completion.provider,
+            ...(descriptor.request.revision === undefined ? {} : {revision: completion.revision}),
             fromCache: completion.fromCache,
             downloaded: completion.downloaded,
           },

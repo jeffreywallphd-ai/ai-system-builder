@@ -1,5 +1,11 @@
 # Contracts
 
+Model downloads accept an optional exact40-lowercase-hex repository `revision`.
+Omission retains the ordinary unpinned request shape. A pinned result must carry
+the worker-confirmed revision before registration. Recorded download provenance
+does not prove weight integrity, license rights, runtime readiness or quality.
+This request extension grants no Headless download operation or approval.
+
 The Headless model-metadata family defines finite persisted-inventory
 and exact-record selectors. Its copied results contain only recorded model
 identities, timestamps, source/form/format, task tags and bounded numeric facts.

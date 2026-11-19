@@ -39,14 +39,25 @@ class PythonRuntimeCapabilitiesResult(BaseModel):
 class EnsureModelDownloadRequest(BaseModel):
     provider: Literal["transformers"]
     modelId: str
+    revision: str | None = Field(default=None, strict=True, min_length=40, max_length=40, pattern=r"^[a-f0-9]{40}$")
     inferenceMode: str | None = None
     taskTags: list[str] | None = None
     artifactForm: str | None = None
+
+    @field_validator("revision", mode="before")
+    @classmethod
+    def reject_explicit_null_revision(cls, value: Any) -> Any:
+        # Defaults are not validated: omission preserves the old request, while
+        # an explicit malformed pin must not become a floating acquisition.
+        if value is None:
+            raise ValueError("Model download revision must be an exact repository commit.")
+        return value
 
 
 class EnsureModelDownloadResult(BaseModel):
     provider: Literal["transformers"]
     modelId: str
+    revision: str | None = Field(default=None, strict=True, min_length=40, max_length=40, pattern=r"^[a-f0-9]{40}$")
     downloaded: bool
     fromCache: bool
     modelHandle: str | None = None

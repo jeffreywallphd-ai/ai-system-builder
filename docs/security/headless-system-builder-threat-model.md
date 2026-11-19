@@ -1,5 +1,22 @@
 # Headless System Builder threat model
 
+## Exact Model acquisition source prerequisite
+
+The existing download lifecycle accepts an optional exact repository commit.
+Both paths require the same current worker's versioned exact-revision capability
+before task dispatch. Capture the target across that await; deny absent support
+or replaced ownership before acquisition, rather than waiting for completion.
+Reject floating/malformed pins and copy pinned targets before awaited dispatch.
+Pass the same revision to cache lookup and network acquisition; confirm the
+exact host-owned repository snapshot and require the matching model/revision
+at completion before registration. An older worker that omits confirmation must
+fail. Substituted cache/transfer results preserve retained data, deny without
+hidden retries or deletion and cannot alter ordinary unpinned aliases. Keep
+existing byte/file/format/resource, worker authentication and ownership guards.
+This component grants no new Headless effect, provider authority, immutable
+weight proof, license rights, model readiness or quality. Exact approved supply
+inspection, task approval/status and actual-host/model qualification remain.
+
 ## Paired recorded-model reads
 
 `models.inventory` and `models.record` add an outward metadata boundary through

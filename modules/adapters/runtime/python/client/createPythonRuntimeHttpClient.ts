@@ -9,6 +9,7 @@ import type {
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
 import type { CompletedModelDownload } from "../../../../application/ports/model";
+import {normalizeModelDownloadRevision} from "../../../../contracts/model";
 import { randomUUID } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -33,12 +34,14 @@ export interface PythonRuntimeHttpClient {
   ensureModelDownloaded(request: {
     provider: "transformers";
     modelId: string;
+    revision?: string;
     inferenceMode?: string;
     taskTags?: string[];
     artifactForm?: string;
   }): Promise<{
     provider: "transformers";
     modelId: string;
+    revision?: string;
     downloaded: boolean;
     fromCache: boolean;
     localPath?: string;
@@ -214,6 +217,8 @@ async function mapModelDownloadPayload(
     );
   }
 
+  const revision = normalizeModelDownloadRevision(record.revision);
+  const modelId = record.modelId, downloaded = record.downloaded === true, fromCache = record.fromCache === true;
   const localPath = await resolveModelCacheHandle(
     cacheRoot,
     record.modelHandle,
@@ -222,9 +227,10 @@ async function mapModelDownloadPayload(
   assertCurrent();
   return {
     provider: "transformers" as const,
-    modelId: record.modelId,
-    downloaded: record.downloaded === true,
-    fromCache: record.fromCache === true,
+    modelId,
+    ...(revision === undefined ? {} : {revision}),
+    downloaded,
+    fromCache,
     localPath,
   };
 }
@@ -397,12 +403,14 @@ export function createPythonRuntimeHttpClient(
     async ensureModelDownloaded(request) {
       const assertCurrent = captureOwnership?.() ?? (() => {});
       assertCurrent();
-      assertHuggingFaceModelId(request.modelId);
+      const revision = normalizeModelDownloadRevision(request.revision);
+      const captured = revision === undefined ? request : structuredClone({...request, revision});
+      assertHuggingFaceModelId(captured.modelId);
       const requestId = `model-download-${randomUUID()}`;
       await this.startTask({
         requestId,
         taskType: "ensure-model-download",
-        payload: request,
+        payload: captured,
         timeoutMs: modelDownloadTimeoutMs,
       });
 
@@ -435,6 +443,8 @@ export function createPythonRuntimeHttpClient(
             assertCurrent,
           );
           assertCurrent();
+          if (revision !== undefined && (result.revision !== revision || result.modelId !== captured.modelId))
+            throw new Error("Pinned model download revision could not be confirmed.");
           return result;
         }
         if (status.status === "failed" || status.status === "cancelled") {
@@ -517,6 +527,18 @@ export function createPythonRuntimeHttpClient(
     },
     async startTask(request: StartPythonRuntimeTaskRequest) {
       assertRuntimeRequestId(request.requestId);
+      const body = request.payload;
+      const revision = request.taskType === "ensure-model-download" && body !== null && typeof body === "object" && !Array.isArray(body)
+        ? normalizeModelDownloadRevision((body as {revision?: unknown}).revision) : undefined;
+      if (revision !== undefined) {
+        const assertCurrent = captureOwnership?.() ?? (() => {});
+        assertCurrent();
+        request = structuredClone(request);
+        const capabilities = await this.getCapabilities();
+        assertCurrent();
+        if (!capabilities.capabilities.includes("ensure-model-download.exact-revision-v1"))
+          throw new Error("Exact model version downloads are unavailable for this worker.");
+      }
       const timeoutMs = Math.min(
         Math.max(request.timeoutMs ?? defaultTaskTimeoutMs, 1_000),
         24 * 60 * 60 * 1_000,

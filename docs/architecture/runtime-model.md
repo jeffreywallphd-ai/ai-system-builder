@@ -1,5 +1,19 @@
 # Runtime Model
 
+An optional exact40-lowercase-hex `revision` binds a Model download request to one
+repository commit. Core normalization and captured runtime-client input retain
+that selection before awaits. A pinned start requires the current worker's
+`ensure-model-download.exact-revision-v1` capability before either synchronous
+or asynchronous acquisition; an older worker cannot silently download a floating
+head. The worker uses the selected revision for both cache and transfer,
+requires the exact repository snapshot path and confirms the same revision in
+its completion. Registration rejects absent or changed confirmation. A mismatch
+preserves retained bytes and ordinary floating aliases, with no retry, deletion
+or fallback to another revision. Ordinary omitted-revision behavior and current
+resource/format/ownership controls stay compatible. This is a source-selection
+foundation for approved Headless acquisition, not an advertised new effect or
+proof of immutable bytes, supplier authenticity, licensing or model quality.
+
 The Python worker's direct script entrypoint binds relative imports to its own
 deployment directory through a fixed private package. The flat packaged worker
 does not depend on repository ancestor paths or modify `sys.path`. A conflicting

@@ -46,6 +46,7 @@ from .tasks.example_generation import ensure_generation_model_downloaded
 from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime_status
 from .generation_capacity import read_local_accelerator_memory_bytes
 from .tasks.local_text_generation import (
+    GenerationModelDownloadRevisionError,
     describe_loaded_generation_models,
     ensure_generation_adapter_is_available,
     ensure_generation_model_is_available,
@@ -562,22 +563,30 @@ def _ensure_model_download_data(
     request: EnsureModelDownloadRequest,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
+    provider, model_id, revision = request.provider, request.modelId, request.revision
     availability = ensure_generation_model_downloaded(
-        LocalModelConfig(provider=request.provider, modelId=request.modelId),
+        LocalModelConfig(provider=provider, modelId=model_id),
         on_progress=on_progress,
         download_context={
             "inferenceMode": request.inferenceMode,
             "taskTags": request.taskTags,
             "artifactForm": request.artifactForm,
+            **({"revision": revision} if revision is not None else {}),
         },
     )
-    return EnsureModelDownloadResult(
-        provider=request.provider,
-        modelId=request.modelId,
+    if revision is not None and getattr(availability, "revision", None) != revision:
+        raise GenerationModelDownloadRevisionError("Pinned model download revision could not be confirmed.")
+    result = EnsureModelDownloadResult(
+        provider=provider,
+        modelId=model_id,
+        revision=revision,
         downloaded=availability.downloaded,
         fromCache=availability.from_cache,
         modelHandle=availability.cache_handle,
     ).model_dump(mode="json")
+    if revision is None:
+        result.pop("revision", None)
+    return result
 
 
 def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult:
@@ -698,6 +707,7 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "generate-context-artifact",
         "context-artifact-operation",
         "ensure-model-download",
+        "ensure-model-download.exact-revision-v1",
         "model-status",
         "unload-model",
         "dataset-preparation.auto-inference-mode",
@@ -785,7 +795,7 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
     return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status=record["status"], cancelled=False, message="Task is no longer cancellable.", metadata=record.get("metadata"))
 
 
-@app.post("/models/ensure-downloaded", response_model=EnsureModelDownloadResult)
+@app.post("/models/ensure-downloaded", response_model=EnsureModelDownloadResult, response_model_exclude_unset=True)
 def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDownloadResult | JSONResponse:
     started_at = time.monotonic()
     print(

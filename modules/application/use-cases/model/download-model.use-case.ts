@@ -18,11 +18,16 @@ export class DownloadModelUseCase {
     const download = await this.dependencies.modelDownloader.ensureModelDownloaded({
       provider: "transformers",
       modelId: normalizedRequest.modelId,
+      ...(normalizedRequest.revision === undefined ? {} : {revision: normalizedRequest.revision}),
       inferenceMode: normalizedRequest.inferenceMode,
       taskTags: normalizedRequest.taskTags,
       artifactForm: normalizedRequest.artifactForm,
     });
 
+    if (normalizedRequest.revision !== undefined &&
+        (download.revision !== normalizedRequest.revision || download.modelId !== normalizedRequest.modelId)) {
+      throw new Error("Pinned model download revision could not be confirmed.");
+    }
     if (!download.localPath) {
       throw new Error(`Downloaded model ${normalizedRequest.modelId} did not report a local path.`);
     }
@@ -42,6 +47,7 @@ export class DownloadModelUseCase {
         ...normalizedRequest.metadata,
         download: {
           provider: download.provider,
+          ...(normalizedRequest.revision === undefined ? {} : {revision: download.revision}),
           fromCache: download.fromCache,
           downloaded: download.downloaded,
         },

@@ -1,0 +1,35 @@
+{
+  "schema_version": "headless-model-download-revision-observation-v1",
+  "scope": "Optional exact revision through the existing Model download lifecycle; controlled source-selection evidence only",
+  "security_impact": "security-relevant",
+  "verification_checks": ["headless-model-metadata-owner-unit", "headless-model-metadata-owner-types", "headless-context-model-worker", "control-plane", "documentation", "agent-support", "architecture"],
+  "evidence_policy": "Current candidate-bound executed receipts and separate independent review govern component completion. This document is neither an executed receipt nor a parent pass.",
+  "controls": [
+    "Both synchronous and asynchronous pinned starts require the same current worker to advertise ensure-model-download.exact-revision-v1 before task dispatch. Copied targets and worker ownership remain current through that preflight, preventing an older worker from silently acquiring a floating head.",
+    "Optional revisions are strict forty-lowercase-hex repository commits. Omission preserves ordinary request and completion wire fields.",
+    "Both application download paths propagate the captured revision. Worker confirmation must match the exact model and requested revision before registration; request intent alone is not provenance.",
+    "The runtime client detaches pinned inputs before transport awaits and validates confirmation. The worker selects that revision for cache and transfer, verifies the exact host-owned repository snapshot and returns a fixed non-retryable mismatch error without deletion, floating fallback, alias replacement or hidden retry.",
+    "Existing runtime authentication, ownership, byte/file/format guards, deadlines, task completion authority and ordinary retry/cancellation behavior remain authoritative. No loading or offload guard changes.",
+    "The fixed worker profile retains its existing Context cases and adds only the controlled revision class; Node/strict-type checks retain related Model and runtime-client compatibility. Unknown sources and explicitly requested generic checks retain fallback."
+  ],
+  "controlled_observations": [
+    "Eleven Python fixture cases exercise actual request/result schemas, passive protocol advertisement, snapshot-selection functions, the app completion wrapper and authenticated in-process HTTP serialization using mocked provider returns and disposable synthetic files; no real weights, transfer or inference occurred.",
+    "Focused Model contract/application and HTTP-client cases exercised exact propagation, old-worker/mismatched confirmation denial, detached awaited targets and ordinary behavior. Current candidate-bound checks determine their final result.",
+    "Expanded strict checking exposed pre-existing untyped callback parameters and one deliberately padded tag fixture; explicit annotations preserve their runtime assertions."
+  ],
+  "retained_failures": [
+    "The first governed revision receipt03d1d26527f05fc37c7e69c676e9c368b151992b2a45630f5b5a74f4a7d968a4 failed Model export inventory, documentation and control-plane groups. The exact export inventory now includes the new Model normalizer, and the runtime pack stays within its existing200-line limit. A direct510-case diagnostic identified the workflow failure: its exact worker-command expectation omitted the new revision class. The updated expectation retains the existing Context class and unknown-source fallback. The failed record is retained; final adopted-source qualification explicitly runs all nine groups and reviews the full25-file Git diff against the committed prerequisite.",
+    "Source review identified that confirmation alone occurred too late for an older worker that could ignore a pin. The added versioned capability preflight refuses before task dispatch, with direct async and synchronous client tests for absent support, captured inputs and replaced worker ownership.",
+    "Independent review found that explicit null at the Python request boundary could become an omitted pin. A request-only before-validator now denies null while preserving the omitted default. Schema, authenticated HTTP and asynchronous task-payload cases require denial before provider dispatch.",
+    "The first new contract fixture omitted the existing mandatory workspace. The fixture was corrected without changing workspace validation.",
+    "A direct client run in the sandbox Temp namespace exposed a case difference between configured and canonical directory names in two pre-existing exact-path assertions. The same client cases passed in the controller's owned temporary directory without changing product path validation or those assertions.",
+    "Initial expanded strict compilation failed on three existing fixture typing issues; bounded annotations repaired the declarations without weakening assertions or source checks.",
+    "An in-process TestClient attempt and related Context class stalled inside the sandbox and were stopped. Their logs remain. Both completed outside the sandbox using the owned temporary directory under a diagnostic deadline, without a product or budget change. The exact underlying sandbox/temporary-environment cause remains unqualified; the final feature suite keeps the authenticated in-process HTTP case. It is not a physical worker or Desktop/Managed app journey."
+  ],
+  "qualification_limits": [
+    "Snapshot path/revision confirmation proves source selection, not immutable file contents, supplier authenticity, license rights, model compatibility, resources or quality.",
+    "No real provider download, model load, training, generation, native cleanup, actual Desktop/Managed host or parent/package/final-roadmap qualification is supplied by these fixtures.",
+    "No new public Headless acquisition operation or effect approval is exposed. Approved source/format/license inspection and scoped task/status integration remain I7 work.",
+    "Accepted ordinary model accuracy and current memory/offload/security limits remain unchanged."
+  ]
+}

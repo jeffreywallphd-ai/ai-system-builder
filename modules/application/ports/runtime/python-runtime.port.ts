@@ -21,12 +21,14 @@ export interface PythonRuntimePort {
   ensureModelDownloaded(request: {
     provider: "transformers";
     modelId: string;
+    revision?: string;
     inferenceMode?: string;
     taskTags?: string[];
     artifactForm?: string;
   }): Promise<{
     provider: "transformers";
     modelId: string;
+    revision?: string;
     downloaded: boolean;
     fromCache: boolean;
     localPath?: string;

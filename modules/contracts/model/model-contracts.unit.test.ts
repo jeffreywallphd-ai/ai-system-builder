@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "../../testing/node-test";
 
 import type { LocalModelConfig } from "../runtime";
+import {createWorkspaceId} from "../workspace";
 import {
   DEFAULT_BROWSE_MODELS_LIMIT,
   MAX_BROWSE_MODELS_LIMIT,
@@ -13,6 +14,8 @@ import {
   normalizeBrowseModelsRequest,
   normalizeBrowseModelsResult,
   normalizeDeleteModelRecordRequest,
+  normalizeDownloadModelRequest,
+  normalizeModelDownloadRevision,
   normalizeListModelsRequest,
   normalizeModelDetails,
   normalizeModelInferenceMode,
@@ -27,12 +30,21 @@ import {
   type BrowseModelsResult,
   type ModelInferenceMode,
   type ModelInventoryRecord,
+  type ModelTaskTag,
   type RegisterDownloadedModelRequest,
   type ModelTrainingRequest,
   type ModelTrainingResult,
 } from ".";
 
 describe("model contracts", () => {
+  it("preserves an exact optional download commit and rejects floating or malformed revisions", () => {
+    const request = {workspaceId: createWorkspaceId("workspace.fixture"), provider: "huggingface" as const, modelId: "fixture/model"};
+    expect("revision" in normalizeDownloadModelRequest(request)).toBe(false);
+    const revision = "a".repeat(40);
+    expect(normalizeDownloadModelRequest({...request, revision}).revision).toBe(revision);
+    for (const value of [null, "main", "A".repeat(40), revision + "\n", " " + revision, "a".repeat(39), 1, {}, new String(revision)])
+      expect(() => normalizeModelDownloadRevision(value)).toThrow("exact repository commit");
+  });
   it("defines browse providers and inference modes", () => {
     expect(MODEL_BROWSE_PROVIDERS).toEqual(["huggingface", "unknown"]);
     expect(MODEL_INFERENCE_MODES).toEqual(["text2text", "causal", "chat", "text-to-image"]);
@@ -44,7 +56,7 @@ describe("model contracts", () => {
     const request = normalizeBrowseModelsRequest({
       provider: "huggingface",
       query: " mistral ",
-      taskTags: ["summarization", " chat "],
+      taskTags: ["summarization", " chat " as ModelTaskTag],
       customTaskTag: " IMAGE-CLASSIFICATION ",
       authorOrOrg: " mistralai ",
       limit: 25,

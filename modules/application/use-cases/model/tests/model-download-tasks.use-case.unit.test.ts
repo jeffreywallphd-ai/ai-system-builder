@@ -15,10 +15,55 @@ import { describe, expect, it, testDouble } from "../../../../testing/node-test"
 import type { ModelDownloadCompletionPort, ModelRegistryPort } from "../../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../../ports/runtime";
 import { ModelDownloadTasksUseCase } from "../model-download-tasks.use-case";
+import {DownloadModelUseCase} from "../download-model.use-case";
 import { OwnedTaskReconcilerService } from "../../../services/runtime/owned-task-reconciler.service";
 
 describe("ModelDownloadTasksUseCase", () => {
   const workspaceId = createWorkspaceId("workspace.downloads");
+  it("keeps the exact start revision and refuses missing or changed completion confirmation before registration", async () => {
+    const revision = "a".repeat(40);
+    for (const observed of [undefined, "b".repeat(40), revision]) {
+      const fixture = createFixture();
+      const request = {workspaceId, provider: "huggingface" as const, modelId: "org/model", revision};
+      fixture.completion.readCompletedModelDownload.mockImplementation(async () => ({provider: "transformers" as const,
+        modelId: "org/model", downloaded: true, fromCache: false, localPath: "C:\\cache\\fixture", revision: observed}));
+      await fixture.useCase.start(request);
+      request.revision = "c".repeat(40);
+      expect(fixture.registry.startTask).toHaveBeenCalledWith(expect.objectContaining({payload: expect.objectContaining({revision})}));
+      fixture.setTask({status: "succeeded"});
+      const complete = fixture.useCase.complete({workspaceId, requestId: "download-1"}, {modelWriteAuthorized: true});
+      if (observed !== revision) {
+        await expect(complete).rejects.toThrow("Retry completion");
+        expect(fixture.registerDownloadedModel).not.toHaveBeenCalled();
+      } else {
+        await complete;
+        expect(fixture.registerDownloadedModel).toHaveBeenCalledWith(expect.objectContaining({metadata: expect.objectContaining({
+          download: expect.objectContaining({revision}),
+        })}));
+      }
+    }
+  });
+
+  it("synchronous downloads require matching worker revision and model identity before registration", async () => {
+    const revision = "a".repeat(40);
+    for (const [observed, modelId] of [[undefined, "org/model"], ["b".repeat(40), "org/model"],
+      [revision, "org/model"], [revision, "org/foreign"]] as const) {
+      const fixture = createFixture();
+      const ensureModelDownloaded = testDouble.fn(async () => ({provider: "transformers" as const, modelId,
+        revision: observed, downloaded: true, fromCache: false, localPath: "C:\\cache\\fixture"}));
+      const owner = new DownloadModelUseCase({modelRegistry: {registerDownloadedModel: fixture.registerDownloadedModel} as never,
+        modelDownloader: {ensureModelDownloaded}});
+      const pending = owner.execute({workspaceId, provider: "huggingface", modelId: "org/model", revision});
+      if (observed !== revision || modelId !== "org/model") {
+        await expect(pending).rejects.toThrow("revision could not be confirmed");
+        expect(fixture.registerDownloadedModel).not.toHaveBeenCalled();
+      } else {
+        expect((await pending).download.revision).toBe(revision);
+        expect(fixture.registerDownloadedModel).toHaveBeenCalledTimes(1);
+      }
+      expect(ensureModelDownloaded).toHaveBeenCalledWith(expect.objectContaining({revision}));
+    }
+  });
   for (const status of ["succeeded", "failed", "cancelled"] as const) it(`observes download ${status} without a renderer or automatic registration`, async () => {
     const reconciler = new OwnedTaskReconcilerService();
     const { useCase, setTask, completion, registerDownloadedModel } = createFixture(reconciler);

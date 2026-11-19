@@ -4,6 +4,13 @@
 
 Use cases in this folder own application orchestration and remain adapter-agnostic.
 
+Pinned Model downloads carry one strict copied revision through both synchronous
+and asynchronous lifecycle paths. Registration requires matching worker-confirmed
+revision and model identity. Missing/changed confirmation is not a successful
+download and cannot create a model record. Saved provenance records that source
+selection only. Ordinary unpinned requests, scoped completion authority, explicit
+retry and terminal task ownership retain their existing behavior.
+
 `ReadHeadlessModelMetadataUseCase` is a private persisted-only metadata owner.
 It binds the captured organization and current principal/workspace, copies the
 request, disables discovery/shared storage on inventory reads and requires the
