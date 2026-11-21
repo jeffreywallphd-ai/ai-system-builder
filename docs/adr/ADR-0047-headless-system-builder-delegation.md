@@ -922,3 +922,24 @@ binds proposal data only. Training and result-save approvals remain separate;
 installation/publication permissions and all byte/runtime/resource/rights/quality
 proof remain absent. Keep the private proposal out of public capability discovery
 until the complete execution workflow qualifies.
+
+## Existing training lifecycle prerequisite
+
+Before composing approved Headless training execution, keep possible live input
+and output staging after an uncertain start reply. Reuse the existing host-owned
+reconciler and capacity limits; no guessed ID, retry, adoption or new recovery
+policy is introduced. Only actual runtime-stop proof permits identity-checked
+cleanup of original stages. Missing proof or replaced/unverified folders retain
+pending custody, including for legacy callers without a reconciler.
+
+Recheck host admission before output allocation and synchronously after its
+identity awaits, immediately before task entry. An earlier stop cannot authorize
+cleanup of later-issued work. Terminal or pending cancellation uses the original
+cached result even if its lease retired before shutdown, with no worker refresh.
+
+Accepted task shutdown fences future worker access and late replies, defers
+cleanup during result handoffs, and preserves successful pending or committed
+results and their saved storage outcome. This prerequisite changes ordinary
+training lifecycle safety, not Headless approval, public activation, training
+settings, providers or resource budgets. Synthetic feature evidence does not
+qualify physical execution, native cleanup or crash/restart ownership.

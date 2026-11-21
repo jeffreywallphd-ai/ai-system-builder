@@ -1,5 +1,8 @@
 import { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
-import { access, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+import fsPromises from "node:fs/promises";
+import {syncBuiltinESMExports} from "node:module";
+import { access, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -81,6 +84,14 @@ describe("TrainModelUseCase", () => {
     const stats = await lstat(stage, { bigint: true });
     expect(stats.isDirectory()).toBe(true);
     ownedStages.set(stage, { dev: stats.dev, ino: stats.ino });
+    for (const dataset of (request.payload as {datasets: {path: string}[]}).datasets) {
+      const directory = dirname(dataset.path);
+      expect(dirname(directory)).toBe(await realpath(tmpdir()));
+      expect(basename(directory)).toMatch(/^ai-system-builder-training-datasets-[A-Za-z0-9]{6}$/);
+      const identity = await lstat(directory, {bigint: true});
+      expect(identity.isDirectory()).toBe(true);
+      ownedStages.set(directory, {dev: identity.dev, ino: identity.ino});
+    }
   };
   const stagedOutputFrom = (runtime: RuntimeTaskRegistryPort) => stagePath(
     (runtime.startTask as ReturnType<typeof testDouble.fn>).mock.calls[0][0],
@@ -191,8 +202,10 @@ describe("TrainModelUseCase", () => {
     expect(Object.getOwnPropertyDescriptor(caught, "code")?.enumerable).toBe(false);
     expect(JSON.stringify(caught)).not.toContain("private-synthetic-start-detail");
     if (stage === "task-dispatch" || stage === "task-registration") {
-      expect(ownedStages.size).toBe(1);
-      await expect(access([...ownedStages.keys()][0]!)).resolves.toBeUndefined();
+      expect(ownedStages.size).toBe(2);
+      expect([...ownedStages.keys()].filter(directory => basename(directory).startsWith("ai-system-builder-training-output-")).length).toBe(1);
+      expect([...ownedStages.keys()].filter(directory => basename(directory).startsWith("ai-system-builder-training-datasets-")).length).toBe(1);
+      for (const directory of ownedStages.keys()) await expect(access(directory)).resolves.toBeUndefined();
     }
   });
 
@@ -746,6 +759,224 @@ describe("TrainModelUseCase", () => {
       }
       await rename(held, stage);
     }
+  });
+
+  for (const reply of ["lost", "missing-id"] as const) {
+    it(`retains input bytes, output and host custody after a ${reply} start reply until actual runtime stop`, async () => {
+      const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+      const runtime = createRuntimeTaskRegistryFake(); let dispatched: StartRuntimeTaskRequest | undefined, starts = 0;
+      const failure = new Error("Synthetic lost training reply.");
+      runtime.startTask = async request => {starts++; dispatched = request; await rememberStage(request);
+        if (reply === "lost") throw failure;
+        return {requestId: "", status: "queued"};};
+      const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+        modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake()});
+      await assert.rejects(useCase.execute(baseRequest), error => reply === "lost" ? error === failure : /missing requestId/.test(String(error)));
+      assert.ok(dispatched);
+      const input = (dispatched.payload as {datasets: {path: string}[]}).datasets[0].path, output = stagePath(dispatched);
+      assert.equal(await readFile(input, "utf8"), "dataset-bytes"); assert.equal(reconciler.status.pending, 1);
+      await reconciler.reconcileNow(); await reconciler.cancelAndReconcile();
+      assert.equal(await readFile(input, "utf8"), "dataset-bytes"); await access(output);
+      assert.equal(starts, 1); expect(runtime.getTaskStatus).not.toHaveBeenCalled(); expect(runtime.cancelTask).not.toHaveBeenCalled();
+      await reconciler.settleAfterRuntimeStop(["python"]);
+      assert.equal(reconciler.status.pending, 0); await assert.rejects(access(input)); await assert.rejects(access(output));
+    });
+  }
+
+  it("a repeated start ID retains the second attempt without adopting or deleting the first task", async () => {
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const runtime = createRuntimeTaskRegistryFake(), attempts: StartRuntimeTaskRequest[] = [];
+    runtime.startTask = async request => {attempts.push(request); await rememberStage(request); return {requestId: "train-req-1", status: "queued"};};
+    const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+      modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake()});
+    assert.equal((await useCase.execute(baseRequest)).runId, "train-req-1");
+    await assert.rejects(useCase.execute(baseRequest), /repeated an existing task/);
+    assert.equal(attempts.length, 2); assert.equal(reconciler.status.pending, 2);
+    for (const request of attempts) {assert.equal(await readFile((request.payload as {datasets: {path: string}[]}).datasets[0].path, "utf8"), "dataset-bytes"); await access(stagePath(request));}
+    expect(runtime.getTaskStatus).not.toHaveBeenCalled(); expect(runtime.cancelTask).not.toHaveBeenCalled();
+    await reconciler.settleAfterRuntimeStop(["python"]); assert.equal(reconciler.status.pending, 0);
+    for (const request of attempts) {await assert.rejects(access((request.payload as {datasets: {path: string}[]}).datasets[0].path)); await assert.rejects(access(stagePath(request)));}
+  });
+
+  for (const kind of ["input", "output"] as const) {
+    it(`refuses a replaced uncertain ${kind} folder and retries cleanup only for the original identity`, async () => {
+      const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+      const runtime = createRuntimeTaskRegistryFake(); let dispatched: StartRuntimeTaskRequest | undefined;
+      runtime.startTask = async request => {dispatched = request; await rememberStage(request); throw new Error("Synthetic lost reply.");};
+      const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+        modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake()});
+      await assert.rejects(useCase.execute(baseRequest)); assert.ok(dispatched);
+      const input = (dispatched.payload as {datasets: {path: string}[]}).datasets[0].path, output = stagePath(dispatched);
+      const directory = kind === "input" ? dirname(input) : output, moved = directory + "-original";
+      const original = await lstat(directory, {bigint: true}), boundary = await realpath(tmpdir());
+      assert.equal(dirname(directory), boundary); assert.equal(await realpath(directory), directory);
+      await rename(directory, moved); await mkdir(directory); const replacement = await lstat(directory, {bigint: true});
+      const sentinel = join(directory, "replacement-sentinel.txt"); await writeFile(sentinel, "Synthetic replacement must survive.");
+      try {
+        await reconciler.settleAfterRuntimeStop(["python"]);
+        assert.equal(reconciler.status.pending, 1); assert.equal(reconciler.status.retrying, 1);
+        assert.equal(await readFile(sentinel, "utf8"), "Synthetic replacement must survive.");
+        expect(runtime.getTaskStatus).not.toHaveBeenCalled(); expect(runtime.cancelTask).not.toHaveBeenCalled();
+      } finally {
+        // Both directories are fresh test-owned fixtures, never historical data.
+        // Verify each identity before deleting the replacement/restoring our original.
+        const current = await lstat(directory, {bigint: true}), retained = await lstat(moved, {bigint: true});
+        assert.equal(dirname(directory), boundary); assert.equal(dirname(moved), boundary);
+        assert.equal(await realpath(directory), directory); assert.equal(await realpath(moved), moved);
+        assert.ok(current.isDirectory() && !current.isSymbolicLink() && retained.isDirectory() && !retained.isSymbolicLink());
+        assert.equal(current.dev, replacement.dev); assert.equal(current.ino, replacement.ino);
+        assert.equal(retained.dev, original.dev); assert.equal(retained.ino, original.ino);
+        await rm(directory, {recursive: true}); await rename(moved, directory);
+      }
+      await reconciler.reconcileNow(); assert.equal(reconciler.status.pending, 0);
+      await assert.rejects(access(input)); await assert.rejects(access(output));
+    });
+  }
+
+  for (const preparation of ["second-source-failure", "stop-during-input", "stop-during-output-identity"] as const) {
+  it(`${preparation} denies late dispatch and cleans only verified pre-dispatch staging`, async () => {
+    const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(join(boundary, "training-pre-dispatch-test-")));
+    const identity = await lstat(directory, {bigint: true});
+    const previous = {TEMP: process.env.TEMP, TMP: process.env.TMP, TMPDIR: process.env.TMPDIR};
+    process.env.TEMP = directory; process.env.TMP = directory; process.env.TMPDIR = directory;
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const runtime = createRuntimeTaskRegistryFake(), bindings = createStorageBindingsFake(), read = bindings.readArtifactStorageBindings, storage = createStorageFake();
+    const failure = new Error("Synthetic second input failure."); let calls = 0;
+    bindings.readArtifactStorageBindings = async (...args) => {if (++calls === 2 && preparation === "second-source-failure") throw failure; return read(...args);};
+    const originalLstat = fsPromises.lstat; let stopped = false;
+    if (preparation === "stop-during-input") {
+      const retrieve = storage.retrieveArtifact;
+      storage.retrieveArtifact = async (...args) => {const result = await retrieve(...args);
+        stopped = true; await reconciler.settleAfterRuntimeStop(["python"]); return result;};
+    }
+    if (preparation === "stop-during-output-identity") {
+      fsPromises.lstat = (async (...args: any[]) => {
+        const result = await (originalLstat as any)(...args);
+        if (!stopped && basename(String(args[0])).startsWith("ai-system-builder-training-output-")) {
+          stopped = true; await reconciler.settleAfterRuntimeStop(["python"]);
+        }
+        return result;
+      }) as typeof fsPromises.lstat;
+      syncBuiltinESMExports();
+    }
+    try {
+      const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+        modelRegistry: baseRegistry, storageBindings: bindings, storage, taskPowerLifecycle: createLifecycleFake()});
+      await assert.rejects(useCase.execute({...baseRequest, datasets: preparation === "second-source-failure"
+        ? [...baseRequest.datasets, {artifactId: "dataset-2", splitRole: "train"}] : baseRequest.datasets}),
+        error => preparation === "second-source-failure" ? error === failure : /Background task lifecycle is unavailable/.test(String(error)));
+      await reconciler.reconcileNow();
+      assert.equal(calls, preparation === "second-source-failure" ? 2 : 1);
+      if (preparation !== "second-source-failure") assert.equal(stopped, true);
+      assert.equal(reconciler.status.pending, 0); assert.deepEqual(await readdir(directory), []);
+      expect(runtime.startTask).not.toHaveBeenCalled(); expect(runtime.getTaskStatus).not.toHaveBeenCalled(); expect(runtime.cancelTask).not.toHaveBeenCalled();
+    } finally {
+      fsPromises.lstat = originalLstat; syncBuiltinESMExports(); await reconciler.reconcileNow();
+      for (const key of ["TEMP", "TMP", "TMPDIR"] as const) {const value = previous[key]; if (value === undefined) delete process.env[key]; else process.env[key] = value;}
+      const current = await lstat(directory, {bigint: true});
+      assert.equal(dirname(directory), boundary); assert.equal(await realpath(directory), directory);
+      assert.ok(current.isDirectory() && !current.isSymbolicLink()); assert.equal(current.dev, identity.dev); assert.equal(current.ino, identity.ino);
+      await rm(directory, {recursive: true});
+    }
+  });
+  }
+
+  for (const mode of ["pending", "committed", "saving"] as const) {
+    const saved = mode !== "pending";
+    it(`preserves ${mode} successful output when the host stops before reconciliation`, async () => {
+      const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+      const runtime = createRuntimeTaskRegistryFake();
+      (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockImplementation(async () => ({requestId: "train-req-1", workspaceId: "workspace-a",
+        taskType: TaskType.MODEL_TRAINING, status: "succeeded", concurrencyClass: "unknown", data: {runId: "train-req-1", status: "succeeded",
+          generatedModelCandidate: {displayName: "Synthetic adapter", artifactForm: "adapter", localPath: stagedOutputFrom(runtime)}}}));
+      const registerGeneratedModel = testDouble.fn(async (request: any) => ({model: {modelRecordId: "generated-1", displayName: "Synthetic adapter",
+        source: "generated", lifecycleStatus: "saved-reference", artifactForm: "adapter", provider: "huggingface", localPath: request.localPath,
+        createdAt: "2026-11-21T00:00:00.000Z"}}));
+      let release!: () => void, enter!: () => void;
+      const held = new Promise<void>(resolve => {release = resolve;}), entered = new Promise<void>(resolve => {enter = resolve;});
+      const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+        modelRegistry: {...baseRegistry, registerGeneratedModel} as ModelRegistryPort,
+        storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake(),
+        generatedModelStorage: {async storeGeneratedModel(request) {if (mode === "saving") {enter(); await held;}
+          return {localPath: request.sourceDirectory, modelId: "generated/synthetic"};}}});
+      await useCase.execute(baseRequest); const output = stagedOutputFrom(runtime);
+      await writeFile(join(output, "synthetic-model.txt"), "Synthetic successful output.");
+      const pending = await useCase.read("train-req-1", "workspace-a"); assert.equal(pending.reviewPending, true);
+      if (mode === "committed") {
+        const cleanup = (useCase as any).cleanupRuntimeDatasetDir.bind(useCase); let calls = 0;
+        // Commit succeeds, then a cleanup failure leaves the existing host lease pending.
+        (useCase as any).cleanupRuntimeDatasetDir = async (id: string) => {if (++calls === 1) throw new Error("Synthetic cleanup failure after commit."); await cleanup(id);};
+        await assert.rejects(useCase.save("train-req-1", "workspace-a"), /cleanup failure after commit/);
+        expect(registerGeneratedModel).toHaveBeenCalledTimes(1);
+      }
+      if (mode === "saving") {
+        const saving = useCase.save("train-req-1", "workspace-a"); await entered;
+        try {
+          await reconciler.settleAfterRuntimeStop(["python"]); assert.equal(reconciler.status.pending, 1);
+          assert.equal(await readFile(join(output, "synthetic-model.txt"), "utf8"), "Synthetic successful output.");
+        } finally {release();}
+        assert.equal((await saving).status, "succeeded"); await reconciler.reconcileNow();
+      } else {assert.equal(reconciler.status.pending, 1); await reconciler.settleAfterRuntimeStop(["python"]);}
+      assert.equal(reconciler.status.pending, 0); assert.equal(await readFile(join(output, "synthetic-model.txt"), "utf8"), "Synthetic successful output.");
+      const retained = await useCase.read("train-req-1", "workspace-a"); assert.equal(retained.status, "succeeded");
+      assert.equal(retained.reviewPending, !saved);
+      if (saved) {assert.equal(retained.outputModel?.localPath, output); expect(registerGeneratedModel).toHaveBeenCalledTimes(1);}
+      else expect(registerGeneratedModel).not.toHaveBeenCalled();
+    });
+  }
+
+  it("waits for an in-flight read at runtime stop and refuses late or fresh worker access", async () => {
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const runtime = createRuntimeTaskRegistryFake(); let release!: () => void, enter!: () => void;
+    const held = new Promise<void>(resolve => {release = resolve;}), entered = new Promise<void>(resolve => {enter = resolve;});
+    (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockImplementation(async () => {enter(); await held;
+      return {requestId: "train-req-1", workspaceId: "workspace-a", taskType: TaskType.MODEL_TRAINING, status: "running", concurrencyClass: "unknown"};});
+    const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+      modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake()});
+    await useCase.execute(baseRequest); const output = stagedOutputFrom(runtime);
+    const reading = useCase.read("train-req-1", "workspace-a"); await entered;
+    await reconciler.settleAfterRuntimeStop(["python"]);
+    assert.equal(reconciler.status.pending, 1); await access(output);
+    const cancellation = useCase.cancel("train-req-1", "workspace-a");
+    const settling = Promise.allSettled([reading, cancellation]); release();
+    const results = await settling;
+    assert.ok(results.every(result => result.status === "rejected" && /stopped before a result/.test(String(result.reason))));
+    await assert.rejects(useCase.read("train-req-1", "workspace-a"), /stopped before a result/);
+    await reconciler.reconcileNow();
+    assert.equal(reconciler.status.pending, 0); await assert.rejects(access(output));
+    assert.equal((await useCase.read("train-req-1", "workspace-a")).status, "failed");
+    expect(runtime.getTaskStatus).toHaveBeenCalledTimes(1); expect(runtime.cancelTask).not.toHaveBeenCalled();
+  });
+
+  it("a stop during the cancellation status wait cannot issue a late cancellation", async () => {
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const runtime = createRuntimeTaskRegistryFake(); let release!: () => void, enter!: () => void;
+    const held = new Promise<void>(resolve => {release = resolve;}), entered = new Promise<void>(resolve => {enter = resolve;});
+    (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockImplementation(async () => {enter(); await held;
+      return {requestId: "train-req-1", workspaceId: "workspace-a", taskType: TaskType.MODEL_TRAINING, status: "running", concurrencyClass: "unknown"};});
+    const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+      modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake()});
+    await useCase.execute(baseRequest);
+    const cancelling = useCase.cancel("train-req-1", "workspace-a"); await entered;
+    await reconciler.settleAfterRuntimeStop(["python"]); assert.equal(reconciler.status.pending, 0);
+    release(); assert.equal((await cancelling).status, "failed");
+    expect(runtime.getTaskStatus).toHaveBeenCalledTimes(1); expect(runtime.cancelTask).not.toHaveBeenCalled();
+  });
+
+  it("cancelling a completed pending review does not reopen a worker after its lease retired", async () => {
+    const reconciler = new OwnedTaskReconcilerService(); reconciler.stopObservation();
+    const runtime = createRuntimeTaskRegistryFake();
+    (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockImplementation(async () => ({requestId: "train-req-1", workspaceId: "workspace-a",
+      taskType: TaskType.MODEL_TRAINING, status: "succeeded", concurrencyClass: "unknown", data: {runId: "train-req-1", status: "succeeded",
+        generatedModelCandidate: {displayName: "Synthetic adapter", artifactForm: "adapter", localPath: stagedOutputFrom(runtime)}}}));
+    const useCase = new TrainModelUseCase({taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+      modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake()});
+    await useCase.execute(baseRequest); assert.equal((await useCase.read("train-req-1", "workspace-a")).reviewPending, true);
+    await reconciler.reconcileNow(); assert.equal(reconciler.status.pending, 0);
+    await reconciler.settleAfterRuntimeStop(["python"]);
+    const result = await useCase.cancel("train-req-1", "workspace-a"); assert.equal(result.status, "succeeded"); assert.equal(result.reviewPending, true);
+    await access(stagedOutputFrom(runtime));
+    expect(runtime.getTaskStatus).toHaveBeenCalledTimes(1); expect(runtime.cancelTask).not.toHaveBeenCalled();
   });
 
   for (const terminal of [

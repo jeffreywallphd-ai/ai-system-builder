@@ -1932,3 +1932,35 @@ deterministic digest. Separate training and output-save approval are explicitly
 required; installation and publication permissions are not granted. No effect
 port is supplied. Private preparation remains outside public plan registration
 until task execution and the complete workflow have been integrated and qualified.
+
+## Training staging after an uncertain start
+
+TrainModelUseCase records the identity and canonical path of each freshly owned
+input stage as well as its output stage. Lost, invalid or repeated start replies
+do not prove nonstart: retain both stages and the existing host-owned lease, with
+no guessed task polling/cancellation, adoption or automatic retry. The unchanged
+session/reconciler bounds include uncertain attempts. Recheck host acceptance
+before output allocation and synchronously after output identity awaits, just
+before task entry. An earlier stop cannot become cleanup proof for a task issued
+afterward. Verified pre-dispatch failures clean their known input stage and preserve the original error object
+and fixed diagnostic stage. Failed or unverified cleanup retains custody.
+
+Only the existing reconciler's actual stopped-runtime callback may clean an
+uncertain attempt. Each removal checks original directory identity/realpath; a
+replacement or an unverified stage denies. Successful input cleanup is shared
+and cached so a later directory at the same name cannot be removed on retry.
+Legacy callers without a reconciler retain uncertainty and gain no stop proof.
+These application checks do not establish a durable native tree fence or crash
+recovery ownership. Historical unknown staging is never adopted or removed.
+
+For accepted tasks, shutdown first fences new worker observations/cancellation
+and rejects replies arriving after that fence. Active reads/review actions keep
+the lease pending for retry. Re-read saved result state before cleanup: successful
+pending review remains reviewable, and a committed result keeps its status and
+saved storage reference. Cleanup must respect an output stored at the original
+path. An unresolved task becomes host-stopped only after known cleanup succeeds.
+Cancelling an already-owned terminal or pending result uses its cached read even
+when its lease retired before shutdown; it cannot reopen a worker.
+The focused suite covers normal training/progress/review/save/discard plus these
+failure paths using actual disposable bytes and synthetic runtime ports. No
+physical model, native shutdown or parent qualification follows.

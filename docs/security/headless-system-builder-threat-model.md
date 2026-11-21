@@ -1650,3 +1650,33 @@ their digest carry no path, source row, prompt, raw owner error or delegated
 installation/publication authority. A new training approval and separate result
 save are still required. Metadata-only Core/SQLite checks do not qualify runtime
 effects, file integrity, hardware or model quality, and public roots remain off.
+
+## Training staging and uncertain acknowledgements
+
+An unconfirmed training start may still have a worker reading its input files.
+Preserve original input/output directory identity and the existing host lease
+after a lost, malformed or repeated reply. Do not discover, cancel or retry a
+guessed task. Actual host-owned Python stop proof is distinct from client
+revocation, a task error or a cancellation acknowledgement. Only that proof may
+trigger cleanup of known original stages; replaced/unverified roots or failed
+cleanup retain the existing bounded capacity. No historical staging is adopted.
+
+Recheck host admission before output allocation and synchronously after output
+identity awaits, before the runtime start call. An old stop flag cannot authorize
+cleanup for work issued afterward. Runtime ports retain responsibility for their
+own internal admission and original host lifetime across awaits.
+
+Shutdown fences new reads/cancellation and suppresses late runtime replies.
+In-flight result reads or review actions defer cleanup; successful pending
+reviews and committed Model records must not be downgraded or destroyed. Use
+the actual saved storage outcome when retiring temporary output, including a
+saved reference at the same path. Cache successful known input cleanup to avoid
+deleting a later replacement during a repeated call. Preserve original internal
+start failures without expanding public diagnostics or permission.
+Terminal or pending cancellation uses the already-owned cached read, including
+after its lease has retired, and cannot reopen a worker for historical status.
+
+Feature tests use actual disposable byte staging and synthetic runtime/stop
+signals. Directory checks alone do not establish durable native protection,
+physical worker shutdown or crash ownership. These genuine gaps and the full
+Headless execution/approval qualification remain pending.

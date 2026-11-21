@@ -2853,3 +2853,20 @@ ancestors. Missing files, aliases and non-file targets preserve generic fallback
 in incomplete roots. Presence alone supplies no pass: the fixed commands must
 still execute. The earlier failed contributor receipt and missing-file regression
 remain recorded; no existing operational-profile expectation was weakened.
+
+The training lifecycle feature profile now covers lost/malformed/repeated start
+acknowledgements, retained input/output bytes and host leases, no guessed runtime
+actions, exact replaced-folder refusal, guarded cleanup retry and verified
+pre-dispatch cleanup. Shutdown cases cover pending/committed/in-flight saved
+results, late read/cancellation replies and preserved ordinary progress, review,
+save, publication and discard behavior. Runtime and publisher ports are synthetic;
+local temporary byte staging is real and cleaned by owned fixtures. Prior failing
+regressions remain evidence. Native shutdown, model work, crash/restart recovery,
+public Headless execution and parent qualification are not supplied by this profile.
+
+Causal tests also stop the host during input retrieval and the final output
+identity handoff and require zero late starts. The latter temporarily wraps the
+actual Node stat read in a serial synthetic test and restores its builtin binding.
+Completed-review cancellation must not refresh a retired worker. Earlier missing
+guards and cache-reentry failures remain recorded; their repair does not qualify
+the runtime port's internal lifecycle or a physical native stop.
