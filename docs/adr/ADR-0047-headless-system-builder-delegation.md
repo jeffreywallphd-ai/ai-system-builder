@@ -865,3 +865,14 @@ leaves this owner. A review grants no current file, registry save, runtime or
 license rights. Public capability activation and separately approved saving
 remain gated by their actual integration and qualification. This implementation
 note introduces no new provider, loader, approval channel or resource policy.
+
+The private Model reference-save implementation follows ADR0043: a shared-cache
+association is metadata only. The new exact save-specific approval/current
+ModelRead/Write callback is required in the same root-owned transaction as the
+library row and causal receipt/index. Original accepted task/client/source and
+strict original host/source lifetime are checked before commit. An unchanged
+committed reference can replay under fresh authority without source discovery;
+a deleted, edited, ambiguous or conflicting row denies. One exact read-only
+reconciliation handles a lost commit reply without a second mutation. This
+checkpoint adds no public operation, native/file authority or runtime-readiness
+claim; versioned save-plan and real host qualification remain required.

@@ -1871,3 +1871,16 @@ The finite summary does not refresh a worker, initialize a runtime, inspect a
 path or write a registry record. Completion-time verification does not establish
 current file integrity, readiness or save authority. Actual product activation,
 separately approved saving and physical host/provider/native qualification remain pending.
+
+The private headless Model reference-save composition consumes cached immutable
+registration inputs from the original Model owner outside retriable transactions.
+It verifies the accepted original task/source and current save-specific approval
+inside the owning organization transaction, then commits the library row, exact
+receipt and original-source point index together. The synchronous pre-commit
+guard retains the original host and source lifetimes. One exact read-only
+reconciliation can confirm a lost commit reply; it never repeats the mutation.
+Committed unchanged references can replay under fresh authority without a live
+task owner. Edited, deleted or conflicting rows deny. These shared-cache
+references grant no file ownership, reveal, deletion or model-readiness claim.
+This private composition does not activate a public save route or borrow the
+original download approval.

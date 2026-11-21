@@ -1584,3 +1584,18 @@ selected-byte verification is not current file/save/readiness authority. Preserv
 accepted results after approval ends; all current original-client read checks
 still apply. Public roots, safe save and real host/native/provider evidence remain
 pending. Controlled Core/SQLite fixtures cannot qualify those boundaries.
+
+Private downloaded-Model saving protects workspace metadata integrity and cache
+reference privacy. A new exact save approval and current ModelRead/Write must
+pass inside the same owned transaction as the registry row and insert-only
+receipt/source index. Download approval is insufficient. Original accepted
+actor/client/workspace/task/source and captured host/source lifetime prevent
+cross-client adoption and stale publication. Rollback removes partial writes;
+exact read-only lost-reply reconciliation cannot issue a new effect. Replay
+requires the unchanged original library row and both causal records. Edited,
+deleted, duplicate or conflicting records deny without overwrite or re-creation.
+The public result contains finite IDs/digest/reference-only and unchecked-readiness
+facts, never the private path, source callbacks or principal. Synthetic Core and
+SQLite checks cover these boundaries. Public save-plan/host activation, actual
+provider/native execution and parent qualification remain pending; this metadata
+association grants no file ownership, reveal, deletion or load authority.

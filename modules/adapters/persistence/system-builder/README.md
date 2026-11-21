@@ -111,3 +111,14 @@ source digest and exact owner; its recorded previous phase fixes revision2 or3.
 Version-1 reserved/issued/accepted history stays unchanged. Replay preserves the
 terminal non-start without another dispatch. It never becomes an accepted task
 or a source witness for saving. Do not infer the outcome from interrupted history.
+
+The private Model reference-save store atomically commits a workspace library
+record, an exact save receipt and one point index per original task/client. It
+requires the supplied organization transaction and never discovers cache files.
+An exact replay checks the unchanged library row and both causal records;
+deleted, edited, ambiguous or conflicting records deny rather than re-create or
+overwrite. This metadata association is reference-only under ADR0043 and proves
+neither physical ownership nor runtime readiness. The shared composition must
+supply a new exact save approval, current ModelRead/Write and original-source
+lifetime; old download approval cannot authorize this save. Public save-plan,
+host, provider and native qualification remain separate pending work.

@@ -2802,3 +2802,12 @@ over a mismatching reply. Desktop task observation also requires the captured
 HTTP read-current fence through the final awaited policy return and owner entry,
 separate from registration and accepted business-task lifetimes. Held-policy and
 same-workspace displaced-plan regressions preserve these boundaries.
+
+The exact private Model reference-save composition, persistence store and
+Core/SQLite feature fixture select the existing Model metadata owner unit and
+strict-type checks. Coverage includes atomic registry/receipt/index rollback,
+fresh save approval, source/actor/client/workspace guards, edited/deleted/collision
+denial, concurrent exact retries and read-only lost-reply reconciliation. These
+metadata-only checks load no model and supply no public-host, provider, native or
+parent qualification. Unknown/shared sources and explicit generic checks retain
+their existing fallback; this profile does not qualify future save-plan wiring.
