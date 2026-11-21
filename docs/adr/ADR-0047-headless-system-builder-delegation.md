@@ -835,6 +835,16 @@ current ModelRead/Write policy still govern the effect. Fixed authenticated
 transports copy and correlate finite lineage/ACK replies; uncertain effects do
 not permit automatic retry or imply native shutdown. Actual source/save and
 root activation remain separately qualified.
+## Reference-only Model registration inputs
+
+Keep the shared cache reference separate from file ownership, consistent with
+ADR0043. Internal registration preparation uses the original completed source,
+manifest and current trusted ModelWrite admission. Its frozen private path and
+original-source lifetime never become public review or save authority. The
+eventual metadata transaction must prove a new exact save approval and current
+policy; ordinary source completion remains unable to register a Model. No file
+inspection, mutation, reveal, deletion or loading is introduced by preparation.
+
 ## Completed Model review protocol integration
 
 The existing read protocol recognizes historical download review through optional

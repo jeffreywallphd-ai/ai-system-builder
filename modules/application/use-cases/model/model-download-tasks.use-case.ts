@@ -18,13 +18,14 @@ import {
 } from "../../../contracts/model";
 import {createHash} from "node:crypto";
 import {types} from "node:util";
+import {isAbsolute, resolve, parse as parsePath} from "node:path";
 import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
 import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
 import type { ModelDownloadCompletionPort, ModelRegistryPort, ApprovedModelSourceDownloadPort,
   ApprovedModelSourceDownloadRequest, ApprovedModelSourceDownloadControl, ApprovedModelSourceDownloadTask,
-  ApprovedModelSourceDownloadReview } from "../../ports/model";
+  ApprovedModelSourceDownloadReview, ApprovedModelSourceRegistrationPreparation } from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 
@@ -257,21 +258,47 @@ export class ModelDownloadTasksUseCase {
    * This never refreshes a task, inspects files, registers or retires a source. */
   public async peekApprovedSourceReview(request: ReadModelDownloadTaskRequest,
     authority: ModelDownloadAuthority = {}): Promise<ApprovedModelSourceDownloadReview | undefined> {
+    const snapshot = await this.peekApprovedSourceSnapshot(request, authority);
+    return snapshot?.isOriginalSourceCurrent() === true ? snapshot.review : undefined;
+  }
+
+  /** Private inputs for reference-only registry metadata, not a file effect or
+   * a save approval. The host must separately approve and authorize the exact
+   * eventual write. No status refresh, path inspection or registration occurs. */
+  public async peekApprovedSourceRegistration(request: ReadModelDownloadTaskRequest, manifestDigest: string,
+    authority: ModelDownloadAuthority): Promise<ApprovedModelSourceRegistrationPreparation | undefined> {
+    const selected = this.requireApprovedSource(request, manifestDigest, authority);
+    if (selected.authority.modelWriteAuthorized !== true) throw new Error("Model write authority is required to prepare this source reference.");
+    const snapshot = await this.peekApprovedSourceSnapshot(selected.request, selected.authority);
+    this.assertCurrentDescriptor(selected.request.requestId, selected.descriptor);
+    if (!snapshot || snapshot.review.manifestDigest !== manifestDigest || !snapshot.isOriginalSourceCurrent()) return;
+    // Structural host-local path validation is not containment, file existence,
+    // immutable bytes or ownership proof. The original source producer supplies it.
+    const location = snapshot.localPath;
+    if (location.length > 32760 || /[\u0000-\u001f\u007f]/.test(location) || !isAbsolute(location) ||
+        resolve(location) !== location || parsePath(location).root === location || location.startsWith("\\\\") || location.startsWith("//")) return;
+    return Object.freeze({...snapshot, sourceManifest: freezeSourceData(structuredClone(snapshot.sourceManifest))});
+  }
+
+  private async peekApprovedSourceSnapshot(request: ReadModelDownloadTaskRequest,
+    authority: ModelDownloadAuthority): Promise<ApprovedModelSourceRegistrationPreparation | undefined> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
     const source = descriptor.source;
     if (!source || source.phase !== "accepted" || !source.nativeTerminal || source.failed || !source.task) return;
+    const task = source.task, control = source.control, sourceCurrent = control.isCurrent;
     const mayRead = () => {
       try {
-        const alive: unknown = source.control.isCurrent();
+        const alive: unknown = sourceCurrent.call(control);
         if (types.isPromise(alive)) void Promise.prototype.then.call(alive, undefined, () => {});
         return alive === true && descriptor.source === source && source.phase === "accepted" &&
+          source.control === control && control.isCurrent === sourceCurrent && source.task === task &&
           source.nativeTerminal && !source.failed && this.descriptors.get(normalized.requestId) === descriptor;
       } catch {return false;}
     };
     try {
       if (!mayRead()) return;
-      const completed = await source.task.readCompleted();
+      const completed = await task.readCompleted();
       this.assertCurrentDescriptor(normalized.requestId, descriptor);
       if (!mayRead() || completed === undefined) return;
       const result = readStrictPassiveRecord(passiveSourceData(completed), ["provider", "modelId", "revision",
@@ -281,11 +308,15 @@ export class ModelDownloadTasksUseCase {
           result.revision !== selected.source.revision || result.verifiedManifestDigest !== selected.manifestDigest ||
           result.downloaded !== true || typeof result.fromCache !== "boolean" ||
           typeof result.localPath !== "string" || !result.localPath.trim() || !mayRead()) return;
-      return freezeSourceData({requestId: normalized.requestId, workspaceId: normalized.workspaceId,
+      const review = freezeSourceData({requestId: normalized.requestId, workspaceId: normalized.workspaceId,
         modelId: selected.source.modelId, revision: selected.source.revision, manifestDigest: selected.manifestDigest,
         format: selected.source.format, license: structuredClone(selected.source.license),
         selectedFileCount: selected.source.files.length, totalBytes: selected.source.totalBytes, fromCache: result.fromCache,
-        selectedFilesVerification: "verified-at-completion", runtimeReadiness: "not-checked"});
+        selectedFilesVerification: "verified-at-completion" as const, runtimeReadiness: "not-checked" as const});
+      // Historical public review returns only review; clone the larger manifest
+      // only when a private registration preparation actually needs it.
+      return Object.freeze({review, sourceManifest: selected, localPath: result.localPath,
+        storageAuthority: "reference-only" as const, isOriginalSourceCurrent: mayRead});
     } catch {return;}
   }
 

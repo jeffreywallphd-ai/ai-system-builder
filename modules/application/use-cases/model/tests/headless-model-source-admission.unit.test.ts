@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
+import {resolve as resolvePath, parse as parsePath} from "node:path";
 import test, {type TestContext} from "node:test";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
@@ -89,6 +90,102 @@ test("cached source review returns detached finite historical verification witho
     await assert.rejects(f.useCase.complete({workspaceId, requestId: taskId}, f.authority), /separately scoped/);
     assert.deepEqual(f.counts(), before);
   }
+});
+
+test("source registration preparation keeps immutable original private references without writes or file authority", async t => {
+  const f = fixture(t); await succeedSource(f);
+  const localPath = resolvePath("synthetic-model-reference"); f.completed({...completionFor(f), localPath});
+  const before = f.counts();
+  const prepared = await f.useCase.peekApprovedSourceRegistration({workspaceId, requestId: taskId},
+    f.sourceRequest.sourceManifest.manifestDigest, f.authority);
+  assert.ok(prepared); assert.equal(prepared.localPath, localPath); assert.equal(prepared.storageAuthority, "reference-only");
+  assert.equal(prepared.review.requestId, taskId); assert.equal(prepared.review.runtimeReadiness, "not-checked");
+  assert.equal(prepared.review.selectedFilesVerification, "verified-at-completion");
+  assert.deepEqual(prepared.sourceManifest, f.sourceRequest.sourceManifest);
+  assert.notEqual(prepared.sourceManifest, f.sourceRequest.sourceManifest);
+  assert.ok(Object.isFrozen(prepared) && Object.isFrozen(prepared.review) && Object.isFrozen(prepared.sourceManifest.source.files));
+  assert.equal(prepared.isOriginalSourceCurrent(), true); assert.deepEqual(f.counts(), before);
+  assert.equal(f.completionReads(), 1);
+  const review = await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority);
+  assert.doesNotMatch(JSON.stringify(review), /localPath|sourceManifest|storageAuthority|isOriginalSourceCurrent|synthetic-model-reference/);
+  await assert.rejects(f.useCase.complete({workspaceId, requestId: taskId}, f.authority), /separately scoped Model registration/);
+  assert.equal(f.counts().registered, 0);
+});
+
+test("source registration preparation requires exact actor, workspace, source and strict ModelWrite before cached access", async t => {
+  const f = fixture(t); await succeedSource(f); f.completed({...completionFor(f), localPath: resolvePath("synthetic-model-reference")});
+  const request = {workspaceId, requestId: taskId}, manifestDigest = f.sourceRequest.sourceManifest.manifestDigest;
+  for (const authority of [{...f.authority, modelWriteAuthorized: false}, {...f.authority, modelWriteAuthorized: undefined},
+    {...f.authority, modelWriteAuthorized: "true"}, {...f.authority, principalId: "principal.foreign"},
+    {...f.authority, organizationId: createOrganizationId("organization.foreign")}])
+    await assert.rejects(f.useCase.peekApprovedSourceRegistration(request, manifestDigest, authority as never));
+  await assert.rejects(f.useCase.peekApprovedSourceRegistration({...request, workspaceId: createWorkspaceId("workspace.foreign")}, manifestDigest, f.authority));
+  await assert.rejects(f.useCase.peekApprovedSourceRegistration(request, "sha256:" + "f".repeat(64), f.authority));
+  assert.equal(f.completionReads(), 0); assert.equal(f.counts().registered, 0);
+});
+
+test("source registration preparation refuses pending or failed native outcomes without refreshing them", async t => {
+  for (const state of ["running", "failed", "cancelled"] as const) {
+    const f = fixture(t);
+    assert.equal((await f.useCase.startApprovedSource(f.request, f.admission, f.authority)).kind, "accepted");
+    f.records.get(taskId)!.status = state;
+    if (state !== "running") {await f.useCase.read({workspaceId, requestId: taskId}, f.authority); await f.reconciler.reconcileNow();}
+    f.completed({...completionFor(f), localPath: resolvePath("synthetic-model-reference")});
+    const before = f.counts();
+    assert.equal(await f.useCase.peekApprovedSourceRegistration({workspaceId, requestId: taskId}, f.sourceRequest.sourceManifest.manifestDigest, f.authority), undefined);
+    assert.deepEqual(f.counts(), before); assert.equal(f.completionReads(), 0);
+  }
+});
+
+test("source registration preparation rejects noncanonical or nonlocal references without changing historical review", async t => {
+  const f = fixture(t); await succeedSource(f);
+  for (const localPath of ["relative-model", "https://example.invalid/model", "\\\\server\\share\\model", "//server/share/model",
+    parsePath(resolvePath("synthetic-model-reference")).root, resolvePath("synthetic-model-reference") + "\nprivate"] ) {
+    f.completed({...completionFor(f), localPath});
+    assert.equal(await f.useCase.peekApprovedSourceRegistration({workspaceId, requestId: taskId}, f.sourceRequest.sourceManifest.manifestDigest, f.authority), undefined);
+  }
+  f.completed({...completionFor(f), localPath: "relative-historical-source"});
+  assert.ok(await f.useCase.peekApprovedSourceReview({workspaceId, requestId: taskId}, f.authority), "Historical review still grants no file/location authority.");
+  assert.equal(f.counts().registered, 0);
+});
+
+test("prepared source liveness is original and cannot be revived by replacing caller callbacks", async t => {
+  const f = fixture(t); await succeedSource(f); f.completed({...completionFor(f), localPath: resolvePath("synthetic-model-reference")});
+  const prepared = await f.useCase.peekApprovedSourceRegistration({workspaceId, requestId: taskId}, f.sourceRequest.sourceManifest.manifestDigest, f.authority);
+  assert.ok(prepared); assert.equal(prepared.isOriginalSourceCurrent(), true);
+  f.retire(); Object.assign(f.admission.control, {isCurrent: () => true});
+  assert.equal(prepared.isOriginalSourceCurrent(), false);
+  assert.equal(await f.useCase.peekApprovedSourceRegistration({workspaceId, requestId: taskId}, f.sourceRequest.sourceManifest.manifestDigest, f.authority), undefined);
+  assert.equal(f.counts().registered, 0);
+});
+
+test("awaited source registration preparation captures identity and suppresses retired original completion", async t => {
+  const f = fixture(t); await succeedSource(f);
+  let enter!: () => void, resume!: () => void;
+  const entered = new Promise<void>(resolve => {enter = resolve;}), released = new Promise<void>(resolve => {resume = resolve;});
+  f.readCompletion(async () => {enter(); await released; return {...completionFor(f), localPath: resolvePath("synthetic-model-reference")};});
+  const request = {workspaceId, requestId: taskId}, authority = {...f.authority};
+  const pending = f.useCase.peekApprovedSourceRegistration(request, f.sourceRequest.sourceManifest.manifestDigest, authority);
+  await entered; request.requestId = "different-task"; authority.principalId = "principal.foreign";
+  f.retire(); Object.assign(f.admission.control, {isCurrent: () => true}); resume();
+  assert.equal(await pending, undefined); assert.equal(f.counts().registered, 0);
+});
+
+test("historical source review rechecks original liveness at the snapshot promise handoff", async t => {
+  const f = fixture(t); await succeedSource(f);
+  let retired = false;
+  f.readCompletion(async () => {
+    // Resolve the cached read and private snapshot first; retire before the
+    // public wrapper resumes. No request, descriptor or task record is replaced.
+    queueMicrotask(() => queueMicrotask(() => queueMicrotask(() => {retired = true; f.retire();})));
+    return completionFor(f);
+  });
+  const request = {workspaceId, requestId: taskId}, before = f.counts();
+  const review = await f.useCase.peekApprovedSourceReview(request, f.authority);
+  assert.equal(retired, true); assert.deepEqual(request, {workspaceId, requestId: taskId});
+  assert.equal(f.records.size, 1); assert.equal(f.records.get(taskId)!.status, "succeeded");
+  assert.deepEqual(f.counts(), before); assert.equal(f.completionReads(), 1);
+  assert.equal(review, undefined, "A snapshot cannot grant a stale public review after its original source retired.");
 });
 
 test("source review preserves declared non-open licensing without asserting rights or readiness", async t => {

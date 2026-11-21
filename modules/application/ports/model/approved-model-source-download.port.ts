@@ -50,5 +50,15 @@ export interface ApprovedModelSourceDownloadReview {
   readonly selectedFilesVerification: "verified-at-completion";
   readonly runtimeReadiness: "not-checked";
 }
+/** Internal cached reference only. Never serialize the path or callback to a
+ * client. A future registry transaction still needs separate exact approval and
+ * current ModelWrite; this grants no current-file, ownership or loading rights. */
+export interface ApprovedModelSourceRegistrationPreparation {
+  readonly review: ApprovedModelSourceDownloadReview;
+  readonly sourceManifest: ApprovedModelSourceDownloadRequest["sourceManifest"];
+  readonly localPath: string;
+  readonly storageAuthority: "reference-only";
+  readonly isOriginalSourceCurrent: () => boolean;
+}
 export type ApprovedModelSourceDownloadStart = Exclude<InstalledRuntimeTaskStart, {kind: "accepted"}> |
   {readonly kind: "accepted"; readonly value: StartRuntimeTaskResult; readonly task: ApprovedModelSourceDownloadTask};

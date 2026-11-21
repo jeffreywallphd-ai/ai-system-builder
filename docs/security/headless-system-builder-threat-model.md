@@ -1543,6 +1543,20 @@ After possible effects, malformed, lost, withdrawn or thrown replies remain
 unconfirmed with no automatic retry. Preserve original business/native custody;
 ACK does not prove terminal cleanup. Protocol fixtures cannot qualify actual
 source/save activation, physical/native/provider execution or parent completion.
+## Private reference-only Model registration inputs
+
+Cached registration preparation requires the exact retained successful source,
+task, actor/workspace, manifest digest and trusted ModelWrite admission. Capture
+original task/control identities before waits and retain their strict synchronous
+liveness check. Replacing caller callbacks cannot revive a retired source.
+Return detached frozen source/review facts and a private canonical host-local
+cache reference. Structural path validation does not prove existence, containment,
+immutable bytes or ownership. Shared cache content stays reference-only. No file,
+provider, worker or registry effect occurs, and no private path/callback enters
+the historical public review. Preparation is not a separate save approval or
+continuing writer permission. The eventual atomic registry owner must reauthorize
+the exact write. Keep save activation, physical/native/provider and parent gaps.
+
 ## Completed Model review protocol
 
 Only configured plan-review reader bindings disclose the finite historical review.

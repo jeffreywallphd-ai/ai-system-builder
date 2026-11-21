@@ -1841,6 +1841,17 @@ remain authoritative. Adapters attach request admission lifetime, copy target
 identity and independently validate finite owner-derived task/workspace/plan/ACK.
 SDK post-dispatch failures are unconfirmed and never retried automatically.
 Cancellation acknowledgement is not native settlement or registry persistence.
+## Reference-only Model registration preparation
+
+Shared provider-cache bytes remain reference-only under ADR0043. The existing
+Model task owner prepares private cached source/review/path data only after exact
+source/task/actor/workspace and trusted ModelWrite admission. The snapshot carries
+original-source liveness, not current write permission, file existence/integrity,
+ownership or readiness. It performs no file or registry effect. Historical public
+review excludes that private data. A later registry owner still needs separate
+exact save approval, current policy and atomic record/receipt publication. No
+product save root or native file effect is enabled by preparation.
+
 ## Completed Model review protocol
 
 Optional Desktop and Managed read bindings expose the cached historical summary
