@@ -49,6 +49,7 @@ function timestamp(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) &&
     Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
 }
+export {timestamp as isHeadlessModelTimestamp};
 function oneOf<T extends readonly string[]>(value: unknown, options: T): value is T[number] {
   return typeof value === "string" && options.some(option => option === value);
 }

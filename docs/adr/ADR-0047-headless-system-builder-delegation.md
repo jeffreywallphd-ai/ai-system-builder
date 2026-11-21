@@ -888,3 +888,22 @@ or each-change approval in trusted chat or the app popup. Execution, committed
 replay and publication require new exact save approval and current ModelRead/Write;
 a download approval cannot substitute. Public transport/product roots remain
 unconfigured pending complete workflow qualification.
+
+## Exact saved inputs before fine-tuning
+
+Use a private metadata-only models.preview-training-inputs operation before
+separately approved training. Reuse authorized recorded-Model and immutable
+Dataset-version readers, rather than ordinary training setup, which can stage
+files and prepare a runtime. Bind the selected Model update timestamp and Dataset
+version digest. Capture complete passive selectors and original actor, client,
+host and callbacks before any policy wait; retain current authority throughout
+two exact Model point reads and one Dataset-version point read. Compare the final
+Model summary and deny changed, missing or malformed inputs without a partial
+reply. Return frozen existing minimized summaries, not private paths or rows.
+
+The review explicitly leaves bytes, runtime, training compatibility, resources
+and license rights unchecked; recorded quality metadata is not fresh quality
+evidence. It starts no model, provider, worker, installation or mutation and grants
+no training approval. Keep this standalone private operation out of public read
+discovery until its full workflow is integrated and qualified. This implementation
+does not change training settings, safe-loading controls or resource policies.

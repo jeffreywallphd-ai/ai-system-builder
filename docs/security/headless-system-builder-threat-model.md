@@ -1613,3 +1613,24 @@ fixtures test both approval modes/channels, missing/stale/foreign completion,
 real membership withdrawal during preparation, changed registry rows, expiry and
 legacy default-off behavior. Public roots stay unconfigured; these checks do not
 qualify actual provider/native/physical execution or the parent roadmap.
+
+## Saved fine-tuning input metadata
+
+Protect private model paths, Dataset rows and workspace authority when an agent
+selects training inputs. The private preview captures bounded passive selectors
+and original actor/client/host/callbacks before waits. Existing authorized Model
+and Dataset metadata readers make only exact point reads; no discovery, file or
+artifact-byte capability is supplied. Recheck current authority after every read,
+compare the final Model summary and selected immutable version digest, and deny
+stale, foreign, active or malformed replies without partial disclosure. Capture
+reader methods before policy waits so a replacement cannot change the owner.
+An immediate synchronous lifetime check after each awaited admission fences the
+caller continuation itself, before entering the next captured metadata reader.
+
+Return frozen minimized summaries and fixed errors without raw owner exceptions,
+private paths, rows, prompts or credentials. Retired/replaced callbacks, async
+synchronous fences and withdrawn policy fail closed. Metadata does not establish
+file integrity, training compatibility, model/resource readiness, license rights
+or fresh quality. Training still requires separate exact approval and safe
+installed-only execution. Core/SQLite tests exercise these privacy and denial
+paths; no public capability, native execution or parent qualification follows.

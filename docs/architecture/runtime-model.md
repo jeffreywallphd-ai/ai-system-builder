@@ -1895,3 +1895,23 @@ commits the reference through the atomic save owner and gates publication on the
 unchanged causal receipt and current plan/policy. No other plan family or legacy
 host inherits saving. Real public transport/product activation and physical,
 provider/native and final workflow qualification remain pending.
+
+## Private fine-tuning input review
+
+The private models.preview-training-inputs operation composes the existing
+authorized recorded-Model and immutable Dataset-version metadata owners. It
+selects one Model ID/update timestamp and one Dataset ID/version/digest. It
+captures passive request data, original actor/client/host and policy callbacks
+before waiting. There are at most two exact Model reads and one Dataset-version
+read, with current authority between them and a final Model-summary comparison.
+Missing, changed, malformed or unauthorized selections yield fixed errors and no
+partial result. Frozen replies contain only the existing minimized summaries;
+private paths, raw rows, source text and owner errors remain private.
+
+This review performs no artifact-byte, provider, runtime, task, installation or
+write effect. Recorded quality fingerprints are not rechecked quality results.
+Input bytes, training compatibility, runtime/resource readiness and license rights
+are explicitly unchecked. A new exact training approval and separately qualified
+installed-only execution are still required. The standalone operation is not
+advertised by public read tools or configured in product roots. Controlled
+Core/SQLite metadata tests do not qualify actual training, hosts or the parent.

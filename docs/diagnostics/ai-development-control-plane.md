@@ -2811,3 +2811,19 @@ denial, concurrent exact retries and read-only lost-reply reconciliation. These
 metadata-only checks load no model and supply no public-host, provider, native or
 parent qualification. Unknown/shared sources and explicit generic checks retain
 their existing fallback; this profile does not qualify future save-plan wiring.
+
+The same exact Model owner unit/type profiles include the private training-input
+contract and application owner. Focused cases compose actual authorized
+Model and immutable Dataset metadata readers with Core/SQLite storage, bounded
+point reads, final revision comparison, current original authority, passive-data
+denial and minimized frozen replies. Three helper-routing tests bind these exact
+sources to their actual tests and strict compiler command; unknown/shared source
+and explicit generic fallback remain unchanged. These checks perform no training,
+provider, installation, artifact-byte or model-quality work. Separate training
+approval, safe execution, public integration and host/parent qualification remain.
+
+Training-input admission also checks the original lifetime synchronously in the
+caller after each awaited policy result. Three causal Promise-handoff cases retire
+that lifetime after the nested policy check but before each reader entry; none
+can invoke the next reader. The independently observed earlier extra entries and
+failed regression results remain evidence, not passing qualification.

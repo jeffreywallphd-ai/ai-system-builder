@@ -26,6 +26,8 @@ function passive(raw: unknown): unknown {
   }
   inspect(raw); return copyBoundedPassiveData(raw);
 }
+/** Bounded Node ingress for passive Model workflow data, with no active hooks. */
+export {passive as copyHeadlessModelWorkflowData};
 function freeze<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) freeze(child); Object.freeze(value);}
   return value;
