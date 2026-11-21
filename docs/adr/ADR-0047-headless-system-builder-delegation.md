@@ -814,3 +814,14 @@ over a mismatching reply. Desktop task observation also requires the captured
 HTTP read-current fence through the final awaited policy return and owner entry,
 separate from registration and accepted business-task lifetimes. Held-policy and
 same-workspace displaced-plan regressions preserve these boundaries.
+
+The Model ownership seam also admits private `models.cancel-download` requests
+for an exact original task or plan step. It is outside read operations and
+requires current ModelRead/ModelWrite, captured operation/registration and actual
+host authority. A cached source owner is used after authoritative ledger lookup;
+the source call and its last policy check run outside metadata transactions.
+Return only finite owned lineage and cancellation acknowledgement. Unknown or
+withdrawn effects remain unconfirmed, with no automatic retry or claim of
+worker shutdown/cleanup. Backend task custody stays independent. Actual public
+transport/source/save activation and host/provider/native qualification remain
+separate; default compositions expose no cancellation handler.

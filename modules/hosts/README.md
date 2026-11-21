@@ -160,3 +160,13 @@ over a mismatching reply. Desktop task observation also requires the captured
 HTTP read-current fence through the final awaited policy return and owner entry,
 separate from registration and accepted business-task lifetimes. Held-policy and
 same-workspace displaced-plan regressions preserve these boundaries.
+
+Private Model plan compositions may opt into `cancelModelDownload` using
+`peekModelDownloadTasks`, which must return only an already loaded original
+source owner. Desktop captures its registration and operation callbacks.
+Managed also requires the existing stable metadata proof and independent actual
+host callback. Both reread current ModelRead/ModelWrite and exact accepted
+client/actor/workspace/task lineage. The last policy check and source cancellation
+run outside transactions. Once an effect may have happened, failed/withdrawn
+outcomes are unconfirmed. Acknowledgement does not settle native custody.
+No ordinary fallback, restart, registry save or public activation follows.

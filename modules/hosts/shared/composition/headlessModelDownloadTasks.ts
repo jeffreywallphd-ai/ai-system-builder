@@ -4,7 +4,9 @@ import {readStructuredOwnedModelPlanTask, readStructuredOwnedModelPlanTaskByPlan
   readStructuredOwnedModelPlanTaskSourceDigest, readStructuredModelPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
 import type {ModelDownloadTasksUseCase} from "../../../application/use-cases/model/model-download-tasks.use-case";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
-import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessModelTaskSelection, type HeadlessModelTaskSelection} from "../../../contracts/headless";
+import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessModelTaskSelection, type HeadlessModelTaskSelection,
+  readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
+  type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
 import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
@@ -14,9 +16,20 @@ export type OwnedHeadlessModelTaskSelection = HeadlessModelTaskSelection;
 export type OwnedHeadlessModelTaskReader = (query: {readonly scope: HeadlessOperationScope;
   readonly selection: HeadlessModelTaskSelection; readonly isCurrent: () => boolean}) => ReturnType<typeof runOwnedHeadlessModelDownloadTask>;
 type SourceOwner = Pick<ModelDownloadTasksUseCase, "readApprovedSource" | "cancelApprovedSource">;
+export type OwnedHeadlessModelSourceTasks = SourceOwner;
 const forbidden = {ok: false, code: "headless.forbidden"} as const;
 const unavailable = {ok: false, code: "headless.unavailable"} as const;
 const isDigest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+function captureScope(value: unknown): HeadlessOperationScope | undefined {
+  try {
+    if (types.isProxy(value)) return;
+    const raw = readStrictPassiveRecord(value, ["organizationId", "principalId", "workspaceId", "registeredClientId"]);
+    if (!isOrganizationId(raw.organizationId) || !isWorkspaceId(raw.workspaceId) || !isDesktopHeadlessClientId(raw.registeredClientId) ||
+        typeof raw.principalId !== "string" || !raw.principalId || raw.principalId.length > 160 || hasKnownPassiveCredential(raw.principalId)) return;
+    return Object.freeze({organizationId: raw.organizationId, principalId: raw.principalId,
+      workspaceId: raw.workspaceId, registeredClientId: raw.registeredClientId});
+  } catch {return;}
+}
 
 /** Private host integration, not a public route or permission grant. Metadata
  * transactions prove original client ownership before touching an already loaded
@@ -37,18 +50,14 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
   const current = () => isHeadlessReadCurrent(isCurrent);
   let captured = false;
   try {
-    if (types.isProxy(options.scope) || types.isProxy(options.selection)) return forbidden;
-    const rawScope = readStrictPassiveRecord(options.scope,
-      ["organizationId", "principalId", "workspaceId", "registeredClientId"]);
+    if (types.isProxy(options.selection)) return forbidden;
+    const parsedScope = captureScope(options.scope); if (!parsedScope) return forbidden;
+    const scope: HeadlessOperationScope = parsedScope;
     const parsedSelection = readHeadlessModelTaskSelection(options.selection);
     if (!parsedSelection) return forbidden;
     const selection: OwnedHeadlessModelTaskSelection = parsedSelection;
-    if (!isOrganizationId(rawScope.organizationId) || !isWorkspaceId(rawScope.workspaceId) || !isDesktopHeadlessClientId(rawScope.registeredClientId) ||
-        typeof rawScope.principalId !== "string" || !rawScope.principalId || rawScope.principalId.length > 160 || hasKnownPassiveCredential(rawScope.principalId) ||
-        !isHeadlessHostIncarnationId(hostIncarnationId) || !["read", "cancel"].includes(action) || !current() ||
+    if (!isHeadlessHostIncarnationId(hostIncarnationId) || !["read", "cancel"].includes(action) || !current() ||
         documents.organizationId !== undefined || !documents.runInOwnedTransaction) return forbidden;
-    const scope: HeadlessOperationScope = Object.freeze({organizationId: rawScope.organizationId, principalId: rawScope.principalId,
-      workspaceId: rawScope.workspaceId, registeredClientId: rawScope.registeredClientId});
     captured = true;
     const transaction = documents.runInOwnedTransaction.bind(documents);
     const fence = () => {if (!current()) throw new Error("The original task request ended.");};
@@ -104,4 +113,39 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
       ...(action === "cancel" ? {cancellationAccepted: reply.cancelled as boolean} : {}),
       registration: "requires-separate-approval" as const, runtimeReadiness: "not-checked" as const}} as const;
   } catch {return captured && current() ? unavailable : forbidden;}
+}
+
+/** Private cancellation admission. Losing a reply never proves no native effect.
+ * The original task owner retains its independent business/cleanup lifetime. */
+export async function runOwnedHeadlessModelDownloadCancellation(options:
+  Omit<Parameters<typeof runOwnedHeadlessModelDownloadTask>[0], "selection" | "action"> & {
+    readonly request: unknown; readonly canUse: () => Promise<boolean>;
+  }): Promise<HeadlessModelTaskCancellationResult> {
+  const {documents, hostIncarnationId, isCurrent, authorize, peekOwner, canUse, request} = options;
+  const current = () => isHeadlessReadCurrent(isCurrent);
+  const unconfirmed = {ok: false, code: "headless.operation-unconfirmed"} as const;
+  let sourceEntered = false;
+  try {
+    if (!isHeadlessHostIncarnationId(hostIncarnationId)) return {ok: false, code: "headless.invalid-request"};
+    const parsed = readHeadlessModelTaskCancellationRequest(request, hostIncarnationId);
+    if (!parsed.ok) return parsed;
+    const scope = captureScope(options.scope); if (!scope) return forbidden;
+    if (scope.workspaceId !== parsed.request.input.workspaceId || !current()) return forbidden;
+    const result = await runOwnedHeadlessModelDownloadTask({documents, hostIncarnationId, scope,
+      selection: parsed.request.input.selection, action: "cancel", isCurrent: current, authorize,
+      peekOwner: () => {
+        const owner = peekOwner();
+        if (!owner) return;
+        const cancel = owner.cancelApprovedSource.bind(owner);
+        return {readApprovedSource: owner.readApprovedSource.bind(owner), async cancelApprovedSource(...args) {
+          if (!current() || await canUse() !== true || !current()) throw new Error("Model cancellation is unavailable.");
+          sourceEntered = true;
+          return cancel(...args);
+        }};
+      }});
+    if (!result.ok) return sourceEntered ? unconfirmed : result;
+    if (!current() || await canUse() !== true || !current()) return sourceEntered ? unconfirmed : forbidden;
+    const value = readHeadlessModelTaskCancellationValue(result.value, parsed.request.input);
+    return value ? {ok: true, operation: "models.cancel-download", value} : sourceEntered ? unconfirmed : unavailable;
+  } catch {return sourceEntered ? unconfirmed : current() ? unavailable : forbidden;}
 }

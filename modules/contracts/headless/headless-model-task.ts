@@ -20,6 +20,19 @@ export interface HeadlessModelTaskValue {
   readonly registration: "requires-separate-approval";
   readonly runtimeReadiness: "not-checked";
 }
+export interface HeadlessModelTaskCancellationRequest {
+  readonly version: typeof HEADLESS_CONTRACT_VERSION;
+  readonly operation: "models.cancel-download";
+  readonly input: HeadlessModelTaskRequest["input"];
+}
+export interface HeadlessModelTaskCancellationValue extends HeadlessModelTaskValue {
+  /** Request acknowledgement only. Observe the original task for actual settlement. */
+  readonly cancellationAccepted: boolean;
+}
+export type HeadlessModelTaskCancellationResult =
+  | {readonly ok: true; readonly operation: "models.cancel-download"; readonly value: HeadlessModelTaskCancellationValue}
+  | {readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" | "headless.forbidden" |
+      "headless.unavailable" | "headless.operation-unconfirmed"};
 const invalid = {ok: false, code: "headless.invalid-request"} as const;
 function record(value: unknown, names: readonly string[]) {
   const result = readStrictPassiveRecord(value, names);
@@ -50,6 +63,16 @@ export function readHeadlessModelTaskRequest(value: unknown, host: HeadlessHostI
       input: Object.freeze({hostIncarnationId: host, workspaceId: input.workspaceId, selection})}) satisfies HeadlessModelTaskRequest} as const;
   } catch {return invalid;}
 }
+export function readHeadlessModelTaskCancellationRequest(value: unknown, host: HeadlessHostIncarnationId) {
+  try {
+    const raw = record(copyBoundedPassiveData(value), ["version", "operation", "input"]);
+    if (raw.version !== HEADLESS_CONTRACT_VERSION || raw.operation !== "models.cancel-download") return invalid;
+    const parsed = readHeadlessModelTaskRequest({version: raw.version, operation: "models.task", input: raw.input}, host);
+    if (!parsed.ok) return parsed;
+    return {ok: true, request: Object.freeze({version: HEADLESS_CONTRACT_VERSION, operation: "models.cancel-download",
+      input: parsed.request.input}) satisfies HeadlessModelTaskCancellationRequest} as const;
+  } catch {return invalid;}
+}
 /** Finite observation only. A succeeded transfer does not save or qualify a model. */
 export function readHeadlessModelTaskValue(value: unknown, target: HeadlessModelTaskRequest["input"]): HeadlessModelTaskValue | undefined {
   try {
@@ -66,5 +89,15 @@ export function readHeadlessModelTaskValue(value: unknown, target: HeadlessModel
     return {workspaceId: target.workspaceId, taskId: raw.taskId, plan: {fingerprint: selection.fingerprint, step: selection.step},
       state: raw.state as HeadlessModelTaskValue["state"],
       percent: raw.percent as number | null, registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  } catch {return;}
+}
+export function readHeadlessModelTaskCancellationValue(value: unknown,
+  target: HeadlessModelTaskRequest["input"]): HeadlessModelTaskCancellationValue | undefined {
+  try {
+    const raw = record(copyBoundedPassiveData(value), ["workspaceId", "taskId", "plan", "state", "percent", "registration",
+      "runtimeReadiness", "cancellationAccepted"]);
+    const {cancellationAccepted, ...metadata} = raw;
+    const task = readHeadlessModelTaskValue(metadata, target);
+    return task && typeof cancellationAccepted === "boolean" ? {...task, cancellationAccepted} : undefined;
   } catch {return;}
 }

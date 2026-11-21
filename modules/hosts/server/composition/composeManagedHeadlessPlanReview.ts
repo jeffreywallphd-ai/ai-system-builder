@@ -14,6 +14,8 @@ import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWit
 import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolicy, type StartHeadlessModelDownload}
   from "../../shared/composition/headlessModelDownloadExecution";
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
+import {runOwnedHeadlessModelDownloadCancellation, type OwnedHeadlessModelSourceTasks} from "../../shared/composition/headlessModelDownloadTasks";
+import {readHeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
@@ -68,6 +70,7 @@ export function composeManagedHeadlessPlanReview(options: {
   /** Private opt-in. Both callbacks are required; host lifetime is not an HTTP lifetime. */
   readonly getModelDownloadStart?: () => Promise<StartHeadlessModelDownload | undefined>;
   readonly isModelHostCurrent?: () => boolean;
+  readonly peekModelDownloadTasks?: () => OwnedHeadlessModelSourceTasks | undefined;
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
 }) {
   const { hostIncarnationId, platform, rootDirectory, workspaces, contexts, authorization, placement, systems } = options;
@@ -83,6 +86,7 @@ export function composeManagedHeadlessPlanReview(options: {
   const getModelSourcePreview = platform.publishWithStableReads ? options.getModelSourcePreview : undefined;
   const isModelHostCurrent = options.isModelHostCurrent;
   const getModelDownloadStart = platform.publishWithStableReads && typeof isModelHostCurrent === "function" ? options.getModelDownloadStart : undefined;
+  const peekModelDownloadTasks = platform.publishWithStableReads && typeof isModelHostCurrent === "function" ? options.peekModelDownloadTasks : undefined;
 
   function admitWorkspace(requested: Pick<HeadlessPlanReviewAgentRequest["target"], "workspaceId" | "hostIncarnationId">,
     operation: string, registration: ManagedPlanReviewRegistration, isOpen: () => boolean,
@@ -166,6 +170,30 @@ export function composeManagedHeadlessPlanReview(options: {
       };
     } catch { return { result: access.current() ? unavailable : forbidden }; }
   }
+
+  const cancelModelDownload = peekModelDownloadTasks ? async (incoming: unknown, registration: ManagedPlanReviewRegistration,
+    isOpen: () => boolean): Promise<HeadlessModelTaskCancellationResult> => {
+    const parsed = readHeadlessModelTaskCancellationRequest(incoming, hostIncarnationId);
+    if (!parsed.ok) return parsed;
+    const {organizationId, principalId, registeredClientId, purpose} = registration;
+    const registrationCurrent = registration.isCurrent;
+    const current = () => isHeadlessReadCurrent(isOpen) && isHeadlessReadCurrent(isModelHostCurrent) &&
+      isHeadlessReadCurrent(registrationCurrent) && registration.organizationId === organizationId &&
+      registration.principalId === principalId && registration.registeredClientId === registeredClientId && registration.purpose === purpose;
+    const captured = Object.freeze({organizationId, principalId, registeredClientId, purpose, isCurrent: current});
+    const access = admitWorkspace(parsed.request.input, "models.cancel-download", captured, current,
+      ["workspace:read", "model:read", "model:write"]);
+    if (!access || !current()) return forbidden;
+    const canUse = async () => current() && access.current() && await access.authorizeCurrent() && access.current() && current();
+    try {
+      if (!await canUse()) return forbidden;
+      return await runOwnedHeadlessModelDownloadCancellation({documents: platform, hostIncarnationId, scope: Object.freeze(access.scope),
+        request: parsed.request, isCurrent: () => current() && access.current(), canUse, peekOwner: peekModelDownloadTasks,
+        authorize: async (owner, selected, action) => action === "cancel" && selected.organizationId === organizationId &&
+          selected.principalId === principalId && selected.registeredClientId === registeredClientId &&
+          selected.workspaceId === parsed.request.input.workspaceId && current() && await access.authorizeOwned(owner) && current()});
+    } catch {return current() ? unavailable : forbidden;}
+  } : undefined;
 
   const handlers = {
     async execute(request: HeadlessPlanReviewAgentRequest, registration: ManagedPlanReviewRegistration,
@@ -400,6 +428,7 @@ export function composeManagedHeadlessPlanReview(options: {
     allowContextQuery: Boolean(getContextQueryOwner),
     allowContextRagGeneration: Boolean(getContextStart),
     runStep: systems && platform.publishWithStableReads ? handlers.runStep : undefined,
+    cancelModelDownload,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads
       ? (request: HeadlessLocalFileImportRequest, registration: ManagedPlanReviewRegistration, isOpen: () => boolean) =>
         previewSelectedFile(request.input, registration, isOpen, {

@@ -1816,3 +1816,18 @@ over a mismatching reply. Desktop task observation also requires the captured
 HTTP read-current fence through the final awaited policy return and owner entry,
 separate from registration and accepted business-task lifetimes. Held-policy and
 same-workspace displaced-plan regressions preserve these boundaries.
+
+### Private cancellation of accepted Model downloads
+
+Both plan compositions can bind a cached source-task owner for an exact
+`models.cancel-download` request. This is a mutation contract, outside the read
+operation family. Current ModelRead/ModelWrite, original client/actor/workspace,
+the accepted ledger and captured request/registration/host fences admit it.
+The helper rechecks authority immediately before the source call outside metadata
+transactions. Replies carry actual owned lineage and a boolean acknowledgement.
+Possible cancellation effects with lost/withdrawn/invalid replies remain
+`operation-unconfirmed`; they never grant a retry or prove worker shutdown.
+Accepted source custody and cleanup keep their original independent lifetime.
+Unconfigured private handlers are absent. Public cancellation routes, source
+activation, separate registry saving and actual provider/native/host proof remain
+pending; this component supplies none of those passes.

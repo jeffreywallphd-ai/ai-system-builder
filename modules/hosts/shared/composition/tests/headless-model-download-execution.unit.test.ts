@@ -7,6 +7,7 @@ import test, {type TestContext} from "node:test";
 import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeDesktopHeadlessReads";
 import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
 import {HEADLESS_READ_OPERATIONS, readHeadlessModelTaskRequest, readHeadlessModelTaskValue,
+  readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
   type HeadlessModelTaskRequest, type HeadlessReadRequest} from "../../../../contracts/headless";
 import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
 import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../../adapters/persistence/sqlite";
@@ -24,7 +25,7 @@ import {createWorkspaceId} from "../../../../contracts/workspace";
 import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId, type HeadlessPlanStepRequest} from "../../../../contracts/headless";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {runPreparedHeadlessModelDownload} from "../headlessModelDownloadExecution";
-import {runOwnedHeadlessModelDownloadTask} from "../headlessModelDownloadTasks";
+import {runOwnedHeadlessModelDownloadTask, runOwnedHeadlessModelDownloadCancellation} from "../headlessModelDownloadTasks";
 
 type Options = {root?: ReturnType<typeof createInMemoryStructuredDocumentStore>; channel?: "app-popup" | "authenticated-chat";
   mode?: "whole-plan" | "each-change"; precedingSystem?: boolean; followingSystem?: boolean};
@@ -623,4 +624,38 @@ test("desktop task observation requires a strict captured HTTP read-current proo
     assert.deepEqual(await f.read(), {ok: false, code: "headless.forbidden"});
     assert.equal(f.state.callbacks, 0);
   }
+});
+
+test("Model cancellation codecs isolate mutation from reads, copy selectors and keep acknowledgements finite", () => {
+  const host = "00000000-0000-4000-8000-000000000001" as HeadlessHostIncarnationId, taskId = randomUUID();
+  const request = {version: "aisb-headless-v1", operation: "models.cancel-download", input: {hostIncarnationId: host,
+    workspaceId: createWorkspaceId("workspace.synthetic"), selection: {kind: "task", taskId}}};
+  const parsed = readHeadlessModelTaskCancellationRequest(request, host); assert.ok(parsed.ok);
+  request.input.selection.taskId = randomUUID();
+  assert.equal(parsed.request.input.selection.kind === "task" && parsed.request.input.selection.taskId, taskId);
+  assert.equal(readHeadlessModelTaskRequest(request, host).ok, false);
+  const value = {workspaceId: parsed.request.input.workspaceId, taskId, plan: {fingerprint: "a".repeat(64), step: 1},
+    state: "running", percent: null, cancellationAccepted: true, registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  assert.deepEqual(readHeadlessModelTaskCancellationValue(value, parsed.request.input), value);
+  for (const bad of [{...value, cancellationAccepted: "true"}, {...value, cancellationAccepted: undefined},
+    {...value, taskId: randomUUID()}, {...value, error: "private/path"}, {...value, registrySaved: true}])
+    assert.equal(readHeadlessModelTaskCancellationValue(bad, parsed.request.input), undefined);
+  for (const bad of [{...request, operation: "models.task"}, {...request, transient: {command: "private"}},
+    {...request, input: {...request.input, selection: {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}}}])
+    assert.equal(readHeadlessModelTaskCancellationRequest(bad, host).ok, false);
+  let getters = 0;
+  assert.equal(readHeadlessModelTaskCancellationRequest({get version() {getters++; return "aisb-headless-v1";}}, host).ok, false);
+  assert.equal(getters, 0);
+});
+
+test("private cancellation refuses active scope and final policy before any source effect", async t => {
+  const f = await taskControls(t), request = {version: "aisb-headless-v1", operation: "models.cancel-download",
+    input: {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection: f.base.selection}};
+  let getters = 0;
+  const active = {...f.scope, get workspaceId() {getters++; return f.scope.workspaceId;}};
+  assert.deepEqual(await runOwnedHeadlessModelDownloadCancellation({...f.base, scope: active, request, canUse: async () => true}),
+    {ok: false, code: "headless.forbidden"});
+  assert.equal(getters, 0); assert.equal(f.state.cancels, 0);
+  assert.equal((await runOwnedHeadlessModelDownloadCancellation({...f.base, request, canUse: async () => false})).ok, false);
+  assert.equal(f.state.cancels, 0); assert.equal(f.state.starts, 1); assert.equal(f.state.registrations, 0);
 });

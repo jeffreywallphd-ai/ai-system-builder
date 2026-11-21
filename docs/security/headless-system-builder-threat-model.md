@@ -1506,3 +1506,20 @@ over a mismatching reply. Desktop task observation also requires the captured
 HTTP read-current fence through the final awaited policy return and owner entry,
 separate from registration and accepted business-task lifetimes. Held-policy and
 same-workspace displaced-plan regressions preserve these boundaries.
+
+### Private Model cancellation control
+
+Cancellation uses a separate closed mutation contract and the original accepted
+task/plan lookup. Both host controls require current ModelRead/ModelWrite and
+purpose-specific client/actor/workspace identity. Capture callback identities,
+selectors and scope before awaits; strict registration, operation and independent
+host fences remain live through the last policy return and source entry.
+A cached source owner is required. No shared-ID lookup, ordinary cancellation,
+lazy feature initialization, new transfer or registry save is permitted.
+Reauthorize before the source call outside metadata transactions and before
+disclosure. Once that call may have happened, a lost, malformed or withdrawn
+reply is unconfirmed; retain original custody and observe before any further
+action. A true or false acknowledgement is not native terminal or cleanup proof.
+Only finite owner-derived task/workspace/plan metadata and the acknowledgement
+leave the helper. Actual public/host/native/provider and parent proof stay
+pending. Rollback leaves the private handler unconfigured and preserves history.

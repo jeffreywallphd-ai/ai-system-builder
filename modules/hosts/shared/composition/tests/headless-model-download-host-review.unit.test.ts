@@ -52,7 +52,9 @@ async function fixture(t: TestContext, host: Host) {
   const state = {current: true, sourceConsent: true, readCurrent: true, operationCurrent: true, hostCurrent: true, ambientCurrent: true,
     inspections: 0, sourceResolutions: 0, denyWrite: false, sourceStarts: 0, startResolutions: 0, nativeReads: 0, nativeCancels: 0, registrations: 0,
     sourceOutcome: "accepted" as "accepted" | "unavailable" | "unknown", loseOutwardOnStart: false,
-    onResolveStart: undefined as (() => Promise<void>) | undefined, onInspect: undefined as (() => Promise<void>) | undefined};
+    onResolveStart: undefined as (() => Promise<void>) | undefined, onInspect: undefined as (() => Promise<void>) | undefined,
+    modelOwnerAvailable: true, ownerLookups: 0, controlPolicies: 0, nativeCancellationAccepted: true,
+    onControlPolicy: undefined as (() => Promise<void>) | undefined, onNativeCancel: undefined as (() => Promise<void>) | undefined};
   const contexts = {getCurrentOrganizationContext: () => state.ambientCurrent ? {organizationId, principalId} : undefined}, placement = createTenantPlacementConfig();
   const policy = createOrganizationAuthorizationPolicy({...repositories, tenantPlacement: placement});
   const authorization = new AuthorizeWorkspaceOperationService({organizationContext: contexts, authorizer: {async execute(input) {
@@ -91,7 +93,10 @@ async function fixture(t: TestContext, host: Host) {
         requestId: request.requestId, workspaceId, modelId: source.modelId, revision: source.revision,
         manifestDigest: request.sourceManifest.manifestDigest,
         read: async () => {state.nativeReads++; return {...record};},
-        cancel: async () => {state.nativeCancels++; return {requestId: request.requestId, status: record.status, cancelled: true};},
+        cancel: async () => {state.nativeCancels++;
+          await platform.runInOwnedTransaction!(async metadata => {assert.equal(metadata.organizationId, undefined);}, () => {});
+          await state.onNativeCancel?.();
+          return {requestId: request.requestId, status: record.status, cancelled: state.nativeCancellationAccepted};},
         readCompleted: async () => undefined})};
     }}});
   const getStart = async () => {state.startResolutions++; await state.onResolveStart?.(); return model.startApprovedSource.bind(model);};
@@ -102,6 +107,7 @@ async function fixture(t: TestContext, host: Host) {
   const registration = {...scope, purpose: "plan-review" as const, isCurrent: () => state.current,
     get modelSourceRead() {return state.sourceConsent ? true as const : undefined;}};
   const guardedAuthorization = {async authorizeWorkspaceOperation(input: Parameters<typeof authorization.authorizeWorkspaceOperation>[0]) {
+    if (input.operation === "headless.models.cancel-download") {state.controlPolicies++; await state.onControlPolicy?.();}
     if (state.denyWrite && input.requiredScopes.includes("model:write")) throw new Error("Synthetic ModelWrite refusal.");
     return authorization.authorizeWorkspaceOperation(input);
   }};
@@ -110,13 +116,16 @@ async function fixture(t: TestContext, host: Host) {
     return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
   }};
   const systems = {composeHeadlessAuthoring() {assert.fail("Model review cannot dispatch an ordinary system command.");}};
-  const compose = (enabled = true, executes = false, hostProof = true) => host === "Desktop"
+  const peekModelDownloadTasks = () => {state.ownerLookups++; return state.modelOwnerAvailable ? model : undefined;};
+  const compose = (enabled = true, executes = false, hostProof = true, controls = executes) => host === "Desktop"
     ? composeDesktopHeadlessPlanReview({hostIncarnationId, identity, platform, rootDirectory: directory, workspaces,
       authorization: guardedAuthorization, systems, isOpen: () => state.hostCurrent,
-      ...(enabled ? {getModelSourcePreview: getSource} : {}), ...(executes ? {getModelDownloadStart: getStart} : {})})
+      ...(enabled ? {getModelSourcePreview: getSource} : {}), ...(executes ? {getModelDownloadStart: getStart} : {}),
+      ...(controls ? {peekModelDownloadTasks} : {})})
     : composeManagedHeadlessPlanReview({hostIncarnationId, platform: managedPlatform, rootDirectory: directory, workspaces,
       contexts, authorization: guardedAuthorization, placement, systems, ...(enabled ? {getModelSourcePreview: getSource} : {}),
-      ...(executes ? {getModelDownloadStart: getStart} : {}), ...(executes && hostProof ? {isModelHostCurrent: () => state.hostCurrent} : {})});
+      ...(executes ? {getModelDownloadStart: getStart} : {}), ...((executes || controls) && hostProof ? {isModelHostCurrent: () => state.hostCurrent} : {}),
+      ...(controls ? {peekModelDownloadTasks} : {})});
   const input = {hostIncarnationId, workspaceId, steps: [{operation: "models.download", idempotencyKey: randomUUID(), name: "Small support model",
     sourceManifest: {source: structuredClone(source), manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")},
     allowedOrigins: ["https://huggingface.co"], maximumDurationSeconds: 1800}]};
@@ -418,5 +427,147 @@ test(`${host}: known non-start stays terminal and unknown source cannot become d
     assert.equal(f.state.startResolutions, 1); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.nativeReads, 0);
     assert.equal(f.reconciler.status.pending, outcome === "unavailable" ? 0 : 1);
     assert.doesNotMatch(JSON.stringify(first), /private-source-start|private\/worker/);
+  }
+});
+
+async function cancellableExecution(t: TestContext, host: Host) {
+  const f = await approvedExecution(t, host);
+  assert.ok((await f.run()).result.ok);
+  const accepted = await f.attempt(); assert.ok(accepted?.kind === "accepted");
+  // A retained task can be controlled without enabling any new source start.
+  const controller = f.compose(true, false, true, true);
+  const request = {version: HEADLESS_CONTRACT_VERSION, operation: "models.cancel-download" as const, input: {
+    hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId,
+    selection: {kind: "task" as const, taskId: accepted.reference.taskId}}};
+  const cancel = (incoming: unknown = request) => host === "Desktop"
+    ? (controller as ReturnType<typeof composeDesktopHeadlessPlanReview>).cancelModelDownload!(incoming, f.grant, async () => f.grant)
+    : (controller as ReturnType<typeof composeManagedHeadlessPlanReview>).cancelModelDownload!(incoming, f.registration,
+      () => f.state.operationCurrent);
+  return {...f, controller, taskId: accepted.reference.taskId, cancelRequest: request, cancel};
+}
+
+for (const host of ["Desktop", "Managed"] as const) {
+  for (const selected of ["task", "plan-step"] as const)
+  test(host + ": original " + selected + " cancellation acknowledges without claiming native settlement", async t => {
+    const f = await cancellableExecution(t, host);
+    f.state.readCurrent = false; f.state.sourceConsent = false;
+    const input = {...f.cancelRequest.input, selection: selected === "task" ? f.cancelRequest.input.selection
+      : {kind: "plan-step" as const, fingerprint: f.target.fingerprint, step: 1}};
+    const result = await f.cancel({...f.cancelRequest, input});
+    assert.ok(result.ok, JSON.stringify(result));
+    assert.deepEqual(result.value, {workspaceId: f.scope.workspaceId, taskId: f.taskId,
+      plan: {fingerprint: f.target.fingerprint, step: 1}, state: "running", percent: null,
+      registration: "requires-separate-approval", runtimeReadiness: "not-checked", cancellationAccepted: true});
+    assert.equal(f.state.nativeCancels, 1); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.startResolutions, 1);
+    assert.equal(f.state.registrations, 0); assert.equal(f.reconciler.status.pending, 1);
+    assert.equal(await f.sourceControls[0].stillAllowed(), true);
+    f.records.get(f.taskId)!.status = "cancelled"; await f.reconciler.reconcileNow();
+    assert.equal(f.reconciler.status.pending, 0);
+  });
+
+  test(host + ": current policy, request, host, original client and exact task constrain cancellation", async t => {
+    for (const denied of ["write", "request", "host", "client", "task", "plan", "membership"] as const) {
+      const f = await cancellableExecution(t, host);
+      let request = f.cancelRequest as unknown;
+      if (denied === "write") f.state.denyWrite = true;
+      if (denied === "request") f.state.operationCurrent = false;
+      if (denied === "host") f.state.hostCurrent = false;
+      if (denied === "client") {f.grant.registeredClientId = randomUUID(); f.registration.registeredClientId = f.grant.registeredClientId;}
+      if (denied === "task") request = {...f.cancelRequest, input: {...f.cancelRequest.input, selection: {kind: "task", taskId: randomUUID()}}};
+      if (denied === "plan") request = {...f.cancelRequest, input: {...f.cancelRequest.input,
+        selection: {kind: "plan-step", fingerprint: "b".repeat(64), step: 1}}};
+      if (denied === "membership") await f.repositories.memberships.saveMembership({...f.membership, status: "removed"});
+      assert.equal((await f.cancel(request)).ok, false);
+      assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.ownerLookups, 0);
+      assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.registrations, 0);
+    }
+  });
+
+  test(host + ": unavailable loaded owner does not initialize or substitute a source", async t => {
+    const f = await cancellableExecution(t, host); f.state.modelOwnerAvailable = false;
+    assert.deepEqual(await f.cancel(), {ok: false, code: "headless.unavailable"});
+    assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.startResolutions, 1);
+  });
+
+  test(host + ": request selector is detached before policy awaits", {timeout: 5000}, async t => {
+    const f = await cancellableExecution(t, host);
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>(resolve => {entered = resolve;});
+    const pending = new Promise<void>(resolve => {release = resolve;});
+    f.state.onControlPolicy = async () => {if (f.state.controlPolicies === 1) {entered(); await pending;}};
+    const request = structuredClone(f.cancelRequest);
+    const result = f.cancel(request); await started;
+    request.input.selection.taskId = randomUUID();
+    release();
+    const cancelled = await result; assert.ok(cancelled.ok, JSON.stringify(cancelled));
+    assert.equal(cancelled.value.taskId, f.taskId); assert.equal(f.state.nativeCancels, 1);
+  });
+
+  test(host + ": final source-admission policy cannot revive a retired operation by replacing its callback", {timeout: 5000}, async t => {
+    const f = await cancellableExecution(t, host);
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>(resolve => {entered = resolve;});
+    const pending = new Promise<void>(resolve => {release = resolve;});
+    f.state.onControlPolicy = async () => {if (f.state.controlPolicies === 2) {entered(); await pending;}};
+    const result = f.cancel(); await started;
+    f.state.operationCurrent = false;
+    f.grant.isOperationCurrent = () => true;
+    f.registration.isCurrent = () => true;
+    release(); assert.equal((await result).ok, false);
+    assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.sourceStarts, 1);
+  });
+
+  test(host + ": captured registration callback cannot be replaced during final cancellation admission", {timeout: 5000}, async t => {
+    const f = await cancellableExecution(t, host);
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>(resolve => {entered = resolve;});
+    const pending = new Promise<void>(resolve => {release = resolve;});
+    f.state.onControlPolicy = async () => {if (f.state.controlPolicies === 2) {entered(); await pending;}};
+    const result = f.cancel(); await started;
+    f.state.current = false; f.grant.isCurrent = () => true; f.registration.isCurrent = () => true;
+    release(); assert.equal((await result).ok, false);
+    assert.equal(f.state.operationCurrent, true); assert.equal(f.state.hostCurrent, true); assert.equal(f.state.nativeCancels, 0);
+  });
+
+  test(host + ": a declined cancellation acknowledgement is distinct from stopped work", async t => {
+    const f = await cancellableExecution(t, host); f.state.nativeCancellationAccepted = false;
+    const result = await f.cancel(); assert.ok(result.ok);
+    assert.equal(result.value.cancellationAccepted, false); assert.equal(result.value.state, "running");
+    assert.equal(f.state.nativeCancels, 1); assert.equal(f.reconciler.status.pending, 1); assert.equal(f.state.registrations, 0);
+  });
+
+  test(host + ": lost or withdrawn cancellation reply is unconfirmed with independent task custody", async t => {
+    for (const failure of ["lost", "withdrawn"] as const) {
+      const f = await cancellableExecution(t, host);
+      f.state.onNativeCancel = async () => {
+        if (failure === "lost") throw new Error("private/source/path cancellation failure");
+        f.state.operationCurrent = false; f.state.current = false;
+      };
+      const result = await f.cancel();
+      assert.deepEqual(result, {ok: false, code: "headless.operation-unconfirmed"});
+      assert.equal(f.state.nativeCancels, 1); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.registrations, 0);
+      assert.equal(f.reconciler.status.pending, 1);
+      assert.equal(f.sourceControls[0].isCurrent(), true);
+      assert.equal(await f.sourceControls[0].stillAllowed(), true);
+    }
+  });
+
+  test(host + ": absent private control configuration exposes no cancellation handler", async t => {
+    const f = await fixture(t, host);
+    assert.equal(f.compose(true, false).cancelModelDownload, undefined);
+    if (host === "Managed") assert.equal(f.compose(true, false, false, true).cancelModelDownload, undefined);
+    assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.sourceStarts, 0); assert.equal(f.state.ownerLookups, 0);
+  });
+}
+
+test("Desktop cancellation refuses asynchronous latest authority callbacks without unhandled rejections", async t => {
+  for (const field of ["isCurrent", "isOperationCurrent"] as const) {
+    const f = await cancellableExecution(t, "Desktop");
+    const latest = {...f.grant, [field]: () => Promise.reject(new Error("private callback rejection"))};
+    const result = await (f.controller as ReturnType<typeof composeDesktopHeadlessPlanReview>).cancelModelDownload!(
+      f.cancelRequest, f.grant, async () => latest as never);
+    assert.deepEqual(result, {ok: false, code: "headless.forbidden"});
+    assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.ownerLookups, 0);
+    await new Promise<void>(resolve => setImmediate(resolve));
   }
 });

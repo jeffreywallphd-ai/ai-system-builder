@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository, readStructuredHeadlessPlanModelPermission } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {prepareHeadlessModelDownloadReviews, type GetHeadlessModelSourcePreview} from "../../shared/composition/headlessModelDownloadReview";
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
+import {runOwnedHeadlessModelDownloadCancellation, type OwnedHeadlessModelSourceTasks} from "../../shared/composition/headlessModelDownloadTasks";
+import {readHeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
 import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolicy, type StartHeadlessModelDownload}
   from "../../shared/composition/headlessModelDownloadExecution";
@@ -40,6 +42,8 @@ const requiredScopes = ["workspace:read", "asset:read", "asset:write"] as const;
 const fileSaveScopes = [...requiredScopes, "artifact:read", "artifact:write"] as const;
 const ragScopes = [...fileSaveScopes, "model:read"] as const;
 const queryScopes = [...requiredScopes, "artifact:read", "model:read"] as const;
+type CancelModelDownload = (request: unknown, initial: DesktopHeadlessAuthoringWireGrant,
+  currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessModelTaskCancellationResult>;
 
 export function composeDesktopHeadlessPlanReview(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -59,17 +63,18 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly getModelSourcePreview?: GetHeadlessModelSourcePreview;
   /** Private execution opt-in; public roots remain unconfigured until status/save qualify. */
   readonly getModelDownloadStart?: () => Promise<StartHeadlessModelDownload | undefined>;
+  readonly peekModelDownloadTasks?: () => OwnedHeadlessModelSourceTasks | undefined;
   /** Only an already loaded retained owner; never start dependencies in a proposal transaction. */
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
   readonly audit?: DesktopHeadlessAudit;
-}): LoopbackPlanReview {
-  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks, getModelSourcePreview, getModelDownloadStart } = options;
+}): LoopbackPlanReview & {readonly cancelModelDownload?: CancelModelDownload} {
+  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks, getModelSourcePreview, getModelDownloadStart, peekModelDownloadTasks } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan review requires the platform transaction owner.");
 
   async function authorize(
     repository: typeof workspaces, policy: WorkspaceOperationAuthorizationPort,
-    workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step",
+    workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step" | "models.cancel-download",
     savesFile = false, usesModel = false, modelPurpose?: "prepare" | "review" | "execute",
   ) {
     try {
@@ -77,7 +82,7 @@ export function composeDesktopHeadlessPlanReview(options: {
       if (workspace?.organizationId !== identity.organizationId || workspace.workspaceId !== workspaceId ||
           workspace.status !== "active") return false;
       await policy.authorizeWorkspaceOperation({ workspace, operation: `headless.${operation}`,
-        requiredScopes: [...(usesModel ? savesFile ? ragScopes : queryScopes : savesFile ? fileSaveScopes : requiredScopes),
+        requiredScopes: operation === "models.cancel-download" ? ["workspace:read", "model:read", "model:write"] : [...(usesModel ? savesFile ? ragScopes : queryScopes : savesFile ? fileSaveScopes : requiredScopes),
           ...(modelPurpose ? ["model:read", "model:write"] as const : []),
           ...(modelPurpose === "prepare" ? ["provider-credential:use"] as const : [])] });
       return isOpen();
@@ -86,7 +91,7 @@ export function composeDesktopHeadlessPlanReview(options: {
 
   function admits(grant: DesktopHeadlessAuthoringWireGrant | undefined, clientId: string, workspaceId: WorkspaceId) {
     return Boolean(isOpen() && grant?.planReview === true &&
-      !grant.authoring?.length && !grant.conversation && !grant.presentation && grant.isCurrent?.() &&
+      !grant.authoring?.length && !grant.conversation && !grant.presentation && isHeadlessReadCurrent(grant.isCurrent) &&
       grant.registeredClientId === clientId && grant.organizationId === identity.organizationId &&
       grant.principalId === identity.principalId && grant.workspaceIds.includes(workspaceId));
   }
@@ -262,8 +267,38 @@ export function composeDesktopHeadlessPlanReview(options: {
     }
   };
 
+  const cancelModelDownload: CancelModelDownload | undefined = peekModelDownloadTasks ? async (incoming, initial, currentGrant) => {
+    const parsed = readHeadlessModelTaskCancellationRequest(incoming, hostIncarnationId);
+    if (!parsed.ok) return parsed;
+    const {workspaceId} = parsed.request.input, {registeredClientId} = initial;
+    const {organizationId, principalId} = identity;
+    const registrationCurrent = initial.isCurrent, operationCurrent = initial.isOperationCurrent;
+    const current = () => isHeadlessReadCurrent(isOpen) && identity.organizationId === organizationId && identity.principalId === principalId &&
+      isHeadlessReadCurrent(registrationCurrent) && isHeadlessReadCurrent(operationCurrent) && admits(initial, registeredClientId, workspaceId);
+    if (!isDesktopHeadlessClientId(registeredClientId) || !current()) return forbidden;
+    const scope = Object.freeze({organizationId, principalId, registeredClientId, workspaceId});
+    const canUse = async () => {
+      if (!current()) return false;
+      const latest = await currentGrant();
+      return current() && admits(latest, registeredClientId, workspaceId) && isHeadlessReadCurrent(latest?.isCurrent) &&
+        isHeadlessReadCurrent(latest?.isOperationCurrent) && await authorize(workspaces, authorization, workspaceId, "models.cancel-download") && current();
+    };
+    try {
+      if (!await canUse()) return forbidden;
+      return await runOwnedHeadlessModelDownloadCancellation({documents: platform, hostIncarnationId, scope, request: parsed.request,
+        isCurrent: current, canUse, peekOwner: peekModelDownloadTasks, authorize: async (owner, selected, action) => {
+          if (action !== "cancel" || !current() || selected.organizationId !== organizationId || selected.principalId !== principalId ||
+              selected.registeredClientId !== registeredClientId || selected.workspaceId !== workspaceId) return false;
+          const repository = createLocalWorkspaceRepository({rootDirectory, documents: owner.forOrganization(organizationId)});
+          return await authorize(repository, composeDesktopWorkspaceAuthorization({documents: owner, localIdentity: identity}),
+            workspaceId, "models.cancel-download") && current();
+        }});
+    } catch {return current() ? unavailable : forbidden;}
+  } : undefined;
+
   return {
     hostIncarnationId,
+    cancelModelDownload,
     ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
     ...(getIngestionTasks ? { allowProviderFileSave: true as const } : {}),
     ...(options.getDatasetStart ? {allowLocalDatasetPreparation: true as const} : {}),
