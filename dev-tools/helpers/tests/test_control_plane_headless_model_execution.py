@@ -32,6 +32,20 @@ class ModelExecutionRoutingTests(unittest.TestCase):
         for path in self.shared:
             self.assertNotIn("headless-model-metadata-owner-unit", self.selected([path]))
 
+    def test_owned_task_controls_select_real_owner_fixture_and_strict_companion(self):
+        source = "modules/hosts/shared/composition/headlessModelDownloadTasks.ts"
+        rows = self.selected([source])
+        unit = rows["headless-model-metadata-owner-unit"]["argv"]
+        types = rows["headless-model-metadata-owner-types"]["argv"]
+        fixture = "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts"
+        self.assertIn(fixture, unit)
+        self.assertIn(fixture, types)
+        self.assertIn(source, types)
+        self.assertNotIn("focused-tests", rows)
+        self.assertNotIn("completion-all", rows)
+        self.assertIn("focused-tests", self.selected([source], ("focused-tests",)))
+        self.assertIn("focused-tests", self.selected([source, "modules/hosts/shared/composition/unknown-model-control.ts"]))
+
     def test_explicit_related_closure_and_unknown_fallback(self):
         required = ("headless-model-metadata-owner-unit", "headless-model-metadata-owner-types", "headless-context-pack-contract",
                     "headless-data-task-status", "headless-approved-dataset-task-wiring")

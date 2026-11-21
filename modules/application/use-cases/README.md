@@ -1,5 +1,13 @@
 # Application Use Cases
 
+Private `ModelDownloadTasksUseCase.readApprovedSource` and `cancelApprovedSource`
+require the original accepted source descriptor, exact manifest digest and actor
+and workspace ownership. Stop additionally requires explicit ModelWrite authority.
+They reuse that descriptor's captured source task; an ordinary/shared task cannot
+substitute and observation never registers the model. Hosts still prove original
+client/host ledger ownership and current policy. Existing ordinary methods retain
+their behavior; these methods do not expose a public Headless route.
+
 `PrepareHeadlessModelDownloadPlanUseCase` copies a strict exact-source proposal,
 captures original actor/client/workspace/host and source-read controls, and
 independently matches the existing provider preview and canonical digest. It

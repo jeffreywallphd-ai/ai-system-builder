@@ -20,6 +20,7 @@ import {createWorkspaceId} from "../../../../contracts/workspace";
 import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId, type HeadlessPlanStepRequest} from "../../../../contracts/headless";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {runPreparedHeadlessModelDownload} from "../headlessModelDownloadExecution";
+import {runOwnedHeadlessModelDownloadTask} from "../headlessModelDownloadTasks";
 
 type Options = {root?: ReturnType<typeof createInMemoryStructuredDocumentStore>; channel?: "app-popup" | "authenticated-chat";
   mode?: "whole-plan" | "each-change"; precedingSystem?: boolean; followingSystem?: boolean};
@@ -28,7 +29,8 @@ async function fixture(t: TestContext, options: Options = {}) {
   const scope = {organizationId: createOrganizationId("organization.model-execution"), workspaceId: createWorkspaceId("workspace.model-execution"),
     principalId: "principal.synthetic", registeredClientId: randomUUID()};
   const state = {current: true, policy: true, business: true, host: true, now: 1000, starts: 0, resolutions: 0, ordinary: 0, registrations: 0,
-    unavailable: false, uncertain: false, loseCallerOnStart: false, loseReply: false};
+    unavailable: false, uncertain: false, loseCallerOnStart: false, loseReply: false,
+    statusReads: 0, cancels: 0, onStatusRead: undefined as (() => Promise<void>) | undefined};
   const source = readModelDownloadSource({provider: "huggingface", modelId: "fixture/model", revision: "a".repeat(40),
     format: "transformers-safetensors", license: {kind: "unknown"}, files: ["config.json", "model.safetensors", "tokenizer.json"].map(path => ({
       path, sizeBytes: 2, integrity: {algorithm: path.endsWith("safetensors") ? "sha256" : "git-blob-sha1",
@@ -81,7 +83,8 @@ async function fixture(t: TestContext, options: Options = {}) {
       records.set(input.requestId, record);
       return {kind: "accepted", value: {requestId: input.requestId, status: "running"}, task: Object.freeze({requestId: input.requestId,
         workspaceId: scope.workspaceId, modelId: source.modelId, revision: source.revision, manifestDigest: digest,
-        read: async () => ({...record}), cancel: async () => ({requestId: input.requestId, status: record.status, cancelled: false}),
+        read: async () => {state.statusReads++; await state.onStatusRead?.(); return {...record};},
+        cancel: async () => {state.cancels++; return {requestId: input.requestId, status: record.status, cancelled: true};},
         readCompleted: async () => undefined})};
     }} });
   const request: HeadlessPlanStepRequest = {version: "aisb-headless-v1", operation: "plan.run-step", input: {
@@ -263,5 +266,181 @@ test("accepted Model source result survives actual SQLite reopen and replays wit
     assert.ok(prepared?.kind === "model-download");
     const replay = await f.run(prepared); assert.ok(replay.result.ok); assert.equal(replay.result.value.kind, "replayed");
     assert.equal(f.state.resolutions, 1); assert.equal(f.state.starts, 1);
+    const task = await runOwnedHeadlessModelDownloadTask({documents: db.documents, hostIncarnationId: f.target.hostIncarnationId,
+      scope: f.scope, selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}, action: "read",
+      isCurrent: () => true, authorize: async () => true, peekOwner: () => f.useCase});
+    assert.ok(task.ok, "Reopened metadata may control only the still-retained original task handle.");
+    assert.deepEqual(await runOwnedHeadlessModelDownloadTask({documents: db.documents, hostIncarnationId: f.target.hostIncarnationId,
+      scope: f.scope, selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}, action: "read",
+      isCurrent: () => true, authorize: async () => true, peekOwner: () => undefined}), {ok: false, code: "headless.unavailable"});
+    assert.equal(f.state.starts, 1);
   } finally {await db?.close(); await rm(directory, {recursive: true, force: true});}
+});
+
+async function taskControls(t: TestContext) {
+  const f = await fixture(t);
+  assert.ok((await f.run(await f.prepare())).result.ok);
+  const attempt = await f.attempt(); assert.ok(attempt?.kind === "accepted");
+  const taskId = attempt.reference.taskId;
+  let readsCurrent = true, ownerLookups = 0;
+  const base = {documents: f.root, hostIncarnationId: f.target.hostIncarnationId, scope: {...f.scope},
+    selection: {kind: "task" as const, taskId}, action: "read" as "read" | "cancel",
+    isCurrent: () => readsCurrent, authorize: async (_owner: unknown, scope: HeadlessOperationScope) =>
+      f.state.policy && scope.organizationId === f.scope.organizationId && scope.principalId === f.scope.principalId &&
+      scope.workspaceId === f.scope.workspaceId && scope.registeredClientId === f.scope.registeredClientId,
+    peekOwner: () => {ownerLookups++; return f.useCase;}};
+  return {...f, taskId, base, setCurrent: (value: boolean) => {readsCurrent = value;}, ownerLookups: () => ownerLookups};
+}
+
+test("original task and plan-step controls report finite progress and cancellation acknowledgement without claiming shutdown", async t => {
+  const f = await taskControls(t), record = f.records.get(f.taskId)!;
+  record.progress = {percent: 25, message: "private provider/path", details: {private: "not for publication"}};
+  const read = await runOwnedHeadlessModelDownloadTask(f.base);
+  assert.deepEqual(read, {ok: true, value: {taskId: f.taskId, state: "running", percent: 25,
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"}});
+  let cancelPolicies = 0;
+  const cancelled = await runOwnedHeadlessModelDownloadTask({...f.base, action: "cancel",
+    selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1},
+    authorize: async (_owner, scope, action) => {assert.equal(action, "cancel"); cancelPolicies++; return scope.principalId === f.scope.principalId;}});
+  assert.deepEqual(cancelled, {ok: true, value: {taskId: f.taskId, state: "running", percent: 25, cancellationAccepted: true,
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"}});
+  assert.equal(cancelPolicies, 2); assert.equal(f.state.cancels, 1); assert.equal(f.state.starts, 1);
+  assert.equal(f.reconciler.status.pending, 1, "A cancellation reply is not receiver/worker settlement.");
+  assert.equal(f.state.registrations, 0); assert.equal(f.state.ordinary, 0);
+  record.status = "cancelled";
+  assert.equal((await runOwnedHeadlessModelDownloadTask(f.base)).ok, true);
+  await f.reconciler.reconcileNow(); assert.equal(f.reconciler.status.pending, 0);
+});
+
+test("task controls survive expired original approval and closed starting request under fresh reader authority", async t => {
+  const f = await taskControls(t);
+  f.state.current = false; f.state.now += 15 * 60 * 1000;
+  const result = await runOwnedHeadlessModelDownloadTask(f.base); assert.ok(result.ok);
+  assert.equal(await f.controls[0].stillAllowed(), true); assert.equal(f.controls[0].isCurrent(), true);
+  assert.equal(f.state.starts, 1); assert.equal(f.state.resolutions, 1);
+});
+
+test("foreign organization actor client workspace host task and plan selections never touch the Model owner", async t => {
+  const f = await taskControls(t), before = f.state.statusReads;
+  const acceptPolicy = async () => true;
+  const variants = [
+    {...f.base, scope: {...f.scope, organizationId: createOrganizationId("org.foreign")}},
+    {...f.base, scope: {...f.scope, principalId: "principal.foreign"}},
+    {...f.base, scope: {...f.scope, registeredClientId: randomUUID()}},
+    {...f.base, scope: {...f.scope, workspaceId: createWorkspaceId("workspace.foreign")}},
+    {...f.base, hostIncarnationId: randomUUID()},
+    {...f.base, selection: {kind: "task" as const, taskId: randomUUID()}},
+    {...f.base, selection: {kind: "plan-step" as const, fingerprint: "f".repeat(64), step: 1}},
+    {...f.base, selection: {kind: "plan-step" as const, fingerprint: f.target.fingerprint, step: 2}},
+  ];
+  for (const variant of variants) assert.deepEqual(await runOwnedHeadlessModelDownloadTask({...variant, authorize: acceptPolicy}),
+    {ok: false, code: "headless.forbidden"});
+  assert.equal(f.ownerLookups(), 0); assert.equal(f.state.statusReads, before); assert.equal(f.state.cancels, 0);
+});
+
+test("current policy is checked before effects and after original observation; withdrawn replies disclose nothing", async t => {
+  for (const action of ["read", "cancel"] as const) for (const stage of ["before", "during", "policy"] as const) {
+    const f = await taskControls(t), before = f.state.statusReads;
+    if (stage === "before") f.setCurrent(false);
+    else f.state.onStatusRead = async () => {if (stage === "during") f.setCurrent(false); else f.state.policy = false;};
+    const result = await runOwnedHeadlessModelDownloadTask({...f.base, action});
+    assert.deepEqual(result, {ok: false, code: "headless.forbidden"});
+    assert.equal(f.state.statusReads, before + (stage === "before" ? 0 : 1));
+    assert.equal(f.state.cancels, action === "cancel" && stage !== "before" ? 1 : 0);
+    assert.equal((await f.attempt())?.kind, "accepted"); assert.equal(f.state.starts, 1);
+  }
+});
+
+test("caller selections are copied before policy awaits and policy callbacks get frozen original scope", async t => {
+  const f = await taskControls(t), scope = {...f.scope}, selection = {...f.base.selection};
+  let first = true;
+  const result = await runOwnedHeadlessModelDownloadTask({...f.base, scope, selection, authorize: async (_owner, captured) => {
+    assert.ok(Object.isFrozen(captured)); assert.equal(captured.principalId, f.scope.principalId);
+    if (first) {first = false; scope.principalId = "principal.foreign"; selection.taskId = randomUUID();}
+    return true;
+  }});
+  assert.ok(result.ok); assert.equal(result.value.taskId, f.taskId); assert.equal(f.state.starts, 1);
+});
+
+test("missing retained owner and failed observation are unavailable without ordinary fallback or private error text", async t => {
+  const f = await taskControls(t), before = f.state.statusReads;
+  assert.deepEqual(await runOwnedHeadlessModelDownloadTask({...f.base, peekOwner: () => undefined}), {ok: false, code: "headless.unavailable"});
+  assert.equal(f.state.statusReads, before);
+  f.state.onStatusRead = async () => {throw new Error("private-token C:/private/model failed");};
+  assert.deepEqual(await runOwnedHeadlessModelDownloadTask(f.base), {ok: false, code: "headless.unavailable"});
+  assert.equal(f.state.starts, 1); assert.equal(f.state.ordinary, 0); assert.equal(f.state.registrations, 0);
+});
+
+test("original observation runs outside metadata transactions and failed-task messages remain private", async t => {
+  const f = await taskControls(t), record = f.records.get(f.taskId)!;
+  f.state.onStatusRead = async () => {await f.root.runInOwnedTransaction!(async owner => {
+    assert.equal(owner.organizationId, undefined);
+  }, () => {});};
+  record.status = "failed"; record.error = {code: "private-provider-error", message: "C:/private/model secret not for output"};
+  assert.deepEqual(await runOwnedHeadlessModelDownloadTask(f.base), {ok: true, value: {taskId: f.taskId, state: "failed", percent: null,
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"}});
+});
+
+test("malformed or active owner replies cannot expose data or claim a cancellation", async t => {
+  const f = await taskControls(t); let getters = 0;
+  const replies: unknown[] = [{activity: {requestId: randomUUID(), workspaceId: f.scope.workspaceId, status: "running"}},
+    {activity: {requestId: f.taskId, workspaceId: f.scope.workspaceId, status: "running", progress: {percent: 101}}},
+    {get activity() {getters++; return {}; }}, new Proxy({}, {ownKeys() {getters++; return [];}})];
+  for (const reply of replies) assert.deepEqual(await runOwnedHeadlessModelDownloadTask({...f.base,
+    peekOwner: () => ({readApprovedSource: async () => reply as never, cancelApprovedSource: async () => reply as never})}),
+    {ok: false, code: "headless.unavailable"});
+  assert.equal(getters, 0);
+  const result = await runOwnedHeadlessModelDownloadTask({...f.base, action: "cancel", peekOwner: () => ({
+    readApprovedSource: f.useCase.readApprovedSource.bind(f.useCase), cancelApprovedSource: async () => ({activity: {
+      requestId: f.taskId, workspaceId: f.scope.workspaceId, status: "running"}, cancelled: "true"}) as never})});
+  assert.deepEqual(result, {ok: false, code: "headless.unavailable"}); assert.equal(f.state.cancels, 0);
+});
+
+test("unknown and known non-start attempts never become observable task IDs or a new Model start", async t => {
+  for (const unknown of [false, true]) {
+    const f = await fixture(t); f.state.unavailable = !unknown; f.state.uncertain = unknown;
+    assert.equal((await f.run(await f.prepare())).result.ok, false);
+    const before = f.state.starts;
+    assert.deepEqual(await runOwnedHeadlessModelDownloadTask({documents: f.root, hostIncarnationId: f.target.hostIncarnationId,
+      scope: f.scope, selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}, action: "cancel",
+      isCurrent: () => true, authorize: async () => true, peekOwner: () => {assert.fail("An unaccepted attempt has no observable task.");}}),
+      {ok: false, code: "headless.forbidden"});
+    assert.equal(f.state.starts, before); assert.equal(f.state.statusReads, 0); assert.equal(f.state.cancels, 0);
+  }
+});
+
+test("source-only owner controls require the original manifest and explicit write authority", async t => {
+  const f = await taskControls(t), request = {requestId: f.taskId, workspaceId: f.scope.workspaceId}, before = f.state.statusReads;
+  const authority = {organizationId: f.scope.organizationId, principalId: f.scope.principalId};
+  await assert.rejects(f.useCase.readApprovedSource(request, "sha256:" + "f".repeat(64), authority));
+  await assert.rejects(f.useCase.cancelApprovedSource(request, f.digest, authority));
+  await assert.rejects(f.useCase.readApprovedSource(request, f.digest, {...authority, principalId: "principal.foreign"}));
+  assert.equal(f.state.statusReads, before); assert.equal(f.state.cancels, 0);
+  assert.equal((await f.useCase.readApprovedSource(request, f.digest, authority)).activity.requestId, f.taskId);
+});
+
+test("ordinary downloads retain normal behavior but cannot satisfy source-only controls", async () => {
+  const taskId = randomUUID(), workspaceId = createWorkspaceId("workspace.ordinary"), authority = {organizationId: "org.ordinary", principalId: "principal.ordinary"};
+  let reads = 0, cancels = 0;
+  const useCase = new ModelDownloadTasksUseCase({runtimeTaskRegistry: {async startTask() {return {requestId: taskId, status: "queued"};},
+    async getTaskStatus() {reads++; return {requestId: taskId, workspaceId, taskType: TaskType.MODEL_DOWNLOAD, concurrencyClass: "io", status: "running", updatedAt: "2026-11-21T00:00:00Z"};},
+    async listTasks() {assert.fail("No enumeration.");}, async cancelTask() {cancels++; assert.fail("No generic cancellation.");}},
+    modelRegistry: {} as never, modelDownloadCompletion: {} as never});
+  await useCase.start({workspaceId, provider: "huggingface", modelId: "fixture/model"}, authority);
+  const request = {requestId: taskId, workspaceId};
+  await assert.rejects(useCase.readApprovedSource(request, "sha256:" + "a".repeat(64), authority));
+  await assert.rejects(useCase.cancelApprovedSource(request, "sha256:" + "a".repeat(64), {...authority, modelWriteAuthorized: true}));
+  assert.equal(reads, 0); assert.equal(cancels, 0);
+  assert.equal((await useCase.read(request, authority)).activity.status, "running"); assert.equal(reads, 1);
+});
+
+test("active or malformed control selections fail before policy or owner callbacks", async t => {
+  const f = await taskControls(t); let getterCalls = 0;
+  const accessor = {kind: "task", get taskId() {getterCalls++; return f.taskId;}};
+  const variants: unknown[] = [accessor, new Proxy(f.base.selection, {getPrototypeOf() {getterCalls++; return Object.prototype;}}),
+    {...f.base.selection, extra: "private"}, {kind: "plan-step", fingerprint: f.target.fingerprint, step: 0}];
+  for (const selection of variants) assert.deepEqual(await runOwnedHeadlessModelDownloadTask({...f.base, selection: selection as never,
+    authorize: async () => {assert.fail("No active selection policy.");}, peekOwner: () => {assert.fail("No active selection owner.");}}),
+    {ok: false, code: "headless.forbidden"});
+  assert.equal(getterCalls, 0);
 });

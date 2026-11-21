@@ -1,5 +1,16 @@
 # Runtime Model
 
+Private Headless Model task controls resolve only an accepted original-client
+task or approved plan-step and source digest through the owning metadata store.
+Current host ModelRead/ModelWrite policy precedes observation/Stop and finite
+disclosure. Invoke only the retained loaded Model application owner outside that
+transaction; no lookup may initialize runtime, enumerate or adopt worker tasks.
+The source-only application methods independently check the original descriptor
+and manifest. Cancellation acceptance and terminal native settlement are distinct.
+Reader withdrawal suppresses a reply without erasing accepted business custody.
+These local components do not activate real host routes, save/register a source
+model, qualify physical execution or reopen accepted model accuracy checks.
+
 Internal Model step execution now composes the exact v3 review binding, original
 approved-step transaction and Model attempt ledger with the existing application
 owner. Legacy host preparation still refuses Model-containing plans; only the

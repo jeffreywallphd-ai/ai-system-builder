@@ -1,5 +1,15 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The private shared Model task control proves an accepted original-client task or
+plan-step and its exact source digest in the platform-owned metadata transaction.
+The host supplies fresh ModelRead policy for observation and ModelWrite for Stop.
+It touches only an already loaded Model owner, outside the transaction, and
+rechecks policy/lineage before returning finite state and numeric progress. A
+cancellation acknowledgement does not claim worker or receiver shutdown. No
+owner, unknown start or foreign identity yields no task discovery, initialization,
+ordinary fallback, registration or retry. Real host route activation, source save
+and physical qualification remain separate pending work.
+
 The private shared Model step runner composes the opt-in approved-step owner with
 the existing Model download use case outside its metadata transaction. Capture
 original actor/workspace/plan and use fresh request/approval admission through

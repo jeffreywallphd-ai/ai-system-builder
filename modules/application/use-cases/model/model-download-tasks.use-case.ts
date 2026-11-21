@@ -289,6 +289,39 @@ export class ModelDownloadTasksUseCase {
     } catch {return;}
   }
 
+  /** Private source-only controls. An ordinary descriptor or guessed/shared
+   * worker ID cannot substitute for the ledger-bound original source owner. */
+  public async readApprovedSource(request: ReadModelDownloadTaskRequest, manifestDigest: string,
+    authority: ModelDownloadAuthority): Promise<ReadModelDownloadTaskResult> {
+    const selected = this.requireApprovedSource(request, manifestDigest, authority);
+    const result = await this.read(selected.request, selected.authority);
+    this.assertCurrentDescriptor(selected.request.requestId, selected.descriptor);
+    return result;
+  }
+
+  public async cancelApprovedSource(request: CancelModelDownloadTaskRequest, manifestDigest: string,
+    authority: ModelDownloadAuthority): Promise<CancelModelDownloadTaskResult> {
+    const selected = this.requireApprovedSource(request, manifestDigest, authority);
+    if (selected.authority.modelWriteAuthorized !== true) throw new Error("Model write authority is required to stop this source download.");
+    const result = await this.cancel(selected.request, selected.authority);
+    this.assertCurrentDescriptor(selected.request.requestId, selected.descriptor);
+    return result;
+  }
+
+  private requireApprovedSource(request: ReadModelDownloadTaskRequest, manifestDigest: string, rawAuthority: ModelDownloadAuthority) {
+    const normalized = normalizeModelDownloadTaskIdentity(passiveSourceData(request) as ReadModelDownloadTaskRequest);
+    if (types.isProxy(rawAuthority)) throw new Error("The original source authority is unavailable.");
+    const raw = readStrictPassiveRecord(rawAuthority, ["organizationId", "principalId", "modelWriteAuthorized"]);
+    const authority = captureAuthority({organizationId: typeof raw.organizationId === "string" ? raw.organizationId : undefined,
+      principalId: typeof raw.principalId === "string" ? raw.principalId : undefined, modelWriteAuthorized: raw.modelWriteAuthorized === true});
+    const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
+    if (typeof manifestDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(manifestDigest) ||
+        descriptor.source?.phase !== "accepted" || !descriptor.source.task ||
+        descriptor.source.input.sourceManifest.manifestDigest !== manifestDigest)
+      throw new Error("The original approved source task is unavailable.");
+    return {request: normalized, descriptor, authority};
+  }
+
   public async read(request: ReadModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<ReadModelDownloadTaskResult> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);

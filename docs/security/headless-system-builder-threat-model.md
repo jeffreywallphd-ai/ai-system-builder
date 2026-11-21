@@ -1,5 +1,23 @@
 # Headless System Builder threat model
 
+## Original Model task observation and cancellation
+
+Protect original organization, actor, client, workspace, host, accepted task and
+manifest ownership from guessed identifiers, cross-client access, shared-task
+adoption and stale reader authorization. Host policy runs in the same owned
+metadata transaction as accepted ledger/index/source proof before any task call,
+and again before disclosure. Read requires ModelRead; Stop requires ModelWrite.
+Only an already loaded original Model owner may run outside the transaction.
+Its source-only methods reject ordinary, unaccepted or changed-manifest tasks;
+unknown dispatches never become observable IDs, restarts or discovery authority.
+Return fixed task state, bounded numeric percentage and cancellation acceptance;
+omit provider/runtime messages, paths, errors, source payloads and model records.
+Do not interpret cancellation acceptance as native/receiver settlement or release
+accepted custody. Preserve independent business lifetime after reader withdrawal.
+Focused fixtures exercise original ledger and application owners, not provider,
+physical/native or public host qualification. Those remain pending until composed
+and exercised. Removing the unadvertised helper is the safe rollback.
+
 ## Approved Model execution boundary
 
 Use the original actor/client/host/workspace/plan/step and private exact source

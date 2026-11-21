@@ -254,6 +254,7 @@ PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (
             "modules/hosts/shared/composition/headlessModelDownloadExecution.ts",
+            "modules/hosts/shared/composition/headlessModelDownloadTasks.ts",
             "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore.ts",
@@ -305,6 +306,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "modules/hosts/shared/composition/headlessModelDownloadExecution.ts",
+            "modules/hosts/shared/composition/headlessModelDownloadTasks.ts",
             "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/contracts/headless/headless-plan-step-wire.ts",
@@ -443,6 +445,7 @@ PUBLISHED_FORM_CHECKS = {
         "companion_to": "headless-model-metadata-owner-unit",
         "sources": (
             "modules/hosts/shared/composition/headlessModelDownloadExecution.ts",
+            "modules/hosts/shared/composition/headlessModelDownloadTasks.ts",
             "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/contracts/headless/headless-plan-step-wire.ts",
@@ -513,6 +516,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
             "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/hosts/shared/composition/headlessModelDownloadTasks.ts",
             "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",

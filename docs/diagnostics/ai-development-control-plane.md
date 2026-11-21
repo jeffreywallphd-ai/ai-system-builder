@@ -1,3 +1,13 @@
+The fixed Model owner unit/type profiles also cover private original-task controls
+through the actual accepted ledger, application owner and reconciler. Cases prove
+task/plan-step lookup, numeric progress, cancellation acknowledgement, current
+reader policy, cross-client/source refusal, retained custody and private error
+suppression. Source-only controls never use ordinary worker discovery or registry
+save. The routing test requires the real fixture and strict companion for the new
+source, retaining explicit generic and unknown-source fallback. These are local
+controlled feature checks; actual host activation, source save and native/provider
+qualification remain pending. Closed ordinary model accuracy is not rerun.
+
 Headless source-preview feature checks cover copied codecs, application policy
 and provider phases, real host-reader composition and exact metadata digests.
 Private manifest work also uses Model owner unit/types, existing runtime
