@@ -2,6 +2,9 @@ import { createHmac, X509Certificate } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:https";
 import type { Duplex } from "node:stream";
+import {types} from "node:util";
+import {HEADLESS_MODEL_TASK_CONTROL_PATH, readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationResult,
+  type HeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
 import { performance } from "node:perf_hooks";
 import selfsigned from "selfsigned";
 import {
@@ -90,6 +93,11 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         readonly result: HeadlessPlanStepResult;
         readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
       }>;
+  };
+  readonly modelTaskControl?: {
+    readonly hostIncarnationId: HeadlessHostIncarnationId;
+    readonly execute: (request: HeadlessModelTaskCancellationRequest, grant: DesktopHeadlessAuthoringWireGrant,
+      currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessModelTaskCancellationResult>;
   };
   readonly dataPreview?: {
     readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -213,6 +221,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         (request.url !== AUTHOR_PATH || !dependencies.authoring) &&
         (request.url !== HEADLESS_PLAN_REVIEW_PATH || !dependencies.planReview) &&
         (request.url !== HEADLESS_PLAN_STEP_PATH || !dependencies.planReview?.runStep) &&
+        (request.url !== HEADLESS_MODEL_TASK_CONTROL_PATH || !dependencies.modelTaskControl) &&
         (request.url !== HEADLESS_LOCAL_FILE_PREVIEW_PATH || !dependencies.dataPreview) &&
         (request.url !== HEADLESS_PROVIDER_FILE_PREVIEW_PATH || !dependencies.dataPreview?.executeProvider) &&
         (request.url !== HEADLESS_WINDOW_CONTROL_PATH || !dependencies.presentation) &&
@@ -286,7 +295,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     }
     if (!admitting() || response.destroyed) return;
     const requiresFence = request.url === AUTHOR_PATH || request.url === HEADLESS_PLAN_REVIEW_PATH ||
-      request.url === HEADLESS_PLAN_STEP_PATH || request.url === HEADLESS_APPROVED_TURN_PATH ||
+      request.url === HEADLESS_PLAN_STEP_PATH || request.url === HEADLESS_MODEL_TASK_CONTROL_PATH || request.url === HEADLESS_APPROVED_TURN_PATH ||
       request.url === HEADLESS_LOCAL_FILE_PREVIEW_PATH || request.url === HEADLESS_PROVIDER_FILE_PREVIEW_PATH ||
       request.url === HEADLESS_WINDOW_CONTROL_PATH || initialGrant.isCurrent !== undefined;
     const currentGrant = async (requireConnection = true): Promise<DesktopHeadlessAuthoringWireGrant | undefined> => {
@@ -318,6 +327,34 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       }
       const safeResult = readHeadlessWindowResult(result);
       send(response, safeResult.ok ? 200 : errorStatus(safeResult.code), safeResult);
+      return;
+    }
+    if (request.url === HEADLESS_MODEL_TASK_CONTROL_PATH && dependencies.modelTaskControl) {
+      if (initialGrant.planReview !== true || initialGrant.authoring?.length || initialGrant.conversation || initialGrant.presentation ||
+          !grantIsCurrent(initialGrant, true)) {fail(response, 403, "headless.forbidden"); return;}
+      const parsed = readHeadlessModelTaskCancellationRequest(body, dependencies.modelTaskControl.hostIncarnationId);
+      if (!parsed.ok) {fail(response, errorStatus(parsed.code), parsed.code); return;}
+      const target = parsed.request.input;
+      const operationCurrent = () => admitting() && !response.destroyed && !response.writableEnded;
+      const currentControlGrant = async () => {
+        const grant = await currentGrant();
+        return grant && operationCurrent() ? {...grant, isOperationCurrent: operationCurrent} : undefined;
+      };
+      const grant = await currentControlGrant();
+      if (!grant || grant.planReview !== true || !grantIsCurrent(grant, true) || !grant.workspaceIds.includes(target.workspaceId)) {
+        fail(response, 403, "headless.forbidden"); return;
+      }
+      let outcome: unknown;
+      try {outcome = await dependencies.modelTaskControl.execute(parsed.request, grant, currentControlGrant);}
+      catch {outcome = {ok: false, code: "headless.operation-unconfirmed"};}
+      const final = await currentControlGrant();
+      if (!operationCurrent()) return;
+      if (!final || final.planReview !== true || !grantIsCurrent(final, true)) {fail(response, 403, "headless.forbidden"); return;}
+      const decoded = readHeadlessModelTaskCancellationResult(outcome, target);
+      // A handler may have acted before returning an invalid/configuration reply.
+      const result = !decoded.ok && ["headless.invalid-request", "headless.unsupported-operation", "headless.host-changed"].includes(decoded.code)
+        ? {ok: false, code: "headless.operation-unconfirmed"} as const : decoded;
+      send(response, result.ok ? 200 : errorStatus(result.code), result);
       return;
     }
     if (request.url === HEADLESS_PLAN_REVIEW_PATH && dependencies.planReview) {
@@ -569,7 +606,14 @@ function errorStatus(code: Extract<HeadlessReadResult | HeadlessAuthoringWireRes
 }
 
 function grantIsCurrent(grant: DesktopHeadlessAuthoringWireGrant, required = false): boolean {
-  return grant.isCurrent?.() ?? !required;
+  try {
+    const check = grant.isCurrent;
+    if (check === undefined) return !required;
+    if (typeof check !== "function") return false;
+    const value: unknown = check();
+    if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+    return value === true;
+  } catch {return false;}
 }
 
 function presentationIsCurrent(grant: DesktopHeadlessAuthoringWireGrant): boolean {

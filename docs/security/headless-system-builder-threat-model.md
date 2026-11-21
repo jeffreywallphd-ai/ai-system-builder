@@ -1523,3 +1523,23 @@ action. A true or false acknowledgement is not native terminal or cleanup proof.
 Only finite owner-derived task/workspace/plan metadata and the acknowledgement
 leave the helper. Actual public/host/native/provider and parent proof stay
 pending. Rollback leaves the private handler unconfigured and preserves history.
+
+### Cancellation transport boundaries
+
+The original-download control uses fixed separate POST paths, never a metadata
+read. Desktop preserves exact pin, origin, framing and purpose-specific pairing;
+Managed declares current workspace/Model read/write scopes under OIDC and
+organization middleware. Missing handlers stay unavailable before dispatch.
+The optional client tool requires plan-review plus explicit Model-control opt-in,
+keeps defaults unchanged and stays within the existing32-tool bound. It grants
+no application authority or arbitrary worker/network control.
+Copy exact targets before awaits and validate actual owner-derived lineage at
+both HTTP and SDK edges. Attach a separate strict operation-request fence;
+callbacks must return immediate true, and rejected native promises are observed.
+Managed captures the original callback before body parsing; replacing it cannot
+revive a retired request. Validation, configuration and host errors are definitive
+only before handler entry. The same codes returned after entry are unconfirmed.
+After possible effects, malformed, lost, withdrawn or thrown replies remain
+unconfirmed with no automatic retry. Preserve original business/native custody;
+ACK does not prove terminal cleanup. Protocol fixtures cannot qualify actual
+source/save activation, physical/native/provider execution or parent completion.

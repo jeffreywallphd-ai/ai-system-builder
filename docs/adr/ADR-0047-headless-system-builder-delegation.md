@@ -825,3 +825,13 @@ withdrawn effects remain unconfirmed, with no automatic retry or claim of
 worker shutdown/cleanup. Backend task custody stays independent. Actual public
 transport/source/save activation and host/provider/native qualification remain
 separate; default compositions expose no cancellation handler.
+
+The original Model cancellation control has separate bounded Desktop/Managed
+POST paths and a default-off client tool. Both plan-review and the explicit
+Model-task-control switch are needed for its discovery. Default catalogs are
+unchanged; the optional Desktop catalog uses the existing32-tool maximum.
+Client configuration never grants host authority. The original Model owner and
+current ModelRead/Write policy still govern the effect. Fixed authenticated
+transports copy and correlate finite lineage/ACK replies; uncertain effects do
+not permit automatic retry or imply native shutdown. Actual source/save and
+root activation remain separately qualified.

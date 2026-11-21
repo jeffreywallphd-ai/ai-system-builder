@@ -1831,3 +1831,13 @@ Accepted source custody and cleanup keep their original independent lifetime.
 Unconfigured private handlers are absent. Public cancellation routes, source
 activation, separate registry saving and actual provider/native/host proof remain
 pending; this component supplies none of those passes.
+
+Optional headless cancellation now has dedicated fixed Desktop/Managed POST
+adapters and an opted-in MCP tool. It stays outside the read operation family.
+Default host handlers and client discovery remain unconfigured/off; complete
+source/save integration still gates activation. Paired plan-review or Managed
+organization identity, current ModelRead/Write and original accepted-task policy
+remain authoritative. Adapters attach request admission lifetime, copy target
+identity and independently validate finite owner-derived task/workspace/plan/ACK.
+SDK post-dispatch failures are unconfirmed and never retried automatically.
+Cancellation acknowledgement is not native settlement or registry persistence.

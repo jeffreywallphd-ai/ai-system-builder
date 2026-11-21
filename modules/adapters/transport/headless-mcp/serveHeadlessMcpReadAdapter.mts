@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessSystemSummary, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
 import type { HeadlessPlanStepRequest, HeadlessLocalFileImportRequest, HeadlessProviderFileImportRequest } from "../../../contracts/headless/index.js";
+import type {HeadlessModelTaskCancellationRequest} from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -26,6 +27,7 @@ const version = headless.HEADLESS_CONTRACT_VERSION;
 const requestedMode = process.env.AISB_HEADLESS_MODE;
 const managed = requestedMode === "managed";
 const enablePlanReview = process.env.AISB_HEADLESS_ENABLE_PLAN_REVIEW === "1";
+const enableModelTaskControl = enablePlanReview && process.env.AISB_HEADLESS_ENABLE_MODEL_TASK_CONTROL === "1";
 const enableAuthoring = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const enableConversation = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
 const enableManagedConsent = managed && !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1";
@@ -36,9 +38,9 @@ const forward = managed ? createManagedHeadlessMcpReadForwarder({
   credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
   organizationId: process.env.AISB_HEADLESS_MANAGED_ORGANIZATION_ID,
   workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
-}, enableAuthoring, enableManagedConsent, enableManagedDelivery, enablePlanReview) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
+}, enableAuthoring, enableManagedConsent, enableManagedDelivery, enablePlanReview, enableModelTaskControl) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
   process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
-  enableAuthoring, enableConversation, enablePresentation, enablePlanReview,
+  enableAuthoring, enableConversation, enablePresentation, enablePlanReview, enableModelTaskControl,
 ) : undefined;
 delete process.env.AISB_HEADLESS_CREDENTIAL;
 delete process.env.AISB_HEADLESS_MANAGED_CREDENTIAL;
@@ -49,7 +51,7 @@ function toolResult<T extends { ok: boolean }>(result:T) {
 
 async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest |
   HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest |
-  HeadlessLocalFileImportRequest | HeadlessProviderFileImportRequest,
+  HeadlessLocalFileImportRequest | HeadlessProviderFileImportRequest | HeadlessModelTaskCancellationRequest,
   signal?: AbortSignal) {
   return toolResult(await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" });
 }
@@ -212,6 +214,19 @@ function addSystemBuilderTools(server: McpServer) {
     contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
     artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)});
   if (enablePlanReview) {
+    if (enableModelTaskControl) server.registerTool("aisb_cancel_model_download", {
+      description: "Request cancellation of one original assistant-owned model download by exact task or plan-step. Requires current Model read/write and the original plan-review client/workspace. An acknowledgement does not prove shutdown or cleanup. Unknown/lost replies must be observed with models.task, never automatically retried. Starts no model/download and saves no registry record. Requires configured host task controls; enabling this tool grants no authority.",
+      inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
+        z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
+        z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+          step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
+      ])}),
+      annotations: {readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false},
+    }, (input, context) => {
+      const parsed = headless.readHeadlessModelTaskCancellationRequest({version, operation: "models.cancel-download", input},
+        input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     server.registerTool("aisb_model_workflow", {
       description: "Inspect a Hugging Face source, or observe one original accepted model download by task or plan-step. Source inspection can contact Hugging Face with the configured credential under current permission and returns pinned provider metadata only. Task reads return finite progress without private errors or discovery; an unknown result grants no retry. Check host operations first. No download, cancellation, model run or registry save is authorized; succeeded transfer still needs separate approved saving. Saved inventory stays in aisb_model_metadata.",
       inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [

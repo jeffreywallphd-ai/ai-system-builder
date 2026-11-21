@@ -35,6 +35,9 @@ download and prove no readiness, license, supply verification or output quality.
 For an exact provider source, use that guide's separate `aisb_model_workflow`
 source selector only when `models.preview-source` is advertised. It can use the
 saved provider credential for bounded metadata reads; it grants no download or run.
+For progress or cancellation of an original accepted download, use the same
+Model guide. Cancellation is a separate opted-in mutation. An acknowledgement
+does not prove the worker stopped; an uncertain reply never authorizes a retry.
 
 For a Context or RAG request, use [Prepare Context inputs, packs and RAG](references/context-inputs.md)
 before selecting saved sources or an embedding model. A metadata preview does

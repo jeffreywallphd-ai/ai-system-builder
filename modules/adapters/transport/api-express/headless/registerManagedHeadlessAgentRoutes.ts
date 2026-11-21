@@ -1,6 +1,9 @@
 import { raw, type Application, type Request, type Response } from "express";
 import {createHash} from "node:crypto";
-import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue} from "../../../../contracts/headless";
+import {types} from "node:util";
+import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue, readHeadlessModelTaskCancellationRequest,
+  readHeadlessModelTaskCancellationResult, type HeadlessModelTaskCancellationRequest,
+  type HeadlessModelTaskCancellationResult} from "../../../../contracts/headless";
 
 import {readHeadlessContextQueryPreviewValue, readHeadlessContextRebuildValue} from "../../../../contracts/headless";
 import {
@@ -68,6 +71,8 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly allowContextResultSave?: boolean;
   readonly allowContextQuery?: boolean;
   readonly allowModelSourceRead?: boolean;
+  readonly modelTaskControl?: (input: HeadlessModelTaskCancellationRequest, agent: Agent,
+    current: () => boolean) => Promise<HeadlessModelTaskCancellationResult>;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -109,18 +114,29 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
       if (kind === "plan-step" && !handlers.planStep) return failure(response, 404, "headless.unavailable");
       if (kind === "local-file-preview" && !handlers.localFilePreview) return failure(response, 404, "headless.unavailable");
       if (kind === "provider-file-preview" && !handlers.providerFilePreview) return failure(response, 404, "headless.unavailable");
+      if (kind === "model-task-control" && !handlers.modelTaskControl) return failure(response, 400, "headless.unsupported-operation");
+      const checkCurrent = handlers.isCurrent;
       const agent = handlers.identify({
         auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
         organizationHeader: request.headers["x-organization-id"],
       }, kind);
-      if (!agent || !handlers.isCurrent(agent)) return failure(response, 403, "headless.forbidden");
+      // Retain the original synchronous authority function across body/handler waits.
+      const agentIsCurrent = () => {
+        try {
+          if (typeof checkCurrent !== "function") return false;
+          const value: unknown = checkCurrent.call(handlers, agent!);
+          if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+          return value === true;
+        } catch {return false;}
+      };
+      if (!agent || !agentIsCurrent()) return failure(response, 403, "headless.forbidden");
       if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(request.headers["content-type"] ?? ""))
         return failure(response, 415, "headless.invalid-request");
       if (active.size >= MAX_ACTIVE_REQUESTS) return failure(response, 503, "headless.unavailable");
       active.add(response);
       const started = performance.now();
       const current = () => open && !response.destroyed && active.has(response) &&
-        performance.now() - started < DEADLINE_MS && handlers.isCurrent(agent);
+        performance.now() - started < DEADLINE_MS && agentIsCurrent();
       const timer = setTimeout(() => response.destroy(), DEADLINE_MS);
       const retireBody = () => { clearTimeout(timer); active.delete(response); };
       response.once("close", retireBody);
@@ -167,6 +183,21 @@ async function respond<Agent>(
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     if (result.value.expiresAt <= Date.now()) return failure(response, 410, "headless.plan-expired");
     return send(response, result);
+  }
+  if (kind === "model-task-control") {
+    const parsed = readHeadlessModelTaskCancellationRequest(value, handlers.hostIncarnationId);
+    if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
+    if (!handlers.modelTaskControl) return failure(response, 400, "headless.unsupported-operation");
+    const target = parsed.request.input;
+    let outcome: unknown;
+    try {outcome = await handlers.modelTaskControl(parsed.request, agent, current);}
+    catch {outcome = {ok: false, code: "headless.operation-unconfirmed"};}
+    if (!current()) return failure(response, 403, "headless.forbidden");
+    const decoded = readHeadlessModelTaskCancellationResult(outcome, target);
+    // Validation/configuration errors are definitive only before handler entry.
+    const result = !decoded.ok && ["headless.invalid-request", "headless.unsupported-operation", "headless.host-changed"].includes(decoded.code)
+      ? {ok: false, code: "headless.operation-unconfirmed"} as const : decoded;
+    return result.ok ? send(response, result) : failure(response, requestErrorStatus(result.code), result.code);
   }
   if (kind === "plan-step") {
     const parsed = readHeadlessPlanStepRequest(value, handlers.hostIncarnationId);

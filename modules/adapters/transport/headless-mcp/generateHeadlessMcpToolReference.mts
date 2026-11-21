@@ -12,6 +12,8 @@ const modes = [
   { name: "all", authoring: true, conversation: true, presentation: true },
   { name: "plan-review", authoring: false, conversation: false, planReview: true },
   { name: "managed-plan-review", authoring: false, conversation: false, planReview: true, managed: true },
+  { name: "model-task-control", authoring: false, conversation: false, planReview: true, modelTaskControl: true },
+  { name: "managed-model-task-control", authoring: false, conversation: false, planReview: true, modelTaskControl: true, managed: true },
 ] as const;
 const entrypoint = fileURLToPath(new URL("./serveHeadlessMcpReadAdapter.mts", import.meta.url));
 const repository = fileURLToPath(new URL("../../../../", import.meta.url));
@@ -29,6 +31,7 @@ export async function collectHeadlessMcpToolReference() {
     if (mode.conversation) env.AISB_HEADLESS_ENABLE_CONVERSATION = "1";
     if ("presentation" in mode && mode.presentation) env.AISB_HEADLESS_ENABLE_PRESENTATION = "1";
     if ("planReview" in mode && mode.planReview) env.AISB_HEADLESS_ENABLE_PLAN_REVIEW = "1";
+    if ("modelTaskControl" in mode && mode.modelTaskControl) env.AISB_HEADLESS_ENABLE_MODEL_TASK_CONTROL = "1";
     if ("managed" in mode && mode.managed) env.AISB_HEADLESS_MODE = "managed";
     const transport = new StdioClientTransport({
       command: process.execPath, args: ["--import", "tsx", entrypoint], cwd: repository,

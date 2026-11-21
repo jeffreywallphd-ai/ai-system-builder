@@ -18,6 +18,7 @@ const catalog = JSON.parse(readFileSync("skills/control-ai-system-builder/refere
 const hostIncarnationId = "130707f1-04a5-43ca-9bed-d750a674fe53" as HeadlessHostIncarnationId;
 const workspaceId = createWorkspaceId("workspace.facilities");
 const scope = { hostIncarnationId, workspaceId };
+const planModes = new Set(["plan-review", "managed-plan-review", "model-task-control", "managed-model-task-control"]);
 
 function literalHostPlanTools(sourcePath: string, mode: "plan-review" | "managed-plan-review", suppliedSource?: string) {
   const source = ts.createSourceFile(sourcePath, suppliedSource ?? readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
@@ -78,7 +79,7 @@ test("portable Model guidance binds finite passive tools and separates recorded 
   const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8");
   assert.ok(skill.includes("references/models.md"));
   for (const mode of catalog.modes)
-    assert.equal(mode.tools.includes("aisb_model_metadata"), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
+    assert.equal(mode.tools.includes("aisb_model_metadata"), planModes.has(mode.mode));
   for (const text of ["aisb_host_describe", "models.inventory", "models.record", "nextCursor", "first record on the next page",
     "fresh first page", "modelRecordId", "modelId", "runtimeReadiness", "supplyVerification", "not-checked", "license rights",
     "same repository revision", "1 to 32", "generic HTTP, shell or filesystem", "approvals"])
@@ -90,7 +91,7 @@ test("portable source guidance discloses provider use and keeps source metadata 
   const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8");
   assert.ok(skill.includes("aisb_model_workflow"));
   for (const mode of catalog.modes)
-    assert.equal(mode.tools.includes("aisb_model_workflow"), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
+    assert.equal(mode.tools.includes("aisb_model_workflow"), planModes.has(mode.mode));
   for (const text of ["models.preview-source", "owner/model", "provider credential", "key stays in the app", "manifestDigest",
     "provider-declared", "unknown", "non-open", "git-blob-sha1", "blob header", "bytesVerification", "not-checked",
     "downloadApprovalRequired", "4 seconds", "5-second", "retains its slot", "no download or execution"])
@@ -105,7 +106,12 @@ test("portable Context guidance and discovery separate metadata from execution a
     "same repository revision", "does not install an MCP server or", "pair it separately"])
     assert.ok(skill.replace(/\s+/g, " ").includes(instruction), `Missing portable skill installation boundary: ${instruction}`);
   for (const mode of catalog.modes) for (const tool of ["aisb_context_models", "aisb_preview_context_generation", "aisb_preview_context_rebuild", "aisb_context_task", "aisb_read_context"])
-    assert.equal(mode.tools.includes(tool), mode.mode === "plan-review" || mode.mode === "managed-plan-review");
+    assert.equal(mode.tools.includes(tool), planModes.has(mode.mode));
+
+  for (const mode of catalog.modes) {
+    assert.ok(mode.tools.length <= 32);
+    assert.equal(mode.tools.includes("aisb_cancel_model_download"), ["model-task-control", "managed-model-task-control"].includes(mode.mode));
+  }
   for (const text of ["taskRevision", "versionDigest", "modelRecordId", "updatedAt", "not-checked", "license rights", "four sources", "1,000", "32 recorded"])
     assert.ok(guide.includes(text), `Missing Context client limit or authority guidance: ${text}`);
   assert.ok(guide.includes("They never grant tool authority"));

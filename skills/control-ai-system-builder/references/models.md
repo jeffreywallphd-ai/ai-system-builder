@@ -91,3 +91,29 @@ overlap it. Ordinary saved inventory remains provider-free and separate.
 Task replies include the original plan fingerprint and step. These come from the
 accepted task record. The client rejects a reply for a different selected plan,
 step, task or workspace. These references grant no additional authority.
+
+## Request cancellation of an original download
+
+Use `aisb_cancel_model_download` only when the connection offers it and the host
+has configured Model task controls. The client needs both
+`AISB_HEADLESS_ENABLE_PLAN_REVIEW=1` and
+`AISB_HEADLESS_ENABLE_MODEL_TASK_CONTROL=1`. The second flag defaults off.
+It adds one tool within the existing 32-tool limit. It grants no host permission.
+
+1. Select the exact original task ID or original plan fingerprint and step.
+   Keep the same registered client and workspace. Current Model read and write
+   permission is required. The app verifies original ownership again.
+2. Send one cancellation request. This mutation has its own fixed endpoint.
+   Do not send it through a read tool, another client's task or generic HTTP.
+3. Read `cancellationAccepted` as an acknowledgement. A true value does not mean
+   the worker stopped or its files were cleaned up. A false value can leave the
+   task running. Use `models.task` to check its actual state.
+4. After dispatch, a lost, invalid or withheld reply is unconfirmed. Do not retry
+   automatically. Observe the original task before taking another action.
+5. Cancellation starts no download or model and saves no registry record.
+   Existing approvals, original backend custody and separate window authority
+   remain in force. Missing host support must not trigger another control path.
+
+Install this guide, `SKILL.md` and the generated `mcp-tools.json` from the same
+repository revision. The optional tool alone is not real-host or native cleanup
+qualification; actual source/save activation remains separately guarded.

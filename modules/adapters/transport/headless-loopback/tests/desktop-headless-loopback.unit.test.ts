@@ -10,6 +10,7 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_PATH,
   HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_WINDOW_CONTROL_PATH, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentResult, type DesktopHeadlessClientAccess } from "../../../../contracts/headless";
+import {HEADLESS_MODEL_TASK_CONTROL_PATH} from "../../../../contracts/headless";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
@@ -159,6 +160,57 @@ function registrations() {
     canReadWorkspace: async (id) => id === workspaceId,
   });
 }
+
+test("pinned model cancellation is separate, plan-client scoped and validates finite owner acknowledgements", {timeout: 12_000}, async () => {
+  const registry = createDesktopHeadlessClientAuthority({documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity, canReadWorkspace: async id => id === workspaceId, canReviewPlans: async id => id === workspaceId});
+  const input = {hostIncarnationId: incarnation, workspaceId, selection: {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}};
+  const command = {version: HEADLESS_CONTRACT_VERSION, operation: "models.cancel-download", input};
+  const value = {workspaceId, taskId: incarnation, plan: {fingerprint: "a".repeat(64), step: 1}, state: "running", percent: null,
+    cancellationAccepted: true, registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  let calls = 0, mode = "valid", operationCurrent: (() => boolean) | undefined, asyncCurrent = false;
+  const connector = await startDesktopHeadlessLoopback({registrations: {completePairing: registry.completePairing,
+    async verifyCredential(credential) {
+      const grant = await registry.verifyCredential(credential);
+      return grant && asyncCurrent ? {...grant, isCurrent: (() => Promise.reject(new Error("private currentness"))) as never} : grant;
+    }},
+    read: async () => ({ok: false, code: "headless.forbidden"}),
+    planReview: {hostIncarnationId: incarnation, execute: async () => ({ok: false, code: "headless.forbidden"})},
+    modelTaskControl: {hostIncarnationId: incarnation, async execute(request, grant) {
+      calls++; assert.deepEqual(request, command); assert.equal(grant.planReview, true);
+      operationCurrent = grant.isOperationCurrent; assert.equal(operationCurrent?.(), true);
+      if (mode === "throw") throw new Error("private/model/path");
+      if (mode.startsWith("headless.")) return {ok: false, code: mode} as never;
+      if (mode === "withdraw") registry.close();
+      return {ok: true, operation: "models.cancel-download", value: {...value,
+        ...(mode === "extra" ? {privatePath: "private/model/path"} : {}),
+        ...(mode === "plan" ? {plan: {fingerprint: "b".repeat(64), step: 1}} : {})}} as never;
+    }}});
+  try {
+    const pair = async (access: DesktopHeadlessClientAccess) => {
+      const pending = await registry.beginPairing(workspaceId, () => true, access); assert.equal(pending.status, "ready");
+      const paired = await post(connector, pairPath, JSON.stringify({pairingCode: pending.pairingCode}));
+      assert.ok(paired.json.value?.credential); return {Authorization: "Bearer " + paired.json.value.credential};
+    };
+    const reader = await pair("read"), planner = await pair("plan-review");
+    const control = (body: unknown = command, headers = planner) => post(connector, HEADLESS_MODEL_TASK_CONTROL_PATH, JSON.stringify(body), headers);
+    asyncCurrent = true; assert.equal((await control()).status, 403); asyncCurrent = false;
+    assert.equal(calls, 0);
+    assert.equal((await control(command, reader)).status, 403); assert.equal(calls, 0);
+    assert.equal((await control({...command, transient: {action: "private"}})).status, 400);
+    assert.equal((await control({...command, input: {...input, workspaceId: createWorkspaceId("workspace.foreign")}})).status, 403);
+    assert.equal(calls, 0);
+    const accepted = await control(); assert.equal(accepted.status, 200); assert.equal(accepted.cacheControl, "no-store");
+    assert.deepEqual(accepted.json, {ok: true, operation: "models.cancel-download", value});
+    assert.equal(operationCurrent?.(), false, "The response lifetime is not retained as task custody.");
+    for (const next of ["extra", "plan", "throw", "headless.invalid-request", "headless.unsupported-operation", "headless.host-changed"]) {
+      mode = next; const result = await control(); assert.equal(result.status, 503);
+      assert.deepEqual(result.json, {ok: false, code: "headless.operation-unconfirmed"});
+      assert.doesNotMatch(JSON.stringify(result.json), /private\/model/);
+    }
+    mode = "withdraw"; assert.equal((await control()).status, 403); assert.equal(calls, 8);
+  } finally {registry.close(); await connector.close();}
+});
 
 test("the paired Desktop preview route rejects app actions, foreign grants and withdrawn replies", { timeout: 12_000 }, async () => {
   const registry = createDesktopHeadlessClientAuthority({

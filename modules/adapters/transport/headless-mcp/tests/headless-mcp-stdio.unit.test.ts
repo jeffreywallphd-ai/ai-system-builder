@@ -121,6 +121,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let displacedCapabilities = false;
   let displacedProviderReply = false;
   let invalidStatusReply = false;
+  let cancellationCalls = 0;
   let wrongQuestionDigest = false;
   let changedPreparation = false;
   let sourceReady = true;
@@ -192,6 +193,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       if (input.operation === "context.task") {
         const payload = JSON.stringify({ok: true, operation: input.operation,
           value: {...contextTaskValue, ...(invalidStatusReply ? {sourceText: "synthetic private source"} : {})}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.cancel-download") {
+        cancellationCalls++;
+        const payload = JSON.stringify({ok: true, operation: input.operation, value: {...modelTaskValue, cancellationAccepted: true,
+          ...(invalidStatusReply ? {error: "private/model/path"} : {})}});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -421,6 +429,27 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     displacedCapabilities = true;
     assert.deepEqual(await capabilities(), {ok:false, code:"headless.unavailable"});
     const planner = await connect({NODE_EXTRA_CA_CERTS:ca,AISB_HEADLESS_ENABLE_PLAN_REVIEW:"1"});
+    assert.ok(!(await planner.listTools()).tools.some(tool => tool.name === "aisb_cancel_model_download"));
+    const controller = await connect({NODE_EXTRA_CA_CERTS:ca, AISB_HEADLESS_ENABLE_PLAN_REVIEW:"1", AISB_HEADLESS_ENABLE_MODEL_TASK_CONTROL:"1"});
+    const stopTool = (await controller.listTools()).tools.find(tool => tool.name === "aisb_cancel_model_download");
+    assert.ok(stopTool); assert.equal(stopTool.annotations?.readOnlyHint, false); assert.equal(stopTool.annotations?.idempotentHint, false);
+    for (const selection of [{kind: "task", taskId: modelTaskValue.taskId}, {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}]) {
+      assert.deepEqual(resultText(await controller.callTool({name: "aisb_cancel_model_download", arguments: {...planBase, selection}})),
+        {ok: true, operation: "models.cancel-download", value: {...modelTaskValue, cancellationAccepted: true}});
+      assert.equal(requests.at(-1)?.url, "/api/headless/agent/model-task-control");
+    }
+    invalidStatusReply = true;
+    assert.deepEqual(resultText(await controller.callTool({name: "aisb_cancel_model_download", arguments: {...planBase,
+      selection: {kind: "task", taskId: modelTaskValue.taskId}}})), {ok: false, code: "headless.operation-unconfirmed"});
+    invalidStatusReply = false;
+    assert.deepEqual(resultText(await controller.callTool({name: "aisb_cancel_model_download", arguments: {...planBase,
+      selection: {kind: "plan-step", fingerprint: "b".repeat(64), step: 1}}})), {ok: false, code: "headless.operation-unconfirmed"});
+    assert.equal(cancellationCalls, 4, "Unknown replies never trigger a second HTTP request.");
+    const beforeBadControl = requests.length;
+    for (const selection of [{kind: "task", taskId: modelTaskValue.taskId, command: "private"},
+      {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}])
+      assert.equal((await controller.callTool({name: "aisb_cancel_model_download", arguments: {...planBase, selection}})).isError, true);
+    assert.equal(requests.length, beforeBadControl);
     for (const [selection, expected] of [[{kind: "inventory", limit: 1}, {ok: true, operation: "models.inventory", value: modelInventory}],
       [{kind: "record", modelRecordId: "model.synthetic"}, {ok: true, operation: "models.record", value: modelRecord}]] as const) {
       assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase, selection}})), expected);
@@ -1284,6 +1313,10 @@ test("the portable reference matches the exact credential-free SDK discovery cat
     { mode: "plan-review", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort() },
     { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system",
       ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort() },
+    { mode: "model-task-control", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool,
+      "aisb_cancel_model_download"].sort() },
+    { mode: "managed-model-task-control", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system",
+      ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool, "aisb_cancel_model_download"].sort() },
   ]);
   const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
   const assertExactObject = (name: string, required: string[], optional: string[] = []) => {
@@ -1304,6 +1337,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   for (const name of ["aisb_list_systems", "aisb_list_templates", "aisb_saved_system_snapshot"]) assertExactObject(name, workspace);
   assertExactObject("aisb_read_system", savedSystem);
   assertExactObject("aisb_read_context", [...workspace, "contextId"]);
+  assertExactObject("aisb_cancel_model_download", [...workspace, "selection"]);
   assertExactObject("aisb_preview_context_rebuild", [...workspace, "reference"]);
   assertExactObject("aisb_preview_context_query", [...workspace, "reference", "query", "maximumResults", "embeddingDevice"]);
   assertExactObject("aisb_saved_system_changes", [...workspace, "cursor"]);
@@ -1366,6 +1400,52 @@ function pair(connector: { endpoint: string; fingerprint: string }, pairingCode:
     req.on("error", reject).end(body);
   });
 }
+
+test("Desktop SDK cancellation is opt-in, pinned, detached and never retried after uncertain effects", {timeout: 12_000}, async () => {
+  const {createHeadlessMcpReadForwarder} = await import("../createHeadlessMcpReadForwarder.mjs");
+  const registry = createDesktopHeadlessClientAuthority({documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity: {organizationId, principalId: "principal.cancel-fixture"}, canReadWorkspace: async id => id === workspaceId,
+    canReviewPlans: async id => id === workspaceId});
+  const taskId = randomUUID(), plan = {fingerprint: "a".repeat(64), step: 1};
+  const value = {workspaceId, taskId, plan, state: "running", percent: null, registration: "requires-separate-approval",
+    runtimeReadiness: "not-checked", cancellationAccepted: true};
+  let calls = 0, mode = "valid";
+  const connector = await startDesktopHeadlessLoopback({registrations: registry,
+    read: async () => ({ok: false, code: "headless.forbidden"}),
+    planReview: {hostIncarnationId, execute: async () => ({ok: false, code: "headless.forbidden"})},
+    modelTaskControl: {hostIncarnationId, async execute(input, grant) {
+      calls++; assert.equal(input.operation, "models.cancel-download"); assert.equal(grant.isOperationCurrent?.(), true);
+      if (input.input.selection.kind === "task") assert.equal(input.input.selection.taskId, taskId);
+      if (mode === "throw") throw new Error("private/model/path");
+      if (mode.startsWith("headless.")) return {ok: false, code: mode} as never;
+      return {ok: true, operation: "models.cancel-download", value: {...value,
+        ...(mode === "plan" ? {plan: {fingerprint: "b".repeat(64), step: 1}} : {})}} as never;
+    }}});
+  try {
+    const pending = await registry.beginPairing(workspaceId, () => true, "plan-review"); assert.equal(pending.status, "ready");
+    const credential = await pair(connector, pending.pairingCode);
+    const disabled = createHeadlessMcpReadForwarder(connector.endpoint, connector.fingerprint, credential, false, false, false, true);
+    const enabled = createHeadlessMcpReadForwarder(connector.endpoint, connector.fingerprint, credential, false, false, false, true, true);
+    assert.ok(disabled && enabled);
+    const command = {version, operation: "models.cancel-download" as const, input: {hostIncarnationId, workspaceId,
+      selection: {kind: "task" as const, taskId}}};
+    assert.deepEqual(await disabled(command), {ok: false, code: "headless.forbidden"}); assert.equal(calls, 0);
+    const result = enabled(command); command.input.selection.taskId = randomUUID();
+    assert.deepEqual(await result, {ok: true, operation: "models.cancel-download", value});
+    mode = "plan";
+    assert.deepEqual(await enabled({...command, input: {...command.input, selection: {kind: "plan-step", ...plan}}}),
+      {ok: false, code: "headless.operation-unconfirmed"});
+    mode = "throw";
+    assert.deepEqual(await enabled({...command, input: {...command.input, selection: {kind: "task", taskId}}}),
+      {ok: false, code: "headless.operation-unconfirmed"});
+    for (const next of ["headless.invalid-request", "headless.unsupported-operation", "headless.host-changed"]) {
+      mode = next;
+      assert.deepEqual(await enabled({...command, input: {...command.input, selection: {kind: "task", taskId}}}),
+        {ok: false, code: "headless.operation-unconfirmed"});
+    }
+    assert.equal(calls, 6, "Each explicit cancellation sends exactly one request, including uncertain outcomes.");
+  } finally {registry.close(); await connector.close();}
+});
 
 function resultText(result: Awaited<ReturnType<Client["callTool"]>>): unknown {
   const block = result.content?.[0];

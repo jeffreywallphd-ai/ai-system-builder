@@ -311,3 +311,19 @@ new query/save, source sharing or task adoption follows. Context shares only the
 selector and view IDs. Generation-task display retains its artifact-only policy
 and rejects query DTOs. Controlled feature checks leave physical and actual-host
 qualification separate. See the Context architecture and portable skill guide.
+
+## Optional original-download cancellation
+
+With both `AISB_HEADLESS_ENABLE_PLAN_REVIEW=1` and
+`AISB_HEADLESS_ENABLE_MODEL_TASK_CONTROL=1`, the client adds
+`aisb_cancel_model_download`. Default modes stay unchanged. The optional Desktop
+catalog has32tools, preserving the existing bound. The tool is a mutation, with
+non-readonly/non-idempotent annotations; it uses a fixed dedicated pinned
+Desktop or authenticated Managed endpoint. Client flags grant no host authority.
+Targets are copied before awaits and finite owner-derived replies are checked
+against the original task/workspace/plan. Lost, malformed or withheld responses
+after dispatch remain unconfirmed; the SDK sends no automatic retry.
+Acknowledgement does not prove shutdown or cleanup. Observe the original task.
+Actual source/save/task-control roots remain unconfigured pending complete
+integration; protocol fixtures are not host/provider/native/parent qualification.
+Install the whole portable skill and generated catalog from the same revision.

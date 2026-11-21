@@ -193,6 +193,73 @@
         "aisb_request_build_plan_approval",
         "aisb_run_approved_build_step"
       ]
+    },
+    {
+      "mode": "model-task-control",
+      "tools": [
+        "aisb_build_plan_approval_status",
+        "aisb_cancel_model_download",
+        "aisb_compare_dataset_versions",
+        "aisb_context_models",
+        "aisb_context_task",
+        "aisb_dataset_task_review",
+        "aisb_dataset_task_status",
+        "aisb_dataset_versions",
+        "aisb_host_describe",
+        "aisb_ingestion_status",
+        "aisb_list_systems",
+        "aisb_list_templates",
+        "aisb_list_workflows",
+        "aisb_list_workspaces",
+        "aisb_model_metadata",
+        "aisb_model_workflow",
+        "aisb_plan_capabilities",
+        "aisb_prepare_workflow",
+        "aisb_preview_build_plan",
+        "aisb_preview_context_generation",
+        "aisb_preview_context_query",
+        "aisb_preview_context_rebuild",
+        "aisb_preview_dataset_preparation",
+        "aisb_preview_selected_local_file",
+        "aisb_preview_selected_provider_file",
+        "aisb_read_context",
+        "aisb_read_conversation_task",
+        "aisb_read_system",
+        "aisb_request_build_plan_approval",
+        "aisb_run_approved_build_step",
+        "aisb_saved_system_changes",
+        "aisb_saved_system_snapshot"
+      ]
+    },
+    {
+      "mode": "managed-model-task-control",
+      "tools": [
+        "aisb_build_plan_approval_status",
+        "aisb_cancel_model_download",
+        "aisb_compare_dataset_versions",
+        "aisb_context_models",
+        "aisb_context_task",
+        "aisb_dataset_task_review",
+        "aisb_dataset_task_status",
+        "aisb_dataset_versions",
+        "aisb_host_describe",
+        "aisb_ingestion_status",
+        "aisb_list_templates",
+        "aisb_model_metadata",
+        "aisb_model_workflow",
+        "aisb_plan_capabilities",
+        "aisb_preview_build_plan",
+        "aisb_preview_context_generation",
+        "aisb_preview_context_query",
+        "aisb_preview_context_rebuild",
+        "aisb_preview_dataset_preparation",
+        "aisb_preview_selected_local_file",
+        "aisb_preview_selected_provider_file",
+        "aisb_read_context",
+        "aisb_read_system",
+        "aisb_request_build_plan_approval",
+        "aisb_run_approved_build_step"
+      ]
     }
   ],
   "tools": [
@@ -470,6 +537,72 @@
           "hostIncarnationId",
           "workspaceId",
           "fingerprint"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_cancel_model_download",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "selection": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "task"
+                  },
+                  "taskId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "taskId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "plan-step"
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  }
+                },
+                "required": [
+                  "kind",
+                  "fingerprint",
+                  "step"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "selection"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

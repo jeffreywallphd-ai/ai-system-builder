@@ -8,6 +8,7 @@ import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeD
 import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
 import {HEADLESS_READ_OPERATIONS, readHeadlessModelTaskRequest, readHeadlessModelTaskValue,
   readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
+  readHeadlessModelTaskCancellationResult,
   type HeadlessModelTaskRequest, type HeadlessReadRequest} from "../../../../contracts/headless";
 import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
 import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../../adapters/persistence/sqlite";
@@ -658,4 +659,18 @@ test("private cancellation refuses active scope and final policy before any sour
   assert.equal(getters, 0); assert.equal(f.state.cancels, 0);
   assert.equal((await runOwnedHeadlessModelDownloadCancellation({...f.base, request, canUse: async () => false})).ok, false);
   assert.equal(f.state.cancels, 0); assert.equal(f.state.starts, 1); assert.equal(f.state.registrations, 0);
+});
+
+test("Model cancellation result codec retains unknown effects and rejects displaced or private acknowledgements", () => {
+  const target = {hostIncarnationId: randomUUID() as HeadlessHostIncarnationId, workspaceId: createWorkspaceId("workspace.synthetic"),
+    selection: {kind: "plan-step" as const, fingerprint: "a".repeat(64), step: 1}};
+  const result = {ok: true, operation: "models.cancel-download", value: {workspaceId: target.workspaceId, taskId: randomUUID(),
+    plan: {fingerprint: target.selection.fingerprint, step: 1}, state: "running", percent: null, cancellationAccepted: true,
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"}};
+  assert.deepEqual(readHeadlessModelTaskCancellationResult(result, target), result);
+  for (const raw of [{...result, operation: "models.task"}, {...result, value: {...result.value, error: "private"}},
+    {...result, value: {...result.value, plan: {fingerprint: "b".repeat(64), step: 1}}},
+    {...result, value: {...result.value, plan: {fingerprint: "a".repeat(64), step: 2}}},
+    {ok: false, code: "headless.forbidden", error: "private"}, {ok: true, value: {}}, undefined])
+    assert.deepEqual(readHeadlessModelTaskCancellationResult(raw, target), {ok: false, code: "headless.operation-unconfirmed"});
 });

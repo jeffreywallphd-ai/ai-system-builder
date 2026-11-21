@@ -447,3 +447,20 @@ after shared imports; it does not measure their lifetime peak. Keep actual-app
 journeys, failed/interrupted physical builds, exact receipt replay and final
 parent qualification pending. Reused native supervision is observed here, not
 independently requalified. No model, dependency, guard or runtime default changed.
+
+### Optional original Model download cancellation
+
+Install or refresh the entire skill directory, including `references/models.md`
+and the generated `references/mcp-tools.json`, from one repository revision.
+Set `AISB_HEADLESS_ENABLE_PLAN_REVIEW=1` and the separate default-off
+`AISB_HEADLESS_ENABLE_MODEL_TASK_CONTROL=1` only for a supported plan-review
+connection. Default discovery stays unchanged; the optional Desktop mode remains
+within32tools. The flag supplies no credentials, permissions or task ownership.
+Follow the Model guide for `aisb_cancel_model_download`. Select only the
+original accepted task or plan step with the same client and workspace.
+Current Model read/write permission and a configured host control are required.
+An acknowledgement is not worker shutdown or cleanup. Check `models.task`.
+After dispatch, treat lost, malformed or withheld replies as unconfirmed and
+never retry automatically. Do not substitute generic HTTP, shell or task tools.
+Actual source/save/task-control root activation and physical/provider
+qualification remain separate from these protocol fixtures.

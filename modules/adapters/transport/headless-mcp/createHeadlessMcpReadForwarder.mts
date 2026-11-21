@@ -1,5 +1,6 @@
 import { Agent, request } from "node:https";
 import {createHash, randomUUID} from "node:crypto";
+import type {HeadlessModelTaskCancellationRequest, HeadlessModelTaskCancellationResult} from "../../../contracts/headless/index.js";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessPlanReviewAgentRequest, HeadlessPlanReviewAgentResult, HeadlessPlanStepRequest,
@@ -132,11 +133,13 @@ const unavailable: ReadResult = { ok: false, code: deadlineCode };
 type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
 export type HeadlessPlanReviewForwardRequest = HeadlessPlanReviewAgentRequest & { readonly version: typeof HEADLESS_CONTRACT_VERSION };
 type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest |
+  HeadlessModelTaskCancellationRequest |
   HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest | HeadlessLocalFileImportRequest | HeadlessProviderFileImportRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
 export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read", "plan.capabilities"] as const;
 type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult |
+  HeadlessModelTaskCancellationResult |
   HeadlessPlanReviewAgentResult | HeadlessPlanStepResult | HeadlessLocalFileImportResult | HeadlessProviderFileImportResult;
 
 export function createManagedHeadlessMcpReadForwarder(configuration: {
@@ -144,7 +147,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly credential?: string;
   readonly organizationId?: string;
   readonly workspaceId?: string;
-}, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
+}, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false, enableModelTaskControl = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
   const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? ["models.task", "models.preview-source", ...headless.HEADLESS_MODEL_READ_OPERATIONS, ...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
@@ -159,6 +162,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const presentationAddress = new URL(managedWindow.MANAGED_HEADLESS_AGENT_WINDOW_PATH, origin);
   const planReviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_REVIEW_PATH, origin) : undefined;
   const planStepAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_STEP_PATH, origin) : undefined;
+  const modelTaskControlAddress = enablePlanReview && enableModelTaskControl ? new URL(headless.MANAGED_HEADLESS_MODEL_TASK_CONTROL_PATH, origin) : undefined;
   const localFilePreviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH, origin) : undefined;
   const providerFilePreviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH, origin) : undefined;
   const headers = {"x-organization-id": organizationId};
@@ -168,6 +172,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   // Each fixed POST independently prevents proxying and redirect following.
   const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
   const guard = (input: ForwardRequest) => {
+    if (input.operation === "models.cancel-download") return enablePlanReview && enableModelTaskControl && input.input.workspaceId === workspaceId;
     if (input.operation === "data.prepare-provider-file" || input.operation === "data.prepare-local-file")
       return enablePlanReview && input.input.workspaceId === workspaceId;
     if (isPlanReview(input)) return enablePlanReview && input.target.workspaceId === workspaceId;
@@ -183,7 +188,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
         ((!enablePlanReview && isAuthoring(input)) || allowedReads.some(operation => operation === input.operation))));
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
-    planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
+    planReviewAddress, planStepAddress, modelTaskControlAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
     allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
@@ -216,7 +221,7 @@ function resultHasOperation(result: ForwardResult, operation: HeadlessReadReques
 }
 
 export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown,
-  enableAuthoring = false, enableConversation = false, enablePresentation = false, enablePlanReview = false) {
+  enableAuthoring = false, enableConversation = false, enablePresentation = false, enablePlanReview = false, enableModelTaskControl = false) {
   if (!isDesktopHeadlessEndpoint(endpoint) || !isDesktopHeadlessFingerprint(fingerprint) || typeof credential !== "string" ||
       credential.length !== 43 || !/^[A-Za-z0-9_-]{43}$/.test(credential)) return undefined;
   // Build fixed paths locally. The pinned Agent attaches HTTP only to
@@ -227,11 +232,12 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const presentationAddress = new URL(headless.HEADLESS_WINDOW_CONTROL_PATH, endpoint);
   const planReviewAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_REVIEW_PATH, endpoint) : undefined;
   const planStepAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_STEP_PATH, endpoint) : undefined;
+  const modelTaskControlAddress = enablePlanReview && enableModelTaskControl ? new URL(headless.HEADLESS_MODEL_TASK_CONTROL_PATH, endpoint) : undefined;
   const localFilePreviewAddress = enablePlanReview ? new URL(headless.HEADLESS_LOCAL_FILE_PREVIEW_PATH, endpoint) : undefined;
   const providerFilePreviewAddress = enablePlanReview ? new URL(headless.HEADLESS_PROVIDER_FILE_PREVIEW_PATH, endpoint) : undefined;
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
-  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
+  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress, modelTaskControlAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
     agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
@@ -241,6 +247,7 @@ function createForwarder(options: {
   address: URL; authoringAddress: URL; conversationAddress: URL; presentationAddress: URL;
   planReviewAddress?: URL;
   planStepAddress?: URL;
+  modelTaskControlAddress?: URL;
   localFilePreviewAddress?: URL;
   providerFilePreviewAddress?: URL;
   allowLocalFileSave?: boolean;
@@ -260,6 +267,22 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (input.operation === "models.cancel-download") {
+      if (!options.modelTaskControlAddress) return {ok: false, code: "headless.forbidden"};
+      const parsed = headless.readHeadlessModelTaskCancellationRequest(input, input.input.hostIncarnationId);
+      if (!parsed.ok) return parsed;
+      if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
+      active++;
+      try {
+        const {status, raw} = await sendRead(options.modelTaskControlAddress, agent, authorization, parsed.request, signal, headers);
+        const result = headless.readHeadlessModelTaskCancellationResult(raw, parsed.request.input);
+        if (status === 200 && result.ok && !signal?.aborted) return result;
+        if (!result.ok && ((status === 400 && (result.code === "headless.invalid-request" || result.code === "headless.unsupported-operation")) ||
+            (status === 409 && result.code === "headless.host-changed"))) return result;
+        return unknownWrite;
+      } catch {return unknownWrite;}
+      finally {active--;}
+    }
     // Both Desktop and Managed callers must lose their mutable request reference
     // before transport awaits. Correlate only against this exact dispatched copy.
     if (input.operation === "models.task") {

@@ -59,3 +59,18 @@ workspace read scope and delegates to the application workspace/group authorizer
 Unknown request fields/pages are rejected; missing authority or service wiring
 returns a sanitized unavailable envelope. Responses contain fixed scalar metrics
 with independent availability, never catalogs, model paths or release locks.
+
+Headless Model cancellation uses only exact
+`POST /api/headless/agent/model-task-control`, under workspace read and Model
+read/write scopes. An explicitly configured host handler and the original
+plan-review registration are required. This is separate from read routes.
+Copy the selector and validate finite owner-derived lineage before publication.
+Capture the original authority callback before body parsing and require immediate
+boolean true at admission, dispatch and publication. Callback replacement,
+promises, thenables and exceptions cannot restore authority.
+Validation, missing-handler and host errors are definitive only before handler
+entry. The same errors returned after entry are unconfirmed.
+A thrown or malformed post-dispatch result is unconfirmed; withdrawal suppresses
+disclosure. No acknowledgement proves native shutdown/cleanup or grants retry.
+Default missing handlers cannot dispatch. Existing framing, concurrency,
+authentication, organization and request-lifetime bounds remain intact.

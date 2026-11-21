@@ -6,6 +6,7 @@ import express from "express";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import path from "node:path";
+import {request as requestHttp} from "node:http";
 
 import { HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, parseHeadlessBuildPlanProposal,
   UI_CONTROL_VERSION, type HeadlessHostIncarnationId, type HeadlessPlanStepResult } from "../../../../../contracts/headless";
@@ -32,7 +33,7 @@ function modelSourcePreview(workspaceId: string) {
 
 test("managed agent routes stay exact in the central deny-by-default API", () => {
   for (const [kind, path] of Object.entries(MANAGED_HEADLESS_AGENT_PATHS)) {
-    const scopes = kind === "local-file-preview" || kind === "provider-file-preview" ? ["workspace:read", "artifact:read"] :
+    const scopes = kind === "model-task-control" ? ["workspace:read", "model:read", "model:write"] : kind === "local-file-preview" || kind === "provider-file-preview" ? ["workspace:read", "artifact:read"] :
       ["workspace:read", "asset:read", ...(kind === "plan-review" || kind === "plan-step" ? ["asset:write"] : [])];
     assert.deepEqual(resolveApiRoutePolicy("POST", path), {public: false, scopes});
     for (const method of ["GET", "HEAD", "DELETE", "PATCH"])
@@ -40,6 +41,77 @@ test("managed agent routes stay exact in the central deny-by-default API", () =>
     for (const variant of [path + "/", path.toUpperCase(), path.replace("agent", "%61gent"), path + "/other"])
       assert.equal(resolveApiRoutePolicy("POST", variant).deny, true);
   }
+});
+
+test("managed cancellation refuses asynchronous, throwing and truthy authority callbacks", {timeout: 8_000}, async () => {
+  const app = express(), agent = {}, hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const workspaceId = createWorkspaceId("fixture-workspace"), taskId = randomUUID();
+  let mode = "promise", calls = 0, thenCalls = 0;
+  const handlers: ManagedAgentRouteHandlers<typeof agent> = {hostIncarnationId, identify: () => agent,
+    isCurrent: (() => {
+      if (mode === "promise") return Promise.resolve(true);
+      if (mode === "reject") return Promise.reject(new Error("Synthetic rejected authority."));
+      if (mode === "throw") throw new Error("Synthetic unavailable authority.");
+      if (mode === "thenable") return {then() {thenCalls++;}};
+      return "true";
+    }) as never,
+    read: async () => ({ok: false, code: "headless.forbidden"}), author: async () => ({}),
+    modelTaskControl: async () => {calls++; return {ok: true, operation: "models.cancel-download", value: {
+      workspaceId, taskId, plan: {fingerprint: "a".repeat(64), step: 1}, state: "running", percent: null,
+      registration: "requires-separate-approval", runtimeReadiness: "not-checked", cancellationAccepted: true}};},
+  };
+  const retire = registerManagedHeadlessAgentRoutes(app, () => handlers), server = app.listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening"); const address = server.address(); assert.ok(address && typeof address !== "string");
+    for (const next of ["promise", "reject", "throw", "thenable", "truthy"]) {
+      mode = next;
+      const response = await fetch(`http://127.0.0.1:${address.port}${MANAGED_HEADLESS_AGENT_PATHS["model-task-control"]}`,
+        {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({version: HEADLESS_CONTRACT_VERSION,
+          operation: "models.cancel-download", input: {hostIncarnationId, workspaceId, selection: {kind: "task", taskId}}})});
+      assert.equal(response.status, 403, next); assert.deepEqual(await response.json(), {ok: false, code: "headless.forbidden"});
+    }
+    assert.equal(calls, 0); assert.equal(thenCalls, 0, "An untrusted thenable is never executed.");
+  } finally {retire(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));}
+});
+
+test("managed cancellation keeps the original authority callback through body and result waits", {timeout: 8_000}, async t => {
+  for (const phase of ["body", "result"]) await t.test(phase, async () => {
+    const app = express(), agent = {}, hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+    const workspaceId = createWorkspaceId("fixture-workspace"), taskId = randomUUID();
+    const admitted = Promise.withResolvers<void>(), entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+    let alive = true, calls = 0;
+    const handlers: ManagedAgentRouteHandlers<typeof agent> = {hostIncarnationId, identify: () => agent,
+      isCurrent(identity) {assert.equal(this, handlers); assert.equal(identity, agent); admitted.resolve(); return alive;},
+      read: async () => ({ok: false, code: "headless.forbidden"}), author: async () => ({}),
+      modelTaskControl: async (_input, _agent, current) => {
+        calls++; entered.resolve(); if (phase === "result") await release.promise;
+        assert.equal(current(), false, "Replacing the callback cannot revive the retired original authority.");
+        return {ok: true, operation: "models.cancel-download", value: {workspaceId, taskId,
+          plan: {fingerprint: "a".repeat(64), step: 1}, state: "running", percent: null,
+          registration: "requires-separate-approval", runtimeReadiness: "not-checked", cancellationAccepted: true}};
+      }};
+    const retire = registerManagedHeadlessAgentRoutes(app, () => handlers), server = app.listen(0, "127.0.0.1");
+    let partial: ReturnType<typeof requestHttp> | undefined;
+    try {
+      await once(server, "listening"); const address = server.address(); assert.ok(address && typeof address !== "string");
+      const url = `http://127.0.0.1:${address.port}${MANAGED_HEADLESS_AGENT_PATHS["model-task-control"]}`;
+      const body = JSON.stringify({version: HEADLESS_CONTRACT_VERSION, operation: "models.cancel-download",
+        input: {hostIncarnationId, workspaceId, selection: {kind: "task", taskId}}});
+      const response = phase === "body" ? new Promise<{status: number; body: unknown}>((resolve, reject) => {
+        partial = requestHttp(url, {method: "POST", headers: {"content-type": "application/json", "content-length": Buffer.byteLength(body)}}, res => {
+          let text = ""; res.setEncoding("utf8"); res.on("data", part => {text += part;}); res.on("error", reject);
+          res.on("end", () => {try {resolve({status: res.statusCode!, body: JSON.parse(text)});} catch (error) {reject(error);}});
+        });
+        partial.on("error", reject); partial.write(body.slice(0, 1));
+      }) : fetch(url, {method: "POST", headers: {"content-type": "application/json"}, body})
+        .then(async res => ({status: res.status, body: await res.json()}));
+      await (phase === "body" ? admitted.promise : entered.promise);
+      alive = false; Object.assign(handlers, {isCurrent: () => true});
+      if (phase === "body") partial!.end(body.slice(1)); else release.resolve();
+      assert.deepEqual(await response, {status: 403, body: {ok: false, code: "headless.forbidden"}});
+      assert.equal(calls, phase === "body" ? 0 : 1);
+    } finally {release.resolve(); partial?.destroy(); retire(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));}
+  });
 });
 
 test("managed plan routes admit only exact proposals, status and an approved step result", {timeout:10_000}, async () => {
@@ -67,6 +139,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let mutateQueryRequest = false;
   let mutateModelRequest = false;
   let acceptedModelPlanFingerprint = "a".repeat(64);
+  let modelControlEnabled = true, modelControlCalls = 0, modelControlMode = "valid";
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -87,11 +160,21 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     allowLocalFileSave:supportsLocalSave,
     allowContextPackGeneration: true,
     allowModelSourceRead,
-    identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" ||
+    identify: (request, kind) => (kind === "model-task-control" || kind === "plan-review" || kind === "plan-step" ||
       kind === "local-file-preview" || kind === "provider-file-preview" || kind === "read") &&
       request.organizationHeader === organizationId &&
       request.auth?.oidcAccessTokenClientId === "fixture-plan" ? planIdentity : undefined,
     isCurrent: identity => identity === planIdentity && current,
+    modelTaskControl: modelControlEnabled ? async () => {
+      modelControlCalls++;
+      if (modelControlMode === "throw") throw new Error("private/model/path");
+      if (modelControlMode.startsWith("headless.")) return {ok: false, code: modelControlMode} as never;
+      if (modelControlMode === "withdraw") current = false;
+      return {ok: true, operation: "models.cancel-download", value: {workspaceId, taskId: acceptedDatasetTaskId,
+        plan: {fingerprint: modelControlMode === "plan" ? "b".repeat(64) : acceptedModelPlanFingerprint, step: 1},
+        state: "running", percent: null, registration: "requires-separate-approval", runtimeReadiness: "not-checked", cancellationAccepted: true,
+        ...(modelControlMode === "extra" ? {localPath: "private/model/path"} : {})}};
+    } : undefined,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
         version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.task", "models.preview-source", "models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
@@ -282,6 +365,25 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     assert.ok(built.ok);
     const fingerprint = createHash("sha256").update(JSON.stringify(built.preview)).digest("hex");
     acceptedModelPlanFingerprint = fingerprint;
+    const cancelRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "models.cancel-download", input: {hostIncarnationId, workspaceId,
+      selection: {kind: "plan-step", fingerprint, step: 1}}};
+    const controlRoute = MANAGED_HEADLESS_AGENT_PATHS["model-task-control"];
+    assert.equal((await request(cancelRequest, "fixture-agent", controlRoute)).status, 403);
+    assert.equal((await request({...cancelRequest, extra: "private"}, "fixture-plan", controlRoute)).status, 400);
+    assert.equal(modelControlCalls, 0);
+    const cancelled = await request(cancelRequest, "fixture-plan", controlRoute);
+    assert.equal(cancelled.status, 200); assert.equal(cancelled.body.value.cancellationAccepted, true);
+    assert.equal(cancelled.body.value.state, "running");
+    for (const mode of ["plan", "extra", "throw", "headless.invalid-request", "headless.unsupported-operation", "headless.host-changed"]) {
+      modelControlMode = mode;
+      const denied = await request(cancelRequest, "fixture-plan", controlRoute);
+      assert.equal(denied.status, 503); assert.deepEqual(denied.body, {ok: false, code: "headless.operation-unconfirmed"});
+    }
+    modelControlMode = "withdraw";
+    assert.equal((await request(cancelRequest, "fixture-plan", controlRoute)).status, 403);
+    current = true; modelControlMode = "valid"; modelControlEnabled = false;
+    assert.equal((await request(cancelRequest, "fixture-plan", controlRoute)).status, 400);
+    modelControlEnabled = true; assert.equal(modelControlCalls, 8);
     const proposal = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.submit", input:{...scope, fingerprint, steps}};
     const planPath = MANAGED_HEADLESS_AGENT_PATHS["plan-review"];
     async function request(body: object | string, token = "fixture-plan", route = planPath, org = organizationId) {

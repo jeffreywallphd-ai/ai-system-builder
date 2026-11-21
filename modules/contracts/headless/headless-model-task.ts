@@ -3,6 +3,9 @@ import {isWorkspaceId, type WorkspaceId} from "../workspace";
 import {HEADLESS_MAX_BUILD_PLAN_STEPS} from "./headless-system-management";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 
+export const HEADLESS_MODEL_TASK_CONTROL_PATH = "/aisb-headless/v1/model-task-control";
+export const MANAGED_HEADLESS_MODEL_TASK_CONTROL_PATH = "/api/headless/agent/model-task-control";
+
 export type HeadlessModelTaskSelection = {readonly kind: "task"; readonly taskId: string} |
   {readonly kind: "plan-step"; readonly fingerprint: string; readonly step: number};
 export interface HeadlessModelTaskRequest {
@@ -31,7 +34,7 @@ export interface HeadlessModelTaskCancellationValue extends HeadlessModelTaskVal
 }
 export type HeadlessModelTaskCancellationResult =
   | {readonly ok: true; readonly operation: "models.cancel-download"; readonly value: HeadlessModelTaskCancellationValue}
-  | {readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" | "headless.forbidden" |
+  | {readonly ok: false; readonly code: "headless.invalid-request" | "headless.unsupported-operation" | "headless.host-changed" | "headless.forbidden" |
       "headless.unavailable" | "headless.operation-unconfirmed"};
 const invalid = {ok: false, code: "headless.invalid-request"} as const;
 function record(value: unknown, names: readonly string[]) {
@@ -100,4 +103,19 @@ export function readHeadlessModelTaskCancellationValue(value: unknown,
     const task = readHeadlessModelTaskValue(metadata, target);
     return task && typeof cancellationAccepted === "boolean" ? {...task, cancellationAccepted} : undefined;
   } catch {return;}
+}
+/** A malformed reply after dispatch cannot prove that cancellation did not occur. */
+export function readHeadlessModelTaskCancellationResult(value: unknown,
+  target: HeadlessModelTaskRequest["input"]): HeadlessModelTaskCancellationResult {
+  const unconfirmed = {ok: false, code: "headless.operation-unconfirmed"} as const;
+  try {
+    const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "operation", "value", "code"]);
+    if (raw.ok === false && Object.keys(raw).length === 2 && typeof raw.code === "string" &&
+        ["headless.invalid-request", "headless.unsupported-operation", "headless.host-changed", "headless.forbidden",
+          "headless.unavailable", "headless.operation-unconfirmed"].includes(raw.code))
+      return {ok: false, code: raw.code as Extract<HeadlessModelTaskCancellationResult, {ok: false}>["code"]};
+    if (raw.ok !== true || Object.keys(raw).length !== 3 || raw.operation !== "models.cancel-download") return unconfirmed;
+    const task = readHeadlessModelTaskCancellationValue(raw.value, target);
+    return task ? {ok: true, operation: "models.cancel-download", value: task} : unconfirmed;
+  } catch {return unconfirmed;}
 }
