@@ -689,6 +689,36 @@
         "Transport receipt 118e7cd6134a42d73d2dad95f7d6970bd21c512ce746ee34fb7782f1fd1f5586 passed seven feature check groups; independent review 950f5f1a1f54efabbaceafc5ba2cac3e151c3ed76a8dffbade2f5c8df6fcce9d closed both causal regression findings. Server build passed. Commit b8283c020dc0a6d9fa06fa39f182807b560cb323."
       ],
       "title": "Connect downloads and owned task controls"
+    },
+    {
+      "areas": [
+        "Original cached Model owner and historical completion clients",
+        "Atomic reference-only registry/receipt/source index",
+        "Private Desktop and Managed plan/approval owners and existing modal/chat UI"
+      ],
+      "chunkId": "review-and-save-downloaded-model",
+      "completedAt": "2026-11-21T20:56:19Z",
+      "criteriaIds": [
+        "compatible-download",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "documentation": [
+        "ADR0047, runtime architecture/context, Headless threat model and persistence README describe exact save consent, reference-only semantics, independent capability gates and pending public/physical qualification."
+      ],
+      "feedbackAddressed": [],
+      "id": "models-training-and-generation-review-and-save-downloaded-model",
+      "incrementId": "models-training-and-generation",
+      "summary": "Implemented cached historical completion review and exact separately approved reference-only Model-list saving through private configured Desktop/Managed plan owners and the existing app/chat approval UI. Metadata registration, causal receipts, retries and policy/source/expiry fences passed controlled local tests. Public transport/product activation and real running-host/provider/native/physical model qualification remain pending in qualify-model-workflows-on-hosts; no parent criterion pass is asserted.",
+      "tests": [
+        "Local work headless-model-completion-review; receipt 6a83a94e7de050bdd83df6fca0ce6a5df553854a071a6ff1b42b83ff6a595474; independent review e4b0bb008d619f3811323ed29247593e6ed234429045126d4c9288f6cfc8ff03.",
+        "Local work headless-model-completion-client-integration; receipt fd186fce5903f0f37bb00d4137d020743bd91c3018728dce0e31b1ec5082fb04; independent review f5296bcea97eb7eced7414f90a83449b5b1355d0e1af9c9c4e5abf5c8ee5d9d6.",
+        "Local work headless-model-registration-inputs; receipt 621b87ea5080c0ed0890aedab168c244438e57544aa5f3e314a0dc73c9a0a716; independent review 52c373ba44c334faf3c946a173966dfd6bc289f6fbfd91fa7c53a2988bb2edd8.",
+        "Local work headless-model-reference-save; receipt 0f7124a378e48f25090cce91e7c6e30f12a79ae5a8cdba2bb2b27fc6af58e3fc; independent review 448d8f6a1a7efa218099b72389bf99ab2ff3e1d00d535220218be7623d5cd24e.",
+        "Local work headless-model-save-plan-integration; receipt b60b6757fbf72c214a4978a423f0ab39989d9fb4ea53e066604c43d93375f30d; independent review 08296f736cef3063f15e218cb4316c2badbd3db570ec4be86867aff265adb7ad.",
+        "Final integration passed eight registered focused groups, 108 targeted contract/UI/host cases, 68 existing source-execution/completion cases and a Server build. Four causal regression cases failed before repair and passed after both named independent findings were fixed. Commit a06020d2c7b7cb1bd49b46628e831906ba42e2e1. Public/physical/native/provider qualification is not supplied by these component fixtures."
+      ],
+      "title": "Review and save the completed model"
     }
   ],
   "completion": null,
@@ -2276,6 +2306,12 @@
       "recordedAt": "2026-11-21T18:15:17Z",
       "sequence": 121,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8717f27486366cadd55897c3cc444445a5ea066916ddb4eb06cd74327bacd2d0",
+      "recordedAt": "2026-11-21T20:56:19Z",
+      "sequence": 122,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -3476,7 +3512,8 @@
         "inspect-installed-models",
         "review-pinned-model-source",
         "execute-approved-model-download",
-        "monitor-and-cancel-model-download"
+        "monitor-and-cancel-model-download",
+        "review-and-save-downloaded-model"
       ],
       "deliverables": [
         "Model download, training, evaluation and supported image/text generation tool families",
@@ -4185,7 +4222,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-21T18:15:17Z",
+  "updatedAt": "2026-11-21T20:56:19Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
