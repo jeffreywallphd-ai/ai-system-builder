@@ -835,3 +835,13 @@ current ModelRead/Write policy still govern the effect. Fixed authenticated
 transports copy and correlate finite lineage/ACK replies; uncertain effects do
 not permit automatic retry or imply native shutdown. Actual source/save and
 root activation remain separately qualified.
+## Completed Model review implementation note
+
+The private completion-review selector reuses exact accepted task/plan/source
+ownership and the cached Model application owner. Current read policy governs
+disclosure after approval expiry or revocation; accepted result custody remains.
+Only bounded historical revision/license/file-count/byte verification metadata
+leaves this owner. A review grants no current file, registry save, runtime or
+license rights. Public capability activation and separately approved saving
+remain gated by their actual integration and qualification. This implementation
+note introduces no new provider, loader, approval channel or resource policy.

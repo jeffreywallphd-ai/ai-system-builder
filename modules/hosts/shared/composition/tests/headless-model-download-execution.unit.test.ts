@@ -9,6 +9,7 @@ import {composeManagedAgentReads} from "../../../server/composition/composeManag
 import {HEADLESS_READ_OPERATIONS, readHeadlessModelTaskRequest, readHeadlessModelTaskValue,
   readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
   readHeadlessModelTaskCancellationResult,
+  readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewValue,
   type HeadlessModelTaskRequest, type HeadlessReadRequest} from "../../../../contracts/headless";
 import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
 import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../../adapters/persistence/sqlite";
@@ -26,7 +27,7 @@ import {createWorkspaceId} from "../../../../contracts/workspace";
 import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId, type HeadlessPlanStepRequest} from "../../../../contracts/headless";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {runPreparedHeadlessModelDownload} from "../headlessModelDownloadExecution";
-import {runOwnedHeadlessModelDownloadTask, runOwnedHeadlessModelDownloadCancellation} from "../headlessModelDownloadTasks";
+import {runOwnedHeadlessModelDownloadTask, runOwnedHeadlessModelDownloadCancellation, runOwnedHeadlessModelDownloadReview} from "../headlessModelDownloadTasks";
 
 type Options = {root?: ReturnType<typeof createInMemoryStructuredDocumentStore>; channel?: "app-popup" | "authenticated-chat";
   mode?: "whole-plan" | "each-change"; precedingSystem?: boolean; followingSystem?: boolean};
@@ -36,7 +37,8 @@ async function fixture(t: TestContext, options: Options = {}) {
     principalId: "principal.synthetic", registeredClientId: randomUUID()};
   const state = {current: true, policy: true, business: true, host: true, now: 1000, starts: 0, resolutions: 0, ordinary: 0, registrations: 0,
     unavailable: false, uncertain: false, loseCallerOnStart: false, loseReply: false,
-    statusReads: 0, cancels: 0, onStatusRead: undefined as (() => Promise<void>) | undefined};
+    statusReads: 0, cancels: 0, onStatusRead: undefined as (() => Promise<void>) | undefined,
+    completionReads: 0, completed: undefined as unknown, onCompletionRead: undefined as (() => Promise<void>) | undefined};
   const source = readModelDownloadSource({provider: "huggingface", modelId: "fixture/model", revision: "a".repeat(40),
     format: "transformers-safetensors", license: {kind: "unknown"}, files: ["config.json", "model.safetensors", "tokenizer.json"].map(path => ({
       path, sizeBytes: 2, integrity: {algorithm: path.endsWith("safetensors") ? "sha256" : "git-blob-sha1",
@@ -91,7 +93,7 @@ async function fixture(t: TestContext, options: Options = {}) {
         workspaceId: scope.workspaceId, modelId: source.modelId, revision: source.revision, manifestDigest: digest,
         read: async () => {state.statusReads++; await state.onStatusRead?.(); return {...record};},
         cancel: async () => {state.cancels++; return {requestId: input.requestId, status: record.status, cancelled: true};},
-        readCompleted: async () => undefined})};
+        readCompleted: async () => {state.completionReads++; await state.onCompletionRead?.(); return state.completed as never;}})};
     }} });
   const request: HeadlessPlanStepRequest = {version: "aisb-headless-v1", operation: "plan.run-step", input: {
     hostIncarnationId: host, workspaceId: scope.workspaceId, fingerprint: target.fingerprint, approvalRevision: 2, step}};
@@ -283,8 +285,8 @@ test("accepted Model source result survives actual SQLite reopen and replays wit
   } finally {await db?.close(); await rm(directory, {recursive: true, force: true});}
 });
 
-async function taskControls(t: TestContext) {
-  const f = await fixture(t);
+async function taskControls(t: TestContext, options: Options = {}) {
+  const f = await fixture(t, options);
   assert.ok((await f.run(await f.prepare())).result.ok);
   const attempt = await f.attempt(); assert.ok(attempt?.kind === "accepted");
   const taskId = attempt.reference.taskId;
@@ -673,4 +675,147 @@ test("Model cancellation result codec retains unknown effects and rejects displa
     {...result, value: {...result.value, plan: {fingerprint: "a".repeat(64), step: 2}}},
     {ok: false, code: "headless.forbidden", error: "private"}, {ok: true, value: {}}, undefined])
     assert.deepEqual(readHeadlessModelTaskCancellationResult(raw, target), {ok: false, code: "headless.operation-unconfirmed"});
+});
+
+async function completedReview(t: TestContext, options: Options = {}) {
+  const f = await taskControls(t, options);
+  f.state.completed = {provider: "transformers", modelId: f.source.modelId, revision: f.source.revision,
+    verifiedManifestDigest: f.digest, downloaded: true, fromCache: false, localPath: "synthetic-private-cache-not-for-display"};
+  f.records.get(f.taskId)!.status = "succeeded";
+  await f.useCase.readApprovedSource({workspaceId: f.scope.workspaceId, requestId: f.taskId}, f.digest,
+    {organizationId: f.scope.organizationId, principalId: f.scope.principalId, modelWriteAuthorized: false});
+  await f.reconciler.reconcileNow();
+  const request = {version: "aisb-headless-v1", operation: "models.review-download",
+    input: {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.taskId}}};
+  const review = (overrides: Partial<Parameters<typeof runOwnedHeadlessModelDownloadReview>[0]> = {}) =>
+    runOwnedHeadlessModelDownloadReview({...f.base, request, ...overrides});
+  return {...f, request, review};
+}
+
+test("completed Model review uses the original cached task or plan without refresh, save or runtime fallback", async t => {
+  const f = await completedReview(t), before = f.state.statusReads;
+  const expected = {workspaceId: f.scope.workspaceId, taskId: f.taskId, plan: {fingerprint: f.target.fingerprint, step: 1},
+    modelId: f.source.modelId, revision: f.source.revision, manifestDigest: f.digest, format: "transformers-safetensors",
+    license: {kind: "unknown"}, selectedFileCount: 3, totalBytes: 6, fromCache: false,
+    selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  for (const selection of [{kind: "task", taskId: f.taskId}, {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}]) {
+    const result = await f.review({request: {...f.request, input: {...f.request.input, selection}}});
+    assert.deepEqual(result, {ok: true, operation: "models.review-download", value: expected});
+    assert.ok(result.ok && Object.isFrozen(result.value) && Object.isFrozen(result.value.license));
+    assert.doesNotMatch(JSON.stringify(result), /localPath|synthetic-private-cache|principalId|registeredClientId/);
+  }
+  assert.equal(f.state.statusReads, before); assert.equal(f.state.completionReads, 2);
+  assert.equal(f.state.starts, 1); assert.equal(f.state.resolutions, 1);
+  assert.equal(f.state.ordinary, 0); assert.equal(f.state.registrations, 0); assert.equal(f.state.cancels, 0);
+  assert.ok((await f.decisions.decide({fingerprint: f.target.fingerprint, expectedRevision: 2, decision: {kind: "revoke"}},
+    f.target.hostIncarnationId, f.scope, f.actor)).ok);
+  f.state.business = false; f.state.now += 16 * 60_000;
+  assert.deepEqual(await f.review(), {ok: true, operation: "models.review-download", value: expected},
+    "Revocation and approval expiry do not destroy an accepted result; current ModelRead still governs its review.");
+});
+
+test("completed Model review preserves exact accepted lineage on real SQLite metadata", async t => {
+  const directory = await realpath(await mkdtemp(join(await realpath(tmpdir()), "headless-model-review-")));
+  let db: Awaited<ReturnType<typeof openLocalSqliteDatabase>> | undefined;
+  try {
+    db = await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: directory})});
+    const f = await completedReview(t, {root: db.documents}), result = await f.review();
+    assert.ok(result.ok); assert.equal(result.value.taskId, f.taskId); assert.equal(result.value.manifestDigest, f.digest);
+    assert.equal(result.value.plan.fingerprint, f.target.fingerprint); assert.equal(f.state.completionReads, 1);
+  } finally {await db?.close(); await rm(directory, {recursive: true, force: true});}
+});
+
+test("completed Model review refuses foreign actor, client, host, workspace and task before owner entry", async t => {
+  for (const field of ["principalId", "registeredClientId", "workspaceId", "host", "task", "plan"] as const) {
+    const f = await completedReview(t), scope = {...f.scope}; let request: unknown = f.request;
+    if (field === "principalId") scope.principalId = "principal.foreign";
+    else if (field === "registeredClientId") scope.registeredClientId = randomUUID();
+    else if (field === "workspaceId") scope.workspaceId = createWorkspaceId("workspace.foreign");
+    else request = {...f.request, input: {...f.request.input,
+      ...(field === "host" ? {hostIncarnationId: randomUUID()} : {selection: field === "task"
+        ? {kind: "task", taskId: randomUUID()} : {kind: "plan-step", fingerprint: "b".repeat(64), step: 1}})}};
+    const result = await f.review({scope, request, authorize: async () => true}); assert.equal(result.ok, false);
+    assert.equal(f.state.completionReads, 0); assert.equal(f.ownerLookups(), 0);
+  }
+});
+
+test("completed Model review captures passive scope, selectors and original lifetime before waits", async t => {
+  const f = await completedReview(t), scope = {...f.scope}, request = structuredClone(f.request);
+  let first = true;
+  assert.ok((await f.review({scope, request, authorize: async (_owner, actual, action) => {
+    assert.equal(action, "read"); assert.ok(Object.isFrozen(actual)); assert.equal(actual.principalId, f.scope.principalId);
+    if (first) {first = false; scope.principalId = "principal.foreign"; request.input.selection.taskId = randomUUID();}
+    return true;
+  }})).ok);
+  let getters = 0;
+  const activeScope = {...f.scope, get principalId() {getters++; return f.scope.principalId;}};
+  assert.deepEqual(await f.review({scope: activeScope}), {ok: false, code: "headless.forbidden"});
+  const activeRequest = {get version() {getters++; return "aisb-headless-v1";}};
+  assert.deepEqual(await f.review({request: activeRequest}), {ok: false, code: "headless.invalid-request"});
+  assert.equal(getters, 0);
+  let enter!: () => void, resume!: () => void;
+  const entered = new Promise<void>(resolve => {enter = resolve;}), release = new Promise<void>(resolve => {resume = resolve;});
+  f.state.onCompletionRead = async () => {enter(); await release;};
+  const options = {...f.base, request: f.request}, pending = runOwnedHeadlessModelDownloadReview(options);
+  await entered; f.setCurrent(false); options.isCurrent = () => true; resume();
+  assert.deepEqual(await pending, {ok: false, code: "headless.forbidden"});
+});
+
+test("completed Model review runs outside transactions and rechecks read policy after its awaited completion", {timeout: 5_000}, async t => {
+  for (const withdraw of [false, true]) {
+    const f = await completedReview(t);
+    f.state.onCompletionRead = async () => {
+      await f.root.runInOwnedTransaction!(async owner => {assert.equal(owner.organizationId, undefined);}, () => {});
+      if (withdraw) f.state.policy = false;
+    };
+    const result = await f.review();
+    assert.equal(result.ok, !withdraw);
+    if (withdraw) assert.deepEqual(result, {ok: false, code: "headless.forbidden"});
+    assert.equal(f.state.completionReads, 1); assert.equal(f.state.registrations, 0);
+  }
+});
+
+test("completed Model review denies missing owners, pending native completion and private or displaced replies", async t => {
+  const f = await completedReview(t);
+  assert.deepEqual(await f.review({peekOwner: () => undefined}), {ok: false, code: "headless.unavailable"});
+  assert.equal(f.state.completionReads, 0);
+  const raw = await f.useCase.peekApprovedSourceReview({workspaceId: f.scope.workspaceId, requestId: f.taskId}, f.scope); assert.ok(raw);
+  for (const invalid of [{...raw, requestId: randomUUID()}, {...raw, workspaceId: "workspace.foreign"},
+    {...raw, manifestDigest: "sha256:" + "b".repeat(64)}, {...raw, localPath: "private/model/path"},
+    {...raw, license: {kind: "unknown", rightsGranted: true}}, {...raw, selectedFilesVerification: "currently-verified"}])
+    assert.deepEqual(await f.review({peekOwner: () => ({peekApprovedSourceReview: async () => invalid as never})}),
+      {ok: false, code: "headless.unavailable"});
+  let getters = 0;
+  assert.deepEqual(await f.review({peekOwner: () => ({peekApprovedSourceReview: async () => ({get requestId() {getters++; return f.taskId;}}) as never})}),
+    {ok: false, code: "headless.unavailable"});
+  assert.equal(getters, 0);
+  assert.deepEqual(await f.review({peekOwner: () => ({peekApprovedSourceReview: async () => {throw new Error("private/model/path");}})}),
+    {ok: false, code: "headless.unavailable"});
+  const pending = await taskControls(t);
+  const request = {...f.request, input: {hostIncarnationId: pending.target.hostIncarnationId,
+    workspaceId: pending.scope.workspaceId, selection: {kind: "task", taskId: pending.taskId}}};
+  assert.deepEqual(await runOwnedHeadlessModelDownloadReview({...pending.base, request}), {ok: false, code: "headless.source-not-ready"});
+  assert.equal(pending.state.completionReads, 0); assert.equal(pending.state.registrations, 0);
+});
+
+test("completed Model review codecs reject invented readiness, file authority, license rights and malformed source summaries", async t => {
+  const f = await completedReview(t), result = await f.review(); assert.ok(result.ok);
+  const parsed = readHeadlessModelDownloadReviewRequest(f.request, f.target.hostIncarnationId); assert.ok(parsed.ok);
+  const input = parsed.request.input;
+  for (const license of [{kind: "unknown"}, {kind: "provider-declared", identifier: "apache-2.0"}]) {
+    const raw: Record<string, unknown> = {...result.value, license};
+    const read = readHeadlessModelDownloadReviewValue(raw, input);
+    assert.deepEqual(read, raw); assert.notEqual(read, raw); assert.notEqual(read?.license, license);
+  }
+  for (const invalid of [{...result.value, selectedFileCount: 65}, {...result.value, totalBytes: 0}, {...result.value, totalBytes: Infinity},
+    {...result.value, fromCache: "true"}, {...result.value, modelId: "private/path/extra"}, {...result.value, revision: "main"},
+    {...result.value, license: {kind: "provider-declared", identifier: "../license"}}, {...result.value, registration: "saved"},
+    {...result.value, runtimeReadiness: "ready"}, {...result.value, currentFileIntegrity: "verified"},
+    {...result.value, localPath: "private/model/path"}, {...result.value, plan: {fingerprint: "a".repeat(64), step: 0}}])
+    assert.equal(readHeadlessModelDownloadReviewValue(invalid, input), undefined);
+  for (const operation of ["models.task", "models.cancel-download", "models.save-download"])
+    assert.equal(readHeadlessModelDownloadReviewRequest({...f.request, operation}, f.target.hostIncarnationId).ok, false);
+  assert.equal(readHeadlessModelTaskRequest(f.request, f.target.hostIncarnationId).ok, false);
+  assert.equal(readHeadlessModelTaskCancellationRequest(f.request, f.target.hostIncarnationId).ok, false);
+  assert.ok(!HEADLESS_READ_OPERATIONS.includes("models.review-download" as never), "Private review is not public activation.");
 });

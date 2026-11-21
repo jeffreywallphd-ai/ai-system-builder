@@ -1543,3 +1543,17 @@ After possible effects, malformed, lost, withdrawn or thrown replies remain
 unconfirmed with no automatic retry. Preserve original business/native custody;
 ACK does not prove terminal cleanup. Protocol fixtures cannot qualify actual
 source/save activation, physical/native/provider execution or parent completion.
+## Private completed Model result review
+
+Retain exact original actor/client/workspace/task/approved-plan/source lineage.
+Copy passive selectors and original request callbacks before policy waits. Check
+current ModelRead before and after cached observation with owned transactions;
+never run runtime/provider/file work in those transactions. Missing ownership,
+unavailable cached owners, malformed/private completion or withdrawn authority
+deny disclosure. Review does not poll a task, inspect paths, invoke a provider,
+start or cancel work, register a model or grant a retry. Closed summaries retain
+provider-declared or unknown license facts without granting rights. Historical
+selected-byte verification is not current file/save/readiness authority. Preserve
+accepted results after approval ends; all current original-client read checks
+still apply. Public roots, safe save and real host/native/provider evidence remain
+pending. Controlled Core/SQLite fixtures cannot qualify those boundaries.

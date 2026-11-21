@@ -1841,3 +1841,13 @@ remain authoritative. Adapters attach request admission lifetime, copy target
 identity and independently validate finite owner-derived task/workspace/plan/ACK.
 SDK post-dispatch failures are unconfirmed and never retried automatically.
 Cancellation acknowledgement is not native settlement or registry persistence.
+## Private completed Model review
+
+The shared Headless composition reads historical selected-byte completion from
+the cached original Model task owner. Exact accepted task/plan/source lineage and
+current original-client ModelRead policy are checked in owning transactions on
+both sides of the observation. Observation itself is outside metadata retries.
+The finite summary does not refresh a worker, initialize a runtime, inspect a
+path or write a registry record. Completion-time verification does not establish
+current file integrity, readiness or save authority. Public review, separately
+approved saving and physical host/provider/native qualification remain pending.

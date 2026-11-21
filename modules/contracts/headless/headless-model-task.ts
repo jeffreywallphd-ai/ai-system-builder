@@ -1,4 +1,5 @@
-import {copyBoundedPassiveData, readStrictPassiveRecord} from "../shared";
+import {copyBoundedPassiveData, readStrictPassiveRecord, hasKnownPassiveCredential} from "../shared";
+import {MAX_MODEL_SOURCE_FILES, MAX_MODEL_SOURCE_BYTES, readModelDownloadSourceRequest, type ModelDownloadSource} from "../model";
 import {isWorkspaceId, type WorkspaceId} from "../workspace";
 import {HEADLESS_MAX_BUILD_PLAN_STEPS} from "./headless-system-management";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
@@ -31,6 +32,28 @@ export interface HeadlessModelTaskCancellationRequest {
 export interface HeadlessModelTaskCancellationValue extends HeadlessModelTaskValue {
   /** Request acknowledgement only. Observe the original task for actual settlement. */
   readonly cancellationAccepted: boolean;
+}
+export interface HeadlessModelDownloadReviewRequest {
+  readonly version: typeof HEADLESS_CONTRACT_VERSION;
+  readonly operation: "models.review-download";
+  readonly input: HeadlessModelTaskRequest["input"];
+}
+/** Historical completion metadata. This grants no current file or save authority. */
+export interface HeadlessModelDownloadReviewValue {
+  readonly workspaceId: WorkspaceId;
+  readonly taskId: string;
+  readonly plan: {readonly fingerprint: string; readonly step: number};
+  readonly modelId: string;
+  readonly revision: string;
+  readonly manifestDigest: string;
+  readonly format: ModelDownloadSource["format"];
+  readonly license: ModelDownloadSource["license"];
+  readonly selectedFileCount: number;
+  readonly totalBytes: number;
+  readonly fromCache: boolean;
+  readonly selectedFilesVerification: "verified-at-completion";
+  readonly registration: "requires-separate-approval";
+  readonly runtimeReadiness: "not-checked";
 }
 export type HeadlessModelTaskCancellationResult =
   | {readonly ok: true; readonly operation: "models.cancel-download"; readonly value: HeadlessModelTaskCancellationValue}
@@ -76,20 +99,63 @@ export function readHeadlessModelTaskCancellationRequest(value: unknown, host: H
       input: parsed.request.input}) satisfies HeadlessModelTaskCancellationRequest} as const;
   } catch {return invalid;}
 }
+export function readHeadlessModelDownloadReviewRequest(value: unknown, host: HeadlessHostIncarnationId) {
+  try {
+    const raw = record(copyBoundedPassiveData(value), ["version", "operation", "input"]);
+    if (raw.version !== HEADLESS_CONTRACT_VERSION || raw.operation !== "models.review-download") return invalid;
+    const parsed = readHeadlessModelTaskRequest({version: raw.version, operation: "models.task", input: raw.input}, host);
+    if (!parsed.ok) return parsed;
+    return {ok: true, request: Object.freeze({version: HEADLESS_CONTRACT_VERSION, operation: "models.review-download",
+      input: parsed.request.input}) satisfies HeadlessModelDownloadReviewRequest} as const;
+  } catch {return invalid;}
+}
+function readTaskIdentity(raw: Record<string, unknown>, target: HeadlessModelTaskRequest["input"]) {
+  const plan = record(raw.plan, ["fingerprint", "step"]);
+  const selection = readHeadlessModelTaskSelection({kind: "plan-step", ...plan});
+  if (!selection || selection.kind !== "plan-step" || (target.selection.kind === "plan-step" &&
+      (selection.fingerprint !== target.selection.fingerprint || selection.step !== target.selection.step)) ||
+      raw.workspaceId !== target.workspaceId || !isHeadlessHostIncarnationId(raw.taskId) ||
+      (target.selection.kind === "task" && raw.taskId !== target.selection.taskId)) return;
+  return {workspaceId: target.workspaceId, taskId: raw.taskId, plan: {fingerprint: selection.fingerprint, step: selection.step}};
+}
+export function readHeadlessModelDownloadReviewValue(value: unknown,
+  target: HeadlessModelTaskRequest["input"]): HeadlessModelDownloadReviewValue | undefined {
+  try {
+    const raw = record(copyBoundedPassiveData(value), ["workspaceId", "taskId", "plan", "modelId", "revision", "manifestDigest",
+      "format", "license", "selectedFileCount", "totalBytes", "fromCache", "selectedFilesVerification", "registration", "runtimeReadiness"]);
+    const identity = readTaskIdentity(raw, target);
+    const source = readModelDownloadSourceRequest({provider: "huggingface", modelId: raw.modelId, revision: raw.revision});
+    if (!identity || source.revision === undefined || source.revision !== raw.revision ||
+        typeof raw.manifestDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(raw.manifestDigest) ||
+        raw.format !== "transformers-safetensors" || !Number.isSafeInteger(raw.selectedFileCount) ||
+        (raw.selectedFileCount as number) < 3 || (raw.selectedFileCount as number) > MAX_MODEL_SOURCE_FILES ||
+        !Number.isSafeInteger(raw.totalBytes) || (raw.totalBytes as number) < (raw.selectedFileCount as number) ||
+        (raw.totalBytes as number) > MAX_MODEL_SOURCE_BYTES || typeof raw.fromCache !== "boolean" ||
+        raw.selectedFilesVerification !== "verified-at-completion" || raw.registration !== "requires-separate-approval" ||
+        raw.runtimeReadiness !== "not-checked") return;
+    const suppliedLicense = readStrictPassiveRecord(raw.license, ["kind", "identifier"]);
+    let license: ModelDownloadSource["license"];
+    if (suppliedLicense.kind === "unknown" && Object.keys(suppliedLicense).length === 1) license = {kind: "unknown"};
+    else if (suppliedLicense.kind === "provider-declared" && Object.keys(suppliedLicense).length === 2 &&
+        typeof suppliedLicense.identifier === "string" && /^[A-Za-z0-9][A-Za-z0-9+._-]{0,79}$/.test(suppliedLicense.identifier) &&
+        !hasKnownPassiveCredential(suppliedLicense.identifier)) license = {kind: "provider-declared", identifier: suppliedLicense.identifier};
+    else return;
+    return Object.freeze({...identity, plan: Object.freeze(identity.plan), modelId: source.modelId, revision: source.revision,
+      manifestDigest: raw.manifestDigest, format: "transformers-safetensors", license: Object.freeze(license),
+      selectedFileCount: raw.selectedFileCount as number, totalBytes: raw.totalBytes as number, fromCache: raw.fromCache,
+      selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked"});
+  } catch {return;}
+}
 /** Finite observation only. A succeeded transfer does not save or qualify a model. */
 export function readHeadlessModelTaskValue(value: unknown, target: HeadlessModelTaskRequest["input"]): HeadlessModelTaskValue | undefined {
   try {
     const raw = record(copyBoundedPassiveData(value), ["workspaceId", "taskId", "plan", "state", "percent", "registration", "runtimeReadiness"]);
-    const plan = record(raw.plan, ["fingerprint", "step"]);
-    const selection = readHeadlessModelTaskSelection({kind: "plan-step", ...plan});
-    if (!selection || selection.kind !== "plan-step" || (target.selection.kind === "plan-step" &&
-        (selection.fingerprint !== target.selection.fingerprint || selection.step !== target.selection.step))) return;
-    if (raw.workspaceId !== target.workspaceId || !isHeadlessHostIncarnationId(raw.taskId) ||
-        (target.selection.kind === "task" && raw.taskId !== target.selection.taskId) ||
+    const identity = readTaskIdentity(raw, target);
+    if (!identity ||
         !["queued", "running", "succeeded", "failed", "cancelled", "unknown"].includes(raw.state as string) ||
         !(raw.percent === null || typeof raw.percent === "number" && Number.isFinite(raw.percent) && raw.percent >= 0 && raw.percent <= 100) ||
         raw.registration !== "requires-separate-approval" || raw.runtimeReadiness !== "not-checked") return;
-    return {workspaceId: target.workspaceId, taskId: raw.taskId, plan: {fingerprint: selection.fingerprint, step: selection.step},
+    return {...identity,
       state: raw.state as HeadlessModelTaskValue["state"],
       percent: raw.percent as number | null, registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
   } catch {return;}

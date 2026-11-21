@@ -6,10 +6,11 @@ import type {ModelDownloadTasksUseCase} from "../../../application/use-cases/mod
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
 import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessModelTaskSelection, type HeadlessModelTaskSelection,
   readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
+  readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewValue,
   type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
 import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
-import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
+import {readStrictPassiveRecord, hasKnownPassiveCredential, copyBoundedPassiveData} from "../../../contracts/shared";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
 
 export type OwnedHeadlessModelTaskSelection = HeadlessModelTaskSelection;
@@ -29,6 +30,21 @@ function captureScope(value: unknown): HeadlessOperationScope | undefined {
     return Object.freeze({organizationId: raw.organizationId, principalId: raw.principalId,
       workspaceId: raw.workspaceId, registeredClientId: raw.registeredClientId});
   } catch {return;}
+}
+async function readOwnedSourceAdmission(partition: StructuredDocumentStore, scope: HeadlessOperationScope,
+  host: string, selection: HeadlessModelTaskSelection, current: () => boolean) {
+  if (!current()) return;
+  const reference = selection.kind === "task"
+    ? await readStructuredOwnedModelPlanTask(partition, scope, host, selection.taskId)
+    : await readStructuredOwnedModelPlanTaskByPlan(partition, scope, host, selection.fingerprint, selection.step);
+  if (!reference || !current()) return;
+  const digest = await readStructuredOwnedModelPlanTaskSourceDigest(partition, scope, host, reference.taskId);
+  if (!digest || !isDigest(digest) || !current()) return;
+  const lineage = await readStructuredModelPlanTaskLineage(partition, scope, host, reference.taskId);
+  if (!lineage || !current() || lineage.sourceDigest !== digest || lineage.target.scope.workspaceId !== reference.workspaceId ||
+      (selection.kind === "plan-step" && (lineage.target.fingerprint !== selection.fingerprint || lineage.step !== selection.step))) return;
+  return {reference, manifestDigest: "sha256:" + digest,
+    plan: Object.freeze({fingerprint: lineage.target.fingerprint, step: lineage.step})};
 }
 
 /** Private host integration, not a public route or permission grant. Metadata
@@ -64,18 +80,7 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
     async function admit() {
       return transaction(async owner => {
         if (!current() || await authorize(owner, scope, action) !== true || !current()) return;
-        const partition = owner.forOrganization(scope.organizationId);
-        const reference = selection.kind === "task"
-          ? await readStructuredOwnedModelPlanTask(partition, scope, hostIncarnationId, selection.taskId)
-          : await readStructuredOwnedModelPlanTaskByPlan(partition, scope, hostIncarnationId, selection.fingerprint, selection.step);
-        if (!reference || !current()) return;
-        const digest = await readStructuredOwnedModelPlanTaskSourceDigest(partition, scope, hostIncarnationId, reference.taskId);
-        if (!digest || !isDigest(digest) || !current()) return;
-        const lineage = await readStructuredModelPlanTaskLineage(partition, scope, hostIncarnationId, reference.taskId);
-        if (!lineage || !current() || lineage.sourceDigest !== digest || lineage.target.scope.workspaceId !== reference.workspaceId ||
-            (selection.kind === "plan-step" && (lineage.target.fingerprint !== selection.fingerprint || lineage.step !== selection.step))) return;
-        return {reference, manifestDigest: "sha256:" + digest,
-          plan: Object.freeze({fingerprint: lineage.target.fingerprint, step: lineage.step})};
+        return readOwnedSourceAdmission(owner.forOrganization(scope.organizationId), scope, hostIncarnationId, selection, current);
       }, fence);
     }
     const admitted = await admit(); if (!admitted || !current()) return forbidden;
@@ -112,6 +117,53 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
       state: fields.status as "queued" | "running" | "succeeded" | "failed" | "cancelled" | "unknown", percent,
       ...(action === "cancel" ? {cancellationAccepted: reply.cancelled as boolean} : {}),
       registration: "requires-separate-approval" as const, runtimeReadiness: "not-checked" as const}} as const;
+  } catch {return captured && current() ? unavailable : forbidden;}
+}
+
+/** Private cached historical review only. Never refresh a task, inspect a path,
+ * resolve a runtime or register a model. Actual saving needs separate approval. */
+export async function runOwnedHeadlessModelDownloadReview(options:
+  Omit<Parameters<typeof runOwnedHeadlessModelDownloadTask>[0], "selection" | "action" | "peekOwner"> & {
+    readonly request: unknown;
+    readonly peekOwner: () => Pick<ModelDownloadTasksUseCase, "peekApprovedSourceReview"> | undefined;
+  }) {
+  const {documents, hostIncarnationId, isCurrent, authorize, peekOwner, request} = options;
+  const current = () => isHeadlessReadCurrent(isCurrent);
+  let captured = false;
+  try {
+    if (!isHeadlessHostIncarnationId(hostIncarnationId)) return {ok: false, code: "headless.invalid-request"} as const;
+    const parsed = readHeadlessModelDownloadReviewRequest(request, hostIncarnationId);
+    if (!parsed.ok) return parsed;
+    const scope = captureScope(options.scope);
+    if (!scope || scope.workspaceId !== parsed.request.input.workspaceId || !current() ||
+        documents.organizationId !== undefined || !documents.runInOwnedTransaction) return forbidden;
+    captured = true;
+    const transaction = documents.runInOwnedTransaction.bind(documents);
+    const fence = () => {if (!current()) throw new Error("The original review request ended.");};
+    const admit = () => transaction(async owner => {
+      if (!current() || await authorize(owner, scope, "read") !== true || !current()) return;
+      return readOwnedSourceAdmission(owner.forOrganization(scope.organizationId), scope, hostIncarnationId, parsed.request.input.selection, current);
+    }, fence);
+    const admitted = await admit(); if (!admitted || !current()) return forbidden;
+    const owner = peekOwner(); if (!current()) return forbidden;
+    if (!owner) return unavailable;
+    const review = await owner.peekApprovedSourceReview({workspaceId: scope.workspaceId, requestId: admitted.reference.taskId},
+      {organizationId: scope.organizationId, principalId: scope.principalId, modelWriteAuthorized: false});
+    if (!current()) return forbidden;
+    const fresh = await admit();
+    if (!fresh || !current() || fresh.reference.workspaceId !== admitted.reference.workspaceId ||
+        fresh.reference.taskId !== admitted.reference.taskId || fresh.manifestDigest !== admitted.manifestDigest ||
+        fresh.plan.fingerprint !== admitted.plan.fingerprint || fresh.plan.step !== admitted.plan.step) return forbidden;
+    if (review === undefined) return {ok: false, code: "headless.source-not-ready"} as const;
+    const names = ["requestId", "workspaceId", "modelId", "revision", "manifestDigest", "format", "license", "selectedFileCount",
+      "totalBytes", "fromCache", "selectedFilesVerification", "runtimeReadiness"];
+    const raw = readStrictPassiveRecord(copyBoundedPassiveData(review), names);
+    if (Object.keys(raw).length !== names.length || raw.requestId !== fresh.reference.taskId ||
+        raw.workspaceId !== fresh.reference.workspaceId || raw.manifestDigest !== fresh.manifestDigest) return unavailable;
+    const {requestId, ...metadata} = raw;
+    const value = readHeadlessModelDownloadReviewValue({...metadata, taskId: requestId, plan: fresh.plan,
+      registration: "requires-separate-approval"}, parsed.request.input);
+    return value && current() ? {ok: true, operation: "models.review-download", value} as const : current() ? unavailable : forbidden;
   } catch {return captured && current() ? unavailable : forbidden;}
 }
 
