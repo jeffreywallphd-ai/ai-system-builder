@@ -1072,27 +1072,72 @@
             "type": "string"
           },
           "selection": {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "const": "source"
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "source"
+                  },
+                  "modelId": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 193
+                  },
+                  "revision": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40}$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "modelId"
+                ],
+                "additionalProperties": false
               },
-              "modelId": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 193
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "task"
+                  },
+                  "taskId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "taskId"
+                ],
+                "additionalProperties": false
               },
-              "revision": {
-                "type": "string",
-                "pattern": "^[a-f0-9]{40}$"
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "plan-step"
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  }
+                },
+                "required": [
+                  "kind",
+                  "fingerprint",
+                  "step"
+                ],
+                "additionalProperties": false
               }
-            },
-            "required": [
-              "kind",
-              "modelId"
-            ],
-            "additionalProperties": false
+            ]
           }
         },
         "required": [

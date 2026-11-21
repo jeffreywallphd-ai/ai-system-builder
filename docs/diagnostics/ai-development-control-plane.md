@@ -1,3 +1,15 @@
+
+The fixed Model owner unit/type checks also cover the `models.task` contract
+and both actual host-reader compositions using the accepted ledger, application
+owner and reconciler. Cases cover exact task/plan selectors, original client,
+current ModelRead/purpose, immutable capture, callback replacement, unavailable
+cached owner and finite private-field refusal. Related pinned MCP and Managed
+route checks verify SDK/API correlation and existing tool-count compatibility.
+Only exact new task sources borrow these profiles; unknown sources and explicitly
+required generic checks retain fallback. These are observation feature checks,
+not transfer, cancellation/save integration, actual-host/native/provider or parent
+qualification. Accepted model accuracy is not rerun.
+
 The same fixed Model owner profiles cover private Model execution in both actual
 step composers with the original approved ledger/application/reconciler. Focused
 cases separate the short metadata lifetime from operation admission, require
@@ -2781,3 +2793,12 @@ requirements. Pending outlines remain planned and cannot start work. Finish and
 checkpoint a source candidate before changing its plan. A reviewed local component
 can be recorded as a completed chunk only within its tested scope; real-host and
 parent qualification stay separate. Refinement itself supplies no test pass.
+
+Model task replies now include workspace and plan fingerprint/step read from the
+accepted dual-index ledger lineage. The owning helper checks the same lineage and
+source again after observation. Hosts, API and SDK validate these owner-supplied
+fields against the captured selector; they never stamp expected request fields
+over a mismatching reply. Desktop task observation also requires the captured
+HTTP read-current fence through the final awaited policy return and owner entry,
+separate from registration and accepted business-task lifetimes. Held-policy and
+same-workspace displaced-plan regressions preserve these boundaries.

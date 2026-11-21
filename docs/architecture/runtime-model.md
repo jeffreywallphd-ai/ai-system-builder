@@ -1,5 +1,14 @@
 # Runtime Model
 
+Headless Model task reads use the finite `models.task` operation. Optional Desktop
+and Managed readers accept an exact task or plan-step selector and delegate only
+to the original accepted ledger and already loaded source owner. Current
+plan-review identity, workspace ModelRead and request lifetime gate disclosure.
+Replies contain workspace, task, state and numeric progress; they cannot start,
+cancel, retry, register or qualify a model. Missing bindings are not advertised.
+Unknown remains unknown. Actual source-root activation, cancellation transport,
+separate registry saving and real provider/native/host qualification remain pending.
+
 Private host step owners can now explicitly compose approved Model download
 execution. The authoritative selected Model operation makes its request fence
 mandatory through owned reservation/issue and final source dispatch. Desktop uses
@@ -1798,3 +1807,12 @@ admission fencing and ordinary recovery after confirmed restrictive retirement
 remain. Failed verification never falls back to an installer. Focused simulated
 causal tests and Managed configuration checks do not prove a live Managed
 Context journey, public plan execution, physical model readiness or native recovery.
+
+Model task replies now include workspace and plan fingerprint/step read from the
+accepted dual-index ledger lineage. The owning helper checks the same lineage and
+source again after observation. Hosts, API and SDK validate these owner-supplied
+fields against the captured selector; they never stamp expected request fields
+over a mismatching reply. Desktop task observation also requires the captured
+HTTP read-current fence through the final awaited policy return and owner entry,
+separate from registration and accepted business-task lifetimes. Held-policy and
+same-workspace displaced-plan regressions preserve these boundaries.

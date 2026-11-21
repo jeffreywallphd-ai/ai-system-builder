@@ -1,5 +1,21 @@
 # Headless System Builder threat model
 
+### Accepted Model task observation
+The `models.task` read protects original host, organization, actor, client,
+workspace and accepted source identity. Passive exact selectors are copied before
+awaits; current ModelRead and plan-review purpose gate each read and publication.
+The retained-owner callback uses the accepted ledger and loaded source owner,
+never shared-ID discovery, ordinary completion or lazy runtime initialization.
+Only fixed state, task/workspace IDs, bounded percentage and not-checked readiness
+cross the boundary. SDK/API independently validate the original copied target;
+private fields and foreign task/workspace replies fail closed. Captured callback
+identity prevents replacing a retired request fence. Reads do not cancel, retry,
+start or save; a succeeded transfer still needs separately approved saving.
+Local protocol and owned application fixtures are not real provider, native
+resource, actual-host or parent qualification. Rollback omits the optional reader
+without releasing accepted custody or deleting history.
+
+
 ## Host Model execution and independent business lifetime
 
 Protect exact stored Model approval/source, original actor/client/workspace/host,
@@ -1481,3 +1497,12 @@ expiry, revoke, draft protection and independent backend tasks retain existing
 semantics. Controlled fixtures and source guards do not grant physical/native,
 actual-app, resource, parent or chunk qualification. Rollback disables this
 selector, retaining execution history and all remaining fences.
+
+Model task replies now include workspace and plan fingerprint/step read from the
+accepted dual-index ledger lineage. The owning helper checks the same lineage and
+source again after observation. Hosts, API and SDK validate these owner-supplied
+fields against the captured selector; they never stamp expected request fields
+over a mismatching reply. Desktop task observation also requires the captured
+HTTP read-current fence through the final awaited policy return and owner entry,
+separate from registration and accepted business-task lifetimes. Held-policy and
+same-workspace displaced-plan regressions preserve these boundaries.

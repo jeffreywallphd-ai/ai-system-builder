@@ -213,11 +213,20 @@ function addSystemBuilderTools(server: McpServer) {
     artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)});
   if (enablePlanReview) {
     server.registerTool("aisb_model_workflow", {
-      description: "Inspect a captured Hugging Face owner/model source before requesting download approval. Source inspection can contact Hugging Face with the configured provider credential under current workspace permission. It returns an immutable revision, a finite safe-format file list, provider-declared or unknown license and sizes. manifestDigest hashes metadata only. No model bytes, download approval, model run, rights or readiness verification is supplied. Saved inventory stays in aisb_model_metadata.",
-      inputSchema: z.strictObject({...workspaceTarget, selection: z.strictObject({kind: z.literal("source"),
-        modelId: z.string().min(3).max(193), revision: z.string().regex(/^[a-f0-9]{40}$/).optional()})}),
+      description: "Inspect a Hugging Face source, or observe one original accepted model download by task or plan-step. Source inspection can contact Hugging Face with the configured credential under current permission and returns pinned provider metadata only. Task reads return finite progress without private errors or discovery; an unknown result grants no retry. Check host operations first. No download, cancellation, model run or registry save is authorized; succeeded transfer still needs separate approved saving. Saved inventory stays in aisb_model_metadata.",
+      inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
+        z.strictObject({kind: z.literal("source"), modelId: z.string().min(3).max(193), revision: z.string().regex(/^[a-f0-9]{40}$/).optional()}),
+        z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
+        z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+          step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
+      ])}),
       annotations: {...queryHints, openWorldHint: true},
     }, ({selection, ...target}, context) => {
+      if (selection.kind !== "source") {
+        const parsed = headless.readHeadlessModelTaskRequest({version, operation: "models.task", input: {...target, selection}},
+          target.hostIncarnationId as HeadlessHostIncarnationId);
+        return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+      }
       const {kind: _kind, ...source} = selection;
       const parsed = headless.readHeadlessModelSourcePreviewRequest({version, operation: "models.preview-source", input: {...target, ...source}},
         target.hostIncarnationId as HeadlessHostIncarnationId);

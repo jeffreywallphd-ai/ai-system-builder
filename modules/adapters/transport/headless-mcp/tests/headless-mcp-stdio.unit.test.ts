@@ -68,6 +68,9 @@ const modelSummary = {modelRecordId: "model.synthetic", updatedAt: "2026-11-19T0
   lifecycleStatus: "downloaded", artifactForm: "full-model", provider: "huggingface", taskTags: ["text-generation"]};
 const modelInventory = {workspaceId, models: [modelSummary], runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
 const modelRecord = {workspaceId, model: modelSummary, runtimeReadiness: "not-checked", supplyVerification: "not-checked"};
+const modelTaskValue = {workspaceId, taskId: "00000000-0000-4000-8000-000000000071", state: "running", percent: 27.5,
+  plan: {fingerprint: "a".repeat(64), step: 1},
+  registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
 function modelSourcePreview() {
   const source = readModelDownloadSource({provider: "huggingface", modelId: "Qwen/synthetic-model", revision: "a".repeat(40),
     format: "transformers-safetensors", license: {kind: "unknown"},
@@ -189,6 +192,12 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       if (input.operation === "context.task") {
         const payload = JSON.stringify({ok: true, operation: input.operation,
           value: {...contextTaskValue, ...(invalidStatusReply ? {sourceText: "synthetic private source"} : {})}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.task") {
+        const payload = JSON.stringify({ok: true, operation: input.operation, value: {...modelTaskValue,
+          ...(invalidStatusReply ? {error: "private/provider/path"} : {})}});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -426,6 +435,21 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.equal(sourceTool?.annotations?.readOnlyHint, true);
     assert.equal(sourceTool?.annotations?.openWorldHint, true);
     assert.equal(sourceTool?.annotations?.destructiveHint, false);
+    for (const selection of [{kind: "task", taskId: modelTaskValue.taskId},
+      {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}]) {
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection}})),
+        {ok: true, operation: "models.task", value: modelTaskValue});
+      invalidStatusReply = true;
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection}})),
+        {ok: false, code: "headless.unavailable"});
+      invalidStatusReply = false;
+    }
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "task", taskId: "00000000-0000-4000-8000-000000000072"}}})), {ok: false, code: "headless.unavailable"});
+    for (const selection of [{kind: "plan-step", fingerprint: "b".repeat(64), step: 1},
+      {kind: "plan-step", fingerprint: "a".repeat(64), step: 2}])
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection}})),
+        {ok: false, code: "headless.unavailable"});
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection: sourceSelection}})),
       {ok: true, operation: "models.preview-source", value: modelSourcePreview()});
     invalidStatusReply = true;
@@ -440,7 +464,8 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       {kind: "record", modelRecordId: "model.synthetic", localPath: "private/model"}, {kind: "download", modelId: "example/model"}])
       assert.equal((await planner.callTool({name: "aisb_model_metadata", arguments: {...planBase, selection}})).isError, true);
     assert.equal(requests.length, beforeInvalidModel);
-    for (const selection of [{...sourceSelection, kind: "download"}, {...sourceSelection, revision: "main"}, {...sourceSelection, localPath: "private/model"}])
+    for (const selection of [{...sourceSelection, kind: "download"}, {...sourceSelection, revision: "main"}, {...sourceSelection, localPath: "private/model"},
+      {kind: "task", taskId: modelTaskValue.taskId, cancel: true}, {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}])
       assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase, selection}})).isError, true);
     assert.equal(requests.length, beforeInvalidModel);
     const preparation = {...planBase, sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],

@@ -4,6 +4,10 @@ import {mkdtemp, realpath, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {type TestContext} from "node:test";
+import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeDesktopHeadlessReads";
+import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
+import {HEADLESS_READ_OPERATIONS, readHeadlessModelTaskRequest, readHeadlessModelTaskValue,
+  type HeadlessModelTaskRequest, type HeadlessReadRequest} from "../../../../contracts/headless";
 import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
 import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../../adapters/persistence/sqlite";
 import {createStructuredHeadlessPlanReviewRepository} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
@@ -296,13 +300,15 @@ test("original task and plan-step controls report finite progress and cancellati
   const f = await taskControls(t), record = f.records.get(f.taskId)!;
   record.progress = {percent: 25, message: "private provider/path", details: {private: "not for publication"}};
   const read = await runOwnedHeadlessModelDownloadTask(f.base);
-  assert.deepEqual(read, {ok: true, value: {taskId: f.taskId, state: "running", percent: 25,
+  assert.deepEqual(read, {ok: true, value: {workspaceId: f.scope.workspaceId, taskId: f.taskId,
+    plan: {fingerprint: f.target.fingerprint, step: 1}, state: "running", percent: 25,
     registration: "requires-separate-approval", runtimeReadiness: "not-checked"}});
   let cancelPolicies = 0;
   const cancelled = await runOwnedHeadlessModelDownloadTask({...f.base, action: "cancel",
     selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1},
     authorize: async (_owner, scope, action) => {assert.equal(action, "cancel"); cancelPolicies++; return scope.principalId === f.scope.principalId;}});
-  assert.deepEqual(cancelled, {ok: true, value: {taskId: f.taskId, state: "running", percent: 25, cancellationAccepted: true,
+  assert.deepEqual(cancelled, {ok: true, value: {workspaceId: f.scope.workspaceId, taskId: f.taskId,
+    plan: {fingerprint: f.target.fingerprint, step: 1}, state: "running", percent: 25, cancellationAccepted: true,
     registration: "requires-separate-approval", runtimeReadiness: "not-checked"}});
   assert.equal(cancelPolicies, 2); assert.equal(f.state.cancels, 1); assert.equal(f.state.starts, 1);
   assert.equal(f.reconciler.status.pending, 1, "A cancellation reply is not receiver/worker settlement.");
@@ -377,7 +383,8 @@ test("original observation runs outside metadata transactions and failed-task me
     assert.equal(owner.organizationId, undefined);
   }, () => {});};
   record.status = "failed"; record.error = {code: "private-provider-error", message: "C:/private/model secret not for output"};
-  assert.deepEqual(await runOwnedHeadlessModelDownloadTask(f.base), {ok: true, value: {taskId: f.taskId, state: "failed", percent: null,
+  assert.deepEqual(await runOwnedHeadlessModelDownloadTask(f.base), {ok: true, value: {workspaceId: f.scope.workspaceId, taskId: f.taskId,
+    plan: {fingerprint: f.target.fingerprint, step: 1}, state: "failed", percent: null,
     registration: "requires-separate-approval", runtimeReadiness: "not-checked"}});
 });
 
@@ -443,4 +450,177 @@ test("active or malformed control selections fail before policy or owner callbac
     authorize: async () => {assert.fail("No active selection policy.");}, peekOwner: () => {assert.fail("No active selection owner.");}}),
     {ok: false, code: "headless.forbidden"});
   assert.equal(getterCalls, 0);
+});
+
+async function hostTaskReads(t: TestContext, hostKind: "desktop" | "managed", configured = true) {
+  const f = await taskControls(t);
+  const state = {live: true, allowed: true, planning: true, current: true, readCurrent: true, owner: true, callbacks: 0,
+    clientId: f.scope.registeredClientId, onRead: () => {}, fence: (() => true) as () => boolean,
+    readFence: (() => true) as () => boolean, onPolicy: undefined as (() => Promise<void>) | undefined,
+    replyPlan: undefined as {fingerprint: string; step: number} | undefined, replyWorkspace: undefined as string | undefined};
+  state.fence = () => state.current;
+  state.readFence = () => state.readCurrent;
+  const identity = {organizationId: f.scope.organizationId, principalId: f.scope.principalId};
+  const workspace = {workspaceId: f.scope.workspaceId, organizationId: f.scope.organizationId, displayName: "Synthetic",
+    status: "active" as const, createdAt: "2026-11-21T00:00:00.000Z", updatedAt: "2026-11-21T00:00:00.000Z"};
+  const workspaces = {async readWorkspace(id: unknown) {return id === workspace.workspaceId ? workspace : undefined;}};
+  const authorization = {async authorizeWorkspaceOperation({requiredScopes}: {requiredScopes: readonly string[]}) {
+    assert.deepEqual(requiredScopes, ["workspace:read", "model:read"]);
+    await state.onPolicy?.();
+    if (!state.allowed) throw new Error("Synthetic policy refusal.");
+  }};
+  const readModelTask = configured ? async (query: {scope: HeadlessOperationScope;
+    selection: HeadlessModelTaskRequest["input"]["selection"]; isCurrent: () => boolean}) => {
+    state.callbacks++; state.onRead();
+    const result = await runOwnedHeadlessModelDownloadTask({...f.base, ...query, action: "read",
+      peekOwner: () => state.owner ? f.useCase : undefined});
+    return result.ok ? {...result, value: {...result.value, ...(state.replyPlan ? {plan: state.replyPlan} : {}),
+      ...(state.replyWorkspace ? {workspaceId: state.replyWorkspace as never} : {})}} : result;
+  } : undefined;
+  const noFeatures = () => {assert.fail("Task reads cannot initialize system, Model or runtime features.");};
+  const query: HeadlessModelTaskRequest = {version: "aisb-headless-v1", operation: "models.task", input: {
+    hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.taskId}}};
+  const read = hostKind === "desktop" ? (() => {
+    const handler = composeDesktopHeadlessReads({hostIncarnationId: f.target.hostIncarnationId, identity,
+      workspaceRepository: workspaces, authorization, getUseCases: noFeatures, isOpen: () => state.live, readModelTask});
+    return (request: HeadlessReadRequest = query) => handler(request, async () => ({...identity, registeredClientId: state.clientId,
+      workspaceIds: [f.scope.workspaceId], operations: HEADLESS_READ_OPERATIONS, isCurrent: state.fence, isReadCurrent: state.readFence,
+      ...(state.planning ? {planReview: true as const} : {})}));
+  })() : (() => {
+    const handler = composeManagedAgentReads({hostIncarnationId: f.target.hostIncarnationId, workspaces,
+      contexts: {getCurrentOrganizationContext: () => state.live ? identity as never : undefined}, authorization,
+      systems: {} as never, readModelTask});
+    return (request: HeadlessReadRequest = query) => handler(request, {...identity, registeredClientId: state.clientId,
+      purpose: state.planning ? "plan-review" : "agent"}, state.fence);
+  })();
+  return {...f, state, modelState: f.state, query, read};
+}
+
+for (const hostKind of ["desktop", "managed"] as const) {
+  test(`${hostKind}: read original accepted task by ID or plan without another start, cancel or registration`, async t => {
+    const f = await hostTaskReads(t, hostKind);
+    f.state.current = true; f.state.live = true;
+    f.records.get(f.taskId)!.progress = {percent: 37.5, message: "private/provider/path", details: {secret: "private"}};
+    const expected = {ok: true, operation: "models.task", value: {workspaceId: f.scope.workspaceId, taskId: f.taskId,
+      plan: {fingerprint: f.target.fingerprint, step: 1}, state: "running", percent: 37.5,
+      registration: "requires-separate-approval", runtimeReadiness: "not-checked"}};
+    assert.deepEqual(await f.read(), expected);
+    assert.deepEqual(await f.read({...f.query, input: {...f.query.input,
+      selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}}}), expected);
+    assert.equal(f.modelState.starts, 1); assert.equal(f.modelState.cancels, 0);
+    assert.equal(f.modelState.registrations, 0); assert.equal(f.modelState.ordinary, 0);
+    assert.equal(f.records.size, 1); assert.equal(f.reconciler.status.pending, 1);
+  });
+
+  test(`${hostKind}: current permission, purpose, client and task ownership fence reads`, async t => {
+    for (const deny of ["policy", "purpose", "client", "task", "owner", "request"] as const) {
+      const f = await hostTaskReads(t, hostKind);
+      if (deny === "policy") f.state.allowed = false;
+      if (deny === "purpose") f.state.planning = false;
+      if (deny === "client") f.state.clientId = randomUUID();
+      if (deny === "owner") f.state.owner = false;
+      if (deny === "request") f.state.current = false;
+      const result = await f.read(deny === "task" ? {...f.query, input: {...f.query.input,
+        selection: {kind: "task", taskId: randomUUID()}}} : f.query);
+      assert.deepEqual(result, {ok: false, code: deny === "owner" ? "headless.unavailable" : "headless.forbidden"});
+      assert.equal(f.records.size, 1);
+    }
+  });
+
+  test(`${hostKind}: retired callback cannot be replaced to publish an awaited task reply`, async t => {
+    const f = await hostTaskReads(t, hostKind);
+    f.state.onRead = () => {f.state.current = false; f.state.fence = () => true;};
+    assert.deepEqual(await f.read(), {ok: false, code: "headless.forbidden"});
+  });
+
+  test(`${hostKind}: policy or captured lifetime withdrawal during source observation suppresses the reply`, async t => {
+    for (const withdraw of ["policy", "lifetime"] as const) {
+      const f = await hostTaskReads(t, hostKind);
+      let release!: () => void, entered!: () => void;
+      const pending = new Promise<void>(resolve => {release = resolve;});
+      const started = new Promise<void>(resolve => {entered = resolve;});
+      f.modelState.onStatusRead = async () => {entered(); await pending;};
+      const reading = f.read();
+      await started;
+      if (withdraw === "policy") f.state.allowed = false;
+      else {f.state.current = false; f.state.fence = () => true;}
+      release();
+      assert.deepEqual(await reading, {ok: false, code: "headless.forbidden"});
+      assert.equal(f.modelState.starts, 1); assert.equal(f.modelState.cancels, 0); assert.equal(f.modelState.registrations, 0);
+    }
+  });
+
+  test(`${hostKind}: absent retained-owner binding does not advertise or execute task reads`, async t => {
+    const f = await hostTaskReads(t, hostKind, false);
+    assert.deepEqual(await f.read(), {ok: false, code: "headless.unsupported-operation"});
+    const described = await f.read({version: "aisb-headless-v1", operation: "host.describe", input: {}});
+    assert.ok(described.ok && described.operation === "host.describe");
+    assert.ok(!described.value.operations.includes("models.task")); assert.equal(f.state.callbacks, 0);
+  });
+
+  test(`${hostKind}: wrong owner-supplied plan or workspace is rejected rather than replaced by request fields`, async t => {
+    for (const displaced of ["fingerprint", "step", "workspace"] as const) {
+      const f = await hostTaskReads(t, hostKind);
+      if (displaced === "workspace") f.state.replyWorkspace = "workspace.foreign";
+      else f.state.replyPlan = {fingerprint: displaced === "fingerprint" ? "b".repeat(64) : f.target.fingerprint,
+        step: displaced === "step" ? 2 : 1};
+      assert.deepEqual(await f.read({...f.query, input: {...f.query.input,
+        selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}}}), {ok: false, code: "headless.unavailable"});
+      assert.equal(f.modelState.starts, 1); assert.equal(f.modelState.registrations, 0);
+    }
+  });
+}
+
+test("Model task codec copies exact passive selectors and rejects malformed, private and foreign replies", () => {
+  const host = "00000000-0000-4000-8000-000000000001" as HeadlessHostIncarnationId, taskId = "00000000-0000-4000-8000-000000000002";
+  const input = {hostIncarnationId: host, workspaceId: createWorkspaceId("workspace.synthetic"), selection: {kind: "task", taskId}};
+  const raw = {version: "aisb-headless-v1", operation: "models.task", input};
+  const copied = readHeadlessModelTaskRequest(raw, host); assert.ok(copied.ok);
+  input.selection.taskId = randomUUID(); assert.equal(copied.request.input.selection.kind === "task" && copied.request.input.selection.taskId, taskId);
+  const value = {workspaceId: input.workspaceId, taskId, state: "unknown", percent: null,
+    plan: {fingerprint: "a".repeat(64), step: 1},
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  assert.deepEqual(readHeadlessModelTaskValue(value, copied.request.input), value);
+  for (const bad of [{...value, taskId: randomUUID()}, {...value, workspaceId: "foreign"}, {...value, error: "private"},
+    {...value, percent: -1}, {...value, percent: Infinity}, {...value, runtimeReadiness: "ready"}, {...value, registration: "saved"}])
+    assert.equal(readHeadlessModelTaskValue(bad, copied.request.input), undefined);
+  const planned = {...copied.request.input, selection: {kind: "plan-step" as const, fingerprint: "a".repeat(64), step: 1}};
+  assert.deepEqual(readHeadlessModelTaskValue(value, planned), value);
+  for (const plan of [{fingerprint: "b".repeat(64), step: 1}, {fingerprint: "a".repeat(64), step: 2},
+    {fingerprint: "a".repeat(64), step: 1, private: "hidden"}])
+    assert.equal(readHeadlessModelTaskValue({...value, plan}, planned), undefined);
+  for (const selection of [{kind: "task", taskId, cancel: true}, {kind: "plan-step", fingerprint: "a".repeat(64), step: 0},
+    {kind: "plan-step", fingerprint: "a".repeat(64), step: 1, taskId}, {kind: "source", modelId: "fixture/model"}])
+    assert.equal(readHeadlessModelTaskRequest({...raw, input: {...raw.input, selection}}, host).ok, false);
+});
+
+test("plan-step task replies without owner-supplied lineage cannot be correlated", () => {
+  const host = "00000000-0000-4000-8000-000000000001" as HeadlessHostIncarnationId;
+  const target = {hostIncarnationId: host, workspaceId: createWorkspaceId("workspace.synthetic"),
+    selection: {kind: "plan-step" as const, fingerprint: "a".repeat(64), step: 1}};
+  const displaced = {workspaceId: target.workspaceId, taskId: randomUUID(), state: "running", percent: null,
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  assert.equal(readHeadlessModelTaskValue(displaced, target), undefined);
+});
+
+test("desktop task read retires during final awaited policy before any retained owner entry", {timeout: 5000}, async t => {
+  const f = await hostTaskReads(t, "desktop");
+  let release!: () => void, entered!: () => void, policies = 0;
+  const held = new Promise<void>(resolve => {release = resolve;});
+  const waiting = new Promise<void>(resolve => {entered = resolve;});
+  f.state.onPolicy = async () => {if (++policies === 2) {entered(); await held;}};
+  const reading = f.read(); await waiting;
+  f.state.readCurrent = false; f.state.readFence = () => true;
+  release();
+  assert.deepEqual(await reading, {ok: false, code: "headless.forbidden"});
+  assert.equal(f.state.callbacks, 0); assert.equal(f.modelState.starts, 1);
+});
+
+test("desktop task observation requires a strict captured HTTP read-current proof", async t => {
+  for (const fence of [undefined, () => false, () => Promise.resolve(true), () => {throw new Error("private");}]) {
+    const f = await hostTaskReads(t, "desktop");
+    f.state.readFence = fence as never;
+    assert.deepEqual(await f.read(), {ok: false, code: "headless.forbidden"});
+    assert.equal(f.state.callbacks, 0);
+  }
 });

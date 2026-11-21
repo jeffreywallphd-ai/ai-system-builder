@@ -1,3 +1,12 @@
+
+Headless Model readers may receive an optional `readModelTask` binding to the
+original accepted ledger and cached source owner. It accepts exact task/plan-step
+selectors under current plan-review, ModelRead, original client and request
+authority. It returns finite progress, with no private errors or lazy feature
+construction. Both hosts validate the reply and reauthorize disclosure.
+Unconfigured roots omit the operation. This component grants no transfer,
+cancellation, registry save, readiness or native/provider/parent pass.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 Private Model execution now selects the exact stored approved step in both hosts
@@ -142,3 +151,12 @@ Desktop Studio requests capture their contract values and check persisted worksp
 Desktop derived-customization IPC validates and captures the request before awaiting its deferred service getter. The getter receives only the registered operation key and normalized captured workspace; it maps fixed read/write scope and admits before feature construction. Missing or rejected feature loaders retain fixed unavailable envelopes. Application and catalog admission repeat after readiness. Finite handler fixtures do not qualify physical app startup or durable restart.
 
 Shared Asset Library composition also supplies the two existing private Studio and derived published-reference readers from the workflow organization store. They add exact published definition visibility only; they create no implementation release, backing row, activation or execution authority.
+
+Model task replies now include workspace and plan fingerprint/step read from the
+accepted dual-index ledger lineage. The owning helper checks the same lineage and
+source again after observation. Hosts, API and SDK validate these owner-supplied
+fields against the captured selector; they never stamp expected request fields
+over a mismatching reply. Desktop task observation also requires the captured
+HTTP read-current fence through the final awaited policy return and owner entry,
+separate from registration and accepted business-task lifetimes. Held-policy and
+same-workspace displaced-plan regressions preserve these boundaries.

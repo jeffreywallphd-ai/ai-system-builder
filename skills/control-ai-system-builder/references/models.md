@@ -73,3 +73,21 @@ inside the existing 5-second desktop/SDK deadline. Slow or unavailable sources c
 return unavailable. Do not widen a guard or use an alternate HTTP/file tool.
 A timed-out dependency retains its slot until it settles; no replacement can
 overlap it. Ordinary saved inventory remains provider-free and separate.
+
+## Observe an approved download
+
+1. Check that the running host advertises `models.task`. An unconfigured host
+   cannot observe retained downloads through this interface.
+2. Call `aisb_model_workflow` with `selection: {kind: "task", taskId}`, or
+   `{kind: "plan-step", fingerprint, step}` from the original approved plan.
+   Use the same registered client, workspace and current plan-review permission.
+3. Read only the finite task state and percentage. Private errors, paths, model
+   bytes and results are not returned. This read starts no new task or runtime.
+4. Treat `unknown` as unresolved work. Do not retry the download automatically.
+   A `succeeded` transfer does not save a registry record or qualify the model.
+5. This read supplies no stop, registry-save, model-run or window authority.
+   Use only separately advertised and approved capabilities for those actions.
+
+Task replies include the original plan fingerprint and step. These come from the
+accepted task record. The client rejects a reply for a different selected plan,
+step, task or workspace. These references grant no additional authority.

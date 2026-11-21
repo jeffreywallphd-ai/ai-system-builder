@@ -1,17 +1,18 @@
 import {types} from "node:util";
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
 import {readStructuredOwnedModelPlanTask, readStructuredOwnedModelPlanTaskByPlan,
-  readStructuredOwnedModelPlanTaskSourceDigest} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
+  readStructuredOwnedModelPlanTaskSourceDigest, readStructuredModelPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
 import type {ModelDownloadTasksUseCase} from "../../../application/use-cases/model/model-download-tasks.use-case";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
-import {HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId} from "../../../contracts/headless";
+import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessModelTaskSelection, type HeadlessModelTaskSelection} from "../../../contracts/headless";
 import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
 
-export type OwnedHeadlessModelTaskSelection = {readonly kind: "task"; readonly taskId: string} |
-  {readonly kind: "plan-step"; readonly fingerprint: string; readonly step: number};
+export type OwnedHeadlessModelTaskSelection = HeadlessModelTaskSelection;
+export type OwnedHeadlessModelTaskReader = (query: {readonly scope: HeadlessOperationScope;
+  readonly selection: HeadlessModelTaskSelection; readonly isCurrent: () => boolean}) => ReturnType<typeof runOwnedHeadlessModelDownloadTask>;
 type SourceOwner = Pick<ModelDownloadTasksUseCase, "readApprovedSource" | "cancelApprovedSource">;
 const forbidden = {ok: false, code: "headless.forbidden"} as const;
 const unavailable = {ok: false, code: "headless.unavailable"} as const;
@@ -39,14 +40,9 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
     if (types.isProxy(options.scope) || types.isProxy(options.selection)) return forbidden;
     const rawScope = readStrictPassiveRecord(options.scope,
       ["organizationId", "principalId", "workspaceId", "registeredClientId"]);
-    const raw = readStrictPassiveRecord(options.selection, ["kind", "taskId", "fingerprint", "step"]);
-    let selection: OwnedHeadlessModelTaskSelection;
-    if (raw.kind === "task" && Object.keys(raw).length === 2 && isHeadlessHostIncarnationId(raw.taskId))
-      selection = Object.freeze({kind: "task", taskId: raw.taskId});
-    else if (raw.kind === "plan-step" && Object.keys(raw).length === 3 && isDigest(raw.fingerprint) &&
-        typeof raw.step === "number" && Number.isSafeInteger(raw.step) && raw.step >= 1 && raw.step <= HEADLESS_MAX_BUILD_PLAN_STEPS)
-      selection = Object.freeze({kind: "plan-step", fingerprint: raw.fingerprint, step: raw.step});
-    else return forbidden;
+    const parsedSelection = readHeadlessModelTaskSelection(options.selection);
+    if (!parsedSelection) return forbidden;
+    const selection: OwnedHeadlessModelTaskSelection = parsedSelection;
     if (!isOrganizationId(rawScope.organizationId) || !isWorkspaceId(rawScope.workspaceId) || !isDesktopHeadlessClientId(rawScope.registeredClientId) ||
         typeof rawScope.principalId !== "string" || !rawScope.principalId || rawScope.principalId.length > 160 || hasKnownPassiveCredential(rawScope.principalId) ||
         !isHeadlessHostIncarnationId(hostIncarnationId) || !["read", "cancel"].includes(action) || !current() ||
@@ -66,7 +62,11 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
         if (!reference || !current()) return;
         const digest = await readStructuredOwnedModelPlanTaskSourceDigest(partition, scope, hostIncarnationId, reference.taskId);
         if (!digest || !isDigest(digest) || !current()) return;
-        return {reference, manifestDigest: "sha256:" + digest};
+        const lineage = await readStructuredModelPlanTaskLineage(partition, scope, hostIncarnationId, reference.taskId);
+        if (!lineage || !current() || lineage.sourceDigest !== digest || lineage.target.scope.workspaceId !== reference.workspaceId ||
+            (selection.kind === "plan-step" && (lineage.target.fingerprint !== selection.fingerprint || lineage.step !== selection.step))) return;
+        return {reference, manifestDigest: "sha256:" + digest,
+          plan: Object.freeze({fingerprint: lineage.target.fingerprint, step: lineage.step})};
       }, fence);
     }
     const admitted = await admit(); if (!admitted || !current()) return forbidden;
@@ -78,7 +78,8 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
       : await owner.readApprovedSource(request, admitted.manifestDigest, authority);
     if (!current()) return forbidden;
     const fresh = await admit();
-    if (!fresh || !current() || fresh.reference.taskId !== request.requestId || fresh.manifestDigest !== admitted.manifestDigest) return forbidden;
+    if (!fresh || !current() || fresh.reference.workspaceId !== admitted.reference.workspaceId || fresh.reference.taskId !== request.requestId ||
+        fresh.manifestDigest !== admitted.manifestDigest || fresh.plan.fingerprint !== admitted.plan.fingerprint || fresh.plan.step !== admitted.plan.step) return forbidden;
     if (types.isProxy(result)) return unavailable;
     const reply = readStrictPassiveRecord(result, ["activity", "cancelled"]);
     const activity = reply.activity;
@@ -98,7 +99,7 @@ export async function runOwnedHeadlessModelDownloadTask(options: {
     }
     if (action === "cancel" && typeof reply.cancelled !== "boolean") return unavailable;
     if (!current()) return forbidden;
-    return {ok: true, value: {taskId: request.requestId,
+    return {ok: true, value: {workspaceId: fresh.reference.workspaceId, taskId: request.requestId, plan: fresh.plan,
       state: fields.status as "queued" | "running" | "succeeded" | "failed" | "cancelled" | "unknown", percent,
       ...(action === "cancel" ? {cancellationAccepted: reply.cancelled as boolean} : {}),
       registration: "requires-separate-approval" as const, runtimeReadiness: "not-checked" as const}} as const;

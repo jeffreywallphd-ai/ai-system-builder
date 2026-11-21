@@ -55,6 +55,17 @@ class ModelExecutionRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.selected([source], ("focused-tests",)))
         self.assertIn("focused-tests", self.selected([source, "modules/hosts/shared/composition/unknown-model-control.ts"]))
 
+    def test_task_protocol_keeps_owned_host_fixture_and_transport_coverage(self):
+        source = "modules/contracts/headless/headless-model-task.ts"
+        fixture = "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts"
+        rows = self.selected([source])
+        for key in ("headless-model-metadata-owner-unit", "headless-model-metadata-owner-types"):
+            self.assertIn(fixture, rows[key]["argv"])
+        self.assertIn(source, rows["headless-model-metadata-owner-types"]["argv"])
+        self.assertNotIn("focused-tests", rows)
+        self.assertIn("focused-tests", self.selected([source], ("focused-tests",)))
+        self.assertIn("focused-tests", self.selected([source, "modules/contracts/headless/unknown-model-task.ts"]))
+
     def test_host_review_preparation_keeps_real_host_fixture_and_borrowed_coverage(self):
         source = "modules/hosts/shared/composition/headlessModelDownloadReview.ts"
         fixture = "modules/hosts/shared/composition/tests/headless-model-download-host-review.unit.test.ts"

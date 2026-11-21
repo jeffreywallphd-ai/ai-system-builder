@@ -9,6 +9,8 @@ import type {ReadHeadlessModelMetadataUseCase} from "../../../application/use-ca
 import type {PreviewHeadlessModelSourceUseCase} from "../../../application/use-cases/model";
 import {readVerifiedHeadlessModelSourcePreview} from "../../shared/composition/headlessModelSourcePreview";
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
+import {readHeadlessModelTaskValue} from "../../../contracts/headless";
+import type {OwnedHeadlessModelTaskReader} from "../../shared/composition/headlessModelDownloadTasks";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
@@ -82,6 +84,8 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
   readonly getModelMetadata?: () => Promise<Pick<ReadHeadlessModelMetadataUseCase, "execute">>;
+  /** Bound to the original accepted ledger and an already loaded source owner. */
+  readonly readModelTask?: OwnedHeadlessModelTaskReader;
   readonly getModelSource?: () => Promise<Pick<PreviewHeadlessModelSourceUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
@@ -93,11 +97,12 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
   const { hostIncarnationId, identity: suppliedIdentity, workspaceRepository, authorization, getUseCases, committedChanges,
-    workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen } = dependencies;
+    workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen, readModelTask } = dependencies;
   const identity = {organizationId: suppliedIdentity.organizationId, principalId: suppliedIdentity.principalId};
   const sameIdentity = () => suppliedIdentity.organizationId === identity.organizationId && suppliedIdentity.principalId === identity.principalId;
 
   const supports = (operation: HeadlessReadOperation) => {
+    if (operation === "models.task") return Boolean(readModelTask);
     if (operation === "models.preview-source") return Boolean(dependencies.getModelSource);
     if (isHeadlessModelReadOperation(operation)) return Boolean(dependencies.getModelMetadata);
     if (operation === "context.preview-query") return Boolean(dependencies.getContextQueryPreview);
@@ -127,7 +132,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         operation: `headless.${operation}`,
         requiredScopes: operation === "models.preview-source" ? ["workspace:read", "model:read", "provider-credential:use"] : queryModel ? ["workspace:read", "artifact:read", "model:read"] : requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
-          : operation === "context.models" || isHeadlessModelReadOperation(operation) ? ["workspace:read", "model:read"]
+          : operation === "context.models" || operation === "models.task" || isHeadlessModelReadOperation(operation) ? ["workspace:read", "model:read"]
           : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
           : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
           : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"]
@@ -159,9 +164,10 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!grant) return forbidden;
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
-      const modelRead = isHeadlessModelReadOperation(operation) || operation === "models.preview-source", modelFence = grant.isCurrent;
+      const modelRead = isHeadlessModelReadOperation(operation) || operation === "models.preview-source" || operation === "models.task", modelFence = grant.isCurrent;
       const sourceFence = grant.isReadCurrent;
       if (operation === "models.preview-source" && (grant.modelSourceRead !== true || !isHeadlessReadCurrent(sourceFence))) return forbidden;
+      if (operation === "models.task" && !isHeadlessReadCurrent(sourceFence)) return forbidden;
       if (!grant.operations.includes(operation)) return forbidden;
       if ((modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && grant.planReview !== true) return forbidden;
       if (modelRead && !isHeadlessReadCurrent(modelFence)) return forbidden;
@@ -172,6 +178,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
           (!(modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") || latest.planReview === true && (modelRead ? isHeadlessReadCurrent(latest.isCurrent) : latest.isCurrent?.() !== false)) &&
           (operation !== "models.preview-source" || latest.modelSourceRead === true && isHeadlessReadCurrent(latest.isReadCurrent)) &&
+          (operation !== "models.task" || isHeadlessReadCurrent(latest.isReadCurrent)) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -194,7 +201,7 @@ export function composeDesktopHeadlessReads(dependencies: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
               op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
-              (!(isHeadlessModelReadOperation(op) || op === "models.preview-source" || isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved" || op === "context.preview-query" || op === "context.preview-rebuild") || latest.planReview === true) &&
+              (!(isHeadlessModelReadOperation(op) || op === "models.preview-source" || op === "models.task" || isHeadlessDataReadOperation(op) || isHeadlessContextReadOperation(op) || op === "context.task" || op === "context.saved" || op === "context.preview-query" || op === "context.preview-rebuild") || latest.planReview === true) &&
               (op !== "models.preview-source" || latest.modelSourceRead === true)),
           },
         };
@@ -207,6 +214,18 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "models.task": {
+          const currentModel = () => isOpen() && sameIdentity() && isHeadlessReadCurrent(modelFence) && isHeadlessReadCurrent(sourceFence);
+          const allowed = async () => currentModel() && Boolean(await currentScopedGrant([workspaceId]) &&
+            await authorizedWorkspace(workspaceId, operation)) && currentModel();
+          if (!readModelTask || !await allowed()) return forbidden;
+          const result = await readModelTask({scope: Object.freeze({...identity, workspaceId, registeredClientId: clientId}),
+            selection: input.selection, isCurrent: currentModel});
+          if (!await allowed()) return forbidden;
+          if (!result.ok) return result.code === "headless.forbidden" ? forbidden : unavailable;
+          const value = readHeadlessModelTaskValue(result.value, input);
+          return value ? {ok: true, operation, value} : unavailable;
+        }
         case "context.preview-query": {
           if (!dependencies.getContextQueryPreview) return unavailable;
           const query = await dependencies.getContextQueryPreview();

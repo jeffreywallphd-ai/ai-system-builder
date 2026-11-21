@@ -1,5 +1,16 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+The read-only Model workflow also supports an exact accepted task or plan-step
+through `models.task`. Both host readers require current plan-review identity,
+ModelRead and original client scope before the original loaded source owner is
+queried, then recheck before disclosure. A separate task contract reconstructs
+finite progress only. SDK and API independently correlate replies with copied
+targets; MCP reuses the existing workflow tool with read-only annotations.
+This does not enable a transfer root or grant cancellation, retry, registration,
+readiness or parent qualification. The original accepted task keeps its separate
+business lifetime. Missing bindings remain unavailable.
+
+
 ### Private host Model execution ownership
 
 Both private host step composers may opt into the existing approved Model runner.
@@ -794,3 +805,12 @@ status, counts, device/limit, question fingerprint and cleanup state. Context
 contains opaque selectors/view identifiers. Existing lease, document, queue,
 replay/revoke and draft controls remain. Physical/actual-host/native/resource and
 parent qualification are separate; rollback disables only new query display.
+
+Model task replies now include workspace and plan fingerprint/step read from the
+accepted dual-index ledger lineage. The owning helper checks the same lineage and
+source again after observation. Hosts, API and SDK validate these owner-supplied
+fields against the captured selector; they never stamp expected request fields
+over a mismatching reply. Desktop task observation also requires the captured
+HTTP read-current fence through the final awaited policy return and owner entry,
+separate from registration and accepted business-task lifetimes. Held-policy and
+same-workspace displaced-plan regressions preserve these boundaries.

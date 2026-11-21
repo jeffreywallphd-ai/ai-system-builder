@@ -66,6 +66,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let withdrawStatus = false;
   let mutateQueryRequest = false;
   let mutateModelRequest = false;
+  let acceptedModelPlanFingerprint = "a".repeat(64);
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -93,8 +94,18 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     isCurrent: identity => identity === planIdentity && current,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.preview-source", "models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.task", "models.preview-source", "models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "models.task") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {
+          workspaceId: mutateModelRequest ? "foreign" as never : request.input.workspaceId,
+          taskId: statusMismatch ? randomUUID() : acceptedDatasetTaskId, state: "running", percent: 23.5,
+          plan: {fingerprint: statusMismatch ? "b".repeat(64) : acceptedModelPlanFingerprint, step: 1},
+          registration: "requires-separate-approval", runtimeReadiness: "not-checked",
+          ...(statusExtra ? {error: "private/provider/path"} : {}),
+        }};
+      }
       if (request.operation === "models.preview-source") {
         sourceReads++;
         if (withdrawStatus) current = false;
@@ -270,6 +281,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     const built = parseHeadlessBuildPlanProposal({...scope, steps}, hostIncarnationId);
     assert.ok(built.ok);
     const fingerprint = createHash("sha256").update(JSON.stringify(built.preview)).digest("hex");
+    acceptedModelPlanFingerprint = fingerprint;
     const proposal = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.submit", input:{...scope, fingerprint, steps}};
     const planPath = MANAGED_HEADLESS_AGENT_PATHS["plan-review"];
     async function request(body: object | string, token = "fixture-plan", route = planPath, org = organizationId) {
@@ -322,6 +334,8 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       ["context.preview-rebuild", {reference: {workspaceId, contextId: hostIncarnationId,
       taskId: hostIncarnationId, kind: "markdown-context-pack", artifactDigest: "sha256:" + "a".repeat(64)}}],
       ["models.preview-source", {modelId: "Qwen/synthetic-model", revision: "a".repeat(40)}],
+      ["models.task", {selection: {kind: "task", taskId: acceptedDatasetTaskId}}],
+      ["models.task", {selection: {kind: "plan-step", fingerprint, step: 1}}],
       ["models.inventory", {limit: 1}], ["models.record", {modelRecordId: "model.synthetic"}],
       ["context.models", {}], ["context.preview-generation", {name: "Synthetic context",
       sources: [{kind: "ingestion-file", taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
@@ -348,7 +362,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
         assert.equal(changed.status, 503); assert.doesNotMatch(JSON.stringify(changed.body), /Synthetic private|substituted private/);
         mutateQueryRequest = false;
       }
-      if (operation === "models.preview-source" || operation === "models.inventory" || operation === "models.record") {
+      if (operation === "models.task" || operation === "models.preview-source" || operation === "models.inventory" || operation === "models.record") {
         mutateModelRequest = true;
         assert.equal((await request(query, "fixture-plan", readRoute)).status, 503);
         mutateModelRequest = false;
