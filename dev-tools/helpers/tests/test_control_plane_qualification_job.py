@@ -7,6 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import unittest
 from types import SimpleNamespace
@@ -92,7 +93,11 @@ def supervisor_fixture(exit_code=0, duplicate_failure=0, identity_failure=False,
 
 class QualificationJobTests(unittest.TestCase):
     def setUp(self):
-        environment = patch.dict(os.environ, {"SystemRoot": "C:\\Windows"}, clear=True)
+        # Keep fake native tests off the process environment. On Windows,
+        # clearing/restoring os._Environ can lose empty native values that
+        # later Git child processes still need. Inner patch.dict cases below
+        # operate only on this temporary Python dictionary.
+        environment = patch.object(job.os, "environ", {"SystemRoot": "C:\\Windows"})
         environment.start()
         self.addCleanup(environment.stop)
         error = patch.object(c, "get_last_error", return_value=122, create=True)
@@ -278,6 +283,53 @@ class QualificationJobTests(unittest.TestCase):
                 job._run_case("normal-descendants")
         native.k.DuplicateHandle.assert_not_called()
         native.k.CloseHandle.assert_not_called()
+
+
+class EnvironmentIsolationTests(unittest.TestCase):
+    def test_mocked_environments_preserve_empty_child_git_configuration(self):
+        # Exercise the actual fixture cleanup in a fresh process. No inherited
+        # Git values enter output, and this child never selects native tests.
+        environment = {key: value for key, value in os.environ.items()
+                       if key != "GIT_CONFIG_COUNT" and key != "GIT_CONFIG_PARAMETERS"
+                       and not key.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"))}
+        environment.update(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="credential.helper", GIT_CONFIG_VALUE_0="")
+        environment.pop("AISB_RUN_OWNED_JOB_NATIVE", None)
+        code = """
+import os, subprocess, sys, tempfile, unittest
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from test_control_plane_qualification_job import QualificationJobTests
+from test_control_plane_focused import FocusedPythonCollectionTests
+original = os.environ
+before = dict(original)
+if original.get('GIT_CONFIG_VALUE_0') != '':
+    raise RuntimeError('Synthetic empty configuration was not supplied.')
+def git_fixture():
+    with tempfile.TemporaryDirectory(prefix='cp-env-') as directory:
+        result = subprocess.run(['git', 'init', '-q'], cwd=directory, capture_output=True, timeout=15)
+        if result.returncode != 0 or not (Path(directory) / '.git').is_dir():
+            raise RuntimeError('Disposable Git fixture could not initialize.')
+git_fixture()
+focused = unittest.TestSuite(FocusedPythonCollectionTests(name) for name in (
+    'test_plain_unittest_child_does_not_inherit_optimization',
+    'test_only_review_site_binds_nested_python_without_mutating_caller',
+    'test_review_site_pytest_environment_keeps_selected_python_and_controls'))
+for suite in (focused, unittest.defaultTestLoader.loadTestsFromTestCase(QualificationJobTests)):
+    expected = suite.countTestCases()
+    result = unittest.TestResult()
+    suite.run(result)
+    if result.testsRun != expected or expected < 1 or result.failures or result.errors or result.skipped:
+        raise RuntimeError('Mocked environment fixtures did not pass.')
+    if os.environ is not original or dict(os.environ) != before:
+        raise RuntimeError('Mocked fixtures changed the original Python environment.')
+    git_fixture()
+print('CONTRIBUTOR_ENVIRONMENT_PRESERVED')
+"""
+        result = subprocess.run([sys.executable, "-B", "-c", code, str(Path(__file__).resolve().parent)],
+                                env=environment, capture_output=True, timeout=45)
+        self.assertEqual(result.returncode, 0, "Fake job fixtures must preserve native child configuration.")
+        self.assertEqual(result.stdout.strip(), b"CONTRIBUTOR_ENVIRONMENT_PRESERVED")
+        self.assertEqual(result.stderr, b"")
 
 
 @unittest.skipUnless(sys.platform == "win32" and os.environ.get("AISB_RUN_OWNED_JOB_NATIVE") == "1",

@@ -255,6 +255,32 @@ test("negative ACK or withdrawn pre-dispatch permission proves no source task ef
   }
 });
 
+test("separate original admission fence closes the final policy await without changing accepted host custody", async t => {
+  const f = fixture(t); let admission = true, acknowledged = false;
+  const approved: ApprovedModelDownloadAdmission = {...f.admission, isAdmissionCurrent: () => admission,
+    acknowledgeIssued: async () => {acknowledged = true; return true;}, control: {...f.admission.control,
+      stillAllowed: async () => {if (acknowledged) admission = false; return true;}}};
+  assert.equal((await f.useCase.startApprovedSource(f.request, approved, f.authority)).kind, "unavailable");
+  assert.equal(acknowledged, true); assert.equal(f.counts().starts, 0); assert.equal(f.reconciler.status.pending, 0);
+  const accepted = fixture(t); let requestCurrent = true;
+  accepted.dispatch(async () => {requestCurrent = false; return {kind: "accepted", value: {requestId: taskId, status: "running"}};});
+  assert.equal((await accepted.useCase.startApprovedSource(accepted.request, {...accepted.admission,
+    isAdmissionCurrent: () => requestCurrent}, accepted.authority)).kind, "accepted");
+  accepted.records.get(taskId)!.status = "succeeded"; await accepted.reconciler.reconcileNow();
+  assert.equal(accepted.reconciler.status.pending, 0);
+});
+
+test("captured admission callbacks reject active and asynchronous authority without hooks or dispatch", async t => {
+  const f = fixture(t); let hooks = 0;
+  const getter = Object.defineProperty({...f.admission}, "isAdmissionCurrent", {enumerable: true, get() {hooks++; return () => true;}});
+  const proxy = new Proxy(() => true, {apply() {hooks++; return true;}});
+  for (const admission of [getter, {...f.admission, isAdmissionCurrent: proxy},
+    {...f.admission, isAdmissionCurrent: () => Promise.reject(new Error("Synthetic async admission.")) as never}])
+    assert.equal((await f.useCase.startApprovedSource(f.request, admission, f.authority)).kind, "unavailable");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(hooks, 0); assert.equal(f.counts().starts, 0);
+});
+
 test("reconciler shutdown during a held ACK prevents new source dispatch without blocking accepted cleanup", async t => {
   const f = fixture(t); let entered!: () => void, release!: () => void;
   const started = new Promise<void>(resolve => {entered = resolve;}), held = new Promise<void>(resolve => {release = resolve;});

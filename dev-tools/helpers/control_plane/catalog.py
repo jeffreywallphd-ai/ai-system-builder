@@ -253,6 +253,9 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-model-metadata-owner-unit": {
         "automatic_sources": (
+            "modules/hosts/shared/composition/headlessModelDownloadExecution.ts",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
             "modules/adapters/persistence/system-builder/headlessModelDownloadReviewBindings.ts",
@@ -301,6 +304,11 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_model_download_revision.py",
         ),
         "sources": (
+            "modules/hosts/shared/composition/headlessModelDownloadExecution.ts",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
+            "modules/contracts/headless/headless-plan-step-wire.ts",
+            "modules/hosts/README.md",
             "modules/adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
             "modules/adapters/persistence/system-builder/headlessModelDownloadReviewBindings.ts",
@@ -396,6 +404,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/README.md",
         ),
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
@@ -432,6 +442,11 @@ PUBLISHED_FORM_CHECKS = {
     "headless-model-metadata-owner-types": {
         "companion_to": "headless-model-metadata-owner-unit",
         "sources": (
+            "modules/hosts/shared/composition/headlessModelDownloadExecution.ts",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
+            "modules/contracts/headless/headless-plan-step-wire.ts",
+            "modules/hosts/README.md",
             "modules/adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
             "modules/adapters/persistence/system-builder/headlessModelDownloadReviewBindings.ts",
@@ -498,6 +513,8 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
             "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-step-execution.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-model-download-review.unit.test.ts",
             "modules/application/use-cases/model/tests/headless-model-source-admission.unit.test.ts",

@@ -1,5 +1,19 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The private shared Model step runner composes the opt-in approved-step owner with
+the existing Model download use case outside its metadata transaction. Capture
+original actor/workspace/plan and use fresh request/approval admission through
+the issue acknowledgement. The application captures a separate synchronous
+admission-only fence immediately before source-port entry. It does not become
+accepted custody: retain original host lifetime and current original-actor
+business ModelWrite afterward, independently of HTTP/token/window/deadline.
+Record the original admitted result even after outward access ends, then require
+fresh exact policy/approval before publication. Known non-start remains terminal;
+unknown ACK/start/reply cannot discover another task or retry. Replay resolves no
+runtime owner. Real Desktop/Managed capability flags still use legacy preparation
+and remain disabled until public status/save/composition qualify. Controlled
+application fixtures do not qualify actual provider/native dispatch or parent work.
+
 Headless `models.preview-source` uses a separate lazy organization-pinned Model
 source owner. Desktop caches only that optional provider owner; Managed reuses
 its configured credential-aware Model provider. Neither path warms the active

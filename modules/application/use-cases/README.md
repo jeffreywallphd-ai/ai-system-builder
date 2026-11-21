@@ -16,6 +16,14 @@ cleanup uncertainty remains unconfirmed rather than receiving deadline credit.
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Private Model source admission can also carry an original synchronous
+`isAdmissionCurrent` callback. Capture it before awaits, require literal true
+after each admission await and immediately before source-port entry, and reject
+active/asynchronous callbacks. Its lifetime ends at admission; accepted custody
+retains the separate original host/business controls. This closes caller
+revocation during the final post-ACK policy check without losing an admitted
+outcome or changing existing internal callers that omit the optional fence.
+
 The private `ModelDownloadTasksUseCase.peekApprovedSourceReview` reads only the
 original captured cached completion after accepted successful terminal source
 work. It checks exact actor/workspace ownership and original host lifetime before

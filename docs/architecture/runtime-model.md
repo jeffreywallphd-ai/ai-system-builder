@@ -1,5 +1,20 @@
 # Runtime Model
 
+Internal Model step execution now composes the exact v3 review binding, original
+approved-step transaction and Model attempt ledger with the existing application
+owner. Legacy host preparation still refuses Model-containing plans; only the
+separate opt-in preparation can reserve/issue them. Require current exact
+actor/client/host/workspace/plan/source, approved order, policy and commit fence.
+Keep provider/runtime effects outside retriable transactions. A distinct captured
+synchronous admission fence checks caller currentness after the final async
+policy return and immediately before source-port entry. Accepted task lifetime
+then remains original host plus business ModelWrite, independent of the outward
+request/window/approval deadline. Record accepted or known-non-start original
+outcomes separately from current outward publication. Unknown starts/ACKs stay
+unconfirmed and cannot retry/discover. Replay resolves no runtime owner; Model
+results expose only finite exact task references. Actual hosts, public status/save,
+provider/native dispatch and parent qualification remain separate pending work.
+
 `peekApprovedSourceReview` is a private cached-only Model application read. It
 requires the original actor/workspace descriptor, accepted successful terminal
 source and literal original host currentness before and after awaiting the

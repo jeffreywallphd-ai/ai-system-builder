@@ -42,6 +42,8 @@ export interface ApprovedModelDownloadAdmission {
   readonly source: ApprovedModelSourceDownloadRequest;
   readonly control: ApprovedModelSourceDownloadControl;
   readonly acknowledgeIssued: () => Promise<boolean>;
+  /** Admission-only synchronous fence. Never becomes the accepted task lifetime. */
+  readonly isAdmissionCurrent?: () => boolean;
 }
 export type ApprovedModelDownloadStart = {readonly kind: "accepted"; readonly value: StartModelDownloadTaskResult} |
   {readonly kind: "unavailable"} | {readonly kind: "unconfirmed"};
@@ -177,7 +179,12 @@ export class ModelDownloadTasksUseCase {
       return result === true && this.descriptors.get(id) === descriptor && this.observedOwners.get(id) === descriptor;
     };
     const admissionCurrent = () => {
-      try {reconciler.assertAccepting(); return current();} catch {return false;}
+      try {
+        reconciler.assertAccepting();
+        const admitted: unknown = parsed.isAdmissionCurrent ? parsed.isAdmissionCurrent() : true;
+        if (types.isPromise(admitted)) void Promise.prototype.then.call(admitted, undefined, () => {});
+        return admitted === true && current();
+      } catch {return false;}
     };
     const unavailable = (): ApprovedModelDownloadStart => {
       if (this.descriptors.get(id) === descriptor) this.descriptors.delete(id);
@@ -534,8 +541,10 @@ function freezeSourceData<T>(value: T): T {
 }
 function captureSourceAdmission(raw: ApprovedModelDownloadAdmission): ApprovedModelDownloadAdmission {
   if (types.isProxy(raw)) throw new Error("Model source admission is unavailable.");
-  const outer = readStrictPassiveRecord(raw, ["source", "control", "acknowledgeIssued"]);
-  if (Object.keys(outer).length !== 3 || typeof outer.acknowledgeIssued !== "function" || types.isProxy(outer.acknowledgeIssued) || types.isProxy(outer.control))
+  const outer = readStrictPassiveRecord(raw, ["source", "control", "acknowledgeIssued", "isAdmissionCurrent"]);
+  if (Object.keys(outer).length !== ("isAdmissionCurrent" in outer ? 4 : 3) ||
+      ("isAdmissionCurrent" in outer && (typeof outer.isAdmissionCurrent !== "function" || types.isProxy(outer.isAdmissionCurrent))) ||
+      typeof outer.acknowledgeIssued !== "function" || types.isProxy(outer.acknowledgeIssued) || types.isProxy(outer.control))
     throw new Error("Model source admission is unavailable.");
   const control = readStrictPassiveRecord(outer.control, ["isCurrent", "stillAllowed"]);
   if (Object.keys(control).length !== 2 || typeof control.isCurrent !== "function" || typeof control.stillAllowed !== "function" ||
@@ -557,7 +566,8 @@ function captureSourceAdmission(raw: ApprovedModelDownloadAdmission): ApprovedMo
     throw new Error("Model source admission is unavailable.");
   return Object.freeze({source: freezeSourceData({...source, sourceManifest: {source: normalized, manifestDigest: manifest.manifestDigest}}) as unknown as ApprovedModelSourceDownloadRequest,
     control: Object.freeze({isCurrent: control.isCurrent, stillAllowed: control.stillAllowed}) as ApprovedModelSourceDownloadControl,
-    acknowledgeIssued: outer.acknowledgeIssued as ApprovedModelDownloadAdmission["acknowledgeIssued"]});
+    acknowledgeIssued: outer.acknowledgeIssued as ApprovedModelDownloadAdmission["acknowledgeIssued"],
+    ...("isAdmissionCurrent" in outer ? {isAdmissionCurrent: outer.isAdmissionCurrent as () => boolean} : {})});
 }
 
 function captureSourceTask(raw: ApprovedModelSourceDownloadTask, source: ApprovedModelSourceDownloadRequest): ApprovedModelSourceDownloadTask {

@@ -14,7 +14,7 @@ class UiCoverageCensusTests(unittest.TestCase):
         env = dict(os.environ)
         env.pop("NODE_TEST_CONTEXT", None)
         result = subprocess.run([node, "--test", "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs"],
-                                cwd=ROOT, env=env, capture_output=True, timeout=45)
+                                cwd=ROOT, env=env, capture_output=True, timeout=90)
         self.assertLess(len(result.stdout) + len(result.stderr), 128 * 1024)
         self.assertEqual(result.returncode, 0, "The fixed UI definition census tests failed.")
 

@@ -35,6 +35,9 @@ import { createStructuredHeadlessOperationStore, hasStructuredHeadlessOperationR
 import { fenceStructuredApprovedPlan, readStructuredApprovedPlan } from "./createStructuredHeadlessPlanReviewRepository";
 import {readCommittedStructuredContextResult, type ContextResultSaveEffect} from "./createStructuredHeadlessContextResultStore";
 import type {HeadlessContextResultSavePlanRequest} from "../../../contracts/headless";
+import {inspectStructuredModelPlanTask, reserveStructuredModelPlanTask, issueStructuredModelPlanTask,
+  acceptStructuredModelPlanTask, recordStructuredModelTaskNotStarted, type ModelPlanTaskEffect} from "./createStructuredHeadlessModelPlanTaskStore";
+import type {HeadlessModelDownloadPlanRequest} from "../../../contracts/headless";
 
 const denied = { kind: "denied" } as const;
 
@@ -62,8 +65,22 @@ export interface CompiledApprovedContextQuery {
 export type CompileApprovedContextQuery = (owner: StructuredDocumentStore, request: HeadlessContextQueryPlanRequest,
   scope: HeadlessOperationScope) => Promise<CompiledApprovedContextQuery | undefined>;
 
+/** Legacy hosts remain explicitly unable to execute Model-containing plans. */
+export async function prepareStructuredHeadlessPlanStep(...input: Parameters<typeof prepareStoredPlanStep>) {
+  input[12] = false;
+  const prepared = await prepareStoredPlanStep(...input);
+  return prepared?.kind === "model-download" ? undefined : prepared;
+}
+
+/** Internal opt-in owner; public hosts must not select it before their exact
+ * Model admission/status/save composition is qualified. */
+export async function prepareStructuredHeadlessPlanStepWithModels(...input: Parameters<typeof prepareStoredPlanStep>) {
+  input[12] = true;
+  return prepareStoredPlanStep(...input);
+}
+
 /** Prepare the stored request, then independently enforce the same exact plan inside the mutation transaction. */
-export async function prepareStructuredHeadlessPlanStep(
+async function prepareStoredPlanStep(
   documents: StructuredDocumentStore, query: StepQuery, authorize: Authorize, now: () => number = Date.now,
   publication: "serialized-owner" | "stable-reads" = "serialized-owner",
   allowLocalFileSave = false,
@@ -73,6 +90,7 @@ export async function prepareStructuredHeadlessPlanStep(
   compileContext?: CompileApprovedContext,
   contextResultRootDirectory?: string,
   compileQuery?: CompileApprovedContextQuery,
+  allowModelDownload = false,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -92,12 +110,8 @@ export async function prepareStructuredHeadlessPlanStep(
     const partition = owner.forOrganization(target.scope.organizationId);
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
-    // A persisted review is not a qualified executor. Refuse the entire plan,
-    // including earlier ordinary steps, until the Model task owner is supplied.
-    if (approved.requests.some(candidate => candidate.operation === "models.download")) return;
+    if (!allowModelDownload && approved.requests.some(candidate => candidate.operation === "models.download")) return;
     const request = approved.requests[step - 1];
-    // Source execution stays disabled until its original private binding is composed.
-    if (request?.operation === "models.download" || approved.requests.some(candidate => candidate.operation === "models.download")) return;
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
@@ -107,13 +121,14 @@ export async function prepareStructuredHeadlessPlanStep(
         (!compileQuery && approved.requests.some(candidate => candidate.operation === "context.query")) ||
         ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source" ||
           request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query") &&
+          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download") &&
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
       if (!previous) return;
-      if (previous.operation === "models.download") return;
-      const received = previous.operation === "data.save-local-source"
+      const received = previous.operation === "models.download"
+        ? (await inspectStructuredModelPlanTask(partition, modelTaskEffect(target, previous, index + 1, approvalRevision))).kind === "accepted"
+        : previous.operation === "data.save-local-source"
         ? await readCommittedStructuredLocalFilePlanEffect(partition, localFileEffect(target, previous, index + 1))
         : previous.operation === "data.save-provider-source"
           ? await readCommittedStructuredProviderFilePlanEffect(partition, providerFileEffect(target, previous, index + 1))
@@ -132,6 +147,8 @@ export async function prepareStructuredHeadlessPlanStep(
     }
     const contextModel = approved.contextModels.find(binding => binding.step === step)?.model;
     if (request.operation === "context.generate-rag" && !contextModel) return;
+    if (request.operation === "models.download" && approved.modelDownloads.find(binding => binding.step === step)?.manifestDigest !==
+        request.input.sourceManifest.manifestDigest) return;
     return { request, expiresAt: approved.expiresAt, contextModel };
   }
 
@@ -164,6 +181,71 @@ export async function prepareStructuredHeadlessPlanStep(
       if (publication === "stable-reads") return await stableReads!(approvedForPublication, send);
       return await ownedTransaction!(async owner => await approvedForPublication(owner) && send(), () => {});
     } catch { return false; }
+  }
+
+  if (request.operation === "models.download") {
+    const effect = modelTaskEffect(target, request, step, approvalRevision);
+    const sourceDigest = request.input.sourceManifest.manifestDigest.slice("sha256:".length);
+    const protect = () => {if (!current()) throw new Error("The approved Model download ended.");};
+    async function authorizedRecord(owner: StructuredDocumentStore) {
+      const selected = await select(owner);
+      return selected && selected.expiresAt === deadline && current() ? owner.forOrganization(target.scope.organizationId) : undefined;
+    }
+    return {kind: "model-download" as const, request: freezeModelData(structuredClone(request)),
+      scope: freezeModelData(structuredClone(target.scope)),
+      selection: Object.freeze({hostIncarnationId: target.hostIncarnationId, workspaceId: target.scope.workspaceId,
+        fingerprint: target.fingerprint, approvalRevision, step}),
+      expiresAt: prepared.expiresAt, isCurrent: current,
+      async stillAllowed() {
+        try {return await ownedTransaction(async owner => Boolean(await authorizedRecord(owner)), protect);} catch {return false;}
+      },
+      async inspect() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner);
+          return partition ? inspectStructuredModelPlanTask(partition, effect) : undefined;
+        }, protect);} catch {return undefined;}
+      },
+      async reserve() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner); if (!partition) return;
+          const previous = await inspectStructuredModelPlanTask(partition, effect);
+          if (previous.kind !== "absent") return previous;
+          if (!await fenceStructuredApprovedPlan(partition, target, approvalRevision) || !current()) return;
+          const reserved = await reserveStructuredModelPlanTask(partition, effect, sourceDigest, now());
+          return reserved.kind === "new" ? {...reserved, sourceDigest} : reserved;
+        }, protect);} catch {return undefined;}
+      },
+      async issue(taskId: string, expectedSourceDigest: string): Promise<"issued" | "denied" | "unconfirmed"> {
+        try {
+          const issued = await ownedTransaction(async owner => {
+            const partition = await authorizedRecord(owner);
+            if (!partition || expectedSourceDigest !== sourceDigest || !current() ||
+                !await fenceStructuredApprovedPlan(partition, target, approvalRevision)) return false;
+            return issueStructuredModelPlanTask(partition, effect, taskId, sourceDigest, now());
+          }, protect);
+          return issued ? "issued" : "denied";
+        } catch {return "unconfirmed";}
+      },
+      async accept(taskId: string) {
+        try {return await ownedTransaction(owner => acceptStructuredModelPlanTask(owner.forOrganization(target.scope.organizationId),
+          effect, taskId, now()), () => {});} catch {return false;}
+      },
+      async recordNotStarted(taskId: string, expectedSourceDigest: string) {
+        if (expectedSourceDigest !== sourceDigest) return false;
+        try {return await ownedTransaction(owner => recordStructuredModelTaskNotStarted(owner.forOrganization(target.scope.organizationId),
+          effect, taskId, sourceDigest, now()), () => {});} catch {return false;}
+      },
+      async readReceipt() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner); if (!partition) return;
+          const value = await inspectStructuredModelPlanTask(partition, effect);
+          return value.kind === "accepted" ? value.reference : undefined;
+        }, protect);} catch {return undefined;}
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => (await inspectStructuredModelPlanTask(partition, effect)).kind === "accepted");
+      },
+    };
   }
 
   if (request.operation === "context.save-result") {
@@ -649,7 +731,8 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "context.query" ? "aisb-approved-context-query-step-v1" :
+  const family = request.operation === "models.download" ? "aisb-approved-model-download-step-v1" :
+    request.operation === "context.query" ? "aisb-approved-context-query-step-v1" :
     request.operation === "context.save-result" ? "aisb-approved-context-result-step-v1" :
     request.operation === "context.generate-rag" ? "aisb-approved-context-rag-step-v1" :
     request.operation === "context.generate-pack" ? "aisb-approved-context-pack-step-v1" :
@@ -659,12 +742,21 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
     request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
   const parts = [family, target.hostIncarnationId, target.fingerprint, step, request.input.idempotencyKey];
   const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" ?
+    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" ?
     [...parts, target.scope.organizationId, target.scope.workspaceId, target.scope.principalId, target.scope.registeredClientId] : parts));
   // Keep the existing validated internal UUID shape. The plan and ordinal
   // reserve a different key even when two proposals reuse a supplied key.
   return [hex.slice(0, 8), hex.slice(8, 12), "4" + hex.slice(13, 16),
     "8" + hex.slice(17, 20), hex.slice(20, 32)].join("-");
+}
+
+function modelTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessModelDownloadPlanRequest,
+  step: number, approvalRevision: number): ModelPlanTaskEffect {
+  return {key: stepKey(target, request, step), target, request, step, approvalRevision};
+}
+function freezeModelData<T>(value: T): T {
+  if (value && typeof value === "object") {for (const child of Object.values(value)) freezeModelData(child); Object.freeze(value);}
+  return value;
 }
 
 function contextTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessContextGenerationPlanRequest | HeadlessContextQueryPlanRequest,

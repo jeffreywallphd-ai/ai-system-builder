@@ -261,7 +261,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             run.assert_not_called()
 
     def test_plain_unittest_child_does_not_inherit_optimization(self):
-        with patch.dict(focused.os.environ, {'PYTHONOPTIMIZE': '2'}), patch.object(sys, 'argv', ['focused', '--regression-test', 'modules/adapters/example/test.py']), patch.object(focused, 'commands', return_value=[[sys.executable, '-m', 'unittest']]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
+        with patch.object(focused.os, 'environ', {**focused.os.environ, 'PYTHONOPTIMIZE': '2'}), patch.object(sys, 'argv', ['focused', '--regression-test', 'modules/adapters/example/test.py']), patch.object(focused, 'commands', return_value=[[sys.executable, '-m', 'unittest']]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
             self.assertEqual(focused.main(), 0)
             self.assertNotIn('PYTHONOPTIMIZE', run.call_args.kwargs['env'])
 
@@ -372,7 +372,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
                 source = {'PATH': 'synthetic-path', 'PYTHONOPTIMIZE': '2'}
                 if ambient is not None: source['PYTHON'] = ambient
                 command = ['node', '--test', '--', 'fixed.unit.test.mjs']
-                with self.subTest(profile=profile, ambient=ambient), patch.dict(focused.os.environ, source, clear=True), patch.object(sys, 'argv', ['focused', '--profile', profile]), patch.object(focused, 'profile_commands', return_value=[command]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
+                with self.subTest(profile=profile, ambient=ambient), patch.object(focused.os, 'environ', dict(source)), patch.object(sys, 'argv', ['focused', '--profile', profile]), patch.object(focused, 'profile_commands', return_value=[command]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
                     self.assertEqual(focused.main(), 0)
                     self.assertEqual(dict(focused.os.environ), source)
                     self.assertEqual(run.call_args.args[0], command)
@@ -393,7 +393,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         source = {'PYTHON': 'synthetic-never-executed-python', 'PYTHONOPTIMIZE': '2',
                   'PYTEST_ADDOPTS': '-p synthetic', 'PYTEST_PLUGINS': 'synthetic'}
         command = [sys.executable, '-B', '-m', 'pytest', '--', 'fixed_test.py']
-        with patch.dict(focused.os.environ, source, clear=True), patch.object(sys, 'argv', ['focused', '--profile', 'review-site']), patch.object(focused, 'profile_commands', return_value=[command]), patch.object(focused, 'pytest_tooling_ready', return_value=True), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
+        with patch.object(focused.os, 'environ', dict(source)), patch.object(sys, 'argv', ['focused', '--profile', 'review-site']), patch.object(focused, 'profile_commands', return_value=[command]), patch.object(focused, 'pytest_tooling_ready', return_value=True), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
             self.assertEqual(focused.main(), 0)
             self.assertEqual(run.call_args.args[0], command)
             self.assertEqual(dict(focused.os.environ), source)

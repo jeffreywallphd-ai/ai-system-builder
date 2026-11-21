@@ -30,8 +30,14 @@ Inline metadata claims and a capability flag alone cannot attest provider checks
 Decisions and replay retain bindings; snapshots omit them. Optional RAG witnesses
 remain distinct and intact. Versions 1 and 2 keep their schemas and fingerprints.
 Unconfigured readers/decision owners deny Model records. Actual hosts remain
-unconfigured, and existing execution refuses the entire Model-containing plan,
-including earlier ordinary steps. Historical verification grants no transfer,
+unconfigured. Legacy preparation still refuses the entire Model-containing plan,
+including earlier ordinary steps; the internal opt-in owner uses current exact
+private bindings, ordered accepted receipts, policy and approval commit fences.
+Reservation and acknowledged issuance each commit in the original transaction;
+no provider/runtime work occurs there. Only the original owning call records
+accepted or known-non-start outcomes after admission; unknowns never restart.
+Final publication rechecks exact current policy/approval and accepted identity.
+Historical verification grants no transfer,
 task, registration, loading, restart or parent qualification authority.
 
 Related Model JSON compatibility writes reuse the existing shared atomic

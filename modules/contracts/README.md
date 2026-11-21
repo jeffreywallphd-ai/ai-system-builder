@@ -7,8 +7,10 @@ space is an estimate. It grants no transfer, byte/readiness result, license
 rights, Model registration or loading by itself. Node preparation independently
 rechecks provider metadata before any future owned proposal transaction. Both
 approval channels reconstruct the exact effects and limits. Existing host
-capabilities, proposal storage and execution remain disabled for this operation
-until their original source bindings are composed; v1-v10 stay byte-exact.
+capabilities remain disabled until public composition is qualified. The internal
+review owner supports exact private v3 bindings, and its opt-in executor emits
+only capability-gated Model started/replayed task references or fixed non-start.
+No paths, registry/save permission or runtime readiness follow. v1-v10 stay byte-exact.
 The fixed transfer profile is public files without credentials. Saved provider
 access can check metadata; private/gated transfer has no qualified credential
 seam here. A duration limit is not a claim of confirmed physical IO stop.

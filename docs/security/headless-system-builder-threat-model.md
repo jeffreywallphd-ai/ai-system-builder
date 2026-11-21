@@ -1,5 +1,22 @@
 # Headless System Builder threat model
 
+## Approved Model execution boundary
+
+Use the original actor/client/host/workspace/plan/step and private exact source
+binding to select an approved effect. Enforce approved order, current policy and
+before-commit lifetime at atomic reservation/issuance; provider/runtime work is
+outside the retriable transaction. A final async true is insufficient: retain a
+distinct captured synchronous admission-only fence at application source-port
+entry. Retiring only the caller during final post-ACK policy must dispatch
+nothing. Accepted source custody separately uses original host and current
+business ModelWrite; outward HTTP/token/window/deadline retirement cannot erase
+admitted ownership. Original-call accepted/non-start recording and current result
+publication are distinct. Unknown ACK/start/reply never grants another start,
+guessed-ID discovery or registration. Current policy/approval and accepted identity
+guard final publication. Results reconstruct finite exact task references only.
+Legacy hosts remain disabled; this internal composition supplies no real provider,
+native cleanup, private/gated transfer, Model save or parent qualification.
+
 ## Cached Model completion review
 
 Historical source review must use the original accepted successful terminal

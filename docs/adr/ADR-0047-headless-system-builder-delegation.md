@@ -1,5 +1,24 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Approved Model step execution and admission lifetime
+
+Compose private source review, ordered approved-step persistence, the Model task
+ledger and existing Model application owner. Use explicit internal opt-in; legacy
+host preparation always denies Model plans, even if passed a true flag. Require
+the exact current private source binding, transaction policy/approval and commit
+fence at reservation and one-use acknowledged issue. Effects stay outside DB
+transactions. Capture a separate optional strict synchronous admission callback
+in the existing application entry, checked after final asynchronous policy and
+immediately before source-port entry. Headless execution always supplies it.
+Preserve existing internal callers and the distinct accepted host/business
+custody; caller, window, token and approval expiry do not erase admitted work.
+Original-call accepted/non-start outcome recording is separate from outward
+permission. Unknown acknowledgement/start never means fresh retry. Replayed
+accepted receipts resolve no runtime. Current publication requires exact policy,
+approval and receipt; finite Model task results need explicit capability.
+This composition does not activate real host/status/save or qualify physical
+provider/native dispatch, model readiness or final parent criteria.
+
 ### Historical Model source completion review
 
 Expose finite historical completion metadata through the original Model

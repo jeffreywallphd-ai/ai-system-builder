@@ -2721,3 +2721,25 @@ digests, one reservation/issuance, conservative uncertainty, trusted non-start,
 atomic rollback, count bounds and actual temporary SQLite reopen. Shared files
 and unknown paths keep existing fallback. These metadata checks cannot qualify
 live dispatch, public status, Model save, provider/host/native work or a parent.
+
+Exact internal Model executor/codec test files select the Model owner unit/types
+profiles. They include real approved review/SQLite/reconciler/application fixtures,
+final admission revocation, current publication, ordered mixed plans, one-use ACK,
+unknown/non-start and durable replay. Source bytes are synthetic; actual provider/
+native/public-host qualification remains separate. Related Data/Context/legacy
+profiles preserve compatibility; shared-only/unknown/explicit fallback remains.
+
+Fake Windows job and focused-runner environment tests temporarily replace the
+Python environment mapping with detached dictionaries. They do not patch the
+native mapping: mock cleanup can lose empty Git configuration values on Windows,
+even without `clear=True`, and break later fixtures. A fresh-child regression
+uses synthetic empty configuration and checks real disposable Git initialization
+before and after each implicated group. It selects no native test, changes no
+production limits and publishes no inherited configuration or secrets.
+
+The nested read-only UI census test has a 90-second contributor-test budget.
+Its fixed command passed alone but exceeded the former 45-second bound after
+other feature checks. The old timeouts remain failed evidence. This prospective
+budget preserves every assertion, the 128 KiB result bound, Git/source/history
+guards and the outer 600-second check limit. It changes no product performance,
+model, memory or native-job requirement and is not a claimed optimization.

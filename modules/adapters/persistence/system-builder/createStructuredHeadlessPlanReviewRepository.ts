@@ -296,7 +296,8 @@ export async function readStructuredApprovedPlan(
   if (state.revision !== expectedRevision || !state.lastChannel || step > state.approvedSteps ||
       (state.status !== "approved" && !(state.status === "pending" && state.mode === "each-change"))) return;
   return { expiresAt: state.expiresAt, requests: review.requests,
-    contextModels: review.record.version !== 1 ? review.record.contextModels ?? [] : [] };
+    contextModels: review.record.version !== 1 ? review.record.contextModels ?? [] : [],
+    modelDownloads: review.record.version === 3 ? review.record.modelDownloads : [] };
 }
 
 /** Serializes a real new write against approval changes, without changing its public decision revision. */
