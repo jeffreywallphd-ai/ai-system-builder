@@ -59,6 +59,7 @@ export * from "./headless-model-metadata";
 export * from "./headless-model-source-preview";
 export * from "./headless-model-download-plan";
 export * from "./headless-model-training-inputs";
+export * from "./headless-model-training-plan";
 export { readAppHeadlessLocalFileSelectionValue } from "./headless-data-app-selection";
 export * from "./desktop-system-change-poll";
 export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";

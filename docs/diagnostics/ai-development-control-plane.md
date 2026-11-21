@@ -2827,3 +2827,13 @@ caller after each awaited policy result. Three causal Promise-handoff cases reti
 that lifetime after the nested policy check but before each reader entry; none
 can invoke the next reader. The independently observed earlier extra entries and
 failed regression results remain evidence, not passing qualification.
+
+Exact private training-proposal contract/application sources and their feature
+tests also select the existing Model unit/type profiles. Tests compare admitted
+settings with the ordinary training normalizer, preserve explicit zero/false,
+exercise exact saved Model/Dataset owners with Core/SQLite storage, and deny
+invalid/active/private input, stale selections and late authority changes. The
+compiler supplies no runtime, file, installation, provider or mutation port.
+Three routing regressions preserve exact source ownership and unknown/shared/
+explicit generic fallback. These passes cannot qualify training, public roots,
+model quality, hardware, provider/native execution or the parent roadmap.

@@ -907,3 +907,18 @@ evidence. It starts no model, provider, worker, installation or mutation and gra
 no training approval. Keep this standalone private operation out of public read
 discovery until its full workflow is integrated and qualified. This implementation
 does not change training settings, safe-loading controls or resource policies.
+
+Build a concrete private models.train proposal from that exact selection and
+closed supported settings. Reuse existing task and method names and preserve
+every admitted common/advanced/validation value, including explicit zero/false.
+Require an explicit epoch or step count. Reject unknown controls, caller paths,
+provider/output destinations and runtime metadata before preparation. This syntax
+boundary does not introduce a resource budget or declare a task/model compatible.
+
+The compiler captures the original input-review receiver and original request,
+actor/client/host and callbacks, calls the metadata owner once, and rechecks its
+own return handoff before publishing the frozen request/input digest. The digest
+binds proposal data only. Training and result-save approvals remain separate;
+installation/publication permissions and all byte/runtime/resource/rights/quality
+proof remain absent. Keep the private proposal out of public capability discovery
+until the complete execution workflow qualifies.

@@ -1915,3 +1915,20 @@ are explicitly unchecked. A new exact training approval and separately qualified
 installed-only execution are still required. The standalone operation is not
 advertised by public read tools or configured in product roots. Controlled
 Core/SQLite metadata tests do not qualify actual training, hosts or the parent.
+
+The private models.train proposal codec reuses that exact saved selection and
+the existing task/method/common/advanced/validation setting families. Its closed
+shape excludes caller paths, provider/output destinations and runtime metadata.
+Epoch or step count must be explicit; numeric settings must be finite and valid
+for their meaning, and explicit zero/false values survive canonicalization.
+Task/method labels and settings syntax do not establish a compatible model,
+installed packages, hardware capacity or safe execution.
+
+The proposal compiler calls the authorized input-review owner once, captures its
+original receiver method and complete request before waits, and keeps original
+actor/client/host/callback identity and current policy through its own return
+handoff. It freezes the exact request and minimized input summaries under a
+deterministic digest. Separate training and output-save approval are explicitly
+required; installation and publication permissions are not granted. No effect
+port is supplied. Private preparation remains outside public plan registration
+until task execution and the complete workflow have been integrated and qualified.

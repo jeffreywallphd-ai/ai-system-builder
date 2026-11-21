@@ -1,5 +1,15 @@
 # Application Use Cases
 
+`PrepareHeadlessModelTrainingPlanUseCase` binds supported task/method/settings
+syntax and a safe output name to exact saved Model and immutable Dataset-version
+metadata. It reuses `PreviewHeadlessModelTrainingInputsUseCase`, retains original
+actor/client/host and callbacks through return, and freezes a deterministic
+proposal digest. Neither owner has a runtime, installation, provider, file,
+training-task or write capability. Metadata and settings syntax leave bytes,
+compatibility, resources, rights and quality unchecked. Exact training approval,
+installed-only execution and separate result saving remain required; private
+proposal construction does not advertise or enable a public plan operation.
+
 Private `ModelDownloadTasksUseCase.readApprovedSource` and `cancelApprovedSource`
 require the original accepted source descriptor, exact manifest digest and actor
 and workspace ownership. Stop additionally requires explicit ModelWrite authority.

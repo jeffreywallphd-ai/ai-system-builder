@@ -1634,3 +1634,19 @@ file integrity, training compatibility, model/resource readiness, license rights
 or fresh quality. Training still requires separate exact approval and safe
 installed-only execution. Core/SQLite tests exercise these privacy and denial
 paths; no public capability, native execution or parent qualification follows.
+
+The private training proposal rejects unknown fields and all caller-supplied
+paths, runtime metadata, provider controls and output destinations. Supported
+task/method names and finite canonical settings are descriptive intent, never
+runtime compatibility or resource admission. Preserve explicit zero/false values
+so normalization cannot silently replace requested limits or validation settings.
+Bound module/tag lists and reject active, hidden, cyclic and malformed data.
+
+The compiler captures the complete request and original input-reader method
+before waits. Original actor/client/host/callback identity and strict currentness
+surround metadata preparation and its separate final policy/return handoffs.
+Withdrawn authority yields no prepared result. Frozen minimized summaries and
+their digest carry no path, source row, prompt, raw owner error or delegated
+installation/publication authority. A new training approval and separate result
+save are still required. Metadata-only Core/SQLite checks do not qualify runtime
+effects, file integrity, hardware or model quality, and public roots remain off.
