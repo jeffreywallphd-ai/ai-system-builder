@@ -2837,3 +2837,19 @@ compiler supplies no runtime, file, installation, provider or mutation port.
 Three routing regressions preserve exact source ownership and unknown/shared/
 explicit generic fallback. These passes cannot qualify training, public roots,
 model quality, hardware, provider/native execution or the parent roadmap.
+
+The exact ordinary training use case and its existing feature test select
+`model-training-lifecycle-unit` and `model-training-lifecycle-types`. The first
+executes the real training feature suite with synthetic runtime/storage fixtures;
+the second strictly compiles the application source and its dependency closure.
+Helper regressions execute both fixed commands in an identity-checked disposable
+temporary root, and verify exact source ownership and shared/unknown/explicit
+generic fallback. No model framework, provider, app or full suite is started.
+These checks do not qualify physical training, native cleanup or the parent.
+
+Automatic training lifecycle selection additionally requires the two exact
+source/test files to be present as ordinary files, with ordinary directory
+ancestors. Missing files, aliases and non-file targets preserve generic fallback
+in incomplete roots. Presence alone supplies no pass: the fixed commands must
+still execute. The earlier failed contributor receipt and missing-file regression
+remain recorded; no existing operational-profile expectation was weakened.

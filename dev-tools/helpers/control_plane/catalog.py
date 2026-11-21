@@ -4,11 +4,13 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import re
+import stat
 import sys
 from pathlib import Path
 
 from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
+from .contracts import ControlError
 
 # The exact regression executor already admits only a tracked test. Keep these
 # two form checks separate so one host does not select the other application's tests.
@@ -168,6 +170,32 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "model-training-lifecycle-unit": {
+        "automatic_sources": (
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
+        ),
+        "automatic_required_files": (
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
+        ),
+        "sources": (
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/application/use-cases/tests/train-model.use-case.unit.test.ts"),
+    },
+    "model-training-lifecycle-types": {
+        "companion_to": "model-training-lifecycle-unit",
+        "sources": (
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/application/use-cases/model/train-model.use-case.ts"),
+    },
     "headless-model-manifest-worker": {
         "interpreter": "python",
         "automatic_sources": (
@@ -2715,6 +2743,34 @@ def policy_digest(root: Path, checks: list[dict]) -> str:
     return digest({"schema_version": "check-catalog-v1", "checks": checks, "sources": sources})
 
 
+def _automatic_files_available(root: Path, check: dict) -> bool:
+    """An opted-in automatic profile cannot cover files absent from this root.
+
+    Presence is not passing evidence; its fixed commands must still execute.
+    Missing files/aliases retain generic fallback in incomplete source roots.
+    """
+    names = check.get("automatic_required_files", ())
+    if not isinstance(names, (tuple, list)) or len(names) > 16:
+        return False
+    try:
+        for name in names:
+            parts = relative(name).split("/")
+            if len(parts) > 32:
+                return False
+            confined_path(root, name)
+            cursor = root
+            for index, part in enumerate(parts):
+                cursor = cursor / part
+                facts = cursor.lstat()
+                if stat.S_ISLNK(facts.st_mode) or getattr(facts, "st_file_attributes", 0) & 0x400:
+                    return False
+                if not (stat.S_ISREG(facts.st_mode) if index == len(parts) - 1 else stat.S_ISDIR(facts.st_mode)):
+                    return False
+        return True
+    except (OSError, ControlError, ValueError, TypeError):
+        return False
+
+
 def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> dict:
     checks = definitions(root)
     ids = {c["id"] for c in checks}
@@ -2732,7 +2788,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     if set(paths).intersection(HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES):
         required.add(HEADLESS_DESKTOP_ACTIVATION_CHECK)
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
-                    if set(paths).intersection(check.get("automatic_sources", ())))
+                    if set(paths).intersection(check.get("automatic_sources", ())) and _automatic_files_available(root, check))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if check.get("companion_to") in required and set(paths).intersection(check["sources"]))
     covered = {p: [c["id"] for c in checks
