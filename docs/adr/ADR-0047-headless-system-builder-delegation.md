@@ -943,3 +943,21 @@ results and their saved storage outcome. This prerequisite changes ordinary
 training lifecycle safety, not Headless approval, public activation, training
 settings, providers or resource budgets. Synthetic feature evidence does not
 qualify physical execution, native cleanup or crash/restart ownership.
+
+### Private fine-tuning dataset preparation
+
+Keep private training Dataset-byte preparation separate from the public metadata
+proposal. Reuse the exact authorized version reader and scoped artifact port,
+existing training/recipe byte limits and original current actor/client/host.
+Read only saved train/validation shards and the matching recipe; a split version
+cannot fall back to its aggregate or test data. Verify copied lengths/digests and
+final exact version metadata. Detached private bytes grant no task, approval,
+model/file ownership, compatibility, resources, rights or quality evidence.
+Public execution and actual-host/native qualification remain separate.
+
+The private training reader refuses selected keys that also name excluded
+artifact roles or source lineage. Selected train/validation SHA-256 digests must
+also differ from recorded held-out test digests, including under alternate keys.
+This check reads no test bytes and proves neither row-level separation nor fresh
+test-content or model quality. A different versioned source or aggregate key
+can legitimately contain the same bytes as a training shard.

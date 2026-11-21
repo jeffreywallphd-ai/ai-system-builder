@@ -1680,3 +1680,27 @@ Feature tests use actual disposable byte staging and synthetic runtime/stop
 signals. Directory checks alone do not establish durable native protection,
 physical worker shutdown or crash ownership. These genuine gaps and the full
 Headless execution/approval qualification remain pending.
+
+### Private fine-tuning dataset preparation
+
+The protected assets are exact saved tenant Dataset bytes, private recipe/rows and
+held-out test separation. A stale/mutated planner selector, retired actor/client,
+foreign version or malformed storage reply must not change the read or expose
+partial contents. Capture original selectors, authority and methods before waits;
+use authorized exact metadata and scoped recorded artifact keys only. Bound reads
+before retrieval, copy intrinsic bytes before policy waits, reject active/shared
+values, verify exact sizes/SHA-256 and final version metadata, and return finite
+failures. Split metadata forbids aggregate/test/source fallback.
+
+Only trusted application execution code may receive these detached private byte
+copies. They are not public tool data or a durable file fence; later staging and
+Model, compatibility, resource, installed-runtime, rights/quality and approval
+checks remain required. Focused synthetic storage/tenant tests qualify this read
+boundary only. No model/task/runtime/write/publication authority is introduced.
+
+The private training reader refuses selected keys that also name excluded
+artifact roles or source lineage. Selected train/validation SHA-256 digests must
+also differ from recorded held-out test digests, including under alternate keys.
+This check reads no test bytes and proves neither row-level separation nor fresh
+test-content or model quality. A different versioned source or aggregate key
+can legitimately contain the same bytes as a training shard.

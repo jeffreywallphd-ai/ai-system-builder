@@ -1,5 +1,15 @@
 # Application Use Cases
 
+Private `ReadHeadlessModelTrainingDatasetUseCase` reads actual saved Dataset
+training/validation and recipe bytes under original current authority. It reuses
+the authorized exact-version reader and scoped storage with explicit byte limits,
+checks copied content length/SHA-256, and rechecks immutable version metadata.
+A declared split requires training shards; held-out test, aggregate, source,
+report and quarantine files cannot substitute. An unsplit dataset can train.
+The result contains private detached byte copies for a future execution owner,
+never a public tool response, approval or durable file fence. Model-byte,
+compatibility, runtime/resource, rights and quality checks remain separate.
+
 `PrepareHeadlessModelTrainingPlanUseCase` binds supported task/method/settings
 syntax and a safe output name to exact saved Model and immutable Dataset-version
 metadata. It reuses `PreviewHeadlessModelTrainingInputsUseCase`, retains original
@@ -288,3 +298,10 @@ after confirmed terminal cancellation with no saved snapshot. Registered user
 deletion, old source snapshots, and native recovery policy are unchanged.
 
 Headless local dataset preparation compiles exact saved local references and uses the existing `PrepareTrainingDatasetFromArtifactsUseCase` through a trusted one-use admission. `ReadHeadlessDatasetTaskStatusUseCase` requires a durable accepted association before requesting the owning processor's passive status. Passive reads do not materialize, approve, save or clean up outputs. Worker success remains distinct from application result review, failure and cancellation.
+
+The private training reader refuses selected keys that also name excluded
+artifact roles or source lineage. Selected train/validation SHA-256 digests must
+also differ from recorded held-out test digests, including under alternate keys.
+This check reads no test bytes and proves neither row-level separation nor fresh
+test-content or model quality. A different versioned source or aggregate key
+can legitimately contain the same bytes as a training shard.

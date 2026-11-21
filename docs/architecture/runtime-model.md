@@ -1964,3 +1964,35 @@ when its lease retired before shutdown; it cannot reopen a worker.
 The focused suite covers normal training/progress/review/save/discard plus these
 failure paths using actual disposable bytes and synthetic runtime ports. No
 physical model, native shutdown or parent qualification follows.
+
+### Private fine-tuning dataset preparation
+
+The private training Dataset reader binds an exact proposed Model/Dataset/settings
+selection to current authorized saved Dataset training/validation and recipe
+bytes. Capture original actor/client/host, selectors and reader/storage methods
+before policy waits. Use the existing exact authorized version reader, scoped
+artifact owner, 64 MiB artifact and 256 MiB aggregate training limits, and 512 KiB
+recipe bound. Pass explicit maximumBytes, copy typed-array bytes without subclass
+hooks, refuse shared memory, and verify exact length and SHA-256. Copy before
+later policy waits and compare the final exact saved metadata before return.
+
+A version with split metadata or any train/validation/test artifact requires a
+saved training split; never fall back to its aggregate. Only an unsplit dataset
+can substitute. Read at most sixteen training/validation shards plus the one
+matching recorded recipe; exclude held-out tests, sources, reports, quarantine
+and documentation. Malformed, stale, foreign, corrupt or retired reads return
+finite failure with no partial contents or raw adapter errors.
+
+These are private detached execution inputs, not a public tool result or new
+approval. The eventual execution owner must separately stage/reverify its copies
+and check Model bytes, task compatibility, installed-only readiness, resources,
+rights and quality. No model/task/runtime, installation, mutation or publication
+port exists here. This preparation alone neither enables models.train nor closes
+actual-host, native or parent qualification.
+
+The private training reader refuses selected keys that also name excluded
+artifact roles or source lineage. Selected train/validation SHA-256 digests must
+also differ from recorded held-out test digests, including under alternate keys.
+This check reads no test bytes and proves neither row-level separation nor fresh
+test-content or model quality. A different versioned source or aggregate key
+can legitimately contain the same bytes as a training shard.

@@ -2870,3 +2870,19 @@ actual Node stat read in a serial synthetic test and restores its builtin bindin
 Completed-review cancellation must not refresh a retired worker. Earlier missing
 guards and cache-reentry failures remain recorded; their repair does not qualify
 the runtime port's internal lifecycle or a physical native stop.
+
+The fixed Model owner unit/type checks include the private training-Dataset byte
+reader and strict source/test compilation. Its actual scoped filesystem and
+Core/SQLite fixtures verify saved train/validation/recipe selection, explicit
+read bounds, copied length/digests, split isolation, original authority/method
+capture, asynchronous retirement and finite corruption/adapter failures. Exact
+sources borrow this profile; shared/unknown and explicit generic checks retain
+fallback. These are synthetic data-integrity features, not model/native/provider,
+training compatibility, resource admission, ordinary accuracy or parent passes.
+
+The private training reader refuses selected keys that also name excluded
+artifact roles or source lineage. Selected train/validation SHA-256 digests must
+also differ from recorded held-out test digests, including under alternate keys.
+This check reads no test bytes and proves neither row-level separation nor fresh
+test-content or model quality. A different versioned source or aggregate key
+can legitimately contain the same bytes as a training shard.
