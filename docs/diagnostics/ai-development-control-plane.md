@@ -1,3 +1,13 @@
+The fixed Model owner unit/type profiles also run the private Desktop/Managed
+Model proposal/approval fixture. It exercises actual host compositions, SQLite
+metadata, original provider preparation outside transactions, exact immutable
+binding, current source/writer policy, both trusted channels/modes and ordinary
+plan compatibility. The stored-only adapter test refuses unbound Model proposals.
+New exact Model review sources select these profiles; shared host sources need
+explicit related Model/Data/Context coverage and retain unknown/generic fallback.
+Actual roots/transports and execution remain disabled. These local cases do not
+qualify real UI, PostgreSQL, provider transfer, native resources or parent closure.
+
 The fixed Model owner unit/type profiles also cover private original-task controls
 through the actual accepted ledger, application owner and reconciler. Cases prove
 task/plan-step lookup, numeric progress, cancellation acknowledgement, current

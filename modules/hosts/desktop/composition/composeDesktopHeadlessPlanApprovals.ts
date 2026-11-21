@@ -1,5 +1,5 @@
 import {
-  createStructuredHeadlessPlanReviewRepository,
+  createStructuredHeadlessStoredPlanReviewRepository,
   listStructuredHeadlessPlanReviews,
   readStructuredHeadlessPlanModelPermission,
 } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
@@ -42,6 +42,8 @@ export function composeDesktopHeadlessPlanApprovals(options: {
   readonly isOpen: () => boolean;
   readonly capturePlanReviewClients: CapturePlanReviewClients;
   readonly now?: () => number;
+  /** Private opt-in; actual roots stay disabled until the complete workflow qualifies. */
+  readonly allowModelDownloadReview?: boolean;
 }) {
   const { hostIncarnationId, identity, platform, rootDirectory, isOpen, capturePlanReviewClients, now = Date.now } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
@@ -50,7 +52,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
   const { organizationId, principalId } = identity;
 
   async function authorize(owner: StructuredDocumentStore, workspaceId: WorkspaceId, operation: "list" | "read" | "decide",
-    current: () => boolean, usesModel = false, savesContext = false) {
+    current: () => boolean, usesModel = false, savesContext = false, writesModel = false) {
     try {
       if (!current() || !isWorkspaceId(workspaceId)) return false;
       const documents = owner.forOrganization(organizationId);
@@ -59,7 +61,9 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== organizationId ||
           workspace.status !== "active") return false;
       await composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }).authorizeWorkspaceOperation({
-        workspace, operation: `headless.plan-approval.${operation}`, requiredScopes: usesModel ? ragScopes : savesContext ? contextSaveScopes : requiredScopes,
+        workspace, operation: `headless.plan-approval.${operation}`, requiredScopes: [
+          ...(usesModel ? ragScopes : savesContext ? contextSaveScopes : requiredScopes),
+          ...(writesModel ? ["model:read", "model:write"] as const : [])],
       });
       return current();
     } catch { return false; }
@@ -78,6 +82,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       if (!await authorize(owner, workspaceId, kind, current)) return false;
       const permissions = await readStructuredHeadlessPlanModelPermission(owner.forOrganization(organizationId), target);
       if (!permissions || !current() || (permissions.requiresModelRead && !await authorize(owner, workspaceId, kind, current, true))) return false;
+      if (permissions.requiresModelWrite && !await authorize(owner, workspaceId, kind, current, false, false, true)) return false;
       if (permissions.requiresArtifactWrite && !await authorize(owner, workspaceId, kind, current, permissions.requiresModelRead, true)) return false;
       const clients = await capturePlanReviewClients(owner.forOrganization(organizationId), workspaceId);
       const requester = clients.find(client => client.registeredClientId === registeredClientId);
@@ -85,11 +90,11 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       requesterCurrent = requester.isCurrent;
       return current();
     }
-    const store = createStructuredHeadlessPlanReviewRepository(platform, async (owner, actual, action) =>
+    const store = createStructuredHeadlessStoredPlanReviewRepository(platform, async (owner, actual, action) =>
       action === kind && actual.hostIncarnationId === hostIncarnationId && actual.fingerprint === fingerprint &&
       actual.scope.organizationId === organizationId && actual.scope.principalId === principalId &&
       actual.scope.workspaceId === workspaceId && actual.scope.registeredClientId === registeredClientId &&
-      await canAccess(owner), now);
+      await canAccess(owner), now, options.allowModelDownloadReview === true);
     async function verify() {
       try {
         const allowed = await ownedTransaction(canAccess, () => {

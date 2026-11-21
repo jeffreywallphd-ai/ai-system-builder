@@ -1,5 +1,18 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Prepared Model review in both hosts
+
+Private review composition prepares exact pinned source metadata before the owned
+proposal transaction and binds copied full requests/target/step/source facts inside
+it. Require explicit current source consent/read lifetime and current ModelRead,
+ModelWrite and provider-credential-use policy before lazy provider resolution.
+Interactive approval has a separate default-off stored-review factory exposing
+only read/decide, with current ModelRead/ModelWrite in both trusted channels and
+approval modes. It cannot create or execute a Model proposal. Ordinary plan
+fingerprints and default refusal remain. Actual host roots/transports, Model step
+execution and source save stay disabled/pending until fully composed and qualified;
+controlled SQLite/provider fixtures grant no physical, PostgreSQL or parent pass.
+
 ### Approved Model step execution and admission lifetime
 
 Compose private source review, ordered approved-step persistence, the Model task

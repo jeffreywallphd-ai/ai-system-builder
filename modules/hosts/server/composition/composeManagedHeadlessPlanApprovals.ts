@@ -6,7 +6,7 @@ import {
 } from
   "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
-import { createStructuredHeadlessPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import { createStructuredHeadlessStoredPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { HeadlessPlanReviewChannel, HeadlessPlanReviewTarget } from "../../../application/ports/system-builder/headless-build-plan-review.port";
@@ -37,6 +37,7 @@ type View = {
   stepCount?: number;
   fileSave?: boolean;
   usesModel?: boolean;
+  writesModel?: boolean;
   deciding: boolean;
 };
 
@@ -63,6 +64,8 @@ export function composeManagedHeadlessPlanApprovals(options: {
   readonly allowContextRagGeneration?: boolean;
   readonly allowContextResultSave?: boolean;
   readonly allowContextQuery?: boolean;
+  /** Private opt-in; no public capability follows from a stored review. */
+  readonly allowModelDownloadReview?: boolean;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, planClientId, platform, rootDirectory, contexts, placement, now = Date.now} = options;
@@ -78,6 +81,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   const allowContextRagGeneration = options.allowContextRagGeneration === true && stableReads !== undefined;
   const allowContextQuery = options.allowContextQuery === true && stableReads !== undefined;
   const allowContextResultSave = options.allowContextResultSave === true && stableReads !== undefined;
+  const allowModelDownload = options.allowModelDownloadReview === true && stableReads !== undefined;
   const views = new Map<string, View>();
 
   async function authorize(owner: StructuredDocumentStore, identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
@@ -216,8 +220,8 @@ export function composeManagedHeadlessPlanApprovals(options: {
       const view: View = {viewId:randomUUID(), documentCurrent, selection, deciding:false};
       views.set(documentKey, view);
       const active = () => current() && views.get(documentKey) === view;
-      const store = createStructuredHeadlessPlanReviewRepository(platform, async (owner, actual, action) =>
-        exact(actual) && action === "read" && await authorize(owner, identity, workspaceId, active), now);
+      const store = createStructuredHeadlessStoredPlanReviewRepository(platform, async (owner, actual, action) =>
+        exact(actual) && action === "read" && await authorize(owner, identity, workspaceId, active), now, allowModelDownload);
       try {
         const outcome = await store.read({target, isCurrent:active});
         if (!outcome.ok || !active()) return forbidden;
@@ -226,23 +230,26 @@ export function composeManagedHeadlessPlanApprovals(options: {
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
         const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
           selection, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave,
-            allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery });
+            allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery, allowModelDownload });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
         const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
           step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
           step.operation === "context.generate-pack" || step.operation === "context.generate-rag" || step.operation === "context.save-result");
         const usesModel = ready.preview.steps.some(step => step.operation === "context.generate-rag" || step.operation === "context.query");
-        const requiredScopes = usesModel ? fileSave ? ragScopes : [...planScopes, "artifact:read", "model:read"] as const : fileSave ? filePlanScopes : planScopes;
+        const writesModel = ready.preview.steps.some(step => step.operation === "models.download");
+        const requiredScopes = [...(usesModel ? fileSave ? ragScopes : [...planScopes, "artifact:read", "model:read"] as const : fileSave ? filePlanScopes : planScopes),
+          ...(writesModel ? ["model:read", "model:write"] as const : [])];
         if (!await verifyAccess(identity, workspaceId, active, requiredScopes)) return forbidden;
         view.revision = ready.state.revision;
         view.expiresAt = ready.state.expiresAt;
         view.stepCount = ready.state.stepCount;
         view.fileSave = fileSave;
         view.usesModel = usesModel;
+        view.writesModel = writesModel;
         const canPublish = () => active() && now() < ready.state.expiresAt;
         return {ok:true, value:ready, canPublish,
-          ...(fileSave || usesModel ? {publishIfCurrent:publishFilePlanReply(canPublish, requiredScopes)} : {})} as const;
+          ...(fileSave || usesModel || writesModel ? {publishIfCurrent:publishFilePlanReply(canPublish, requiredScopes)} : {})} as const;
       } finally {
         if (views.get(documentKey) === view && view.revision === undefined) views.delete(documentKey);
       }
@@ -256,9 +263,10 @@ export function composeManagedHeadlessPlanApprovals(options: {
       view.expiresAt !== undefined && now() < view.expiresAt;
     if (!active()) return forbidden;
     view.deciding = true;
-    const requiredScopes = view.usesModel ? view.fileSave ? ragScopes : [...planScopes, "artifact:read", "model:read"] as const : view.fileSave ? filePlanScopes : planScopes;
-    const store = createStructuredHeadlessPlanReviewRepository(platform, async (owner, actual, action) =>
-      exact(actual) && action === "decide" && await authorize(owner, identity, workspaceId, active, requiredScopes), now);
+    const requiredScopes = [...(view.usesModel ? view.fileSave ? ragScopes : [...planScopes, "artifact:read", "model:read"] as const : view.fileSave ? filePlanScopes : planScopes),
+      ...(view.writesModel ? ["model:read", "model:write"] as const : [])];
+    const store = createStructuredHeadlessStoredPlanReviewRepository(platform, async (owner, actual, action) =>
+      exact(actual) && action === "decide" && await authorize(owner, identity, workspaceId, active, requiredScopes), now, allowModelDownload);
     try {
       const outcome = await new HeadlessBuildPlanReviewUseCase(store, now).decide({
         fingerprint:selection.fingerprint, expectedRevision:request.decision.expectedRevision, decision:request.decision.decision,
@@ -275,7 +283,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
       if (!receipt.ok) return unconfirmed;
       const canPublish = () => current() && now() < receipt.value.expiresAt;
       return {...receipt, canPublish,
-        ...(view.fileSave || view.usesModel ? {publishIfCurrent:publishFilePlanReply(canPublish, requiredScopes)} : {})};
+        ...(view.fileSave || view.usesModel || view.writesModel ? {publishIfCurrent:publishFilePlanReply(canPublish, requiredScopes)} : {})};
     } finally {
       if (views.get(documentKey) === view) views.delete(documentKey);
     }

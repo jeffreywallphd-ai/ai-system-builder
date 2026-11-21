@@ -46,6 +46,27 @@ class ModelExecutionRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.selected([source], ("focused-tests",)))
         self.assertIn("focused-tests", self.selected([source, "modules/hosts/shared/composition/unknown-model-control.ts"]))
 
+    def test_host_review_preparation_keeps_real_host_fixture_and_borrowed_coverage(self):
+        source = "modules/hosts/shared/composition/headlessModelDownloadReview.ts"
+        fixture = "modules/hosts/shared/composition/tests/headless-model-download-host-review.unit.test.ts"
+        for path in (source, fixture):
+            rows = self.selected([path])
+            self.assertIn(fixture, rows["headless-model-metadata-owner-unit"]["argv"])
+            self.assertIn(fixture, rows["headless-model-metadata-owner-types"]["argv"])
+            self.assertNotIn("focused-tests", rows)
+        shared = ["modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
+                  "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+                  "modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals.ts",
+                  "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts"]
+        for path in shared:
+            self.assertNotIn("headless-model-metadata-owner-unit", self.selected([path]))
+        required = ("headless-model-metadata-owner-unit", "headless-model-metadata-owner-types",
+                    "headless-context-pack-contract", "headless-approved-dataset-task-wiring")
+        rows = self.selected([source, fixture, *shared], required)
+        self.assertTrue(set(required).issubset(rows))
+        self.assertNotIn("focused-tests", rows)
+        self.assertIn("focused-tests", self.selected([source], ("focused-tests",)))
+
     def test_explicit_related_closure_and_unknown_fallback(self):
         required = ("headless-model-metadata-owner-unit", "headless-model-metadata-owner-types", "headless-context-pack-contract",
                     "headless-data-task-status", "headless-approved-dataset-task-wiring")

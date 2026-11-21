@@ -73,6 +73,7 @@ export function createStructuredHeadlessPlanReviewRepository(
   allowContextResultSave = false,
   allowContextQuery = false,
   bindModelDownloads?: BindModelDownloadReviews,
+  allowStoredModelDownloads = false,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -167,7 +168,7 @@ export function createStructuredHeadlessPlanReviewRepository(
       return run(input, "read", async (store, target, key, requireFresh) => {
         const review = await readReview(store, target, key);
         if (!review) return denied;
-        if (review.record.version === 3 && !bindModelDownloads) return denied;
+        if (review.record.version === 3 && !bindModelDownloads && allowStoredModelDownloads !== true) return denied;
         return requireFresh(review.state.expiresAt) ? snapshot(review) : expired;
       });
     },
@@ -175,7 +176,7 @@ export function createStructuredHeadlessPlanReviewRepository(
       return run(input, "decide", async (store, target, key, requireFresh) => {
         const review = await readReview(store, target, key);
         if (!review) return denied;
-        if (review.record.version === 3 && !bindModelDownloads) return denied;
+        if (review.record.version === 3 && !bindModelDownloads && allowStoredModelDownloads !== true) return denied;
         if (!requireFresh(review.state.expiresAt)) return expired;
         const previous = review.state;
         const outcome = input.update({ ...previous });
@@ -197,6 +198,19 @@ export function createStructuredHeadlessPlanReviewRepository(
       });
     },
   };
+}
+
+/** Interactive approval owners may read/decide existing bound Model proposals.
+ * They receive no proposal method and cannot replace provider preparation. */
+export function createStructuredHeadlessStoredPlanReviewRepository(
+  documents: StructuredDocumentStore,
+  policy: Parameters<typeof createStructuredHeadlessPlanReviewRepository>[1],
+  now: () => number = Date.now,
+  allowModelDownloads = false,
+): Pick<HeadlessPlanReviewRepository, "read" | "decide"> {
+  const store = createStructuredHeadlessPlanReviewRepository(documents, policy, now, undefined,
+    false, false, false, false, false, false, undefined, false, false, undefined, allowModelDownloads === true);
+  return {read: store.read, decide: store.decide};
 }
 
 function validTarget(target: HeadlessPlanReviewTarget) {
@@ -251,7 +265,8 @@ export async function readStructuredHeadlessPlanModelPermission(partition: Struc
   if (!validTarget(target) || partition.organizationId !== target.scope.organizationId) return;
   const review = await readReview(partition, target, planKey(target));
   return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag" || request.operation === "context.query"),
-    requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result")} : undefined;
+    requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result"),
+    ...(review.requests.some(request => request.operation === "models.download") ? {requiresModelWrite: true as const} : {})} : undefined;
 }
 
 /** Historic definition, never historic permission. The caller must first prove

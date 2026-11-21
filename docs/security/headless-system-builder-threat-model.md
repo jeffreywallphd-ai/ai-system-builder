@@ -1,5 +1,29 @@
 # Headless System Builder threat model
 
+## Prepared Model proposal and interactive review
+
+Protect provider credentials, exact source facts and approval provenance against
+inline claims, request substitution across awaits, stale/withdrawn source consent,
+actor/client/tenant changes and approval without current ModelWrite. Both private
+host options require current source-read/read-lifetime controls plus ModelRead,
+ModelWrite and credential-use policy before lazy provider metadata. The shared
+preparer copies passive inputs and revalidates the pinned source through the
+existing application owner outside transactions. Its frozen facts bind the entire
+request list and original target/step/digest inside the current owned proposal
+transaction. The host still owns policy and the before-commit fence; a metadata
+binder alone grants no permission or transfer. Changed source facts, unknown
+provider outcomes and retired authority create no approvable review.
+
+The separate stored-only factory exposes read/decide, defaults Model support off
+and cannot create a Model proposal without independently prepared bindings. Trusted
+Desktop/Managed popup/chat review and decision recheck current ModelRead/ModelWrite.
+An agent proposal or model text cannot invoke that trusted channel. Model status
+needs current consent/policy and performs no provider call. Keep ordinary plans
+compatible and actual roots/transports/Model execution disabled until the complete
+workflow qualifies. Local SQLite/provider fixtures are not real app, PostgreSQL,
+provider-transfer or native qualification. Safe rollback leaves options disabled
+and retains original records and accepted business custody.
+
 ## Original Model task observation and cancellation
 
 Protect original organization, actor, client, workspace, host, accepted task and

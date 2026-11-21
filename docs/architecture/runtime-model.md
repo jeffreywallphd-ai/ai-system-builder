@@ -1,5 +1,16 @@
 # Runtime Model
 
+Private Desktop/Managed Model plan review now composes the existing metadata
+preparer outside database transactions. Capture passive proposal data and require
+current source consent/read lifetime and ModelRead/ModelWrite/credential-use policy
+before source resolution. Bind the full immutable request list, exact actor/client/
+host/workspace/plan target and Model step/digest inside the owning transaction.
+Stored interactive Model review is a separate default-off read/decide capability
+with fresh writer policy, never provider access or proposal/transfer authority.
+Ordinary plans and public feature defaults are unchanged. Model execution, task
+transport/save integration and actual host/native/provider qualification remain
+pending; controlled SQLite composition is not PostgreSQL or real-app evidence.
+
 Private Headless Model task controls resolve only an accepted original-client
 task or approved plan-step and source digest through the owning metadata store.
 Current host ModelRead/ModelWrite policy precedes observation/Stop and finite

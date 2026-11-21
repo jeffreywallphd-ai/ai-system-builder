@@ -1,5 +1,17 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The private Model review option prepares pinned provider facts before the owned
+proposal transaction in both hosts. Require current source-read consent, read
+lifetime, workspace ModelRead/ModelWrite and credential-use policy before lazy
+source resolution. Its binder compares the full copied request list, original
+target and each Model step; it performs no I/O. The transaction rechecks policy
+and currentness. Existing trusted popup/chat approval owners have a separate
+stored-review opt-in and require current ModelRead/ModelWrite; they receive no
+proposal method. Model status uses current consent/policy without another provider
+call. Ordinary plans keep their fingerprints and dependency requirements. Actual
+roots/transports and Model step execution remain disabled pending full composition;
+controlled local SQLite fixtures do not qualify PostgreSQL, real UI or provider IO.
+
 The private shared Model task control proves an accepted original-client task or
 plan-step and its exact source digest in the platform-owned metadata transaction.
 The host supplies fresh ModelRead policy for observation and ModelWrite for Stop.

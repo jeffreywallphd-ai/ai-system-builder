@@ -11,7 +11,7 @@ import {parseHeadlessBuildPlanProposal, serializeHeadlessMutationInput, type Hea
 import {HeadlessBuildPlanReviewUseCase} from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import {createInMemoryStructuredDocumentStore, type StructuredDocumentStore} from "../../shared";
 import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../sqlite";
-import {createStructuredHeadlessPlanReviewRepository, readStructuredApprovedPlan,
+import {createStructuredHeadlessPlanReviewRepository, createStructuredHeadlessStoredPlanReviewRepository, readStructuredApprovedPlan,
   readStructuredRecordedContextGeneration, type BindModelDownloadReviews} from "../createStructuredHeadlessPlanReviewRepository";
 import {readModelDownloadReviewBindings} from "../headlessModelDownloadReviewBindings";
 import {prepareStructuredHeadlessPlanStep} from "../createStructuredHeadlessPlanStepOperationStore";
@@ -71,6 +71,22 @@ function fixture(steps: unknown[] = [modelStep()], root = createInMemoryStructur
   return {root, scope, proposal, parsed, target, query, state, bindings, contextModels, reviews, actor, approve,
     partition: root.forOrganization(scope.organizationId)};
 }
+
+test("stored Model review opt-in can read and decide private bindings but cannot supply proposal authority", async () => {
+  const f = fixture();
+  const stored = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now, true);
+  assert.deepEqual(Object.keys(stored).sort(), ["decide", "read"]);
+  assert.ok((await f.reviews().propose({...f.query, proposal: f.proposal})).ok);
+  assert.equal((await createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now).read(f.query)).ok, false);
+  assert.ok((await stored.read(f.query)).ok);
+  const approval = await new HeadlessBuildPlanReviewUseCase(stored, () => f.state.now).decide({fingerprint: f.target.fingerprint,
+    expectedRevision: 1, decision: {kind: "approve", mode: "whole-plan"}}, f.target.hostIncarnationId, f.scope, f.actor);
+  assert.ok(approval.ok);
+  const other = fixture();
+  const noBinder = createStructuredHeadlessPlanReviewRepository(other.root, async () => true, () => other.state.now,
+    async () => true, false, false, false, false, false, false, undefined, false, false, undefined, true);
+  assert.equal((await noBinder.propose({...other.query, proposal: other.proposal})).ok, false);
+});
 
 test("model metadata claims alone, disabled validation, bad coverage and substituted source digests cannot create a review", async () => {
   for (const variant of ["no-binder", "no-validation", "missing", "empty", "wrong-step", "duplicate", "extra", "wrong-digest", "self-asserted-digest"] as const) {

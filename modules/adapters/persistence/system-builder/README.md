@@ -1,5 +1,14 @@
 # Saved System Builder and Headless plan persistence
 
+Interactive Model approval uses the separate stored-review factory. It returns
+only read/decide and has an explicit default-off bound-Model read option. That
+option never enables Model proposal decoding, inline source authority or execution.
+Only independently prepared bindings and proposal validation can create a v3
+review. The metadata permission query identifies ModelWrite separately from
+Context ModelRead/artifact requirements so hosts check current approval policy.
+Unknown/malformed versions, binding changes, deadline/currentness retirement and
+unconfirmed writes retain the existing fail-closed behavior.
+
 Private Model download task records use separate task/plan indexes and namespaces
 from ordinary Model, Data and Context work. Capture strict passive effect/scope
 data before store awaits. Bind exact organization, actor, client, host, workspace,
