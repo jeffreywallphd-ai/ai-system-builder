@@ -1,5 +1,18 @@
 # Runtime Model
 
+Private host step owners can now explicitly compose approved Model download
+execution. The authoritative selected Model operation makes its request fence
+mandatory through owned reservation/issue and final source dispatch. Desktop uses
+the trusted operation-current callback, separate from the short metadata-read
+lifetime; Managed requires independent actual host-current proof. After admission,
+reconstruct the original actor's current workspace ModelRead/ModelWrite from owned
+records, with a fixed original organization context. HTTP, token, window, ambient
+request context and approval expiry do not erase accepted business ownership.
+Recheck current request/approval policy before disclosure. Unknown starts never
+discover/adopt/retry, and accepted replay initializes no runtime. Public host roots,
+transport status/cancellation/save activation and physical qualification remain
+pending. Controlled source-task fixtures are not real provider/native evidence.
+
 Private Desktop/Managed Model plan review now composes the existing metadata
 preparer outside database transactions. Capture passive proposal data and require
 current source consent/read lifetime and ModelRead/ModelWrite/credential-use policy

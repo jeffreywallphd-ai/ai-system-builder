@@ -3,9 +3,53 @@ import type {ModelDownloadTasksUseCase} from "../../../application/use-cases/mod
 import type {ApplicationRequestContext} from "../../../application/ports";
 import {readHeadlessPlanStepRequest, readHeadlessPlanStepResult, type HeadlessPlanStepRequest} from "../../../contracts/headless";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
+import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
+import {createStructuredOrganizationRepositories} from "../../../adapters/persistence/organization";
+import {createLocalWorkspaceRepository} from "../../../adapters/persistence/workspace";
+import {AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy} from "../../../application/services/security";
+import type {TenantPlacementConfig} from "../../../contracts/config";
+import {isOrganizationId} from "../../../contracts/organization";
+import {isWorkspaceId} from "../../../contracts/workspace";
+import {hasKnownPassiveCredential} from "../../../contracts/shared";
 
 type PreparedModelStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStepWithModels>>>, {kind: "model-download"}>;
 export type StartHeadlessModelDownload = ModelDownloadTasksUseCase["startApprovedSource"];
+
+/** Accepted downloads use their original actor, never an ended request's ambient
+ * context, token, approval deadline or window. Each check rereads current policy. */
+export function composeOwnedHeadlessModelDownloadPolicy(options: {readonly documents: StructuredDocumentStore;
+  readonly rootDirectory: string; readonly placement: TenantPlacementConfig; readonly context: ApplicationRequestContext;
+  readonly isHostCurrent: () => boolean}) {
+  const {documents, rootDirectory, placement, isHostCurrent} = options;
+  const context = Object.freeze({organizationId: options.context.organizationId, principalId: options.context.principalId,
+    workspaceId: options.context.workspaceId});
+  const hostCurrent = () => isHeadlessReadCurrent(isHostCurrent);
+  const transaction = documents.runInOwnedTransaction?.bind(documents);
+  return async () => {
+    if (!transaction || documents.organizationId !== undefined || !isOrganizationId(context.organizationId) ||
+        !isWorkspaceId(context.workspaceId) || typeof context.principalId !== "string" || !context.principalId ||
+        context.principalId.length > 160 || hasKnownPassiveCredential(context.principalId) || !hostCurrent()) return false;
+    const workspaceId = context.workspaceId;
+    try {
+      const allowed = await transaction(async owner => {
+        if (!hostCurrent()) return false;
+        const policy = createOrganizationAuthorizationPolicy({...createStructuredOrganizationRepositories(owner), tenantPlacement: placement});
+        const authorization = new AuthorizeWorkspaceOperationService({organizationContext: {getCurrentOrganizationContext: () => ({
+          organizationId: context.organizationId!, principalId: context.principalId!})}, authorizer: {async execute(input) {
+          if (!(await policy.authorize(input)).allowed) throw new Error("The original Model download is unavailable.");
+        }}});
+        const workspace = await createLocalWorkspaceRepository({rootDirectory, documents: owner.forOrganization(context.organizationId!)})
+          .readWorkspace(workspaceId);
+        if (!workspace || workspace.status !== "active" || workspace.organizationId !== context.organizationId ||
+            workspace.workspaceId !== context.workspaceId || !hostCurrent()) return false;
+        await authorization.authorizeWorkspaceOperation({workspace, operation: "headless.models.download",
+          requiredScopes: ["workspace:read", "model:read", "model:write"]});
+        return hostCurrent();
+      }, () => {if (!hostCurrent()) throw new Error("The Model host is no longer current.");});
+      return allowed === true && hostCurrent();
+    } catch {return false;}
+  };
+}
 
 /** Compose one approved stored step with the existing Model application owner.
  * Real hosts must supply fresh request policy and separately retained original

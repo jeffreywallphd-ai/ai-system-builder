@@ -1,5 +1,32 @@
 # Headless System Builder threat model
 
+## Host Model execution and independent business lifetime
+
+Protect exact stored Model approval/source, original actor/client/workspace/host,
+one-use effects and retained task custody. Both private step composers identify
+the Model operation from the authoritative approved record before enabling its
+strict request fence at owned reservation, issue and application source dispatch.
+Desktop uses a distinct trusted operation-admission callback; short metadata read
+deadlines are not download startup limits. Missing proof denies Model admission.
+Capture the original operation and metadata-read callback identities before any
+await; replacement of the caller's grant property cannot revive a retired request.
+Managed requires a separate synchronous actual host-current callback, not a
+request or client lifetime. Ordinary step fences and default public refusal stay.
+
+Accepted source work reconstructs current original-actor ModelRead/ModelWrite and
+active workspace/organization/membership policy in an owned transaction using a
+fixed original organization context. Do not read ended request AsyncLocalStorage,
+token/window state or approval expiry as business permission. Source transfer is
+public and receives no saved provider credential. Host or actor policy withdrawal
+denies continuing authorized work without granting another start or discarding
+unknown custody. Accepted outcomes persist after outward withdrawal; fresh policy
+still gates replies. Known non-start is terminal and unknown issue/start remains
+unconfirmed without enumeration, adoption or retries. Reuse the original source
+owner/reconciler and source-only task controls, with no ordinary fallback or
+registry write. Root/transport/save activation and actual provider/native/host
+qualification remain pending. Rollback disables private start support while
+preserving accepted ownership and history.
+
 ## Prepared Model proposal and interactive review
 
 Protect provider credentials, exact source facts and approval provenance against

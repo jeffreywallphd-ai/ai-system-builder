@@ -32,6 +32,15 @@ class ModelExecutionRoutingTests(unittest.TestCase):
         for path in self.shared:
             self.assertNotIn("headless-model-metadata-owner-unit", self.selected([path]))
 
+    def test_trusted_operation_lifetime_keeps_pinned_loopback_mcp_coverage(self):
+        source = "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts"
+        rows = self.selected([source, "modules/hosts/shared/composition/headlessModelDownloadExecution.ts"],
+                             ("headless-model-metadata-owner-unit", "headless-model-metadata-owner-types"))
+        self.assertIn("headless-desktop-pinned-mcp", rows)
+        self.assertIn("headless-model-metadata-owner-unit", rows)
+        self.assertIn("headless-model-metadata-owner-types", rows)
+        self.assertNotIn("completion-all", rows)
+
     def test_owned_task_controls_select_real_owner_fixture_and_strict_companion(self):
         source = "modules/hosts/shared/composition/headlessModelDownloadTasks.ts"
         rows = self.selected([source])

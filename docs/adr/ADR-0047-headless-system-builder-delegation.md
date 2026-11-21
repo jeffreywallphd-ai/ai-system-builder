@@ -1,5 +1,19 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+### Private host Model execution ownership
+
+Both private host step composers may opt into the existing approved Model runner.
+Bind the selected operation's synchronous request lifetime through owned admission
+and source dispatch. Desktop's trusted operation-current field is separate from
+its short metadata-read field; Managed must provide independent actual host-current
+proof. Neither becomes accepted task permission. Retained work reconstructs current
+original-actor/workspace ModelRead/ModelWrite using a fixed original organization
+context, independently of HTTP, token, ambient request, approval expiry and window.
+Persist accepted outcomes despite withdrawn outward permission, disclose only under
+fresh reader/approval policy, and retain terminal non-start/unknown no-retry rules.
+Ordinary behavior and public root/transport refusal remain. Local source-task
+fixtures do not qualify actual transfer, native ownership, source save or hosts.
+
 ### Prepared Model review in both hosts
 
 Private review composition prepares exact pinned source metadata before the owned

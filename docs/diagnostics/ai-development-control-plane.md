@@ -1,3 +1,13 @@
+The same fixed Model owner profiles cover private Model execution in both actual
+step composers with the original approved ledger/application/reconciler. Focused
+cases separate the short metadata lifetime from operation admission, require
+independent Managed host proof, preserve accepted task control after caller and
+ambient-context withdrawal, reread removed membership, replay without runtime
+resolution and keep unknown/no-start outcomes non-retryable. The Desktop grant
+field is internal trusted admission data, not JSON authority; actual transport
+activation remains pending. Related pinned-loopback/MCP and Data/Context checks retain
+ordinary behavior. Controlled tasks grant no real provider/native/host/save pass.
+
 The fixed Model owner unit/type profiles also run the private Desktop/Managed
 Model proposal/approval fixture. It exercises actual host compositions, SQLite
 metadata, original provider preparation outside transactions, exact immutable

@@ -22,6 +22,12 @@ import {readModelDownloadSource} from "../../../../contracts/model";
 import {HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest,
   type HeadlessHostIncarnationId} from "../../../../contracts/headless";
 import {prepareHeadlessModelDownloadReviews} from "../headlessModelDownloadReview";
+import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
+import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
+import type {ApprovedModelSourceDownloadControl} from "../../../../application/ports/model";
+import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
+import {readStructuredModelPlanAttemptByPlan} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
+import {runOwnedHeadlessModelDownloadTask} from "../headlessModelDownloadTasks";
 
 type Host = "Desktop" | "Managed";
 async function fixture(t: TestContext, host: Host) {
@@ -43,13 +49,15 @@ async function fixture(t: TestContext, host: Host) {
   await repositories.memberships.saveMembership(membership);
   const documents = platform.forOrganization(organizationId), workspaces = createLocalWorkspaceRepository({rootDirectory: directory, documents});
   await workspaces.saveWorkspace({organizationId, workspaceId, displayName: "Synthetic", status: "active", createdAt: at, updatedAt: at});
-  const contexts = {getCurrentOrganizationContext: () => ({organizationId, principalId})}, placement = createTenantPlacementConfig();
+  const state = {current: true, sourceConsent: true, readCurrent: true, operationCurrent: true, hostCurrent: true, ambientCurrent: true,
+    inspections: 0, sourceResolutions: 0, denyWrite: false, sourceStarts: 0, startResolutions: 0, nativeReads: 0, nativeCancels: 0, registrations: 0,
+    sourceOutcome: "accepted" as "accepted" | "unavailable" | "unknown", loseOutwardOnStart: false,
+    onResolveStart: undefined as (() => Promise<void>) | undefined, onInspect: undefined as (() => Promise<void>) | undefined};
+  const contexts = {getCurrentOrganizationContext: () => state.ambientCurrent ? {organizationId, principalId} : undefined}, placement = createTenantPlacementConfig();
   const policy = createOrganizationAuthorizationPolicy({...repositories, tenantPlacement: placement});
   const authorization = new AuthorizeWorkspaceOperationService({organizationContext: contexts, authorizer: {async execute(input) {
     if (!(await policy.authorize(input)).allowed) throw new Error("Synthetic policy refusal.");
   }}});
-  const state = {current: true, sourceConsent: true, readCurrent: true, inspections: 0, sourceResolutions: 0, denyWrite: false,
-    onInspect: undefined as (() => Promise<void>) | undefined};
   const source = readModelDownloadSource({provider: "huggingface", modelId: "fixture/model", revision: "a".repeat(40),
     format: "transformers-safetensors", license: {kind: "unknown"}, files: ["config.json", "model.safetensors", "tokenizer.json"].map(path => ({
       path, sizeBytes: 10, integrity: {algorithm: path.endsWith("safetensors") ? "sha256" : "git-blob-sha1",
@@ -64,9 +72,33 @@ async function fixture(t: TestContext, host: Host) {
   }};
   const sourcePreview = new PreviewHeadlessModelSourceUseCase({organizationId, provider});
   const getSource = async () => {state.sourceResolutions++; return sourcePreview;};
+  const reconciler = new OwnedTaskReconcilerService(); t.after(() => reconciler.stopObservation());
+  const records = new Map<string, RuntimeTaskRecord>(), sourceControls: ApprovedModelSourceDownloadControl[] = [];
+  const model = new ModelDownloadTasksUseCase({taskReconciler: reconciler, now: () => at,
+    runtimeTaskRegistry: {async startTask() {assert.fail("No ordinary Model start.");}, async getTaskStatus() {assert.fail("No shared-ID lookup.");},
+      async listTasks() {assert.fail("No task enumeration.");}, async cancelTask() {assert.fail("No generic cancellation.");}},
+    modelRegistry: {async registerDownloadedModel() {state.registrations++; assert.fail("A separate save is required.");}} as never,
+    modelDownloadCompletion: {async readCompletedModelDownload() {assert.fail("No ordinary completion.");}},
+    approvedModelSourceDownload: {async startApprovedModelSource(request, control) {
+      state.sourceStarts++; sourceControls.push(control);
+      assert.equal(request.workspaceId, workspaceId); assert.deepEqual(request.sourceManifest.source, source);
+      if (state.sourceOutcome === "unavailable") return {kind: "unavailable"};
+      if (state.sourceOutcome === "unknown") throw new Error("private-source-start C:/private/worker");
+      const record: RuntimeTaskRecord = {requestId: request.requestId, workspaceId, taskType: TaskType.MODEL_DOWNLOAD,
+        concurrencyClass: "io", status: "running", updatedAt: at}; records.set(request.requestId, record);
+      if (state.loseOutwardOnStart) {state.current = false; state.operationCurrent = false; state.ambientCurrent = false;}
+      return {kind: "accepted", value: {requestId: request.requestId, status: "running"}, task: Object.freeze({
+        requestId: request.requestId, workspaceId, modelId: source.modelId, revision: source.revision,
+        manifestDigest: request.sourceManifest.manifestDigest,
+        read: async () => {state.nativeReads++; return {...record};},
+        cancel: async () => {state.nativeCancels++; return {requestId: request.requestId, status: record.status, cancelled: true};},
+        readCompleted: async () => undefined})};
+    }}});
+  const getStart = async () => {state.startResolutions++; await state.onResolveStart?.(); return model.startApprovedSource.bind(model);};
   const scope = {organizationId, workspaceId, principalId, registeredClientId};
   const grant = {...scope, planReview: true as const, operations: [], workspaceIds: [workspaceId] as const, isCurrent: () => state.current,
-    isReadCurrent: () => state.readCurrent, get modelSourceRead() {return state.sourceConsent ? true as const : undefined;}};
+    isReadCurrent: () => state.readCurrent, isOperationCurrent: () => state.operationCurrent,
+    get modelSourceRead() {return state.sourceConsent ? true as const : undefined;}};
   const registration = {...scope, purpose: "plan-review" as const, isCurrent: () => state.current,
     get modelSourceRead() {return state.sourceConsent ? true as const : undefined;}};
   const guardedAuthorization = {async authorizeWorkspaceOperation(input: Parameters<typeof authorization.authorizeWorkspaceOperation>[0]) {
@@ -78,11 +110,13 @@ async function fixture(t: TestContext, host: Host) {
     return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
   }};
   const systems = {composeHeadlessAuthoring() {assert.fail("Model review cannot dispatch an ordinary system command.");}};
-  const compose = (enabled = true) => host === "Desktop"
+  const compose = (enabled = true, executes = false, hostProof = true) => host === "Desktop"
     ? composeDesktopHeadlessPlanReview({hostIncarnationId, identity, platform, rootDirectory: directory, workspaces,
-      authorization: guardedAuthorization, systems, isOpen: () => state.current, ...(enabled ? {getModelSourcePreview: getSource} : {})})
+      authorization: guardedAuthorization, systems, isOpen: () => state.hostCurrent,
+      ...(enabled ? {getModelSourcePreview: getSource} : {}), ...(executes ? {getModelDownloadStart: getStart} : {})})
     : composeManagedHeadlessPlanReview({hostIncarnationId, platform: managedPlatform, rootDirectory: directory, workspaces,
-      contexts, authorization: guardedAuthorization, placement, systems, ...(enabled ? {getModelSourcePreview: getSource} : {})});
+      contexts, authorization: guardedAuthorization, placement, systems, ...(enabled ? {getModelSourcePreview: getSource} : {}),
+      ...(executes ? {getModelDownloadStart: getStart} : {}), ...(executes && hostProof ? {isModelHostCurrent: () => state.hostCurrent} : {})});
   const input = {hostIncarnationId, workspaceId, steps: [{operation: "models.download", idempotencyKey: randomUUID(), name: "Small support model",
     sourceManifest: {source: structuredClone(source), manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")},
     allowedOrigins: ["https://huggingface.co"], maximumDurationSeconds: 1800}]};
@@ -105,7 +139,8 @@ async function fixture(t: TestContext, host: Host) {
     platform: managedPlatform, rootDirectory: directory, contexts, placement, allowModelDownloadReview: enabled});
   const document = {hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID()};
   return {host, state, input, parsed, submit: submit.request, read: read.request, target, selection, scope, source, platform, documents,
-    repositories, membership, owner, compose, execute, makeDesktopApprovals, makeManagedApprovals, identity, document, getSource, grant, registration};
+    repositories, membership, owner, compose, execute, makeDesktopApprovals, makeManagedApprovals, identity, document, getSource, grant, registration,
+    model, reconciler, records, sourceControls};
 }
 
 for (const host of ["Desktop", "Managed"] as const) for (const channel of ["app-popup", "authenticated-chat"] as const)
@@ -261,4 +296,127 @@ test("active proposal values never reach a provider and stored-only approval has
   assert.equal(result.ok, false); assert.equal(getterCalls, 0);
   const stored = createStructuredHeadlessStoredPlanReviewRepository(f.platform, async () => true, Date.now, true);
   assert.deepEqual(Object.keys(stored).sort(), ["decide", "read"]);
+});
+
+async function approvedExecution(t: TestContext, host: Host, hostProof = true) {
+  const f = await fixture(t, host), owner = f.compose(true, true, hostProof);
+  assert.ok((await f.execute(f.submit, owner)).ok);
+  const decision = {kind: "approve" as const, mode: "whole-plan" as const};
+  if (host === "Desktop") {
+    const approvals = f.makeDesktopApprovals(true), caller = {channel: "app-popup" as const, isCurrent: () => true};
+    assert.ok((await approvals.open(f.selection, caller)).ok);
+    assert.ok((await approvals.decide(f.selection, {fingerprint: f.target.fingerprint, expectedRevision: 1, decision}, caller)).ok);
+  } else {
+    const approvals = f.makeManagedApprovals(true);
+    const opened = await approvals({operation: "open", document: f.document, selection: f.selection}, f.identity, () => true, () => true);
+    assert.ok(opened.ok && "value" in opened && typeof opened.value === "object" && opened.value && "viewId" in opened.value);
+    assert.ok((await approvals({operation: "decide", document: f.document, decision: {selection: f.selection,
+      viewId: opened.value.viewId, expectedRevision: 1, decision}}, f.identity, () => true, () => true)).ok);
+  }
+  const request = {version: HEADLESS_CONTRACT_VERSION, operation: "plan.run-step" as const, input: {
+    hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, fingerprint: f.target.fingerprint, approvalRevision: 2, step: 1}} as const;
+  const run = () => host === "Desktop"
+    ? (owner as ReturnType<typeof composeDesktopHeadlessPlanReview>).runStep!(request, f.grant, async () => f.grant)
+    : (owner as ReturnType<typeof composeManagedHeadlessPlanReview>).runStep!(request, f.registration, () => f.state.current && f.state.operationCurrent);
+  const attempt = () => f.platform.runInOwnedTransaction!(metadata => readStructuredModelPlanAttemptByPlan(
+    metadata.forOrganization(f.scope.organizationId), f.scope, f.target.hostIncarnationId, f.target.fingerprint, 1), () => {});
+  return {...f, owner, run, request, attempt};
+}
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: private approved execution starts one captured source and replays without resolving runtime`, async t => {
+  const f = await approvedExecution(t, host);
+  f.state.readCurrent = false; // The short metadata-read lifetime is not download-start lifetime.
+  const first = await f.run(); assert.ok(first.result.ok, JSON.stringify(first));
+  assert.equal(first.result.value.kind, "started"); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.startResolutions, 1);
+  const accepted = await f.attempt(); assert.ok(accepted?.kind === "accepted");
+  assert.deepEqual(first.result.value.reference, accepted.reference);
+  const replay = await f.run(); assert.ok(replay.result.ok); assert.equal(replay.result.value.kind, "replayed");
+  assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.startResolutions, 1); assert.equal(f.state.registrations, 0);
+  assert.equal(await f.sourceControls[0].stillAllowed(), true);
+  f.records.get(accepted.reference.taskId)!.status = "succeeded";
+  await f.reconciler.reconcileNow(); assert.equal(f.reconciler.status.pending, 0);
+  assert.equal((f.owner as {allowModelDownload?: unknown}).allowModelDownload, undefined);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: accepted task and original business policy outlive the caller and ambient request context`, async t => {
+  const f = await approvedExecution(t, host); f.state.loseOutwardOnStart = true;
+  const result = await f.run(); assert.deepEqual(result.result, {ok: false, code: "headless.forbidden"});
+  const accepted = await f.attempt(); assert.ok(accepted?.kind === "accepted");
+  assert.equal(f.sourceControls[0].isCurrent(), true); assert.equal(await f.sourceControls[0].stillAllowed(), true);
+  const observed = await runOwnedHeadlessModelDownloadTask({documents: f.platform, hostIncarnationId: f.target.hostIncarnationId,
+    scope: f.scope, selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}, action: "read",
+    isCurrent: () => true, authorize: async () => true, peekOwner: () => f.model});
+  assert.ok(observed.ok); assert.equal(observed.value.taskId, accepted.reference.taskId);
+  await f.repositories.memberships.saveMembership({...f.membership, status: "removed"});
+  assert.equal(await f.sourceControls[0].stillAllowed(), false, "Business policy rereads the original actor's real membership.");
+  f.records.get(accepted.reference.taskId)!.status = "cancelled";
+  await f.reconciler.reconcileNow(); assert.equal(f.reconciler.status.pending, 0); assert.equal(f.state.registrations, 0);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: retired operation, host or policy cannot enter or reserve a Model download`, async t => {
+  for (const stage of ["operation", "host", "policy", "during-resolution"] as const) {
+    const f = await approvedExecution(t, host);
+    if (stage === "operation") f.state.operationCurrent = false;
+    if (stage === "host") f.state.hostCurrent = false;
+    if (stage === "policy") f.state.denyWrite = true;
+    if (stage === "during-resolution") f.state.onResolveStart = async () => {f.state.operationCurrent = false;};
+    assert.equal((await f.run()).result.ok, false);
+    assert.equal(f.state.sourceStarts, 0); assert.equal(await f.attempt(), undefined); assert.equal(f.reconciler.status.pending, 0);
+  }
+});
+
+test("Desktop Model execution requires a distinct trusted operation fence; Managed requires independent host proof", async t => {
+  const desktop = await approvedExecution(t, "Desktop");
+  const grant = {...desktop.grant, isOperationCurrent: undefined};
+  assert.equal((await (desktop.owner as ReturnType<typeof composeDesktopHeadlessPlanReview>).runStep!(desktop.request, grant,
+    async () => grant)).result.ok, false); assert.equal(desktop.state.startResolutions, 0);
+  const managed = await approvedExecution(t, "Managed", false);
+  assert.equal((await managed.run()).result.ok, false); assert.equal(managed.state.startResolutions, 0);
+});
+
+test("the original Desktop operation callback cannot be replaced during held owner resolution", async t => {
+  const f = await approvedExecution(t, "Desktop"); let originalCurrent = true;
+  f.grant.isOperationCurrent = () => originalCurrent;
+  let entered!: () => void, release!: () => void;
+  const resolving = new Promise<void>(resolve => {entered = resolve;});
+  const held = new Promise<void>(resolve => {release = resolve;}); t.after(() => release());
+  f.state.onResolveStart = async () => {entered(); await held;};
+  const pending = f.run(); await resolving;
+  originalCurrent = false; f.grant.isOperationCurrent = () => true; release();
+  const result = await pending;
+  assert.equal(f.state.sourceStarts, 0, "Replacing a request callback cannot revive its original stopped operation.");
+  assert.equal(result.result.ok, false); assert.equal(await f.attempt(), undefined);
+});
+
+test("the original Desktop metadata callback cannot be replaced during held provider observation", async t => {
+  const f = await fixture(t, "Desktop"); let originalCurrent = true;
+  f.grant.isReadCurrent = () => originalCurrent;
+  let entered!: () => void, release!: () => void;
+  const observing = new Promise<void>(resolve => {entered = resolve;});
+  const held = new Promise<void>(resolve => {release = resolve;}); t.after(() => release());
+  f.state.onInspect = async () => {entered(); await held;};
+  const pending = f.execute(); await observing;
+  originalCurrent = false; f.grant.isReadCurrent = () => true; release();
+  const result = await pending;
+  assert.equal(result.ok, false, "Replacing a read callback cannot revive its original stopped metadata request.");
+  assert.equal((await createStructuredHeadlessStoredPlanReviewRepository(f.platform, async () => true, Date.now, true)
+    .read({target: f.target, isCurrent: () => true})).ok, false);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: known non-start stays terminal and unknown source cannot become discovery or a retry`, async t => {
+  for (const outcome of ["unavailable", "unknown"] as const) {
+    const f = await approvedExecution(t, host); f.state.sourceOutcome = outcome;
+    const first = await f.run();
+    assert.deepEqual(first.result, {ok: false, code: outcome === "unavailable" ? "headless.not-started" : "headless.operation-unconfirmed"});
+    assert.deepEqual(await f.attempt(), {kind: outcome === "unavailable" ? "not-started" : "unconfirmed"});
+    f.state.sourceOutcome = "accepted";
+    const replay = await f.run(); assert.equal(replay.result.ok, false);
+    assert.equal(f.state.startResolutions, 1); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.nativeReads, 0);
+    assert.equal(f.reconciler.status.pending, outcome === "unavailable" ? 0 : 1);
+    assert.doesNotMatch(JSON.stringify(first), /private-source-start|private\/worker/);
+  }
 });

@@ -4,7 +4,10 @@ import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository, readStructuredHeadlessPlanModelPermission } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {prepareHeadlessModelDownloadReviews, type GetHeadlessModelSourcePreview} from "../../shared/composition/headlessModelDownloadReview";
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
-import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolicy, type StartHeadlessModelDownload}
+  from "../../shared/composition/headlessModelDownloadExecution";
+import {createTenantPlacementConfig} from "../../../contracts/config";
 import { readStructuredHeadlessLocalFileSelection, readStructuredHeadlessProviderFileSelection } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
@@ -54,18 +57,20 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly getContextQueryOwner?: () => Promise<HeadlessContextQueryOwner>;
   /** Private metadata preparation only; no public Model download capability. */
   readonly getModelSourcePreview?: GetHeadlessModelSourcePreview;
+  /** Private execution opt-in; public roots remain unconfigured until status/save qualify. */
+  readonly getModelDownloadStart?: () => Promise<StartHeadlessModelDownload | undefined>;
   /** Only an already loaded retained owner; never start dependencies in a proposal transaction. */
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
   readonly audit?: DesktopHeadlessAudit;
 }): LoopbackPlanReview {
-  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks, getModelSourcePreview } = options;
+  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks, getModelSourcePreview, getModelDownloadStart } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan review requires the platform transaction owner.");
 
   async function authorize(
     repository: typeof workspaces, policy: WorkspaceOperationAuthorizationPort,
     workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step",
-    savesFile = false, usesModel = false, modelPurpose?: "prepare" | "review",
+    savesFile = false, usesModel = false, modelPurpose?: "prepare" | "review" | "execute",
   ) {
     try {
       const workspace = await repository.readWorkspace(workspaceId);
@@ -95,9 +100,15 @@ export function composeDesktopHeadlessPlanReview(options: {
         !isDesktopHeadlessClientId(registeredClientId)) return { result: forbidden };
     const { organizationId, principalId } = identity;
     const scope = { organizationId, principalId, registeredClientId, workspaceId };
-    const isCurrent = () => admits(initial, registeredClientId, workspaceId);
-    const canUse = async (savesFile = false, usesModel = false) => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
-      await authorize(workspaces, authorization, workspaceId, request.operation, savesFile, usesModel) && isCurrent();
+    const operationCurrent = initial.isOperationCurrent;
+    let isModelStep = false;
+    // Selection is established by the owned stored request. Thereafter every
+    // reservation/issue/dispatch fence includes this request's synchronous life.
+    const isCurrent = () => admits(initial, registeredClientId, workspaceId) &&
+      (!isModelStep || isHeadlessReadCurrent(operationCurrent));
+    const canUse = async (savesFile = false, usesModel = false, modelPurpose?: "execute") =>
+      isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
+      await authorize(workspaces, authorization, workspaceId, request.operation, savesFile, usesModel, modelPurpose) && isCurrent();
     let savingFile: "local-data-save" | "provider-data-save" | "local-dataset-start" | "local-dataset-save" | "context-pack-start" | "context-rag-start" | "context-result-save" | undefined;
     function localFailure(result: typeof forbidden | typeof unconfirmed | {readonly ok: false; readonly code: "headless.not-started"}) {
       options.audit?.backend(savingFile ?? "local-data-save", workspaceId,
@@ -106,15 +117,18 @@ export function composeDesktopHeadlessPlanReview(options: {
     }
     try {
       if (!await canUse()) return { result: forbidden };
-      const prepared = await prepareStructuredHeadlessPlanStep(platform, {
+      const prepare = getModelDownloadStart ? prepareStructuredHeadlessPlanStepWithModels : prepareStructuredHeadlessPlanStep;
+      const prepared = await prepare(platform, {
         target: { hostIncarnationId, fingerprint, scope }, approvalRevision, step, isCurrent,
       }, async (owner, _scope, approvedRequest) => {
+        if (approvedRequest?.operation === "models.download") isModelStep = true;
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
-        return authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
+        return await authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
           workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source" ||
             approvedRequest?.operation === "data.save-provider-source" || approvedRequest?.operation === "data.prepare-local-dataset" ||
             approvedRequest?.operation === "data.save-prepared-dataset" || approvedRequest?.operation === "context.generate-pack" ||
-            approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.save-result", (approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.query"));
+            approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.save-result", (approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.query"),
+          approvedRequest?.operation === "models.download" ? "execute" : undefined) && isCurrent();
       }, Date.now, "serialized-owner", Boolean(getIngestionTasks), getIngestionTasks
         ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
         : undefined, options.getDatasetStart ? async (owner, selected, taskScope) => {
@@ -140,6 +154,13 @@ export function composeDesktopHeadlessPlanReview(options: {
             async () => isCurrent() && await authorize(repository, policy, workspaceId, request.operation, false, true));
         } : undefined);
       if (!prepared || !await canUse() || !prepared.isCurrent() || question !== undefined && prepared.kind !== "context-query") return { result: forbidden };
+      if (prepared.kind === "model-download") {
+        if (!getModelDownloadStart) return {result: forbidden};
+        return runPreparedHeadlessModelDownload({prepared, request, context: scope, canUse: () => canUse(false, false, "execute"),
+          isHostCurrent: isOpen, resolveStart: getModelDownloadStart,
+          stillBusinessAllowed: composeOwnedHeadlessModelDownloadPolicy({documents: platform, rootDirectory,
+            placement: createTenantPlacementConfig({mode: "dedicated", organizationId}), context: scope, isHostCurrent: isOpen})});
+      }
       if (prepared.kind === "context-query") {
         return runPreparedHeadlessContextQuery({prepared, request, question, context: scope,
           canUse: () => canUse(false, true), resolveOwner: async () => options.getContextQueryOwner?.(), isHostCurrent: isOpen,
@@ -254,10 +275,11 @@ export function composeDesktopHeadlessPlanReview(options: {
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
       const { registeredClientId } = initialGrant;
+      const readCurrent = initialGrant.isReadCurrent;
       const preparesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "models.download");
       let readsModel = false;
       const isCurrent = () => admits(initialGrant, registeredClientId, workspaceId) &&
-        (!(preparesModel || readsModel) || initialGrant.modelSourceRead === true && isHeadlessReadCurrent(initialGrant.isReadCurrent));
+        (!(preparesModel || readsModel) || initialGrant.modelSourceRead === true && isHeadlessReadCurrent(readCurrent));
       const savesFile = request.operation === "plan.submit" &&
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
             step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||

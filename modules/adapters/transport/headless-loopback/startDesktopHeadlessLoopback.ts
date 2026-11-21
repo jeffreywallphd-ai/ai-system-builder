@@ -47,6 +47,9 @@ export interface DesktopHeadlessAuthoringWireGrant extends Pick<LegacyGrant, "or
   readonly modelSourceRead?: true;
   /** Read-request liveness only; independent accepted work must not use it. */
   readonly isReadCurrent?: () => boolean;
+  /** Trusted operation-admission lifetime, separate from short metadata reads.
+   * Accepted background work must use independent host/business ownership. */
+  readonly isOperationCurrent?: () => boolean;
   readonly isPresentationCurrent?: () => boolean;
   readonly isCurrent?: () => boolean;
 }

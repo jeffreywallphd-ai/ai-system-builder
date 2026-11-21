@@ -1,5 +1,19 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Private Model execution now selects the exact stored approved step in both hosts
+and reuses the existing source runner/application owner outside transactions.
+Once selection identifies a Model step, every captured reservation, issue and
+dispatch fence includes its operation lifetime. Desktop requires the separate
+trusted `isOperationCurrent` grant callback; a short metadata `isReadCurrent`
+deadline is not substituted. Managed support requires a separate strict actual
+host-current callback. Capture original operation/read callback identities before
+waits; replacing a grant property cannot revive either retired request. Accepted
+tasks reconstruct current original-actor/workspace ModelRead/ModelWrite policy,
+independent of request, token,
+ambient organization context, approval deadline and window. Keep accepted receipts
+and unknown custody; replay resolves no runtime owner and known non-start stays
+terminal. Public roots, transport activation and registry save remain pending.
+
 The private Model review option prepares pinned provider facts before the owned
 proposal transaction in both hosts. Require current source-read consent, read
 lifetime, workspace ModelRead/ModelWrite and credential-use policy before lazy
@@ -9,7 +23,7 @@ and currentness. Existing trusted popup/chat approval owners have a separate
 stored-review opt-in and require current ModelRead/ModelWrite; they receive no
 proposal method. Model status uses current consent/policy without another provider
 call. Ordinary plans keep their fingerprints and dependency requirements. Actual
-roots/transports and Model step execution remain disabled pending full composition;
+roots/transports and public Model step execution remain disabled pending full composition;
 controlled local SQLite fixtures do not qualify PostgreSQL, real UI or provider IO.
 
 The private shared Model task control proves an accepted original-client task or

@@ -10,7 +10,10 @@ import {
   readStructuredHeadlessLocalFileSelection, readStructuredHeadlessProviderFileSelection,
 } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import type { HeadlessFileSelectionResult, HeadlessLocalFileSelection } from "../../../application/ports/ingestion/headless-local-file-selection.port";
-import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolicy, type StartHeadlessModelDownload}
+  from "../../shared/composition/headlessModelDownloadExecution";
+import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
@@ -62,6 +65,9 @@ export function composeManagedHeadlessPlanReview(options: {
   readonly getContextQueryOwner?: () => Promise<HeadlessContextQueryOwner>;
   /** Private metadata preparation only. Caller supplies its current read lifetime. */
   readonly getModelSourcePreview?: GetHeadlessModelSourcePreview;
+  /** Private opt-in. Both callbacks are required; host lifetime is not an HTTP lifetime. */
+  readonly getModelDownloadStart?: () => Promise<StartHeadlessModelDownload | undefined>;
+  readonly isModelHostCurrent?: () => boolean;
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
 }) {
   const { hostIncarnationId, platform, rootDirectory, workspaces, contexts, authorization, placement, systems } = options;
@@ -75,6 +81,8 @@ export function composeManagedHeadlessPlanReview(options: {
   const getContextQueryOwner = platform.publishWithStableReads ? options.getContextQueryOwner : undefined;
   const peekContextResults = platform.publishWithStableReads ? options.peekContextResults : undefined;
   const getModelSourcePreview = platform.publishWithStableReads ? options.getModelSourcePreview : undefined;
+  const isModelHostCurrent = options.isModelHostCurrent;
+  const getModelDownloadStart = platform.publishWithStableReads && typeof isModelHostCurrent === "function" ? options.getModelDownloadStart : undefined;
 
   function admitWorkspace(requested: Pick<HeadlessPlanReviewAgentRequest["target"], "workspaceId" | "hostIncarnationId">,
     operation: string, registration: ManagedPlanReviewRegistration, isOpen: () => boolean,
@@ -267,20 +275,28 @@ export function composeManagedHeadlessPlanReview(options: {
       const request = {version: incoming.version, operation: incoming.operation, input: {...incoming.input}};
       const access = admit(request.input, request.operation, registration, isOpen);
       if (!access || !systems || !platform.publishWithStableReads) return { result: forbidden };
-      const { target, scope, current, authorizeOwned } = access;
+      const { target, scope, authorizeOwned } = access;
+      let isModelStep = false;
+      const current = () => access.current() && (!isModelStep || isHeadlessReadCurrent(isModelHostCurrent));
       const { fingerprint, approvalRevision, step } = request.input;
       const fileAccess = finalize || finalizeProvider || getDatasetStart || getDatasetResults || getContextStart || peekContextResults
         ? admitWorkspace(request.input, request.operation, registration, isOpen, filePlanScopes) : undefined;
       const queryAccess = getContextQueryOwner ? admitWorkspace(request.input, request.operation, registration, isOpen, queryScopes) : undefined;
       const modelAccess = getContextStart ? admitWorkspace(request.input, request.operation, registration, isOpen, ragScopes) : undefined;
+      const downloadAccess = getModelDownloadStart ? admitWorkspace(request.input, request.operation, registration, isOpen,
+        [...planScopes, "model:read", "model:write"]) : undefined;
       try {
         if (!await access.authorizeCurrent()) return { result: forbidden };
-        const prepared = await prepareStructuredHeadlessPlanStep(platform, {
+        const prepare = getModelDownloadStart ? prepareStructuredHeadlessPlanStepWithModels : prepareStructuredHeadlessPlanStep;
+        const prepared = await prepare(platform, {
           target, approvalRevision, step, isCurrent: current,
-        }, async (owner, _scope, operation) => operation?.operation === "context.query" ? Boolean(await queryAccess?.authorizeOwned(owner)) : operation?.operation === "context.generate-rag" ? Boolean(await modelAccess?.authorizeOwned(owner)) :
+        }, async (owner, _scope, operation) => {
+          if (operation?.operation === "models.download") {isModelStep = true; return current() && await downloadAccess?.authorizeOwned(owner) === true && current();}
+          return operation?.operation === "context.query" ? Boolean(await queryAccess?.authorizeOwned(owner)) : operation?.operation === "context.generate-rag" ? Boolean(await modelAccess?.authorizeOwned(owner)) :
           operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source" ||
           operation?.operation === "data.prepare-local-dataset" || operation?.operation === "data.save-prepared-dataset" || operation?.operation === "context.generate-pack" || operation?.operation === "context.save-result"
-          ? Boolean(await fileAccess?.authorizeOwned(owner)) : authorizeOwned(owner),
+          ? Boolean(await fileAccess?.authorizeOwned(owner)) : authorizeOwned(owner);
+        },
         Date.now, "stable-reads", Boolean(finalize && fileAccess), finalizeProvider && fileAccess
           ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
           : undefined, getDatasetStart && fileAccess ? async (owner, selected) => {
@@ -300,6 +316,14 @@ export function composeManagedHeadlessPlanReview(options: {
             compileHeadlessContextQueryInputs(owner.forOrganization(scope.organizationId), rootDirectory, selected, scope,
               async () => current() && await queryAccess.authorizeOwned(owner)) : undefined);
         if (!prepared || !prepared.isCurrent() || question !== undefined && prepared.kind !== "context-query") return { result: forbidden };
+        if (prepared.kind === "model-download") {
+          if (!downloadAccess || !getModelDownloadStart || typeof isModelHostCurrent !== "function") return {result: forbidden};
+          return runPreparedHeadlessModelDownload({prepared, request, context: scope,
+            canUse: async () => current() && await downloadAccess.authorizeCurrent() && current(),
+            isHostCurrent: isModelHostCurrent, resolveStart: getModelDownloadStart,
+            stillBusinessAllowed: composeOwnedHeadlessModelDownloadPolicy({documents: platform, rootDirectory, placement,
+              context: scope, isHostCurrent: isModelHostCurrent})});
+        }
         if (prepared.kind === "context-query") {
           if (!queryAccess || !getContextQueryOwner) return {result: forbidden};
           // The retained Browser's existing reconciler fences host shutdown. No old request or token becomes job authority.
