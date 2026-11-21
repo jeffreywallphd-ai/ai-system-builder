@@ -662,6 +662,33 @@
         "Actual passing stored component receipt 1b368fadc5e852ea4d99073b7b7c73685f29cae6952899b801f6619f5b6b647d and independent review 79e8e3171c35671a460cb423b3b0f361f1f7caa6af28decd4a335aaf45cd3c57. No accepted ordinary model accuracy tests were repeated."
       ],
       "title": "Execute an exact approved download"
+    },
+    {
+      "areas": [
+        "Desktop and Managed host compositions",
+        "Original Model owner and accepted task ledger",
+        "Pinned HTTP, SDK and opt-in MCP task controls"
+      ],
+      "chunkId": "monitor-and-cancel-model-download",
+      "completedAt": "2026-11-21T18:15:02Z",
+      "criteriaIds": [
+        "compatible-download",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "documentation": [
+        "ADR0047, runtime architecture, Headless threat model, transport READMEs and portable Model skill/reference updated with boundaries."
+      ],
+      "feedbackAddressed": [],
+      "id": "models-training-and-generation-monitor-and-cancel-model-download",
+      "incrementId": "models-training-and-generation",
+      "summary": "Implemented exact source rebinding, approved execution, owned status and separate cancellation in both host compositions and pinned HTTP/SDK/MCP adapters. Controlled fixtures passed; public source/save roots remain disabled. Safe saving, real running hosts, provider transfer, native cleanup and parent qualification remain pending.",
+      "tests": [
+        "Local status receipt db989862bab3049761f379ea5d7a8d2b7d187939e12f4b24a5e5ca1bc25eca16; review 5f0faf1f55f8ea5dbebdac0c047e5b15e1a74be6c779c03034097b9e62dcaa3d.",
+        "Local cancellation admission receipt a56bd973dea4249fc376afe89226c45c735cfa3a3ff8f2df40e2e0faa6484cf4; review ff4f7cc9fc395b341c76bf078caa72ff4d6c825bcc374e7f12705b0ded3394df.",
+        "Transport receipt 118e7cd6134a42d73d2dad95f7d6970bd21c512ce746ee34fb7782f1fd1f5586 passed seven feature check groups; independent review 950f5f1a1f54efabbaceafc5ba2cac3e151c3ed76a8dffbade2f5c8df6fcce9d closed both causal regression findings. Server build passed. Commit b8283c020dc0a6d9fa06fa39f182807b560cb323."
+      ],
+      "title": "Connect downloads and owned task controls"
     }
   ],
   "completion": null,
@@ -1510,6 +1537,16 @@
       "recordedAt": "2026-11-17T04:02:54Z",
       "summary": "Let users select open Creative Commons, other open licenses, or all sources during collection. Make non-open licenses and missing or unclear terms visible and keep the provider declaration with the exact saved source.",
       "targetIncrementId": "data-acquisition-and-datasets"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "publish-frontier-chat-after-increment-seven",
+      "impact": "later-increment",
+      "nextAction": "Finish increment seven, then use the governed pending-suffix revision, preserve history, publish the complete chat proposal for review and obtain actual roadmap approval before starting increment eight.",
+      "recordedAt": "2026-11-21T18:15:17Z",
+      "summary": "After increment seven completes, publish the prepared frontier API chat increment as increment ten and move final qualification to eleven, before starting increment eight. Publication is not implementation approval.",
+      "targetIncrementId": "asset-selection-and-custom-creation"
     }
   ],
   "finalApproval": null,
@@ -2227,6 +2264,18 @@
       "recordedAt": "2026-11-21T13:49:58Z",
       "sequence": 119,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "00b42a1ce18ab521336de26bac5745b58defe9422be4996166523f1b97f69c18",
+      "recordedAt": "2026-11-21T18:15:02Z",
+      "sequence": 120,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "858c868710f6db75d5ee5151ef4f5df34377d5a49ff462ccea3c950f6aa304ae",
+      "recordedAt": "2026-11-21T18:15:17Z",
+      "sequence": 121,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -3426,7 +3475,8 @@
       "completedChunks": [
         "inspect-installed-models",
         "review-pinned-model-source",
-        "execute-approved-model-download"
+        "execute-approved-model-download",
+        "monitor-and-cancel-model-download"
       ],
       "deliverables": [
         "Model download, training, evaluation and supported image/text generation tool families",
@@ -4135,7 +4185,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-21T13:49:58Z",
+  "updatedAt": "2026-11-21T18:15:17Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
