@@ -66,6 +66,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   readonly allowContextQuery?: boolean;
   /** Private opt-in; no public capability follows from a stored review. */
   readonly allowModelDownloadReview?: boolean;
+  readonly allowModelReferenceSaveReview?: boolean;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, planClientId, platform, rootDirectory, contexts, placement, now = Date.now} = options;
@@ -82,6 +83,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   const allowContextQuery = options.allowContextQuery === true && stableReads !== undefined;
   const allowContextResultSave = options.allowContextResultSave === true && stableReads !== undefined;
   const allowModelDownload = options.allowModelDownloadReview === true && stableReads !== undefined;
+  const allowModelReferenceSave = options.allowModelReferenceSaveReview === true && stableReads !== undefined;
   const views = new Map<string, View>();
 
   async function authorize(owner: StructuredDocumentStore, identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
@@ -221,7 +223,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
       views.set(documentKey, view);
       const active = () => current() && views.get(documentKey) === view;
       const store = createStructuredHeadlessStoredPlanReviewRepository(platform, async (owner, actual, action) =>
-        exact(actual) && action === "read" && await authorize(owner, identity, workspaceId, active), now, allowModelDownload);
+        exact(actual) && action === "read" && await authorize(owner, identity, workspaceId, active), now, allowModelDownload, allowModelReferenceSave);
       try {
         const outcome = await store.read({target, isCurrent:active});
         if (!outcome.ok || !active()) return forbidden;
@@ -230,7 +232,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
         const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
           selection, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave,
-            allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery, allowModelDownload });
+            allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery, allowModelDownload, allowModelReferenceSave });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
         const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
@@ -266,7 +268,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
     const requiredScopes = [...(view.usesModel ? view.fileSave ? ragScopes : [...planScopes, "artifact:read", "model:read"] as const : view.fileSave ? filePlanScopes : planScopes),
       ...(view.writesModel ? ["model:read", "model:write"] as const : [])];
     const store = createStructuredHeadlessStoredPlanReviewRepository(platform, async (owner, actual, action) =>
-      exact(actual) && action === "decide" && await authorize(owner, identity, workspaceId, active, requiredScopes), now, allowModelDownload);
+      exact(actual) && action === "decide" && await authorize(owner, identity, workspaceId, active, requiredScopes), now, allowModelDownload, allowModelReferenceSave);
     try {
       const outcome = await new HeadlessBuildPlanReviewUseCase(store, now).decide({
         fingerprint:selection.fingerprint, expectedRevision:request.decision.expectedRevision, decision:request.decision.decision,

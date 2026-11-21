@@ -44,6 +44,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
   readonly now?: () => number;
   /** Private opt-in; actual roots stay disabled until the complete workflow qualifies. */
   readonly allowModelDownloadReview?: boolean;
+  readonly allowModelReferenceSaveReview?: boolean;
 }) {
   const { hostIncarnationId, identity, platform, rootDirectory, isOpen, capturePlanReviewClients, now = Date.now } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
@@ -94,7 +95,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       action === kind && actual.hostIncarnationId === hostIncarnationId && actual.fingerprint === fingerprint &&
       actual.scope.organizationId === organizationId && actual.scope.principalId === principalId &&
       actual.scope.workspaceId === workspaceId && actual.scope.registeredClientId === registeredClientId &&
-      await canAccess(owner), now, options.allowModelDownloadReview === true);
+      await canAccess(owner), now, options.allowModelDownloadReview === true, options.allowModelReferenceSaveReview === true);
     async function verify() {
       try {
         const allowed = await ownedTransaction(canAccess, () => {

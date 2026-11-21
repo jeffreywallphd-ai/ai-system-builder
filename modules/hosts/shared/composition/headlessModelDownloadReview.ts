@@ -32,6 +32,8 @@ function copyPassive(value: unknown): unknown {
   }
   inspect(value); return copyBoundedPassiveData(value);
 }
+/** Shared bounded passive Model-plan snapshot; never invokes active values. */
+export {copyPassive as copyHeadlessModelPlanData};
 function frozen<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) frozen(child); Object.freeze(value);}
   return value;

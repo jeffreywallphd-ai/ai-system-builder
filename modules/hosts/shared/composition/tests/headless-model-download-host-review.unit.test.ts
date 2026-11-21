@@ -18,15 +18,17 @@ import {composeManagedHeadlessPlanApprovals} from "../../../server/composition/c
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createTenantPlacementConfig} from "../../../../contracts/config";
-import {readModelDownloadSource} from "../../../../contracts/model";
+import {readModelDownloadSource, type ModelInventoryRecord} from "../../../../contracts/model";
 import {HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest,
   type HeadlessHostIncarnationId} from "../../../../contracts/headless";
 import {prepareHeadlessModelDownloadReviews} from "../headlessModelDownloadReview";
+import {prepareHeadlessModelReferenceSaveReviews} from "../headlessModelReferenceSave";
 import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
 import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
 import type {ApprovedModelSourceDownloadControl} from "../../../../application/ports/model";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {readStructuredModelPlanAttemptByPlan} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
+import {prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {runOwnedHeadlessModelDownloadTask} from "../headlessModelDownloadTasks";
 
 type Host = "Desktop" | "Managed";
@@ -54,7 +56,8 @@ async function fixture(t: TestContext, host: Host) {
     sourceOutcome: "accepted" as "accepted" | "unavailable" | "unknown", loseOutwardOnStart: false,
     onResolveStart: undefined as (() => Promise<void>) | undefined, onInspect: undefined as (() => Promise<void>) | undefined,
     modelOwnerAvailable: true, ownerLookups: 0, controlPolicies: 0, nativeCancellationAccepted: true,
-    onControlPolicy: undefined as (() => Promise<void>) | undefined, onNativeCancel: undefined as (() => Promise<void>) | undefined};
+    onControlPolicy: undefined as (() => Promise<void>) | undefined, onNativeCancel: undefined as (() => Promise<void>) | undefined,
+    completionReady: false, onCompletionRead: undefined as (() => Promise<void>) | undefined, authoringCalls: 0};
   const contexts = {getCurrentOrganizationContext: () => state.ambientCurrent ? {organizationId, principalId} : undefined}, placement = createTenantPlacementConfig();
   const policy = createOrganizationAuthorizationPolicy({...repositories, tenantPlacement: placement});
   const authorization = new AuthorizeWorkspaceOperationService({organizationContext: contexts, authorizer: {async execute(input) {
@@ -97,7 +100,9 @@ async function fixture(t: TestContext, host: Host) {
           await platform.runInOwnedTransaction!(async metadata => {assert.equal(metadata.organizationId, undefined);}, () => {});
           await state.onNativeCancel?.();
           return {requestId: request.requestId, status: record.status, cancelled: state.nativeCancellationAccepted};},
-        readCompleted: async () => undefined})};
+        readCompleted: async () => {await state.onCompletionRead?.(); return state.completionReady ? {provider: "transformers" as const, modelId: source.modelId, revision: source.revision,
+          verifiedManifestDigest: request.sourceManifest.manifestDigest, downloaded: true, fromCache: false,
+          localPath: join(directory, "synthetic-shared-cache-reference")} : undefined;}})};
     }}});
   const getStart = async () => {state.startResolutions++; await state.onResolveStart?.(); return model.startApprovedSource.bind(model);};
   const scope = {organizationId, workspaceId, principalId, registeredClientId};
@@ -115,17 +120,18 @@ async function fixture(t: TestContext, host: Host) {
   const managedPlatform: StructuredDocumentStore = {...platform, async publishWithStableReads(check, publish) {
     return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
   }};
-  const systems = {composeHeadlessAuthoring() {assert.fail("Model review cannot dispatch an ordinary system command.");}};
+  const systems = {composeHeadlessAuthoring() {state.authoringCalls++; assert.fail("Model review cannot dispatch an ordinary system command.");}};
   const peekModelDownloadTasks = () => {state.ownerLookups++; return state.modelOwnerAvailable ? model : undefined;};
-  const compose = (enabled = true, executes = false, hostProof = true, controls = executes) => host === "Desktop"
+  const peekModelReferenceSave = () => {state.ownerLookups++; return state.modelOwnerAvailable ? model : undefined;};
+  const compose = (enabled = true, executes = false, hostProof = true, controls = executes, saves = false) => host === "Desktop"
     ? composeDesktopHeadlessPlanReview({hostIncarnationId, identity, platform, rootDirectory: directory, workspaces,
       authorization: guardedAuthorization, systems, isOpen: () => state.hostCurrent,
       ...(enabled ? {getModelSourcePreview: getSource} : {}), ...(executes ? {getModelDownloadStart: getStart} : {}),
-      ...(controls ? {peekModelDownloadTasks} : {})})
+      ...(controls ? {peekModelDownloadTasks} : {}), ...(saves ? {peekModelReferenceSave} : {})})
     : composeManagedHeadlessPlanReview({hostIncarnationId, platform: managedPlatform, rootDirectory: directory, workspaces,
       contexts, authorization: guardedAuthorization, placement, systems, ...(enabled ? {getModelSourcePreview: getSource} : {}),
-      ...(executes ? {getModelDownloadStart: getStart} : {}), ...((executes || controls) && hostProof ? {isModelHostCurrent: () => state.hostCurrent} : {}),
-      ...(controls ? {peekModelDownloadTasks} : {})});
+      ...(executes ? {getModelDownloadStart: getStart} : {}), ...((executes || controls || saves) && hostProof ? {isModelHostCurrent: () => state.hostCurrent} : {}),
+      ...(controls ? {peekModelDownloadTasks} : {}), ...(saves ? {peekModelReferenceSave} : {})});
   const input = {hostIncarnationId, workspaceId, steps: [{operation: "models.download", idempotencyKey: randomUUID(), name: "Small support model",
     sourceManifest: {source: structuredClone(source), manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")},
     allowedOrigins: ["https://huggingface.co"], maximumDurationSeconds: 1800}]};
@@ -141,15 +147,15 @@ async function fixture(t: TestContext, host: Host) {
     ? (selectedOwner as ReturnType<typeof composeDesktopHeadlessPlanReview>).execute(request, grant, async () => grant)
     : (selectedOwner as ReturnType<typeof composeManagedHeadlessPlanReview>)(request, registration, () => state.current && state.readCurrent);
   const target = {hostIncarnationId, scope, fingerprint}, selection = {workspaceId, registeredClientId, fingerprint};
-  const makeDesktopApprovals = (enabled: boolean) => composeDesktopHeadlessPlanApprovals({hostIncarnationId, identity, platform,
-    rootDirectory: directory, isOpen: () => state.current, allowModelDownloadReview: enabled,
+  const makeDesktopApprovals = (enabled: boolean, saves = false) => composeDesktopHeadlessPlanApprovals({hostIncarnationId, identity, platform,
+    rootDirectory: directory, isOpen: () => state.current, allowModelDownloadReview: enabled, allowModelReferenceSaveReview: saves,
     capturePlanReviewClients: async () => [{registeredClientId, isCurrent: () => state.current}]});
-  const makeManagedApprovals = (enabled: boolean) => composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId: registeredClientId,
-    platform: managedPlatform, rootDirectory: directory, contexts, placement, allowModelDownloadReview: enabled});
+  const makeManagedApprovals = (enabled: boolean, saves = false) => composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId: registeredClientId,
+    platform: managedPlatform, rootDirectory: directory, contexts, placement, allowModelDownloadReview: enabled, allowModelReferenceSaveReview: saves});
   const document = {hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID()};
   return {host, state, input, parsed, submit: submit.request, read: read.request, target, selection, scope, source, platform, documents,
     repositories, membership, owner, compose, execute, makeDesktopApprovals, makeManagedApprovals, identity, document, getSource, grant, registration,
-    model, reconciler, records, sourceControls};
+    model, reconciler, records, sourceControls, directory};
 }
 
 for (const host of ["Desktop", "Managed"] as const) for (const channel of ["app-popup", "authenticated-chat"] as const)
@@ -331,6 +337,205 @@ async function approvedExecution(t: TestContext, host: Host, hostProof = true) {
     metadata.forOrganization(f.scope.organizationId), f.scope, f.target.hostIncarnationId, f.target.fingerprint, 1), () => {});
   return {...f, owner, run, request, attempt};
 }
+
+async function reviewedSave(t: TestContext, host: Host, complete = true) {
+  const f = await approvedExecution(t, host), started = await f.run(); assert.ok(started.result.ok);
+  const accepted = await f.attempt(); assert.ok(accepted?.kind === "accepted"); const taskId = accepted.reference.taskId;
+  if (complete) {
+    f.state.completionReady = true; f.records.get(taskId)!.status = "succeeded";
+    await f.reconciler.reconcileNow(); assert.equal(f.reconciler.status.pending, 0);
+  }
+  const capabilities = {allowLocalFileSave: false, allowModelReferenceSave: true};
+  const input = {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId,
+    steps: [{operation: "models.save-download", idempotencyKey: randomUUID(), taskId, name: "Reviewed support model",
+      sourceManifest: structuredClone(f.input.steps[0].sourceManifest)}]};
+  const parsed = parseHeadlessBuildPlanProposal(input, f.target.hostIncarnationId, capabilities); assert.ok(parsed.ok);
+  const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+  const submit = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit",
+    input: {...input, fingerprint}}, f.target.hostIncarnationId, capabilities); assert.ok(submit.ok);
+  const owner = f.compose(true, false, true, false, true), selection = {...f.selection, fingerprint};
+  const request = {...f.request, input: {...f.request.input, fingerprint}};
+  const run = () => host === "Desktop" ? (owner as ReturnType<typeof composeDesktopHeadlessPlanReview>).runStep!(request, f.grant, async () => f.grant)
+    : (owner as ReturnType<typeof composeManagedHeadlessPlanReview>).runStep!(request, f.registration, () => f.state.current && f.state.operationCurrent);
+  const rows = async () => (await f.documents.readDocument<{models: unknown[]}>("model-registry", "models.json"))?.value.models ?? [];
+  const approve = async (channel: "app-popup" | "authenticated-chat" = "app-popup", mode: "whole-plan" | "each-change" = "whole-plan", enabled = true,
+    selected = selection) => {
+    const fingerprint = selected.fingerprint;
+    const decision = mode === "whole-plan" ? {kind: "approve" as const, mode} : {kind: "approve" as const, mode, step: 1};
+    if (host === "Desktop") {
+      const approvals = f.makeDesktopApprovals(false, enabled), caller = {channel, isCurrent: () => f.state.current};
+      const opened = await approvals.open(selected, caller); if (!opened.ok) return opened;
+      assert.equal(opened.snapshot.preview.steps[0].operation, "models.save-download");
+      return approvals.decide(selected, {fingerprint, expectedRevision: 1, decision}, caller);
+    }
+    const approvals = f.makeManagedApprovals(false, enabled);
+    const opened = await approvals({operation: "open", document: f.document, selection: selected}, f.identity, () => true, () => true, channel);
+    if (!opened.ok) return opened;
+    assert.ok("value" in opened && typeof opened.value === "object" && opened.value && "viewId" in opened.value);
+    return approvals({operation: "decide", document: f.document, decision: {selection: selected, viewId: opened.value.viewId, expectedRevision: 1, decision}},
+      f.identity, () => true, () => true, channel);
+  };
+  return {...f, owner, input, taskId, parsed, selection, saveSubmit: submit.request, saveRun: run, saveRows: rows, approveSave: approve};
+}
+
+for (const mutation of ["replace", "mutate"] as const)
+test(`Model save review captures the original target before first policy wait (${mutation})`, async t => {
+  const f = await reviewedSave(t, "Desktop"); let enter!: () => void, release!: () => void, checks = 0, peeks = 0;
+  const entered = new Promise<void>(resolve => {enter = resolve;}), held = new Promise<void>(resolve => {release = resolve;});
+  const target = {hostIncarnationId: f.target.hostIncarnationId, fingerprint: f.selection.fingerprint,
+    scope: {...f.scope, principalId: "principal.another-authorized-writer"}};
+  const options = {documents: f.platform, target, requests: f.parsed.requests, isCurrent: () => true,
+    stillAllowed: async () => {if (++checks === 1) {enter(); await held;} return true;}, peekOwner: () => {peeks++; return f.model;}};
+  const pending = prepareHeadlessModelReferenceSaveReviews(options); await entered;
+  if (mutation === "replace") options.target = {...target, scope: {...f.scope}};
+  else target.scope.principalId = f.scope.principalId;
+  release(); const result = await pending;
+  assert.equal(result.ok, false, "The original writer owns no source task; changing the target after admission must not adopt another writer's result.");
+  assert.equal(peeks, 0); assert.deepEqual(await f.saveRows(), []); assert.equal(f.state.sourceStarts, 1);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: save-only configuration refuses every effect in a plan containing an unsupported download`, async t => {
+  const f = await reviewedSave(t, host), capabilities = {allowLocalFileSave: false, allowModelDownload: true};
+  const input = {...f.input, steps: [{operation: "systems.create", idempotencyKey: randomUUID(), name: "Must not create a partial system",
+    templateId: "reference.secured-data-review@1.0.0"}, {operation: "models.download", idempotencyKey: randomUUID(),
+    name: "Unsupported later download", sourceManifest: f.input.steps[0].sourceManifest,
+    allowedOrigins: ["https://huggingface.co"], maximumDurationSeconds: 10}]};
+  const parsed = parseHeadlessBuildPlanProposal(input, f.target.hostIncarnationId, capabilities); assert.ok(parsed.ok);
+  const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex"), selection = {...f.selection, fingerprint};
+  const submit = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit",
+    input: {...input, fingerprint}}, f.target.hostIncarnationId, capabilities); assert.ok(submit.ok);
+  assert.ok((await f.execute(submit.request, f.owner)).ok, "Metadata review is separately configured; download execution is absent.");
+  const decision = {kind: "approve" as const, mode: "whole-plan" as const};
+  if (host === "Desktop") {
+    const approvals = f.makeDesktopApprovals(true, true), caller = {channel: "app-popup" as const, isCurrent: () => true};
+    assert.ok((await approvals.open(selection, caller)).ok);
+    assert.ok((await approvals.decide(selection, {fingerprint, expectedRevision: 1, decision}, caller)).ok);
+  } else {
+    const approvals = f.makeManagedApprovals(true, true), opened = await approvals({operation: "open", document: f.document, selection}, f.identity, () => true, () => true);
+    assert.ok(opened.ok && "value" in opened && typeof opened.value === "object" && opened.value && "viewId" in opened.value);
+    assert.ok((await approvals({operation: "decide", document: f.document, decision: {selection,
+      viewId: opened.value.viewId, expectedRevision: 1, decision}}, f.identity, () => true, () => true)).ok);
+  }
+  const request = {...f.request, input: {...f.request.input, fingerprint, step: 1}};
+  const result = host === "Desktop" ? await (f.owner as ReturnType<typeof composeDesktopHeadlessPlanReview>).runStep!(request, f.grant, async () => f.grant)
+    : await (f.owner as ReturnType<typeof composeManagedHeadlessPlanReview>).runStep!(request, f.registration, () => true);
+  assert.equal(result.result.ok, false); assert.equal(f.state.authoringCalls, 0, "No ordinary writer is constructed before the unsupported family is rejected.");
+  assert.equal(f.state.sourceStarts, 1); assert.deepEqual(await f.saveRows(), []);
+});
+
+for (const host of ["Desktop", "Managed"] as const) for (const channel of ["app-popup", "authenticated-chat"] as const)
+for (const mode of ["whole-plan", "each-change"] as const)
+test(`${host}/${channel}/${mode}: separate approved save registers one private reference and publishes/replays without another download`, async t => {
+  const f = await reviewedSave(t, host); assert.deepEqual(await f.saveRows(), []);
+  const before = {inspections: f.state.inspections, starts: f.state.sourceStarts, reads: f.state.nativeReads, resolves: f.state.startResolutions};
+  assert.equal((await f.saveRun()).result.ok, false, "The old download approval does not authorize a fresh save.");
+  const submitted = await f.execute(f.saveSubmit, f.owner); assert.ok(submitted.ok, JSON.stringify(submitted));
+  assert.equal((await f.approveSave(channel, mode, false)).ok, false, "Stored-only approval remains separately opt-in.");
+  assert.ok((await f.approveSave(channel, mode)).ok);
+  const saved = await f.saveRun(); assert.ok(saved.result.ok, JSON.stringify(saved));
+  assert.equal(saved.result.value.kind, "committed"); assert.ok("operation" in saved.result.value);
+  assert.equal(saved.result.value.operation, "models.save-download"); assert.equal((await f.saveRows()).length, 1);
+  assert.doesNotMatch(JSON.stringify(saved.result), /localPath|synthetic-shared-cache-reference|principal|registeredClientId|sourceManifest/);
+  let publications = 0; assert.equal(await saved.publishIfCurrent?.(() => {publications++; return true;}), true); assert.equal(publications, 1);
+  f.state.modelOwnerAvailable = false;
+  const replay = await f.saveRun(); assert.ok(replay.result.ok, JSON.stringify(replay)); assert.equal(replay.result.value.kind, "replayed");
+  assert.deepEqual(replay.result.value.reference, saved.result.value.reference); assert.equal((await f.saveRows()).length, 1);
+  assert.deepEqual({inspections: f.state.inspections, starts: f.state.sourceStarts, reads: f.state.nativeReads, resolves: f.state.startResolutions}, before);
+  assert.equal(f.state.registrations, 0, "The ordinary registration fallback is never used.");
+  await f.repositories.memberships.saveMembership({...f.membership, status: "removed"});
+  assert.equal(await replay.publishIfCurrent?.(() => {publications++; return true;}), false); assert.equal(publications, 1);
+  assert.equal((await f.saveRun()).result.ok, false); assert.equal((await f.saveRows()).length, 1);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: pending completion, missing source consent, ModelWrite and unconfigured save cannot become approvable metadata`, async t => {
+  for (const variant of ["pending", "consent", "read", "writer", "unconfigured", "unloaded", "host"] as const) {
+    const f = await reviewedSave(t, host, variant !== "pending");
+    if (variant === "consent") f.state.sourceConsent = false; if (variant === "read") f.state.readCurrent = false;
+    if (variant === "writer") f.state.denyWrite = true; if (variant === "unloaded") f.state.modelOwnerAvailable = false;
+    if (variant === "host") f.state.hostCurrent = false;
+    const result = await f.execute(f.saveSubmit, variant === "unconfigured" ? f.compose() : f.owner);
+    assert.equal(result.ok, false, variant); assert.deepEqual(await f.saveRows(), []); assert.equal(f.state.registrations, 0);
+    assert.doesNotMatch(JSON.stringify(result), /synthetic-shared-cache|localPath/);
+  }
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: foreign task/client or a different source manifest denies before looking up the loaded Model owner`, async t => {
+  for (const variant of ["task", "client", "source"] as const) {
+    const f = await reviewedSave(t, host), input = structuredClone(f.input);
+    if (variant === "task") input.steps[0].taskId = randomUUID();
+    if (variant === "client") {
+      if (host === "Desktop") f.grant.registeredClientId = randomUUID(); else f.registration.registeredClientId = randomUUID();
+    }
+    if (variant === "source") {
+      input.steps[0].sourceManifest.source = {...input.steps[0].sourceManifest.source, modelId: "fixture/other-model"};
+      input.steps[0].sourceManifest.manifestDigest = "sha256:" + createHash("sha256").update(JSON.stringify(input.steps[0].sourceManifest.source)).digest("hex");
+    }
+    const caps = {allowLocalFileSave: false, allowModelReferenceSave: true};
+    const parsed = parseHeadlessBuildPlanProposal(input, f.target.hostIncarnationId, caps); assert.ok(parsed.ok);
+    const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+    const request = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit", input: {...input, fingerprint}},
+      f.target.hostIncarnationId, caps); assert.ok(request.ok);
+    const lookups = f.state.ownerLookups; assert.equal((await f.execute(request.request, f.owner)).ok, false);
+    assert.equal(f.state.ownerLookups, lookups); assert.deepEqual(await f.saveRows(), []); assert.equal(f.state.sourceStarts, 1);
+  }
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: actual membership revocation during cached preparation rolls back an approved save`, async t => {
+  const f = await reviewedSave(t, host); assert.ok((await f.execute(f.saveSubmit, f.owner)).ok); assert.ok((await f.approveSave()).ok);
+  f.state.onCompletionRead = async () => {await f.repositories.memberships.saveMembership({...f.membership, status: "removed"});};
+  const result = await f.saveRun(); assert.equal(result.result.ok, false); assert.deepEqual(await f.saveRows(), []);
+  assert.equal((await f.documents.listDocuments("headless/models/reference-saves")).length, 0);
+  assert.equal((await f.documents.listDocuments("headless/models/reference-save-sources")).length, 0);
+  assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.registrations, 0);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: a later user edit prevents saved-reference publication/replay and is never overwritten`, async t => {
+  const f = await reviewedSave(t, host); assert.ok((await f.execute(f.saveSubmit, f.owner)).ok); assert.ok((await f.approveSave()).ok);
+  const saved = await f.saveRun(); assert.ok(saved.result.ok);
+  const row = await f.documents.readDocument<{models: ModelInventoryRecord[]}>("model-registry", "models.json"); assert.ok(row);
+  const edited = {...row.value, models: row.value.models.map(model => ({...model, displayName: "User-edited library model"}))};
+  await f.documents.writeDocument("model-registry", "models.json", edited, {expectedRevision: row.revision});
+  let sends = 0; assert.equal(await saved.publishIfCurrent?.(() => {sends++; return true;}), false); assert.equal(sends, 0);
+  f.state.modelOwnerAvailable = false; assert.equal((await f.saveRun()).result.ok, false);
+  assert.deepEqual(await f.saveRows(), edited.models); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.registrations, 0);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: expired exact save approval cannot write a library reference`, async t => {
+  const f = await reviewedSave(t, host); assert.ok((await f.execute(f.saveSubmit, f.owner)).ok); assert.ok((await f.approveSave()).ok);
+  const original = Date.now, expired = original() + 20 * 60 * 1000;
+  try {Date.now = () => expired; assert.equal((await f.saveRun()).result.ok, false);} finally {Date.now = original;}
+  assert.deepEqual(await f.saveRows(), []); assert.equal(f.state.sourceStarts, 1);
+});
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: a later plan step waits for the exact saved reference; legacy owners cannot inherit Model saving`, async t => {
+  const f = await reviewedSave(t, host), capabilities = {allowLocalFileSave: false, allowModelReferenceSave: true};
+  const input = {...f.input, steps: [...f.input.steps, {operation: "systems.create", idempotencyKey: randomUUID(),
+    name: "System after model review", templateId: "reference.secured-data-review@1.0.0"}]};
+  const parsed = parseHeadlessBuildPlanProposal(input, f.target.hostIncarnationId, capabilities); assert.ok(parsed.ok);
+  const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+  const submit = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit",
+    input: {...input, fingerprint}}, f.target.hostIncarnationId, capabilities); assert.ok(submit.ok);
+  assert.ok((await f.execute(submit.request, f.owner)).ok);
+  assert.ok((await f.approveSave("app-popup", "whole-plan", true, {...f.selection, fingerprint})).ok);
+  const query = {target: {...f.target, fingerprint}, approvalRevision: 2, step: 2, isCurrent: () => true};
+  const preparation: Parameters<typeof prepareStructuredHeadlessPlanStepWithModels> = [f.platform, query, async () => true, Date.now,
+    "serialized-owner", false, undefined, undefined, undefined, undefined, f.directory, undefined, false, true];
+  assert.equal(await prepareStructuredHeadlessPlanStepWithModels(...preparation), undefined, "No ordinary system step before the causal save receipt.");
+  const request = {...f.request, input: {...f.request.input, fingerprint, step: 1}};
+  const saved = host === "Desktop" ? await (f.owner as ReturnType<typeof composeDesktopHeadlessPlanReview>).runStep!(request, f.grant, async () => f.grant)
+    : await (f.owner as ReturnType<typeof composeManagedHeadlessPlanReview>).runStep!(request, f.registration, () => true);
+  assert.ok(saved.result.ok, JSON.stringify(saved));
+  assert.equal((await prepareStructuredHeadlessPlanStepWithModels(...preparation))?.kind, "system");
+  assert.equal(await prepareStructuredHeadlessPlanStep(...preparation), undefined, "An old owner never borrows the new opt-in.");
+  assert.equal((await f.saveRows()).length, 1); assert.equal(f.state.sourceStarts, 1);
+});
 
 for (const host of ["Desktop", "Managed"] as const)
 test(`${host}: private approved execution starts one captured source and replays without resolving runtime`, async t => {

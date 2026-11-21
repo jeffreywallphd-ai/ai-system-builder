@@ -65,7 +65,7 @@ export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost:
         allowContextRagGeneration: options?.allowContextRagGeneration === true,
         allowContextResultSave: options?.allowContextResultSave === true,
         allowContextQuery: options?.allowContextQuery === true,
-        allowModelDownload: options?.allowModelDownload === true });
+        allowModelDownload: options?.allowModelDownload === true, allowModelReferenceSave: options?.allowModelReferenceSave === true });
     return proposal.ok ? { ok: true, request: { operation, target, proposal } } : invalid;
   } catch { return invalid; }
 }

@@ -11,6 +11,20 @@ const caps = {allowLocalFileSave: false, allowModelDownload: true};
 const result = () => ({ok: true, value: {kind: "started", operation: "models.download", fingerprint: exact.fingerprint,
   approvalRevision: 2, step: 1, expiresAt: 10000, reference: {workspaceId: exact.workspaceId, taskId: randomUUID()}}});
 
+test("saved Model references are separately capability-bound, correlated and path-free", () => {
+  const saved = {ok: true, value: {...result().value, kind: "committed", operation: "models.save-download",
+    reference: {workspaceId: exact.workspaceId, modelRecordId: "model_headless_" + "b".repeat(32), taskId: randomUUID(),
+      manifestDigest: "sha256:" + "c".repeat(64), storageAuthority: "reference-only", runtimeReadiness: "not-checked"}}};
+  const options = {allowLocalFileSave: false, allowModelReferenceSave: true};
+  assert.deepEqual(readHeadlessPlanStepResult(saved, exact, options), saved);
+  assert.equal(readHeadlessPlanStepResult(saved, exact, caps).ok, false);
+  for (const patch of [{kind: "started"}, {step: 2}, {approvalRevision: 3}, {fingerprint: "b".repeat(64)}, {expiresAt: 0}])
+    assert.equal(readHeadlessPlanStepResult({...saved, value: {...saved.value, ...patch}}, exact, options).ok, false);
+  for (const patch of [{localPath: "private/cache"}, {storageAuthority: "owned"}, {runtimeReadiness: "ready"}, {taskId: "shared-history"},
+    {workspaceId: createWorkspaceId("foreign.workspace")}, {modelRecordId: "ordinary-model"}])
+    assert.equal(readHeadlessPlanStepResult({...saved, value: {...saved.value, reference: {...saved.value.reference, ...patch}}}, exact, options).ok, false);
+});
+
 test("finite Model start/replay results need explicit support and exact source plan identity", () => {
   for (const kind of ["started", "replayed"]) {
     const value = result(); value.value.kind = kind;

@@ -4,7 +4,7 @@ import test from "node:test";
 import {createWorkspaceId} from "../../workspace";
 import {readModelDownloadSource} from "../../model";
 import {HEADLESS_CONTRACT_VERSION as version, type HeadlessHostIncarnationId} from "../headless-protocol";
-import {readHeadlessModelDownloadPlanRequest} from "../headless-model-download-plan";
+import {readHeadlessModelDownloadPlanRequest, readHeadlessModelReferenceSavePlanRequest, readHeadlessSavedModelReference} from "../headless-model-download-plan";
 import {parseHeadlessBuildPlanProposal, serializeHeadlessMutationInput} from "../headless-system-management";
 import {readHeadlessPlanReviewAgentRequest} from "../headless-plan-review-wire";
 import {readDesktopPlanApprovalView} from "../desktop-headless-plan-approval";
@@ -28,6 +28,68 @@ function fixture() {
   return {wire, proposal, capabilities, workspaceId};
 }
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+function saveFixture() {
+  const f = fixture(), input = {hostIncarnationId: host, workspaceId: f.workspaceId, idempotencyKey: randomUUID(),
+    name: "Reviewed library model", taskId: randomUUID(), sourceManifest: f.wire.input.sourceManifest};
+  const wire = {version, operation: "models.save-download", input};
+  const {hostIncarnationId: _host, workspaceId: _workspace, ...fields} = input;
+  const proposal = {hostIncarnationId: host, workspaceId: f.workspaceId, steps: [{operation: wire.operation, ...fields}]};
+  const capabilities = {allowLocalFileSave: false, allowModelReferenceSave: true};
+  return {...f, wire, proposal, capabilities};
+}
+
+test("reviewed Model reference save has a separate closed opt-in and stable metadata-only v12 preview", () => {
+  const f = saveFixture(), decoded = readHeadlessModelReferenceSavePlanRequest(f.wire, host); assert.ok(decoded.ok);
+  assert.deepEqual(decoded.request, f.wire); assert.notEqual(decoded.request.input.sourceManifest.source.files, f.wire.input.sourceManifest.source.files);
+  const parsed = parseHeadlessBuildPlanProposal(f.proposal, host, f.capabilities); assert.ok(parsed.ok);
+  assert.equal(parsed.preview.version, "aisb-build-plan-preview-v12"); const step = parsed.preview.steps[0];
+  assert.equal(step.operation, "models.save-download"); if (step.operation !== "models.save-download") assert.fail();
+  assert.equal(step.effect, "save-reviewed-model-reference"); assert.equal(step.externalProviderCalls, 0); assert.equal(step.modelCalls, 0);
+  assert.equal(step.loadsModel, false); assert.equal(step.writesModelRegistry, true); assert.equal(step.exactReviewRequired, true);
+  assert.equal(step.storageAuthority, "reference-only"); assert.equal(step.runtimeReadiness, "not-checked");
+  for (const caps of [undefined, {allowLocalFileSave: false, allowModelDownload: true}, {...f.capabilities, allowModelReferenceSave: false}]) {
+    assert.equal(parseHeadlessBuildPlanProposal(f.proposal, host, caps ?? {allowLocalFileSave: false}).ok, false);
+    assert.equal(readHeadlessPlanReviewAgentRequest({version, operation: "plan.submit", input: {...f.proposal, fingerprint: "a".repeat(64)}}, host, caps).ok, false);
+  }
+  assert.ok(readHeadlessPlanReviewAgentRequest({version, operation: "plan.submit", input: {...f.proposal, fingerprint: "a".repeat(64)}}, host, f.capabilities).ok);
+  assert.equal(parseHeadlessBuildPlanProposal({...f.proposal, steps: [...f.proposal.steps,
+    {...f.proposal.steps[0], idempotencyKey: randomUUID()}]}, host, f.capabilities).ok, false);
+});
+
+test("save proposals reject active fields, hidden file/approval powers, malformed original task and broadened source claims", () => {
+  const f = saveFixture(); let calls = 0; const input = {...f.wire.input};
+  Object.defineProperty(input, "name", {enumerable: true, get() {calls++; return "must not read";}});
+  assert.equal(readHeadlessModelReferenceSavePlanRequest({...f.wire, input}, host).ok, false); assert.equal(calls, 0);
+  for (const patch of [{localPath: "C:/private/model"}, {modelRecordId: "caller-record"}, {approved: true}, {runtimeReadiness: "ready"},
+    {allowedOrigins: ["https://huggingface.co"]}, {taskId: "shared-history-id"}, {name: "token=synthetic"}, {name: " padded "}])
+    assert.equal(readHeadlessModelReferenceSavePlanRequest({...f.wire, input: {...f.wire.input, ...patch}}, host).ok, false);
+  assert.deepEqual(readHeadlessModelReferenceSavePlanRequest(f.wire, randomUUID() as HeadlessHostIncarnationId), {ok: false, code: "headless.host-changed"});
+  const reference = {workspaceId: f.workspaceId, modelRecordId: "model_headless_" + "b".repeat(32), taskId: f.wire.input.taskId,
+    manifestDigest: f.wire.input.sourceManifest.manifestDigest, storageAuthority: "reference-only", runtimeReadiness: "not-checked"};
+  assert.deepEqual(readHeadlessSavedModelReference(reference, f.workspaceId), reference);
+  for (const patch of [{localPath: "private"}, {storageAuthority: "owned"}, {runtimeReadiness: "ready"}, {modelRecordId: "ordinary-model"},
+    {workspaceId: createWorkspaceId("workspace.foreign")}, {manifestDigest: "sha256:invalid"}, {taskId: "shared-history-id"}])
+    assert.equal(readHeadlessSavedModelReference({...reference, ...patch}, f.workspaceId), undefined);
+});
+
+test("both save approval channels reject changed permission labels, hidden fields and legacy capability inheritance", () => {
+  const f = saveFixture(), parsed = parseHeadlessBuildPlanProposal(f.proposal, host, f.capabilities); assert.ok(parsed.ok);
+  const selection = {workspaceId: f.workspaceId, registeredClientId: randomUUID(), fingerprint: "c".repeat(64)};
+  const value = {selection, viewId: randomUUID(), preview: parsed.preview, state: {fingerprint: selection.fingerprint,
+    revision: 1, stepCount: 1, approvedSteps: 0, expiresAt: Date.now() + 60000, status: "pending"}};
+  const request = {operation: "open" as const, selection, document: {hostIncarnationId: host, workspaceId: f.workspaceId,
+    windowId: randomUUID(), uiIncarnationId: randomUUID()}};
+  assert.ok(readDesktopPlanApprovalView(value, selection, f.capabilities));
+  assert.ok(readManagedBrowserPlanApprovalValue(request, value, f.capabilities));
+  assert.equal(readDesktopPlanApprovalView(value, selection, {allowLocalFileSave: false, allowModelDownload: true}), undefined);
+  for (const patch of [{storageAuthority: "owned"}, {runtimeReadiness: "ready"}, {loadsModel: true}, {writesModelRegistry: false},
+    {externalProviderCalls: "required"}, {modelCalls: 1}, {localPath: "private/cache"}, {exactReviewRequired: false}]) {
+    const changed = {...value, preview: {...value.preview, steps: [{...value.preview.steps[0], ...patch}]}};
+    assert.equal(readDesktopPlanApprovalView(changed, selection, f.capabilities), undefined);
+    assert.equal(readManagedBrowserPlanApprovalValue(request, changed, f.capabilities), undefined);
+  }
+});
 
 test("model download proposal captures exact bounded source data without granting transfer, readiness or registry authority", () => {
   const f = fixture(), decoded = readHeadlessModelDownloadPlanRequest(f.wire, host); assert.ok(decoded.ok);

@@ -266,11 +266,18 @@ export async function validateHeadlessPlanSavedSources(
   validateContextResult?: (request: HeadlessContextResultSavePlanRequest) => Promise<true | false | "stale">,
   validateContextQuery?: (request: import("../../../contracts/headless").HeadlessContextQueryPlanRequest) => Promise<true | false | "stale">,
   validateModelDownload?: (request: import("../../../contracts/headless").HeadlessModelDownloadPlanRequest) => Promise<true | false | "stale">,
+  validateModelReferenceSave?: (request: import("../../../contracts/headless").HeadlessModelReferenceSavePlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
+    if (operation === "models.save-download") {
+      if (!validateModelReferenceSave) return false;
+      const eligible = await validateModelReferenceSave(request);
+      if (eligible !== true) return eligible;
+      continue;
+    }
     // The opt-in validator compares only provider facts already prepared outside
     // this transaction. A caller's inline source claims supply no authority.
     if (operation === "models.download") {

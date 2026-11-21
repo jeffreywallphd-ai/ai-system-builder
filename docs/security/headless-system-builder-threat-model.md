@@ -1599,3 +1599,17 @@ facts, never the private path, source callbacks or principal. Synthetic Core and
 SQLite checks cover these boundaries. Public save-plan/host activation, actual
 provider/native execution and parent qualification remain pending; this metadata
 association grants no file ownership, reveal, deletion or load authority.
+
+The new private models.save-download plan never derives saving power from source
+metadata or prior download consent. Its v12 preview shows the exact original
+task/source/name and reference-only metadata scope in the existing app/chat
+approval dialog; no model, provider, file or runtime-readiness effect is approved.
+Cached original-owner preparation is outside retriable database transactions.
+The proposal validator proves accepted original actor/client/workspace/task and
+exact source before using the loaded owner, then compares frozen facts inside
+the proposal owner. A new exact save approval and current ModelRead/Write fence
+the atomic metadata save, replay and causal publication. Actual Core/SQLite host
+fixtures test both approval modes/channels, missing/stale/foreign completion,
+real membership withdrawal during preparation, changed registry rows, expiry and
+legacy default-off behavior. Public roots stay unconfigured; these checks do not
+qualify actual provider/native/physical execution or the parent roadmap.

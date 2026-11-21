@@ -876,3 +876,15 @@ a deleted, edited, ambiguous or conflicting row denies. One exact read-only
 reconciliation handles a lost commit reply without a second mutation. This
 checkpoint adds no public operation, native/file authority or runtime-readiness
 claim; versioned save-plan and real host qualification remain required.
+
+The separate metadata-save plan is the closed, opt-in models.save-download
+operation. Its v12 preview binds the original task, exact selected source
+manifest and chosen library name, with zero model/provider calls and explicit
+reference-only, unchecked-readiness permissions. Existing preview fingerprints
+and stored schema versions retain their prior meaning. Private Desktop/Managed
+compositions prepare cached original-owner facts outside proposal transactions,
+validate the original accepted source inside them, and use the existing scoped
+or each-change approval in trusted chat or the app popup. Execution, committed
+replay and publication require new exact save approval and current ModelRead/Write;
+a download approval cannot substitute. Public transport/product roots remain
+unconfigured pending complete workflow qualification.

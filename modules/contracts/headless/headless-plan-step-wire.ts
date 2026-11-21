@@ -8,6 +8,7 @@ import { HEADLESS_MAX_BUILD_PLAN_STEPS, type HeadlessBuildPlanCapabilities } fro
 import {readHeadlessSavedDatasetReference, type HeadlessSavedDatasetReference} from "./headless-dataset-result-plan";
 import {readHeadlessSavedContextReference, type HeadlessSavedContextReference} from "./headless-context-result-plan";
 import {isHeadlessContextQuestion} from "./headless-context-query-preview";
+import {readHeadlessSavedModelReference, type HeadlessSavedModelReference} from "./headless-model-download-plan";
 
 export const HEADLESS_PLAN_STEP_PATH = "/aisb-headless/v1/plan-step";
 export const MANAGED_HEADLESS_PLAN_STEP_PATH = "/api/headless/agent/plan-step";
@@ -39,9 +40,11 @@ type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 type StartedModelDownloadEffect = {readonly kind: "started" | "replayed"; readonly operation: "models.download";
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
+type SavedModelReferenceEffect = {readonly kind: "committed" | "replayed"; readonly operation: "models.save-download";
+  readonly reference: HeadlessSavedModelReference};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
   {readonly ok: false; readonly code: "headless.not-started"} |
-  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | SavedContextEffect | StartedContextPackEffect | StartedModelDownloadEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | SavedContextEffect | StartedContextPackEffect | StartedModelDownloadEffect | SavedModelReferenceEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -90,6 +93,11 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
         !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed" && kind !== "started")) return unavailable;
     if ("operation" in operationField) {
       const operation = operationField.operation;
+      if (operation === "models.save-download") {
+        if (options?.allowModelReferenceSave !== true || (kind !== "committed" && kind !== "replayed")) return unavailable;
+        const saved = readHeadlessSavedModelReference(reference, exact.workspaceId);
+        return saved ? {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt, reference: saved}} : unavailable;
+      }
       if (operation === "models.download") {
         if (options?.allowModelDownload !== true || (kind !== "started" && kind !== "replayed")) return unavailable;
         const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId"]);

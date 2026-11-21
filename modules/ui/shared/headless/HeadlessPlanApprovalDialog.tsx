@@ -200,6 +200,7 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const contextSaving = view.preview.steps.some(step => step.operation === "context.save-result");
   const contextQuerying = view.preview.steps.some(step => step.operation === "context.query");
   const modelDownloading = view.preview.steps.some(step => step.operation === "models.download");
+  const modelSaving = view.preview.steps.some(step => step.operation === "models.save-download");
   const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying || modelDownloading;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
@@ -249,6 +250,12 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>The disk space amount is an estimate, not a reservation.</li>
         <li>This request does not add the downloaded model to the Models list, run it, train it, or publish it. Those actions need separate approval.</li>
       </> : null}
+      {modelSaving ? <>
+        <li>Save a reference to the reviewed download in this workspace’s Models list, with the name shown below.</li>
+        <li>Use only the listed original task, exact model version and source fingerprint.</li>
+        <li>Permission covers library metadata only. Cached files remain a shared reference. Runtime readiness stays unchecked.</li>
+        <li>Saving makes no downloads, model calls, file changes, training runs or publications.</li>
+      </> : null}
       <li>Limit of {state.stepCount} {contextQuerying || modelDownloading ? state.stepCount === 1 ? "work item" : "work items" : `${processing ? "" : "saved "}${state.stepCount === 1 ? "change" : "changes"}`} for this plan.</li>
       {modelDownloading ? <li>Outside file transfers are required. This request makes no paid model calls.</li> : providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
@@ -259,7 +266,18 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     </time>.</p>
     <ol aria-label="Requested changes">
       {view.preview.steps.map((step, index) => <li key={step.input.idempotencyKey}>
-        {step.operation === "models.download" ? <>
+        {step.operation === "models.save-download" ? <>
+          <strong>Save reviewed model: {step.input.name}</strong>
+          <div>Model: {step.input.sourceManifest.source.modelId}</div>
+          <div style={{overflowWrap: "anywhere"}}>Exact version: <code>{step.input.sourceManifest.source.revision}</code></div>
+          <div style={{overflowWrap: "anywhere"}}>Original download task: <code>{step.input.taskId}</code></div>
+          <div>{step.input.sourceManifest.source.license.kind === "provider-declared"
+            ? <>License reported by the provider: {step.input.sourceManifest.source.license.identifier}.</>
+            : "License: Not reported by the provider."} Saving does not confirm license rights.</div>
+          <div>Selected files: {step.input.sourceManifest.source.files.length}. Bytes recorded at completion: {step.input.sourceManifest.source.totalBytes.toLocaleString()}.</div>
+          <div style={{overflowWrap: "anywhere"}}>Source fingerprint: <code>{step.input.sourceManifest.manifestDigest}</code></div>
+          <div>Library reference only. Runtime support and current file availability remain unchecked.</div>
+        </> : step.operation === "models.download" ? <>
           <strong>Download model files: {step.input.name}</strong>
           <div>Model: {step.input.sourceManifest.source.modelId}</div>
           <div style={{overflowWrap: "anywhere"}}>Exact version: <code>{step.input.sourceManifest.source.revision}</code></div>

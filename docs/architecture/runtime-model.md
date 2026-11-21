@@ -1884,3 +1884,14 @@ task owner. Edited, deleted or conflicting rows deny. These shared-cache
 references grant no file ownership, reveal, deletion or model-readiness claim.
 This private composition does not activate a public save route or borrow the
 original download approval.
+
+Private headless Model saving now connects to the existing plan workflow through
+the opt-in models.save-download request and v12 metadata-only preview. Proposal
+preparation peeks the original cached Model owner outside database transactions;
+its validator checks frozen exact source/task facts and accepted ledger point
+reads inside the supplied partition. Both trusted approval channels and both
+approval modes use the existing dialog and exact revision. The approved step
+commits the reference through the atomic save owner and gates publication on the
+unchanged causal receipt and current plan/policy. No other plan family or legacy
+host inherits saving. Real public transport/product activation and physical,
+provider/native and final workflow qualification remain pending.

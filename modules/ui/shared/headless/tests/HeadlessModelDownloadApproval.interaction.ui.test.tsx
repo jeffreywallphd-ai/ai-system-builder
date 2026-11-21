@@ -11,8 +11,9 @@ import {isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal, readDesktop
   readManagedBrowserPlanApprovalValue, type DesktopPlanApprovalDecision} from "../../../../contracts/headless";
 import {HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient} from "../HeadlessPlanApprovalDialog";
 
+for (const kind of ["download", "save"] as const)
 for (const variant of ["unknown", "open", "non-open", "mixed-escaped"] as const) test(
-  variant + " Model download approval shows exact permissions in both channels and approval modes", async () => {
+  kind + "/" + variant + " Model approval shows exact permissions in both channels and approval modes", async () => {
   const host = "ca353bdd-7793-44c6-8c36-c470be8c537c"; assert.ok(isHeadlessHostIncarnationId(host));
   const workspaceId = createWorkspaceId("workspace.model-plan-ui");
   const license = variant === "unknown" ? {kind: "unknown"} : {kind: "provider-declared", identifier: variant === "open" ? "apache-2.0" : "proprietary"};
@@ -23,12 +24,14 @@ for (const variant of ["unknown", "open", "non-open", "mixed-escaped"] as const)
     sourceVerification: "provider-metadata", bytesVerification: "not-checked", runtimeReadiness: "not-checked"},
     {provider: "huggingface", modelId: "fixture/support-model", revision: "a".repeat(40)});
   const name = variant === "mixed-escaped" ? "<img src=x onerror=synthetic>" : "Small support model";
-  const steps: Record<string, unknown>[] = [{operation: "models.download", idempotencyKey: randomUUID(), name,
-    sourceManifest: {source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")},
-    allowedOrigins: ["https://huggingface.co", "https://cdn-lfs.huggingface.co"], maximumDurationSeconds: 1800, inferenceMode: "chat"}];
+  const taskId = randomUUID(), sourceManifest = {source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")};
+  const steps: Record<string, unknown>[] = [kind === "save"
+    ? {operation: "models.save-download", idempotencyKey: randomUUID(), name, taskId, sourceManifest}
+    : {operation: "models.download", idempotencyKey: randomUUID(), name, sourceManifest,
+      allowedOrigins: ["https://huggingface.co", "https://cdn-lfs.huggingface.co"], maximumDurationSeconds: 1800, inferenceMode: "chat"}];
   if (variant === "mixed-escaped") steps.push({operation: "systems.create", idempotencyKey: randomUUID(),
     name: "Customer support assistant", templateId: "reference.secured-data-review@1.0.0"});
-  const caps = {allowLocalFileSave: false, allowModelDownload: true};
+  const caps = {allowLocalFileSave: false, allowModelDownload: true, allowModelReferenceSave: kind === "save"};
   const parsed = parseHeadlessBuildPlanProposal({hostIncarnationId: host, workspaceId, steps}, host, caps); assert.ok(parsed.ok);
   const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
   const selection = {workspaceId, fingerprint, registeredClientId: randomUUID()}, viewId = randomUUID(), expiresAt = Date.now() + 60000;
@@ -67,6 +70,7 @@ for (const variant of ["unknown", "open", "non-open", "mixed-escaped"] as const)
         await act(async () => button("Review request " + fingerprint.slice(0, 8), true).click());
         const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]')?.textContent ?? "";
         const changes = dom.window.document.querySelector('[aria-label="Requested changes"]')?.textContent ?? "";
+        if (kind === "download") {
         assert.match(permissions, /Download only the exact model files and versions/);
         assert.match(permissions, /saved Hugging Face access/); assert.match(permissions, /only the allowed sites/);
         assert.match(permissions, /to check model details/); assert.match(permissions, /File transfers use public access only/);
@@ -76,7 +80,19 @@ for (const variant of ["unknown", "open", "non-open", "mixed-escaped"] as const)
         assert.doesNotMatch(permissions, /Each download stops at/);
         assert.match(permissions, /does not add the downloaded model to the Models list, run it, train it, or publish it/);
         assert.match(permissions, /Outside file transfers are required/); assert.doesNotMatch(permissions, /No outside service calls/);
+        } else {
+          assert.match(permissions, /Save a reference to the reviewed download/);
+          assert.match(permissions, /only the listed original task, exact model version and source fingerprint/);
+          assert.match(permissions, /Permission covers library metadata only/);
+          assert.match(permissions, /Runtime readiness stays unchecked/);
+          assert.match(permissions, /Saving makes no downloads, model calls, file changes, training runs or publications/);
+          assert.match(permissions, /No outside service calls or provider charges/);
+          assert.doesNotMatch(permissions, /Download only|saved Hugging Face access|Outside file transfers are required/);
+          assert.ok(changes.includes(taskId)); assert.ok(changes.includes(sourceManifest.manifestDigest));
+          assert.match(changes, /Save reviewed model/); assert.match(changes, /Library reference only/);
+        }
         assert.match(changes, /fixture\/support-model/); assert.match(changes, new RegExp("Exact version: " + "a".repeat(40)));
+        if (kind === "download") {
         assert.match(changes, /Transformers safetensors/);
         const selectedBytes = [...dom.window.document.querySelectorAll("div")].find(element => element.textContent?.startsWith("Selected file bytes:"));
         const diskBytes = [...dom.window.document.querySelectorAll("div")].find(element => element.textContent?.startsWith("Disk space estimate during transfer:"));
@@ -86,10 +102,16 @@ for (const variant of ["unknown", "open", "non-open", "mixed-escaped"] as const)
         assert.match(changes, /Time limit: 30 minutes 0 seconds/); assert.match(changes, /integrity and runtime support are not yet checked/);
         assert.equal(dom.window.document.querySelectorAll('[aria-label="Allowed download sites"] li').length, 2);
         assert.match(changes, /https:\/\/cdn-lfs.huggingface.co/); assert.match(changes, /https:\/\/huggingface.co/);
+        }
         assert.match(changes, variant === "unknown" ? /License: Not reported by the provider/ : variant === "open" ? /apache-2.0/ : /proprietary/);
+        if (kind === "download") {
         const files = dom.window.document.querySelector("details"); assert.ok(files); assert.equal(files.open, false);
         await act(async () => {files.open = true; files.dispatchEvent(new dom.window.Event("toggle"));});
         assert.match(files.textContent ?? "", /config.json/); assert.match(files.textContent ?? "", /model.safetensors/); assert.match(files.textContent ?? "", /tokenizer.json/);
+        } else {
+          assert.equal(dom.window.document.querySelectorAll('[aria-label="Allowed download sites"]').length, 0);
+          assert.match(changes, /current file availability remain unchecked/);
+        }
         assert.equal(dom.window.document.querySelectorAll("img, script").length, 0);
         if (variant === "mixed-escaped") {assert.ok(changes.includes(name)); assert.match(changes, /Create Customer support assistant/);}
         if (mode === "whole-plan") await act(async () => {

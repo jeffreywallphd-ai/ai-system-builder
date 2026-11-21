@@ -122,3 +122,11 @@ neither physical ownership nor runtime readiness. The shared composition must
 supply a new exact save approval, current ModelRead/Write and original-source
 lifetime; old download approval cannot authorize this save. Public save-plan,
 host, provider and native qualification remain separate pending work.
+
+The separate opt-in models.save-download request has a v12 preview and uses the
+existing plan approval state machine. Proposal validation binds the original
+cached completion to accepted task/source point reads; new save approval is
+required at execution. The distinct prepared Model-reference step also verifies
+committed reference receipts before later ordered steps and publication. Legacy
+hosts, stored-only approval readers and unconfigured compositions refuse this
+new family unless explicitly enabled. Public transport/product roots remain off.

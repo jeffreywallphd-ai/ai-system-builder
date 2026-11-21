@@ -37,7 +37,9 @@ import {readCommittedStructuredContextResult, type ContextResultSaveEffect} from
 import type {HeadlessContextResultSavePlanRequest} from "../../../contracts/headless";
 import {inspectStructuredModelPlanTask, reserveStructuredModelPlanTask, issueStructuredModelPlanTask,
   acceptStructuredModelPlanTask, recordStructuredModelTaskNotStarted, type ModelPlanTaskEffect} from "./createStructuredHeadlessModelPlanTaskStore";
-import type {HeadlessModelDownloadPlanRequest} from "../../../contracts/headless";
+import type {HeadlessModelDownloadPlanRequest, HeadlessModelReferenceSavePlanRequest} from "../../../contracts/headless";
+import {captureModelReferenceSaveEffect, inspectStructuredModelReferenceSave,
+  type ModelReferenceSaveEffect} from "./createStructuredHeadlessModelReferenceStore";
 
 const denied = { kind: "denied" } as const;
 
@@ -68,14 +70,17 @@ export type CompileApprovedContextQuery = (owner: StructuredDocumentStore, reque
 /** Legacy hosts remain explicitly unable to execute Model-containing plans. */
 export async function prepareStructuredHeadlessPlanStep(...input: Parameters<typeof prepareStoredPlanStep>) {
   input[12] = false;
+  input[13] = false;
   const prepared = await prepareStoredPlanStep(...input);
-  return prepared?.kind === "model-download" ? undefined : prepared;
+  return prepared?.kind === "model-download" || prepared?.kind === "model-reference" ? undefined : prepared;
 }
 
 /** Internal opt-in owner; public hosts must not select it before their exact
  * Model admission/status/save composition is qualified. */
 export async function prepareStructuredHeadlessPlanStepWithModels(...input: Parameters<typeof prepareStoredPlanStep>) {
-  input[12] = true;
+  // Preserve the original download-only wrapper's omitted gate. A caller which
+  // opts into reference saving must still be able to explicitly disable downloads.
+  if (input[12] === undefined) input[12] = true;
   return prepareStoredPlanStep(...input);
 }
 
@@ -91,6 +96,7 @@ async function prepareStoredPlanStep(
   contextResultRootDirectory?: string,
   compileQuery?: CompileApprovedContextQuery,
   allowModelDownload = false,
+  allowModelReferenceSave = false,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -110,7 +116,8 @@ async function prepareStoredPlanStep(
     const partition = owner.forOrganization(target.scope.organizationId);
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
-    if (!allowModelDownload && approved.requests.some(candidate => candidate.operation === "models.download")) return;
+    if (allowModelDownload !== true && approved.requests.some(candidate => candidate.operation === "models.download")) return;
+    if ((allowModelReferenceSave !== true || !contextResultRootDirectory) && approved.requests.some(candidate => candidate.operation === "models.save-download")) return;
     const request = approved.requests[step - 1];
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
@@ -121,12 +128,14 @@ async function prepareStoredPlanStep(
         (!compileQuery && approved.requests.some(candidate => candidate.operation === "context.query")) ||
         ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source" ||
           request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download") &&
+          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" || request.operation === "models.save-download") &&
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
       if (!previous) return;
-      const received = previous.operation === "models.download"
+      const received = previous.operation === "models.save-download"
+        ? (await inspectStructuredModelReferenceSave(partition, modelReferenceEffect(target, previous, index + 1, approvalRevision))).kind === "committed"
+        : previous.operation === "models.download"
         ? (await inspectStructuredModelPlanTask(partition, modelTaskEffect(target, previous, index + 1, approvalRevision))).kind === "accepted"
         : previous.operation === "data.save-local-source"
         ? await readCommittedStructuredLocalFilePlanEffect(partition, localFileEffect(target, previous, index + 1))
@@ -181,6 +190,26 @@ async function prepareStoredPlanStep(
       if (publication === "stable-reads") return await stableReads!(approvedForPublication, send);
       return await ownedTransaction!(async owner => await approvedForPublication(owner) && send(), () => {});
     } catch { return false; }
+  }
+
+  if (request.operation === "models.save-download") {
+    const effect = captureModelReferenceSaveEffect(modelReferenceEffect(target, request, step, approvalRevision));
+    return {kind: "model-reference" as const, request: freezeModelData(structuredClone(request)), effect,
+      expiresAt: prepared.expiresAt, isCurrent: current,
+      async authorizeSaveOwned(owner: StructuredDocumentStore, selected: ModelReferenceSaveEffect) {
+        if (!isDeepStrictEqual(selected, effect) || !current()) return false;
+        const latest = await select(owner);
+        return Boolean(latest && latest.expiresAt === deadline && current() &&
+          await fenceStructuredApprovedPlan(owner.forOrganization(target.scope.organizationId), target, approvalRevision) && current());
+      },
+      async stillAllowed() {
+        try {return await ownedTransaction(async owner => Boolean(await select(owner)) && current(),
+          () => {if (!current()) throw new Error("The approved Model reference save ended.");});} catch {return false;}
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => (await inspectStructuredModelReferenceSave(partition, effect)).kind === "committed");
+      },
+    };
   }
 
   if (request.operation === "models.download") {
@@ -731,7 +760,8 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "models.download" ? "aisb-approved-model-download-step-v1" :
+  const family = request.operation === "models.save-download" ? "aisb-approved-model-reference-step-v1" :
+    request.operation === "models.download" ? "aisb-approved-model-download-step-v1" :
     request.operation === "context.query" ? "aisb-approved-context-query-step-v1" :
     request.operation === "context.save-result" ? "aisb-approved-context-result-step-v1" :
     request.operation === "context.generate-rag" ? "aisb-approved-context-rag-step-v1" :
@@ -742,7 +772,7 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
     request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
   const parts = [family, target.hostIncarnationId, target.fingerprint, step, request.input.idempotencyKey];
   const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" ?
+    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" || request.operation === "models.save-download" ?
     [...parts, target.scope.organizationId, target.scope.workspaceId, target.scope.principalId, target.scope.registeredClientId] : parts));
   // Keep the existing validated internal UUID shape. The plan and ordinal
   // reserve a different key even when two proposals reuse a supplied key.
@@ -753,6 +783,11 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
 function modelTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessModelDownloadPlanRequest,
   step: number, approvalRevision: number): ModelPlanTaskEffect {
   return {key: stepKey(target, request, step), target, request, step, approvalRevision};
+}
+function modelReferenceEffect(target: HeadlessPlanReviewTarget, request: HeadlessModelReferenceSavePlanRequest,
+  step: number, approvalRevision: number): ModelReferenceSaveEffect {
+  return {key: stepKey(target, request, step), target, step, approvalRevision, taskId: request.input.taskId,
+    manifestDigest: request.input.sourceManifest.manifestDigest, name: request.input.name};
 }
 function freezeModelData<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) freezeModelData(child); Object.freeze(value);}
