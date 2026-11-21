@@ -2217,5 +2217,24 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("Define the increments", status["nextCheckpoint"])
 
 
+class WorkChunkCollectionTest(unittest.TestCase):
+    def test_registered_direct_runner_collects_a_real_refinement_case(self):
+        # This test stays in the fixed runner, so removing the sidecar bridge
+        # cannot also silently remove the test that detects the missing bridge.
+        selected = "WorkChunkRefinementTests.test_formal_plan_and_state_validation_share_the_visible_chunk_bound"
+        result = subprocess.run([sys.executable, "-B", str(Path(__file__)), "-k", selected, "-v"],
+                                capture_output=True, timeout=30)
+        self.assertLess(len(result.stdout) + len(result.stderr), 128 * 1024)
+        self.assertEqual(result.returncode, 0, "The registered roadmap runner must collect the refinement cases.")
+        self.assertIn(selected.split(".", 1)[1].encode(), result.stderr)
+        self.assertIn(b"Ran 1 test", result.stderr)
+        self.assertNotIn(b"skipped", result.stderr)
+
+
 if __name__ == "__main__":
+    # The registered roadmap gate executes this file directly. Share its fixture
+    # module with the sidecar and collect that class here; normal discovery
+    # collects the sidecar separately and does not enter this block.
+    sys.modules.setdefault("test_roadmap", sys.modules[__name__])
+    from test_work_chunk_refinement import WorkChunkRefinementTests
     unittest.main()

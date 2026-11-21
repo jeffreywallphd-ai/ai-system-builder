@@ -314,6 +314,28 @@ surfaces. Do not run the complete standard suite, complete end-to-end suite, AI
 suite, or aggregate matrix while roadmap increments remain; add or run a focused
 regression instead.
 
+#### Refine work-chunk tracking
+
+Choose independently testable outcomes with useful review and commit boundaries.
+A chunk includes implementation, focused regression checks and affected documents.
+Several unrelated behaviors under one long-running chunk hide progress; one file
+or one test per chunk creates noise. Keep security and lifecycle changes with the
+behavior they protect. A completed component can be a chunk while real host or
+parent qualification remains pending; describe that boundary explicitly.
+
+Use `work-chunks-reconfigured` for approved granularity-only changes. Complete the
+current candidate's verification, review and owned-change checkpoint first. The
+event checks the digest of the entire stored plan, archives exact old/new plans,
+and preserves all other existing plan fields and every completed chunk definition
+and order. It cannot change product scope, criteria, approval, evidence, status,
+dependencies or completion gates. Use the normal scope/approval workflow for those.
+
+Untouched pending increments may receive visible chunk outlines through the same
+event. An outline is planning information, not an execution plan: ordered start,
+increment research and `increment-plan-recorded` are still required. Reconcile the
+outline with that research. Record completed chunks only from real implementation,
+focused checks and independent review, never from a split or a commit alone.
+
 #### Commit reviewed chunks
 
 Commit a coherent completed, tested and independently reviewed chunk before

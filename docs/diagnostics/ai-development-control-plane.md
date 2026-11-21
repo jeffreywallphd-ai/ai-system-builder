@@ -2743,3 +2743,11 @@ other feature checks. The old timeouts remain failed evidence. This prospective
 budget preserves every assertion, the 128 KiB result bound, Git/source/history
 guards and the outer 600-second check limit. It changes no product performance,
 model, memory or native-job requirement and is not a claimed optimization.
+
+The roadmap skill's `work-chunks-reconfigured` event publishes smaller coherent
+outcomes through the existing JSON plan/chunk projection. It archives exact
+old/new plans and retains scope, approval, completed history and all qualification
+requirements. Pending outlines remain planned and cannot start work. Finish and
+checkpoint a source candidate before changing its plan. A reviewed local component
+can be recorded as a completed chunk only within its tested scope; real-host and
+parent qualification stay separate. Refinement itself supplies no test pass.

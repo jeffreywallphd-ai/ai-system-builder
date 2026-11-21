@@ -272,6 +272,10 @@ another roadmap's completion.
 ### `increment-plan-recorded`
 
 Every criterion must be assigned to one or more planned chunks.
+Formal plans and refined outlines both allow at most 100 chunks, matching the
+review projection. State validation refuses oversized plans before work, rather
+than hiding their remaining outcomes. This is a display/integrity bound, not a
+target chunk count; choose the smallest coherent set.
 
 ```json
 {
@@ -304,6 +308,59 @@ Every criterion must be assigned to one or more planned chunks.
   }
 }
 ```
+
+### `work-chunks-reconfigured`
+
+Use this event only to improve tracking within already approved scope. Supply
+`incrementId`, `expectedPlanDigest`, a full `plan` in the shape documented above,
+`authorityRef`, and a clear `reason`. For a missing pending plan, the expected
+digest is JSON `null`. Read the current `planDigest` from the status command's
+`chunkPlans` entry, or compute `fingerprint(current_increment["plan"])` with the
+engine. This hashes the **whole stored plan**, including its metadata;
+it is different from the plan's internal `fingerprint` field.
+
+```json
+{
+  "type": "work-chunks-reconfigured",
+  "incrementId": "pending-outcome",
+  "expectedPlanDigest": null,
+  "plan": {
+    "summary": "Pending chunk outline; research is required before implementation.",
+    "steps": ["Inspect the supported workflow before implementing it."],
+    "chunks": [
+      {"id": "reviewed-outcome", "title": "Deliver the reviewed outcome",
+       "outcome": "The exact outcome works and its refusal paths are tested.",
+       "criteriaIds": ["contract-tests", "security-impact-reviewed"]}
+    ],
+    "focusedTests": ["Test the changed feature and its refusal paths."],
+    "completionTests": ["Run increment-relevant qualification after implementation."],
+    "documentation": ["Update the owning README."],
+    "rollback": "Disable the new behavior while preserving accepted work.",
+    "assumptions": ["Existing approved scope and technical criteria remain."]
+  },
+  "authorityRef": "user-work-chunk-sizing",
+  "reason": "Expose independently reviewable outcomes without changing scope."
+}
+```
+
+The target must be the current researched, implementing increment or an untouched
+pending increment. Existing plans may change only their `chunks`. Every criterion
+must stay mapped, IDs must be unique, and the plan must fit the review site's
+100-chunk bound. Completed chunks cannot be deleted, edited or reordered. Missing
+or stale digests, no-op changes, unapproved scope and human-action blockers refuse
+without mutation.
+
+`workChunkPlanRevisions` retains exact original/replacement plans, their whole-plan
+digests, completed IDs, criterion IDs, approved scope digest, authority and reason.
+The original plan creation time remains. Pending plans receive `outlineOnly: true`
+and remain pending. Ordered start, research and a formal implementation plan still
+apply; the formal plan replaces the outline marker. No chunk, criterion, increment,
+measurement or roadmap is passed by refinement. A product-scope change still needs
+the existing revision and approval process.
+
+Finish any current source verification/review and checkpoint before changing its
+plan. Inspect and independently review actual obligation coverage; IDs and hashes
+cannot prove that rewritten prose retains its full meaning.
 
 ### `chunk-recorded`
 

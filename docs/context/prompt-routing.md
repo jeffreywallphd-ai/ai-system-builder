@@ -131,6 +131,11 @@ skill. Its scoped checkpoint procedure preserves unrelated changes and pending
 parent qualification; a checkpoint grants no publication or main advancement.
 For Windows publication errors, use the roadmap skill's state recovery procedure.
 
+Requests to resize work chunks or improve progress tracking also use that skill.
+Use its archived `work-chunks-reconfigured` event for granularity-only changes.
+Keep coherent tested/reviewed outcomes, completed history, scope and approval;
+pending outlines still require ordered start, research and formal planning.
+
 Use `completed` as the single current roadmap completion status. Final approval
 is the separate immutable `finalApproval` fact. For explicit legacy status
 conversion, route to the skill's `completion-status-normalized` event; retain

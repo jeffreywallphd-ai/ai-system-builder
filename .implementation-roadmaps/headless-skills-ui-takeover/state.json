@@ -596,6 +596,72 @@
         "headless-context-query-window: receipte37290e09b09c62b0e7c6d672a1af9d7aa44841b95413589995eaf48c53c27d7, reviewa907d7a9715cd7ebed6fd6eb41fd7370f485aaf7a5c1651506b9fce6d311178a. Eleven focused groups, Desktop types and Server/Thin builds; exact query family, final ModelRead and consent/replay/revoke."
       ],
       "title": "Show Context outcomes in the app"
+    },
+    {
+      "areas": [
+        "Headless Model implementation"
+      ],
+      "chunkId": "inspect-installed-models",
+      "completedAt": "2026-11-21T13:49:57Z",
+      "criteriaIds": [
+        "compatible-download",
+        "security-model-supply-and-limits"
+      ],
+      "documentation": [
+        "Current Model contracts/host/runtime guidance and scoped qualification observations."
+      ],
+      "feedbackAddressed": [],
+      "id": "models-training-and-generation-inspect-installed-models",
+      "incrementId": "models-training-and-generation",
+      "summary": "Implemented bounded saved-model inventory and exact record reads for paired Desktop and Managed clients. Current scope and pagination checks passed; no runtime startup or filesystem discovery. Actual model acquisition and parent qualification are separate. Reviewed local implementation record headless-model-inventory-integration; receipt 1b630ddff5806f188f66d1cd4fb5dd69ebc8a35985812140ca20c23f958bfaa3; review 5a5e3dfe3cb7add7da65932872259c777b10ef9fb7d56d914bc0e75bed1b5fe2; committed ancestor 5b9a4b1fe7a5e805a7e2aa5488a786bb1c0fb909. Original executed evidence remains preserved; this history record grants no current parent qualification.",
+      "tests": [
+        "Actual passing stored component receipt 1b630ddff5806f188f66d1cd4fb5dd69ebc8a35985812140ca20c23f958bfaa3 and independent review 5a5e3dfe3cb7add7da65932872259c777b10ef9fb7d56d914bc0e75bed1b5fe2. No accepted ordinary model accuracy tests were repeated."
+      ],
+      "title": "Inspect installed models"
+    },
+    {
+      "areas": [
+        "Headless Model implementation"
+      ],
+      "chunkId": "review-pinned-model-source",
+      "completedAt": "2026-11-21T13:49:58Z",
+      "criteriaIds": [
+        "compatible-download",
+        "security-model-supply-and-limits"
+      ],
+      "documentation": [
+        "Current Model contracts/host/runtime guidance and scoped qualification observations."
+      ],
+      "feedbackAddressed": [],
+      "id": "models-training-and-generation-review-pinned-model-source",
+      "incrementId": "models-training-and-generation",
+      "summary": "Implemented exact provider model-source metadata preview with current paired-client permissions, immutable revision, safe-format files, sizes and declared licensing. Controlled provider/transport tests supply local component evidence; no transfer approval, actual provider download or runtime-readiness pass is asserted. Reviewed local implementation record headless-model-source-preview-qualified; receipt 38fb6e49b50ec097a94cd7dc6b9b5451cd11530b7c5f6e246665601611071c90; review bed4c9369b0bc2ee42dbf5f32187151c0e3e9e1b667754b97a97f6e03d594f41; committed ancestor ce3a511c0c567ab7a8eb36c320935c3e9845f88f. Original executed evidence remains preserved; this history record grants no current parent qualification.",
+      "tests": [
+        "Actual passing stored component receipt 38fb6e49b50ec097a94cd7dc6b9b5451cd11530b7c5f6e246665601611071c90 and independent review bed4c9369b0bc2ee42dbf5f32187151c0e3e9e1b667754b97a97f6e03d594f41. No accepted ordinary model accuracy tests were repeated."
+      ],
+      "title": "Inspect the exact model source"
+    },
+    {
+      "areas": [
+        "Headless Model implementation"
+      ],
+      "chunkId": "execute-approved-model-download",
+      "completedAt": "2026-11-21T13:49:58Z",
+      "criteriaIds": [
+        "compatible-download",
+        "security-model-supply-and-limits"
+      ],
+      "documentation": [
+        "Current Model contracts/host/runtime guidance and scoped qualification observations."
+      ],
+      "feedbackAddressed": [],
+      "id": "models-training-and-generation-execute-approved-model-download",
+      "incrementId": "models-training-and-generation",
+      "summary": "Implemented private exact approved Model step execution, durable one-use attempts and the final original source-port admission check. Accepted work survives outward withdrawal and replay does not duplicate effects. Controlled application/SQLite fixtures qualify this component; public host binding, status/cancel, save and actual provider/native/host qualification remain pending. Reviewed local implementation record headless-model-download-execution-checkpoint; receipt 1b368fadc5e852ea4d99073b7b7c73685f29cae6952899b801f6619f5b6b647d; review 79e8e3171c35671a460cb423b3b0f361f1f7caa6af28decd4a335aaf45cd3c57; committed ancestor b4455a84d239b9e395dc653c67dafcb268129304. Original executed evidence remains preserved; this history record grants no current parent qualification.",
+      "tests": [
+        "Actual passing stored component receipt 1b368fadc5e852ea4d99073b7b7c73685f29cae6952899b801f6619f5b6b647d and independent review 79e8e3171c35671a460cb423b3b0f361f1f7caa6af28decd4a335aaf45cd3c57. No accepted ordinary model accuracy tests were repeated."
+      ],
+      "title": "Execute an exact approved download"
     }
   ],
   "completion": null,
@@ -2119,6 +2185,48 @@
       "recordedAt": "2026-11-19T02:29:18Z",
       "sequence": 112,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "ec1b028199b7ce5f67347c10345f33bbebb31454616e1c19089c17fd10d53d59",
+      "recordedAt": "2026-11-21T13:44:03Z",
+      "sequence": 113,
+      "type": "work-chunks-reconfigured"
+    },
+    {
+      "eventFingerprint": "988caccacc54144bcf00fc01a93b76fc850162663aec93df882fcdb4baea22a4",
+      "recordedAt": "2026-11-21T13:44:03Z",
+      "sequence": 114,
+      "type": "work-chunks-reconfigured"
+    },
+    {
+      "eventFingerprint": "a9c588b4e68107340412d15187eee49d831709b2a318aded45ab44e5f19f1798",
+      "recordedAt": "2026-11-21T13:44:04Z",
+      "sequence": 115,
+      "type": "work-chunks-reconfigured"
+    },
+    {
+      "eventFingerprint": "f88c7f6718462aa715c1758ac936fec459a711c5606d5e3879d4adda67331624",
+      "recordedAt": "2026-11-21T13:44:05Z",
+      "sequence": 116,
+      "type": "work-chunks-reconfigured"
+    },
+    {
+      "eventFingerprint": "08317716f723cb53e091e8a22463417bbd236626b65bff3f50aed2830e561f72",
+      "recordedAt": "2026-11-21T13:49:57Z",
+      "sequence": 117,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "dc02c37df39dd8796250e2a27b788838170c98473c72410936a6d71060b19ccd",
+      "recordedAt": "2026-11-21T13:49:58Z",
+      "sequence": 118,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9876a05913b9e489815e6292df8adecc48e58dc2150a09398d3d3dfabcf32c60",
+      "recordedAt": "2026-11-21T13:49:58Z",
+      "sequence": 119,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -3315,7 +3423,11 @@
       ],
       "allowPendingQualification": false,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "inspect-installed-models",
+        "review-pinned-model-source",
+        "execute-approved-model-download"
+      ],
       "deliverables": [
         "Model download, training, evaluation and supported image/text generation tool families",
         "Task and notification integration, including hardware admission and verified actor/target ownership"
@@ -3341,12 +3453,49 @@
           {
             "criteriaIds": [
               "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "inspect-installed-models",
+            "outcome": "List already-saved models and open the exact selected record. Keep result pages bounded and apply the current user and workspace permissions. Listing must not scan model folders or start a runtime.",
+            "title": "Inspect installed models"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-pinned-model-source",
+            "outcome": "Show the exact provider version, files, sizes, format and license before download approval. Keep keys and local file locations private. Source metadata alone does not approve a transfer or prove model readiness.",
+            "title": "Inspect the exact model source"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "execute-approved-model-download",
+            "outcome": "Implement the approved download through the existing Model owner. Retries must not start it twice. Keep track of started or uncertain work if chat closes or permission changes. Controlled tests check this code; real provider and app qualification remain separate.",
+            "title": "Execute an exact approved download"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
               "model-runtime-hosts",
               "security-model-supply-and-limits"
             ],
-            "id": "models",
-            "outcome": "A paired client can inspect permitted persisted models and configured-provider provenance/license/revision/format, preview exact download/resource scope and run one explicitly approved supported acquisition with durable scoped task status, safe retry/cancellation semantics and unchanged ordinary downloads.",
-            "title": "Prepare and acquire exact supported models"
+            "id": "monitor-and-cancel-model-download",
+            "outcome": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant\u2019s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
+            "title": "Connect downloads and owned task controls"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-and-save-downloaded-model",
+            "outcome": "Show the completed download for review. Add the exact result to saved models only after separate approval and a current permission check. Save the record atomically, prevent duplicates on retry, and preserve the downloaded result if approval ends.",
+            "title": "Review and save the completed model"
           },
           {
             "criteriaIds": [
@@ -3354,9 +3503,29 @@
               "model-runtime-hosts",
               "security-model-supply-and-limits"
             ],
-            "id": "train-evaluate",
-            "outcome": "An exact approved dataset version and compatible pinned base feed the existing supported training task. Base/recipe/data/hardware/task/output lineage remains traceable, validation and fixed evaluation are separate, and a trained candidate requires separate save. Missing resources or unsupported profiles stay explicit.",
-            "title": "Fine-tune, evaluate and review authorized outputs"
+            "id": "run-approved-fine-tuning",
+            "outcome": "Use the approved dataset version, exact base model and supported training settings. Show progress, checkpoints and output history. Keep hardware limits, clearly refuse unsupported or low-resource requests, and require separate approval to save the trained result.",
+            "title": "Run a bounded fine-tuning task"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "evaluate-trained-model-candidate",
+            "outcome": "Compare the trained candidate with the declared fixed baseline. Record model, data, recipe, hardware and task history. Separate readiness from output quality and review before saving. Do not repeat ordinary model accuracy checks already accepted by the user.",
+            "title": "Evaluate and review the trained candidate"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "generate-and-import-model-output",
+            "outcome": "Generate supported text and images and import outputs for review through existing tasks. Apply current permissions and resource limits. Keep prompts private, preserve exact output history and save only approved results.",
+            "title": "Generate and import supported outputs"
           },
           {
             "criteriaIds": [
@@ -3365,9 +3534,9 @@
               "model-runtime-hosts",
               "security-model-supply-and-limits"
             ],
-            "id": "generate-and-reveal",
-            "outcome": "Existing supported text/image tasks and output import use current scoped approval, safe transient inputs and exact task lineage. Separately authorized Desktop/Managed windows show exact model inventory/download/training/generated-artifact outcomes and revoke stops presentation without losing independent work.",
-            "title": "Generate and show exact model outcomes"
+            "id": "qualify-model-workflows-on-hosts",
+            "outcome": "Test real approved model downloads, training, evaluation and generated outputs on Desktop and Managed browser through MCP and paired app views. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Simulated results cannot pass the real execution checks.",
+            "title": "Show and qualify exact model outcomes"
           }
         ],
         "completionTests": [
@@ -3381,7 +3550,7 @@
           "Portable skill/MCP schemas and both host permission disclosures",
           "Bounded genuine task/quality/resource/cleanup qualification reports"
         ],
-        "fingerprint": "17380c01d38a9bdad5a634080af464058728b6765e8e6a5b14e409b1615516b5",
+        "fingerprint": "71ef135bcc0e6f9820649a624612f48df280465c4b18a31f22718330d28f0614",
         "focusedTests": [
           "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
           "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
@@ -3516,7 +3685,87 @@
       "id": "asset-selection-and-custom-creation",
       "number": 8,
       "objective": "Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component.",
-      "plan": null,
+      "plan": {
+        "assumptions": [
+          "This is a pending outline; perform ordered start, current increment research and formal planning before implementation.",
+          "Retain every approved criterion, work package, deliverable, exclusion, authority and technical qualification requirement.",
+          "Use feature-focused checks while implementing. Run the combined all-suite and complete software gates only after all implementation increments. Genuine unavailable qualification remains pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-asset-plan",
+              "security-asset-trust"
+            ],
+            "id": "inspect-asset-compatibility",
+            "outcome": "List released asset versions, their source and where they can be used. Check connections, placement and readiness. Explain missing or incompatible choices without installing or activating anything.",
+            "title": "Inspect compatible released assets"
+          },
+          {
+            "criteriaIds": [
+              "compatible-asset-plan",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "preview-asset-composition-plan",
+            "outcome": "Preview the exact assets and versions in the proposed design. Show substitutions and dependencies before changes are approved. Apply the same asset rules to forms, pages, fields, validation, routes and submission actions.",
+            "title": "Preview and review an asset plan"
+          },
+          {
+            "criteriaIds": [
+              "custom-asset-drafts",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "create-declarative-custom-asset",
+            "outcome": "Create a reusable declarative draft from the exact base or source. Define its settings, connections and behavior and run existing validation. Generated material must remain inactive during review.",
+            "title": "Create and validate a custom asset draft"
+          },
+          {
+            "criteriaIds": [
+              "custom-asset-drafts",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "review-and-promote-custom-asset",
+            "outcome": "Review the exact custom draft, source and package before release. Use existing isolation and admission checks. Executable changes require separate approval; an assistant message or permission to show a window cannot grant it.",
+            "title": "Review and promote the exact custom asset"
+          },
+          {
+            "criteriaIds": [
+              "compatible-asset-plan",
+              "custom-asset-drafts",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "reveal-and-qualify-asset-workflow",
+            "outcome": "Test choosing an asset, creating a missing declarative asset and using it in a system through real supported hosts and MCP. Show the exact draft, review and validation views. Check refusals for missing or revoked implementations and preserve independent background work.",
+            "title": "Show and qualify the asset workflow"
+          }
+        ],
+        "completionTests": [
+          "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
+        ],
+        "documentation": [
+          "Update the owning module README, ADR0047 and relevant architecture/threat-model guidance with changed behavior.",
+          "Maintain portable Headless tool/skill guidance and bounded truthful feature qualification records."
+        ],
+        "fingerprint": "990edc8a858c3684c6d75446ee73c586e347f5075e51d938abac71562ed1fc25",
+        "focusedTests": [
+          "For each outcome, run the smallest feature and related functionality checks, including denial, malformed input, scope, privacy, interruption and safe failure cases. Preserve every specific verification and technical requirement in the approved increment."
+        ],
+        "outlineOnly": true,
+        "recordedAt": "2026-11-21T13:44:03Z",
+        "rollback": "Withdraw tool families and presentation actions while retaining reviewed proposals, protected package quarantine, existing release history and saved system revisions.",
+        "steps": [
+          "List released asset versions, their source and where they can be used. Check connections, placement and readiness. Explain missing or incompatible choices without installing or activating anything.",
+          "Preview the exact assets and versions in the proposed design. Show substitutions and dependencies before changes are approved. Apply the same asset rules to forms, pages, fields, validation, routes and submission actions.",
+          "Create a reusable declarative draft from the exact base or source. Define its settings, connections and behavior and run existing validation. Generated material must remain inactive during review.",
+          "Review the exact custom draft, source and package before release. Use existing isolation and admission checks. Executable changes require separate approval; an assistant message or permission to show a window cannot grant it.",
+          "Test choosing an asset, creating a missing declarative asset and using it in a system through real supported hosts and MCP. Show the exact draft, review and validation views. Check refusals for missing or revoked implementations and preserve independent background work."
+        ],
+        "summary": "Pending work-chunk outline. Ordered start, increment research and formal implementation planning are required before work."
+      },
       "research": [],
       "rollback": "Withdraw tool families and presentation actions while retaining reviewed proposals, protected package quarantine, existing release history and saved system revisions.",
       "startedAt": null,
@@ -3587,7 +3836,99 @@
       "id": "compose-build-test-publish",
       "number": 9,
       "objective": "Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle.",
-      "plan": null,
+      "plan": {
+        "assumptions": [
+          "This is a pending outline; perform ordered start, current increment research and formal planning before implementation.",
+          "Retain every approved criterion, work package, deliverable, exclusion, authority and technical qualification requirement.",
+          "Use feature-focused checks while implementing. Run the combined all-suite and complete software gates only after all implementation increments. Genuine unavailable qualification remains pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "validated-system-design",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "edit-reviewed-system-composition",
+            "outcome": "Apply approved edits to the exact system and revision through existing Canvas and Form actions. Preserve unsaved drafts and recover from conflicting edits. Keep each form and its fields under the correct asset, page and container.",
+            "title": "Apply reviewed Canvas and Form edits"
+          },
+          {
+            "criteriaIds": [
+              "validated-system-design",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "bind-and-validate-system-resources",
+            "outcome": "Bind exact model, data, RAG and asset versions. Validate useful RAG, trained-model and form or interactive systems without silent replacements. Compare the existing and proposed revisions.",
+            "title": "Bind and validate system resources"
+          },
+          {
+            "criteriaIds": [
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "build-immutable-system-candidate",
+            "outcome": "Build the exact approved design through the existing builder. Check readiness and input history. Report bounded progress and produce fixed build artifacts. Preserve failures and resource limits.",
+            "title": "Build an immutable candidate"
+          },
+          {
+            "criteriaIds": [
+              "validated-system-design",
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "test-and-review-built-system",
+            "outcome": "Run the existing isolated tests on the exact built candidate and review their evidence. Fix identified feature defects and retain the failed results. Passing tests do not grant permission to publish.",
+            "title": "Test and review the candidate"
+          },
+          {
+            "criteriaIds": [
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "approve-and-publish-exact-release",
+            "outcome": "Show the release changes, compatibility, audience and destination. Publish only the exact separately approved build and evidence through existing release controls. Use authorized synthetic targets for qualification.",
+            "title": "Approve and publish the exact release"
+          },
+          {
+            "criteriaIds": [
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "operate-and-qualify-published-system",
+            "outcome": "Use separate approval for runtime Start and Stop. Test progress, exact result views, save and reopen, interruption and safe rollback on real supported hosts. Closing a view must not discard independent background work.",
+            "title": "Operate and qualify the published system"
+          }
+        ],
+        "completionTests": [
+          "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
+        ],
+        "documentation": [
+          "Update the owning module README, ADR0047 and relevant architecture/threat-model guidance with changed behavior.",
+          "Maintain portable Headless tool/skill guidance and bounded truthful feature qualification records."
+        ],
+        "fingerprint": "0e3dfd3179a3d39c17e5d03392bf12817bb767b62ec789ffc6ac9e057fb356c2",
+        "focusedTests": [
+          "For each outcome, run the smallest feature and related functionality checks, including denial, malformed input, scope, privacy, interruption and safe failure cases. Preserve every specific verification and technical requirement in the approved increment."
+        ],
+        "outlineOnly": true,
+        "recordedAt": "2026-11-21T13:44:04Z",
+        "rollback": "Disable new delegated lifecycle entry points and end their presentation. Retain immutable builds, tests, releases, active-work safety and prior release rollback procedures.",
+        "steps": [
+          "Apply approved edits to the exact system and revision through existing Canvas and Form actions. Preserve unsaved drafts and recover from conflicting edits. Keep each form and its fields under the correct asset, page and container.",
+          "Bind exact model, data, RAG and asset versions. Validate useful RAG, trained-model and form or interactive systems without silent replacements. Compare the existing and proposed revisions.",
+          "Build the exact approved design through the existing builder. Check readiness and input history. Report bounded progress and produce fixed build artifacts. Preserve failures and resource limits.",
+          "Run the existing isolated tests on the exact built candidate and review their evidence. Fix identified feature defects and retain the failed results. Passing tests do not grant permission to publish.",
+          "Show the release changes, compatibility, audience and destination. Publish only the exact separately approved build and evidence through existing release controls. Use authorized synthetic targets for qualification.",
+          "Use separate approval for runtime Start and Stop. Test progress, exact result views, save and reopen, interruption and safe rollback on real supported hosts. Closing a view must not discard independent background work."
+        ],
+        "summary": "Pending work-chunk outline. Ordered start, increment research and formal implementation planning are required before work."
+      },
       "research": [],
       "rollback": "Disable new delegated lifecycle entry points and end their presentation. Retain immutable builds, tests, releases, active-work safety and prior release rollback procedures.",
       "startedAt": null,
@@ -3659,7 +4000,97 @@
       "id": "workspace-controls-and-product-qualification",
       "number": 10,
       "objective": "Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests.",
-      "plan": null,
+      "plan": {
+        "assumptions": [
+          "This is a pending outline; perform ordered start, current increment research and formal planning before implementation.",
+          "Retain every approved criterion, work package, deliverable, exclusion, authority and technical qualification requirement.",
+          "Use feature-focused checks while implementing. Run the combined all-suite and complete software gates only after all implementation increments. Genuine unavailable qualification remains pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "administrative-handoff",
+              "security-final-capability-review"
+            ],
+            "id": "workspace-settings-handoff",
+            "outcome": "Show safe workspace, settings and security status. Perform only separately approved workspace actions and open the exact setup view for an authorized user. Keep credentials, membership and trust-policy entry on their existing protected paths.",
+            "title": "Manage workspace status and setup handoff"
+          },
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "administrative-handoff",
+              "security-final-capability-review"
+            ],
+            "id": "task-notification-and-readiness-coverage",
+            "outcome": "Cover the remaining task, notification and readiness views. Show bounded current status for the correct workspace. Do not expose keys, private content or raw worker responses.",
+            "title": "Cover task, notification and readiness surfaces"
+          },
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "security-final-capability-review"
+            ],
+            "id": "reconcile-complete-capability-map",
+            "outcome": "Map every major app feature to its actual supported hosts, tools, permissions, tasks and views. Keep discovery, routes, schemas and skills consistent. Identify unsupported features clearly.",
+            "title": "Reconcile the complete capability map"
+          },
+          {
+            "criteriaIds": [
+              "portfolio-qualification",
+              "security-final-capability-review"
+            ],
+            "id": "qualify-representative-build-goals",
+            "outcome": "Test repeated written build goals for RAG, training, asset reuse and controlled publishing. Use both a maintained frontier client and deterministic regression cases. Record fixed expectations for tool count, clarification quality, task latency, resource use and the intended user result.",
+            "title": "Qualify representative written build goals"
+          },
+          {
+            "criteriaIds": [
+              "portfolio-qualification",
+              "security-final-capability-review"
+            ],
+            "id": "qualify-interruption-and-denials",
+            "outcome": "Test interruption, limited fallback, privacy, wrong-scope requests, unavailable providers or hosts and revoked access. Prove refused requests cause no effects. Preserve real failures and genuinely unsupported environments.",
+            "title": "Qualify interruption and refusal behavior"
+          },
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "administrative-handoff",
+              "portfolio-qualification",
+              "security-final-capability-review"
+            ],
+            "id": "qualify-final-combined-candidate",
+            "outcome": "After every implementation increment is feature-tested, run the current combined all-suite and required product builds once. Obtain independent final feature and security review. Resolve failures and pass every retained technical criterion before closing the roadmap.",
+            "title": "Qualify the final combined candidate"
+          }
+        ],
+        "completionTests": [
+          "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.",
+          "Run the full repository all-suite and platform builds only after relevant increments are implemented and tested. Record current exact evidence and independent review."
+        ],
+        "documentation": [
+          "Update the owning module README, ADR0047 and relevant architecture/threat-model guidance with changed behavior.",
+          "Maintain portable Headless tool/skill guidance and bounded truthful feature qualification records."
+        ],
+        "fingerprint": "50b95e9b2c1168c69927a25d0c3163b9f5b58fc9f2fcd9baaabeef947d49a696",
+        "focusedTests": [
+          "For each outcome, run the smallest feature and related functionality checks, including denial, malformed input, scope, privacy, interruption and safe failure cases. Preserve every specific verification and technical requirement in the approved increment."
+        ],
+        "outlineOnly": true,
+        "recordedAt": "2026-11-21T13:44:05Z",
+        "rollback": "Turn off each new capability family independently, revoke exact grants and leases, and preserve prior Headless scope, ordinary app UI and accepted records.",
+        "steps": [
+          "Show safe workspace, settings and security status. Perform only separately approved workspace actions and open the exact setup view for an authorized user. Keep credentials, membership and trust-policy entry on their existing protected paths.",
+          "Cover the remaining task, notification and readiness views. Show bounded current status for the correct workspace. Do not expose keys, private content or raw worker responses.",
+          "Map every major app feature to its actual supported hosts, tools, permissions, tasks and views. Keep discovery, routes, schemas and skills consistent. Identify unsupported features clearly.",
+          "Test repeated written build goals for RAG, training, asset reuse and controlled publishing. Use both a maintained frontier client and deterministic regression cases. Record fixed expectations for tool count, clarification quality, task latency, resource use and the intended user result.",
+          "Test interruption, limited fallback, privacy, wrong-scope requests, unavailable providers or hosts and revoked access. Prove refused requests cause no effects. Preserve real failures and genuinely unsupported environments.",
+          "After every implementation increment is feature-tested, run the current combined all-suite and required product builds once. Obtain independent final feature and security review. Resolve failures and pass every retained technical criterion before closing the roadmap."
+        ],
+        "summary": "Pending work-chunk outline. Ordered start, increment research and formal implementation planning are required before work."
+      },
       "research": [],
       "rollback": "Turn off each new capability family independently, revoke exact grants and leases, and preserve prior Headless scope, ordinary app UI and accepted records.",
       "startedAt": null,
@@ -3704,5 +4135,530 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-19T02:29:18Z"
+  "updatedAt": "2026-11-21T13:49:58Z",
+  "workChunkPlanRevisions": [
+    {
+      "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
+      "authorityRef": "user-headless-work-chunk-sizing-20261121",
+      "completedChunkIds": [],
+      "criterionIds": [
+        "compatible-download",
+        "training-and-generation-quality",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "incrementId": "models-training-and-generation",
+      "originalPlan": {
+        "assumptions": [
+          "The merged roadmap and both approval modes/channels are already approved; no new provider, engine, runtime topology, arbitrary loader or automatic purchasing is authorized.",
+          "Use existing authorized installed model assets and configured provider authority. A new model, paid action, external transfer/publication or unresolved security-policy change requires its existing explicit direction rather than hidden fallback.",
+          "Compatible availability is a measured supported profile, not a promise for all models/hardware. Preserve genuine unavailable qualification; technical pending is agent work unless a specific human action is required.",
+          "Latest user direction is feature-focused testing while implementing increments, followed by one combined comprehensive roadmap qualification boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "models",
+            "outcome": "A paired client can inspect permitted persisted models and configured-provider provenance/license/revision/format, preview exact download/resource scope and run one explicitly approved supported acquisition with durable scoped task status, safe retry/cancellation semantics and unchanged ordinary downloads.",
+            "title": "Prepare and acquire exact supported models"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "train-evaluate",
+            "outcome": "An exact approved dataset version and compatible pinned base feed the existing supported training task. Base/recipe/data/hardware/task/output lineage remains traceable, validation and fixed evaluation are separate, and a trained candidate requires separate save. Missing resources or unsupported profiles stay explicit.",
+            "title": "Fine-tune, evaluate and review authorized outputs"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "generate-and-reveal",
+            "outcome": "Existing supported text/image tasks and output import use current scoped approval, safe transient inputs and exact task lineage. Separately authorized Desktop/Managed windows show exact model inventory/download/training/generated-artifact outcomes and revoke stops presentation without losing independent work.",
+            "title": "Generate and show exact model outcomes"
+          }
+        ],
+        "completionTests": [
+          "Actual stdio MCP client on packaged Desktop and authenticated Managed browser exercises the supported small pinned acquisition, declared local training/evaluation, generation/output import, task recovery/resource refusal and separate revocable status reveals. No fake accepted task, weights, worker or output can substitute for a claimed physical pass.",
+          "Predeclare task-specific baseline/quality/format/data/resource expectations before observation. Retain original accepted model-size accuracy policy, existing guard/deadline/native/offload controls and failed history; report each profile/device/method truthfully.",
+          "Run only this increment's relevant feature tests, builds/docs/dependency-direction gates and independent exact-criterion review. Reserve the combined standard/end-to-end/AI suite for after all roadmap implementation increments."
+        ],
+        "documentation": [
+          "Model/runtime contracts and application/host READMEs",
+          "ADR0047, Headless threat model and runtime architecture/profile boundaries",
+          "Portable skill/MCP schemas and both host permission disclosures",
+          "Bounded genuine task/quality/resource/cleanup qualification reports"
+        ],
+        "fingerprint": "17380c01d38a9bdad5a634080af464058728b6765e8e6a5b14e409b1615516b5",
+        "focusedTests": [
+          "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
+          "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
+          "Finite training/generation settings, source/model substitution, admission/memory shortfall, protected prompt/data exclusion, review-before-save, failed/ambiguous tasks and current egress/consent/revoke fences.",
+          "Focused source-compatible application/worker/adapter/host and paired UI tests, real supported task profile with original safety controls and owned lifecycle/cleanup proof. No accepted ordinary Qwen accuracy rerun."
+        ],
+        "recordedAt": "2026-11-19T02:29:18Z",
+        "rollback": "Disable only newly advertised model/training/generation delegation and related presentation. Preserve ordinary app functionality, exact accepted task custody, installed models, dataset versions, reviewed candidates, receipts and all existing cleanup/resource/security controls.",
+        "steps": [
+          "Define strict bounded model metadata/preview/task contracts and private exact model witnesses. Bind persisted-only inventory and configured provider metadata to current actor/client/workspace/model authority. Extend the existing approved download path with immutable revision/integrity/resource admission and durable accepted-task lineage; no public raw path or worker error.",
+          "Compile exact saved dataset version/artifact and base-model witnesses into finite supported training/validation settings. Admit one current approved task through the existing owner, retain base/recipe/data/hardware/task lineage, expose minimized status and separate explicit result save. Evaluate a declared supported small profile against a fixed baseline, with honest unsupported/resource refusal outcomes.",
+          "Use existing approved text/image generation owners with bounded transient prompt handling and exact task/result lineage. Add finite model/download/training/generated-artifact presentation selectors to the existing consent/revoke delivery protocol on both hosts. Run the real scoped MCP/app workflows and relevant denial/cleanup tests before exact criterion qualification."
+        ],
+        "summary": "Deliver three integrated model outcomes: prepare and acquire an exact compatible model; fine-tune and evaluate authorized data with review before save; generate and reveal exact outcomes under separate revocable window consent. Reuse the existing host application/runtime owners and exact approved-plan receipt protocol."
+      },
+      "originalPlanDigest": "6cacf0dd6fa38d179c16dbb41d6e7e8597e643aa99be927a3e1576683e6f313f",
+      "reason": "Expose coherent independently tested and reviewed outcomes without changing approved scope, criteria, completed evidence, order or qualification. Pending outlines do not start work.",
+      "recordedAt": "2026-11-21T13:44:03Z",
+      "replacementPlan": {
+        "assumptions": [
+          "The merged roadmap and both approval modes/channels are already approved; no new provider, engine, runtime topology, arbitrary loader or automatic purchasing is authorized.",
+          "Use existing authorized installed model assets and configured provider authority. A new model, paid action, external transfer/publication or unresolved security-policy change requires its existing explicit direction rather than hidden fallback.",
+          "Compatible availability is a measured supported profile, not a promise for all models/hardware. Preserve genuine unavailable qualification; technical pending is agent work unless a specific human action is required.",
+          "Latest user direction is feature-focused testing while implementing increments, followed by one combined comprehensive roadmap qualification boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "inspect-installed-models",
+            "outcome": "List already-saved models and open the exact selected record. Keep result pages bounded and apply the current user and workspace permissions. Listing must not scan model folders or start a runtime.",
+            "title": "Inspect installed models"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-pinned-model-source",
+            "outcome": "Show the exact provider version, files, sizes, format and license before download approval. Keep keys and local file locations private. Source metadata alone does not approve a transfer or prove model readiness.",
+            "title": "Inspect the exact model source"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "execute-approved-model-download",
+            "outcome": "Implement the approved download through the existing Model owner. Retries must not start it twice. Keep track of started or uncertain work if chat closes or permission changes. Controlled tests check this code; real provider and app qualification remain separate.",
+            "title": "Execute an exact approved download"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "monitor-and-cancel-model-download",
+            "outcome": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant\u2019s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
+            "title": "Connect downloads and owned task controls"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-and-save-downloaded-model",
+            "outcome": "Show the completed download for review. Add the exact result to saved models only after separate approval and a current permission check. Save the record atomically, prevent duplicates on retry, and preserve the downloaded result if approval ends.",
+            "title": "Review and save the completed model"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "run-approved-fine-tuning",
+            "outcome": "Use the approved dataset version, exact base model and supported training settings. Show progress, checkpoints and output history. Keep hardware limits, clearly refuse unsupported or low-resource requests, and require separate approval to save the trained result.",
+            "title": "Run a bounded fine-tuning task"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "evaluate-trained-model-candidate",
+            "outcome": "Compare the trained candidate with the declared fixed baseline. Record model, data, recipe, hardware and task history. Separate readiness from output quality and review before saving. Do not repeat ordinary model accuracy checks already accepted by the user.",
+            "title": "Evaluate and review the trained candidate"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "generate-and-import-model-output",
+            "outcome": "Generate supported text and images and import outputs for review through existing tasks. Apply current permissions and resource limits. Keep prompts private, preserve exact output history and save only approved results.",
+            "title": "Generate and import supported outputs"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "qualify-model-workflows-on-hosts",
+            "outcome": "Test real approved model downloads, training, evaluation and generated outputs on Desktop and Managed browser through MCP and paired app views. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Simulated results cannot pass the real execution checks.",
+            "title": "Show and qualify exact model outcomes"
+          }
+        ],
+        "completionTests": [
+          "Actual stdio MCP client on packaged Desktop and authenticated Managed browser exercises the supported small pinned acquisition, declared local training/evaluation, generation/output import, task recovery/resource refusal and separate revocable status reveals. No fake accepted task, weights, worker or output can substitute for a claimed physical pass.",
+          "Predeclare task-specific baseline/quality/format/data/resource expectations before observation. Retain original accepted model-size accuracy policy, existing guard/deadline/native/offload controls and failed history; report each profile/device/method truthfully.",
+          "Run only this increment's relevant feature tests, builds/docs/dependency-direction gates and independent exact-criterion review. Reserve the combined standard/end-to-end/AI suite for after all roadmap implementation increments."
+        ],
+        "documentation": [
+          "Model/runtime contracts and application/host READMEs",
+          "ADR0047, Headless threat model and runtime architecture/profile boundaries",
+          "Portable skill/MCP schemas and both host permission disclosures",
+          "Bounded genuine task/quality/resource/cleanup qualification reports"
+        ],
+        "fingerprint": "71ef135bcc0e6f9820649a624612f48df280465c4b18a31f22718330d28f0614",
+        "focusedTests": [
+          "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
+          "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
+          "Finite training/generation settings, source/model substitution, admission/memory shortfall, protected prompt/data exclusion, review-before-save, failed/ambiguous tasks and current egress/consent/revoke fences.",
+          "Focused source-compatible application/worker/adapter/host and paired UI tests, real supported task profile with original safety controls and owned lifecycle/cleanup proof. No accepted ordinary Qwen accuracy rerun."
+        ],
+        "recordedAt": "2026-11-19T02:29:18Z",
+        "rollback": "Disable only newly advertised model/training/generation delegation and related presentation. Preserve ordinary app functionality, exact accepted task custody, installed models, dataset versions, reviewed candidates, receipts and all existing cleanup/resource/security controls.",
+        "steps": [
+          "Define strict bounded model metadata/preview/task contracts and private exact model witnesses. Bind persisted-only inventory and configured provider metadata to current actor/client/workspace/model authority. Extend the existing approved download path with immutable revision/integrity/resource admission and durable accepted-task lineage; no public raw path or worker error.",
+          "Compile exact saved dataset version/artifact and base-model witnesses into finite supported training/validation settings. Admit one current approved task through the existing owner, retain base/recipe/data/hardware/task lineage, expose minimized status and separate explicit result save. Evaluate a declared supported small profile against a fixed baseline, with honest unsupported/resource refusal outcomes.",
+          "Use existing approved text/image generation owners with bounded transient prompt handling and exact task/result lineage. Add finite model/download/training/generated-artifact presentation selectors to the existing consent/revoke delivery protocol on both hosts. Run the real scoped MCP/app workflows and relevant denial/cleanup tests before exact criterion qualification."
+        ],
+        "summary": "Deliver three integrated model outcomes: prepare and acquire an exact compatible model; fine-tune and evaluate authorized data with review before save; generate and reveal exact outcomes under separate revocable window consent. Reuse the existing host application/runtime owners and exact approved-plan receipt protocol."
+      },
+      "replacementPlanDigest": "412284d5b6cdf00278e319f53a44cbf468964797a3760e3c9e94219f362c5a1c"
+    },
+    {
+      "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
+      "authorityRef": "user-headless-work-chunk-sizing-20261121",
+      "completedChunkIds": [],
+      "criterionIds": [
+        "compatible-asset-plan",
+        "custom-asset-drafts",
+        "real-asset-workflow",
+        "security-asset-trust"
+      ],
+      "incrementId": "asset-selection-and-custom-creation",
+      "originalPlan": null,
+      "originalPlanDigest": null,
+      "reason": "Expose coherent independently tested and reviewed outcomes without changing approved scope, criteria, completed evidence, order or qualification. Pending outlines do not start work.",
+      "recordedAt": "2026-11-21T13:44:03Z",
+      "replacementPlan": {
+        "assumptions": [
+          "This is a pending outline; perform ordered start, current increment research and formal planning before implementation.",
+          "Retain every approved criterion, work package, deliverable, exclusion, authority and technical qualification requirement.",
+          "Use feature-focused checks while implementing. Run the combined all-suite and complete software gates only after all implementation increments. Genuine unavailable qualification remains pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-asset-plan",
+              "security-asset-trust"
+            ],
+            "id": "inspect-asset-compatibility",
+            "outcome": "List released asset versions, their source and where they can be used. Check connections, placement and readiness. Explain missing or incompatible choices without installing or activating anything.",
+            "title": "Inspect compatible released assets"
+          },
+          {
+            "criteriaIds": [
+              "compatible-asset-plan",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "preview-asset-composition-plan",
+            "outcome": "Preview the exact assets and versions in the proposed design. Show substitutions and dependencies before changes are approved. Apply the same asset rules to forms, pages, fields, validation, routes and submission actions.",
+            "title": "Preview and review an asset plan"
+          },
+          {
+            "criteriaIds": [
+              "custom-asset-drafts",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "create-declarative-custom-asset",
+            "outcome": "Create a reusable declarative draft from the exact base or source. Define its settings, connections and behavior and run existing validation. Generated material must remain inactive during review.",
+            "title": "Create and validate a custom asset draft"
+          },
+          {
+            "criteriaIds": [
+              "custom-asset-drafts",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "review-and-promote-custom-asset",
+            "outcome": "Review the exact custom draft, source and package before release. Use existing isolation and admission checks. Executable changes require separate approval; an assistant message or permission to show a window cannot grant it.",
+            "title": "Review and promote the exact custom asset"
+          },
+          {
+            "criteriaIds": [
+              "compatible-asset-plan",
+              "custom-asset-drafts",
+              "real-asset-workflow",
+              "security-asset-trust"
+            ],
+            "id": "reveal-and-qualify-asset-workflow",
+            "outcome": "Test choosing an asset, creating a missing declarative asset and using it in a system through real supported hosts and MCP. Show the exact draft, review and validation views. Check refusals for missing or revoked implementations and preserve independent background work.",
+            "title": "Show and qualify the asset workflow"
+          }
+        ],
+        "completionTests": [
+          "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
+        ],
+        "documentation": [
+          "Update the owning module README, ADR0047 and relevant architecture/threat-model guidance with changed behavior.",
+          "Maintain portable Headless tool/skill guidance and bounded truthful feature qualification records."
+        ],
+        "fingerprint": "990edc8a858c3684c6d75446ee73c586e347f5075e51d938abac71562ed1fc25",
+        "focusedTests": [
+          "For each outcome, run the smallest feature and related functionality checks, including denial, malformed input, scope, privacy, interruption and safe failure cases. Preserve every specific verification and technical requirement in the approved increment."
+        ],
+        "outlineOnly": true,
+        "recordedAt": "2026-11-21T13:44:03Z",
+        "rollback": "Withdraw tool families and presentation actions while retaining reviewed proposals, protected package quarantine, existing release history and saved system revisions.",
+        "steps": [
+          "List released asset versions, their source and where they can be used. Check connections, placement and readiness. Explain missing or incompatible choices without installing or activating anything.",
+          "Preview the exact assets and versions in the proposed design. Show substitutions and dependencies before changes are approved. Apply the same asset rules to forms, pages, fields, validation, routes and submission actions.",
+          "Create a reusable declarative draft from the exact base or source. Define its settings, connections and behavior and run existing validation. Generated material must remain inactive during review.",
+          "Review the exact custom draft, source and package before release. Use existing isolation and admission checks. Executable changes require separate approval; an assistant message or permission to show a window cannot grant it.",
+          "Test choosing an asset, creating a missing declarative asset and using it in a system through real supported hosts and MCP. Show the exact draft, review and validation views. Check refusals for missing or revoked implementations and preserve independent background work."
+        ],
+        "summary": "Pending work-chunk outline. Ordered start, increment research and formal implementation planning are required before work."
+      },
+      "replacementPlanDigest": "a392b124d9e685934c9033bf4561b81488b959529761f71d85bb64db75a93649"
+    },
+    {
+      "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
+      "authorityRef": "user-headless-work-chunk-sizing-20261121",
+      "completedChunkIds": [],
+      "criterionIds": [
+        "validated-system-design",
+        "build-test-release",
+        "full-system-user-journeys",
+        "security-release-boundaries"
+      ],
+      "incrementId": "compose-build-test-publish",
+      "originalPlan": null,
+      "originalPlanDigest": null,
+      "reason": "Expose coherent independently tested and reviewed outcomes without changing approved scope, criteria, completed evidence, order or qualification. Pending outlines do not start work.",
+      "recordedAt": "2026-11-21T13:44:04Z",
+      "replacementPlan": {
+        "assumptions": [
+          "This is a pending outline; perform ordered start, current increment research and formal planning before implementation.",
+          "Retain every approved criterion, work package, deliverable, exclusion, authority and technical qualification requirement.",
+          "Use feature-focused checks while implementing. Run the combined all-suite and complete software gates only after all implementation increments. Genuine unavailable qualification remains pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "validated-system-design",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "edit-reviewed-system-composition",
+            "outcome": "Apply approved edits to the exact system and revision through existing Canvas and Form actions. Preserve unsaved drafts and recover from conflicting edits. Keep each form and its fields under the correct asset, page and container.",
+            "title": "Apply reviewed Canvas and Form edits"
+          },
+          {
+            "criteriaIds": [
+              "validated-system-design",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "bind-and-validate-system-resources",
+            "outcome": "Bind exact model, data, RAG and asset versions. Validate useful RAG, trained-model and form or interactive systems without silent replacements. Compare the existing and proposed revisions.",
+            "title": "Bind and validate system resources"
+          },
+          {
+            "criteriaIds": [
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "build-immutable-system-candidate",
+            "outcome": "Build the exact approved design through the existing builder. Check readiness and input history. Report bounded progress and produce fixed build artifacts. Preserve failures and resource limits.",
+            "title": "Build an immutable candidate"
+          },
+          {
+            "criteriaIds": [
+              "validated-system-design",
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "test-and-review-built-system",
+            "outcome": "Run the existing isolated tests on the exact built candidate and review their evidence. Fix identified feature defects and retain the failed results. Passing tests do not grant permission to publish.",
+            "title": "Test and review the candidate"
+          },
+          {
+            "criteriaIds": [
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "approve-and-publish-exact-release",
+            "outcome": "Show the release changes, compatibility, audience and destination. Publish only the exact separately approved build and evidence through existing release controls. Use authorized synthetic targets for qualification.",
+            "title": "Approve and publish the exact release"
+          },
+          {
+            "criteriaIds": [
+              "build-test-release",
+              "full-system-user-journeys",
+              "security-release-boundaries"
+            ],
+            "id": "operate-and-qualify-published-system",
+            "outcome": "Use separate approval for runtime Start and Stop. Test progress, exact result views, save and reopen, interruption and safe rollback on real supported hosts. Closing a view must not discard independent background work.",
+            "title": "Operate and qualify the published system"
+          }
+        ],
+        "completionTests": [
+          "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
+        ],
+        "documentation": [
+          "Update the owning module README, ADR0047 and relevant architecture/threat-model guidance with changed behavior.",
+          "Maintain portable Headless tool/skill guidance and bounded truthful feature qualification records."
+        ],
+        "fingerprint": "0e3dfd3179a3d39c17e5d03392bf12817bb767b62ec789ffc6ac9e057fb356c2",
+        "focusedTests": [
+          "For each outcome, run the smallest feature and related functionality checks, including denial, malformed input, scope, privacy, interruption and safe failure cases. Preserve every specific verification and technical requirement in the approved increment."
+        ],
+        "outlineOnly": true,
+        "recordedAt": "2026-11-21T13:44:04Z",
+        "rollback": "Disable new delegated lifecycle entry points and end their presentation. Retain immutable builds, tests, releases, active-work safety and prior release rollback procedures.",
+        "steps": [
+          "Apply approved edits to the exact system and revision through existing Canvas and Form actions. Preserve unsaved drafts and recover from conflicting edits. Keep each form and its fields under the correct asset, page and container.",
+          "Bind exact model, data, RAG and asset versions. Validate useful RAG, trained-model and form or interactive systems without silent replacements. Compare the existing and proposed revisions.",
+          "Build the exact approved design through the existing builder. Check readiness and input history. Report bounded progress and produce fixed build artifacts. Preserve failures and resource limits.",
+          "Run the existing isolated tests on the exact built candidate and review their evidence. Fix identified feature defects and retain the failed results. Passing tests do not grant permission to publish.",
+          "Show the release changes, compatibility, audience and destination. Publish only the exact separately approved build and evidence through existing release controls. Use authorized synthetic targets for qualification.",
+          "Use separate approval for runtime Start and Stop. Test progress, exact result views, save and reopen, interruption and safe rollback on real supported hosts. Closing a view must not discard independent background work."
+        ],
+        "summary": "Pending work-chunk outline. Ordered start, increment research and formal implementation planning are required before work."
+      },
+      "replacementPlanDigest": "308184d56870f76e594ed938eba365d8c19f844c14e8305f5e0dd2f091e126e0"
+    },
+    {
+      "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
+      "authorityRef": "user-headless-work-chunk-sizing-20261121",
+      "completedChunkIds": [],
+      "criterionIds": [
+        "complete-capability-map",
+        "administrative-handoff",
+        "portfolio-qualification",
+        "security-final-capability-review"
+      ],
+      "incrementId": "workspace-controls-and-product-qualification",
+      "originalPlan": null,
+      "originalPlanDigest": null,
+      "reason": "Expose coherent independently tested and reviewed outcomes without changing approved scope, criteria, completed evidence, order or qualification. Pending outlines do not start work.",
+      "recordedAt": "2026-11-21T13:44:05Z",
+      "replacementPlan": {
+        "assumptions": [
+          "This is a pending outline; perform ordered start, current increment research and formal planning before implementation.",
+          "Retain every approved criterion, work package, deliverable, exclusion, authority and technical qualification requirement.",
+          "Use feature-focused checks while implementing. Run the combined all-suite and complete software gates only after all implementation increments. Genuine unavailable qualification remains pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "administrative-handoff",
+              "security-final-capability-review"
+            ],
+            "id": "workspace-settings-handoff",
+            "outcome": "Show safe workspace, settings and security status. Perform only separately approved workspace actions and open the exact setup view for an authorized user. Keep credentials, membership and trust-policy entry on their existing protected paths.",
+            "title": "Manage workspace status and setup handoff"
+          },
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "administrative-handoff",
+              "security-final-capability-review"
+            ],
+            "id": "task-notification-and-readiness-coverage",
+            "outcome": "Cover the remaining task, notification and readiness views. Show bounded current status for the correct workspace. Do not expose keys, private content or raw worker responses.",
+            "title": "Cover task, notification and readiness surfaces"
+          },
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "security-final-capability-review"
+            ],
+            "id": "reconcile-complete-capability-map",
+            "outcome": "Map every major app feature to its actual supported hosts, tools, permissions, tasks and views. Keep discovery, routes, schemas and skills consistent. Identify unsupported features clearly.",
+            "title": "Reconcile the complete capability map"
+          },
+          {
+            "criteriaIds": [
+              "portfolio-qualification",
+              "security-final-capability-review"
+            ],
+            "id": "qualify-representative-build-goals",
+            "outcome": "Test repeated written build goals for RAG, training, asset reuse and controlled publishing. Use both a maintained frontier client and deterministic regression cases. Record fixed expectations for tool count, clarification quality, task latency, resource use and the intended user result.",
+            "title": "Qualify representative written build goals"
+          },
+          {
+            "criteriaIds": [
+              "portfolio-qualification",
+              "security-final-capability-review"
+            ],
+            "id": "qualify-interruption-and-denials",
+            "outcome": "Test interruption, limited fallback, privacy, wrong-scope requests, unavailable providers or hosts and revoked access. Prove refused requests cause no effects. Preserve real failures and genuinely unsupported environments.",
+            "title": "Qualify interruption and refusal behavior"
+          },
+          {
+            "criteriaIds": [
+              "complete-capability-map",
+              "administrative-handoff",
+              "portfolio-qualification",
+              "security-final-capability-review"
+            ],
+            "id": "qualify-final-combined-candidate",
+            "outcome": "After every implementation increment is feature-tested, run the current combined all-suite and required product builds once. Obtain independent final feature and security review. Resolve failures and pass every retained technical criterion before closing the roadmap.",
+            "title": "Qualify the final combined candidate"
+          }
+        ],
+        "completionTests": [
+          "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.",
+          "Run the full repository all-suite and platform builds only after relevant increments are implemented and tested. Record current exact evidence and independent review."
+        ],
+        "documentation": [
+          "Update the owning module README, ADR0047 and relevant architecture/threat-model guidance with changed behavior.",
+          "Maintain portable Headless tool/skill guidance and bounded truthful feature qualification records."
+        ],
+        "fingerprint": "50b95e9b2c1168c69927a25d0c3163b9f5b58fc9f2fcd9baaabeef947d49a696",
+        "focusedTests": [
+          "For each outcome, run the smallest feature and related functionality checks, including denial, malformed input, scope, privacy, interruption and safe failure cases. Preserve every specific verification and technical requirement in the approved increment."
+        ],
+        "outlineOnly": true,
+        "recordedAt": "2026-11-21T13:44:05Z",
+        "rollback": "Turn off each new capability family independently, revoke exact grants and leases, and preserve prior Headless scope, ordinary app UI and accepted records.",
+        "steps": [
+          "Show safe workspace, settings and security status. Perform only separately approved workspace actions and open the exact setup view for an authorized user. Keep credentials, membership and trust-policy entry on their existing protected paths.",
+          "Cover the remaining task, notification and readiness views. Show bounded current status for the correct workspace. Do not expose keys, private content or raw worker responses.",
+          "Map every major app feature to its actual supported hosts, tools, permissions, tasks and views. Keep discovery, routes, schemas and skills consistent. Identify unsupported features clearly.",
+          "Test repeated written build goals for RAG, training, asset reuse and controlled publishing. Use both a maintained frontier client and deterministic regression cases. Record fixed expectations for tool count, clarification quality, task latency, resource use and the intended user result.",
+          "Test interruption, limited fallback, privacy, wrong-scope requests, unavailable providers or hosts and revoked access. Prove refused requests cause no effects. Preserve real failures and genuinely unsupported environments.",
+          "After every implementation increment is feature-tested, run the current combined all-suite and required product builds once. Obtain independent final feature and security review. Resolve failures and pass every retained technical criterion before closing the roadmap."
+        ],
+        "summary": "Pending work-chunk outline. Ordered start, increment research and formal implementation planning are required before work."
+      },
+      "replacementPlanDigest": "7988c747e65db2e811fc0824f25f8bfcca3a9dddf2f00bd02d308a3dd9bbe422"
+    }
+  ]
 }

@@ -300,6 +300,8 @@ def implementation_ready_for_overall(state: dict[str, Any]) -> bool:
     if not increments or not approval_is_current(state) or execution_blocked(state):
         return False
     for increment in increments:
+        if (increment.get("plan") or {}).get("outlineOnly"):
+            return False
         planned = [item["id"] for item in (increment.get("plan") or {}).get("chunks", [])]
         completed = increment.get("completedChunks", [])
         if not planned or len(set(planned)) != len(planned) or len(completed) != len(planned) or set(completed) != set(planned):
@@ -724,9 +726,10 @@ def validate_plan(value: Any, increment: dict[str, Any]) -> dict[str, Any]:
     )
     criterion_ids = {item["id"] for item in increment["acceptanceCriteria"]}
     chunks = []
-    for index, value in enumerate(
-        require_list(plan.get("chunks"), "event.plan.chunks", minimum=1)
-    ):
+    proposed_chunks = require_list(plan.get("chunks"), "event.plan.chunks", minimum=1)
+    if len(proposed_chunks) > 100:
+        raise RoadmapError("Keep plans within the existing one-hundred-chunk review projection.")
+    for index, value in enumerate(proposed_chunks):
         label = f"event.plan.chunks[{index}]"
         chunk = require_object(value, label)
         reject_unknown(chunk, {"id", "title", "outcome", "criteriaIds"}, label)
@@ -1037,6 +1040,58 @@ def handle_increment_plan_recorded(
     increment["status"] = "implementing"
 
 
+def handle_work_chunks_reconfigured(state: dict[str, Any], event: dict[str, Any]) -> None:
+    """Refine tracking without changing scope, execution gates or completed work."""
+    reject_unknown(event, {"type", "incrementId", "expectedPlanDigest", "plan", "authorityRef", "reason"}, "event")
+    if not approval_is_current(state) or execution_blocked(state):
+        raise RoadmapError("Current approval and no unresolved human action are required.")
+    target = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
+    pending = (target["status"] == "pending" and not target.get("startedAt")
+               and not target.get("research") and not target.get("completedChunks"))
+    active = (state.get("currentIncrementId") == target["id"] and target["status"] == "implementing"
+              and bool(target.get("research")) and bool(target.get("plan"))
+              and not target["plan"].get("outlineOnly"))
+    if not pending and not active:
+        raise RoadmapError("Refine the active implementation plan or an untouched pending outline only.")
+    old = copy.deepcopy(target.get("plan"))
+    expected = fingerprint(old) if old is not None else None
+    if "expectedPlanDigest" not in event or event["expectedPlanDigest"] != expected:
+        raise RoadmapError("The chunk plan changed; inspect its whole-plan digest before retrying.")
+    if old is not None:
+        validate_plan({key: value for key, value in require_object(old, "current chunk plan").items()
+                       if key not in {"recordedAt", "fingerprint", "outlineOnly"}}, target)
+    replacement = validate_plan(event.get("plan"), target)
+    if old is not None:
+        if any(replacement[key] != old.get(key) for key in replacement if key != "chunks"):
+            raise RoadmapError("Preserve the existing steps, tests, assumptions, documentation and rollback.")
+        if replacement["chunks"] == old.get("chunks"):
+            raise RoadmapError("Reconfiguration must change unfinished chunk tracking.")
+    completed = target.get("completedChunks", [])
+    originals = {chunk["id"]: chunk for chunk in (old or {}).get("chunks", [])}
+    revised = {chunk["id"]: chunk for chunk in replacement["chunks"]}
+    if len(completed) != len(set(completed)) or any(
+        key not in originals or revised.get(key) != originals[key] for key in completed
+    ):
+        raise RoadmapError("Preserve every completed chunk and its exact definition.")
+    if ([chunk["id"] for chunk in (old or {}).get("chunks", []) if chunk["id"] in completed]
+            != [chunk["id"] for chunk in replacement["chunks"] if chunk["id"] in completed]):
+        raise RoadmapError("Preserve the order of completed chunks.")
+    replacement["recordedAt"] = (old or {}).get("recordedAt") or now_utc()
+    if pending:
+        replacement["outlineOnly"] = True
+    replacement["fingerprint"] = fingerprint(replacement)
+    state.setdefault("workChunkPlanRevisions", []).append({
+        "incrementId": target["id"], "originalPlan": old, "originalPlanDigest": expected,
+        "replacementPlan": copy.deepcopy(replacement), "replacementPlanDigest": fingerprint(replacement),
+        "completedChunkIds": list(completed),
+        "criterionIds": [criterion["id"] for criterion in target["acceptanceCriteria"]],
+        "approvedScopeDigest": state["roadmapApproval"]["fingerprint"],
+        "authorityRef": require_identifier(event.get("authorityRef"), "event.authorityRef"),
+        "reason": require_string(event.get("reason"), "event.reason"), "recordedAt": now_utc(),
+    })
+    target["plan"] = replacement
+
+
 def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
     reject_unknown(
         event,
@@ -1052,7 +1107,8 @@ def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
         "event",
     )
     increment = current_increment(state)
-    if increment["status"] not in {"implementing", "verifying"} or not increment["plan"]:
+    if (increment["status"] not in {"implementing", "verifying"} or not increment["plan"]
+            or increment["plan"].get("outlineOnly")):
         raise RoadmapError("Record research and an increment plan before work chunks.")
     chunk_id = require_identifier(event.get("chunkId"), "event.chunkId")
     planned = next(
@@ -1720,7 +1776,7 @@ def derive_progress_status(state: dict[str, Any]) -> None:
         return
     if state.get("currentIncrementId"):
         increment = current_increment(state)
-        if increment["plan"]:
+        if increment["plan"] and not increment["plan"].get("outlineOnly"):
             increment["status"] = (
                 "verifying" if set(increment["completedChunks"])
                 == {c["id"] for c in increment["plan"]["chunks"]} else "implementing"
@@ -1809,7 +1865,7 @@ def handle_increment_completed(state: dict[str, Any], event: dict[str, Any]) -> 
         raise RoadmapError("Renew roadmap approval before completing the increment.")
     require_no_pending_work(state)
     increment = current_increment(state)
-    if not increment["plan"]:
+    if not increment["plan"] or increment["plan"].get("outlineOnly"):
         raise RoadmapError("The active increment has no implementation plan.")
     planned = {item["id"] for item in increment["plan"]["chunks"]}
     if set(increment["completedChunks"]) != planned:
@@ -1975,6 +2031,7 @@ EVENT_HANDLERS = {
     "increment-started": handle_increment_started,
     "increment-research-recorded": handle_increment_research_recorded,
     "increment-plan-recorded": handle_increment_plan_recorded,
+    "work-chunks-reconfigured": handle_work_chunks_reconfigured,
     "chunk-recorded": handle_chunk_recorded,
     "evidence-recorded": handle_evidence_recorded,
     "human-acceptance-transferred": handle_human_acceptance_transferred,
@@ -2067,8 +2124,50 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "assetLegacyAssessmentExclusion",
         "assetRevisedSecurityProofs",
         "blockerReclassifications",
+        "workChunkPlanRevisions",
     }
     reject_unknown(state, allowed, "state")
+    for revision in require_list(state.get("workChunkPlanRevisions", []), "state.workChunkPlanRevisions"):
+        revision = require_object(revision, "chunk plan revision")
+        reject_unknown(revision, {"incrementId", "originalPlan", "originalPlanDigest", "replacementPlan",
+                                  "replacementPlanDigest", "completedChunkIds", "criterionIds", "approvedScopeDigest",
+                                  "authorityRef", "reason", "recordedAt"}, "chunk plan revision")
+        require_identifier(revision.get("incrementId"), "chunk plan revision.incrementId")
+        require_identifier(revision.get("authorityRef"), "chunk plan revision.authorityRef")
+        require_string(revision.get("reason"), "chunk plan revision.reason")
+        require_string(revision.get("recordedAt"), "chunk plan revision.recordedAt", maximum=80)
+        if not isinstance(revision.get("approvedScopeDigest"), str) or not re.fullmatch(r"[a-f0-9]{64}", revision["approvedScopeDigest"]):
+            raise RoadmapError("A chunk revision must retain its approved scope digest.")
+        criteria = require_string_list(revision.get("criterionIds"), "chunk revision.criterionIds", minimum=1)
+        if len(criteria) != len(set(criteria)):
+            raise RoadmapError("Archived chunk criterion IDs must be unique.")
+        for criterion in criteria:
+            require_identifier(criterion, "chunk revision.criterionId")
+        plans = []
+        for key in ("originalPlan", "replacementPlan"):
+            plan = revision.get(key)
+            if plan is None and key == "originalPlan":
+                if revision.get(key + "Digest") is not None:
+                    raise RoadmapError("An absent original outline must have a null digest.")
+                plans.append(None)
+                continue
+            plan = require_object(plan, "archived chunk plan")
+            data = {key: value for key, value in plan.items() if key not in {"recordedAt", "fingerprint", "outlineOnly"}}
+            checked = validate_plan(data, {"acceptanceCriteria": [{"id": criterion} for criterion in criteria]})
+            if revision.get(key + "Digest") != fingerprint(plan):
+                raise RoadmapError("Preserve each complete bounded archived plan and its whole-plan digest.")
+            if "outlineOnly" in plan and plan["outlineOnly"] is not True:
+                raise RoadmapError("A pending outline marker cannot grant implementation authority.")
+            plans.append(checked)
+        completed = require_string_list(revision.get("completedChunkIds"), "chunk revision.completedChunkIds")
+        if plans[0] is not None and any(plans[0][key] != plans[1][key] for key in plans[0] if key != "chunks"):
+            raise RoadmapError("Archived chunk refinements must preserve all other plan fields.")
+        old_chunks = {chunk["id"]: chunk for chunk in (plans[0] or {}).get("chunks", [])}
+        new_chunks = {chunk["id"]: chunk for chunk in plans[1]["chunks"]}
+        if len(completed) != len(set(completed)) or any(key not in old_chunks or new_chunks.get(key) != old_chunks[key] for key in completed):
+            raise RoadmapError("Archived refinements must preserve completed chunk definitions.")
+        if [key for key in old_chunks if key in completed] != [key for key in new_chunks if key in completed]:
+            raise RoadmapError("Archived refinements must preserve completed chunk order.")
     if "contextualFormScopeAlignment" in state:
         validate_form_scope_archive(state, state["contextualFormScopeAlignment"])
     asset_exclusion = state.get("assetLegacyAssessmentExclusion")
@@ -2222,6 +2321,14 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "history",
     ):
         require_list(state.get(key), f"state.{key}")
+    for increment in state["increments"]:
+        plan = increment.get("plan")
+        if isinstance(plan, dict) and isinstance(plan.get("chunks"), list) and len(plan["chunks"]) > 100:
+            raise RoadmapError("A plan must fit the one-hundred-chunk review projection.")
+        if isinstance(plan, dict) and "outlineOnly" in plan:
+            if (plan["outlineOnly"] is not True or increment.get("completedChunks")
+                    or increment.get("status") not in {"pending", "researching", "planning", "blocked", "paused-for-approval"}):
+                raise RoadmapError("A chunk outline cannot serve as an implementation or completion plan.")
     discovery = state.get("discovery")
     if discovery is not None:
         discovery = require_object(discovery, "state.discovery")
@@ -2646,7 +2753,7 @@ def render_report(state: dict[str, Any]) -> str:
     if state.get("currentIncrementId"):
         active = current_increment(state)
     lines.extend(["", "## Current work", ""])
-    if active and active.get("plan"):
+    if active and active.get("plan") and not active["plan"].get("outlineOnly"):
         next_chunk = next(
             (
                 chunk
@@ -2664,6 +2771,8 @@ def render_report(state: dict[str, Any]) -> str:
             )
         else:
             lines.append("- Next chunk: none; complete increment verification.")
+    elif active and (active.get("plan") or {}).get("outlineOnly"):
+        lines.append("A pending chunk outline is available. Complete increment research and record the implementation plan before work.")
     else:
         lines.append("No active implementation plan.")
     lines.extend(["", "## Recent progress", ""])
@@ -2982,6 +3091,13 @@ def command_status(args: argparse.Namespace) -> dict[str, Any]:
     _, state = load_state(repo, args.state)
     result = result_payload(repo, state)
     result["nextCheckpoint"] = next_checkpoint(state)
+    result["chunkPlans"] = [{
+        "incrementId": increment["id"],
+        "planDigest": fingerprint(increment["plan"]) if increment.get("plan") is not None else None,
+        "outlineOnly": bool((increment.get("plan") or {}).get("outlineOnly")),
+        "planned": len((increment.get("plan") or {}).get("chunks", [])),
+        "completed": len(increment.get("completedChunks", [])),
+    } for increment in state["increments"]]
     return result
 
 

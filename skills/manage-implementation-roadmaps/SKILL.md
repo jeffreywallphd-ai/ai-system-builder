@@ -224,6 +224,26 @@ from the earlier one. If an increment would contain only a small UI adjustment,
 rename, helper, documentation update, test-only step, or shared primitive, merge it
 unless an explicit risk boundary above justifies separation.
 
+## Size work chunks for visible progress
+
+Use a chunk for one coherent outcome that can be implemented, feature-tested,
+independently reviewed and committed before the entire increment closes. Include
+its relevant denial tests and documentation. Split independent outcomes such as
+inspection, approved execution, task controls and reviewed saving when each has
+its own useful verification boundary. Do not split by file, layer or test count.
+Keep closely coupled changes together; do not invent completion percentages or
+fixed time quotas. Titles and outcomes should explain the result in plain language.
+
+Revisit an oversized chunk when several completed reviewed checkpoints remain
+hidden beneath it. Use `work-chunks-reconfigured` in
+[events.md](references/events.md) to archive and refine tracking without changing
+scope, acceptance, approval or completed history. Publish pending chunk outlines
+when useful for review; they remain pending and require their own ordered start,
+research and formal implementation plan. A plan refinement records no test pass.
+Checkpoint current source work before changing its plan; never invalidate a
+candidate that is still under verification or review. See the workflow reference
+for refinement and the existing owned-change commit procedure.
+
 ## Preserve plan continuity across approval turns
 
 An approval checkpoint ends a conversation turn, not the larger roadmap task. Never

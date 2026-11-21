@@ -13,6 +13,16 @@ format. Keep one canonical copy in this repository. Let installers place or adap
 for each supported host rather than maintaining divergent Codex, Claude, Copilot, or
 Gemini copies.
 
+Keep the plan-refinement handler, archive validator, references and focused tests
+together when updating an installed skill. `work-chunks-reconfigured` preserves
+approved scope and completed history; pending outlines do not bypass start,
+research, formal planning or current-receipt qualification. Preserve these denial
+and round-trip tests on every supported agent host. Reinstalling a skill grants
+no execution or completion authority.
+The fixed `tests/test_roadmap.py` runner also collects the refinement sidecar.
+Keep its direct-runner bridge and nonzero-collection regression when installing;
+placing a new test file beside a fixed runner does not make that gate execute it.
+
 ## GitHub CLI skill commands
 
 GitHub CLI 2.90 or later includes public-preview `gh skill` commands. Preview the
