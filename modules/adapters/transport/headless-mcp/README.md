@@ -312,6 +312,21 @@ selector and view IDs. Generation-task display retains its artifact-only policy
 and rejects query DTOs. Controlled feature checks leave physical and actual-host
 qualification separate. See the Context architecture and portable skill guide.
 
+## Review an original completed download
+
+`aisb_model_workflow` accepts `selection: {kind: "completed-download", task:
+{kind: "task", taskId}}`, or an exact plan-step selector in `task`. It uses
+`models.review-download` on the existing read endpoint in plan-review mode.
+Both SDKs copy the selector before waits and independently validate finite
+workspace/task/plan/source summaries. The host requires current original-client
+ModelRead and a cached accepted owner. No status refresh, provider call, runtime,
+file inspection or save follows. Verification is historical, not current file or
+save authority. Missing/not-ready/withdrawn results grant no alternate task or
+download. The selector adds no tool; all default mode counts and the32-tool
+limit stay unchanged. Install the entire skill and catalog from the same revision.
+Actual product roots, separate save and physical host/native/provider qualification
+remain pending.
+
 ## Optional original-download cancellation
 
 With both `AISB_HEADLESS_ENABLE_PLAN_REVIEW=1` and

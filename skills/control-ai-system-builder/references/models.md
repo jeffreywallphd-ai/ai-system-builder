@@ -92,6 +92,31 @@ Task replies include the original plan fingerprint and step. These come from the
 accepted task record. The client rejects a reply for a different selected plan,
 step, task or workspace. These references grant no additional authority.
 
+## Review a completed download
+
+1. Check that the host advertises `models.review-download`. Use the original
+   registered client, exact workspace and current plan-review connection.
+   Current Model read permission is required. Missing support grants no fallback.
+2. Call `aisb_model_workflow` with `selection: {kind: "completed-download",
+   task: {kind: "task", taskId}}`, or put `{kind: "plan-step", fingerprint,
+   step}` in `task`. Use only the original accepted task or approved plan step.
+3. Inspect the recorded model revision, manifest digest, format, declared or
+   unknown license, file count and bytes. `verified-at-completion` describes
+   historical selected-byte verification. It proves no current file integrity,
+   license rights or runtime readiness. Registration requires separate approval.
+4. `headless.source-not-ready` means a review is not available. Observe the
+   original task with `models.task`; do not start another download. Unavailable
+   or withdrawn access is not an empty result. Do not discover files, claim
+   another client's task or use generic HTTP, shell or filesystem calls.
+
+This read performs no task refresh, provider request, file inspection, runtime
+resolution, model load or registry save. A result can remain after its original
+approval expires or is revoked; current original-client and Model read permission
+still govern access. Install the entire skill directory and generated tool
+catalog from the same repository revision. The selector adds no tool or authority.
+Actual product activation, separate save and real host/native/provider
+qualification remain distinct.
+
 ## Request cancellation of an original download
 
 Use `aisb_cancel_model_download` only when the connection offers it and the host

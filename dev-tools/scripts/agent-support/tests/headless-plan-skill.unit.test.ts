@@ -98,6 +98,19 @@ test("portable source guidance discloses provider use and keeps source metadata 
     assert.ok(guide.includes(text), `Missing source client boundary: ${text}`);
 });
 
+test("portable completed-download review separates historical facts from current file and save authority", () => {
+  const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8").replace(/\s+/g, " ");
+  const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
+  assert.ok(skill.includes("review of a completed download"));
+  for (const text of ["models.review-download", "completed-download", "original accepted task", "Current Model read",
+    "verified-at-completion", "historical selected-byte verification", "no current file integrity", "separate approval",
+    "headless.source-not-ready", "no task refresh", "same repository revision", "another client's task"])
+    assert.ok(guide.includes(text), `Missing completed review boundary: ${text}`);
+  const reference = JSON.parse(readFileSync("skills/control-ai-system-builder/references/mcp-tools.json", "utf8"));
+  const tool = reference.tools.find((row: {name: string}) => row.name === "aisb_model_workflow");
+  assert.ok(tool && JSON.stringify(tool.inputSchema).includes('"completed-download"'));
+});
+
 test("portable Context guidance and discovery separate metadata from execution and model readiness", () => {
   const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
   const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");

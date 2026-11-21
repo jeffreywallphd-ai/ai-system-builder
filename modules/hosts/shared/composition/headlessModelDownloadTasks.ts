@@ -16,6 +16,7 @@ import {isHeadlessReadCurrent} from "./headlessReadCurrent";
 export type OwnedHeadlessModelTaskSelection = HeadlessModelTaskSelection;
 export type OwnedHeadlessModelTaskReader = (query: {readonly scope: HeadlessOperationScope;
   readonly selection: HeadlessModelTaskSelection; readonly isCurrent: () => boolean}) => ReturnType<typeof runOwnedHeadlessModelDownloadTask>;
+export type OwnedHeadlessModelCompletionReader = (query: Parameters<OwnedHeadlessModelTaskReader>[0]) => ReturnType<typeof runOwnedHeadlessModelDownloadReview>;
 type SourceOwner = Pick<ModelDownloadTasksUseCase, "readApprovedSource" | "cancelApprovedSource">;
 export type OwnedHeadlessModelSourceTasks = SourceOwner;
 const forbidden = {ok: false, code: "headless.forbidden"} as const;

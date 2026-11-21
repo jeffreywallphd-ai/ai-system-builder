@@ -448,6 +448,20 @@ journeys, failed/interrupted physical builds, exact receipt replay and final
 parent qualification pending. Reused native supervision is observed here, not
 independently requalified. No model, dependency, guard or runtime default changed.
 
+### Review an original completed Model download
+
+Refresh the entire portable skill directory, including its Model guide and
+generated tool catalog, from the same repository revision. In plan-review mode,
+check for `models.review-download` in host discovery. The existing
+`aisb_model_workflow` tool accepts a `completed-download` selection with an exact
+original task or plan-step selector in `task`. It adds no tool or permission.
+The reply contains bounded historical revision/license/count/byte verification
+facts. Current original-client ModelRead still gates access after approval ends.
+This does not refresh a task, initialize a runtime, inspect files or save a Model.
+`headless.source-not-ready` is a pending review, not permission to start another
+download. Product roots stay unconfigured until separate save and actual host
+qualification; protocol fixtures alone cannot pass those boundaries.
+
 ### Optional original Model download cancellation
 
 Install or refresh the entire skill directory, including `references/models.md`

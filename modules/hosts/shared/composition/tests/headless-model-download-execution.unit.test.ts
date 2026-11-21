@@ -10,6 +10,7 @@ import {HEADLESS_READ_OPERATIONS, readHeadlessModelTaskRequest, readHeadlessMode
   readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
   readHeadlessModelTaskCancellationResult,
   readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewValue,
+  parseHeadlessReadRequest, readHeadlessModelDownloadReviewResult,
   type HeadlessModelTaskRequest, type HeadlessReadRequest} from "../../../../contracts/headless";
 import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
 import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../../adapters/persistence/sqlite";
@@ -461,7 +462,8 @@ async function hostTaskReads(t: TestContext, hostKind: "desktop" | "managed", co
   const state = {live: true, allowed: true, planning: true, current: true, readCurrent: true, owner: true, callbacks: 0,
     clientId: f.scope.registeredClientId, onRead: () => {}, fence: (() => true) as () => boolean,
     readFence: (() => true) as () => boolean, onPolicy: undefined as (() => Promise<void>) | undefined,
-    replyPlan: undefined as {fingerprint: string; step: number} | undefined, replyWorkspace: undefined as string | undefined};
+    replyPlan: undefined as {fingerprint: string; step: number} | undefined, replyWorkspace: undefined as string | undefined,
+    replyReview: undefined as unknown};
   state.fence = () => state.current;
   state.readFence = () => state.readCurrent;
   const identity = {organizationId: f.scope.organizationId, principalId: f.scope.principalId};
@@ -481,19 +483,27 @@ async function hostTaskReads(t: TestContext, hostKind: "desktop" | "managed", co
     return result.ok ? {...result, value: {...result.value, ...(state.replyPlan ? {plan: state.replyPlan} : {}),
       ...(state.replyWorkspace ? {workspaceId: state.replyWorkspace as never} : {})}} : result;
   } : undefined;
+  const readModelCompletion = configured ? async (query: {scope: HeadlessOperationScope;
+    selection: HeadlessModelTaskRequest["input"]["selection"]; isCurrent: () => boolean}) => {
+    state.callbacks++; state.onRead();
+    const result = await runOwnedHeadlessModelDownloadReview({...f.base, ...query, request: {version: "aisb-headless-v1",
+      operation: "models.review-download", input: {hostIncarnationId: f.target.hostIncarnationId,
+        workspaceId: query.scope.workspaceId, selection: query.selection}}, peekOwner: () => state.owner ? f.useCase : undefined});
+    return state.replyReview === undefined ? result : state.replyReview as never;
+  } : undefined;
   const noFeatures = () => {assert.fail("Task reads cannot initialize system, Model or runtime features.");};
   const query: HeadlessModelTaskRequest = {version: "aisb-headless-v1", operation: "models.task", input: {
     hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.taskId}}};
   const read = hostKind === "desktop" ? (() => {
     const handler = composeDesktopHeadlessReads({hostIncarnationId: f.target.hostIncarnationId, identity,
-      workspaceRepository: workspaces, authorization, getUseCases: noFeatures, isOpen: () => state.live, readModelTask});
+      workspaceRepository: workspaces, authorization, getUseCases: noFeatures, isOpen: () => state.live, readModelTask, readModelCompletion});
     return (request: HeadlessReadRequest = query) => handler(request, async () => ({...identity, registeredClientId: state.clientId,
       workspaceIds: [f.scope.workspaceId], operations: HEADLESS_READ_OPERATIONS, isCurrent: state.fence, isReadCurrent: state.readFence,
       ...(state.planning ? {planReview: true as const} : {})}));
   })() : (() => {
     const handler = composeManagedAgentReads({hostIncarnationId: f.target.hostIncarnationId, workspaces,
       contexts: {getCurrentOrganizationContext: () => state.live ? identity as never : undefined}, authorization,
-      systems: {} as never, readModelTask});
+      systems: {} as never, readModelTask, readModelCompletion});
     return (request: HeadlessReadRequest = query) => handler(request, {...identity, registeredClientId: state.clientId,
       purpose: state.planning ? "plan-review" : "agent"}, state.fence);
   })();
@@ -817,5 +827,106 @@ test("completed Model review codecs reject invented readiness, file authority, l
     assert.equal(readHeadlessModelDownloadReviewRequest({...f.request, operation}, f.target.hostIncarnationId).ok, false);
   assert.equal(readHeadlessModelTaskRequest(f.request, f.target.hostIncarnationId).ok, false);
   assert.equal(readHeadlessModelTaskCancellationRequest(f.request, f.target.hostIncarnationId).ok, false);
-  assert.ok(!HEADLESS_READ_OPERATIONS.includes("models.review-download" as never), "Private review is not public activation.");
+  assert.ok(parseHeadlessReadRequest(f.request, f.target.hostIncarnationId).ok, "The read protocol recognizes the exact review request.");
+  assert.ok(HEADLESS_READ_OPERATIONS.includes("models.review-download"));
+});
+
+async function hostCompletedReview(t: TestContext, host: "desktop" | "managed", configured = true) {
+  const f = await hostTaskReads(t, host, configured);
+  f.modelState.completed = {provider: "transformers", modelId: f.source.modelId, revision: f.source.revision,
+    verifiedManifestDigest: f.digest, downloaded: true, fromCache: false, localPath: "synthetic-private-cache-not-for-display"};
+  f.records.get(f.taskId)!.status = "succeeded";
+  await f.useCase.readApprovedSource({workspaceId: f.scope.workspaceId, requestId: f.taskId}, f.digest,
+    {organizationId: f.scope.organizationId, principalId: f.scope.principalId, modelWriteAuthorized: false});
+  await f.reconciler.reconcileNow();
+  const query = {...f.query, operation: "models.review-download" as const};
+  return {...f, reviewQuery: query, review: () => f.read(query)};
+}
+
+for (const host of ["desktop", "managed"] as const) {
+  test(`${host}: completed download read is bound to actual accepted owner with no new runtime or save`, async t => {
+    const f = await hostCompletedReview(t, host), before = f.modelState.statusReads;
+    const first = await f.review(); assert.ok(first.ok && first.operation === "models.review-download");
+    assert.equal(first.value.taskId, f.taskId); assert.equal(first.value.manifestDigest, f.digest);
+    assert.equal(first.value.plan.fingerprint, f.target.fingerprint);
+    assert.equal(first.value.selectedFilesVerification, "verified-at-completion");
+    assert.equal(first.value.registration, "requires-separate-approval");
+    const planned = await f.read({...f.reviewQuery, input: {...f.reviewQuery.input,
+      selection: {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}}});
+    assert.deepEqual(planned, first);
+    assert.equal(f.modelState.statusReads, before); assert.equal(f.modelState.completionReads, 2);
+    assert.equal(f.modelState.resolutions, 1); assert.equal(f.modelState.starts, 1);
+    assert.equal(f.modelState.cancels, 0); assert.equal(f.modelState.registrations, 0); assert.equal(f.modelState.ordinary, 0);
+    assert.doesNotMatch(JSON.stringify(first), /localPath|synthetic-private-cache|principalId|registeredClientId/);
+  });
+
+  test(`${host}: completed download read requires current purpose, policy, client, task and cached owner`, async t => {
+    for (const deny of ["policy", "purpose", "client", "task", "owner", "request"] as const) {
+      const f = await hostCompletedReview(t, host);
+      if (deny === "policy") f.state.allowed = false;
+      if (deny === "purpose") f.state.planning = false;
+      if (deny === "client") f.state.clientId = randomUUID();
+      if (deny === "owner") f.state.owner = false;
+      if (deny === "request") f.state.current = false;
+      const result = await f.read(deny === "task" ? {...f.reviewQuery, input: {...f.reviewQuery.input,
+        selection: {kind: "task", taskId: randomUUID()}}} : f.reviewQuery);
+      assert.deepEqual(result, {ok: false, code: deny === "owner" ? "headless.unavailable" : "headless.forbidden"}, deny);
+      assert.equal(f.modelState.completionReads, 0); assert.equal(f.modelState.registrations, 0);
+    }
+  });
+
+  test(`${host}: missing completion binding remains undiscovered and cannot disclose a cached result`, async t => {
+    const f = await hostCompletedReview(t, host, false);
+    const described = await f.read({version: "aisb-headless-v1", operation: "host.describe", input: {}});
+    assert.ok(described.ok && described.operation === "host.describe");
+    assert.ok(!described.value.operations.includes("models.review-download"));
+    assert.deepEqual(await f.review(), {ok: false, code: "headless.unsupported-operation"});
+    assert.equal(f.state.callbacks, 0); assert.equal(f.modelState.completionReads, 0);
+  });
+
+  test(`${host}: retired original callback cannot be replaced to disclose completed download metadata`, async t => {
+    const f = await hostCompletedReview(t, host);
+    f.state.onRead = () => {f.state.current = false; f.state.fence = () => true;};
+    assert.deepEqual(await f.review(), {ok: false, code: "headless.forbidden"});
+    assert.equal(f.modelState.completionReads, 0);
+  });
+
+  test(`${host}: final awaited ModelRead policy withdrawal suppresses completed download metadata`, {timeout: 5_000}, async t => {
+    const f = await hostCompletedReview(t, host); let completed = false, enter!: () => void, resume!: () => void;
+    const entered = new Promise<void>(resolve => {enter = resolve;}), released = new Promise<void>(resolve => {resume = resolve;});
+    f.modelState.onCompletionRead = async () => {completed = true;};
+    f.state.onPolicy = async () => {if (completed) {enter(); await released;}};
+    const reading = f.review(); await entered; f.state.allowed = false; resume();
+    assert.deepEqual(await reading, {ok: false, code: "headless.forbidden"}); assert.equal(f.modelState.completionReads, 1);
+  });
+
+  test(`${host}: completion result tags, actual lineage and private fields are independently checked`, async t => {
+    const f = await hostCompletedReview(t, host), first = await f.review(); assert.ok(first.ok && first.operation === "models.review-download");
+    for (const raw of [{...first, operation: "models.task"}, {...first, private: "private/model/path"},
+      {...first, value: {...first.value, taskId: randomUUID()}}, {...first, value: {...first.value, workspaceId: "workspace.foreign"}},
+      {...first, value: {...first.value, localPath: "private/model/path"}}]) {
+      f.state.replyReview = raw; assert.deepEqual(await f.review(), {ok: false, code: "headless.unavailable"});
+    }
+    f.state.replyReview = {ok: false, code: "headless.source-not-ready"};
+    assert.deepEqual(await f.review(), f.state.replyReview);
+  });
+}
+
+test("Desktop completion read captures its strict HTTP lifetime independently of registration", async t => {
+  for (const fence of [undefined, () => false, () => Promise.resolve(true), () => Promise.reject(new Error("Synthetic retired HTTP request."))]) {
+    const f = await hostCompletedReview(t, "desktop"); f.state.readFence = fence as never;
+    assert.deepEqual(await f.review(), {ok: false, code: "headless.forbidden"}); assert.equal(f.state.callbacks, 0);
+  }
+});
+
+test("completed download result codec copies finite replies without invoking private getters", async t => {
+  const f = await completedReview(t), first = await f.review(); assert.ok(first.ok);
+  const parsed = readHeadlessModelDownloadReviewRequest(f.request, f.target.hostIncarnationId); assert.ok(parsed.ok);
+  assert.deepEqual(readHeadlessModelDownloadReviewResult(first, parsed.request.input), first);
+  let getters = 0;
+  for (const raw of [{...first, operation: "models.task"}, {...first, private: "private/path"},
+    {get ok() {getters++; return true;}}, {ok: false, code: "private/path"},
+    {ok: false, code: "headless.source-not-ready", private: "private/path"}])
+    assert.deepEqual(readHeadlessModelDownloadReviewResult(raw, parsed.request.input), {ok: false, code: "headless.unavailable"});
+  assert.equal(getters, 0);
 });

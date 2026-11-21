@@ -28,7 +28,9 @@ use [Build from a written request](references/build-plans.md). It covers the
 supported plan connections, exact resources, approval choices, ordered
 execution and recovery. Open it before preparing a plan.
 
-For saved model selection, read [Recorded model metadata](references/models.md).
+For saved model selection or review of a completed download, read
+[Recorded model metadata](references/models.md). Completion review is a read;
+it grants no current file, registry-save or runtime authority.
 Use `aisb_model_metadata` only on a plan-review connection that advertises the
 matching read operation. Inventory and exact-record reads start no model or
 download and prove no readiness, license, supply verification or output quality.

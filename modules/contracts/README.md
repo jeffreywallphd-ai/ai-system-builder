@@ -1,12 +1,13 @@
 # Contracts
 
-Private `models.review-download` uses the same exact task or approved-plan-step
+`models.review-download` uses the same exact task or approved-plan-step
 selector as Model task controls. Its closed summary includes original lineage,
 model revision, manifest digest, provider-declared or unknown license, selected
 file count and bytes. `verified-at-completion` is historical; registration still
 requires separate approval and runtime readiness stays unchecked. No path, raw
 worker output, license rights or current file authority is accepted. This codec
-is not in the public read catalog and activates no host route.
+is in the finite read catalog. Optional host bindings govern discovery and use;
+unconfigured product roots cannot disclose results or activate a Model save.
 
 The opt-in `models.download` proposal uses a distinct v11 plan preview with an
 exact pinned safe-format source selection, metadata digest, declared license,

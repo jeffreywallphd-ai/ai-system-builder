@@ -61,9 +61,10 @@ import type {HeadlessContextRebuildValue} from "./headless-context-rebuild";
 import type {HeadlessContextQueryPreviewValue} from "./headless-context-query-preview";
 import type {HeadlessModelInventory, HeadlessModelRecord} from "./headless-model-metadata";
 import type {HeadlessModelSourcePreview} from "./headless-model-source-preview";
-import type {HeadlessModelTaskValue} from "./headless-model-task";
+import type {HeadlessModelTaskValue, HeadlessModelDownloadReviewValue} from "./headless-model-task";
 
 export type HeadlessReadResult =
+  | {readonly ok: true; readonly operation: "models.review-download"; readonly value: HeadlessModelDownloadReviewValue}
   | {readonly ok: true; readonly operation: "models.task"; readonly value: HeadlessModelTaskValue}
   | {readonly ok: true; readonly operation: "models.preview-source"; readonly value: HeadlessModelSourcePreview}
   | {readonly ok: true; readonly operation: "models.inventory"; readonly value: HeadlessModelInventory}

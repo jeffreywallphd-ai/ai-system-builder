@@ -59,6 +59,7 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
 const resultValue = {
   "models.preview-source": z.unknown(),
   "models.task": z.unknown(),
+  "models.review-download": z.unknown(),
   "models.inventory": z.unknown(),
   "models.record": z.unknown(),
   // These two finite shapes use the shared exact-target passive decoders below.
@@ -149,7 +150,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false, enableModelTaskControl = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? ["models.task", "models.preview-source", ...headless.HEADLESS_MODEL_READ_OPERATIONS, ...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_MODEL_TASK_READ_OPERATIONS, "models.preview-source", ...headless.HEADLESS_MODEL_READ_OPERATIONS, ...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -290,6 +291,11 @@ function createForwarder(options: {
       if (!copied.ok) return copied;
       input = copied.request;
     }
+    if (input.operation === "models.review-download") {
+      const copied = headless.readHeadlessModelDownloadReviewRequest(input, input.input.hostIncarnationId);
+      if (!copied.ok) return copied;
+      input = copied.request;
+    }
     if (input.operation === "models.preview-source") {
       const copied = headless.readHeadlessModelSourcePreviewRequest(input, input.input.hostIncarnationId);
       if (!copied.ok) return copied;
@@ -305,7 +311,7 @@ function createForwarder(options: {
       if (!copied.ok) return {ok: false, code: "headless.invalid-request"};
       input = copied.request;
     }
-    if ((input.operation === "models.task" || input.operation === "models.preview-source" || headless.isHeadlessModelReadOperation(input.operation) || headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-query" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
+    if ((headless.isHeadlessModelTaskReadOperation(input.operation) || input.operation === "models.preview-source" || headless.isHeadlessModelReadOperation(input.operation) || headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-query" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -462,6 +468,10 @@ function createForwarder(options: {
         if (signal?.aborted) return unavailable;
         const value = headless.readHeadlessModelTaskValue(parsed.data.value, input.input);
         return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
+      if (input.operation === "models.review-download") {
+        if (signal?.aborted) return unavailable;
+        return headless.readHeadlessModelDownloadReviewResult(parsed.data, input.input);
       }
       if (input.operation === "models.preview-source") {
         if (signal?.aborted) return unavailable;

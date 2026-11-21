@@ -212,6 +212,62 @@ test("pinned model cancellation is separate, plan-client scoped and validates fi
   } finally {registry.close(); await connector.close();}
 });
 
+test("pinned completion review keeps exact passive lineage and the original request authority", {timeout: 12_000}, async () => {
+  const registry = createDesktopHeadlessClientAuthority({documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity, canReadWorkspace: async id => id === workspaceId, canReviewPlans: async id => id === workspaceId});
+  let current = true, check: () => unknown = () => current, calls = 0, mode = "valid";
+  let httpCurrent: (() => boolean) | undefined;
+  const input = {hostIncarnationId: incarnation, workspaceId, selection: {kind: "task" as const, taskId: incarnation as string}};
+  const command = {version: HEADLESS_CONTRACT_VERSION, operation: "models.review-download" as const, input};
+  const value = {workspaceId, taskId: incarnation, plan: {fingerprint: "a".repeat(64), step: 1}, modelId: "fixture/model",
+    revision: "a".repeat(40), manifestDigest: "sha256:" + "b".repeat(64), format: "transformers-safetensors", license: {kind: "unknown"},
+    selectedFileCount: 3, totalBytes: 30, fromCache: false, selectedFilesVerification: "verified-at-completion",
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+  const connector = await startDesktopHeadlessLoopback({registrations: {completePairing: registry.completePairing,
+    async verifyCredential(credential) {const grant = await registry.verifyCredential(credential); return grant && {...grant, isCurrent: check as never};}},
+    planReview: {hostIncarnationId: incarnation, execute: async () => ({ok: false, code: "headless.forbidden"})},
+    async read(request, getGrant) {
+      calls++; assert.equal((request as typeof command).input.selection.kind, "task");
+      assert.equal((request as typeof command).input.selection.taskId, incarnation);
+      const grant = await getGrant(); assert.ok(grant?.planReview); httpCurrent = grant.isReadCurrent; assert.equal(httpCurrent?.(), true);
+      if (mode === "withdraw") {current = false; check = () => true;}
+      if (mode === "not-ready") return {ok: false, code: "headless.source-not-ready"};
+      return {ok: true, operation: mode === "tag" ? "models.task" : command.operation, value: {...value,
+        ...(mode === "task" ? {taskId: "00000000-0000-4000-8000-000000000099"} : {}),
+        ...(mode === "private" ? {localPath: "private/model/path"} : {})}} as never;
+    }});
+  try {
+    const pair = async (access: DesktopHeadlessClientAccess) => {
+      const pending = await registry.beginPairing(workspaceId, () => true, access); assert.equal(pending.status, "ready");
+      const paired = await post(connector, pairPath, JSON.stringify({pairingCode: pending.pairingCode}));
+      assert.ok(paired.json.value?.credential); return {Authorization: "Bearer " + paired.json.value.credential};
+    };
+    const reader = await pair("read"), planner = await pair("plan-review");
+    const review = (body: unknown = command, headers = planner) => post(connector, readPath, JSON.stringify(body), headers);
+    assert.equal((await review(command, reader)).status, 403); assert.equal(calls, 0);
+    assert.equal((await review({...command, private: "private/path"})).status, 400); assert.equal(calls, 0);
+    assert.equal((await review({...command, input: {...input, hostIncarnationId: "00000000-0000-4000-8000-000000000099"}})).status, 409);
+    assert.equal((await review({...command, input: {...input, workspaceId: createWorkspaceId("workspace.foreign")}})).status, 403);
+    assert.equal(calls, 0);
+    const accepted = await review(); assert.equal(accepted.status, 200); assert.equal(accepted.cacheControl, "no-store");
+    assert.deepEqual(accepted.json, {ok: true, operation: command.operation, value}); assert.equal(httpCurrent?.(), false);
+    for (const next of ["tag", "task", "private"]) {
+      mode = next; const result = await review(); assert.equal(result.status, 503, next);
+      assert.deepEqual(result.json, {ok: false, code: "headless.unavailable"});
+    }
+    mode = "not-ready"; const notReady = await review(); assert.equal(notReady.status, 409);
+    assert.deepEqual(notReady.json, {ok: false, code: "headless.source-not-ready"});
+    const {createHeadlessMcpReadForwarder} = await import("../../headless-mcp/createHeadlessMcpReadForwarder.mjs");
+    const disabled = createHeadlessMcpReadForwarder(connector.endpoint, connector.fingerprint, planner.Authorization.slice(7));
+    const enabled = createHeadlessMcpReadForwarder(connector.endpoint, connector.fingerprint, planner.Authorization.slice(7), false, false, false, true);
+    assert.ok(disabled && enabled);
+    const beforeDenied = calls; assert.deepEqual(await disabled(command), {ok: false, code: "headless.forbidden"}); assert.equal(calls, beforeDenied);
+    mode = "valid"; const mutable = structuredClone(command), result = enabled(mutable); mutable.input.selection.taskId = "00000000-0000-4000-8000-000000000099";
+    assert.deepEqual(await result, {ok: true, operation: command.operation, value});
+    mode = "withdraw"; assert.equal((await review()).status, 403);
+  } finally {registry.close(); await connector.close();}
+});
+
 test("the paired Desktop preview route rejects app actions, foreign grants and withdrawn replies", { timeout: 12_000 }, async () => {
   const registry = createDesktopHeadlessClientAuthority({
     documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId), identity,

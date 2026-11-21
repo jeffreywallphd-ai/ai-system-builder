@@ -80,6 +80,13 @@ function modelSourcePreview() {
   {provider: "huggingface", modelId: "Qwen/synthetic-model"});
   return {workspaceId, source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex"), downloadApprovalRequired: true};
 }
+function modelCompletionReviewValue() {
+  const {source, manifestDigest} = modelSourcePreview();
+  return {workspaceId, taskId: modelTaskValue.taskId, plan: {...modelTaskValue.plan}, modelId: source.modelId,
+    revision: source.revision, manifestDigest, format: source.format, license: source.license,
+    selectedFileCount: source.files.length, totalBytes: source.totalBytes, fromCache: false,
+    selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked"};
+}
 const ragSettings = {kind: "rag-database", chunkCharacters: 500, overlapCharacters: 50, maximumChunks: 100, textFields: ["text"],
   modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-18T00:00:00.000Z", batchSize: 4, device: "cpu",
   sourceChecks: {preset: "recommended", allowedLanguages: ["en"], requireLicenseMetadata: false,
@@ -122,6 +129,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let displacedProviderReply = false;
   let invalidStatusReply = false;
   let cancellationCalls = 0;
+  let completionReviewMode = "valid";
   let wrongQuestionDigest = false;
   let changedPreparation = false;
   let sourceReady = true;
@@ -201,6 +209,15 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
         const payload = JSON.stringify({ok: true, operation: input.operation, value: {...modelTaskValue, cancellationAccepted: true,
           ...(invalidStatusReply ? {error: "private/model/path"} : {})}});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.review-download") {
+        const payload = JSON.stringify(completionReviewMode === "not-ready" ? {ok: false, code: "headless.source-not-ready"} : {
+          ok: true, operation: completionReviewMode === "tag" ? "models.task" : input.operation,
+          value: {...modelCompletionReviewValue(), ...(completionReviewMode === "private" ? {localPath: "private/model/path"} : {}),
+            ...(completionReviewMode === "workspace" ? {workspaceId: "workspace.foreign"} : {})}});
+        response.writeHead(completionReviewMode === "not-ready" ? 409 : 200,
+          {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       if (input.operation === "models.task") {
@@ -445,6 +462,28 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.deepEqual(resultText(await controller.callTool({name: "aisb_cancel_model_download", arguments: {...planBase,
       selection: {kind: "plan-step", fingerprint: "b".repeat(64), step: 1}}})), {ok: false, code: "headless.operation-unconfirmed"});
     assert.equal(cancellationCalls, 4, "Unknown replies never trigger a second HTTP request.");
+    for (const task of [{kind: "task", taskId: modelTaskValue.taskId}, {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}]) {
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-download", task}}})), {ok: true, operation: "models.review-download", value: modelCompletionReviewValue()});
+      assert.equal(requests.at(-1)?.url, "/api/headless/agent/read");
+    }
+    for (const mode of ["tag", "private", "workspace"]) {
+      completionReviewMode = mode;
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-download", task: {kind: "task", taskId: modelTaskValue.taskId}}}})), {ok: false, code: "headless.unavailable"});
+    }
+    completionReviewMode = "not-ready";
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "completed-download", task: {kind: "task", taskId: modelTaskValue.taskId}}}})), {ok: false, code: "headless.source-not-ready"});
+    completionReviewMode = "valid";
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "completed-download", task: {kind: "task", taskId: randomUUID()}}}})), {ok: false, code: "headless.unavailable"});
+    const beforeBadReview = requests.length;
+    for (const task of [{kind: "task", taskId: modelTaskValue.taskId, path: "private"},
+      {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}])
+      assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-download", task}}})).isError, true);
+    assert.equal(requests.length, beforeBadReview);
     const beforeBadControl = requests.length;
     for (const selection of [{kind: "task", taskId: modelTaskValue.taskId, command: "private"},
       {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}])

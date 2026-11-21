@@ -6,6 +6,10 @@ import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHos
 
 export const HEADLESS_MODEL_TASK_CONTROL_PATH = "/aisb-headless/v1/model-task-control";
 export const MANAGED_HEADLESS_MODEL_TASK_CONTROL_PATH = "/api/headless/agent/model-task-control";
+export const HEADLESS_MODEL_TASK_READ_OPERATIONS = Object.freeze(["models.task", "models.review-download"] as const);
+export function isHeadlessModelTaskReadOperation(value: unknown): value is typeof HEADLESS_MODEL_TASK_READ_OPERATIONS[number] {
+  return HEADLESS_MODEL_TASK_READ_OPERATIONS.some(operation => operation === value);
+}
 
 export type HeadlessModelTaskSelection = {readonly kind: "task"; readonly taskId: string} |
   {readonly kind: "plan-step"; readonly fingerprint: string; readonly step: number};
@@ -55,6 +59,10 @@ export interface HeadlessModelDownloadReviewValue {
   readonly registration: "requires-separate-approval";
   readonly runtimeReadiness: "not-checked";
 }
+export type HeadlessModelDownloadReviewResult =
+  | {readonly ok: true; readonly operation: "models.review-download"; readonly value: HeadlessModelDownloadReviewValue}
+  | {readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" | "headless.forbidden" |
+      "headless.unavailable" | "headless.source-not-ready"};
 export type HeadlessModelTaskCancellationResult =
   | {readonly ok: true; readonly operation: "models.cancel-download"; readonly value: HeadlessModelTaskCancellationValue}
   | {readonly ok: false; readonly code: "headless.invalid-request" | "headless.unsupported-operation" | "headless.host-changed" | "headless.forbidden" |
@@ -145,6 +153,19 @@ export function readHeadlessModelDownloadReviewValue(value: unknown,
       selectedFileCount: raw.selectedFileCount as number, totalBytes: raw.totalBytes as number, fromCache: raw.fromCache,
       selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked"});
   } catch {return;}
+}
+export function readHeadlessModelDownloadReviewResult(value: unknown,
+  target: HeadlessModelTaskRequest["input"]): HeadlessModelDownloadReviewResult {
+  const unavailable = {ok: false, code: "headless.unavailable"} as const;
+  try {
+    const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "operation", "value", "code"]);
+    if (raw.ok === false && Object.keys(raw).length === 2 && typeof raw.code === "string" &&
+        ["headless.invalid-request", "headless.host-changed", "headless.forbidden", "headless.unavailable", "headless.source-not-ready"].includes(raw.code))
+      return {ok: false, code: raw.code as Extract<HeadlessModelDownloadReviewResult, {ok: false}>["code"]};
+    if (raw.ok !== true || Object.keys(raw).length !== 3 || raw.operation !== "models.review-download") return unavailable;
+    const review = readHeadlessModelDownloadReviewValue(raw.value, target);
+    return review ? {ok: true, operation: "models.review-download", value: review} : unavailable;
+  } catch {return unavailable;}
 }
 /** Finite observation only. A succeeded transfer does not save or qualify a model. */
 export function readHeadlessModelTaskValue(value: unknown, target: HeadlessModelTaskRequest["input"]): HeadlessModelTaskValue | undefined {

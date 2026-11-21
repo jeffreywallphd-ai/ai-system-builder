@@ -1,12 +1,14 @@
 
-Private completed Model review uses the original accepted task/source ledger and
+Optional completed Model read bindings use the original accepted task/source ledger and
 already loaded application owner. Copy exact task/plan selectors, scope and
 request callbacks before awaits. Authorize ModelRead in owning transactions
 before and after the cached completion read; that read runs outside transactions
 and never refreshes status, resolves a runtime, inspects files or saves a record.
 Return a strict historical summary only. Approval expiry/revocation preserves the
 accepted result, while current original-client/workspace/read policy still gates
-its disclosure. Missing or uncertain completion stays not ready. Public review
+its disclosure. Missing or uncertain completion stays not ready. Real host reader
+compositions, HTTP and SDK codecs independently validate copied targets and
+finite replies. Unconfigured roots do not advertise the operation. Product
 activation, current-file/save proof and physical/native/provider qualification
 remain separate work.
 

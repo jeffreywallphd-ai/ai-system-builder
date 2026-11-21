@@ -4,6 +4,7 @@ import { createServer } from "node:https";
 import type { Duplex } from "node:stream";
 import {types} from "node:util";
 import {HEADLESS_MODEL_TASK_CONTROL_PATH, readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationResult,
+  readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult, type HeadlessModelDownloadReviewRequest,
   type HeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
 import { performance } from "node:perf_hooks";
 import selfsigned from "selfsigned";
@@ -288,6 +289,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       fail(response, 403, "headless.forbidden");
       return;
     }
+    const initialReadFence = initialGrant.isCurrent;
     const body = await decodeRequest(request, length);
     if (body === undefined) {
       fail(response, 400, "headless.invalid-request");
@@ -479,6 +481,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       return;
     }
     let result: HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult;
+    let modelReviewTarget: HeadlessModelDownloadReviewRequest["input"] | undefined;
     if (request.url === AUTHOR_PATH && dependencies.authoring) {
       const { hostIncarnationId, execute } = dependencies.authoring;
       if (!initialGrant.authoring?.length || !initialGrant.isCurrent) { fail(response, 403, "headless.forbidden"); return; }
@@ -513,19 +516,36 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       // disconnected request does not revoke that authority or cancel the task.
       result = readHeadlessApprovedTurnResult(await execute(input, { grant, currentGrant: () => currentGrant(false), fingerprint }));
     } else {
+      const modelReview = !!body && typeof body === "object" && "operation" in body && body.operation === "models.review-download";
+      let readBody = body;
+      if (modelReview) {
+        if (initialGrant.planReview !== true || !callbackIsCurrent(initialReadFence, true)) {fail(response, 403, "headless.forbidden"); return;}
+        if (!dependencies.planReview) {fail(response, 400, "headless.unsupported-operation"); return;}
+        const parsed = readHeadlessModelDownloadReviewRequest(body, dependencies.planReview.hostIncarnationId);
+        if (!parsed.ok) {fail(response, errorStatus(parsed.code), parsed.code); return;}
+        modelReviewTarget = parsed.request.input;
+        const grant = await currentGrant();
+        if (!grant || grant.planReview !== true || !grant.operations.includes("models.review-download") ||
+            !grant.workspaceIds.includes(modelReviewTarget.workspaceId) || !callbackIsCurrent(initialReadFence, true)) {
+          fail(response, 403, "headless.forbidden"); return;
+        }
+        readBody = parsed.request;
+      }
       const sourceRead = !!body && typeof body === "object" && "operation" in body && body.operation === "models.preview-source";
       if (sourceRead && (initialGrant.planReview !== true || initialGrant.modelSourceRead !== true || !grantIsCurrent(initialGrant, true))) {
         fail(response, 403, "headless.forbidden"); return;
       }
-      const readCurrent = () => admitting() && !response.destroyed && !response.writableEnded;
-      result = await dependencies.read(body, async () => {
+      const readCurrent = () => admitting() && !response.destroyed && !response.writableEnded &&
+        (!modelReview || callbackIsCurrent(initialReadFence, true));
+      result = await dependencies.read(readBody, async () => {
         const grant = await currentGrant();
         return grant && readCurrent() ? {...grant, isReadCurrent: readCurrent} : undefined;
       });
+      if (modelReviewTarget) result = readHeadlessModelDownloadReviewResult(result, modelReviewTarget);
     }
     const finalGrant = await currentGrant();
     if (!admitting() || response.destroyed) return;
-    if (!finalGrant || !grantIsCurrent(finalGrant, requiresFence)) {
+    if (!finalGrant || !grantIsCurrent(finalGrant, requiresFence) || modelReviewTarget && !callbackIsCurrent(initialReadFence, true)) {
       fail(response, 403, "headless.forbidden");
       return;
     }
@@ -606,8 +626,10 @@ function errorStatus(code: Extract<HeadlessReadResult | HeadlessAuthoringWireRes
 }
 
 function grantIsCurrent(grant: DesktopHeadlessAuthoringWireGrant, required = false): boolean {
+  return callbackIsCurrent(grant.isCurrent, required);
+}
+function callbackIsCurrent(check: unknown, required = false): boolean {
   try {
-    const check = grant.isCurrent;
     if (check === undefined) return !required;
     if (typeof check !== "function") return false;
     const value: unknown = check();

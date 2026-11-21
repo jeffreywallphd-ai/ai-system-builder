@@ -1543,6 +1543,19 @@ After possible effects, malformed, lost, withdrawn or thrown replies remain
 unconfirmed with no automatic retry. Preserve original business/native custody;
 ACK does not prove terminal cleanup. Protocol fixtures cannot qualify actual
 source/save activation, physical/native/provider execution or parent completion.
+## Completed Model review protocol
+
+Only configured plan-review reader bindings disclose the finite historical review.
+Both hosts require current original client/workspace ModelRead and captured request
+authority. Desktop separately retains HTTP and registration proof. Managed retains
+the original request identity and policy across waits. Adapters and SDKs copy the
+exact task/plan selector and independently decode replies; private, malformed,
+wrong-operation and displaced-target replies fail closed. No source, worker or
+registry effect follows. MCP uses one new selector in its existing Model tool,
+preserving discovery bounds and default permissions. Keep product roots disabled
+until separate save/actual-host proof; no physical/native/provider/parent pass is
+granted by controlled protocol fixtures.
+
 ## Private completed Model result review
 
 Retain exact original actor/client/workspace/task/approved-plan/source lineage.

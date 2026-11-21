@@ -10,8 +10,9 @@ import type {PreviewHeadlessModelSourceUseCase} from "../../../application/use-c
 import {readHeadlessModelSourcePreviewRequest} from "../../../contracts/headless";
 import {readVerifiedHeadlessModelSourcePreview} from "../../shared/composition/headlessModelSourcePreview";
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
-import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue} from "../../../contracts/headless";
-import type {OwnedHeadlessModelTaskReader} from "../../shared/composition/headlessModelDownloadTasks";
+import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue, isHeadlessModelTaskReadOperation,
+  readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult} from "../../../contracts/headless";
+import type {OwnedHeadlessModelTaskReader, OwnedHeadlessModelCompletionReader} from "../../shared/composition/headlessModelDownloadTasks";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
@@ -40,6 +41,7 @@ export function composeManagedAgentReads(options: {
   readonly getContextInputs?: () => Promise<Pick<PreviewHeadlessContextInputsUseCase, "execute">>;
   readonly getModelMetadata?: () => Promise<Pick<ReadHeadlessModelMetadataUseCase, "execute">>;
   readonly readModelTask?: OwnedHeadlessModelTaskReader;
+  readonly readModelCompletion?: OwnedHeadlessModelCompletionReader;
   readonly getModelSource?: () => Promise<Pick<PreviewHeadlessModelSourceUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
@@ -50,6 +52,7 @@ export function composeManagedAgentReads(options: {
   readonly getDatasetTaskReview?: () => Promise<Pick<ReadHeadlessDatasetTaskReviewUseCase, "execute">>;
 }) {
   const readModelTask = options.readModelTask;
+  const readModelCompletion = options.readModelCompletion;
   return async (request: HeadlessReadRequest, suppliedIdentity: Pick<OrganizationRequestContext, "principalId" | "organizationId"> &
     { readonly purpose?: "agent" | "plan-review"; readonly registeredClientId?: string; readonly modelSourceRead?: true },
     isCurrent: () => boolean): Promise<HeadlessReadResult> => {
@@ -65,6 +68,8 @@ export function composeManagedAgentReads(options: {
     if (!current()) return denied;
     const taskRequest = request.operation === "models.task" ? readHeadlessModelTaskRequest(request, options.hostIncarnationId) : undefined;
     if (taskRequest && !taskRequest.ok) return taskRequest;
+    const reviewRequest = request.operation === "models.review-download" ? readHeadlessModelDownloadReviewRequest(request, options.hostIncarnationId) : undefined;
+    if (reviewRequest && !reviewRequest.ok) return reviewRequest;
     const modelRequest = isHeadlessModelReadOperation(request.operation) ? readHeadlessModelMetadataRequest(request, options.hostIncarnationId) : undefined;
     const sourceRequest = request.operation === "models.preview-source" ? readHeadlessModelSourcePreviewRequest(request, options.hostIncarnationId) : undefined;
     if (sourceRequest && !sourceRequest.ok) return sourceRequest;
@@ -74,7 +79,7 @@ export function composeManagedAgentReads(options: {
       Object.freeze(modelRequest.request.input);
       Object.freeze(modelRequest.request);
     }
-    const capturedRequest = taskRequest?.ok ? taskRequest.request : sourceRequest?.ok ? sourceRequest.request : modelRequest?.ok ? modelRequest.request : request;
+    const capturedRequest = reviewRequest?.ok ? reviewRequest.request : taskRequest?.ok ? taskRequest.request : sourceRequest?.ok ? sourceRequest.request : modelRequest?.ok ? modelRequest.request : request;
     const {operation, input} = capturedRequest;
     if (operation === "host.describe") {
       // Discovery gives the host identity only. Operator configuration supplies
@@ -83,6 +88,7 @@ export function composeManagedAgentReads(options: {
         workspaces: [], operations: [
           ...(identity.purpose === "plan-review" && options.getModelMetadata ? ["models.inventory", "models.record"] as const : []),
           ...(identity.purpose === "plan-review" && readModelTask ? ["models.task"] as const : []),
+          ...(identity.purpose === "plan-review" && readModelCompletion ? ["models.review-download"] as const : []),
           ...(identity.purpose === "plan-review" && identity.modelSourceRead === true && options.getModelSource ? ["models.preview-source"] as const : []),
           ...(identity.purpose === "plan-review" && options.getContextInputs ? ["context.models", "context.preview-generation"] as const : []),
           ...(identity.purpose === "plan-review" && options.getContextTask ? ["context.task"] as const : []),"host.describe", "templates.list", "systems.read",
@@ -95,11 +101,11 @@ export function composeManagedAgentReads(options: {
           ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskReview ? ["data.dataset-task-review"] as const : [])]}};
     }
-    if (operation !== "models.task" && operation !== "models.preview-source" && operation !== "models.inventory" && operation !== "models.record" && operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
+    if (operation !== "models.task" && operation !== "models.review-download" && operation !== "models.preview-source" && operation !== "models.inventory" && operation !== "models.record" && operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
         operation !== "data.ingestion-status" && operation !== "data.dataset-versions" && operation !== "data.compare-dataset-versions" &&
         operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status" && operation !== "data.dataset-task-review")
       return {ok: false, code: "headless.unsupported-operation"};
-    if ((operation === "models.task" || operation === "models.preview-source" || isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && identity.purpose !== "plan-review") return denied;
+    if ((isHeadlessModelTaskReadOperation(operation) || operation === "models.preview-source" || isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && identity.purpose !== "plan-review") return denied;
     if (operation === "models.preview-source" && identity.modelSourceRead !== true) return denied;
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
     const authorized = async (workspaceId: WorkspaceId,
@@ -113,7 +119,7 @@ export function composeManagedAgentReads(options: {
         await options.authorization.authorizeWorkspaceOperation({
           workspace, operation: `headless.${requestedOperation}`,
           requiredScopes: operation === "models.preview-source" ? ["workspace:read", "model:read", "provider-credential:use"] : queryModel ? ["workspace:read", "artifact:read", "model:read"] : requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
-            : operation === "context.models" || operation === "models.task" || isHeadlessModelReadOperation(operation) ? ["workspace:read", "model:read"]
+            : operation === "context.models" || isHeadlessModelTaskReadOperation(operation) || isHeadlessModelReadOperation(operation) ? ["workspace:read", "model:read"]
             : operation === "context.preview-generation" || operation === "context.preview-query" || operation === "context.preview-rebuild" ? ["workspace:read", "artifact:read", "model:read"]
             : operation === "context.task" || operation === "context.saved" ? ["workspace:read", "artifact:read"]
             : isHeadlessDataReadOperation(operation) ? ["workspace:read", "artifact:read"] : ["workspace:read", "asset:read"],
@@ -123,6 +129,14 @@ export function composeManagedAgentReads(options: {
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "models.review-download") {
+        if (!readModelCompletion) return {ok: false, code: "headless.unsupported-operation"};
+        if (!identity.registeredClientId) return denied;
+        const result = readHeadlessModelDownloadReviewResult(await readModelCompletion({scope: Object.freeze({
+          organizationId: identity.organizationId, principalId: identity.principalId, workspaceId: input.workspaceId,
+          registeredClientId: identity.registeredClientId}), selection: input.selection, isCurrent: current}), input);
+        return current() && await authorized(input.workspaceId) && current() ? result : denied;
+      }
       if (operation === "models.task") {
         if (!readModelTask) return {ok: false, code: "headless.unsupported-operation"};
         if (!identity.registeredClientId) return denied;

@@ -835,6 +835,16 @@ current ModelRead/Write policy still govern the effect. Fixed authenticated
 transports copy and correlate finite lineage/ACK replies; uncertain effects do
 not permit automatic retry or imply native shutdown. Actual source/save and
 root activation remain separately qualified.
+## Completed Model review protocol integration
+
+The existing read protocol recognizes historical download review through optional
+Desktop and Managed cached-owner bindings. Current ModelRead, original client,
+workspace and captured request authority gate each observation and disclosure.
+Host, HTTP and SDK codecs independently retain exact finite task/plan lineage;
+MCP adds a selection to its existing Model tool without another tool or privilege.
+Product source/save roots remain disabled. Local protocol/owner fixtures do not
+qualify physical execution, current-file save safety or parent completion.
+
 ## Completed Model review implementation note
 
 The private completion-review selector reuses exact accepted task/plan/source

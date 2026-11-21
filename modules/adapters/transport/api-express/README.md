@@ -60,6 +60,14 @@ Unknown request fields/pages are rejected; missing authority or service wiring
 returns a sanitized unavailable envelope. Responses contain fixed scalar metrics
 with independent availability, never catalogs, model paths or release locks.
 
+Headless completed-download review uses the existing exact
+`POST /api/headless/agent/read` route and `models.review-download` operation.
+The optional host reader requires original plan-client/workspace ModelRead
+authority. The route keeps a copied task/plan target and independently decodes
+finite replies; private fields, a wrong operation or displaced lineage deny.
+Current request authority gates final disclosure. A not-ready review stays
+not ready. Historical verification grants no current file, save or runtime rights.
+
 Headless Model cancellation uses only exact
 `POST /api/headless/agent/model-task-control`, under workspace read and Model
 read/write scopes. An explicitly configured host handler and the original

@@ -214,13 +214,14 @@ function addSystemBuilderTools(server: McpServer) {
     contextId: z.string().uuid(), taskId: z.string().uuid(), kind: z.enum(["rag-database", "markdown-context-pack"]),
     artifactDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/)});
   if (enablePlanReview) {
+    const ownedModelSelection = z.discriminatedUnion("kind", [
+      z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
+      z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+        step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
+    ]);
     if (enableModelTaskControl) server.registerTool("aisb_cancel_model_download", {
       description: "Request cancellation of one original assistant-owned model download by exact task or plan-step. Requires current Model read/write and the original plan-review client/workspace. An acknowledgement does not prove shutdown or cleanup. Unknown/lost replies must be observed with models.task, never automatically retried. Starts no model/download and saves no registry record. Requires configured host task controls; enabling this tool grants no authority.",
-      inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
-        z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
-        z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-          step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
-      ])}),
+      inputSchema: z.strictObject({...workspaceTarget, selection: ownedModelSelection}),
       annotations: {readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false},
     }, (input, context) => {
       const parsed = headless.readHeadlessModelTaskCancellationRequest({version, operation: "models.cancel-download", input},
@@ -228,15 +229,21 @@ function addSystemBuilderTools(server: McpServer) {
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
     server.registerTool("aisb_model_workflow", {
-      description: "Inspect a Hugging Face source, or observe one original accepted model download by task or plan-step. Source inspection can contact Hugging Face with the configured credential under current permission and returns pinned provider metadata only. Task reads return finite progress without private errors or discovery; an unknown result grants no retry. Check host operations first. No download, cancellation, model run or registry save is authorized; succeeded transfer still needs separate approved saving. Saved inventory stays in aisb_model_metadata.",
+      description: "Inspect a Hugging Face source, observe original download progress, or review its historical completion by exact task or plan-step. Source inspection can contact Hugging Face with the configured credential under current permission and returns pinned provider metadata only. Completion review uses kind completed-download with an exact task selector; it returns recorded revision/license/file-count/bytes and verification at completion, never current file/save/readiness authority. Task reads return finite progress without private errors or discovery; unknown grants no retry. Check host operations first. No download, cancellation, model run or registry save is authorized. Saved inventory stays in aisb_model_metadata.",
       inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
         z.strictObject({kind: z.literal("source"), modelId: z.string().min(3).max(193), revision: z.string().regex(/^[a-f0-9]{40}$/).optional()}),
         z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
         z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
           step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
+        z.strictObject({kind: z.literal("completed-download"), task: ownedModelSelection}),
       ])}),
       annotations: {...queryHints, openWorldHint: true},
     }, ({selection, ...target}, context) => {
+      if (selection.kind === "completed-download") {
+        const parsed = headless.readHeadlessModelDownloadReviewRequest({version, operation: "models.review-download",
+          input: {...target, selection: selection.task}}, target.hostIncarnationId as HeadlessHostIncarnationId);
+        return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+      }
       if (selection.kind !== "source") {
         const parsed = headless.readHeadlessModelTaskRequest({version, operation: "models.task", input: {...target, selection}},
           target.hostIncarnationId as HeadlessHostIncarnationId);

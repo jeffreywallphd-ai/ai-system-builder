@@ -1841,6 +1841,15 @@ remain authoritative. Adapters attach request admission lifetime, copy target
 identity and independently validate finite owner-derived task/workspace/plan/ACK.
 SDK post-dispatch failures are unconfirmed and never retried automatically.
 Cancellation acknowledgement is not native settlement or registry persistence.
+## Completed Model review protocol
+
+Optional Desktop and Managed read bindings expose the cached historical summary
+through `models.review-download`. Both capture original request/registration
+proof, require current original-client ModelRead and reauthorize disclosure.
+HTTP and SDK boundaries independently decode the exact task/plan selection and
+finite result. MCP reuses its Model workflow selector without changing tool counts.
+Product roots remain disabled until complete save and actual-host qualification.
+
 ## Private completed Model review
 
 The shared Headless composition reads historical selected-byte completion from
@@ -1849,5 +1858,5 @@ current original-client ModelRead policy are checked in owning transactions on
 both sides of the observation. Observation itself is outside metadata retries.
 The finite summary does not refresh a worker, initialize a runtime, inspect a
 path or write a registry record. Completion-time verification does not establish
-current file integrity, readiness or save authority. Public review, separately
-approved saving and physical host/provider/native qualification remain pending.
+current file integrity, readiness or save authority. Actual product activation,
+separately approved saving and physical host/provider/native qualification remain pending.

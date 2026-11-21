@@ -2,6 +2,7 @@ import { raw, type Application, type Request, type Response } from "express";
 import {createHash} from "node:crypto";
 import {types} from "node:util";
 import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue, readHeadlessModelTaskCancellationRequest,
+  isHeadlessModelTaskReadOperation, readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult,
   readHeadlessModelTaskCancellationResult, type HeadlessModelTaskCancellationRequest,
   type HeadlessModelTaskCancellationResult} from "../../../../contracts/headless";
 
@@ -264,7 +265,7 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    const dataRead = (parsed.request.operation === "models.task" || (parsed.request.operation === "models.preview-source" && handlers.allowModelSourceRead === true) || isHeadlessModelReadOperation(parsed.request.operation) || isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
+    const dataRead = (isHeadlessModelTaskReadOperation(parsed.request.operation) || (parsed.request.operation === "models.preview-source" && handlers.allowModelSourceRead === true) || isHeadlessModelReadOperation(parsed.request.operation) || isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
       parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-query" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
     if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
@@ -276,15 +277,22 @@ async function respond<Agent>(
     // Keep an independent target so a faulty handler cannot change correlation.
     const taskProof = parsed.request.operation === "models.task"
       ? readHeadlessModelTaskRequest(parsed.request, handlers.hostIncarnationId) : undefined;
+    const reviewProof = parsed.request.operation === "models.review-download"
+      ? readHeadlessModelDownloadReviewRequest(parsed.request, handlers.hostIncarnationId) : undefined;
     const modelProof = isHeadlessModelReadOperation(parsed.request.operation)
       ? readHeadlessModelMetadataRequest(parsed.request, handlers.hostIncarnationId) : undefined;
     const sourceProof = parsed.request.operation === "models.preview-source"
       ? readHeadlessModelSourcePreviewRequest(parsed.request, handlers.hostIncarnationId) : undefined;
     if (sourceProof && !sourceProof.ok) return failure(response, 400, "headless.invalid-request");
     if (taskProof && !taskProof.ok) return failure(response, 400, "headless.invalid-request");
+    if (reviewProof && !reviewProof.ok) return failure(response, 400, "headless.invalid-request");
     if (modelProof && !modelProof.ok) return failure(response, 400, "headless.invalid-request");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
+    if (reviewProof?.ok) {
+      const decoded = readHeadlessModelDownloadReviewResult(result, reviewProof.request.input);
+      return decoded.ok ? send(response, decoded) : failure(response, requestErrorStatus(decoded.code), decoded.code);
+    }
     if (!result.ok) {
       const code = readFailures.has(result.code) ? result.code : "headless.unavailable";
       return failure(response, requestErrorStatus(code), code);
@@ -304,7 +312,7 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
-          ...(handlers.planReview ? result.value.operations.filter(operation => operation === "models.task" || operation === "models.preview-source" && handlers.allowModelSourceRead === true || isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) ||
+          ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessModelTaskReadOperation(operation) || operation === "models.preview-source" && handlers.allowModelSourceRead === true || isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) ||
             isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") : [])]}});
     }
     if (result.operation === "models.preview-source") {

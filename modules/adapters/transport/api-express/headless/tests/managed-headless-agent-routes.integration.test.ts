@@ -140,6 +140,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let mutateModelRequest = false;
   let acceptedModelPlanFingerprint = "a".repeat(64);
   let modelControlEnabled = true, modelControlCalls = 0, modelControlMode = "valid";
+  let modelReviewMode = "valid", modelReviewCalls = 0;
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -177,8 +178,23 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     } : undefined,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.task", "models.preview-source", "models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["models.review-download", "models.task", "models.preview-source", "models.inventory", "models.record", "context.task", "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "models.review-download") {
+        modelReviewCalls++;
+        if (modelReviewMode === "not-ready") return {ok: false, code: "headless.source-not-ready"};
+        if (modelReviewMode === "withdraw") current = false;
+        const {source, manifestDigest} = modelSourcePreview(workspaceId);
+        return {ok: true, operation: modelReviewMode === "tag" ? "models.task" : request.operation, value: {
+          workspaceId: modelReviewMode === "workspace" ? "workspace.foreign" : workspaceId,
+          taskId: modelReviewMode === "task" ? randomUUID() : acceptedDatasetTaskId,
+          plan: {fingerprint: modelReviewMode === "plan" ? "b".repeat(64) : acceptedModelPlanFingerprint, step: 1},
+          modelId: source.modelId, revision: source.revision, manifestDigest, format: source.format, license: source.license,
+          selectedFileCount: source.files.length, totalBytes: source.totalBytes, fromCache: false,
+          selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked",
+          ...(modelReviewMode === "private" ? {localPath: "private/model/path"} : {}),
+        }} as never;
+      }
       if (request.operation === "models.task") {
         if (withdrawStatus) current = false;
         return {ok: true, operation: request.operation, value: {
@@ -384,6 +400,26 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     current = true; modelControlMode = "valid"; modelControlEnabled = false;
     assert.equal((await request(cancelRequest, "fixture-plan", controlRoute)).status, 400);
     modelControlEnabled = true; assert.equal(modelControlCalls, 8);
+    const reviewRequest = {...cancelRequest, operation: "models.review-download"};
+    const readRouteForReview = MANAGED_HEADLESS_AGENT_PATHS.read;
+    assert.equal((await request({...reviewRequest, private: "private/path"}, "fixture-plan", readRouteForReview)).status, 400);
+    assert.equal(modelReviewCalls, 0);
+    const reviewed = await request(reviewRequest, "fixture-plan", readRouteForReview);
+    assert.equal(reviewed.status, 200); assert.equal(reviewed.body.value.taskId, acceptedDatasetTaskId);
+    assert.equal(reviewed.body.value.registration, "requires-separate-approval");
+    for (const mode of ["tag", "workspace", "task", "plan", "private"]) {
+      modelReviewMode = mode;
+      const selected = mode === "task" ? {...reviewRequest, input: {...reviewRequest.input,
+        selection: {kind: "task", taskId: acceptedDatasetTaskId}}} : reviewRequest;
+      const denied = await request(selected, "fixture-plan", readRouteForReview);
+      assert.equal(denied.status, 503, mode); assert.deepEqual(denied.body, {ok: false, code: "headless.unavailable"});
+    }
+    modelReviewMode = "not-ready";
+    const notReady = await request(reviewRequest, "fixture-plan", readRouteForReview);
+    assert.equal(notReady.status, 409); assert.deepEqual(notReady.body, {ok: false, code: "headless.source-not-ready"});
+    modelReviewMode = "withdraw";
+    assert.equal((await request(reviewRequest, "fixture-plan", readRouteForReview)).status, 403);
+    modelReviewMode = "valid"; current = true;
     const proposal = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.submit", input:{...scope, fingerprint, steps}};
     const planPath = MANAGED_HEADLESS_AGENT_PATHS["plan-review"];
     async function request(body: object | string, token = "fixture-plan", route = planPath, org = organizationId) {
