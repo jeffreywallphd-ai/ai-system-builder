@@ -130,6 +130,34 @@ def exact_options(value, required, optional=()):
         deny()
 
 
+def admit_training_output(root, raw):
+    """Check the fixed application's empty stage; never acquire native custody.
+
+    The authenticated test composition owns the parent and creates the stage.
+    These read-time checks do not fence a concurrent hostile local writer.
+    """
+    if type(raw) is not str or not 0 < len(raw) <= 1024:
+        deny()
+    target = Path(raw)
+    if (not root.is_absolute() or root.resolve() != root or not target.is_absolute() or
+            str(target) != raw or target.parent != root or
+            not re.fullmatch(r"ai-system-builder-training-output-[A-Za-z0-9]{6}", target.name)):
+        deny()
+    def identity(path):
+        info = path.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or not info.st_ino or path.is_symlink() or
+                getattr(info, "st_file_attributes", 0) & 0x400 or path.resolve() != path):
+            deny()
+        return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink, info.st_size,
+                info.st_mtime_ns, info.st_ctime_ns)
+    parent, before = identity(root), identity(target)
+    with os.scandir(target) as children:
+        if next(children, None) is not None:
+            deny()
+    if identity(target) != before or identity(root) != parent:
+        deny()
+
+
 def validate_training_request(request, fixture, model_directory, temp_directory, inspect_file=admit_dataset):
     """Admit only the declared tiny real local task, before delegating once."""
     if request.taskType != "train-model" or not isinstance(request.payload, dict):
@@ -156,7 +184,7 @@ def validate_training_request(request, fixture, model_directory, temp_directory,
                   ("warmupSteps", "warmupRatio", "schedulerType", "saveTotalLimit", "mixedPrecision", "quantization"))
     exact_options(advanced.get("lora"), {"rank": 1, "alpha": 2, "dropout": .05}, ("targetModules",))
     exact_options(output, {"outputModelName": OUTPUT_NAME, "maxShardSize": "2GB", "destination": {"local": {"enabled": True}},
-                          "registration": output.get("registration")}, ("localOutputDirectory", "outputDirectory"))
+                          "registration": output.get("registration"), "outputDirectory": output.get("outputDirectory")}, ("localOutputDirectory",))
     exact_options(output.get("registration"), {"displayName": "Training host support adapter", "artifactForm": "adapter"},
                   ("inferenceMode", "taskTags", "baseModelId", "adapterOfModelId", "metadata"))
     exact_options(validation, {"enabled": False, "expectedLoRA": True, "expectedRecurrentAdditions": False}, ("taskTags",))
@@ -169,6 +197,8 @@ def validate_training_request(request, fixture, model_directory, temp_directory,
                 not isinstance(row.get("path"), str)):
             deny()
         inspect_file(temp_directory, Path(row["path"]), 8192)
+    # Last admission read before handing the unchanged request to the real task.
+    admit_training_output(temp_directory, output.get("outputDirectory"))
 
 
 def training_failure_facts(result, cache):
@@ -243,17 +273,49 @@ def write_training_failure_facts(result, cache, dataset_cache=None):
         stream.write(payload)
 
 
+def write_training_dispatch_exception(stage, error, cache):
+    """Finite local facts only; never inspect exception text or traceback locals."""
+    if type(stage) is not str or stage not in ("request-admission", "training-delegate"):
+        deny()
+    if not cache.is_absolute() or cache.resolve() != cache or not cache.is_dir():
+        deny()
+    info = cache.lstat()
+    if cache.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
+        deny()
+    error_type = next((label for kind, label in ((ValueError, "ValueError"), (FileNotFoundError, "FileNotFoundError"),
+        (PermissionError, "PermissionError"), (OSError, "OSError")) if type(error) is kind), "other")
+    payload = (json.dumps({"schema_version": "training-dispatch-exception-v1", "stage": stage,
+        "error_type": error_type, "parent_qualification_granted": False}, separators=(",", ":")) + "\n").encode("utf8")
+    if len(payload) > 1024:
+        deny()
+    target = cache / "qualification-training-dispatch-exception.json"
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(payload)
+
+
 def single_training_dispatch(original, fixture, model_directory, temp_directory, inspect_file=admit_dataset,
-                             failure_observer=None):
+                             failure_observer=None, exception_observer=None):
     used = False
 
     def dispatch(request):
         nonlocal used
         if used:
             deny()
-        validate_training_request(request, fixture, model_directory, temp_directory, inspect_file)
+        # A refused admission also consumes this one test-task attempt.
         used = True
-        result = original(request)
+        stage = "request-admission"
+        try:
+            validate_training_request(request, fixture, model_directory, temp_directory, inspect_file)
+            stage = "training-delegate"
+            result = original(request)
+        except Exception as error:
+            if exception_observer is not None:
+                try:
+                    exception_observer(stage, error)
+                except Exception:
+                    pass  # Missing diagnostics never replace or retry the task.
+            raise
         if (failure_observer is not None and type(result) is dict and
                 type(result.get("status")) is str and result["status"] == "failed"):
             try:
@@ -547,7 +609,8 @@ def main():
         training_tasks._load_dataset = observe_training_dataset_loader(original_dataset_loader,
             lambda error: write_dataset_exception_facts(error, cache, original_dataset_loader))
     application._run_task = single_training_dispatch(application._run_task, fixture, model, temp,
-        failure_observer=lambda result: write_training_failure_facts(result, cache, dataset_cache))
+        failure_observer=lambda result: write_training_failure_facts(result, cache, dataset_cache),
+        exception_observer=lambda stage, error: write_training_dispatch_exception(stage, error, cache))
     application._ensure_model_download_data = deny_download
     with (cache / f"qualification-worker-identity-{os.getpid()}.json").open("x", encoding="utf-8") as stream:
         json.dump({"pid": os.getpid(), "parentPid": os.getppid(), "scenario": "training-model-host"}, stream)

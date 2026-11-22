@@ -295,16 +295,19 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
             "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+            "dev-tools/scripts/qualification/tests/training-request-producer.ts",
         ),
         "automatic_required_files": (
             "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
             "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+            "dev-tools/scripts/qualification/tests/training-request-producer.ts",
             "dev-tools/helpers/run_focused_checks.py",
         ),
         "sources": (
             "dev-tools/README.md", "modules/adapters/runtime/python/worker/README.md",
             "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
             "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+            "dev-tools/scripts/qualification/tests/training-request-producer.ts",
         ),
         "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
             "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py"),
@@ -2985,7 +2988,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                     if set(paths).intersection(check.get("automatic_sources", ())) and _automatic_files_available(root, check))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if check.get("companion_to") in required and set(paths).intersection(check["sources"]))
-    # Two exact inert training-fixture files have their own executed regression
+    # Exact training fixture/producer files have their own executed regression
     # profile. They do not require unrelated operational UI fixtures. Preserve
     # explicit operational coverage, unavailable-file and every other-path rule.
     training_fixture = PUBLISHED_FORM_CHECKS["training-local-loader-fixture-unit"]

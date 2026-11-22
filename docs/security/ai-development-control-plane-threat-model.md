@@ -1,5 +1,21 @@
 # AI Development Control Plane Threat Model
 
+The fixed offline training qualifier admits only the application's canonical,
+empty, direct-child output folder under the isolated declared temporary root.
+Fixed naming, no-link/no-reparse, nonzero identity and stable read-time directory
+checks reject foreign, missing, nonempty and changed stages. The real application
+and task-registry producer feed the regression; copied payloads alone cannot prove
+compatibility. Only synthetic storage and inert runtime ports run in this source
+probe. No public capability, model, Native UI or custody guarantee follows.
+The trusted test composition owns its parent; these checks do not fence a hostile
+concurrent local writer or weaken production staging/cleanup controls.
+
+Qualification dispatch consumes its one attempt before admission. Admission and
+delegate exceptions retain their original identity. A fixed exclusive diagnostic
+stores only closed stage/type labels, never exception text, paths, traceback locals
+or payloads. Diagnostic failure cannot retry or replace the task. Prior failed
+Native attempts, stop records and genuine execution/host gaps remain unchanged.
+
 The expressly approved Desktop training repeat is a closed exception for one
 known, retired pre-acceptance failure. The original issuers retain their stop
 guards. The private reservation checks exact original Native/UI/cleanup/review

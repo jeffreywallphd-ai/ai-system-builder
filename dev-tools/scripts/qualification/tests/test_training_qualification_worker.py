@@ -1,4 +1,4 @@
-"""Finite inert dispatch tests: no production import, model or process launch."""
+"""Real source producer and finite worker tests; no model or native UI launch."""
 import copy
 import importlib.util
 from pathlib import Path
@@ -10,12 +10,172 @@ import json
 import stat
 import ast
 import sys
+import shutil
+import subprocess
 from types import ModuleType
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("training_worker", Path(__file__).parents[1] / "visual-composer/training-qualification-worker.py")
 worker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(worker)
+
+
+class ActualTrainingRequestProducerTests(unittest.TestCase):
+    def test_actual_application_request_is_admitted_before_a_single_inert_delegate(self):
+        # Exercise the actual producer, including real mkdtemp and dataset
+        # staging. A copied dictionary would miss producer/consumer drift.
+        root = Path(__file__).resolve().parents[4]
+        with tempfile.TemporaryDirectory(prefix="p-") as folder:
+            temporary = Path(folder).resolve()
+            node = shutil.which("node")
+            self.assertIsNotNone(node, "The fixed producer probe needs the installed Node runtime.")
+            result = subprocess.run([node, "--import", "tsx", str(Path(__file__).with_name("training-request-producer.ts"))],
+                cwd=root, input=json.dumps({"temporaryRoot": str(temporary)}),
+                env={**os.environ, "TEMP": str(temporary), "TMP": str(temporary), "TMPDIR": str(temporary), "TSX_DISABLE_CACHE": "1"},
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf8", timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+            self.assertLess(len(result.stdout.encode("utf8")), 16384)
+            actual = json.loads(result.stdout)
+            request = SimpleNamespace(**actual["request"])
+            self.assertIn("outputDirectory", request.payload["output"])
+            calls, value = [], object()
+            dispatch = worker.single_training_dispatch(lambda original: calls.append(original) or value,
+                actual["fixture"], Path(actual["model"]), temporary)
+            self.assertIs(dispatch(request), value)
+            self.assertEqual(calls, [request])
+            with self.assertRaises(ValueError): dispatch(request)
+            self.assertEqual(calls, [request])
+
+
+class TrainingOutputStageAdmissionTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="o-")
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name).resolve()
+        self.output = self.root / "ai-system-builder-training-output-aB1234"
+        self.output.mkdir()
+
+    def test_empty_canonical_direct_child_is_read_without_modification(self):
+        before = self.output.stat()
+        worker.admit_training_output(self.root, str(self.output))
+        after = self.output.stat()
+        self.assertEqual((before.st_dev, before.st_ino, before.st_mtime_ns), (after.st_dev, after.st_ino, after.st_mtime_ns))
+        self.assertEqual(list(self.output.iterdir()), [])
+
+    def test_foreign_nested_aliased_missing_and_nontext_names_refuse(self):
+        for value in (None, "", [], "relative", str(self.root), str(self.output) + os.sep,
+                      str(self.root / "other"), str(self.output / "ai-system-builder-training-output-ABC123"),
+                      str(self.root / ".." / self.root.name / self.output.name),
+                      str(self.root.parent / self.output.name), str(self.root / "ai-system-builder-training-output-miss12")):
+            with self.subTest(kind=type(value).__name__), self.assertRaises((ValueError, OSError)):
+                worker.admit_training_output(self.root, value)
+
+    def test_file_and_nonempty_directory_are_never_adopted_or_changed(self):
+        content = self.output / "retained-synthetic-bytes"
+        content.write_bytes(b"preserve")
+        with self.assertRaises(ValueError): worker.admit_training_output(self.root, str(self.output))
+        self.assertEqual(content.read_bytes(), b"preserve")
+        target = self.root / "ai-system-builder-training-output-file12"
+        target.write_bytes(b"preserve")
+        with self.assertRaises(ValueError): worker.admit_training_output(self.root, str(target))
+        self.assertEqual(target.read_bytes(), b"preserve")
+
+    def modified_stat(self, original, **changes):
+        fields = ("st_dev", "st_ino", "st_mode", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns")
+        return SimpleNamespace(**{**{key: getattr(original, key) for key in fields}, **changes})
+
+    def test_reparse_and_symlink_modes_refuse_before_directory_enumeration(self):
+        original = worker.Path.lstat
+        for change in ({"st_file_attributes": 0x400}, {"st_mode": stat.S_IFLNK | 0o700}, {"st_ino": 0}):
+            def read(path, **kwargs):
+                value = original(path, **kwargs)
+                return self.modified_stat(value, **change) if path == self.output else value
+            with patch.object(worker.Path, "lstat", read), patch.object(worker.os, "scandir") as scan:
+                with self.assertRaises(ValueError): worker.admit_training_output(self.root, str(self.output))
+                scan.assert_not_called()
+
+    def test_changed_output_or_parent_identity_refuses(self):
+        original = worker.Path.lstat
+        for changed in (self.root, self.output):
+            counts = {}
+            def read(path, **kwargs):
+                counts[path] = counts.get(path, 0) + 1
+                value = original(path, **kwargs)
+                # is_symlink and resolve may perform their own lstat. Change
+                # after the first full identity, while the scan is in progress.
+                return self.modified_stat(value, st_ino=value.st_ino + 1) if path == changed and after_scan[0] else value
+            after_scan = [False]
+            real_scan = worker.os.scandir
+            def scan(path):
+                after_scan[0] = True
+                return real_scan(path)
+            with patch.object(worker.Path, "lstat", read), patch.object(worker.os, "scandir", scan):
+                with self.assertRaises(ValueError): worker.admit_training_output(self.root, str(self.output))
+
+    def test_noncanonical_or_missing_parent_refuses(self):
+        for root in (Path("relative"), self.root / "missing", self.output):
+            with self.assertRaises((ValueError, OSError)): worker.admit_training_output(root, str(self.output))
+
+
+class TrainingDispatchExceptionTests(unittest.TestCase):
+    def fixture(self):
+        fixture = TrainingQualificationWorkerTests(); fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        return fixture
+
+    def test_failed_admission_is_observed_once_and_consumes_dispatch(self):
+        fixture = self.fixture(); calls, observed = [], []
+        fixture.request.payload["output"].pop("outputDirectory")
+        dispatch = worker.single_training_dispatch(lambda _: calls.append(True), fixture.fixture, fixture.model, fixture.temp,
+            lambda *_: None, exception_observer=lambda stage, error: observed.append((stage, error)))
+        with self.assertRaises(ValueError) as failure: dispatch(fixture.request)
+        self.assertEqual(observed, [("request-admission", failure.exception)])
+        fixture.request.payload["output"]["outputDirectory"] = str(fixture.output)
+        with self.assertRaises(ValueError): dispatch(fixture.request)
+        self.assertEqual(calls, []); self.assertEqual(len(observed), 1)
+
+    def test_original_delegate_exception_survives_an_observer_failure_without_retry(self):
+        fixture = self.fixture(); observed, calls = [], []
+        error = OSError("synthetic-private-path-and-message")
+        def delegate(_): calls.append(True); raise error
+        def observer(stage, actual): observed.append((stage, actual)); raise RuntimeError("private-observer")
+        dispatch = worker.single_training_dispatch(delegate, fixture.fixture, fixture.model, fixture.temp,
+            lambda *_: None, exception_observer=observer)
+        with self.assertRaises(OSError) as failure: dispatch(fixture.request)
+        self.assertIs(failure.exception, error)
+        self.assertEqual(observed, [("training-delegate", error)])
+        with self.assertRaises(ValueError): dispatch(fixture.request)
+        self.assertEqual(calls, [True])
+
+    def test_finite_exclusive_summary_never_reads_exception_properties(self):
+        class PrivateError(Exception):
+            def __str__(self): raise AssertionError("Private text must not be read.")
+            def __getattribute__(self, _): raise AssertionError("Private properties must not be read.")
+        with tempfile.TemporaryDirectory(prefix="e-") as folder:
+            cache = Path(folder).resolve()
+            worker.write_training_dispatch_exception("request-admission", PrivateError(), cache)
+            target = cache / "qualification-training-dispatch-exception.json"
+            raw = target.read_bytes()
+            self.assertLess(len(raw), 1024)
+            self.assertEqual(json.loads(raw), {"schema_version": "training-dispatch-exception-v1", "stage": "request-admission", "error_type": "other", "parent_qualification_granted": False})
+            with self.assertRaises(FileExistsError): worker.write_training_dispatch_exception("training-delegate", ValueError("private"), cache)
+            self.assertEqual(target.read_bytes(), raw)
+
+    def test_unknown_stage_or_missing_destination_cannot_create_a_file(self):
+        with tempfile.TemporaryDirectory(prefix="e-") as folder:
+            cache = Path(folder).resolve()
+            for stage, target in (("foreign", cache), ("request-admission", cache / "missing")):
+                with self.assertRaises(ValueError): worker.write_training_dispatch_exception(stage, ValueError("private"), target)
+            self.assertEqual(list(cache.iterdir()), [])
+
+    def test_interrupts_are_not_replaced_or_observed(self):
+        for error in (KeyboardInterrupt(), SystemExit(1)):
+            fixture = self.fixture(); observed = []
+            def delegate(_): raise error
+            dispatch = worker.single_training_dispatch(delegate, fixture.fixture, fixture.model, fixture.temp,
+                lambda *_: None, exception_observer=lambda *args: observed.append(args))
+            with self.assertRaises(type(error)) as failure: dispatch(fixture.request)
+            self.assertIs(failure.exception, error); self.assertEqual(observed, [])
 
 
 class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
@@ -248,12 +408,17 @@ class TrainingWorkerOwnedStartupTests(unittest.TestCase):
 class TrainingQualificationWorkerTests(unittest.TestCase):
     def setUp(self):
         self.fixture = {"workspaceId": "workspace.training", "baseModelRecordId": "model.input", "datasetArtifactIds": ["data.train", "data.validation"]}
-        self.model, self.temp = Path("/owned/model"), Path("/owned/temp")
+        self.temporary = tempfile.TemporaryDirectory(prefix="w-")
+        self.addCleanup(self.temporary.cleanup)
+        self.temp = Path(self.temporary.name).resolve()
+        self.model = self.temp / "synthetic-model-not-loaded"
+        self.output = self.temp / "ai-system-builder-training-output-aB1234"
+        self.output.mkdir()
         self.request = SimpleNamespace(taskType="train-model", metadata={"workspaceId": "workspace.training"}, payload={"workspaceId": "workspace.training", "trainingTask": "llm-instruction", "method": "lora",
             "baseModel": {"modelRecordId": "model.input", "modelId": worker.MODEL_ID, "provider": "huggingface", "inferenceMode": "causal", "localPath": str(self.model)},
             "commonParameters": {"numEpochs": 1, "maxSteps": 1, "batchSize": 1, "learningRate": .0002, "maxSequenceLength": 64, "seed": 7},
             "advancedParameters": {"gradientAccumulationSteps": 1, "checkpointIntervalSteps": 100, "evalIntervalSteps": 100, "gradientCheckpointing": False, "lora": {"rank": 1, "alpha": 2, "dropout": .05}},
-            "output": {"outputModelName": worker.OUTPUT_NAME, "maxShardSize": "2GB", "destination": {"local": {"enabled": True}}, "registration": {"displayName": "Training host support adapter", "artifactForm": "adapter"}},
+            "output": {"outputModelName": worker.OUTPUT_NAME, "outputDirectory": str(self.output), "maxShardSize": "2GB", "destination": {"local": {"enabled": True}}, "registration": {"displayName": "Training host support adapter", "artifactForm": "adapter"}},
             "validation": {"enabled": False, "expectedLoRA": True, "expectedRecurrentAdditions": False},
             "datasets": [{"artifactId": artifact, "splitRole": role, "format": "jsonl", "path": str(self.temp / f"{role}.jsonl")}
                          for artifact, role in zip(self.fixture["datasetArtifactIds"], ("train", "validation"))]})
@@ -856,6 +1021,7 @@ class TrainingFailureFactsTests(unittest.TestCase):
 
     def test_one_failed_dispatch_preserves_result_identity_even_when_observer_fails(self):
         fixture = TrainingQualificationWorkerTests();fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
         result = self.failed("synthetic-private")
         observed = []
         def observer(actual):
@@ -871,6 +1037,7 @@ class TrainingFailureFactsTests(unittest.TestCase):
 
     def test_success_cancellation_nonresults_and_malformed_status_do_not_observe(self):
         fixture = TrainingQualificationWorkerTests();fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
         class Dangerous:
             def __eq__(self, _): raise AssertionError("status equality evaluated")
         for result in ({"status": "completed"}, {"status": "cancelled"}, {"status": Dangerous()}, "original", None):
@@ -882,6 +1049,7 @@ class TrainingFailureFactsTests(unittest.TestCase):
 
     def test_rejected_request_and_raised_original_never_invoke_observer(self):
         fixture = TrainingQualificationWorkerTests();fixture.setUp();observed=[];calls=[]
+        self.addCleanup(fixture.doCleanups)
         dispatch = worker.single_training_dispatch(lambda _: calls.append(True), fixture.fixture, fixture.model, fixture.temp,
                                                    lambda *_: None, observed.append)
         fixture.request.taskType = "foreign"

@@ -9,6 +9,27 @@ one-use dispatch and original resource limits are documented in
 The native-host-policy profile tests those controls using disposable evidence
 and inert process objects. Source tests do not start the repeat or qualify it.
 
+The fixed training test now accepts the empty output folder created by the real
+application. It checks the canonical test parent, direct-child name, empty contents
+and stable directory identity. It rejects missing, linked, nonempty, changed or
+foreign folders. These read-time checks do not prove native custody or stop a
+hostile concurrent writer. The authenticated isolated test composition owns the
+parent; product storage and cleanup guards stay in force.
+
+The `training-local-loader-fixture-unit` check runs a source-only Node probe through
+the actual `TrainModelUseCase` and Python task-registry adapter, then checks its
+captured request with the real fixed-worker admission. Storage and runtime ports
+use synthetic bytes and an inert accepted-task reply. No model or worker starts.
+The Python test owns and removes its temporary files. This catches producer fields
+that copied request dictionaries can miss.
+
+One admission or delegate exception can produce a fixed, exclusive local diagnostic
+with only its stage and a known exception type. It contains no message, path or
+payload. A refused admission consumes the test's single dispatch. Diagnostic
+failure cannot replace the original exception or permit a retry. Both failed
+Desktop attempts and their consumed stop records remain; a source pass supplies
+no new Native authority or successful training/review/save qualification.
+
 The fixed Desktop training test worker starts the shipped worker through its
 existing `_run_runtime` function. This keeps the exclusive listening socket and
 private startup proof that the managed host requires. A missing or failed
