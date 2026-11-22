@@ -93,6 +93,18 @@ Its state path must be `.implementation-roadmaps/<slug>/state.json`. Configure
 qualify the final candidate through the guide's reviewed `overall` work binding
 before `roadmap-completed`. Portable repositories without the adapter retain
 their declarative workflow.
+
+Install the fixed Headless workflow-only restriction profile with its archive
+validation and `tests/fixtures/headless-workflow-restriction-original.json`.
+The direct `tests/test_roadmap.py` runner collects its positive, refusal and
+read-time tamper cases. Preserve the original generic technical-policy guards;
+the fixed active profile cannot be generalized by an installer or host adapter.
+The fixture includes sanitized prior tracked metadata and the fixed policy, so
+portable tests need no app installation or live roadmap. The owning repository
+also keeps `docs/operations/headless-workflow-testing-policy.json`; tests compare
+that canonical copy when present. Neither fixture is execution or approval
+authority. The policy digest uses parsed JSON so Windows line endings do not
+change its identity. Installing the profile neither applies it nor permits a test.
 Preserve implementation-boundary tests: final verifying work can qualify only
 when every implementation chunk and predecessor is done, approval is current and
 no human action or unclassified legacy record prevents execution. Open agent work

@@ -1004,3 +1004,30 @@ Unselected declarations never authorize coverage. Unknown or jointly uncovered
 source and an explicit generic requirement retain the generic check. This routing
 repair changes no command identity, process authority or qualification threshold.
 Actual profile execution and candidate-bound review remain mandatory.
+
+### Active Headless workflow test restriction
+
+The fixed technical-policy profile admits only the user's explicit Headless-I7
+testing restriction. Threats include disguising an arbitrary active scope rewrite,
+removing security/resource/cleanup obligations, borrowing a failed measurement,
+replaying the event or stripping its archive marker. Exact original scope, plan,
+criterion and approval pins, fixed authority/policy data, the nine completed
+chunks, accepted verification feedback and a pending review bound the case.
+Unknown fields, other targets/statuses, changed policies and passed/failed tests
+cannot use it. The fixed revised plan changes no completed chunk or security
+criterion; controlled software metrics never become a physical model score.
+
+Read-time checks require the restricted current scope, unique exact archive and
+unique marked history event together. The history binds the original event and
+complete archive digests. Whole-record deletion, duplicate records, removed
+markers and changed plans are refused. This detects inconsistent local records;
+it cannot authenticate a complete replacement of all state and evidence by an
+arbitrary local writer. Approval and
+semantic bindings are invalidated; independent review must confirm actual user
+direction and every retained obligation before narrow reapproval/qualification.
+The policy's semantic digest is not authenticated identity or proof that an
+operator read the policy. These remain cooperative local records. The profile
+changes no native/effect/credential/retry authority and grants no test pass or
+completion. Rollback refuses the amendment without reviving prohibited scoring
+or weakening other controls. The normal technical-policy path remains closed to
+active/incomplete work.

@@ -1,0 +1,28 @@
+{
+  "schema_version": "headless-workflow-testing-policy-v1",
+  "policy_id": "headless-i7-workflow-only-testing-policy-v1",
+  "authority_ref": "user-headless-i7-no-model-quality-tests-20261122",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "models-training-and-generation",
+  "excluded_tests": [
+    "Model accuracy and usefulness benchmarks.",
+    "Real model output-quality scoring.",
+    "Before/after model-quality or validation-loss measurements."
+  ],
+  "retained_requirements": [
+    "Actual authorized supported model download, pinned safe formats and provenance/license checks.",
+    "Actual bounded local fine-tuning, progress, checkpoints, private review and approved save.",
+    "Supported generation, output import, exact task/result history and recovery.",
+    "Evaluation software correctness with deterministic controlled metrics and fixed-baseline arithmetic, result shape, lineage and permissions; no model score is claimed.",
+    "Real Desktop/Managed status and separately approved revocable reveals.",
+    "Existing memory, storage, native ownership, time limits, cleanup and fail-closed controls.",
+    "Original actor, workspace, model, dataset and recipe permissions, current approvals and exact replay checks.",
+    "All security criteria, completed history and genuine non-quality technical gaps.",
+    "Fresh candidate-bound tests and separate review, all implementation chunks and final overall qualification."
+  ],
+  "scope_limits": [
+    "This policy changes tests only; it does not remove the optional evaluation feature.",
+    "A scope amendment and reapproval do not supply a measurement, pass, completed chunk, effect permission or release.",
+    "Authority is recorded from the explicit user instruction; the policy does not authenticate a user or reviewer."
+  ]
+}

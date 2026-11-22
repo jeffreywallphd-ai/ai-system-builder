@@ -535,6 +535,48 @@ and separate review still govern qualification. Neither amendment nor reapproval
 is a measurement, hardware result, pass or completion. Never use this event to
 remove a security control or conceal a genuine feature/runtime/resource failure.
 
+#### Fixed Headless workflow-only testing profile
+
+The user explicitly excluded real model-quality tests from Headless increment 7.
+For that exact still-implementing Model increment, the existing event accepts
+`restrictionProfile: headless-i7-workflow-only-tests`. The generic event's
+fully-implemented guard remains unchanged for every other request.
+
+The profile pins the original approved roadmap, controlled `model-runtime-hosts`
+criterion, complete original plan, previous approval and nine completed chunks.
+It requires accepted verification feedback
+`i7-workflow-tests-without-model-quality-20261122` and a pending `review` evidence
+record for the controlled criterion whose artifact is
+`docs/operations/headless-workflow-testing-policy.json`. A passed or failed
+measurement, absent review, different scope, security target or arbitrary active
+plan is refused. Authority remains the actual explicit user instruction.
+
+Use the normal event fields plus the fixed profile. The authority is
+`user-headless-i7-no-model-quality-tests-20261122`; the policy reference is
+`headless-i7-workflow-only-testing-policy-v1`. Its digest is the engine's
+`fingerprint` of the parsed versioned policy JSON, independent of line endings.
+Copy the exact fixed criterion and superseded/retained requirement lists from
+`HEADLESS_WORKFLOW_CRITERION`, `HEADLESS_WORKFLOW_SUPERSEDED` and
+`HEADLESS_WORKFLOW_RETAINED`. Rewritten or extra caller fields are refused.
+
+The archive adds `restrictionProfile` and a deterministic `revisedPlan` to
+`technicalAcceptanceRevisions`. Only physical model scoring in the controlled
+criterion, final host chunk and two completion-test clauses is superseded. The
+optional evaluation feature and its software contract remain. All other actual
+download, training, generation, authority, hardware/resource, native and cleanup
+checks stay required. The original plan and approval, evidence, nine finished
+chunks and their definitions remain; no test or work is passed. Read-time
+validation links the restricted current scope to one archive and one history
+event. The event binds the exact event and archive digests. Missing whole records,
+duplicates, removed profile markers and changed plans are refused. These are
+cooperative-local consistency checks, not authenticated historical storage.
+
+Approval and old semantic bindings become stale. Record narrow reapproval only
+from the user's actual instruction, then use fresh candidate-bound checks and
+separate review. The profile grants no run, retry, credentials, external transfer,
+publication, new implementation approval or final qualification. It does not
+revise any other roadmap's accepted model-quality policy.
+
 ### `contextual-form-scope-aligned`
 
 This one-time legacy amendment records the accepted contextual Form design for

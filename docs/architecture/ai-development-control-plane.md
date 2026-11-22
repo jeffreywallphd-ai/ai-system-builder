@@ -511,3 +511,23 @@ the legacy argument constant and real single-training dispatch remain unchanged.
 Bounded reference hashes do not replace native filesystem custody or supplier
 ownership. Physical input/readiness/package/UI outcomes and complete owned cleanup
 need their own reviewed execution evidence; no source pass supplies them.
+
+### Fixed Headless testing restriction
+
+The roadmap engine's existing technical-policy event has one finite active
+restriction profile for the user's Headless increment-7 instruction. Its exact
+original approval, controlled criterion, plan and completed-prefix witnesses,
+accepted feedback, pending review and versioned policy identify the supported
+case. The engine owns the revised criterion and test-plan clauses; callers cannot
+supply another active plan. The optional evaluation software remains while real
+model scoring is outside this increment's tests.
+
+The event archives both plans and the old approval, preserves evidence and
+completed work, and invalidates current approval/bindings. Read validation links
+the known restricted scope, unique archive and unique event using event/archive
+digests; deleting a whole record cannot silently remove the plan guard. This is
+cooperative-local consistency rather than authenticated storage. Separate actual narrow
+reapproval and fresh qualification remain required. Every non-quality actual
+execution, security, resource, native ownership and cleanup requirement stays.
+This declarative profile grants no task, test, retry or parent pass. The generic
+fully-implemented technical-policy route and other roadmap guards are unchanged.

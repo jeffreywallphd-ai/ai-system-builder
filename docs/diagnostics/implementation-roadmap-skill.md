@@ -33,6 +33,18 @@ the user's already explicit direction. Independent semantic review and fresh
 checks remain mandatory. Neither amendment nor reapproval clears blockers or
 qualifies a measurement; human-only scope events cannot change model targets.
 
+One fixed active profile, `headless-i7-workflow-only-tests`, handles the explicit
+user instruction to exclude real model-quality tests from the current Headless
+Model increment. Route that exact case through the skill's event reference.
+It requires the pinned original scope/plan/approval, nine completed chunks,
+accepted verification feedback and pending requirement review. It archives both
+plans and changes only the fixed scoring-test clauses; completed work, security
+and all other actual host/resource checks remain. Controlled metrics test the
+evaluation software and do not claim a model score. Generic active amendments
+remain refused. Apply the actual narrow reapproval, then qualify the revised
+candidate with fresh checks and separate review; no pass or effect follows from
+the scope event.
+
 Agents must route to the skill by intent, not only by exact name. Use it when a
 user:
 

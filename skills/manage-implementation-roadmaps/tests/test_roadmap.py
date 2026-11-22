@@ -2217,6 +2217,194 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("Define the increments", status["nextCheckpoint"])
 
 
+class HeadlessWorkflowRestrictionTest(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="headless-restriction-")
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name).resolve()
+
+    def fixture(self):
+        return json.loads((Path(__file__).with_name("fixtures") /
+                           "headless-workflow-restriction-original.json").read_text(encoding="utf8"))
+
+    def original(self):
+        return self.fixture()["state"]
+
+    def pending(self):
+        return roadmap.apply_event(self.original(), {
+            "type": "evidence-recorded", "incrementId": "models-training-and-generation",
+            "criterionId": "model-runtime-hosts", "kind": "review", "outcome": "pending",
+            "summary": "Review records unfinished real host work and the explicit no-quality-testing instruction; no test pass.",
+            "artifact": "docs/operations/headless-workflow-testing-policy.json",
+        })
+
+    def event(self):
+        return copy.deepcopy({
+            "type": "technical-acceptance-revised", "restrictionProfile": roadmap.HEADLESS_WORKFLOW_RESTRICTION,
+            "incrementId": "models-training-and-generation", "approvedFingerprint": roadmap.HEADLESS_WORKFLOW_BASELINE,
+            "authorityRef": roadmap.HEADLESS_WORKFLOW_AUTHORITY, "policyRef": roadmap.HEADLESS_WORKFLOW_POLICY,
+            "policyDigest": roadmap.HEADLESS_WORKFLOW_POLICY_DIGEST, "criterion": roadmap.HEADLESS_WORKFLOW_CRITERION,
+            "supersededRequirements": roadmap.HEADLESS_WORKFLOW_SUPERSEDED,
+            "retainedRequirements": roadmap.HEADLESS_WORKFLOW_RETAINED,
+            "summary": "Apply only the explicit workflow-only test instruction; no software or physical qualification is passed.",
+        })
+
+    def denied(self, state, event):
+        before = copy.deepcopy(state)
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.apply_event(state, event)
+        self.assertEqual(state, before)
+
+    def test_fixed_profile_archives_and_reapproves_without_completing_or_scoring(self):
+        original = self.pending()
+        before = copy.deepcopy(original)
+        with mock.patch.object(roadmap, "atomic_write", side_effect=AssertionError("Pure events cannot write")), \
+                mock.patch.object(subprocess, "run", side_effect=AssertionError("Pure events cannot execute")):
+            changed = roadmap.apply_event(original, self.event())
+        self.assertEqual(original, before)
+        old = roadmap.find_increment(before, "models-training-and-generation")
+        current = roadmap.find_increment(changed, old["id"])
+        archive = changed["technicalAcceptanceRevisions"][-1]
+        self.assertEqual(archive["originalPlan"], old["plan"])
+        self.assertEqual(archive["previousApproval"], before["roadmapApproval"])
+        self.assertEqual(current["plan"], archive["revisedPlan"])
+        self.assertEqual(archive["revisedCriterion"], roadmap.HEADLESS_WORKFLOW_CRITERION)
+        for key in ("chunks", "evidence", "blockers", "currentIncrementId", "evidencePolicy", "completionSuite", "completion", "finalApproval"):
+            self.assertEqual(changed[key], before[key])
+        self.assertEqual(current["completedChunks"], old["completedChunks"])
+        self.assertEqual(current["status"], "implementing")
+        self.assertEqual(changed["status"], "approval-required")
+        self.assertFalse(roadmap.approval_is_current(changed))
+        self.assertEqual([c for c in current["acceptanceCriteria"] if c["id"] != "model-runtime-hosts"],
+                         [c for c in old["acceptanceCriteria"] if c["id"] != "model-runtime-hosts"])
+        self.assertEqual([i for i in changed["increments"] if i["id"] != old["id"]],
+                         [i for i in before["increments"] if i["id"] != old["id"]])
+        for chunk in old["plan"]["chunks"][:9]:
+            self.assertEqual(next(c for c in current["plan"]["chunks"] if c["id"] == chunk["id"]), chunk)
+        roadmap.validate_state_shape(self.repo, changed)
+        approved = roadmap.apply_event(changed, {"type": "roadmap-approved", "note": "The user explicitly directed this exact testing restriction."})
+        roadmap.validate_state_shape(self.repo, approved)
+        self.assertEqual(approved["status"], "executing")
+        self.assertTrue(roadmap.approval_is_current(approved))
+        self.assertEqual(len(roadmap.find_increment(approved, old["id"])["completedChunks"]), 9)
+        self.assertFalse(roadmap.implementation_ready_for_overall(approved))
+        self.denied(approved, {"type": "increment-completed", "summary": "A policy is not implementation."})
+        self.denied(approved, {"type": "roadmap-completed", "summary": "A policy is not qualification."})
+        self.denied(approved, {**self.event(), "approvedFingerprint": roadmap.roadmap_fingerprint(approved)})
+
+    def test_unknown_extra_or_weakened_policy_fields_refuse(self):
+        for patch in (
+            {"restrictionProfile": None}, {"restrictionProfile": True}, {"restrictionProfile": "arbitrary-active-policy"},
+            {"approvedFingerprint": "a" * 64}, {"authorityRef": "other"}, {"policyRef": "other"},
+            {"policyDigest": "a" * 64}, {"retainedRequirements": ["Skip native qualification"]},
+            {"supersededRequirements": ["All tests"]}, {"completionSuite": "standardande2e"},
+            {"nativeEffectAllowed": True}, {"revisedPlan": {}},
+            {"criterion": {**roadmap.HEADLESS_WORKFLOW_CRITERION, "description": "Always pass"}},
+            {"criterion": {**roadmap.HEADLESS_WORKFLOW_CRITERION, "qualification": "local"}},
+            {"criterion": {**roadmap.HEADLESS_WORKFLOW_CRITERION, "id": "security-model-supply-and-limits"}},
+        ):
+            with self.subTest(patch=patch):
+                self.denied(self.pending(), {**self.event(), **patch})
+
+    def test_wrong_scope_status_history_or_feedback_refuses(self):
+        for change in ("roadmap", "current", "state-status", "target-status", "plan", "approval",
+                       "completed", "extra-completed", "feedback", "feedback-category", "security"):
+            state = self.pending()
+            target = roadmap.find_increment(state, "models-training-and-generation")
+            if change == "roadmap": state["slug"] = "other"
+            elif change == "current": state["currentIncrementId"] = "rag-and-context"
+            elif change == "state-status": state["status"] = "ready"
+            elif change == "target-status": target["status"] = "verifying"
+            elif change == "plan": target["plan"]["completionTests"][0] = "Skip all host tests"
+            elif change == "approval": state["roadmapApproval"]["note"] = "Different approval"
+            elif change == "completed": target["completedChunks"] = []
+            elif change == "extra-completed": target["completedChunks"].append("run-approved-fine-tuning")
+            elif change == "feedback": state["feedback"] = []
+            elif change == "feedback-category": state["feedback"][-1]["category"] = "scope"
+            elif change == "security": next(c for c in target["acceptanceCriteria"] if c["id"].startswith("security-"))["description"] = "Skip security"
+            with self.subTest(change=change):
+                self.denied(state, self.event())
+
+    def test_pending_review_is_required_and_measurement_outcomes_are_not_reclassified(self):
+        self.denied(self.original(), self.event())
+        for field, value in (("outcome", "passed"), ("outcome", "failed"), ("kind", "test"), ("artifact", "docs/other.json")):
+            state = self.pending()
+            state["evidence"][-1][field] = value
+            with self.subTest(field=field, value=value):
+                self.denied(state, self.event())
+
+    def test_read_time_archive_and_current_scope_tampering_refuses(self):
+        changed = roadmap.apply_event(self.pending(), self.event())
+        for key in ("originalCriterion", "originalPlan", "previousApproval", "revisedPlan", "policyDigest", "retainedRequirements"):
+            state = copy.deepcopy(changed)
+            row = state["technicalAcceptanceRevisions"][-1]
+            if isinstance(row[key], dict): row[key]["tampered"] = True
+            elif isinstance(row[key], list): row[key] = []
+            else: row[key] = "a" * 64
+            with self.subTest(key=key), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, state)
+        for removed in (("restrictionProfile",), ("revisedPlan",), ("restrictionProfile", "revisedPlan")):
+            state = copy.deepcopy(changed)
+            for key in removed: state["technicalAcceptanceRevisions"][-1].pop(key)
+            with self.subTest(removed=removed), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, state)
+        for which in ("slug", "plan", "criterion", "completed"):
+            state = copy.deepcopy(changed)
+            target = roadmap.find_increment(state, "models-training-and-generation")
+            if which == "slug": state["slug"] = "other"
+            elif which == "plan": target["plan"]["completionTests"][0] = "Skip execution"
+            elif which == "criterion": next(c for c in target["acceptanceCriteria"] if c["id"] == "model-runtime-hosts")["description"] = "Always pass"
+            else: target["completedChunks"] = target["completedChunks"][1:]
+            with self.subTest(which=which), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, state)
+
+    def test_versioned_policy_matches_the_exact_finite_profile(self):
+        root = Path(__file__).resolve().parents[3]
+        policy = self.fixture()["policy"]
+        canonical = root / "docs/operations/headless-workflow-testing-policy.json"
+        if canonical.exists():
+            self.assertEqual(json.loads(canonical.read_text(encoding="utf8")), policy)
+        self.assertEqual(roadmap.fingerprint(policy), roadmap.HEADLESS_WORKFLOW_POLICY_DIGEST)
+        self.assertEqual(policy["retained_requirements"], roadmap.HEADLESS_WORKFLOW_RETAINED)
+        self.assertEqual(policy["authority_ref"], roadmap.HEADLESS_WORKFLOW_AUTHORITY)
+        self.assertEqual(policy["policy_id"], roadmap.HEADLESS_WORKFLOW_POLICY)
+
+
+    def test_whole_archive_or_history_deletion_and_unbinding_refuse_on_read(self):
+        changed = roadmap.apply_event(self.pending(), self.event())
+        roadmap.validate_state_shape(self.repo, changed)
+        for mutation in ("archive-field", "archive-row", "history-row", "history-marker", "both-records",
+                         "archive-and-weaken-plan", "event-digest", "revision-digest", "history-sequence",
+                         "duplicate-history", "duplicate-archive", "summary", "recorded-at"):
+            state = copy.deepcopy(changed)
+            if mutation in {"archive-field", "both-records", "archive-and-weaken-plan"}:
+                state.pop("technicalAcceptanceRevisions")
+            elif mutation == "archive-row": state["technicalAcceptanceRevisions"] = []
+            elif mutation == "duplicate-archive":
+                state["technicalAcceptanceRevisions"].append(copy.deepcopy(state["technicalAcceptanceRevisions"][-1]))
+            elif mutation == "summary": state["technicalAcceptanceRevisions"][-1]["summary"] = "Different event"
+            elif mutation == "recorded-at": state["technicalAcceptanceRevisions"][-1]["recordedAt"] = "Different time"
+            if mutation in {"history-row", "both-records"}: state["history"].pop()
+            elif mutation == "history-marker": state["history"][-1].pop("restrictionProfile")
+            elif mutation == "event-digest": state["history"][-1]["eventFingerprint"] = "a" * 64
+            elif mutation == "revision-digest": state["history"][-1]["revisionDigest"] = "a" * 64
+            elif mutation == "history-sequence": state["history"][-1]["sequence"] += 1
+            elif mutation == "duplicate-history": state["history"].append(copy.deepcopy(state["history"][-1]))
+            if mutation == "archive-and-weaken-plan":
+                plan = roadmap.find_increment(state, "models-training-and-generation")["plan"]
+                plan["completionTests"][0] = "Skip real host qualification entirely."
+                plan.pop("fingerprint")
+                plan["fingerprint"] = roadmap.fingerprint(plan)
+            before = copy.deepcopy(state)
+            with self.subTest(mutation=mutation), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, state)
+            self.assertEqual(state, before)
+        # Later implementation progress and its ordinary history remain valid.
+        approved = roadmap.apply_event(changed, {"type": "roadmap-approved", "note": "Explicit user restriction only."})
+        roadmap.validate_state_shape(self.repo, approved)
+        self.assertEqual(approved["history"][:-1], changed["history"])
+
+
 class WorkChunkCollectionTest(unittest.TestCase):
     def test_registered_direct_runner_collects_a_real_refinement_case(self):
         # This test stays in the fixed runner, so removing the sidecar bridge

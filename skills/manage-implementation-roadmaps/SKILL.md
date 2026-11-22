@@ -76,6 +76,19 @@ user instruction may supply that authority without another question. Obtain fres
 current checks/review for technical closure. Human-only scope events cannot revise
 model accuracy or other technical policy. Keep real resource/native/runtime gaps.
 
+The same event has one closed `headless-i7-workflow-only-tests` restriction profile
+for the user's explicit exclusion of real model-quality tests from the active
+Headless Model increment. See `references/events.md` and the versioned
+`docs/operations/headless-workflow-testing-policy.json`. This profile requires the
+exact original approval, criterion, plan, nine completed chunks, accepted feedback
+and pending requirement review. It archives the original and fixed revised plan,
+changes no completed chunk or evidence, and retains actual download, training,
+generation, permissions, resources, native ownership and cleanup qualification.
+Test evaluation software with controlled metrics; never claim those metrics are
+a real model score. Apply the actual narrow user-directed reapproval and obtain
+fresh checks and separate review. This exception cannot amend another active
+roadmap or remove arbitrary tests, security controls or qualification.
+
 When the human explicitly takes human acceptance testing offline, use
 `human-acceptance-transferred` as documented in `references/events.md`. Close only
 legacy implemented increments whose sole remaining criteria are human acceptance.

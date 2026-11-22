@@ -1304,12 +1304,158 @@ def handle_legacy_acceptance_scope_revised(state: dict[str, Any], event: dict[st
     revise_human_scope(state, event, "legacyAcceptanceScopeRevisions")
 
 
+HEADLESS_WORKFLOW_RESTRICTION = "headless-i7-workflow-only-tests"
+HEADLESS_WORKFLOW_AUTHORITY = "user-headless-i7-no-model-quality-tests-20261122"
+HEADLESS_WORKFLOW_POLICY = "headless-i7-workflow-only-testing-policy-v1"
+HEADLESS_WORKFLOW_POLICY_DIGEST = "58cef3ecdf4039c5d4c45d75e225e68560c4669050d9d64b991801406e3bf877"
+HEADLESS_WORKFLOW_BASELINE = "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05"
+HEADLESS_WORKFLOW_PINS = {
+    "originalCriterion": "01b297ee463e96fcc3db4851eb4c9ca09aae12a9c033e6433f9dae362cda356f",
+    "originalPlan": "e7c8ae87701ca3cfd000ba46c9550dba1b5a4c445a7a9e8cfa865161ae9f3f7a",
+    "previousApproval": "395dad84a8b466b1b8d95c20650154a4bed3725886c9964725fe57b4d4c7d61e",
+}
+HEADLESS_WORKFLOW_COMPLETED = (
+    "inspect-installed-models", "review-pinned-model-source", "execute-approved-model-download",
+    "monitor-and-cancel-model-download", "review-and-save-downloaded-model",
+    "review-fine-tuning-inputs-and-settings", "prepare-local-training-files-and-load-policy",
+    "inspect-local-training-model-files", "prepare-fixed-validation-comparison",
+)
+HEADLESS_WORKFLOW_SUPERSEDED = [
+    "Real model evaluation in the controlled Model host criterion.",
+    "Real model evaluation in the final Model host chunk and its actual-host completion test.",
+    "Real model quality measurements in the task-specific quality completion test.",
+]
+HEADLESS_WORKFLOW_RETAINED = [
+    "Actual authorized supported model download, pinned safe formats and provenance/license checks.",
+    "Actual bounded local fine-tuning, progress, checkpoints, private review and approved save.",
+    "Supported generation, output import, exact task/result history and recovery.",
+    "Evaluation software correctness with deterministic controlled metrics and fixed-baseline arithmetic, result shape, lineage and permissions; no model score is claimed.",
+    "Real Desktop/Managed status and separately approved revocable reveals.",
+    "Existing memory, storage, native ownership, time limits, cleanup and fail-closed controls.",
+    "Original actor, workspace, model, dataset and recipe permissions, current approvals and exact replay checks.",
+    "All security criteria, completed history and genuine non-quality technical gaps.",
+    "Fresh candidate-bound tests and separate review, all implementation chunks and final overall qualification.",
+]
+HEADLESS_WORKFLOW_CRITERION = {
+    "id": "model-runtime-hosts", "qualification": "controlled-environment",
+    "description": (
+        "Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning, "
+        "generated output and task recovery, resource guard refusal and owned cleanup. Prove paired "
+        "Desktop/browser status and revoke-gated reveals. Verify evaluation software with deterministic "
+        "controlled metrics, including fixed-baseline calculation, result shape, lineage and current permissions. "
+        "Model accuracy, real output-quality scoring and before/after model-quality measurements are excluded "
+        "from this increment's tests. Document supported hardware profiles and unavailable methods instead "
+        "of passing a stand-in."
+    ),
+}
+
+
+def headless_workflow_restricted_plan(original: dict[str, Any]) -> dict[str, Any]:
+    """One fixed test restriction, never a caller-supplied active plan rewrite."""
+    if fingerprint(original) != HEADLESS_WORKFLOW_PINS["originalPlan"]:
+        raise RoadmapError("The Headless test restriction requires its exact original plan.")
+    revised = copy.deepcopy(original)
+    chunk = next(c for c in revised["chunks"] if c["id"] == "qualify-model-workflows-on-hosts")
+    chunk["outcome"] = (
+        "Test real approved model downloads, training and generated outputs on Desktop and Managed browser "
+        "through MCP and paired app views. Check progress, exact results, separate window approval, revocation, "
+        "resource refusal, failure recovery and owned cleanup. Verify evaluation software with controlled "
+        "metrics without scoring real model quality. Simulated results cannot pass real execution checks."
+    )
+    revised["completionTests"][:2] = [
+        "Actual stdio MCP client on packaged Desktop and authenticated Managed browser exercises the supported "
+        "small pinned acquisition, declared local training, generation/output import, task recovery/resource "
+        "refusal and separate revocable status reveals. Evaluation software uses deterministic controlled "
+        "metrics; no real model quality is scored. No fake accepted task, weights, worker or output can "
+        "substitute for a claimed physical pass.",
+        "Predeclare task-specific workflow, format, data and resource expectations before observation. "
+        "Keep accepted accuracy tests closed and do not run real model-quality scoring or before/after "
+        "quality measurements. Preserve existing guard, deadline, native and offload controls and failed "
+        "history; report each profile, device and method truthfully.",
+    ]
+    revised["assumptions"].append(
+        "The user excludes model quality tests from this increment. Test the evaluation software with "
+        "controlled metrics; retain the optional feature and every non-quality technical qualification."
+    )
+    revised.pop("fingerprint")
+    revised["fingerprint"] = fingerprint(revised)
+    return revised
+
+
+def validate_headless_workflow_restriction(value: dict[str, Any]) -> None:
+    if (value.get("restrictionProfile") != HEADLESS_WORKFLOW_RESTRICTION
+        or value["incrementId"] != "models-training-and-generation"
+        or value["authorityRef"] != HEADLESS_WORKFLOW_AUTHORITY
+        or value["policyRef"] != HEADLESS_WORKFLOW_POLICY
+        or value["policyDigest"] != HEADLESS_WORKFLOW_POLICY_DIGEST
+        or value["revisedCriterion"] != HEADLESS_WORKFLOW_CRITERION
+        or value["supersededRequirements"] != HEADLESS_WORKFLOW_SUPERSEDED
+        or value["retainedRequirements"] != HEADLESS_WORKFLOW_RETAINED
+        or any(fingerprint(value.get(key)) != expected for key, expected in HEADLESS_WORKFLOW_PINS.items())
+        or value.get("revisedPlan") != headless_workflow_restricted_plan(value["originalPlan"])):
+        raise RoadmapError("Only the exact reviewed Headless workflow test restriction is supported.")
+
+
+def admit_headless_workflow_restriction(state: dict[str, Any], increment: dict[str, Any], event: dict[str, Any]) -> None:
+    feedback_id = "i7-workflow-tests-without-model-quality-20261122"
+    if (state["slug"] != "headless-skills-ui-takeover" or state["status"] != "executing"
+        or state.get("currentIncrementId") != "models-training-and-generation"
+        or increment["id"] != "models-training-and-generation" or increment["status"] != "implementing"
+        or roadmap_fingerprint(state) != HEADLESS_WORKFLOW_BASELINE
+        or tuple(increment.get("completedChunks", [])) != HEADLESS_WORKFLOW_COMPLETED
+        or fingerprint(increment.get("plan")) != HEADLESS_WORKFLOW_PINS["originalPlan"]
+        or any(r.get("restrictionProfile") == HEADLESS_WORKFLOW_RESTRICTION
+               for r in state.get("technicalAcceptanceRevisions", []))
+        or not any(f["id"] == feedback_id and f.get("category") == "verification"
+                   and f.get("impact") == "within-increment" and f.get("disposition") == "accepted"
+                   and f.get("targetIncrementId") == increment["id"] for f in state["feedback"])):
+        raise RoadmapError("The Headless restriction requires its exact active approved scope and user feedback.")
+    evidence = latest_criterion_evidence(state, increment["id"], "model-runtime-hosts")
+    if (not evidence or evidence.get("kind") != "review" or evidence.get("outcome") != "pending"
+        or evidence.get("artifact") != "docs/operations/headless-workflow-testing-policy.json"):
+        raise RoadmapError("Record the pending Headless requirement review before the restricted amendment.")
+
+
+def validate_headless_workflow_restriction_history(state: dict[str, Any]) -> None:
+    """Keep the fixed replacement, its original archive and event linked on read.
+
+    This is cooperative-local consistency, not authentication against a writer
+    capable of replacing the complete state and its historical evidence.
+    """
+    revisions = [r for r in state.get("technicalAcceptanceRevisions", [])
+                 if isinstance(r, dict) and r.get("restrictionProfile") == HEADLESS_WORKFLOW_RESTRICTION]
+    marked = [(index, row) for index, row in enumerate(require_list(state.get("history"), "state.history"))
+              if isinstance(row, dict) and "restrictionProfile" in row]
+    current = any(c == HEADLESS_WORKFLOW_CRITERION for increment in state.get("increments", [])
+                  for c in increment.get("acceptanceCriteria", []))
+    if not revisions and not marked and not current:
+        return
+    if len(revisions) != 1 or len(marked) != 1:
+        raise RoadmapError("The Headless restriction requires its unique archive and history event.")
+    revision = validate_technical_replacement(revisions[0], "Headless technical revision")
+    index, row = marked[0]
+    event = {
+        "type": "technical-acceptance-revised", "restrictionProfile": HEADLESS_WORKFLOW_RESTRICTION,
+        "incrementId": revision["incrementId"], "approvedFingerprint": HEADLESS_WORKFLOW_BASELINE,
+        **{key: revision[key] for key in ("authorityRef", "policyRef", "policyDigest", "summary",
+                                          "supersededRequirements", "retainedRequirements")},
+        "criterion": revision["revisedCriterion"],
+    }
+    if (set(row) != {"sequence", "type", "eventFingerprint", "recordedAt", "restrictionProfile", "revisionDigest"}
+        or type(row["sequence"]) is not int or row["sequence"] != index + 1
+        or row["type"] != event["type"] or row["restrictionProfile"] != HEADLESS_WORKFLOW_RESTRICTION
+        or row["eventFingerprint"] != fingerprint(event) or row["revisionDigest"] != fingerprint(revision)):
+        raise RoadmapError("The Headless restriction history must bind its exact event and archive.")
+    require_string(row["recordedAt"], "Headless restriction history.recordedAt", maximum=80)
+
+
 def validate_technical_replacement(value: Any, label: str) -> dict[str, Any]:
     """Validate the bounded archive; policy authority still needs semantic review."""
     value = require_object(value, label)
     reject_unknown(value, {"incrementId", "originalCriterion", "revisedCriterion", "originalPlan",
                            "previousApproval", "authorityRef", "policyRef", "policyDigest", "summary",
-                           "supersededRequirements", "retainedRequirements", "status", "recordedAt"}, label)
+                           "supersededRequirements", "retainedRequirements", "status", "recordedAt",
+                           "restrictionProfile", "revisedPlan"}, label)
     require_identifier(value.get("incrementId"), f"{label}.incrementId")
     original = validate_criterion(value.get("originalCriterion"), f"{label}.originalCriterion")
     revised = validate_criterion(value.get("revisedCriterion"), f"{label}.revisedCriterion")
@@ -1330,39 +1476,58 @@ def validate_technical_replacement(value: Any, label: str) -> dict[str, Any]:
     if value.get("status") != "technical-policy-revised":
         raise RoadmapError("Technical policy revision cannot assert qualification or offline human ownership.")
     require_string(value.get("recordedAt"), f"{label}.recordedAt", maximum=80)
+    if (revised == HEADLESS_WORKFLOW_CRITERION
+        and fingerprint(original) == HEADLESS_WORKFLOW_PINS["originalCriterion"]
+        and "restrictionProfile" not in value):
+        raise RoadmapError("The known Headless restriction cannot discard its archive profile.")
+    if "restrictionProfile" in value or "revisedPlan" in value:
+        validate_headless_workflow_restriction(value)
     return value
 
 
 def handle_technical_acceptance_revised(state: dict[str, Any], event: dict[str, Any]) -> None:
     """Amend explicitly authorized technical policy, without supplying a test pass."""
     reject_unknown(event, {"type", "incrementId", "approvedFingerprint", "authorityRef", "policyRef",
-                           "policyDigest", "criterion", "supersededRequirements", "retainedRequirements", "summary"}, "event")
+                           "policyDigest", "criterion", "supersededRequirements", "retainedRequirements", "summary",
+                           "restrictionProfile"}, "event")
     if state.get("evidencePolicy") != "control-plane-v1":
         raise RoadmapError("Technical acceptance revision requires receipt-governed completion policy.")
     if not approval_is_current(state) or event.get("approvedFingerprint") != roadmap_fingerprint(state):
         raise RoadmapError("Technical acceptance revision requires the current approved fingerprint.")
     increment = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
-    if increment["status"] not in {"verifying", "implemented-pending-qualification", "blocked"}:
+    restricted = "restrictionProfile" in event
+    if restricted:
+        if event["restrictionProfile"] != HEADLESS_WORKFLOW_RESTRICTION:
+            raise RoadmapError("Unknown active technical policy restriction.")
+        admit_headless_workflow_restriction(state, increment, event)
+    elif increment["status"] not in {"verifying", "implemented-pending-qualification", "blocked"}:
         raise RoadmapError("Revise technical policy only after implementation is complete.")
     planned = [c["id"] for c in (increment.get("plan") or {}).get("chunks", [])]
     completed = increment.get("completedChunks", [])
-    if not planned or len(set(planned)) != len(planned) or len(completed) != len(planned) or set(completed) != set(planned):
+    if (not planned or len(set(planned)) != len(planned)
+        or (not restricted and (len(completed) != len(planned) or set(completed) != set(planned)))):
         raise RoadmapError("Complete every unique planned chunk before revising technical policy.")
     revised = validate_criterion(event.get("criterion"), "event.criterion")
     original = next((c for c in increment["acceptanceCriteria"] if c["id"] == revised["id"]), None)
     evidence = latest_criterion_evidence(state, increment["id"], revised["id"])
     if not original or not evidence or evidence["outcome"] != "pending":
         raise RoadmapError("Only a known pending controlled technical criterion may change.")
-    archive = validate_technical_replacement({
+    archive_value = {
         "incrementId": increment["id"], "originalCriterion": copy.deepcopy(original),
         "revisedCriterion": revised, "originalPlan": copy.deepcopy(increment["plan"]),
         "previousApproval": copy.deepcopy(state["roadmapApproval"]),
         **{key: event.get(key) for key in ("authorityRef", "policyRef", "policyDigest", "summary",
                                           "supersededRequirements", "retainedRequirements")},
         "status": "technical-policy-revised", "recordedAt": now_utc(),
-    }, "revision")
+    }
+    if restricted:
+        archive_value.update(restrictionProfile=HEADLESS_WORKFLOW_RESTRICTION,
+                             revisedPlan=headless_workflow_restricted_plan(increment["plan"]))
+    archive = validate_technical_replacement(archive_value, "revision")
     state.setdefault("technicalAcceptanceRevisions", []).append(archive)
     increment["acceptanceCriteria"] = [revised if c["id"] == revised["id"] else c for c in increment["acceptanceCriteria"]]
+    if restricted:
+        increment["plan"] = copy.deepcopy(archive["revisedPlan"])
     # Preserve every evidence/chunk/blocker/status fact. Changed semantics stale old bindings.
     invalidate_roadmap_approval(state)
     state["status"] = "approval-required"
@@ -2080,14 +2245,16 @@ def apply_event(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
             current_increment(updated)["status"] = "blocked"
     timestamp = now_utc()
     updated["updatedAt"] = timestamp
-    updated["history"].append(
-        {
-            "sequence": len(updated["history"]) + 1,
-            "type": event_type,
-            "eventFingerprint": fingerprint(event),
-            "recordedAt": timestamp,
-        }
-    )
+    history_row = {
+        "sequence": len(updated["history"]) + 1,
+        "type": event_type,
+        "eventFingerprint": fingerprint(event),
+        "recordedAt": timestamp,
+    }
+    if event_type == "technical-acceptance-revised" and event.get("restrictionProfile") == HEADLESS_WORKFLOW_RESTRICTION:
+        history_row.update(restrictionProfile=HEADLESS_WORKFLOW_RESTRICTION,
+                           revisionDigest=fingerprint(updated["technicalAcceptanceRevisions"][-1]))
+    updated["history"].append(history_row)
     return updated
 
 
@@ -2234,7 +2401,9 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         if current is None or {k: v for k, v in current.items() if k not in mutable_resolution} != {
                 k: v for k, v in expected.items() if k not in mutable_resolution}:
             raise RoadmapError("Current work must retain its archived action assignment.")
-    for revision in require_list(state.get("technicalAcceptanceRevisions", []), "state.technicalAcceptanceRevisions"):
+    require_list(state.get("technicalAcceptanceRevisions", []), "state.technicalAcceptanceRevisions")
+    validate_headless_workflow_restriction_history(state)
+    for revision in state.get("technicalAcceptanceRevisions", []):
         revision = validate_technical_replacement(revision, "technical revision")
         if state.get("evidencePolicy") != "control-plane-v1":
             raise RoadmapError("Technical acceptance revisions retain governed completion policy.")
@@ -2242,6 +2411,14 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         if not any(c["id"] == revision["originalCriterion"]["id"] and c["qualification"] == "controlled-environment"
                    for c in increment["acceptanceCriteria"]):
             raise RoadmapError("Amended technical identity and qualification must remain active.")
+        if "restrictionProfile" in revision and (
+            state["slug"] != "headless-skills-ui-takeover"
+            or increment["plan"] != revision["revisedPlan"]
+            or next(c for c in increment["acceptanceCriteria"] if c["id"] == "model-runtime-hosts")
+                != revision["revisedCriterion"]
+            or tuple(increment["completedChunks"][:len(HEADLESS_WORKFLOW_COMPLETED)]) != HEADLESS_WORKFLOW_COMPLETED
+        ):
+            raise RoadmapError("The Headless restriction must retain its exact revised scope and completed history.")
     for transfer in require_list(state.get("humanAcceptanceTransfers", []), "state.humanAcceptanceTransfers"):
         reject_unknown(transfer, {"incrementId", "criteria", "originalPlan", "previousApproval", "authorityRef", "summary", "status", "recordedAt"}, "transfer")
         increment = find_increment(state, require_identifier(transfer.get("incrementId"), "transfer.incrementId"))

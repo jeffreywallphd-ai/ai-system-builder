@@ -35,6 +35,13 @@
   criterion identity/qualification, archive original policy/approval, independently
   review actual authority and obtain fresh checks; no technical pass is inferred.
 
+- The skill's fixed `headless-i7-workflow-only-tests` profile is limited to the
+  explicit current Headless testing instruction. Preserve its pinned original
+  scope, pending review and completed history. It supersedes only real scoring
+  tests; software evaluation and actual non-quality host/security/resource checks
+  remain. Other active amendments still refuse; consult the canonical event
+  reference instead of generalizing this exception.
+
 - Route contributor workflow requests through `AGENTS.md` and
   `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its review
   server and share the verified URL; site data comes from versioned JSON.
