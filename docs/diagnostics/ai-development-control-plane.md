@@ -949,6 +949,16 @@ delete snapshots to free index space or replace missing evidence with a pass.
 
 ## Review and complete
 
+The fixed `training-first-phase-retained-evidence` check reads the saved primary
+tiny-input/readiness results and separate reviews through a bounded closed-path
+reader. Its versioned report records the historical execution commit and each
+physical checkout's raw source digest. Only nine explicit qualification-only
+paths may change; other source changes make the support stale. The companion
+`training-first-phase-evidence-unit` runs disposable denial tests and does not
+stand in for that actual evidence check. Neither command launches native/model
+work, reruns accuracy checks or supplies a parent/training/UI pass. See the
+[native helper guide](../../dev-tools/helpers/native-qualification/README.md).
+
 A separate invocation reviews the actual candidate, every criterion and its
 qualifying receipt. Store the request only under ignored `.local-codex/`:
 

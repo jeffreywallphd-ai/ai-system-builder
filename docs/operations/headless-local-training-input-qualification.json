@@ -1,0 +1,40 @@
+{
+  "schema_version": "headless-local-training-input-qualification-v1",
+  "status": "qualified-recorded-source-first-phases-only",
+  "run_id": "30430b9443254741986db4c15aae266d",
+  "source_commit": "097c2fff5096ab9a39e78f73868d6596b0853c29",
+  "owner_source_digest": "8d4c36d0567837a96701eccabb48352af695de3030f1cc51d7b1dfd88b019842",
+  "execution_source_digest": "fb1e22c9aaa73f39c77b3d1f9d01f6ff52e861b825313c8f158ce128665301ab",
+  "artifacts": {
+    "owner_snapshot": "3999b15d18c895f732e96f3c6665275756c8b22c32198627033aab2a156b382f",
+    "execution_snapshot": "f35583e87f9d7a8baf1119d60ce66ae596129f2fdeb017d4f63f5ba068f9ae87",
+    "input_plan": "1a1b0834576d43784ad438054d64f598be921602dac78629a36f413ac99595f8",
+    "input_script": "2eb4268f8477666e5229b3aad09d86a28de450e0f97b72f7a41c308ad8dbff85",
+    "input_effect_review": "ea2257fcf121797cf6f501cc85f9432f0259e3c4f5d38ce8a9643d1b745767db",
+    "input_result_review": "0e651a41eb7690cec76bbbbba2fabc536c1d550e907db88d873609f649ac3e94",
+    "input_observation": "f782eba12f40eb9c22eab7e320014019e4e6b4401e52ef93db6b45b72d60caf0",
+    "input_native": "5967b05a7c6f0e124716eca989579ccccb7d2e39e02eb47705001503c38c783c",
+    "input_stdout": "e55c99eae5c1640b10ca7f1e77e438a8180776f36463657b48e660d572eb0463",
+    "input_stderr": "6d1058d22d7feb64b923567ec3a1f4457446ac6fb6df713eb2d0bf0d44d38cd8",
+    "readiness_plan": "eff0c66db90f202a6643ff8c6ae9676fe395f03d065de2c606042b1c0b66a15d",
+    "readiness_script": "931b5595ab7afa6a91b137bccd2343a5e547db1fe4d3d2d2eab83bc3b871f032",
+    "readiness_effect_review": "82c7b9e368634e76bdd18b5033bddac0e9d14a634f3158ca7665f0df87037bd3",
+    "readiness_result_review": "623875bd69b73339279b56ea35f1ec8214962dad450894477c7c3231ae94a067",
+    "readiness_observation": "b9cc5da93188805b7e04d98c59fdecfac26f4fd26b4b2ab4d80fb503a8b38e8d",
+    "readiness_native": "08eb3041be585d0c69eb0d1837bcecbc9ef1f72974fc504046dbeca7000f5f65",
+    "readiness_stdout": "68e48c53ff18963d2e9c4ec2387f89c7269d1ba2ed2211678d0ea1e7cb40c99d",
+    "readiness_stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "probes": "adb7ce0b520c6c27c621b482d0b251a0139d3cb31b64755820be57bee7317122",
+    "manifest": "d7d002bf14e0b95fa3cdbdf78f72d48056c21c7970b1d4419231da6e491616d0"
+  },
+  "scope": {
+    "training_executed": false,
+    "package_or_ui_executed": false,
+    "accuracy_qualified": false,
+    "headless_qualified": false,
+    "independent_coding_installation": false,
+    "parent_pass": false,
+    "native_effect_allowed": false,
+    "automatic_retry_allowed": false
+  }
+}

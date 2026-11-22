@@ -1,5 +1,20 @@
 # AI Development Control Plane Threat Model
 
+The private first-phase training evidence reader treats saved artifacts as
+untrusted data. A versioned source-owned report pins their hashes, and a closed
+run/role recipe supplies every path. Observed runtime paths and command fields
+are never opened or executed. Explicit UTF-8 duplicate/depth-checked JSON, stable
+single-link regular-file reads, exact phase/review/input bindings and all
+native cleanup/limit checks reject substitution, malformed evidence and partial
+retirement. The creator result, closed phase/context and exact integer allowance
+counts are validated separately from hashes; matching hashes cannot turn a
+different phase or boolean alias into admitted evidence. The two physical source
+snapshots reject all drift outside nine
+literal qualification-only paths. Hashes coordinate trusted contributor work;
+they do not authenticate a reviewer, fence hostile filesystem writers, prove
+supplier integrity or grant any execution, retry, training or parent authority.
+Nonempty per-probe hashes remain source-produced when raw payloads are absent.
+
 The current-source training operator renderer admits only plain closed phase data,
 finite run/hash facts and one separately witnessed canonical local Git identity.
 It replaces one literal data sentinel in fixed tracked templates and returns bytes;

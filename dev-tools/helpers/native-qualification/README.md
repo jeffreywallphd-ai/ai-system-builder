@@ -438,6 +438,41 @@ No model accuracy, native retirement, Headless activation or parent pass follows
 
 ## Bounded training package bytes
 
+`training_first_phase_evidence.py` reads the versioned
+`docs/operations/headless-local-training-input-qualification.json` and retained
+first-phase artifacts without starting any process, model or native effect.
+Its only Git calls are the established read-only source snapshot commands.
+The fixed primary checkout and its nested `.local-codex/h` checkout must share
+the same Git directory. Artifact paths come from a closed run/role recipe;
+paths and commands inside observations are never followed. Missing evidence
+fails the check; it cannot trigger a rerun, download or installer.
+
+The reader checks actual retained native results and complete logs, original
+2 GiB process/4 GiB Job/32-active-process limits, confirmed retirement, six
+input-file hashes, separate effect/result reviews and all twelve readiness rows.
+Creator output, exact phase schemas/roles, closed context and input-manifest
+bindings, original deadlines/limits and integer effect counts are checked in
+addition to artifact hashes. JSON is explicitly UTF-8; UTF-16/32 cannot bypass
+the nesting scan through the parser's encoding autodetection.
+The unsuccessful NVIDIA inventory and unavailable ROCm inventory remain explicit;
+the real installed-Torch CUDA and backend checks supply CUDA readiness. Nonempty
+probe payload hashes are source-produced observations: their raw payloads were
+not retained and cannot be independently rehashed. Complete native logs can.
+
+Both physical source maps retain their original raw digests and source commit.
+Exactly nine literal qualification-only reader/test/report/catalog/documentation
+paths may differ. Every other new, deleted or changed source makes this support
+stale. This is cooperative evidence validation, not hostile-file custody, reviewer
+authentication or a fresh runtime supplier audit. Ordinary mutable work records
+are not required to remain at their historical pre-effect hashes.
+
+The two focused checks deliberately differ. `training-first-phase-evidence-unit`
+runs real disposable parser/file/tamper tests. `training-first-phase-retained-evidence`
+runs the reader against actual retained artifacts; it fails without them. Neither
+performs native work or qualifies training, packaging, app UI, model accuracy,
+Headless workflows, an independent coding-checkout installation or the parent
+roadmap. These later phases still need their own evidence and reviewed authority.
+
 `training_package_inputs.py` tracks the earlier reviewed source-copy and installed
 Electron ZIP algorithm. It has no CLI, subprocess, native or model entry point.
 A separately reviewed trusted operator must bind current source/runtime identities,

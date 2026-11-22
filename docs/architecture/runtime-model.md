@@ -1,5 +1,13 @@
 # Runtime Model
 
+The private training qualification reader records fresh generated-input and
+read-only installed-dependency observations separately from actual training.
+Its fixed primary/coding-checkout layout and two raw source snapshots prevent
+another checkout's bytes from being presented as physical execution evidence.
+The reader checks saved native retirement and limits; it never issues a Job,
+starts a model, repairs dependencies or authorizes a retry. This first-phase
+support does not qualify the public Headless workflow or its parent roadmap.
+
 Current-source developer training qualification can render the fixed four-file
 operator from tracked templates. Only the private v2 factory derives its immutable
 per-run/per-phase helper directory. It shares the original native family and all
