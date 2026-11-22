@@ -4,7 +4,7 @@ import {readStructuredOwnedModelPlanTask, readStructuredOwnedModelPlanTaskByPlan
   readStructuredOwnedModelPlanTaskSourceDigest, readStructuredModelPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
 import type {ModelDownloadTasksUseCase} from "../../../application/use-cases/model/model-download-tasks.use-case";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
-import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessModelTaskSelection, type HeadlessModelTaskSelection,
+import {HEADLESS_CONTRACT_VERSION, isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessModelTaskSelection, type HeadlessModelTaskSelection,
   readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationValue,
   readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewValue,
   type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
@@ -12,6 +12,10 @@ import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {readStrictPassiveRecord, hasKnownPassiveCredential, copyBoundedPassiveData} from "../../../contracts/shared";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
+import {createStructuredOrganizationRepositories} from "../../../adapters/persistence/organization";
+import {createLocalWorkspaceRepository} from "../../../adapters/persistence/workspace";
+import {AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy} from "../../../application/services/security";
+import type {TenantPlacementConfig} from "../../../contracts/config";
 
 export type OwnedHeadlessModelTaskSelection = HeadlessModelTaskSelection;
 export type OwnedHeadlessModelTaskReader = (query: {readonly scope: HeadlessOperationScope;
@@ -201,4 +205,81 @@ export async function runOwnedHeadlessModelDownloadCancellation(options:
     const value = readHeadlessModelTaskCancellationValue(result.value, parsed.request.input);
     return value ? {ok: true, operation: "models.cancel-download", value} : sourceEntered ? unconfirmed : unavailable;
   } catch {return sourceEntered ? unconfirmed : current() ? unavailable : forbidden;}
+}
+
+/** Host composition only. Reads the original accepted task under fresh policy;
+ * peeking a retained owner must never construct a feature or start a runtime.
+ * This factory installs no transport or public capability. */
+export function composeHeadlessModelTaskReaders(options: {
+  readonly documents: StructuredDocumentStore;
+  readonly rootDirectory: string;
+  readonly hostIncarnationId: string;
+  readonly placement: TenantPlacementConfig;
+  readonly isHostCurrent: () => boolean;
+  readonly peekOwner: () => (OwnedHeadlessModelSourceTasks & Pick<ModelDownloadTasksUseCase, "peekApprovedSourceReview">) | undefined;
+}) {
+  if (types.isProxy(options)) throw new Error("Model task read composition is unavailable.");
+  const fields = readStrictPassiveRecord(options, ["documents", "rootDirectory", "hostIncarnationId", "placement", "isHostCurrent", "peekOwner"]);
+  const {documents, rootDirectory, hostIncarnationId, placement: originalPlacement, isHostCurrent, peekOwner} = options;
+  if (Object.keys(fields).length !== 6 || !documents || types.isProxy(documents) ||
+      documents.organizationId !== undefined || typeof documents.runInOwnedTransaction !== "function" ||
+      typeof rootDirectory !== "string" || !rootDirectory || rootDirectory.length > 4096 ||
+      !isHeadlessHostIncarnationId(hostIncarnationId) || typeof isHostCurrent !== "function" || types.isProxy(isHostCurrent) ||
+      typeof peekOwner !== "function" || types.isProxy(peekOwner) || types.isAsyncFunction(peekOwner) || types.isProxy(originalPlacement))
+    throw new Error("Model task read composition is unavailable.");
+  const configured = readStrictPassiveRecord(originalPlacement, ["mode", "organizationId"]);
+  let placement: TenantPlacementConfig;
+  if (configured.mode === "pooled" && Object.keys(configured).length === 1) placement = Object.freeze({mode: "pooled"});
+  else if (configured.mode === "dedicated" && isOrganizationId(configured.organizationId) && Object.keys(configured).length === 2)
+    placement = Object.freeze({mode: "dedicated", organizationId: configured.organizationId});
+  else throw new Error("Model task read composition is unavailable.");
+  const hostCurrent = () => isHeadlessReadCurrent(() => Reflect.apply(isHostCurrent, options, []));
+
+  function capture(query: Parameters<OwnedHeadlessModelTaskReader>[0]) {
+    try {
+      if (types.isProxy(query)) return;
+      const row = readStrictPassiveRecord(query, ["scope", "selection", "isCurrent"]);
+      if (Object.keys(row).length !== 3 || typeof row.isCurrent !== "function" || types.isProxy(row.isCurrent) || types.isProxy(row.selection)) return;
+      const scope = captureScope(row.scope), selected = readHeadlessModelTaskSelection(row.selection);
+      if (!scope || !selected) return;
+      const selection = Object.freeze(copyBoundedPassiveData(selected)) as HeadlessModelTaskSelection;
+      const originalCurrent = row.isCurrent;
+      const current = () => hostCurrent() && isHeadlessReadCurrent(() => Reflect.apply(originalCurrent, query, []));
+      return {scope, selection, current};
+    } catch {return;}
+  }
+
+  async function authorize(owner: StructuredDocumentStore, scope: HeadlessOperationScope, current: () => boolean) {
+    try {
+      if (!current()) return false;
+      const policy = createOrganizationAuthorizationPolicy({...createStructuredOrganizationRepositories(owner), tenantPlacement: placement});
+      const authorization = new AuthorizeWorkspaceOperationService({organizationContext: {
+        getCurrentOrganizationContext: () => ({organizationId: scope.organizationId, principalId: scope.principalId})},
+        authorizer: {async execute(input) {
+          if (!(await policy.authorize(input)).allowed) throw new Error("The original Model task is unavailable.");
+        }}});
+      const workspace = await createLocalWorkspaceRepository({rootDirectory, documents: owner.forOrganization(scope.organizationId)})
+        .readWorkspace(scope.workspaceId);
+      if (!current() || workspace?.organizationId !== scope.organizationId || workspace.workspaceId !== scope.workspaceId || workspace.status !== "active") return false;
+      await authorization.authorizeWorkspaceOperation({workspace, operation: "headless.models.task",
+        requiredScopes: ["workspace:read", "model:read"]});
+      return current();
+    } catch {return false;}
+  }
+
+  const readModelTask: OwnedHeadlessModelTaskReader = async query => {
+    const captured = capture(query); if (!captured) return forbidden;
+    const {scope, selection, current} = captured;
+    return runOwnedHeadlessModelDownloadTask({documents, hostIncarnationId, scope, selection, action: "read", isCurrent: current,
+      authorize: (owner, actor) => authorize(owner, actor, current), peekOwner: () => hostCurrent() ? peekOwner() : undefined});
+  };
+  const readModelCompletion: OwnedHeadlessModelCompletionReader = async query => {
+    const captured = capture(query); if (!captured) return forbidden;
+    const {scope, selection, current} = captured;
+    return runOwnedHeadlessModelDownloadReview({documents, hostIncarnationId, scope, isCurrent: current,
+      request: {version: HEADLESS_CONTRACT_VERSION, operation: "models.review-download",
+        input: {hostIncarnationId, workspaceId: scope.workspaceId, selection}},
+      authorize: (owner, actor) => authorize(owner, actor, current), peekOwner: () => hostCurrent() ? peekOwner() : undefined});
+  };
+  return Object.freeze({readModelTask, readModelCompletion});
 }

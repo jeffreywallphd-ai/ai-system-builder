@@ -15,12 +15,14 @@ import {composeDesktopHeadlessPlanReview} from "../../../desktop/composition/com
 import {composeManagedHeadlessPlanReview} from "../../../server/composition/composeManagedHeadlessPlanReview";
 import {composeDesktopHeadlessPlanApprovals} from "../../../desktop/composition/composeDesktopHeadlessPlanApprovals";
 import {composeManagedHeadlessPlanApprovals} from "../../../server/composition/composeManagedHeadlessPlanApprovals";
+import {composeDesktopHeadlessReads} from "../../../desktop/composition/composeDesktopHeadlessReads";
+import {composeManagedAgentReads} from "../../../server/composition/composeManagedAgentReads";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createTenantPlacementConfig} from "../../../../contracts/config";
 import {readModelDownloadSource, type ModelInventoryRecord} from "../../../../contracts/model";
-import {HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest, readDesktopPlanApprovalView,
-  type HeadlessHostIncarnationId} from "../../../../contracts/headless";
+import {HEADLESS_CONTRACT_VERSION, HEADLESS_READ_OPERATIONS, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest, readDesktopPlanApprovalView,
+  type HeadlessHostIncarnationId, type HeadlessReadRequest} from "../../../../contracts/headless";
 import {prepareHeadlessModelDownloadReviews} from "../headlessModelDownloadReview";
 import {prepareHeadlessModelReferenceSaveReviews} from "../headlessModelReferenceSave";
 import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
@@ -29,7 +31,7 @@ import type {ApprovedModelSourceDownloadControl} from "../../../../application/p
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {readStructuredModelPlanAttemptByPlan} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
 import {prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
-import {runOwnedHeadlessModelDownloadTask} from "../headlessModelDownloadTasks";
+import {runOwnedHeadlessModelDownloadTask, composeHeadlessModelTaskReaders} from "../headlessModelDownloadTasks";
 
 type Host = "Desktop" | "Managed";
 async function fixture(t: TestContext, host: Host) {
@@ -829,4 +831,163 @@ test("Desktop cancellation refuses asynchronous latest authority callbacks witho
     assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.ownerLookups, 0);
     await new Promise<void>(resolve => setImmediate(resolve));
   }
+});
+
+async function composedModelReaders(t: TestContext, host: Host = "Desktop") {
+  const f = await approvedExecution(t, host);
+  assert.ok((await f.run()).result.ok);
+  const accepted = await f.attempt(); assert.ok(accepted?.kind === "accepted");
+  const taskId = accepted.reference.taskId, readerState = {current: true, loaded: true, peeks: 0};
+  const options = {documents: f.platform, rootDirectory: f.directory, hostIncarnationId: f.target.hostIncarnationId,
+    placement: createTenantPlacementConfig({mode: "dedicated", organizationId: f.scope.organizationId}),
+    isHostCurrent: () => f.state.hostCurrent,
+    peekOwner: () => {readerState.peeks++; return readerState.loaded ? f.model : undefined;}};
+  const readers = composeHeadlessModelTaskReaders(options);
+  const modelQuery = {scope: {...f.scope}, selection: {kind: "task" as const, taskId}, isCurrent: () => readerState.current};
+  const workspaces = createLocalWorkspaceRepository({rootDirectory: f.directory, documents: f.documents});
+  const contexts = {getCurrentOrganizationContext: () => f.identity};
+  const policy = createOrganizationAuthorizationPolicy({...f.repositories, tenantPlacement: options.placement});
+  const authorization = new AuthorizeWorkspaceOperationService({organizationContext: contexts, authorizer: {async execute(input) {
+    if (!(await policy.authorize(input)).allowed) throw new Error("Synthetic current reader policy refusal.");
+  }}});
+  const noFeatures = (): never => assert.fail("Model task reads cannot construct ordinary features.");
+  const request: HeadlessReadRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "models.task",
+    input: {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection: modelQuery.selection}};
+  const read = host === "Desktop" ? (() => {
+    const handler = composeDesktopHeadlessReads({hostIncarnationId: f.target.hostIncarnationId, identity: f.identity,
+      workspaceRepository: workspaces, authorization, getUseCases: noFeatures, isOpen: () => f.state.hostCurrent, ...readers});
+    return (query: HeadlessReadRequest = request) => handler(query, async () => ({...f.identity,
+      registeredClientId: f.scope.registeredClientId, workspaceIds: [f.scope.workspaceId], operations: HEADLESS_READ_OPERATIONS,
+      planReview: true, isCurrent: () => readerState.current, isReadCurrent: () => readerState.current}));
+  })() : (() => {
+    const handler = composeManagedAgentReads({hostIncarnationId: f.target.hostIncarnationId, workspaces, contexts, authorization,
+      systems: {get listTemplates() {return noFeatures();}, get read() {return noFeatures();}}, ...readers});
+    return (query: HeadlessReadRequest = request) => handler(query, {...f.identity,
+      registeredClientId: f.scope.registeredClientId, purpose: "plan-review"}, () => readerState.current);
+  })();
+  const complete = async () => {
+    f.state.completionReady = true; f.records.get(taskId)!.status = "succeeded";
+    await f.reconciler.reconcileNow(); assert.equal(f.reconciler.status.pending, 0);
+  };
+  return {...f, options, readers, readerState, modelQuery, request, taskId, read, complete};
+}
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`Composed Model readers: ${host} uses current policy and the original owner through both read handlers`, async t => {
+  const f = await composedModelReaders(t, host);
+  assert.equal(f.readerState.peeks, 0, "Composition cannot resolve a Model feature.");
+  const task = await f.read(); assert.ok(task.ok, JSON.stringify(task));
+  assert.equal(task.operation, "models.task");
+  await f.complete(); const before = f.state.nativeReads;
+  const history = await f.read({version: HEADLESS_CONTRACT_VERSION, operation: "models.review-download",
+    input: {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection: f.modelQuery.selection}});
+  assert.ok(history.ok, JSON.stringify(history)); assert.equal(history.operation, "models.review-download");
+  assert.doesNotMatch(JSON.stringify(history), /localPath|principalId|registeredClientId|synthetic-shared-cache-reference/);
+  assert.equal(f.state.nativeReads, before, "A completion read must not refresh the worker.");
+  assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.registrations, 0);
+});
+
+test("Composed Model readers: read-only policy is reconstructed inside ledger checks without requiring ModelWrite", async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  const original = AuthorizeWorkspaceOperationService.prototype.authorizeWorkspaceOperation;
+  let modelChecks = 0;
+  t.mock.method(AuthorizeWorkspaceOperationService.prototype, "authorizeWorkspaceOperation",
+    async function(this: AuthorizeWorkspaceOperationService, input: Parameters<typeof original>[0]) {
+      if (input.requiredScopes.includes("model:write")) throw new Error("Synthetic read-only actor.");
+      if (input.requiredScopes.includes("model:read")) modelChecks++;
+      return Reflect.apply(original, this, [input]);
+    });
+  assert.ok((await f.readers.readModelTask(f.modelQuery)).ok);
+  assert.ok((await f.readers.readModelCompletion(f.modelQuery)).ok);
+  assert.ok(modelChecks >= 4, "Both direct bindings must check current ModelRead before and after the original owner.");
+  assert.equal(f.state.registrations, 0); assert.equal(f.state.nativeCancels, 0);
+});
+
+for (const when of ["before", "during-completion"] as const)
+test(`Composed Model readers: membership withdrawal ${when} denies disclosure`, async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  const before = f.state.nativeReads;
+  const withdraw = () => f.repositories.memberships.saveMembership({...f.membership, status: "removed"});
+  if (when === "before") await withdraw();
+  else {
+    const original = f.model.peekApprovedSourceReview;
+    t.mock.method(f.model, "peekApprovedSourceReview", async function(this: typeof f.model, ...args: Parameters<typeof original>) {
+      await withdraw(); return Reflect.apply(original, this, args);
+    });
+  }
+  const result = await f.readers.readModelCompletion(f.modelQuery);
+  assert.equal(result.ok, false); assert.doesNotMatch(JSON.stringify(result), /localPath|fixture\/model|principalId/);
+  if (when === "before") assert.equal(f.readerState.peeks, 0);
+  assert.equal(f.state.nativeReads, before); assert.equal(f.state.registrations, 0);
+});
+
+for (const changed of ["client", "workspace", "host"] as const)
+test(`Composed Model readers: a foreign ${changed} cannot reach the cached owner`, async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  const query = {...f.modelQuery, scope: {...f.scope}};
+  if (changed === "client") query.scope.registeredClientId = randomUUID();
+  if (changed === "workspace") query.scope.workspaceId = createWorkspaceId("workspace.foreign-reader");
+  const readers = changed === "host" ? composeHeadlessModelTaskReaders({...f.options, hostIncarnationId: randomUUID()}) : f.readers;
+  assert.equal((await readers.readModelTask(query)).ok, false);
+  assert.equal(f.readerState.peeks, 0); assert.equal(f.state.sourceStarts, 1);
+});
+
+test("Composed Model readers: unavailable retained owners are not initialized or replaced", async t => {
+  const f = await composedModelReaders(t); await f.complete(); f.readerState.loaded = false;
+  const before = f.state.nativeReads;
+  assert.deepEqual(await f.readers.readModelTask(f.modelQuery), {ok: false, code: "headless.unavailable"});
+  assert.deepEqual(await f.readers.readModelCompletion(f.modelQuery), {ok: false, code: "headless.unavailable"});
+  assert.equal(f.state.nativeReads, before); assert.equal(f.state.sourceStarts, 1); assert.equal(f.state.nativeCancels, 0);
+});
+
+for (const replaced of ["request", "host"] as const)
+test(`Composed Model readers: replacing the ${replaced} callback cannot restore withdrawn authority`, async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  let entered!: () => void, release!: () => void, checks = 0;
+  const held = new Promise<void>(resolve => {entered = resolve;}), gate = new Promise<void>(resolve => {release = resolve;});
+  const original = AuthorizeWorkspaceOperationService.prototype.authorizeWorkspaceOperation;
+  t.mock.method(AuthorizeWorkspaceOperationService.prototype, "authorizeWorkspaceOperation",
+    async function(this: AuthorizeWorkspaceOperationService, input: Parameters<typeof original>[0]) {
+      if (++checks === 1) {entered(); await gate;}
+      return Reflect.apply(original, this, [input]);
+    });
+  const pending = f.readers.readModelTask(f.modelQuery); await held;
+  if (replaced === "request") {f.readerState.current = false; f.modelQuery.isCurrent = () => true;}
+  else {f.state.hostCurrent = false; f.options.isHostCurrent = () => true;}
+  release(); assert.equal((await pending).ok, false); assert.equal(f.readerState.peeks, 0);
+});
+
+test("Composed Model readers: active query values never execute hooks", async t => {
+  const f = await composedModelReaders(t); await f.complete(); let hooks = 0;
+  const active = {...f.modelQuery, get isCurrent() {hooks++; return () => true;}};
+  const handler = {get() {hooks++; throw new Error("Synthetic active value.");}, ownKeys() {hooks++; throw new Error("Synthetic active keys.");}};
+  const inputs = [active, new Proxy(f.modelQuery, handler), {...f.modelQuery, scope: new Proxy(f.modelQuery.scope, handler)},
+    {...f.modelQuery, selection: new Proxy(f.modelQuery.selection, handler)}];
+  for (const input of inputs) assert.equal((await f.readers.readModelTask(input)).ok, false);
+  assert.equal(hooks, 0); assert.equal(f.readerState.peeks, 0);
+});
+
+test("Composed Model readers: a partition or legacy metadata owner cannot replace the platform transaction owner", async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  for (const documents of [f.documents, {...f.platform, runInOwnedTransaction: undefined}])
+    assert.throws(() => composeHeadlessModelTaskReaders({...f.options, documents}), /unavailable/);
+  assert.equal(f.readerState.peeks, 0);
+});
+
+test("Composed Model readers: pooled configuration permits the original authorized organization", async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  const readers = composeHeadlessModelTaskReaders({...f.options, placement: createTenantPlacementConfig({mode: "pooled"})});
+  assert.ok((await readers.readModelTask(f.modelQuery)).ok);
+  assert.ok((await readers.readModelCompletion(f.modelQuery)).ok);
+  assert.equal(f.state.nativeCancels, 0); assert.equal(f.state.registrations, 0);
+});
+
+test("Composed Model readers: the dedicated organization is captured before configuration changes", async t => {
+  const f = await composedModelReaders(t); await f.complete();
+  const placement = {mode: "dedicated" as const, organizationId: createOrganizationId("org.foreign-reader")};
+  const readers = composeHeadlessModelTaskReaders({...f.options, placement});
+  placement.organizationId = f.scope.organizationId;
+  assert.equal((await readers.readModelTask(f.modelQuery)).ok, false);
+  assert.equal((await readers.readModelCompletion(f.modelQuery)).ok, false);
+  assert.equal(f.readerState.peeks, 0);
 });

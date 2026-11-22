@@ -1844,3 +1844,23 @@ approval composition with denial at the existing authorization-service seam.
 They check declared Model scopes, zero publication after denial, unchanged saved
 records and existing permitted approval behavior. These source checks start no
 provider or model, enable no public route and qualify no physical host.
+
+### Original actor policy in Model task reader bindings
+
+The shared read composition must not turn an accepted task ID, earlier write
+permission or ambient request actor into ModelRead authority. Capture passive
+scope/selection and the original request/host callbacks before asynchronous work.
+Reject active or proxy query values. Reconstruct current workspace and membership
+policy for the original actor in the platform transaction owner, then reuse the
+accepted client/host/task ledger and retained application owner. Recheck policy
+after the owned read. Read permission alone must suffice; cancellation and saving
+remain separately authorized effects.
+
+An unloaded owner stays unavailable instead of initializing a feature, scanning
+files or discovering a shared-history task. Historical completion uses cached
+original facts without worker refresh. Both read handlers retain independent
+target/reply checks. Withdrawal during a read suppresses metadata; callback
+replacement cannot restore the original withdrawn authority or erase accepted
+cleanup ownership. Local SQLite composition fixtures supply no public activation,
+PostgreSQL, physical model/provider/native or parent qualification. Rollback
+disconnects these bindings and preserves current-policy denial.

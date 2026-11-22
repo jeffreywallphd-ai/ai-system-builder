@@ -2200,3 +2200,21 @@ before/after loss and sample-count measurements in private run/candidate history
 This tests Tiny training mechanics, not generalization, fresh full provenance or
 accepted model accuracy. Source checks start no model or Native/app run and grant
 no new recovery allowance or parent qualification.
+
+### Original Model task read composition
+
+Compose the existing task/progress and historical-completion readers with the
+platform metadata owner, the original host lifetime and a retained Model-owner
+peek. Capture passive query scope/selection and original callbacks before awaits.
+Reconstruct workspace and membership policy for that exact actor inside each
+accepted-ledger transaction; require workspace read and ModelRead without using
+ModelWrite as a substitute. Use no ambient request actor. The existing readers
+recheck ownership and policy after the original owner returns. A cached completion
+peek stays outside metadata transactions and cannot refresh runtime status.
+
+The shared factory installs no public route and initializes no Model feature,
+runtime, provider or file discovery. Host and request withdrawal suppress outward
+metadata while the original accepted business/cleanup owner remains intact.
+Existing Desktop/Managed handlers still correlate selectors and filter replies.
+Local SQLite composition and controlled-task checks do not qualify PostgreSQL,
+physical hosts, actual provider/model work or final public activation.

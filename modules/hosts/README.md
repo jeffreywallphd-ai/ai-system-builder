@@ -5,6 +5,16 @@ transaction and stable-read publication seams. A later execution check does not
 replace approval-stage policy. Ordinary plans and the existing separate result
 save approval stay unchanged; source fixtures grant no actual host qualification.
 
+The shared `composeHeadlessModelTaskReaders` factory supplies original-task and
+cached-completion callbacks for the existing Desktop and Managed read handlers.
+It rebuilds the original actor's current workspace and ModelRead policy in the
+platform metadata owner, and reuses the accepted task/client/host ledger. It needs
+no ModelWrite grant. The owner callback only peeks an already retained Model
+instance. No feature, provider, runtime, generic task lookup or write is started.
+The helper installs no route; public root activation and physical qualification
+remain separate. SQLite composition tests are local evidence, not PostgreSQL or
+running-host qualification.
+
 Optional completed Model read bindings use the original accepted task/source ledger and
 already loaded application owner. Copy exact task/plan selectors, scope and
 request callbacks before awaits. Authorize ModelRead in owning transactions
