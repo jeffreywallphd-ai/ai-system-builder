@@ -170,6 +170,25 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "model-training-image-worker-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/worker/README.md",
+            "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py"),
+    },
     "model-training-worker-unit": {
         "interpreter": "python",
         "automatic_sources": (

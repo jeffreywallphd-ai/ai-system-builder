@@ -19,6 +19,8 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
     test = "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"
     helper = "dev-tools/helpers/run_focused_checks.py"
     unit = "model-training-worker-unit"
+    other_source = "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py"
+    minimum_cases = 45
 
     def selected(self, paths, required=("architecture",), root=None):
         return {row["id"]: row for row in catalog.plan(root or self.root, paths, list(required), "a" * 64)["selected"]}
@@ -40,7 +42,7 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
     def test_explicit_unknown_and_shared_fallback_are_preserved(self):
         self.assertIn("focused-tests", self.selected([self.source], ("focused-tests",)))
         for shared in ["modules/adapters/runtime/python/worker/models.py",
-                       "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py",
+                       self.other_source,
                        "modules/adapters/runtime/python/worker/tasks/model_serialization.py"]:
             self.assertNotIn(self.unit, self.selected([shared]))
         self.assertIn("focused-tests", self.selected([self.source, "modules/adapters/runtime/python/worker/tasks/unknown_training.py"]))
@@ -75,9 +77,12 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
                                     stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
             self.assertEqual(result.returncode, 0, result.stdout[-3000:])
             counts = re.findall(r"\b([0-9]+) passed\b", result.stdout)
+            if not counts:
+                counts = re.findall(r"\bRan ([0-9]+) tests? in ", result.stdout)
+                self.assertRegex(result.stdout, r"(?m)^OK\s*$")
             self.assertTrue(counts, result.stdout[-3000:])
-            self.assertGreaterEqual(int(counts[-1]), 45)
-            self.assertNotRegex(result.stdout, r"\b[1-9][0-9]* (?:failed|skipped|error|deselected)\b")
+            self.assertGreaterEqual(int(counts[-1]), self.minimum_cases)
+            self.assertNotRegex(result.stdout, r"\b[1-9][0-9]* (?:failed|skipped|error|deselected|xfailed|xpassed)\b|\bskipped=[1-9][0-9]*")
             print(json.dumps({"check": self.unit, "worker_feature_cases_passed": int(counts[-1]),
                               "scope": "synthetic training controls; no model or native qualification"}))
         finally:
@@ -87,6 +92,14 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
                 shutil.rmtree(owned)
             else:
                 raise RuntimeError("The owned regression folder changed; cleanup was refused.")
+
+
+class ModelTrainingImageWorkerRoutingTests(ModelTrainingWorkerRoutingTests):
+    source = "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py"
+    test = "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py"
+    unit = "model-training-image-worker-unit"
+    other_source = ModelTrainingWorkerRoutingTests.source
+    minimum_cases = 7
 
 
 if __name__ == "__main__":

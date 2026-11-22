@@ -1711,3 +1711,16 @@ roles and require train files before importing the optional dataset supplier.
 Controlled import/path spies and existing ordinary worker regressions qualify
 these denial paths without model loading or installation. This does not attest
 row-level separation, actual training quality, resources, native or host behavior.
+
+Image-manifest content cannot promote a selected held-out Dataset into training.
+Validate selected roles, ignore test paths and test source maps before inspection,
+and keep validation rows held out even if row metadata says train. Reserved
+unknown row roles fail with fixed errors; supported empty/normalized labels
+retain existing routing. Real disposable manifests and path/map spies qualify
+these controls, without engines or raw data in tool responses. This is not source
+file authority, near-duplicate quality, actual training or native/resource proof.
+
+One training source ID must have one exact declared path string across selected
+train/validation files and both supported map fields. Conflicting bindings fail
+instead of picking a later path; repeated identical bindings remain valid. This
+metadata check does not inspect or reconcile file identities, bytes or aliases.

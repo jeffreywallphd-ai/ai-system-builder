@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import json
+import shutil
+import stat
+from contextlib import contextmanager
+from unittest.mock import patch
 import sys
 import tempfile
 import types
@@ -57,6 +61,144 @@ class TrainModelMultimodalTaskTests(unittest.TestCase):
                 "output": {"outputModelName": "demo"},
             }
         )
+
+
+    @contextmanager
+    def _owned_split_fixture(self):
+        parent = Path(tempfile.gettempdir()).resolve()
+        root = Path(tempfile.mkdtemp(prefix="image-training-splits-", dir=parent)).resolve()
+        before = root.lstat()
+        try:
+            yield root
+        finally:
+            after = root.lstat()
+            self.assertEqual(root.parent, parent)
+            self.assertEqual(root.resolve(), root)
+            self.assertTrue(stat.S_ISDIR(after.st_mode))
+            self.assertFalse(root.is_symlink())
+            self.assertFalse(getattr(after, "st_file_attributes", 0) & 0x400)
+            self.assertEqual((after.st_dev, after.st_ino), (before.st_dev, before.st_ino))
+            shutil.rmtree(root)
+
+    def test_selected_test_manifest_is_not_inspected_or_promoted(self):
+        for present in [False, True]:
+            with self.subTest(file_exists=present), self._owned_split_fixture() as root:
+                payload = self._vision_request(root)
+                test_path = root / "heldout.jsonl"
+                if present:
+                    test_path.write_text('{"image":"heldout.png","label":"synthetic","split":"train"}\n', encoding="utf-8")
+                payload.datasets.append(payload.datasets[0].model_copy(update={
+                    "artifactId": "heldout-test", "splitRole": "test", "path": str(test_path)}))
+                original_exists = Path.exists
+                checked = []
+
+                def exists(candidate):
+                    checked.append(candidate)
+                    if candidate == test_path:
+                        raise AssertionError("Held-out test paths cannot enter training inspection.")
+                    return original_exists(candidate)
+
+                with patch.object(Path, "exists", autospec=True, side_effect=exists):
+                    bundle = load_manifest_bundle(payload)
+                self.assertEqual(len(bundle.train_rows), 1)
+                self.assertEqual(bundle.validation_rows, [])
+                self.assertNotIn(test_path, checked)
+
+    def test_training_selection_is_required_before_manifest_io(self):
+        for role in ["validation", "test"]:
+            with self.subTest(role=role), self._owned_split_fixture() as root:
+                payload = self._vision_request(root)
+                payload.datasets[0] = payload.datasets[0].model_copy(update={"splitRole": role})
+                with patch.object(Path, "exists", side_effect=AssertionError("No manifest IO without a training selection.")):
+                    with self.assertRaisesRegex(ValueError, "At least one train split dataset row"):
+                        load_manifest_bundle(payload)
+
+    def test_validation_rows_cannot_override_the_file_role_to_train(self):
+        with self._owned_split_fixture() as root:
+            payload = self._vision_request(root)
+            validation = root / "validation.jsonl"
+            validation.write_text('{"image":"validation.png","label":"synthetic","split":"train"}\n'
+                                  '{"image":"test.png","label":"synthetic","split":"test"}\n', encoding="utf-8")
+            payload.datasets.append(payload.datasets[0].model_copy(update={
+                "artifactId": "validation", "splitRole": "validation", "path": str(validation)}))
+            bundle = load_manifest_bundle(payload)
+            self.assertEqual([row["image"] for row in bundle.train_rows], ["image.png"])
+            self.assertEqual([row["image"] for row in bundle.validation_rows], ["validation.png"])
+
+    def test_unknown_dataset_roles_deny_before_file_or_source_map_inspection(self):
+        with self._owned_split_fixture() as root:
+            payload = self._vision_request(root)
+            payload.datasets[0] = payload.datasets[0].model_copy(update={"splitRole": "unknown"})
+            for function in [load_manifest_bundle, staged_source_artifact_paths]:
+                with self.subTest(function=function.__name__):
+                    with patch.object(Path, "exists", side_effect=AssertionError("Unknown roles cannot inspect files.")):
+                        with self.assertRaisesRegex(ValueError, "Unsupported training dataset split role"):
+                            function(payload)
+
+    def test_unknown_reserved_row_split_values_are_not_silently_promoted(self):
+        for value in ["unrecognized", True, 7, [], {}]:
+            with self.subTest(value=value), self._owned_split_fixture() as root:
+                payload = self._vision_request(root)
+                Path(payload.datasets[0].path).write_text(json.dumps({"image": "synthetic.png", "label": "synthetic", "split": value}) + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "Unsupported training manifest split role"):
+                    load_manifest_bundle(payload)
+
+    def test_missing_empty_and_normalized_supported_row_splits_keep_valid_routing(self):
+        with self._owned_split_fixture() as root:
+            payload = self._vision_request(root)
+            values = [None, "", "  ", "TRAIN", "validation", " VaLiDaTiOn ", "test", " TEST "]
+            Path(payload.datasets[0].path).write_text("".join(json.dumps({
+                "image": str(index) + ".png", "label": "synthetic", "split": value}) + "\n" for index, value in enumerate(values)), encoding="utf-8")
+            bundle = load_manifest_bundle(payload)
+            self.assertEqual([row["image"] for row in bundle.train_rows], ["0.png", "1.png", "2.png", "3.png"])
+            self.assertEqual([row["image"] for row in bundle.validation_rows], ["4.png", "5.png"])
+
+    def test_test_source_maps_cannot_shadow_training_images_and_validation_maps_stay(self):
+        with self._owned_split_fixture() as root:
+            payload = self._vision_request(root)
+            good, heldout, validation = root / "training.png", root / "test.png", root / "validation.png"
+            payload.datasets[0].metadata = {"stagedSourceArtifactPaths": {"training-image": str(good)}}
+            payload.datasets.append(payload.datasets[0].model_copy(update={
+                "artifactId": "validation", "splitRole": "validation",
+                "metadata": {"sourceArtifactPaths": {"validation-image": str(validation)}}}))
+            payload.datasets.append(payload.datasets[0].model_copy(update={
+                "artifactId": "test", "splitRole": "test",
+                "metadata": {"stagedSourceArtifactPaths": {"training-image": str(heldout)},
+                             "sourceArtifactPaths": {"heldout-image": str(heldout)}}}))
+            self.assertEqual(staged_source_artifact_paths(payload), {"training-image": good, "validation-image": validation})
+
+
+    def test_conflicting_source_ids_refuse_instead_of_selecting_a_later_path(self):
+        for scope in ["same-dataset-fields", "two-train-files", "train-and-validation", "different-case"]:
+            with self.subTest(scope=scope), self._owned_split_fixture() as root:
+                payload = self._vision_request(root)
+                original = str(root / "image.png")
+                conflicting = str(root / ("IMAGE.png" if scope == "different-case" else "validation.png"))
+                payload.datasets[0].metadata = {"stagedSourceArtifactPaths": {"shared-image": original}}
+                if scope == "same-dataset-fields":
+                    payload.datasets[0].metadata["sourceArtifactPaths"] = {"shared-image": conflicting}
+                else:
+                    payload.datasets.append(payload.datasets[0].model_copy(update={
+                        "artifactId": "second-file",
+                        "splitRole": "train" if scope == "two-train-files" else "validation",
+                        "metadata": {"sourceArtifactPaths": {"shared-image": conflicting}}}))
+                with patch.object(Path, "resolve", side_effect=AssertionError("Metadata conflicts cannot adopt filesystem aliases.")):
+                    with self.assertRaisesRegex(ValueError, "Conflicting training source artifact paths"):
+                        staged_source_artifact_paths(payload)
+
+    def test_repeated_exact_source_bindings_remain_supported_without_file_probes(self):
+        with self._owned_split_fixture() as root:
+            payload = self._vision_request(root)
+            original, validation = str(root / "image.png"), str(root / "validation.png")
+            payload.datasets[0].metadata = {"stagedSourceArtifactPaths": {"shared-image": original},
+                                            "sourceArtifactPaths": {"shared-image": original}}
+            payload.datasets.append(payload.datasets[0].model_copy(update={
+                "artifactId": "validation", "splitRole": "validation",
+                "metadata": {"sourceArtifactPaths": {"shared-image": original, "validation-image": validation}}}))
+            with patch.object(Path, "resolve", side_effect=AssertionError("No filesystem identity or byte authority is inferred.")):
+                with patch.object(Path, "stat", side_effect=AssertionError("No file inspection is required.")):
+                    self.assertEqual(staged_source_artifact_paths(payload),
+                                     {"shared-image": Path(original), "validation-image": Path(validation)})
 
     def test_staged_source_paths_resolve_manifest_artifact_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

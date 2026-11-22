@@ -2006,3 +2006,20 @@ inspect their paths, include them in the dataset loader, or relabel them as trai
 or validation. This matches the existing multimodal separation. It does not
 prove row-level disjointness or run an evaluation. Valid requests still require
 the installed runtime/dependencies; no installation or model download is added.
+
+### Held-out image manifest selections
+
+Image/vision manifest loading checks Dataset split roles and requires a training
+selection before manifest IO. Selected test files are ignored before path or
+format inspection. Their staged-source maps are also ignored, so test metadata
+cannot replace training image references. A row in a selected validation file
+stays held out even if its split label says train. Training rows can still route
+to validation or test; test rows are excluded. Missing/empty labels inherit the
+selected file role, supported labels normalize case/space, and unknown values
+fail with a fixed message. This does not prove near-duplicate/row-level quality,
+actual model training, source-file/native ownership or resource/host qualification.
+
+One training source ID must have one exact declared path string across selected
+train/validation files and both supported map fields. Conflicting bindings fail
+instead of picking a later path; repeated identical bindings remain valid. This
+metadata check does not inspect or reconcile file identities, bytes or aliases.

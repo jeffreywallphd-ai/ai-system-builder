@@ -2898,3 +2898,19 @@ files and unknown/shared/explicit generic checks retain fallback. The shared wor
 README borrows training coverage only when the exact training source already
 selects this profile; README-only changes cannot select it. Synthetic
 training controls do not qualify a model, hardware, native resource, host or parent.
+
+The exact model-training-image-worker-unit profile runs only the existing image/
+vision worker file through the same tracked-file helper. The reused real-command
+routing harness accepts successful unittest counts with a plain OK result as well
+as successful pytest counts, and refuses skipped/failed/deselected/expected-failure
+results. It executes both image and unchanged text feature assertions with owned
+temporary roots; no model or optional engine is loaded. Both profiles preserve
+three-file availability, paired README borrowing, and explicit/shared/unknown
+fallback. These are split-selection/source-map checks, not model, image decoding,
+resource/native, actual-host or parent qualification.
+
+Image-worker cases also reject conflicting source-ID/path strings within a file,
+between train files and across train/validation maps, including case differences.
+They retain exact duplicate bindings and nonconflicting validation references.
+Path-probe spies keep this proof metadata-only; no identity or byte adoption is
+used to reconcile ambiguity. Preserve the original reviewed collision evidence.

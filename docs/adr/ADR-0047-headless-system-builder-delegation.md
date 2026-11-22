@@ -967,3 +967,14 @@ importing optional dataset dependencies and ignores held-out test selections.
 Unknown split roles deny. Reuse this preflight in future admitted Headless
 training; metadata, source bytes and successful feature tests do not establish
 installed runtime, Model compatibility, resource or actual-host qualification.
+
+Image-manifest Dataset roles are a ceiling for reserved row split labels. Ignore
+selected test files/source maps, keep validation rows held out, and retain valid
+train-to-validation/test routing. Validate roles and train presence before
+manifest IO. These helpers qualify selection safety only, not model loading,
+resource admission, near-duplicate quality or actual Headless execution.
+
+One training source ID must have one exact declared path string across selected
+train/validation files and both supported map fields. Conflicting bindings fail
+instead of picking a later path; repeated identical bindings remain valid. This
+metadata check does not inspect or reconcile file identities, bytes or aliases.

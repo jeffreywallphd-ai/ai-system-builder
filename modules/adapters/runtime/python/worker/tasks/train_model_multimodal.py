@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote, urlparse
 
-from ..models import TrainModelTaskRequest, TrainModelTaskResult
+from ..models import TrainModelDatasetInput, TrainModelTaskRequest, TrainModelTaskResult
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -147,22 +147,49 @@ def _read_rows(path: Path, fmt: str) -> list[dict[str, Any]]:
     return [row for row in parquet.read_table(path).to_pylist() if isinstance(row, dict)]
 
 
+def _selected_training_datasets(payload: TrainModelTaskRequest) -> list[TrainModelDatasetInput]:
+    selected = []
+    for dataset in payload.datasets:
+        if dataset.splitRole == "test":
+            continue
+        if dataset.splitRole not in ("train", "validation"):
+            raise ValueError("Unsupported training dataset split role.")
+        selected.append(dataset)
+    return selected
+
+
 def load_manifest_bundle(payload: TrainModelTaskRequest) -> ManifestBundle:
     train_rows: list[dict[str, Any]] = []
     validation_rows: list[dict[str, Any]] = []
 
-    for dataset in payload.datasets:
+    selected = _selected_training_datasets(payload)
+    if not any(dataset.splitRole == "train" for dataset in selected):
+        raise ValueError("At least one train split dataset row is required.")
+
+    for dataset in selected:
         path = _dataset_path(dataset)
         if not path.exists():
             raise ValueError(f"Dataset path does not exist: {path}")
         fmt = _infer_dataset_format(dataset, path)
         rows = _read_rows(path, fmt)
         for row in rows:
+            raw_split = row.get("split")
+            if raw_split is None:
+                split = dataset.splitRole
+            elif isinstance(raw_split, str):
+                split = raw_split.strip().lower() or dataset.splitRole
+            else:
+                raise ValueError("Unsupported training manifest split role.")
+            if split not in ("train", "validation", "test"):
+                raise ValueError("Unsupported training manifest split role.")
+            if split == "test":
+                continue
             enriched = {**row, "_datasetPath": str(path)}
-            split = str(row.get("split") or dataset.splitRole or "train").strip().lower()
-            if split == "validation":
+            # Row metadata can move training rows into a held-out split, but
+            # cannot promote a selected validation file back into training.
+            if dataset.splitRole == "validation" or split == "validation":
                 validation_rows.append(enriched)
-            elif split != "test":
+            else:
                 train_rows.append(enriched)
 
     if not train_rows:
@@ -173,7 +200,8 @@ def load_manifest_bundle(payload: TrainModelTaskRequest) -> ManifestBundle:
 
 def staged_source_artifact_paths(payload: TrainModelTaskRequest) -> dict[str, Path]:
     paths: dict[str, Path] = {}
-    for dataset in payload.datasets:
+    declared_paths: dict[str, str] = {}
+    for dataset in _selected_training_datasets(payload):
         metadata = _to_dict(getattr(dataset, "metadata", None))
         candidates = [
             metadata.get("stagedSourceArtifactPaths"),
@@ -183,7 +211,15 @@ def staged_source_artifact_paths(payload: TrainModelTaskRequest) -> dict[str, Pa
             if isinstance(candidate, dict):
                 for artifact_id, path in candidate.items():
                     if isinstance(artifact_id, str) and isinstance(path, str) and path.strip():
-                        paths[artifact_id] = Path(path)
+                        # One source ID has one declared binding. Do not let a
+                        # later validation/map entry substitute training bytes,
+                        # or infer equality from platform path case folding.
+                        previous = declared_paths.get(artifact_id)
+                        if previous is not None and previous != path:
+                            raise ValueError("Conflicting training source artifact paths.")
+                        if previous is None:
+                            declared_paths[artifact_id] = path
+                            paths[artifact_id] = Path(path)
     return paths
 
 
