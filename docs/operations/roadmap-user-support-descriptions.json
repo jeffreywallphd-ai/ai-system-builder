@@ -1651,5 +1651,5 @@
         ]
       }
     }
-  ]
+  ,{"kind":"support-scope","source_text_sha256":"7cb14f493bad6866e8d4d025de1a81f4876ef3a65fc3276ee090607a649a1fea","user_description":{"owner":"agent","sentences":["The agent tested the exact saved model and dataset choices, training settings and permission list.","The existing popup and chat views support both approval methods.","These software checks do not start a training task."]}},{"kind":"support-limitation","source_text_sha256":"35805158bdec0cf44e7ba44f206759ee82a1b644bbf06752f0101286e801b921","user_description":{"owner":"agent","sentences":["No action needed.","The agent must finish approval storage, task execution and public host integration.","This private preview is off by default.","This record does not qualify the current software or close the increment."]}},{"kind":"support-limitation","source_text_sha256":"ee9c88cf2e2657fad1acbd8868b3ada79f3ec7eb35fcc26183400ab66a63f2c4","user_description":{"owner":"agent","sentences":["Model quality tests stay outside this increment.","This record permits no new app test, native test, model download, supplier change, retry, cleanup or publication."]}}]
 }
