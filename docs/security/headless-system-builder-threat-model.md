@@ -1874,3 +1874,13 @@ transport's actor checks. No Model creation, cancellation or save approval/effec
 flag is enabled here. Wiring assertions are not proof of a live app/provider or
 native run. Rollback removes only these outward read bindings and preserves
 accepted task/result custody, ordinary behavior and current-policy denial.
+
+The separate one-attempt loader-fix qualification exception cannot derive retry
+authority from a clean later exit alone. Its closed profile revalidates the
+latest Native/app retirement and independent review, original claim/used records,
+and the complete earlier proof chain. Changed, incomplete or uncertain proof
+denies before a new reservation. New exclusive permanent records and an opaque
+one-use permit preserve old failures/stops and forbid replay or reset. The fixed
+Tiny input and existing memory/process/deadline limits remain. Source tests mock
+Native/process boundaries; only separate current-source effect review may admit
+the actual UI attempt. No public retry, model accuracy rerun or parent pass follows.

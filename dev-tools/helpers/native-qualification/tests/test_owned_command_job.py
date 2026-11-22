@@ -2197,6 +2197,148 @@ class TrainingUIReviewedRepeatTests(unittest.TestCase):
             self.assertEqual(injected,[True])
 
 
+class TrainingUILoaderReviewedRepeatTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def subject(self):
+        with TrainingUIReviewedRepeatTests().subject() as old:
+            review_file=old.root/".local-codex/review/loader-failure.json"
+            paths=job._training_ui_repeat_files(review_file,"loader");hashes={}
+            def write(name,value):
+                raw=value if type(value) is bytes else (json.dumps(value,indent=2)+"\n").encode()
+                path=paths[name];path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+                hashes[name]=hashlib.sha256(raw).hexdigest()
+            claim={"schema_version":"reviewed-training-ui-repeat-v1",
+                "authority_ref":"user-allow-one-guarded-desktop-training-repeat-20261122",
+                "prior_run_id":job._TRAINING_UI_PRIOR_RUN,"run_id":job._TRAINING_UI_LOADER_PRIOR_RUN,
+                "proof_hashes":dict(old.hashes),"prior_review":old.paths["review"].relative_to(old.root).as_posix(),
+                "source_hashes":job._implementation_hashes(),"review_digest":"e"*64,"automatic_retry_allowed":False}
+            write("prior-claim",claim)
+            write("prior-used",{"schema_version":"reviewed-training-ui-repeat-used-v1",
+                "run_id":job._TRAINING_UI_LOADER_PRIOR_RUN,"claim_sha256":hashes["prior-claim"],
+                "effect_review_digest":claim["review_digest"],"automatic_retry_allowed":False})
+            hashes["family-stop"]=old.hashes["family-stop"]
+            for name in ("run-stop","phase-stop"):
+                write(name,{"schema_version":"reviewed-training-ui-repeat-stop-v1",
+                    "run_id":job._TRAINING_UI_LOADER_PRIOR_RUN,"reason":"failed-or-unconfirmed-guarded-training-ui-repeat",
+                    "error_type":"ValueError","automatic_retry_allowed":False,"prior_data_preserved":True})
+            write("stdout",b"synthetic retained loader failure\n");write("stderr",b"")
+            native=json.loads(old.paths["native"].read_bytes())
+            native["logs"]={name:{"complete":True,"path":str(paths[name]),"bytes":paths[name].stat().st_size,
+                "observed_bytes":paths[name].stat().st_size,"sha256":hashes[name],"cap_bytes":job.LOG_CAP}
+                for name in ("stdout","stderr")}
+            write("native",native)
+            cleanup=json.loads(old.paths["cleanup"].read_bytes());write("cleanup",cleanup)
+            report={"schemaVersion":"training-host-ui-outcome-v1","status":"failed","host":"packaged-desktop",
+                "inputProfile":"generated-tiny-qwen2-v1",
+                "phases":["workspace-and-inputs-visible","configuration-bounded","training-accepted"],
+                "nextPhase":"private-review-pending","parentQualificationGranted":False}
+            ui=json.loads(old.paths["playwright"].read_bytes())
+            ui["suites"][0]["specs"][0]["tests"][0]["results"][0]["attachments"][0]["body"]=base64.b64encode(json.dumps(report).encode()).decode()
+            write("playwright",ui)
+            review={"schema_version":"independent-native-ui-result-review-v1",
+                "disposition":"accepted-failure-and-confirmed-retirement-only","run_id":job._TRAINING_UI_LOADER_PRIOR_RUN,
+                "source_identity":cleanup["sourceRevision"],"effect_review_sha256":claim["review_digest"],
+                "native_retirement_confirmed":True,"one_use_grant_consumed":True,"training_acceptance_confirmed":True,
+                "successful_training_or_save_qualified":False,"native_effect_allowance":0,"native_deadline_seconds":690,
+                "reviewed_retry_allowed":False,"automatic_retry_allowed":False}
+            def refresh_review():
+                review.update({"native_result_sha256":hashes["native"],"playwright_result_sha256":hashes["playwright"],
+                    "actual_artifacts_sha256":{target:hashes[name] for name,target in (
+                        ("native","native_result"),("playwright","playwright_result"),("stdout","stdout"),
+                        ("stderr","stderr"),("cleanup","owned_desktop_cleanup"),("prior-claim","permanent_claim"),("prior-used","used"))},
+                    "original_stop_and_prior_evidence_sha256":{str(path):old.hashes[name] for name,path in old.paths.items()}})
+                write("review",review)
+            refresh_review()
+            before={path:path.read_bytes() for path in (*old.paths.values(),*paths.values())}
+            args={**old.args,"proof_hashes":hashes,"prior_review_file":review_file}
+            yield SimpleNamespace(**{**vars(old),"args":args,"paths":paths,"hashes":hashes,"write":write,
+                "original":before,"prior":old,"review_value":review,"native_value":native,"cleanup_value":cleanup,
+                "refresh_review":refresh_review})
+
+    def test_latest_failure_and_original_retirement_chain_are_read_only(self):
+        with self.subject() as case:
+            bindings=job._training_ui_repeat_evidence(case.hashes,case.paths["review"],"loader")
+            self.assertEqual(len(bindings),19)
+            self.assertEqual(bindings,{str(path):hashlib.sha256(raw).hexdigest() for path,raw in case.original.items()})
+            self.assertEqual(case.original,{path:path.read_bytes() for path in case.original})
+            self.assertFalse(job._TRAINING_UI_REPEAT_PERMITS)
+
+    def test_new_reservation_and_intent_are_one_use_with_original_limits(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+            self.assertEqual(permit.profile,"loader");self.assertFalse(permit.run.exists())
+            family=permit.run.parent.parent
+            self.assertEqual(json.loads((family/job._TRAINING_UI_LOADER_CLAIM).read_bytes())["prior_run_id"],job._TRAINING_UI_LOADER_PRIOR_RUN)
+            with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+            args=TrainingUIReviewedRepeatTests().prepare(case,permit)
+            intent=job._reviewed_training_ui_repeat_intent(**args)
+            self.assertEqual(intent.seconds,690)
+            self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+            self.assertTrue(set(map(str,case.original))<=set(intent.consumer_hashes))
+            self.assertEqual(json.loads((family/job._TRAINING_UI_LOADER_USED).read_bytes())["schema_version"],"reviewed-training-ui-loader-repeat-used-v1")
+            job._validate_intent(intent,args["folder"])
+            self.assertEqual(case.original,{path:path.read_bytes() for path in case.original})
+            self.assertFalse(job._TRAINING_UI_REPEAT_PERMITS)
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+
+    def test_every_new_and_transitive_old_proof_is_rechecked(self):
+        roles=[("latest",name) for name in ("family-stop","run-stop","phase-stop","native","stdout","stderr","playwright","cleanup","review","prior-claim","prior-used")]
+        roles.extend(("original",name) for name in ("run-stop","phase-stop","native","playwright","review","cleanup"))
+        for generation,name in roles:
+            with self.subTest(generation=generation,name=name),self.subject() as case:
+                selected=case.paths if generation=="latest" else case.prior.paths
+                selected[name].write_bytes(b"changed known proof")
+                with self.assertRaises((job.NativeFailure,OSError)):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+                self.assertFalse((case.root/".local-codex/native-training-host-v1"/job._TRAINING_UI_LOADER_CLAIM).exists())
+
+    def test_rehashed_nonretired_native_or_app_proof_is_not_admitted(self):
+        changes=[("native","job_accounting",{"total":3,"active":1,"terminated":0}),
+            ("native","forced_owned_job_termination",True),("native","all_owned_handles_close_acknowledged",False),
+            ("cleanup","physicalWorkersAlive",1),("cleanup","physicalWorkersPidAbsenceObserved",1)]
+        for name,key,value in changes:
+            with self.subTest(name=name,key=key),self.subject() as case:
+                document=json.loads(case.paths[name].read_bytes());document[key]=value
+                case.write(name,document);case.refresh_review()
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+
+    def test_review_cannot_replace_original_consumption_or_claim_an_extra_allowance(self):
+        for key,value in (("native_effect_allowance",1),("native_deadline_seconds",691),("one_use_grant_consumed",False),
+                          ("reviewed_retry_allowed",True),("training_acceptance_confirmed",False)):
+            with self.subTest(key=key),self.subject() as case:
+                case.review_value[key]=value;case.refresh_review()
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+        with self.subject() as case:
+            used=json.loads(case.paths["prior-used"].read_bytes());used["claim_sha256"]="f"*64
+            case.write("prior-used",used);case.refresh_review()
+            with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+
+    def test_occupied_new_record_or_prior_run_cannot_be_reused(self):
+        for name in (job._TRAINING_UI_LOADER_CLAIM,job._TRAINING_UI_LOADER_USED):
+            with self.subTest(name=name),self.subject() as case:
+                marker=case.root/".local-codex/native-training-host-v1"/name;marker.write_bytes(b"occupied")
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+                self.assertEqual(marker.read_bytes(),b"occupied")
+        for prior in (job._TRAINING_UI_PRIOR_RUN,job._TRAINING_UI_LOADER_PRIOR_RUN):
+            with self.subTest(prior=prior),self.subject() as case:
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**{**case.args,"run_id":prior})
+
+    def test_transitive_drift_consumes_attempt_before_any_native_role(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+            args=TrainingUIReviewedRepeatTests().prepare(case,permit)
+            case.prior.paths["cleanup"].write_bytes(b"changed original cleanup")
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+            self.assertTrue((permit.run.parent.parent/job._TRAINING_UI_LOADER_USED).exists())
+            self.assertFalse(job._TRAINING_UI_REPEAT_PERMITS)
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+            with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+
+    def test_unknown_profile_cannot_select_another_proof_or_policy(self):
+        for profile in (None,False,"other",{},["loader"]):
+            with self.subTest(profile=profile),self.subject() as case:
+                with self.assertRaises(job.NativeFailure):job._training_ui_repeat_files(case.paths["review"],profile)
+
+
 class ControlledWindowsNativeTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("AISB_RUN_FIXED_NATIVE_QUALIFICATION")=="1" and os.name=="nt" and ctypes.sizeof(ctypes.c_void_p)==8,"pending physical Windows qualification; explicit model-free native opt-in required")
     def test_actual_nine_native_lifecycle_and_standard_ocr_budget_cases(self):

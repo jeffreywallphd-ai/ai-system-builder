@@ -2229,3 +2229,12 @@ connects existing read operations only: creation, cancellation and save approval
 or execution flags remain unconfigured pending complete workflow qualification.
 AST wiring assertions and controlled SQLite reader tests are source evidence,
 not a real product-host or model/provider/native qualification.
+
+The qualification-only loader-fix retry uses the existing opaque training UI
+intent after explicit one-attempt user authorization. Its dedicated profile
+verifies both failed cases and the first consumed allowance through the saved
+retirement chain. New exclusive claim/used records preserve old stop and failure
+bytes. The original installed runtime, generated Tiny input, 2 GiB process,
+4 GiB Job, 32-process and 690-second UI bounds remain. This is neither an
+application retry API nor a general recovery policy. Portable guard checks start
+no Native role; actual rebuild/UI effects need a separate current-source review.

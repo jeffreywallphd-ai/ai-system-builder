@@ -656,3 +656,25 @@ Actual execution requires a separate current-source effect review and one-use
 attempt. Root exit, total3/active0, nonforced retirement, complete drains and all
 owned-handle acknowledgements remain necessary. A failed or uncertain attempt
 grants no retry, old-input cleanup, staging credit or parent qualification.
+
+### One authorized training test after loader fixes
+
+The private `_reserve_reviewed_training_ui_loader_repeat` issuer records the
+user's separate authorization for one generated-Tiny Desktop training attempt
+after the payload and validation-comparison fixes. It does not reset the earlier
+issuer. The fixed loader profile reads the latest failed case and independent
+retirement review, its consumed claim/used records, and the complete original
+failure proof chain. All five stop markers and both earlier failures remain.
+
+The new exclusive permanent records are `reviewed-training-ui-loader-repeat-20261122.json`
+and `reviewed-training-ui-loader-repeat-used-20261122.json`. One opaque in-process
+permit can create only the existing fixed `training-ui` intent. Proof and source
+are checked again before the effect; failure while creating that intent consumes
+the attempt. Existing claims, occupied destinations, uncertain ownership, changed
+proof or an unknown profile deny. No cleanup, reset or automatic retry follows.
+
+The UI attempt keeps the existing generated Tiny model, 690-second deadline,
+2 GiB process, 4 GiB Job and 32-process ceilings. No model download or accepted
+accuracy rerun is included. Portable fixtures forbid Native construction and
+process launch. Source qualification grants no app/model or parent pass; rebuilding
+and the one actual UI attempt require separate current-source effect review.

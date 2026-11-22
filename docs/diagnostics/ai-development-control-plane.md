@@ -3020,3 +3020,13 @@ any other operational source, and unavailable-file fallback preserve the origina
 profile; explicitly requested focused-tests also stays. Developer/worker READMEs
 borrow this coverage only alongside a selected exact source. Source verification
 does not execute or qualify the later reviewed native/package/UI/model journey.
+
+The expressly authorized loader-fix training repeat has a dedicated private
+issuer in the native qualification helper. It checks the latest failed UI case,
+its consumed permanent records and the entire original retirement chain. It
+writes new exclusive claim/used records; it never resets the old allowance or
+removes any stop marker. Its one fixed UI attempt retains the generated Tiny
+input and 2 GiB/process, 4 GiB total, 32-process and 690-second limits. Source
+fixtures forbid Native/process effects. A rebuilt current package, fresh concrete
+execution plan and independent effect review are still required. A passing guard
+test is not model, app-host, training-quality or parent qualification.
