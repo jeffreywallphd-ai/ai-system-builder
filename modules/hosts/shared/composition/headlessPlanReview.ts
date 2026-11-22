@@ -268,9 +268,12 @@ export async function validateHeadlessPlanSavedSources(
   validateModelDownload?: (request: import("../../../contracts/headless").HeadlessModelDownloadPlanRequest) => Promise<true | false | "stale">,
   validateModelReferenceSave?: (request: import("../../../contracts/headless").HeadlessModelReferenceSavePlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
+  // Training preview support does not supply a storage or execution validator.
+  if (requests.some(request => request.operation === "models.train")) return false;
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
     const { operation, input } = request;
+    if (operation === "models.train") return false;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
     if (operation === "models.save-download") {
       if (!validateModelReferenceSave) return false;

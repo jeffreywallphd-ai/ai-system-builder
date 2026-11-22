@@ -5,6 +5,7 @@ import type {
 } from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import { ModalDialog } from "../components/ModalDialog";
+import type {HeadlessModelTrainingSettings} from "../../../contracts/headless";
 
 
 type Screen =
@@ -201,7 +202,8 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const contextQuerying = view.preview.steps.some(step => step.operation === "context.query");
   const modelDownloading = view.preview.steps.some(step => step.operation === "models.download");
   const modelSaving = view.preview.steps.some(step => step.operation === "models.save-download");
-  const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying || modelDownloading;
+  const modelTraining = view.preview.steps.some(step => step.operation === "models.train");
+  const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying || modelDownloading || modelTraining;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
@@ -248,13 +250,19 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Allow saved Hugging Face access to check model details. File transfers use public access only. Files that require a token are not supported.</li>
         <li>Transfers can use only the allowed sites shown for each download. The app checks the listed byte and time limits. If stopping cannot be confirmed, the outcome stays unconfirmed.</li>
         <li>The disk space amount is an estimate, not a reservation.</li>
-        <li>This request does not add the downloaded model to the Models list, run it, train it, or publish it. Those actions need separate approval.</li>
+        <li>Each download step does not add the downloaded model to the Models list, run it, train it, or publish it. Those actions need their own approval steps.</li>
       </> : null}
       {modelSaving ? <>
         <li>Save a reference to the reviewed download in this workspace’s Models list, with the name shown below.</li>
         <li>Use only the listed original task, exact model version and source fingerprint.</li>
         <li>Permission covers library metadata only. Cached files remain a shared reference. Runtime readiness stays unchecked.</li>
         <li>Saving makes no downloads, model calls, file changes, training runs or publications.</li>
+      </> : null}
+      {modelTraining ? <>
+        <li>Read the exact saved model and dataset version listed below. Train a local model with the listed settings.</li>
+        <li>Keep the trained result private until you review it. Adding it to the Models list needs a separate Save approval.</li>
+        <li>Before training starts, the app must check the input files, runtime support and available memory and disk space. This preview does not confirm those checks.</li>
+        <li>Each training step covers local training only. Model downloads, software installation, outside publication and window control need their own approval.</li>
       </> : null}
       <li>Limit of {state.stepCount} {contextQuerying || modelDownloading ? state.stepCount === 1 ? "work item" : "work items" : `${processing ? "" : "saved "}${state.stepCount === 1 ? "change" : "changes"}`} for this plan.</li>
       {modelDownloading ? <li>Outside file transfers are required. This request makes no paid model calls.</li> : providerReads
@@ -266,7 +274,14 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     </time>.</p>
     <ol aria-label="Requested changes">
       {view.preview.steps.map((step, index) => <li key={step.input.idempotencyKey}>
-        {step.operation === "models.save-download" ? <>
+        {step.operation === "models.train" ? <>
+          <strong>Train a local model: {step.input.name}</strong>
+          <div>Model record: {step.input.model.modelRecordId}. Saved at {step.input.model.updatedAt}.</div>
+          <div>Dataset: {step.input.dataset.datasetId}. Saved version: {step.input.dataset.versionId}.</div>
+          <div style={{overflowWrap: "anywhere"}}>Dataset version digest: <code>{step.input.dataset.versionDigest}</code></div>
+          <TrainingSettings training={step.input.training} />
+          <div>Runtime and resource checks are still required. Review the trained result before a separate Save request.</div>
+        </> : step.operation === "models.save-download" ? <>
           <strong>Save reviewed model: {step.input.name}</strong>
           <div>Model: {step.input.sourceManifest.source.modelId}</div>
           <div style={{overflowWrap: "anywhere"}}>Exact version: <code>{step.input.sourceManifest.source.revision}</code></div>
@@ -386,4 +401,36 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     </button> : null}
     <button type="button" disabled={busy} onClick={onBack}>Back to requests</button>
   </>;
+}
+
+function TrainingSettingList<T extends object>({values, labels}: {values: T; labels: Record<keyof T, string>}) {
+  return <dl>{(Object.keys(labels) as (keyof T)[]).filter(key => values[key] !== undefined).map(key => {
+    const value = values[key];
+    const text = typeof value === "boolean" ? value ? "Yes" : "No" : Array.isArray(value) ? value.join(", ") : String(value);
+    return <div key={String(key)}><dt>{labels[key]}</dt><dd>{text}</dd></div>;
+  })}</dl>;
+}
+
+function TrainingSettings({training}: {training: HeadlessModelTrainingSettings}) {
+  const {lora, quantization, ...advanced} = training.advancedParameters ?? {};
+  return <section aria-label="Training settings">
+    <div>Training task: {training.trainingTask}. Method: {training.method}.</div>
+    <TrainingSettingList values={training.commonParameters} labels={{numEpochs: "Epochs", maxSteps: "Maximum training steps",
+      batchSize: "Batch size", learningRate: "Learning rate", weightDecay: "Weight decay", maxSequenceLength: "Maximum sequence length", seed: "Random seed"}} />
+    {training.advancedParameters ? <details><summary>Advanced training settings</summary>
+      <TrainingSettingList values={advanced} labels={{gradientAccumulationSteps: "Gradient accumulation steps", warmupSteps: "Warmup steps",
+        warmupRatio: "Warmup ratio", schedulerType: "Learning rate schedule", evalIntervalSteps: "Evaluation interval in steps",
+        checkpointIntervalSteps: "Checkpoint interval in steps", saveTotalLimit: "Checkpoint limit", mixedPrecision: "Mixed precision",
+        gradientCheckpointing: "Gradient checkpointing"}} />
+      {lora ? <><h4>LoRA settings</h4><TrainingSettingList values={lora} labels={{rank: "Rank", alpha: "Alpha",
+        dropout: "Dropout", targetModules: "Target modules"}} /></> : null}
+      {quantization ? <><h4>Quantization settings</h4><TrainingSettingList values={quantization} labels={{loadIn4Bit: "Load in 4-bit",
+        loadIn8Bit: "Load in 8-bit", bnb4BitQuantType: "4-bit quantization type", bnb4BitComputeDtype: "4-bit compute type"}} /></> : null}
+    </details> : null}
+    {training.validation ? <details><summary>Post-training check settings</summary>
+      <TrainingSettingList values={training.validation} labels={{enabled: "Enable post-training checks", expectedLoRA: "Expect LoRA adapters",
+        expectedRecurrentAdditions: "Expect recurrent additions", taskTags: "Expected model tasks"}} />
+    </details> : null}
+    <p>Settings not listed here use the existing training defaults. The app must check compatibility before it starts.</p>
+  </section>;
 }

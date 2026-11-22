@@ -2280,3 +2280,18 @@ Headless execution, another host, every training method or general hardware
 capacity. It does not grant a parent pass, another run or cleanup. The selected
 product inputs and retained build bytes remain separately checked; evidence
 metadata changes do not requalify the earlier package's complete source tree.
+
+### Private fine-tuning approval representation
+
+An explicitly enabled `models.train` proposal uses the existing shared build-plan
+parser and version-13 preview. It carries exact saved Model and Dataset selectors
+and the existing closed training settings. The Desktop and Managed readers reuse
+that parser, and the existing popup/chat component shows the requested local work
+in both approval modes. No second approval system or runtime executor is added.
+
+The representation is disabled by default. Saved review records, source validation
+and operation execution do not acquire training authority from the widened type.
+Unconfigured paths deny training. Input-file integrity, current authorization,
+runtime compatibility, resource admission, original task ownership and separate
+result Save must be implemented and qualified before activation. Model downloads,
+installation, publication and UI control are outside this preview's permission.

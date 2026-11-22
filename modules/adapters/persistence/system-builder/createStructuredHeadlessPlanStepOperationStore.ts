@@ -116,9 +116,11 @@ async function prepareStoredPlanStep(
     const partition = owner.forOrganization(target.scope.organizationId);
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
+    if (approved.requests.some(candidate => candidate.operation === "models.train")) return;
     if (allowModelDownload !== true && approved.requests.some(candidate => candidate.operation === "models.download")) return;
     if ((allowModelReferenceSave !== true || !contextResultRootDirectory) && approved.requests.some(candidate => candidate.operation === "models.save-download")) return;
     const request = approved.requests[step - 1];
+    if (request?.operation === "models.train") return;
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
@@ -133,6 +135,7 @@ async function prepareStoredPlanStep(
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
       if (!previous) return;
+      if (previous.operation === "models.train") return;
       const received = previous.operation === "models.save-download"
         ? (await inspectStructuredModelReferenceSave(partition, modelReferenceEffect(target, previous, index + 1, approvalRevision))).kind === "committed"
         : previous.operation === "models.download"

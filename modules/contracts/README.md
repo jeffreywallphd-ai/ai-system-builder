@@ -214,3 +214,18 @@ new query/save, source sharing or task adoption follows. Context shares only the
 selector and view IDs. Generation-task display retains its artifact-only policy
 and rejects query DTOs. Controlled feature checks leave physical and actual-host
 qualification separate. See the Context architecture and portable skill guide.
+
+## Private fine-tuning approval preview
+
+The existing shared build-plan parser accepts `models.train` only when a trusted
+caller explicitly enables `allowModelTraining`. Its version-13 preview preserves
+the exact saved Model timestamp, Dataset version/digest and training settings.
+Desktop and Managed approval readers reconstruct the same closed preview. The
+common popup/chat view lists local training, separate result Save approval and
+runtime/resource checks still required. Preview data grants no approval or task
+admission. Public discovery, unconfigured storage and execution remain denied.
+Versions 1–12 retain their existing previews and fingerprints.
+
+The fixed Model-owner unit/type checks include the training approval contract and
+rendered two-channel/two-mode tests. These are software workflow checks; they do
+not run model-quality tests, model loads, Native retries or full-software suites.

@@ -1895,3 +1895,21 @@ remains family-fenced, and a new package-phase stop denies final admission.
 Actual metadata/build authority and its outcome/retirement need separate review
 before the later UI invocation. These trusted local operator guards do not assert
 system-wide scheduling or authorization against hostile same-user code.
+
+### Private fine-tuning preview boundary
+
+Protect exact Model/Dataset versions, training settings and approval meaning from
+substitution or hidden permission widening. Admit `models.train` only through an
+explicit trusted capability; untrusted JSON cannot enable it. Use bounded passive
+copying and the existing closed selector/settings decoder. Reconstruct version-13
+steps through the shared parser in both approval channels and reject changed,
+missing or additional effect/limit fields. Keep legacy preview versions unchanged.
+
+The shared popup/chat view renders text through React, lists all explicit settings,
+and discloses local training, private result review, separate Save and unconfirmed
+runtime/resource checks. No provider transfer, installation, publication or window
+control follows. Default storage and execution refuse training. Focused cases cover
+active/malformed input, effect tampering, exact input changes, escaped display,
+both channels/modes, real unconfigured storage/host denial and related legacy
+regressions. Residual file/native/resource/task/actual-host qualification remains
+pending; software preview checks supply no current-source model execution pass.

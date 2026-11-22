@@ -1036,3 +1036,20 @@ support fails instead of falling back to the ordinary loader. Keep the legacy
 profile, native limits/witnesses and product roots unchanged. Inert function and
 wiring tests are source support only. A fresh separately reviewed effect plan and
 real current-source run remain necessary; this is no Headless activation/pass.
+
+### Closed shared fine-tuning approval preview
+
+Reuse the existing plan parser, both channel codecs and common modal/chat approval
+view for the private `models.train` intent. A trusted, default-off capability
+selects preview version 13. Bind the exact saved Model timestamp, Dataset version
+and digest, candidate name and every explicit training setting. Preserve explicit
+false and zero values and existing versions 1–12. Changes to the selected inputs
+or settings change the canonical preview used by the owning fingerprint check.
+
+The preview declares local model work, a private result and separate Save approval.
+It explicitly leaves file, runtime and resource checks unconfirmed. Do not treat a
+syntactically valid preview or an approval-reader result as execution authority.
+Existing unconfigured persistence, host source validation and step execution stay
+denied. Later execution integration must supply its own current proofs. This
+component needs focused software permission/interface tests, not real model
+quality scoring or another Native package/Desktop attempt.
