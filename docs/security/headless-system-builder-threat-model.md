@@ -1935,10 +1935,14 @@ SQLite metadata, controlled callbacks and actual approval logic. Model quality,
 file/native/resource/runtime proof and actual host/task integration remain outside
 this component; no consumed app/Native allowance or historical stop is changed.
 
-The factory-to-policy handoff is also a substitution boundary. Capture the
-original reader's value method and receiver immediately after factory resolution,
-before another await can replace it. Bounded descriptor lookup refuses active
-methods/proxies; reflective invocation avoids function name/length getter hooks.
-An unavailable reader is disclosed only after the post-factory policy check.
-Regressions replace the method during that policy await, refuse active readers
-and preserve a real class-prototype receiver. No model or runtime is invoked.
+The factory-to-policy handoff is also a substitution boundary for both download
+source and saved training-input review. Share the private bounded capture helper;
+retain the original reader's value method and receiver immediately after factory
+resolution, before another await can replace it. Keep the same captured method
+across provider waits and multiple distinct selected sources. Bounded descriptor
+lookup refuses active owners/methods and proxies; reflective invocation avoids
+function name/length getter hooks. An unavailable reader is disclosed only after
+the post-factory policy check. Actual synthetic metadata/Core/SQLite fixtures
+replace methods at both handoffs, refuse active readers and preserve class
+receivers. Duplicate-source and current policy rules remain. No model, provider
+network, task start or runtime is invoked; host qualification remains separate.

@@ -2311,3 +2311,11 @@ stored-read option exposes no submit or execution method. Existing public
 permission/source/step owners remain closed. Version-4 metadata is not a file,
 runtime, resource, rights, quality or task-admission witness. Historical approval
 cannot start a task or revive withdrawn permission. Versions 1–3 are unchanged.
+
+Model source-download and saved training-input review preparation share one
+private host reader-capture helper. It retains the factory's original value
+method and receiver before the post-factory policy wait, and uses that same
+reader for every selected step after provider waits. Bounded descriptor lookup
+refuses active owners/methods; a frozen facade avoids function-property getters.
+Current policy still precedes metadata invocation and availability disclosure.
+This ownership check adds no effect, capability, model readiness or host pass.

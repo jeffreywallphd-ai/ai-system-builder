@@ -34,6 +34,27 @@ function copyPassive(value: unknown): unknown {
 }
 /** Shared bounded passive Model-plan snapshot; never invokes active values. */
 export {copyPassive as copyHeadlessModelPlanData};
+/** Capture the original metadata method before later policy/provider waits.
+ * Inspect descriptors without invoking owner or function-property getters.
+ * Shared by download source and saved training-input preparation only. */
+export function captureHeadlessModelReviewReader<Reader extends (...args: never[]) => unknown>(owner: unknown):
+  Readonly<{execute: (...args: Parameters<Reader>) => ReturnType<Reader>}> | undefined {
+  try {
+    if (!owner || typeof owner !== "object" || types.isProxy(owner)) return;
+    let cursor: object | null = owner;
+    for (let depth = 0; cursor && cursor !== Object.prototype && depth < 8; depth++) {
+      if (types.isProxy(cursor)) return;
+      const field = Object.getOwnPropertyDescriptor(cursor, "execute");
+      if (field) {
+        if (!("value" in field) || typeof field.value !== "function" || types.isProxy(field.value)) return;
+        const method = field.value as Reader;
+        return Object.freeze({execute: (...args: Parameters<Reader>) => Reflect.apply(method, owner, args) as ReturnType<Reader>});
+      }
+      cursor = Object.getPrototypeOf(cursor);
+    }
+  } catch {return;}
+}
+
 function frozen<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) frozen(child); Object.freeze(value);}
   return value;
@@ -73,9 +94,11 @@ export async function prepareHeadlessModelDownloadReviews(options: {
     frozen(requests);
     if (!selected.length || !current() || await stillAllowed() !== true || !current()) return forbidden;
     const sourcePreview = await getSource();
+    if (!current()) return forbidden;
+    const originalSource = captureHeadlessModelReviewReader<PreviewHeadlessModelSourceUseCase["execute"]>(sourcePreview);
     if (!current() || await stillAllowed() !== true || !current()) return forbidden;
-    if (!sourcePreview) return unavailable;
-    const preparation = new PrepareHeadlessModelDownloadPlanUseCase({organizationId: target.scope.organizationId, sourcePreview});
+    if (!originalSource) return unavailable;
+    const preparation = new PrepareHeadlessModelDownloadPlanUseCase({organizationId: target.scope.organizationId, sourcePreview: originalSource});
     for (const {request} of selected) {
       const prepared = await preparation.execute(request, {hostIncarnationId: target.hostIncarnationId,
         context: {organizationId: target.scope.organizationId, principalId: target.scope.principalId, workspaceId: target.scope.workspaceId},

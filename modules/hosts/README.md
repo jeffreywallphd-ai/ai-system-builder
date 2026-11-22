@@ -224,8 +224,10 @@ Actual training/task control, result Save and resource/native/host qualification
 remain separate implementation work. Software fixtures do not rerun model-quality
 checks or grant another app/Native test attempt.
 
-Capture the returned input reader synchronously as soon as its factory resolves,
-before the post-factory policy await. Inspect bounded ordinary prototype method
+Download source and saved training-input preparation share the same private
+Model-review reader capture. Capture the returned reader synchronously as soon
+as its factory resolves, before the post-factory policy await. Keep that exact
+reader for every selected step, including after provider waits. Inspect bounded ordinary prototype method
 descriptors; refuse accessors/proxies without invoking them. Retain the original
 receiver through a frozen facade without reading function name/length getters.
 Recheck policy before metadata invocation or reporting reader availability.

@@ -248,6 +248,82 @@ test(`${host}: unconfigured approval and revoked membership cannot decide or dis
   }
 });
 
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host}: download approval captures the factory reader before the policy handoff`, async t => {
+  const f = await fixture(t, host), owner = await f.getSource();
+  const execute = owner.execute.bind(owner);
+  let originalCalls = 0, replacementCalls = 0, policyCalls = 0;
+  owner.execute = async (...args) => {originalCalls++; return execute(...args);};
+  const result = await prepareHeadlessModelDownloadReviews({target: f.target, requests: f.parsed.requests,
+    getSource: async () => owner, isCurrent: () => true, stillAllowed: async () => {
+      if (++policyCalls === 2) owner.execute = async (...args) => {replacementCalls++; return execute(...args);};
+      return true;
+    }});
+  assert.ok(result.ok); assert.equal(originalCalls, 1); assert.equal(replacementCalls, 0);
+  assert.equal(f.state.inspections, 1); assert.equal(f.state.sourceStarts, 0); assert.equal(f.state.registrations, 0);
+});
+
+test("multiple download selections keep the original reader across provider waits", async t => {
+  const f = await fixture(t, "Desktop");
+  const secondSource = readModelDownloadSource({...f.source, modelId: "fixture/second-model"},
+    {provider: "huggingface", modelId: "fixture/second-model", revision: f.source.revision});
+  const owner = new PreviewHeadlessModelSourceUseCase({organizationId: f.scope.organizationId, provider: {
+    async inspectModelDownloadSource(request) {
+      f.state.inspections++; await f.state.onInspect?.();
+      return structuredClone(request.modelId === f.source.modelId ? f.source : secondSource);
+    }}}), execute = owner.execute.bind(owner);
+  let originalCalls = 0, replacementCalls = 0;
+  owner.execute = async (...args) => {originalCalls++; return execute(...args);};
+  // Duplicate-source refusal remains intact. Exercise two distinct valid sources.
+  const input = {...f.input, steps: [f.input.steps[0], {...f.input.steps[0], idempotencyKey: randomUUID(), name: "Second reviewed source",
+    sourceManifest: {source: secondSource, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(secondSource)).digest("hex")}}]};
+  const parsed = parseHeadlessBuildPlanProposal(input, f.target.hostIncarnationId, {allowLocalFileSave: false, allowModelDownload: true});
+  assert.ok(parsed.ok);
+  const target = {...f.target, fingerprint: createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex")};
+  f.state.onInspect = async () => {owner.execute = async (...args) => {replacementCalls++; return execute(...args);};};
+  const result = await prepareHeadlessModelDownloadReviews({target, requests: parsed.requests, getSource: async () => owner,
+    isCurrent: () => true, stillAllowed: async () => true});
+  assert.ok(result.ok); assert.equal(originalCalls, 2); assert.equal(replacementCalls, 0);
+  assert.equal(f.state.inspections, 2); assert.equal(f.state.sourceStarts, 0);
+  const bindings = await f.platform.runInOwnedTransaction!(transaction => result.bind(transaction.forOrganization(f.scope.organizationId),
+    target, parsed.requests), () => {});
+  assert.deepEqual(bindings?.map(row => row.step), [1, 2]);
+});
+
+test("download reader capture refuses active methods and preserves the original class receiver", async t => {
+  const f = await fixture(t, "Desktop"), original = await f.getSource(), execute = original.execute.bind(original);
+  let hooks = 0;
+  const active = Object.defineProperty({}, "execute", {get() {hooks++; return execute;}});
+  const proxyOwner = new Proxy(original, {get(owner, key, receiver) {
+    if (key !== "then") hooks++;
+    return Reflect.get(owner, key, receiver);
+  }});
+  const proxyMethod = {execute: new Proxy(execute, {apply(target, receiver, args) {hooks++; return Reflect.apply(target, receiver, args);}})};
+  for (const owner of [active, proxyOwner, proxyMethod]) {
+    const result = await prepareHeadlessModelDownloadReviews({target: f.target, requests: f.parsed.requests,
+      getSource: async () => owner as typeof original, isCurrent: () => true, stillAllowed: async () => true});
+    assert.deepEqual(result, {ok: false, code: "headless.unavailable"});
+  }
+  assert.equal(hooks, 0); assert.equal(f.state.inspections, 0);
+  class Reader {
+    readonly marker = "original-metadata-reader";
+    async execute(...args: Parameters<typeof execute>) {assert.equal(this.marker, "original-metadata-reader"); return execute(...args);}
+  }
+  for (const property of ["name", "length"]) Object.defineProperty(Reader.prototype.execute, property,
+    {configurable: true, get() {hooks++; return property === "name" ? "Synthetic reader" : 2;}});
+  const result = await prepareHeadlessModelDownloadReviews({target: f.target, requests: f.parsed.requests,
+    getSource: async () => new Reader(), isCurrent: () => true, stillAllowed: async () => true});
+  assert.ok(result.ok); assert.equal(hooks, 0); assert.equal(f.state.inspections, 1);
+});
+
+test("withdrawal after the source factory takes precedence over reader availability", async t => {
+  const f = await fixture(t, "Desktop"); let policies = 0;
+  const result = await prepareHeadlessModelDownloadReviews({target: f.target, requests: f.parsed.requests,
+    getSource: async () => undefined, isCurrent: () => true, stillAllowed: async () => ++policies === 1});
+  assert.deepEqual(result, {ok: false, code: "headless.forbidden"});
+  assert.equal(f.state.inspections, 0); assert.equal(f.state.sourceStarts, 0);
+});
+
 test("prepared host bindings reject changed target, step/order, name or duration and perform no provider I/O inside a transaction", async t => {
   const f = await fixture(t, "Desktop");
   const result = await prepareHeadlessModelDownloadReviews({target: f.target, requests: f.parsed.requests, getSource: f.getSource,

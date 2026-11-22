@@ -1,4 +1,4 @@
-import {isDeepStrictEqual, types} from "node:util";
+import {isDeepStrictEqual} from "node:util";
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
 import type {BindModelTrainingReviews} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import type {ModelTrainingReviewBinding} from "../../../adapters/persistence/system-builder/headlessModelTrainingReviewBindings";
@@ -10,32 +10,13 @@ import {HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHost
 import {isOrganizationId} from "../../../contracts/organization";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
-import {copyHeadlessModelPlanData} from "./headlessModelDownloadReview";
+import {captureHeadlessModelReviewReader, copyHeadlessModelPlanData} from "./headlessModelDownloadReview";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
 
 export type GetHeadlessModelTrainingInputs = () => Promise<Pick<PreviewHeadlessModelTrainingInputsUseCase, "execute"> | undefined>;
 function freeze<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) freeze(child); Object.freeze(value);}
   return value;
-}
-
-/** Capture a value method without executing owner or function-property getters.
- * Actual use-case instances have their method on the ordinary class prototype. */
-function captureInputReader(owner: unknown): Pick<PreviewHeadlessModelTrainingInputsUseCase, "execute"> | undefined {
-  try {
-    if (!owner || typeof owner !== "object" || types.isProxy(owner)) return;
-    let cursor: object | null = owner;
-    for (let depth = 0; cursor && cursor !== Object.prototype && depth < 8; depth++) {
-      if (types.isProxy(cursor)) return;
-      const field = Object.getOwnPropertyDescriptor(cursor, "execute");
-      if (field) {
-        if (!("value" in field) || typeof field.value !== "function" || types.isProxy(field.value)) return;
-        const method = field.value as PreviewHeadlessModelTrainingInputsUseCase["execute"];
-        return Object.freeze({execute: (...args: Parameters<typeof method>) => Reflect.apply(method, owner, args) as ReturnType<typeof method>});
-      }
-      cursor = Object.getPrototypeOf(cursor);
-    }
-  } catch {return;}
 }
 
 /** Prepare recorded metadata before the owned transaction. The binder compares
@@ -76,7 +57,7 @@ export async function prepareHeadlessModelTrainingReviews(options: {
     const inputs = await getInputs();
     if (!current()) return forbidden;
     // No awaited policy handoff may replace the factory's original reader.
-    const originalInputs = captureInputReader(inputs);
+    const originalInputs = captureHeadlessModelReviewReader<PreviewHeadlessModelTrainingInputsUseCase["execute"]>(inputs);
     if (!current() || await stillAllowed() !== true || !current()) return forbidden;
     if (!originalInputs) return unavailable;
     const compiler = new PrepareHeadlessModelTrainingPlanUseCase({organizationId: target.scope.organizationId, inputs: originalInputs});
