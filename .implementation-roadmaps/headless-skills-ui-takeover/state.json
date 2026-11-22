@@ -1569,6 +1569,17 @@
       "outcome": "passed",
       "recordedAt": "2026-11-19T02:13:17Z",
       "summary": "Completed actual two-host component retained23permission/scope denial checks, failed-result save denial, same-task replay, exact bounded failed/null-review card, separate display consent, revoke and owned shutdown. New focused evidence/routing negatives reject stale sources, false grades, wrong citations, invalid resources and unsafe report reads. Fresh current exact-target verification and independent review remain mandatory before closure."
+    },
+    {
+      "artifact": "docs/operations/headless-local-training-package-qualification.json",
+      "command": "python dev-tools/helpers/native-qualification/training_package_evidence.py",
+      "criterionId": "model-runtime-hosts",
+      "id": "evidence-46",
+      "incrementId": "models-training-and-generation",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-22T06:01:10Z",
+      "summary": "The current Desktop test build passed its file and cleanup checks. It contains 242 files, including 134 worker files. The agent must now test training, saving results, generating output and the connection between Desktop and browser. Those tests are still pending. No user action is needed. The accepted model accuracy results stay closed."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -2391,6 +2402,12 @@
       "recordedAt": "2026-11-22T01:15:26Z",
       "sequence": 126,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "5d6267ea544f7f08591abcf237adc4f0508f5505017524e9db1a9a8cfa0c808c",
+      "recordedAt": "2026-11-22T06:01:10Z",
+      "sequence": 127,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -4323,7 +4340,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-22T01:15:26Z",
+  "updatedAt": "2026-11-22T06:01:10Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
