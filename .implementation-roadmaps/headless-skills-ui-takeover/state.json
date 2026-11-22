@@ -1711,6 +1711,16 @@
       "recordedAt": "2026-11-21T18:15:17Z",
       "summary": "After increment seven completes, publish the prepared frontier API chat increment as increment ten and move final qualification to eleven, before starting increment eight. Publication is not implementation approval.",
       "targetIncrementId": "asset-selection-and-custom-creation"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "i7-workflow-tests-without-model-quality-20261122",
+      "impact": "within-increment",
+      "nextAction": "Keep the Tiny workflow comparison and post-training validation disabled. Continue software-feature and real training/download/generation/cleanup checks. Preserve optional evaluation functionality and test its software contracts with controlled metrics. Do not claim a real model-quality result or waive existing physical evaluation text by fixture evidence. Reconcile that physical-testing obligation through a separately reviewed governed policy amendment before increment closure.",
+      "recordedAt": "2026-11-22T15:25:14Z",
+      "summary": "The user excludes model quality tests from this increment. The agent will test software workflow behavior without accuracy checks or real before-and-after scoring. No user action is needed.",
+      "targetIncrementId": "models-training-and-generation"
     }
   ],
   "finalApproval": null,
@@ -2506,6 +2516,12 @@
       "recordedAt": "2026-11-22T11:55:32Z",
       "sequence": 132,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0664a623ad7e82f115a153c5ed7f88ba1fe0ca990775d1df15c60b260bae3789",
+      "recordedAt": "2026-11-22T15:25:14Z",
+      "sequence": 133,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -4460,7 +4476,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-22T11:55:32Z",
+  "updatedAt": "2026-11-22T15:25:14Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",

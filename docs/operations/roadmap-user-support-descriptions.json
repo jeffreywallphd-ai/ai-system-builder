@@ -1478,6 +1478,111 @@
           "The accepted model accuracy tests were not run again."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a5b61148487b57b822d571e23c33ed34813a9b301dc4722fe802274cdf1aac39",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task information now comes from the existing Model service.",
+          "The tests checked permission changes, stopped hosts and saved task results.",
+          "These code tests do not qualify a running app."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f6f273e80b23218f6d3d3fd2607ab8ed2b90e652d555cd2ebcd6cba6bcca078e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both apps now use the original Model service to read task information.",
+          "Reading a task does not start a model or a runtime.",
+          "The agent must still check the complete workflow in the running apps."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "34d32155f49deeb327f2b6727d93f6227f38368524cc712db8159de567926bc1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The safety checks allow one separately approved Desktop training test.",
+          "They check the earlier failed test and confirmed shutdown first.",
+          "These code checks did not run the app test."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8241e59887a6837d0dd4276d76543ef137c177e1342b541cff85a319928ae788",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A separate safety check allows one build of the corrected offline app package.",
+          "It cannot start a model or use the training-test allowance.",
+          "These code checks did not build an app package."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c7d49ea2d44c7ebf95ca628956859e2a0eda0828aa0ff76149a11f5b0bfbfe3c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Tiny Desktop test now has model-quality comparison turned off.",
+          "Focused code tests and an independent review passed before the change was committed.",
+          "No model was loaded or scored."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b9064b8198e808f5908e038ae819b1fc7fec7cd4739eecfc1290b590661dd71f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results support the code at its recorded version.",
+          "They do not complete a roadmap work chunk, criterion or running-app test."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8365ede369cac677b66956ee3145d19c33c25106a08a030b0a8a53731ba7da1d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks did not test model quality or accuracy.",
+          "The optional software evaluation feature stays separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8e9dc59e2b526f75e1aa4e9a94d0bd58df496ac8303f3be778bffe4b45a171a3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed tests and stop records are preserved.",
+          "This progress entry gives no permission to build, run a model, start an app or publish anything."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "10c29ad04f6cadc779bcd94e0c040ae3df80682460dc2c94346fd05bce0991a1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may not have these local records.",
+          "A missing record does not count as a passed test.",
+          "This entry does not qualify the current software or complete its roadmap."
+        ]
+      }
     }
   ]
 }
