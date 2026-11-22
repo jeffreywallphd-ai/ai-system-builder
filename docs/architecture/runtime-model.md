@@ -2189,3 +2189,14 @@ fallback. Replace only the test application's entry. Legacy qualification and
 product roots remain unchanged. Structural binding is not source authenticity:
 existing runtime/package/native witnesses and a fresh bounded physical UI run
 remain required. This does not activate Headless training or qualify its controls.
+
+For that generated-Tiny test composition, capture the original private training
+function in a fixed closure and enable its explicit validation comparison. Refuse
+older private entries without the comparison keyword before dispatch. Forward the
+original payload, progress callback, result and exception; expose no caller option
+to disable comparison or select another loader. Legacy qualification remains on
+its existing entry. One fixed subset of at most 32 validation rows supplies finite
+before/after loss and sample-count measurements in private run/candidate history.
+This tests Tiny training mechanics, not generalization, fresh full provenance or
+accepted model accuracy. Source checks start no model or Native/app run and grant
+no new recovery allowance or parent qualification.

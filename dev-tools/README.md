@@ -2,6 +2,20 @@
 
 ## Training package input bytes
 
+The generated-Tiny training fixture captures the original private local training
+entry and enables its fixed validation comparison. It compares one subset of at
+most 32 validation rows before and after training. Caller arguments cannot disable
+the comparison or replace its captured function. Missing comparison support stops
+binding before dispatch. The legacy fixture and product loading defaults stay the
+same.
+
+The source check exercises the real private entry with an inert training core,
+plus override, replacement, failure, cancellation and owned-startup cases. It loads
+no model. The Tiny profile checks training and measurement mechanics; it does not
+establish general model accuracy or complete model/data/recipe/hardware provenance.
+Earlier failed runs and consumed stop records remain. A fresh physical run still
+needs its own reviewed plan and expressly authorized recovery allowance.
+
 One separately approved private Desktop training repeat can use the repaired
 startup fixture. Its exclusive reservation, unchanged stop records, proof checks,
 one-use dispatch and original resource limits are documented in

@@ -27,7 +27,7 @@ def deny():
 
 
 def bind_private_local_training_entry(application, training_tasks, fixture):
-    """Select a real private entry for the fixed Tiny TEST composition only.
+    """Bind fixed local loading and comparison for the Tiny TEST composition.
 
     Source/worker/native witnesses remain the caller's existing prerequisite.
     This function does not invoke training or enable a product capability.
@@ -47,8 +47,20 @@ def bind_private_local_training_entry(application, training_tasks, fixture):
             local is ordinary or type(name) is not str or type(original.__module__) is not str or
             type(local.__module__) is not str or original.__module__ != name or local.__module__ != name):
         deny()
-    application_values["train_model"] = local
-    return local
+    code = local.__code__
+    keyword_parameters = code.co_varnames[code.co_argcount:code.co_argcount + code.co_kwonlyargcount]
+    if "compare_validation_baseline" not in keyword_parameters:
+        # Reject stale private support before dispatch, never after starting a
+        # physical test and never by falling back to an ordinary loader.
+        deny()
+
+    def compare_local_training(payload, *, on_progress=None):
+        # Capture the original function. Module replacement and caller options
+        # cannot change this fixed test profile. Errors/cancellation stay intact.
+        return local(payload, on_progress=on_progress, compare_validation_baseline=True)
+
+    application_values["train_model"] = compare_local_training
+    return compare_local_training
 
 
 def _source_identity_bytes(root, target):

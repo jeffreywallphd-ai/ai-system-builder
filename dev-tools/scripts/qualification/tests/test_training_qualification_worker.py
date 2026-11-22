@@ -186,8 +186,9 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
         def ordinary(*args, **kwargs):
             calls.append(("ordinary", args, kwargs))
             return "ordinary-result"
-        def local(*args, **kwargs):
-            calls.append(("local", args, kwargs))
+        def local(payload, *, on_progress=None, compare_validation_baseline=False):
+            calls.append(("local", (payload,), {"on_progress": on_progress,
+                         "compare_validation_baseline": compare_validation_baseline}))
             return "local-result"
         ordinary.__module__ = local.__module__ = tasks.__name__
         tasks.train_model = application.train_model = ordinary
@@ -197,15 +198,78 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
     def fixture(self):
         return {"schemaVersion": "training-host-fixture-v2", "inputProfile": "generated-tiny-qwen2-v1"}
 
-    def test_exact_private_function_is_selected_without_calling_a_supplier(self):
+    def test_exact_private_delegate_enables_comparison_without_calling_at_binding(self):
         application, tasks, calls = self.modules()
         selected = worker.bind_private_local_training_entry(application, tasks, self.fixture())
-        self.assertIs(selected, tasks.train_model_from_local_files)
         self.assertIs(application.train_model, selected)
         self.assertEqual(calls, [])
         payload, progress = object(), lambda _: None
         self.assertEqual(application.train_model(payload, on_progress=progress), "local-result")
-        self.assertEqual(calls, [("local", (payload,), {"on_progress": progress})])
+        self.assertEqual(calls, [("local", (payload,), {"on_progress": progress,
+                                 "compare_validation_baseline": True})])
+
+    def test_actual_private_entry_receives_fixed_comparison_before_an_inert_core(self):
+        # Import the real entry, but intercept its core before any model/framework
+        # load. This proves the composition reaches the real keyword contract.
+        real = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model")
+        application = ModuleType("synthetic_real_entry_application")
+        application.train_model = real.train_model
+        with tempfile.TemporaryDirectory(prefix="tiny-compare-") as folder:
+            payload = SimpleNamespace(trainingTask="llm-instruction", baseModel=SimpleNamespace(localPath=str(Path(folder).resolve())))
+            progress = lambda _: None
+            expected = object()
+            with patch.object(real, "_train_model", return_value=expected) as core:
+                worker.bind_private_local_training_entry(application, real, self.fixture())
+                self.assertIs(application.train_model(payload, on_progress=progress), expected)
+                core.assert_called_once_with(payload, on_progress=progress,
+                    local_model_ref=str(Path(folder).resolve()), compare_validation_baseline=True)
+
+    def test_comparison_cannot_be_overridden_by_the_dispatch_caller(self):
+        application, tasks, calls = self.modules()
+        worker.bind_private_local_training_entry(application, tasks, self.fixture())
+        for keyword in ({"compare_validation_baseline": False}, {"compare_validation_baseline": True},
+                        {"local_model_ref": "synthetic-foreign"}):
+            with self.subTest(keyword=keyword):
+                with self.assertRaises(TypeError): application.train_model(object(), **keyword)
+        self.assertEqual(calls, [])
+
+    def test_original_private_delegate_is_kept_after_module_replacement(self):
+        application, tasks, calls = self.modules()
+        worker.bind_private_local_training_entry(application, tasks, self.fixture())
+        tasks.train_model_from_local_files = lambda *_a, **_k: self.fail("A replacement must not run.")
+        tasks.train_model = lambda *_a, **_k: self.fail("The ordinary loader must not run.")
+        payload = object()
+        self.assertEqual(application.train_model(payload), "local-result")
+        self.assertEqual(calls, [("local", (payload,), {"on_progress": None,
+                                 "compare_validation_baseline": True})])
+
+    def test_old_private_entry_without_explicit_comparison_support_refuses_at_binding(self):
+        application, tasks, calls = self.modules()
+        def older(payload, *, on_progress=None): self.fail("Old support must not run.")
+        older.__module__ = tasks.__name__
+        tasks.train_model_from_local_files = older
+        original = application.train_model
+        with self.assertRaises(ValueError): worker.bind_private_local_training_entry(application, tasks, self.fixture())
+        self.assertIs(application.train_model, original)
+        self.assertEqual(calls, [])
+
+    def test_original_failure_and_progress_callback_are_forwarded_without_error_inspection(self):
+        from concurrent.futures import CancelledError
+        class PrivateFailure(Exception):
+            def __str__(self): raise AssertionError("Private failure text must not be read.")
+        for error in (ValueError("synthetic"), CancelledError(), PrivateFailure()):
+            application, tasks, calls = self.modules()
+            progress = lambda _: None
+            def local(payload, *, on_progress=None, compare_validation_baseline=False):
+                self.assertIs(on_progress, progress)
+                self.assertIs(compare_validation_baseline, True)
+                raise error
+            local.__module__ = tasks.__name__
+            tasks.train_model_from_local_files = local
+            worker.bind_private_local_training_entry(application, tasks, self.fixture())
+            with self.assertRaises(type(error)) as raised: application.train_model(object(), on_progress=progress)
+            self.assertIs(raised.exception, error)
+            self.assertEqual(calls, [])
 
     def test_non_tiny_or_malformed_fixture_refuses_without_replacing_original(self):
         for fixture in ({}, {"schemaVersion": "training-host-fixture-v1"},
@@ -336,7 +400,7 @@ class TrainingWorkerOwnedStartupTests(unittest.TestCase):
             application._run_task = lambda _: self.fail("A startup test must not dispatch training.")
             tasks = ModuleType("synthetic_training_tasks")
             def ordinary(*_args, **_kwargs): self.fail("Startup must not call the ordinary model loader.")
-            def local(*_args, **_kwargs): self.fail("Startup must not call the private model loader.")
+            def local(payload, *, on_progress=None, compare_validation_baseline=False): self.fail("Startup must not call the private model loader.")
             ordinary.__module__ = local.__module__ = tasks.__name__
             tasks.train_model = application.train_model = ordinary
             tasks.train_model_from_local_files = local
@@ -348,7 +412,11 @@ class TrainingWorkerOwnedStartupTests(unittest.TestCase):
             def startup(host, port):
                 calls.append(("owned-runtime", host, port))
                 self.assertEqual(environment["PYTHON_RUNTIME_STARTUP_PROOF"], "b" * 64)
-                self.assertIs(application.train_model, local if tiny else ordinary)
+                if tiny:
+                    self.assertIsNot(application.train_model, ordinary)
+                    self.assertIs(tasks.train_model_from_local_files, local)
+                else:
+                    self.assertIs(application.train_model, ordinary)
                 if startup_error is not None: raise startup_error
             shipped._resolve_launch_configuration = configuration
             if not missing_startup: shipped._run_runtime = startup
