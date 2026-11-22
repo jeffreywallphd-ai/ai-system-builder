@@ -11,6 +11,11 @@ with inert modules and temporary files to test that delegation and failure
 behavior. It starts no socket, worker process or model. A source-test pass does
 not close the retained failed Desktop journey or authorize another native run.
 
+The startup tests use short disposable folder labels so that the existing
+controller can nest its isolated temporary directory on Windows. The required
+repository and qualification path anchors and every startup assertion stay
+unchanged. This test-path correction does not qualify long product paths.
+
 The adjacent private `training_operator.py` renders four fixed current-source
 training operator templates. The existing `native-host-policy` check executes
 their renderer, syntax and refusal cases with the portable role/fence fixtures.

@@ -150,12 +150,14 @@ class TrainingWorkerOwnedStartupTests(unittest.TestCase):
     """Run the actual fixture main with inert modules, not a real listener."""
     def run_main(self, *, tiny=False, startup_error=None, missing_startup=False, configuration_error=None):
         calls, raw_listener_calls = [], []
-        with tempfile.TemporaryDirectory(prefix="training-startup-") as folder:
+        # The regression controller adds its own temporary parent. Keep only
+        # these disposable labels short; the production path anchors stay exact.
+        with tempfile.TemporaryDirectory(prefix="s-") as folder:
             root = Path(folder).resolve()
             source = root / "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py"
             source.parent.mkdir(parents=True); source.write_bytes(b"# synthetic fixture location\n")
             shipped_worker = root / "shipped-worker"; shipped_worker.mkdir()
-            data_root = root / "artifacts/qualification/visual-composer/d/test-desktop/training"
+            data_root = root / "artifacts/qualification/visual-composer/d/s/training"
             cache, temp = data_root / "controlled-model-cache", data_root / "training-temp"
             cache.mkdir(parents=True); temp.mkdir()
             run, revision = "training-startup-qualification-01", "source." + "a" * 64
