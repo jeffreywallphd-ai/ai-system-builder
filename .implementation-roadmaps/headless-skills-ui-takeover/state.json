@@ -1659,6 +1659,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-22T16:31:54Z",
       "summary": "Requirement review: the user excludes real model-quality scoring from this increment. Actual model download, bounded training, generation, task and host status, resources, permissions and owned cleanup still require evidence. Controlled metrics will test evaluation software, not model quality. No technical test has passed through this review."
+    },
+    {
+      "artifact": "docs/operations/headless-local-training-package-qualification.json",
+      "command": null,
+      "criterionId": "model-runtime-hosts",
+      "id": "evidence-50",
+      "incrementId": "models-training-and-generation",
+      "kind": "review",
+      "outcome": "pending",
+      "recordedAt": "2026-11-22T17:52:22Z",
+      "summary": "The current Desktop package was built and its files were verified. All processes owned by that build and their tracked handles closed. This proves packaging only. The UI training test, Headless execution, evaluation-software checks, generated output and host workflow qualification remain pending. Model accuracy and real output-quality scoring are excluded from this increment."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1731,6 +1742,16 @@
       "nextAction": "Keep the Tiny workflow comparison and post-training validation disabled. Continue software-feature and real training/download/generation/cleanup checks. Preserve optional evaluation functionality and test its software contracts with controlled metrics. Do not claim a real model-quality result or waive existing physical evaluation text by fixture evidence. Reconcile that physical-testing obligation through a separately reviewed governed policy amendment before increment closure.",
       "recordedAt": "2026-11-22T15:25:14Z",
       "summary": "The user excludes model quality tests from this increment. The agent will test software workflow behavior without accuracy checks or real before-and-after scoring. No user action is needed.",
+      "targetIncrementId": "models-training-and-generation"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "i7-workflow-only-package-support-20261122",
+      "impact": "within-increment",
+      "nextAction": "Continue the separately reviewed small generated-model UI training test, then the remaining Headless training, evaluation-software, output-import and host work. Keep real model quality tests excluded and all genuine technical gaps pending.",
+      "recordedAt": "2026-11-22T17:52:22Z",
+      "summary": "The corrected offline Desktop package and its saved verification evidence passed. This support does not complete a model or Headless workflow.",
       "targetIncrementId": "models-training-and-generation"
     }
   ],
@@ -2553,6 +2574,18 @@
       "recordedAt": "2026-11-22T16:31:54Z",
       "sequence": 136,
       "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "c7155a603c2821e3fa6343278fb32a47b5a87ce3332b724653f70fbe46201544",
+      "recordedAt": "2026-11-22T17:52:22Z",
+      "sequence": 137,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "41ab53e8e8edac986618dc251c5f87fdaa42a3a9403a285a508b6f527bca9bc7",
+      "recordedAt": "2026-11-22T17:52:22Z",
+      "sequence": 138,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -4880,7 +4913,7 @@
       ]
     }
   ],
-  "updatedAt": "2026-11-22T16:31:54Z",
+  "updatedAt": "2026-11-22T17:52:22Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",

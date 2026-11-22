@@ -1583,6 +1583,36 @@
           "This entry does not qualify the current software or complete its roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fa2eb29b6d789fa35a43fcc7919ca633c8a37cc329b087d9d34e4ab8763f48f8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The reviewed Desktop package was built successfully. Its files and all owned build-process shutdown records were verified."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "434b4f9eaba069a31eca61de3287c24acf573dca3300c98744ba22f2852f0923",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This support applies to the recorded source only. App use, training, generation, Headless workflows, the full increment and current-source qualification are not passed by this record."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b2ac05aa89ea2fdabda6c760dbe5f6acc19dd208260b9b85fb9bec1657136a21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This record gives no permission to run another test, transfer files or publish data. Real model quality tests are excluded. The agent must complete the remaining technical work."
+        ]
+      }
     }
   ]
 }
