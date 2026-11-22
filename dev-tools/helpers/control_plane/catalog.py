@@ -2673,6 +2673,12 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/settings-host-listener.unit.test.mjs",
     ],
     "native-host-policy": [
+        "dev-tools/helpers/native-qualification/training_operator.py",
+        "dev-tools/helpers/native-qualification/tests/test_training_operator.py",
+        "dev-tools/helpers/native-qualification/training-operator/global-setup.mjs",
+        "dev-tools/helpers/native-qualification/training-operator/offline-package.mjs",
+        "dev-tools/helpers/native-qualification/training-operator/package-tree.mjs",
+        "dev-tools/helpers/native-qualification/training-operator/playwright.config.mjs",
         "dev-tools/helpers/native-qualification/owned_command_job.py",
         "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
         "dev-tools/helpers/native-qualification/serial_provided_coordinator.py",

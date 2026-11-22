@@ -1,5 +1,14 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+Current-source training qualification reuses four tracked unbound operator
+templates and a pure closed-data renderer. A private v2 factory selects only the
+fixed fresh run/phase helper directory while sharing all original native roles,
+family/fences, witness maps, deadlines and budgets. The original v1 path remains.
+This developer-only composition adds no product capability or executable caller
+selection. Separate trusted source/effect review must bind provenance, actual
+checkout bytes, phase data and deployed hashes before native execution. Source
+tests neither deploy these files nor qualify actual training or Headless hosts.
+
 The read-only Model workflow also supports an exact accepted task or plan-step
 through `models.task`. Both host readers require current plan-review identity,
 ModelRead and original client scope before the original loaded source owner is

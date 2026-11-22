@@ -1,5 +1,15 @@
 # Runtime Model
 
+Current-source developer training qualification can render the fixed four-file
+operator from tracked templates. Only the private v2 factory derives its immutable
+per-run/per-phase helper directory. It shares the original native family and all
+role commands, limits, witness and retirement rules; the v1 path remains unchanged.
+Rendering is pure byte preparation, never approval or deployment. A trusted source
+and effect review must bind renderer/template provenance, closed phase data and
+actual deployed hashes before each native phase. The factory verifies concrete
+consumer bytes, not authenticated reviewer identity. Neither this seam nor its
+portable tests activates a product Headless runtime or supplies physical evidence.
+
 Training qualification byte preparation is a private developer-tool concern.
 The bounded copy/ZIP helper consumes reviewed current-source and installed-file
 references; it grants no runtime readiness, loader authority or native ownership.

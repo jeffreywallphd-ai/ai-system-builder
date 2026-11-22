@@ -178,6 +178,15 @@ deeper input. Source checks cannot replace the skipped physical qualification.
 
 # Contributor Control Plane
 
+The existing `native-host-policy` check now also executes the tracked training
+operator renderer and inert definition/refusal tests. Its exact source paths keep
+all prior native policy fixtures and unknown-path coverage; explicit generic
+requests remain. The controller harness runs the real profile with physical native
+opt-in removed. Unbound templates refuse before actual setup. Pure rendered bytes
+and these source checks do not authorize deployment, install dependencies, create
+model inputs or run a package/app/native job. Actual current-source effects keep
+their separate reviewed witnesses, original native family and unchanged limits.
+
 The review browser now requests bounded server pages. Use Previous/Next for
 Roadmaps and Work items; their controls show exact matching totals and page
 counts. Search applies to the current page. Open Roadmaps come first across

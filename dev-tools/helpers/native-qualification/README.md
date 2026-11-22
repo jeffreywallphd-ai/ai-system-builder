@@ -398,6 +398,44 @@ Unknown owners/fences and historical failures remain; there is no reset or retry
 authority. Completed model accuracy and OCR checks stay closed.
 
 
+## Current-source training operator templates
+
+The four files in `training-operator/` reuse the reviewed training-specific
+readiness, package, resource and one-case UI logic. They contain no deployed run,
+package/source hash or local Git path. Unbound executable templates refuse before
+readiness, packaging or UI setup. `training_operator.py` only renders bytes from
+closed plain phase data; it does not deploy files or run commands. Its only path
+fact is the existing separately witnessed local `git.exe` used for source reads.
+Hashes and rendered data are neither permission nor proof of ownership.
+
+The private `_reviewed_training_intent_v2` derives the four helper paths only from
+the exact run and phase under `.local-codex/native-training-host-operator/v2/`.
+Each phase gets its own fresh directory, so package facts discovered later do not
+rewrite an earlier reviewed setup. The original v1 factory and files remain.
+Both factories share the original native family, commands, runtime/source witness
+maps, deadlines, memory/count limits, pending-owner and stop-marker checks. There
+is no caller version, helper-directory, command, environment, quota or retry option.
+Missing v2 files cannot fall back to v1. A new operator version cannot bypass an
+old native-family fence.
+Readiness and package admission also require the environment input-manifest hash
+to equal the exact rendered phase hash before probes or package reads. UI retains
+its existing exact hash binding. A matching run name cannot replace that check.
+
+Before deployment, a separate trusted source/effect review must bind the actual
+current checkout bytes, renderer/templates, closed context and all four resulting
+file hashes. Deploy only to the fresh fixed phase directory, preserving old files.
+The native factory witnesses those exact deployed bytes; it does not independently
+authenticate a reviewer or infer template provenance from a hash. Input creation,
+readiness, actual packaging and UI each retain their own review and one-use owned
+execution/retirement requirements. No test here qualifies those physical effects.
+Primary and coding checkout line endings can differ; capture actual bytes where
+the native run will execute instead of reusing another checkout's digest.
+
+`native-host-policy` executes actual renderer/syntax/refusal tests and all prior
+portable role fixtures. Its controller execution removes the physical opt-in.
+The existing physical test remains explicitly skipped without separate authority.
+No model accuracy, native retirement, Headless activation or parent pass follows.
+
 ## Bounded training package bytes
 
 `training_package_inputs.py` tracks the earlier reviewed source-copy and installed

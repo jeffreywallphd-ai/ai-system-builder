@@ -2,6 +2,13 @@
 
 ## Training package input bytes
 
+The adjacent private `training_operator.py` renders four fixed current-source
+training operator templates. The existing `native-host-policy` check executes
+their renderer, syntax and refusal cases with the portable role/fence fixtures.
+The original operator stays intact. The fixed successor path adds no caller
+commands, runtime installation or quota controls. Source tests do not deploy the
+operator or execute training; actual effects still need separate current review.
+
 The private [training byte helper](helpers/native-qualification/training_package_inputs.py)
 reuses bounded source-copy and offline Electron ZIP preparation. Its exact
 `training-package-inputs-unit` check runs disposable file/ZIP tests through the

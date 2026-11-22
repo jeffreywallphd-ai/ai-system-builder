@@ -412,12 +412,32 @@ def _training_empty_cache(short):
 
 def _reviewed_training_intent(phase,*,node_executable,node_sha256,run,folder,
         reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes=None):
+    """Original fixed v1 composition; no caller operator/version selector."""
+    return _training_intent(phase,node_executable=node_executable,node_sha256=node_sha256,
+        run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,
+        runtime_file_hashes=runtime_file_hashes,input_manifest_sha256=input_manifest_sha256,
+        review_digest=review_digest,package_hashes=package_hashes,operator_version="v1")
+
+
+def _reviewed_training_intent_v2(phase,*,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes=None):
+    """Fixed fresh per-run/per-phase operator; identical original role controls."""
+    return _training_intent(phase,node_executable=node_executable,node_sha256=node_sha256,
+        run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,
+        runtime_file_hashes=runtime_file_hashes,input_manifest_sha256=input_manifest_sha256,
+        review_digest=review_digest,package_hashes=package_hashes,operator_version="v2")
+
+
+def _training_intent(phase,*,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes,
+        operator_version):
     """Literal private roles; the separate effect review still grants authority.
 
     Node identity is a trusted host witness, as in the legacy private factory.
     It is never accepted from a public command/JSON execution interface. Python,
     cwd, source/consumer names, environment and limits have no caller selectors.
     """
+    need(type(operator_version) is str and operator_version in ("v1","v2"),"unknown-fixed-training-operator")
     need(type(phase) is str and phase in _TRAINING_DEADLINES and phase!="training-budget","unknown-fixed-training-role")
     if phase!="training-ui":need(package_hashes is None,"unexpected-training-package-witness")
     short=_training_run(phase,run,folder,review_digest)
@@ -439,7 +459,8 @@ def _reviewed_training_intent(phase,*,node_executable,node_sha256,run,folder,
             key=key.strip().lower();need(key not in settings,"training-runtime-config-duplicate");settings[key]=value.strip()
     need(Path(settings.get("home",""))==base.parent and settings.get("include-system-site-packages","").lower()=="true" and
          settings.get("version")=="3.12.8","training-runtime-context")
-    helpers=_REPO/".local-codex/native-training-host-operator/v1"
+    helpers=(_REPO/".local-codex/native-training-host-operator/v1" if operator_version=="v1" else
+             _REPO/".local-codex/native-training-host-operator/v2"/run.name/phase)
     files={name:helpers/name for name in _CONSUMER_FILES}
     files.update({name:_REPO/name for name in _TRAINING_SOURCES})
     need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(files),"training-source-witness")

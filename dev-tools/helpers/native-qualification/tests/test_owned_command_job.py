@@ -1021,6 +1021,65 @@ class PortableNativePolicyTests(unittest.TestCase):
             with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)),patch.object(job.sys,"executable",str(base)),patch.dict(os.environ,{"SystemRoot":str(root/"Windows"),"WINDIR":str(root/"Windows"),"HF_TOKEN":"synthetic-private-never-inherited","OPENAI_API_KEY":"synthetic-private-never-inherited"}):
                 yield root,kwargs,manifest,package_hashes
 
+    def test_training_v2_uses_fixed_fresh_phase_helpers_and_preserves_all_original_role_limits(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"]
+            old=root/".local-codex/native-training-host-operator/v1"
+            before={name:(old/name).read_bytes() for name in job._CONSUMER_FILES}
+            for phase,seconds in (("training-input-create",120),("training-readiness",300),("training-package",420),("training-ui",690)):
+                helpers=root/".local-codex/native-training-host-operator/v2"/run.name/phase
+                helpers.mkdir(parents=True)
+                for name in job._CONSUMER_FILES:(helpers/name).write_bytes(before[name])
+                if phase!="training-input-create" and not manifest.exists():
+                    manifest.parent.mkdir();manifest.write_bytes(b"inert exact input manifest")
+                values={**kwargs,"folder":run/phase,"input_manifest_sha256":None if phase=="training-input-create" else job._digest(manifest)}
+                if phase=="training-ui":values["package_hashes"]=package_hashes
+                intent=job._reviewed_training_intent_v2(phase,**values)
+                self.assertEqual(intent.seconds,seconds)
+                self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+                self.assertEqual(intent.environment["AISB_LOCAL_TRAINING_UI_RUN"],str(run))
+                self.assertNotIn("HF_TOKEN",intent.environment)
+                self.assertNotIn("OPENAI_API_KEY",intent.environment)
+                self.assertTrue(all(str(helpers/name) in intent.consumer_hashes for name in job._CONSUMER_FILES))
+                if phase=="training-readiness":self.assertEqual(intent.argv[-2],str(helpers/"global-setup.mjs"))
+                if phase=="training-package":self.assertEqual(intent.argv[-1],str(helpers/"offline-package.mjs"))
+                if phase=="training-ui":self.assertIn(str(helpers/"playwright.config.mjs"),intent.argv)
+                job._validate_intent(intent,run/phase)
+            self.assertEqual(before,{name:(old/name).read_bytes() for name in job._CONSUMER_FILES})
+            native.assert_not_called()
+
+    def test_training_v2_has_no_legacy_fallback_or_public_operator_selector(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,_package),patch.object(job,"_Win") as native:
+            run=kwargs["run"]
+            values={**kwargs,"folder":run/"training-input-create","input_manifest_sha256":None}
+            # Existing v1 references cannot supply a missing current operator.
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_intent_v2("training-input-create",**values)
+            for factory in (job._reviewed_training_intent,job._reviewed_training_intent_v2):
+                for selector in ("operator_version","helper_directory","command","environment","seconds","process_bytes"):
+                    with self.subTest(factory=factory.__name__,selector=selector),self.assertRaises(TypeError):
+                        factory("training-input-create",**values,**{selector:"untrusted"})
+            native.assert_not_called()
+
+    def test_training_v2_retains_original_family_stop_markers_and_dispatch_witnesses(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,_package),patch.object(job,"_Win") as native:
+            run=kwargs["run"];phase="training-input-create"
+            helpers=root/".local-codex/native-training-host-operator/v2"/run.name/phase
+            helpers.mkdir(parents=True)
+            old=root/".local-codex/native-training-host-operator/v1"
+            for name in job._CONSUMER_FILES:(helpers/name).write_bytes((old/name).read_bytes())
+            values={**kwargs,"folder":run/phase,"input_manifest_sha256":None}
+            intent=job._reviewed_training_intent_v2(phase,**values)
+            source=helpers/"global-setup.mjs";original=source.read_bytes();source.write_bytes(b"changed helper")
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,run/phase)
+            source.write_bytes(original);job._validate_intent(intent,run/phase)
+            for folder in (run,run.parent.parent):
+                marker=folder/"FENCED.json";marker.write_bytes(b"preserved original uncertainty")
+                try:
+                    with self.assertRaises(job.NativeFailure):job._reviewed_training_intent_v2(phase,**values)
+                    self.assertEqual(marker.read_bytes(),b"preserved original uncertainty")
+                finally:marker.unlink()  # Only this test's own synthetic marker.
+            native.assert_not_called()
+
     def test_training_roles_fix_commands_environment_deadlines_and_existing_budget(self):
         with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
             run=kwargs["run"];base=Path(job.sys._base_executable)

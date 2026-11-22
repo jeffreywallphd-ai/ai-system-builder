@@ -1,5 +1,19 @@
 # AI Development Control Plane Threat Model
 
+The current-source training operator renderer admits only plain closed phase data,
+finite run/hash facts and one separately witnessed canonical local Git identity.
+It replaces one literal data sentinel in fixed tracked templates and returns bytes;
+it exposes no command, arbitrary helper source, environment, quota, retry or deploy
+selector. Unknown/malformed/active inputs and absent template markers deny. Source
+template reads are bounded stable regular-file observations, not native custody.
+The fixed v2 native factory derives only a run/phase helper directory and retains
+the original family/fences, roles, runtime witnesses, limits and retirement checks.
+It cannot adopt old v1 bytes or reset a consumed stop/retry. A separately trusted
+source/effect review still binds template/context provenance and deployed hashes;
+concrete hash equality is not approval, reviewer authentication or hostile-source
+protection. Portable tests remove physical opt-in and grant no actual launch,
+model, Headless activation or parent qualification.
+
 Private training package byte preparation protects current source, installed
 supplier files and retained evidence. Plain detached bounded manifests reject
 malformed rows, unsafe Windows names, case/file-directory aliases and excess
