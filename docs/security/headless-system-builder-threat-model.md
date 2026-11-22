@@ -1813,8 +1813,8 @@ selection do not qualify physical training, cleanup or Headless controls. Preser
 old evidence/stop markers; rollback disables Tiny private qualification rather
 than restoring an ordinary fallback.
 
-The fixed Tiny composition must also select the explicit bounded validation
-comparison. Capture the original private function in a closure; do not resolve it
+The fixed Tiny workflow composition explicitly disables validation comparison.
+Capture the original private function in a closure; do not resolve it
 again from mutable module properties during dispatch. Admit only private support
 with the explicit comparison keyword, and do not expose that keyword to the
 dispatch caller. Preserve the original progress callback, exception and
@@ -1822,9 +1822,11 @@ cancellation without copying their text. Binding invokes no supplier. Existing
 source/package witnesses still establish the trusted code; signature and function
 identity checks do not create authenticity, resource or runtime authority.
 
-The comparison records finite loss/delta/sample-count measurements for one fixed
-validation subset, not a quality pass or proof of generalization. The Tiny test
-does not complete model/data/recipe/hardware provenance. Inert routing tests leave
+The workflow profile must not run model accuracy checks, score real outputs or
+measure before/after validation loss. Dispatch callers cannot enable those tests.
+Keep the optional product comparison capability separate. Controlled software
+fixtures do not claim a real model-quality result. The Tiny workflow test does
+not complete model/data/recipe/hardware provenance. Inert routing tests leave
 actual UI/model/cleanup qualification pending and preserve failed histories,
 consumed stops and all existing limits. They grant no retry or public capability.
 

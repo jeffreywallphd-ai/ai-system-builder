@@ -198,7 +198,7 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
     def fixture(self):
         return {"schemaVersion": "training-host-fixture-v2", "inputProfile": "generated-tiny-qwen2-v1"}
 
-    def test_exact_private_delegate_enables_comparison_without_calling_at_binding(self):
+    def test_exact_private_delegate_disables_quality_comparison_without_calling_at_binding(self):
         application, tasks, calls = self.modules()
         selected = worker.bind_private_local_training_entry(application, tasks, self.fixture())
         self.assertIs(application.train_model, selected)
@@ -206,9 +206,9 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
         payload, progress = object(), lambda _: None
         self.assertEqual(application.train_model(payload, on_progress=progress), "local-result")
         self.assertEqual(calls, [("local", (payload,), {"on_progress": progress,
-                                 "compare_validation_baseline": True})])
+                                 "compare_validation_baseline": False})])
 
-    def test_actual_private_entry_receives_fixed_comparison_before_an_inert_core(self):
+    def test_actual_private_entry_receives_no_quality_comparison_before_an_inert_core(self):
         # Import the real entry, but intercept its core before any model/framework
         # load. This proves the composition reaches the real keyword contract.
         real = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model")
@@ -222,9 +222,20 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
                 worker.bind_private_local_training_entry(application, real, self.fixture())
                 self.assertIs(application.train_model(payload, on_progress=progress), expected)
                 core.assert_called_once_with(payload, on_progress=progress,
-                    local_model_ref=str(Path(folder).resolve()), compare_validation_baseline=True)
+                    local_model_ref=str(Path(folder).resolve()), compare_validation_baseline=False)
 
-    def test_comparison_cannot_be_overridden_by_the_dispatch_caller(self):
+    def test_workflow_disables_comparison_even_if_the_private_default_enables_it(self):
+        application, tasks, calls = self.modules()
+        def local(payload, *, on_progress=None, compare_validation_baseline=True):
+            self.assertIs(compare_validation_baseline, False)
+            return "workflow-result"
+        local.__module__ = tasks.__name__
+        tasks.train_model_from_local_files = local
+        worker.bind_private_local_training_entry(application, tasks, self.fixture())
+        self.assertEqual(application.train_model(object()), "workflow-result")
+        self.assertEqual(calls, [])
+
+    def test_quality_comparison_cannot_be_enabled_by_the_dispatch_caller(self):
         application, tasks, calls = self.modules()
         worker.bind_private_local_training_entry(application, tasks, self.fixture())
         for keyword in ({"compare_validation_baseline": False}, {"compare_validation_baseline": True},
@@ -241,7 +252,7 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
         payload = object()
         self.assertEqual(application.train_model(payload), "local-result")
         self.assertEqual(calls, [("local", (payload,), {"on_progress": None,
-                                 "compare_validation_baseline": True})])
+                                 "compare_validation_baseline": False})])
 
     def test_old_private_entry_without_explicit_comparison_support_refuses_at_binding(self):
         application, tasks, calls = self.modules()
@@ -262,7 +273,7 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
             progress = lambda _: None
             def local(payload, *, on_progress=None, compare_validation_baseline=False):
                 self.assertIs(on_progress, progress)
-                self.assertIs(compare_validation_baseline, True)
+                self.assertIs(compare_validation_baseline, False)
                 raise error
             local.__module__ = tasks.__name__
             tasks.train_model_from_local_files = local

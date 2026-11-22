@@ -27,7 +27,7 @@ def deny():
 
 
 def bind_private_local_training_entry(application, training_tasks, fixture):
-    """Bind fixed local loading and comparison for the Tiny TEST composition.
+    """Bind workflow-only local loading for the Tiny TEST composition.
 
     Source/worker/native witnesses remain the caller's existing prerequisite.
     This function does not invoke training or enable a product capability.
@@ -54,13 +54,14 @@ def bind_private_local_training_entry(application, training_tasks, fixture):
         # physical test and never by falling back to an ordinary loader.
         deny()
 
-    def compare_local_training(payload, *, on_progress=None):
+    def workflow_local_training(payload, *, on_progress=None):
         # Capture the original function. Module replacement and caller options
         # cannot change this fixed test profile. Errors/cancellation stay intact.
-        return local(payload, on_progress=on_progress, compare_validation_baseline=True)
+        # This profile qualifies the software workflow, not model quality.
+        return local(payload, on_progress=on_progress, compare_validation_baseline=False)
 
-    application_values["train_model"] = compare_local_training
-    return compare_local_training
+    application_values["train_model"] = workflow_local_training
+    return workflow_local_training
 
 
 def _source_identity_bytes(root, target):

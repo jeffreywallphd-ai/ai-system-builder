@@ -2191,14 +2191,17 @@ existing runtime/package/native witnesses and a fresh bounded physical UI run
 remain required. This does not activate Headless training or qualify its controls.
 
 For that generated-Tiny test composition, capture the original private training
-function in a fixed closure and enable its explicit validation comparison. Refuse
+function in a fixed closure and disable its explicit validation comparison. Refuse
 older private entries without the comparison keyword before dispatch. Forward the
 original payload, progress callback, result and exception; expose no caller option
-to disable comparison or select another loader. Legacy qualification remains on
-its existing entry. One fixed subset of at most 32 validation rows supplies finite
-before/after loss and sample-count measurements in private run/candidate history.
-This tests Tiny training mechanics, not generalization, fresh full provenance or
-accepted model accuracy. Source checks start no model or Native/app run and grant
+to enable comparison or select another loader. Legacy qualification remains on
+its existing entry. This follows the user's workflow-only testing direction:
+the physical Tiny journey tests training, task status, private review, explicit
+save and cleanup. It performs no model scoring or before/after loss measurement.
+The optional product comparison implementation remains available; its software
+contract can be checked with controlled metrics without scoring a real model.
+This does not assess model quality, fresh full provenance or accepted model
+accuracy. Source checks start no model or Native/app run and grant
 no new recovery allowance or parent qualification.
 
 ### Original Model task read composition
