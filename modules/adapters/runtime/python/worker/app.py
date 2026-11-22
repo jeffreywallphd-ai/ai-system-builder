@@ -683,9 +683,9 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             request.taskType,
             request.metadata,
         )
+        original_id = request.requestId
+        incarnation = (RUNTIME_ID, WORKER_STARTED_AT)
         if selection is not None:
-            original_id = request.requestId
-            incarnation = (RUNTIME_ID, WORKER_STARTED_AT)
             def original_record_current():
                 with TASK_REGISTRY_LOCK:
                     return _source_record_current_locked(record, owner)
@@ -694,11 +694,22 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             record["_modelSourceIncarnation"] = incarnation
         TASK_REGISTRY[request.requestId] = record
 
+    def record_is_current_locked():
+        if selection is not None:
+            return _source_record_current_locked(record, owner)
+        return (TASK_REGISTRY.get(original_id) is record and
+                incarnation == (RUNTIME_ID, WORKER_STARTED_AT) and
+                not isinstance(record.get("_modelSourceOwner"), ModelSourceTaskOwner))
+
     def publish(**updates):
         if selection is not None:
             return _publish_source_task(record, owner, **updates)
-        _update_task(request.requestId, **updates)
-        return True
+        with TASK_REGISTRY_LOCK:
+            if not record_is_current_locked():
+                return False
+            record.update(updates)
+            record["updatedAt"] = _now_iso()
+            return True
 
     def task_wrapper() -> None:
         try:
@@ -706,12 +717,9 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                 return
             data = owner.execute() if selection is not None else _run_task(request)
             with TASK_REGISTRY_LOCK:
-                if selection is not None and not _source_record_current_locked(record, owner):
+                if not record_is_current_locked():
                     return
-                cancellation_requested = TASK_REGISTRY.get(
-                    request.requestId,
-                    {},
-                ).get("cancellationRequested") is True
+                cancellation_requested = record.get("cancellationRequested") is True
             if cancellation_requested:
                 publish(
                     status="cancelled",
@@ -737,8 +745,9 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                 completedAt=_now_iso(),
             )
         except Exception as error:
-            if selection is not None and not original_record_current():
-                return
+            with TASK_REGISTRY_LOCK:
+                if not record_is_current_locked():
+                    return
             error_code = _safe_task_error_code(error)
             error_stage = _safe_task_error_stage(error)
             print(
@@ -768,7 +777,7 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             )
         finally:
             with TASK_REGISTRY_LOCK:
-                if selection is None or _source_record_current_locked(record, owner):
+                if record_is_current_locked():
                     _prune_terminal_tasks_locked()
 
     try:
@@ -779,22 +788,21 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             raise ModelSourceTaskError() from None
         raise
     if not publish(future=future):
-        raise ModelSourceTaskError()
-    with TASK_REGISTRY_LOCK:
         if selection is not None:
-            if not _source_record_current_locked(record, owner):
+            raise ModelSourceTaskError()
+        raise RuntimeError("The original runtime task could not be confirmed.")
+    with TASK_REGISTRY_LOCK:
+        if not record_is_current_locked():
+            if selection is not None:
                 raise ModelSourceTaskError()
-            reply_record = record
-        else:
-            reply_record = TASK_REGISTRY[request.requestId]
-            if isinstance(reply_record.get("_modelSourceOwner"), ModelSourceTaskOwner):
-                raise ModelSourceTaskError()
+            raise RuntimeError("The original runtime task could not be confirmed.")
+        reply_record = record
     accepted_status = (
         reply_record["status"]
         if reply_record["status"] in {"queued", "running"}
         else "running"
     )
-    return StartPythonRuntimeTaskResult(requestId=request.requestId, taskType=request.taskType, accepted=True, status=accepted_status, startedAt=reply_record["startedAt"], updatedAt=reply_record["updatedAt"], metadata=reply_record["metadata"])
+    return StartPythonRuntimeTaskResult(requestId=original_id, taskType=reply_record["taskType"], accepted=True, status=accepted_status, startedAt=reply_record["startedAt"], updatedAt=reply_record["updatedAt"], metadata=reply_record["metadata"])
 
 
 @app.get("/health", response_model=PythonRuntimeHealthCheckResult)

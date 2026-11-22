@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import unittest
+from concurrent.futures import Future
 from threading import Event
 from unittest.mock import patch
 
@@ -16,6 +17,96 @@ class TaskLifecycleTests(unittest.TestCase):
     def setUp(self) -> None:
         with worker_app.TASK_REGISTRY_LOCK:
             worker_app.TASK_REGISTRY.clear()
+
+    def test_late_submit_reply_cannot_overwrite_reused_task_future_or_adopt_its_row(self):
+        for first_type, second_type in (("train-model", "validate-model"), ("validate-model", "train-model")):
+            with self.subTest(first=first_type), patch.object(worker_app, "TASK_REGISTRY", {}):
+                old_future, new_future = Future(), Future()
+                old_future.set_result(None)
+                captured = {}
+                class Executor:
+                    calls = 0
+                    def submit(executor, callback):
+                        executor.calls += 1
+                        if executor.calls == 1:
+                            callback()
+                            self.assertEqual(worker_app.TASK_REGISTRY["reused-ack"]["status"], "succeeded")
+                            worker_app._start_async_task(StartPythonRuntimeTaskRequest(requestId="reused-ack", taskType=second_type,
+                                payload={}, metadata={"workspaceId": "synthetic-new-workspace"}))
+                            captured["successor"] = worker_app.TASK_REGISTRY["reused-ack"]
+                            captured["expected"] = dict(captured["successor"])
+                            self.assertIs(captured["successor"]["future"], new_future)
+                            return old_future
+                        return new_future
+                with patch.object(worker_app, "TASK_EXECUTOR", Executor()), patch.object(worker_app, "_run_task", return_value={"old": True}):
+                    with self.assertRaisesRegex(RuntimeError, "original runtime task could not be confirmed"):
+                        worker_app._start_async_task(StartPythonRuntimeTaskRequest(requestId="reused-ack", taskType=first_type,
+                            payload={}, metadata={"workspaceId": "synthetic-old-workspace"}))
+                self.assertIs(worker_app.TASK_REGISTRY["reused-ack"], captured["successor"])
+                self.assertEqual(captured["successor"], captured["expected"])
+                self.assertIs(captured["successor"]["future"], new_future)
+
+    def test_retired_queued_callback_cannot_start_or_publish_into_another_record(self):
+        for changed in ("replacement", "removed", "incarnation"):
+            with self.subTest(changed=changed), patch.object(worker_app, "TASK_REGISTRY", {}):
+                callbacks = []
+                own_future = Future()
+                class Executor:
+                    def submit(executor, callback):
+                        callbacks.append(callback)
+                        return own_future
+                with patch.object(worker_app, "TASK_EXECUTOR", Executor()), patch.object(worker_app, "_run_task") as run:
+                    worker_app._start_async_task(StartPythonRuntimeTaskRequest(requestId="retired-queued", taskType="train-model", payload={}))
+                    original = worker_app.TASK_REGISTRY["retired-queued"]
+                    if changed == "replacement":
+                        worker_app.TASK_REGISTRY["retired-queued"] = worker_app._create_task_record("retired-queued", "validate-model")
+                    elif changed == "removed":
+                        worker_app.TASK_REGISTRY.pop("retired-queued")
+                    expected = dict(worker_app.TASK_REGISTRY.get("retired-queued", {}))
+                    with patch.object(worker_app, "RUNTIME_ID", "synthetic-retired-worker" if changed == "incarnation" else worker_app.RUNTIME_ID):
+                        callbacks[0]()
+                    run.assert_not_called()
+                    self.assertEqual(worker_app.TASK_REGISTRY.get("retired-queued", {}), expected)
+                    self.assertEqual(original["status"], "queued")
+
+    def test_late_terminal_success_or_error_does_not_publish_to_successor(self):
+        for failed in (False, True):
+            with self.subTest(failed=failed), patch.object(worker_app, "TASK_REGISTRY", {}):
+                successor = worker_app._create_task_record("retired-result", "validate-model")
+                successor["future"] = Future()
+                expected = dict(successor)
+                def run(_request):
+                    worker_app.TASK_REGISTRY["retired-result"] = successor
+                    if failed:
+                        raise RuntimeError("Synthetic old task failure.")
+                    return {"old": True}
+                class Executor:
+                    def submit(executor, callback):
+                        callback()
+                        future = Future(); future.set_result(None)
+                        return future
+                with patch.object(worker_app, "TASK_EXECUTOR", Executor()), patch.object(worker_app, "_run_task", side_effect=run) as run_mock:
+                    with self.assertRaisesRegex(RuntimeError, "original runtime task could not be confirmed"):
+                        worker_app._start_async_task(StartPythonRuntimeTaskRequest(requestId="retired-result", taskType="train-model", payload={}))
+                self.assertEqual(run_mock.call_count, 1)
+                self.assertIs(worker_app.TASK_REGISTRY["retired-result"], successor)
+                self.assertEqual(successor, expected)
+
+    def test_inline_completion_keeps_original_ack_and_future_when_record_is_current(self):
+        with patch.object(worker_app, "TASK_REGISTRY", {}):
+            own_future = Future(); own_future.set_result(None)
+            class Executor:
+                def submit(executor, callback):
+                    callback()
+                    return own_future
+            with patch.object(worker_app, "TASK_EXECUTOR", Executor()), patch.object(worker_app, "_run_task", return_value={"own": True}):
+                result = worker_app._start_async_task(StartPythonRuntimeTaskRequest(requestId="inline-own", taskType="train-model",
+                    payload={}, metadata={"workspaceId": "synthetic-own-workspace"}))
+            self.assertTrue(result.accepted)
+            self.assertEqual(result.metadata["workspaceId"], "synthetic-own-workspace")
+            self.assertEqual(worker_app.TASK_REGISTRY["inline-own"]["status"], "succeeded")
+            self.assertEqual(worker_app.TASK_REGISTRY["inline-own"]["data"], {"own": True})
+            self.assertIs(worker_app.TASK_REGISTRY["inline-own"]["future"], own_future)
 
     def test_start_returns_accepted_true_quickly(self) -> None:
         with patch("modules.adapters.runtime.python.worker.app.train_model") as train_mock:

@@ -2069,3 +2069,18 @@ PEFT's separate adapter-weight loader. Repeat refusal before Dataset/model
 imports and at the model-factory handoff after tokenizer callbacks. LoRA from a
 full base remains available; ordinary adapter policy is unchanged. These are
 read-time observations, not protection against native changes after the checks.
+
+## Original async worker record publication
+
+Capture the exact task row and runtime incarnation during queue admission.
+Compare them under the existing registry lock before queued dispatch, terminal
+publication, cancellation-state observation, Future installation and selecting
+the start reply. A late old submit reply must neither overwrite a newer Future
+nor adopt another row after terminal-ID reuse. Retirement suppresses old result
+or error publication; unchanged immediate completion remains valid.
+
+Keep the dedicated Model-source owner protocol and its private errors unchanged.
+This shared queue repair does not convert legacy ID-based progress/cancel APIs
+into private task authority. Approved Headless training still needs its own
+original actor/plan, installed-only readiness, exact model/input bytes, task
+controls, result-save, resource and actual-host qualification.

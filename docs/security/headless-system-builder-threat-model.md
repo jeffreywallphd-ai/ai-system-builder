@@ -1762,3 +1762,20 @@ engine/model entry, including config creation during progress/tokenizer work.
 Ordinary adapter loading and LoRA training from a full local base remain intact.
 Native mutation after a read-time check and exact content/custody proof remain
 outside this helper; an actual execution owner must establish those separately.
+
+### Delayed async worker start and result publication
+
+A reusable task ID cannot authorize an old queue continuation to publish into a
+new row. Executor submission can return after the old task finishes and another
+start legitimately reuses the terminal ID. Capture the original record and
+runtime incarnation; compare under the registry lock before dispatch, terminal
+or error publication, cancellation observation, Future assignment and reply
+selection. Missing/replaced/retired records deny without touching successor state
+or disclosing its metadata. Keep the dedicated source owner/error path intact.
+
+Controlled executors reproduce terminal-ID reuse and retired callbacks without
+threads, engines or model/provider effects. They qualify queue publication only.
+Legacy generic progress/cancel interfaces remain ID based and cannot supply a
+private Headless task's original actor/approval or ownership proof. Resource,
+file/native custody, installed-only training and actual-host checks stay pending.
+Rollback must preserve original-row refusal, never restore shared-row adoption.

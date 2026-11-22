@@ -1666,3 +1666,19 @@ tokenizer work before the model factory. LoRA training from a full local base is
 still supported; starting from an existing adapter is not admitted privately.
 Ordinary adapter loading is unchanged. These read-time observations do not prove
 a native mutation fence or exact model contents.
+
+## Original-record queue and start replies
+
+Async queue publication captures the original record and worker incarnation.
+Before queued execution, result/error/cancellation-state publication, Future
+installation and start-reply selection, compare that same row under the registry
+lock. A completed task can be replaced before executor submission returns; its
+late issuer must fail with a fixed message, without installing an old Future or
+using the successor's metadata. Retired queued callbacks do not dispatch work.
+Normal immediate completion still returns its own accepted acknowledgement.
+
+The private Model-source branch retains its original owner and error behavior.
+This repair changes queue/terminal publication only. Generic ID-based progress
+and cancellation interfaces remain legacy interfaces, not original-client,
+approval, installed-only or private Headless training authority. No model/file,
+native, resource or actual-host qualification is supplied by inert race fixtures.

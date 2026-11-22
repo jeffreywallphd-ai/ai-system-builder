@@ -2941,3 +2941,12 @@ ordinary adapter loading. Supplier import/factory spies and inert weight-named
 fixtures prove refusal only; no actual PEFT, Torch, model or provider is executed.
 Preserve the independently found adapter issue and original passing-but-incomplete
 receipt alongside the fixed candidate's fresh checks and reviewed closure.
+
+The existing headless-model-manifest-worker profile also runs original-record
+queue/lifecycle cases in TaskLifecycleTests. Inert controlled submitters reproduce
+late Future/start replies after valid terminal-ID reuse, replaced/removed/retired
+queued callbacks and stale success/error publication. Positive immediate
+completion and ordinary lifecycle behavior remain covered. Related Model-source
+owner/identity/ASGI fixtures protect the unchanged private branch. These checks
+do not establish private Headless progress/cancel authority, model execution,
+installed readiness, resources, native custody or parent qualification.

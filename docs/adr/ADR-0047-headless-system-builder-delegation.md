@@ -1009,3 +1009,13 @@ can substitute the adapter's base locator, while the pinned
 has its own adapter weight path. Top-level flags are insufficient for that
 topology. Keep LoRA training from a full local base and ordinary adapter behavior;
 do not claim native fencing, content proof or private adapter support.
+
+### Original worker queue/start publication
+
+Before composing private approved training, bind ordinary async worker
+queue/terminal/Future/reply publication to the originating row and runtime
+incarnation. Compare under the registry lock; do not adopt a reused ID's row or
+overwrite its Future after a late submit reply. Preserve normal inline completion
+and the existing dedicated Model-source owner protocol. This prerequisite grants
+no private progress/cancel, approval, installed-runtime, model/native/resource or
+Headless host authority. Those remain separate requirements before activation.
