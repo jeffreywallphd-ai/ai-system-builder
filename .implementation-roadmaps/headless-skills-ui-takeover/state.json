@@ -1580,6 +1580,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-22T06:01:10Z",
       "summary": "The current Desktop test build passed its file and cleanup checks. It contains 242 files, including 134 worker files. The agent must now test training, saving results, generating output and the connection between Desktop and browser. Those tests are still pending. No user action is needed. The accepted model accuracy results stay closed."
+    },
+    {
+      "artifact": "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+      "command": "python -B dev-tools/helpers/run_focused_checks.py --regression-test dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+      "criterionId": "model-runtime-hosts",
+      "id": "evidence-47",
+      "incrementId": "models-training-and-generation",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-22T06:54:22Z",
+      "summary": "The Desktop test opened the workspace and configured training. Its test helper skipped secure startup, so the app correctly refused training. The corrected helper is committed to rebuild. Its 69 focused tests, documentation checks and architecture checks passed. The app and its background process closed cleanly. Training, result saving, generated output and Desktop/browser checks remain pending. One protected repeat of the failed test needs the requested approval. Other agent work continues. Accepted model accuracy tests remain closed."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -2407,6 +2418,12 @@
       "eventFingerprint": "5d6267ea544f7f08591abcf237adc4f0508f5505017524e9db1a9a8cfa0c808c",
       "recordedAt": "2026-11-22T06:01:10Z",
       "sequence": 127,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e83512f6d531e95370c780169a4a8a045951e5c00da66832e8e9a7706a4a0002",
+      "recordedAt": "2026-11-22T06:54:22Z",
+      "sequence": 128,
       "type": "evidence-recorded"
     }
   ],
@@ -4340,7 +4357,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-22T06:01:10Z",
+  "updatedAt": "2026-11-22T06:54:22Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
