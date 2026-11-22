@@ -534,6 +534,43 @@ PUBLISHED_FORM_CHECKS = {
             "modules.adapters.runtime.python.worker.tests.test_worker_app.WorkerAppTests.test_async_model_download_task_updates_progress",
             "modules.adapters.runtime.python.worker.tests.test_worker_app.WorkerAppTests.test_async_model_download_failure_preserves_retryable_safe_error"),
     },
+    "headless-training-task-ledger-unit": {
+        "automatic_sources": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-task-store.unit.test.ts",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/adapters/persistence/system-builder/headlessModelTrainingReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-task-store.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
+        ),
+        "sources": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/adapters/persistence/system-builder/headlessModelTrainingReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-task-store.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
+            "modules/adapters/persistence/system-builder/README.md",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-task-store.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts"),
+    },
+    "headless-training-task-ledger-types": {
+        "companion_to": "headless-training-task-ledger-unit",
+        "sources": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/adapters/persistence/system-builder/headlessModelTrainingReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-task-store.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
+            "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop",
+            "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-task-store.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-model-plan-task-store.unit.test.ts"),
+    },
     "headless-model-metadata-owner-unit": {
         "automatic_required_files": (
             "modules/contracts/headless/headless-model-training-build-plan.ts",

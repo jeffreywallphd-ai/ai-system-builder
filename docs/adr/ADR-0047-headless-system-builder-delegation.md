@@ -1072,3 +1072,19 @@ permission/source/step compositions stay denied pending their separate integrati
 Snapshots omit private bindings. Keep versions 1–3 byte-compatible and refuse
 training in those schemas. Rollback leaves unsupported version 4 unavailable.
 No model-quality, runtime/native, task or parent pass follows from metadata tests.
+
+### Private training task metadata protocol
+
+Use a separate training-plan task record family with the existing bounded
+owned-transaction, dual-index and reserve/issue/accept protocol. Bind original
+actor/client/host/workspace/plan/step and exact request plus saved-input proposal
+digest. Keep current approval/input authorization in the owning composition,
+not in caller-supplied hashes. Reserved or issued uncertainty never permits a
+new attempt; later approvals can read an accepted original receipt without
+repeating its effect. Download/Data/Context records cannot supply training
+ownership. Keep the existing per-family quota and minimize stored facts.
+
+This private metadata component changes no public capability or execution root.
+Its Core/SQLite/type checks qualify neither runtime/model/native resources nor
+real task/host behavior or the parent. Runtime admission, original task controls,
+separate result Save and full qualification remain required.

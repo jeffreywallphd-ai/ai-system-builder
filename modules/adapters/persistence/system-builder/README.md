@@ -148,3 +148,26 @@ bindings. Existing public permission/source/step owners continue to deny trainin
 including earlier ordinary steps in a training-containing plan. A stored approval
 is no task, input-byte, runtime, resource, license or model-quality proof. Unsupported
 version-4 records remain unavailable on rollback; never downgrade or rewrite them.
+
+## Private training task records
+
+The training-plan task store uses dedicated namespaces and the existing owned
+transaction/CAS protocol. A complete copied effect binds original organization,
+actor, client, host, workspace, plan, approval revision and step to the exact
+request plus the existing saved-input proposal digest. The existing closed
+training-binding decoder checks an isolated request; the actual plan step is
+validated separately and remains part of stored identity.
+
+Reserve one task and both point indices with the existing per-client/workspace
+family ceiling of 2,048. Issue once, then record only the original accepted
+outcome or trusted terminal non-start. Lost or interrupted reservation/issuance
+stays unconfirmed and cannot grant a new attempt. Accepted exact receipts can
+be read after a later approval revision without dispatching work again. Reads
+check both indices and original ownership, without enumerating task history.
+
+This private adapter does not read approval policy itself. Its owning execution
+composition must prove current exact approval/input authority before mutation.
+Records contain identity and hashes, not paths, prompts, dataset/model bytes or
+provider replies. Download, Data and Context task records remain separate. No
+public route, task dispatcher, runtime/native ownership, model-quality or host
+qualification follows. Keep unsupported records unavailable on rollback.

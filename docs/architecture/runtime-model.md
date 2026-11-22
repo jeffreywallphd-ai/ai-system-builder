@@ -2319,3 +2319,20 @@ reader for every selected step after provider waits. Bounded descriptor lookup
 refuses active owners/methods; a frozen facade avoids function-property getters.
 Current policy still precedes metadata invocation and availability disclosure.
 This ownership check adds no effect, capability, model readiness or host pass.
+
+### Private training plan-to-task history
+
+Training has a separate metadata-only task ledger. It reuses the existing closed
+request and saved-input binding decoders and owned transaction protocol. Exact
+original actor/client/host/workspace/plan/step identity and request-plus-inputs
+digests bind one reserved task, its issuance and original accepted outcome.
+Dedicated namespaces and dual point indices prevent another task family or
+client from adopting that identity. The existing per-family receipt ceiling
+remains; uncertain starts never become absent or a fresh retry.
+
+The binding decoder checks one request in isolation; the real plan step is
+independently matched and retained. Only minimized identity hashes enter these
+records. Actual approval/source policy stays in the future owning composition.
+This store starts no task and supplies no runtime, model-byte, native, resource,
+result-Save, public-host or parent qualification. Core/SQLite metadata fixtures
+and strict types test this boundary without model loading or quality scoring.

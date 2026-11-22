@@ -1946,3 +1946,30 @@ the post-factory policy check. Actual synthetic metadata/Core/SQLite fixtures
 replace methods at both handoffs, refuse active readers and preserve class
 receivers. Duplicate-source and current policy rules remain. No model, provider
 network, task start or runtime is invoked; host qualification remains separate.
+
+### Private training task identity and uncertainty
+
+Protect the original organization, actor, client, host, workspace, plan, step,
+request and saved-input proposal digest. Copy and decode the complete effect
+before awaits. Refuse active/unknown fields, changed selectors/settings/bindings,
+foreign partitions and mismatched point indices. A valid metadata hash alone
+supplies no approval or execution authority. The owning composition must prove
+current exact policy before its root-owned transaction; this adapter cannot
+replace that check.
+
+Use training-only task/index/count namespaces and the existing 2,048-record
+per-client/workspace family ceiling. Reserve the task and both indices atomically,
+acknowledge issuance once and preserve unconfirmed reservations/starts. A trusted
+new invocation can record a proven non-start, never reinterpret old uncertainty.
+Accepted receipts retain their original actor/input identity across newer
+approval revisions without authorizing a repeated effect. Check both exact
+indices on point reads; never enumerate shared runtime history or adopt IDs from
+download, Data or Context work.
+
+Store only identity and hashes, never prompts, files, model/dataset bytes or
+provider payloads. Focused Core/SQLite cases cover commit refusal, rollback,
+concurrency, lost replies, corrupt records/indices/counts, original-owner and
+active-value refusal, unchanged download behavior and real reopen. These are
+metadata software checks. Native custody, current model/source rights, runtime
+readiness/resources, task dispatch/cancellation/result saving and actual hosts
+still need separate implementation/qualification. No model-quality tests run.

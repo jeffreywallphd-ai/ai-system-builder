@@ -3086,3 +3086,15 @@ quality and before/after loss comparison are excluded. The report grants no
 public Headless, other-host, parent, retry or cleanup authority. Future product
 changes require their own relevant evidence; an older package's recorded facts
 are not a current-all-repository package pass.
+
+The exact private training task-store source and fixture select
+`headless-training-task-ledger-unit` and `headless-training-task-ledger-types`.
+The unit command runs the new original-binding/Core/SQLite lifecycle cases and
+the unchanged related Model download ledger cases. The type command strictly
+compiles those actual sources and consumers. Routing regressions execute both
+fixed commands; syntax or command registration alone cannot supply a pass.
+Missing required files, shared-only/unknown sources and explicit generic requests
+retain their existing fallback. The shared persistence README borrows this
+coverage only with a selected exact source. No app, worker, model, provider or
+Native command is selected. These passes do not qualify actual training, host
+activation, physical custody/resources, model quality or the parent roadmap.
