@@ -1591,6 +1591,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-22T06:54:22Z",
       "summary": "The Desktop test opened the workspace and configured training. Its test helper skipped secure startup, so the app correctly refused training. The corrected helper is committed to rebuild. Its 69 focused tests, documentation checks and architecture checks passed. The app and its background process closed cleanly. Training, result saving, generated output and Desktop/browser checks remain pending. One protected repeat of the failed test needs the requested approval. Other agent work continues. Accepted model accuracy tests remain closed."
+    },
+    {
+      "artifact": "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+      "command": "training-local-loader-fixture-unit; documentation; agent-support; control-plane",
+      "criterionId": "model-runtime-hosts",
+      "id": "evidence-48",
+      "incrementId": "models-training-and-generation",
+      "kind": "review",
+      "outcome": "pending",
+      "recordedAt": "2026-11-22T10:15:59Z",
+      "summary": "The second Desktop test started training, then the task failed before its results could be reviewed or saved. All app, worker and Windows test processes shut down cleanly. A regression using the actual application and runtime adapter reproduced the rejected output folder. The correction is committed on rebuild at b9185e73b; all81 focused worker tests, documentation, agent-support and helper checks passed with separate review. This is a source fix, not successful app training. Both failed attempts, all stop records and the consumed repeat allowance remain. Actual training/review/save/reopen, public Headless execution, candidate evaluation, output generation and host qualification stay pending. The API/chat revision remains after I7 and before I8."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -2424,6 +2435,12 @@
       "eventFingerprint": "e83512f6d531e95370c780169a4a8a045951e5c00da66832e8e9a7706a4a0002",
       "recordedAt": "2026-11-22T06:54:22Z",
       "sequence": 128,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b829038f191c71b3052d28b45795664ca31b598d4f0fa5a726f68f4e2a06947b",
+      "recordedAt": "2026-11-22T10:15:59Z",
+      "sequence": 129,
       "type": "evidence-recorded"
     }
   ],
@@ -4357,7 +4374,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-22T06:54:22Z",
+  "updatedAt": "2026-11-22T10:15:59Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",

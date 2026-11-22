@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-22T06:54:22Z`
+- Updated: `2026-11-22T10:15:59Z`
 
 ## Objective
 
@@ -451,7 +451,7 @@ Select, download and verify an appropriate supported local model. Fine-tune and 
 | --- | --- | --- |
 | `compatible-download`: Resolve permitted model revision, provenance, format, license and compatible runtime. Follow memory and storage guards, show the amount of memory needed if refused, and surface durable status for retry and existing supported cancellation. | local | not recorded |
 | `training-and-generation-quality`: An approved dataset and pinned model feed the available fine-tuning task profile. Record base, recipe, data hash, hardware, task and output artifact. Run evaluation against a fixed baseline and separate training, readiness and quality results. Include supported image generation and output import in scoped capability coverage. | local | not recorded |
-| `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning/evaluation, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Document supported hardware profiles and unavailable methods instead of passing a stand-in. | controlled-environment | pending (test) |
+| `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning/evaluation, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Document supported hardware profiles and unavailable methods instead of passing a stand-in. | controlled-environment | pending (review) |
 | `security-model-supply-and-limits`: Use existing host-managed providers, safe formats, integrity/allowlist controls and fail-closed executable model policy. Deny hidden new suppliers, unauthorized paid or external effects, unbounded resource reservations and unsafe retries. Keep tokens, protected sample data and raw worker output out of model tool responses. | local | not recorded |
 
 ### Verification
