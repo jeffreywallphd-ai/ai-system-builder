@@ -1613,6 +1613,43 @@
           "This record gives no permission to run another test, transfer files or publish data. Real model quality tests are excluded. The agent must complete the remaining technical work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1b3700dd2800414dad4da404bda41e69d0432faa9b74ee25cc4dca80d23bf663",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The automated Desktop test trained a small generated model.",
+          "The result stayed private until explicit Save.",
+          "The saved record reopened and survived a page reload.",
+          "The app and its owned worker shut down correctly."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "019a730a145b1fd47cfe230a903b513c47eda02cb510f664d87e6fec541dc079",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must complete Headless training, evaluation software, generated output and host checks.",
+          "This result covers one recorded local Desktop workflow.",
+          "It does not qualify other hosts, all methods, other installations, general hardware performance, current software or the full increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e84e9dde257c65d42c048295ce9769f82e994a6a9f8cce716e234bc3a35bd3c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model quality tests remain outside this increment.",
+          "This record gives no permission for another test run, retry, data transfer, cleanup or publication."
+        ]
+      }
     }
   ]
 }

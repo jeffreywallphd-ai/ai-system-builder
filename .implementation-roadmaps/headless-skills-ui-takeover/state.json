@@ -1670,6 +1670,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-22T17:52:22Z",
       "summary": "The current Desktop package was built and its files were verified. All processes owned by that build and their tracked handles closed. This proves packaging only. The UI training test, Headless execution, evaluation-software checks, generated output and host workflow qualification remain pending. Model accuracy and real output-quality scoring are excluded from this increment."
+    },
+    {
+      "artifact": "docs/operations/headless-local-training-ui-qualification.json",
+      "command": null,
+      "criterionId": "model-runtime-hosts",
+      "id": "evidence-51",
+      "incrementId": "models-training-and-generation",
+      "kind": "review",
+      "outcome": "pending",
+      "recordedAt": "2026-11-22T19:34:42Z",
+      "summary": "The recorded generated-Tiny Desktop workflow passed training acceptance, private review, candidate absence before Save, explicit saving, reopening and renderer reload. The app, its observed worker and original Native Job retired with confirmed acknowledgements. This qualifies the private local loader workflow only. Public Headless training and task controls, evaluation-software checks, generation/import and paired-host verification remain pending. Real model quality scoring is excluded."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1752,6 +1763,16 @@
       "nextAction": "Continue the separately reviewed small generated-model UI training test, then the remaining Headless training, evaluation-software, output-import and host work. Keep real model quality tests excluded and all genuine technical gaps pending.",
       "recordedAt": "2026-11-22T17:52:22Z",
       "summary": "The corrected offline Desktop package and its saved verification evidence passed. This support does not complete a model or Headless workflow.",
+      "targetIncrementId": "models-training-and-generation"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "i7-desktop-workflow-without-model-scoring-20261122",
+      "impact": "within-increment",
+      "nextAction": "Continue Headless training approvals, original task execution/control and reviewed saving. Then complete controlled evaluation-software checks, generation/import and host verification. Keep real model-quality tests excluded and actual unfinished technical work pending.",
+      "recordedAt": "2026-11-22T19:34:42Z",
+      "summary": "The repaired Desktop private training workflow and its bounded saved-evidence checks passed. No model-quality score or public Headless pass is asserted.",
       "targetIncrementId": "models-training-and-generation"
     }
   ],
@@ -2585,6 +2606,18 @@
       "eventFingerprint": "41ab53e8e8edac986618dc251c5f87fdaa42a3a9403a285a508b6f527bca9bc7",
       "recordedAt": "2026-11-22T17:52:22Z",
       "sequence": 138,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "bd1573a74b8d5ba2988a9d0b91d345e836850aae85de2f15ec446810ffa14a26",
+      "recordedAt": "2026-11-22T19:34:42Z",
+      "sequence": 139,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "882cb3e252dd6e8c80be57c91a411d86ce1800581c17e2505bac286eda84c382",
+      "recordedAt": "2026-11-22T19:34:42Z",
+      "sequence": 140,
       "type": "feedback-recorded"
     }
   ],
@@ -4913,7 +4946,7 @@
       ]
     }
   ],
-  "updatedAt": "2026-11-22T17:52:22Z",
+  "updatedAt": "2026-11-22T19:34:42Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
