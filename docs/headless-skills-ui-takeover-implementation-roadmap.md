@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-22T15:25:14Z`
+- Updated: `2026-11-22T16:31:54Z`
 
 ## Objective
 
@@ -451,8 +451,15 @@ Select, download and verify an appropriate supported local model. Fine-tune and 
 | --- | --- | --- |
 | `compatible-download`: Resolve permitted model revision, provenance, format, license and compatible runtime. Follow memory and storage guards, show the amount of memory needed if refused, and surface durable status for retry and existing supported cancellation. | local | not recorded |
 | `training-and-generation-quality`: An approved dataset and pinned model feed the available fine-tuning task profile. Record base, recipe, data hash, hardware, task and output artifact. Run evaluation against a fixed baseline and separate training, readiness and quality results. Include supported image generation and output import in scoped capability coverage. | local | not recorded |
-| `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning/evaluation, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Document supported hardware profiles and unavailable methods instead of passing a stand-in. | controlled-environment | pending (review) |
+| `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Verify evaluation software with deterministic controlled metrics, including fixed-baseline calculation, result shape, lineage and current permissions. Model accuracy, real output-quality scoring and before/after model-quality measurements are excluded from this increment's tests. Document supported hardware profiles and unavailable methods instead of passing a stand-in. | controlled-environment | pending (review) |
 | `security-model-supply-and-limits`: Use existing host-managed providers, safe formats, integrity/allowlist controls and fail-closed executable model policy. Deny hidden new suppliers, unauthorized paid or external effects, unbounded resource reservations and unsafe retries. Keep tokens, protected sample data and raw worker output out of model tool responses. | local | not recorded |
+
+### Technical policy amendment history
+
+- Apply the explicit user instruction to omit real model quality tests from increment seven. Retain evaluation software checks with controlled metrics and every non-quality technical obligation. This amendment supplies no measurement, pass, chunk completion or effect authority. (`user-headless-i7-no-model-quality-tests-20261122`); no test pass or completion is asserted.
+  - Original `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning/evaluation, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Document supported hardware profiles and unavailable methods instead of passing a stand-in.
+  - Superseded requirements: Real model evaluation in the controlled Model host criterion.; Real model evaluation in the final Model host chunk and its actual-host completion test.; Real model quality measurements in the task-specific quality completion test.
+  - Retained requirements: Actual authorized supported model download, pinned safe formats and provenance/license checks.; Actual bounded local fine-tuning, progress, checkpoints, private review and approved save.; Supported generation, output import, exact task/result history and recovery.; Evaluation software correctness with deterministic controlled metrics and fixed-baseline arithmetic, result shape, lineage and permissions; no model score is claimed.; Real Desktop/Managed status and separately approved revocable reveals.; Existing memory, storage, native ownership, time limits, cleanup and fail-closed controls.; Original actor, workspace, model, dataset and recipe permissions, current approvals and exact replay checks.; All security criteria, completed history and genuine non-quality technical gaps.; Fresh candidate-bound tests and separate review, all implementation chunks and final overall qualification.
 
 ### Verification
 

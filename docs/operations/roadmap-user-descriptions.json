@@ -311,43 +311,8 @@
         ]
       }
     },
-    {
-      "roadmap_id": "headless-skills-ui-takeover",
-      "increment_id": "models-training-and-generation",
-      "criterion_id": "training-and-generation-quality",
-      "source_description_sha256": "9e1fd528d5de97a37d2d35c3d986c763d7be377ca735324d5acc11473f464289",
-      "qualification": "local",
-      "user_description": {
-        "purpose": "Train and evaluate a model or generate an output.",
-        "owner": "agent",
-        "next_action": "The agent must implement this capability and check the requirements below.",
-        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
-        "requirements": [
-          "Use an approved dataset, exact base model, fixed recipe, and supported hardware.",
-          "Record the dataset fingerprint, task type, base model, recipe, hardware and output artifact.",
-          "Compare with a fixed baseline. Report separate results for training, readiness and quality.",
-          "Cover supported image generation and importing the result into the workspace."
-        ]
-      }
-    },
-    {
-      "roadmap_id": "headless-skills-ui-takeover",
-      "increment_id": "models-training-and-generation",
-      "criterion_id": "model-runtime-hosts",
-      "source_description_sha256": "ccebdc19cce735a5f395f0c447a87aaf9648895c5fb003447d9ce5777d36b1a6",
-      "qualification": "controlled-environment",
-      "user_description": {
-        "purpose": "Test real model and generation work within resource limits.",
-        "owner": "agent",
-        "next_action": "The agent must implement this capability and check the requirements below.",
-        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
-        "requirements": [
-          "Download an approved supported small model in the controlled test environment. Run bounded local fine-tuning and evaluation, and generate an output.",
-          "Verify resource refusal, task recovery and owned cleanup.",
-          "Reveal exact status in both apps under approved window control. Identify hardware and methods that could not be tested."
-        ]
-      }
-    },
+    {"roadmap_id":"headless-skills-ui-takeover","increment_id":"models-training-and-generation","criterion_id":"training-and-generation-quality","source_description_sha256":"9e1fd528d5de97a37d2d35c3d986c763d7be377ca735324d5acc11473f464289","qualification":"local","user_description":{"purpose":"Check model training, evaluation software, and output generation.","owner":"agent","next_action":"The agent must implement this capability and check the requirements below.","completion_proof":"Current automated test evidence and independent review show that the requirements are met.","requirements":["Use an approved dataset, exact base model, fixed recipe, and supported hardware.","Record the dataset fingerprint, task type, base model, recipe, hardware and output artifact.","Test evaluation software against a fixed baseline with controlled metrics. Keep training, readiness, and quality results separate. Do not score real model quality for this increment.","Cover supported image generation and importing the result into the workspace."]}},
+    {"roadmap_id":"headless-skills-ui-takeover","increment_id":"models-training-and-generation","criterion_id":"model-runtime-hosts","source_description_sha256":"a8d51f0f0fd40db015bccca0edafffc3c429a06b4888a2d700cecf3c7bff0a25","qualification":"controlled-environment","user_description":{"purpose":"Test real model workflows within resource limits.","owner":"agent","next_action":"The agent must implement this capability and check the requirements below.","completion_proof":"Current automated test evidence and independent review show that the requirements are met.","requirements":["Download an approved supported small model. Run bounded local fine-tuning, generate an output, and test task recovery.","Check evaluation software with controlled metrics. Verify baseline calculations, result format, dataset and model links, and current permissions.","Do not run model accuracy tests, score real output quality, or compare real quality before and after training in this increment.","Verify memory and storage refusal, other resource limits, and cleanup of files and processes owned by the task.","Show exact task status in Desktop and browser views. Require separate window approval and verify that revoking control stops access.","Document supported hardware and unavailable methods. A simulated result cannot pass a real execution check."]}},
     {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "models-training-and-generation",
