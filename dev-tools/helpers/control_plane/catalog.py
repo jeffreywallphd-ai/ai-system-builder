@@ -170,6 +170,25 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "model-training-worker-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/worker/README.md",
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"),
+    },
     "model-training-lifecycle-unit": {
         "automatic_sources": (
             "modules/application/use-cases/model/train-model.use-case.ts",

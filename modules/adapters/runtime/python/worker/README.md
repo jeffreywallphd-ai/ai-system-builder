@@ -1606,3 +1606,13 @@ Standalone launch without a proof nonce retains its prior behavior, but managed
 foundations will not adopt that listener. The proof establishes startup ownership
 under trusted-worker/exclusive-bind assumptions, not continuing mutual network
 authentication or native exit qualification.
+
+## Training selection preflight
+
+Text training validates its local train/validation selections before importing
+the optional datasets library. It requires at least one train file and rejects
+unknown split roles. Selected test splits are held out: the text reader does not
+inspect their paths, include them in the dataset loader, or relabel them as train
+or validation. This matches the existing multimodal separation. It does not
+prove row-level disjointness or run an evaluation. Valid requests still require
+the installed runtime/dependencies; no installation or model download is added.

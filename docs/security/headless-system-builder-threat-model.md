@@ -1704,3 +1704,10 @@ also differ from recorded held-out test digests, including under alternate keys.
 This check reads no test bytes and proves neither row-level separation nor fresh
 test-content or model quality. A different versioned source or aggregate key
 can legitimately contain the same bytes as a training shard.
+
+Text worker selection preflight prevents a held-out test role from falling through
+to training. Ignore test selections before path/format inspection; reject unknown
+roles and require train files before importing the optional dataset supplier.
+Controlled import/path spies and existing ordinary worker regressions qualify
+these denial paths without model loading or installation. This does not attest
+row-level separation, actual training quality, resources, native or host behavior.

@@ -2886,3 +2886,15 @@ also differ from recorded held-out test digests, including under alternate keys.
 This check reads no test bytes and proves neither row-level separation nor fresh
 test-content or model quality. A different versioned source or aggregate key
 can legitimately contain the same bytes as a training shard.
+
+The exact model-training-worker-unit profile delegates to the existing tracked-file
+helper for the ordinary training worker test file. That helper requires the pinned
+pytest tools, neutral config, no conftest, no plugin autoload and no cache provider;
+it installs nothing. Its routing regression must also execute the actual fixed
+command, verify passing worker assertions and clean only its identified temporary
+root. This supplies candidate-bound feature evidence while registering the new
+profile; command-shape checks alone are insufficient. Missing source/test/helper
+files and unknown/shared/explicit generic checks retain fallback. The shared worker
+README borrows training coverage only when the exact training source already
+selects this profile; README-only changes cannot select it. Synthetic
+training controls do not qualify a model, hardware, native resource, host or parent.

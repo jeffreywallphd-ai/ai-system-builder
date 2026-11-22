@@ -1996,3 +1996,13 @@ also differ from recorded held-out test digests, including under alternate keys.
 This check reads no test bytes and proves neither row-level separation nor fresh
 test-content or model quality. A different versioned source or aggregate key
 can legitimately contain the same bytes as a training shard.
+
+## Training selection preflight
+
+Text training validates its local train/validation selections before importing
+the optional datasets library. It requires at least one train file and rejects
+unknown split roles. Selected test splits are held out: the text reader does not
+inspect their paths, include them in the dataset loader, or relabel them as train
+or validation. This matches the existing multimodal separation. It does not
+prove row-level disjointness or run an evaluation. Valid requests still require
+the installed runtime/dependencies; no installation or model download is added.

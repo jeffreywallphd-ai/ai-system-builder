@@ -382,6 +382,62 @@ def test_multimodal_label_collectors_use_nested_purpose_paths() -> None:
     ) == ["invoice"]
 
 
+@pytest.mark.parametrize("selection", ["empty", "validation-only", "test-only", "unknown-role"])
+def test_dataset_split_preflight_runs_before_training_dependency_import(monkeypatch, tmp_path, selection):
+    import builtins
+
+    request = _request(tmp_path)
+    if selection == "empty":
+        request.datasets = []
+    else:
+        role = {"validation-only": "validation", "test-only": "test", "unknown-role": "not-a-split"}[selection]
+        request.datasets = [request.datasets[0].model_copy(update={"splitRole": role})]
+    imports = []
+    original_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name == "datasets":
+            imports.append(name)
+            raise AssertionError("Invalid training selections cannot load a training dependency.")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    expected = "Unsupported training dataset split role" if selection == "unknown-role" else "At least one train split dataset"
+    with pytest.raises(ValueError, match=expected):
+        train_model_module._load_dataset(request)
+    assert imports == []
+
+
+@pytest.mark.parametrize("test_file_exists", [False, True])
+def test_heldout_test_selection_is_not_a_training_or_validation_file(monkeypatch, tmp_path, test_file_exists):
+    request = _request(tmp_path)
+    heldout = tmp_path / "heldout.jsonl"
+    if test_file_exists:
+        heldout.write_text('{"text":"Synthetic held-out test row"}\n', encoding="utf-8")
+    request.datasets.append(request.datasets[0].model_copy(update={"artifactId": "heldout-test", "splitRole": "test", "path": str(heldout)}))
+    original_exists = Path.exists
+    checked = []
+    loaded = {"train": [{"text": "Synthetic training row"}]}
+
+    def exists(candidate):
+        checked.append(candidate)
+        if candidate == heldout:
+            raise AssertionError("Held-out paths cannot enter training input inspection.")
+        return original_exists(candidate)
+
+    def load_local(name, *, data_files):
+        assert name == "json"
+        assert data_files == {"train": [request.datasets[0].path]}
+        return loaded
+
+    monkeypatch.setattr(Path, "exists", exists)
+    monkeypatch.setitem(sys.modules, "datasets", SimpleNamespace(load_dataset=load_local))
+    actual, evaluation = train_model_module._load_dataset(request)
+    assert actual is loaded
+    assert evaluation is None
+    assert heldout not in checked
+
+
 def test_train_model_validates_required_inputs(tmp_path: Path) -> None:
     payload = _request(tmp_path)
     payload.datasets = []
@@ -665,3 +721,22 @@ def test_run_trainer_reports_estimated_total_batches_before_training(monkeypatch
         {"epoch": 1, "totalEpochs": 1, "batch": 1, "totalBatches": 59},
         {"epoch": 1, "totalEpochs": 1, "batch": 2, "totalBatches": 59},
     ]
+
+
+def test_valid_training_selection_retains_explicit_missing_dependency_failure(monkeypatch, tmp_path):
+    import builtins
+
+    request = _request(tmp_path)
+    imports = []
+    original_import = builtins.__import__
+
+    def unavailable(name, *args, **kwargs):
+        if name == "datasets":
+            imports.append(name)
+            raise ModuleNotFoundError("Synthetic missing training dependency")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", unavailable)
+    with pytest.raises(RuntimeError, match="datasets is required for model training dataset loading"):
+        train_model_module._load_dataset(request)
+    assert imports == ["datasets"]

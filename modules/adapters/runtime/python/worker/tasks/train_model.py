@@ -214,16 +214,17 @@ def _resolve_training_purpose_paths(
 
 
 def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
-    try:
-        from datasets import load_dataset
-    except Exception as error:  # pragma: no cover - dependency failure
-        raise RuntimeError("datasets is required for model training dataset loading.") from error
-
     train_files: list[str] = []
     validation_files: list[str] = []
     dataset_format: str | None = None
 
     for dataset in payload.datasets:
+        # Held-out test data is not a training or validation input. Match the
+        # existing multimodal separation without inspecting its paths or bytes.
+        if dataset.splitRole == "test":
+            continue
+        if dataset.splitRole not in {"train", "validation"}:
+            raise ValueError("Unsupported training dataset split role.")
         _require_non_empty(dataset.artifactId, "datasets[].artifactId")
         path = _dataset_path(dataset)
         if not path.exists():
@@ -239,6 +240,13 @@ def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
 
     if not train_files:
         raise ValueError("At least one train split dataset is required.")
+
+    # Validate local selections first, including when this optional dependency
+    # is absent. Installing it cannot make an invalid training request valid.
+    try:
+        from datasets import load_dataset
+    except Exception as error:  # pragma: no cover - dependency failure
+        raise RuntimeError("datasets is required for model training dataset loading.") from error
 
     dataset_dict = {"train": train_files}
     if validation_files:

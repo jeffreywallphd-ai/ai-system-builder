@@ -961,3 +961,9 @@ also differ from recorded held-out test digests, including under alternate keys.
 This check reads no test bytes and proves neither row-level separation nor fresh
 test-content or model quality. A different versioned source or aggregate key
 can legitimately contain the same bytes as a training shard.
+
+The existing text training worker validates train/validation selections before
+importing optional dataset dependencies and ignores held-out test selections.
+Unknown split roles deny. Reuse this preflight in future admitted Headless
+training; metadata, source bytes and successful feature tests do not establish
+installed runtime, Model compatibility, resource or actual-host qualification.
