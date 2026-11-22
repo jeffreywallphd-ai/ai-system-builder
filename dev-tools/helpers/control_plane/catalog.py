@@ -170,6 +170,25 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "training-local-loader-fixture-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+            "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+        ),
+        "automatic_required_files": (
+            "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+            "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "dev-tools/README.md", "modules/adapters/runtime/python/worker/README.md",
+            "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+            "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py"),
+    },
     "model-training-image-worker-unit": {
         "interpreter": "python",
         "automatic_sources": (
@@ -2827,6 +2846,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     # A form-only UI check never claims coverage of the shared Canvas CSS.
     # Include its existing stylesheet contracts only for the explicit Form slice.
     required = set(required)
+    explicit_required = set(required)
     headless_explicit = HEADLESS_DESKTOP_READ_CHECK in required
     headless_sources = HEADLESS_DESKTOP_READ_SOURCES if headless_explicit else HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES
     activation_explicit = HEADLESS_DESKTOP_ACTIVATION_CHECK in required
@@ -2839,8 +2859,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                     if set(paths).intersection(check.get("automatic_sources", ())) and _automatic_files_available(root, check))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if check.get("companion_to") in required and set(paths).intersection(check["sources"]))
+    # Two exact inert training-fixture files have their own executed regression
+    # profile. They do not require unrelated operational UI fixtures. Preserve
+    # explicit operational coverage, unavailable-file and every other-path rule.
+    training_fixture = PUBLISHED_FORM_CHECKS["training-local-loader-fixture-unit"]
+    isolated_training_fixture = ("training-local-loader-fixture-unit" in required and
+                                 _automatic_files_available(root, training_fixture))
     covered = {p: [c["id"] for c in checks
-                   if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
+                   if (any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"]) and not (
+                       c["id"] == "operational-ui" and c["id"] not in explicit_required and
+                       isolated_training_fixture and p in training_fixture["automatic_sources"]))
                    or (c["id"] in required and (
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
                        (c["id"] == HEADLESS_DESKTOP_READ_CHECK and p in headless_sources) or

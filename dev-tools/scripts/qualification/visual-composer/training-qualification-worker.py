@@ -26,6 +26,31 @@ def deny():
     raise ValueError("The fixed training qualification request is unavailable.")
 
 
+def bind_private_local_training_entry(application, training_tasks, fixture):
+    """Select a real private entry for the fixed Tiny TEST composition only.
+
+    Source/worker/native witnesses remain the caller's existing prerequisite.
+    This function does not invoke training or enable a product capability.
+    """
+    if type(fixture) is not dict:
+        deny()
+    schema, profile = fixture.get("schemaVersion"), fixture.get("inputProfile")
+    if (type(schema) is not str or schema != "training-host-fixture-v2" or
+            type(profile) is not str or profile != "generated-tiny-qwen2-v1" or
+            type(application) is not ModuleType or type(training_tasks) is not ModuleType or application is training_tasks):
+        deny()
+    application_values, task_values = application.__dict__, training_tasks.__dict__
+    original, ordinary, local = (application_values.get("train_model"), task_values.get("train_model"),
+                                 task_values.get("train_model_from_local_files"))
+    name = task_values.get("__name__")
+    if (type(original) is not FunctionType or original is not ordinary or type(local) is not FunctionType or
+            local is ordinary or type(name) is not str or type(original.__module__) is not str or
+            type(local.__module__) is not str or original.__module__ != name or local.__module__ != name):
+        deny()
+    application_values["train_model"] = local
+    return local
+
+
 def _source_identity_bytes(root, target):
     """Bound two exact current source files; not a native custody capability."""
     regular_under(root, target, 64 * 1024)
@@ -513,6 +538,9 @@ def main():
     spec.loader.exec_module(module)
     host, port = module._resolve_launch_configuration()  # Real token and loopback guard.
     application = importlib.import_module("_ai_system_builder_worker.app")
+    if tiny:
+        training_tasks = importlib.import_module("_ai_system_builder_worker.tasks.train_model")
+        bind_private_local_training_entry(application, training_tasks, fixture)
     if dataset_cache is not None:
         training_tasks = importlib.import_module("_ai_system_builder_worker.tasks.train_model")
         original_dataset_loader = training_tasks._load_dataset

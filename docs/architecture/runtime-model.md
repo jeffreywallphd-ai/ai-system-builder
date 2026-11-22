@@ -2084,3 +2084,15 @@ This shared queue repair does not convert legacy ID-based progress/cancel APIs
 into private task authority. Approved Headless training still needs its own
 original actor/plan, installed-only readiness, exact model/input bytes, task
 controls, result-save, resource and actual-host qualification.
+
+### Generated-Tiny qualification composition
+
+Reuse the existing fixed generated-Tiny Desktop training profile to exercise
+private local loading. Bind the actual private function only after its validated
+Tiny fixture and source-bound worker modules are available. Compare original
+application/training-module function identity, exact module/function kinds and
+module labels; reject missing, aliased or foreign private support without ordinary
+fallback. Replace only the test application's entry. Legacy qualification and
+product roots remain unchanged. Structural binding is not source authenticity:
+existing runtime/package/native witnesses and a fresh bounded physical UI run
+remain required. This does not activate Headless training or qualify its controls.

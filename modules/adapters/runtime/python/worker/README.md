@@ -1682,3 +1682,11 @@ This repair changes queue/terminal publication only. Generic ID-based progress
 and cancellation interfaces remain legacy interfaces, not original-client,
 approval, installed-only or private Headless training authority. No model/file,
 native, resource or actual-host qualification is supplied by inert race fixtures.
+
+The fixed generated-Tiny Desktop qualification composition selects this private
+local-only entry after loading its source-bound worker modules. It checks the
+original ordinary function identity and a distinct private function in the same
+training module, then replaces only that test application's entry. Missing or
+changed support denies without an ordinary fallback. The legacy test profile and
+normal product entry remain unchanged. Inert binding tests prove no actual model
+effect; native/runtime/package witnesses and a fresh real journey are separate.

@@ -17,6 +17,134 @@ worker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(worker)
 
 
+class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
+    def modules(self):
+        tasks = ModuleType("synthetic_training_tasks")
+        application = ModuleType("synthetic_worker_application")
+        calls = []
+        def ordinary(*args, **kwargs):
+            calls.append(("ordinary", args, kwargs))
+            return "ordinary-result"
+        def local(*args, **kwargs):
+            calls.append(("local", args, kwargs))
+            return "local-result"
+        ordinary.__module__ = local.__module__ = tasks.__name__
+        tasks.train_model = application.train_model = ordinary
+        tasks.train_model_from_local_files = local
+        return application, tasks, calls
+
+    def fixture(self):
+        return {"schemaVersion": "training-host-fixture-v2", "inputProfile": "generated-tiny-qwen2-v1"}
+
+    def test_exact_private_function_is_selected_without_calling_a_supplier(self):
+        application, tasks, calls = self.modules()
+        selected = worker.bind_private_local_training_entry(application, tasks, self.fixture())
+        self.assertIs(selected, tasks.train_model_from_local_files)
+        self.assertIs(application.train_model, selected)
+        self.assertEqual(calls, [])
+        payload, progress = object(), lambda _: None
+        self.assertEqual(application.train_model(payload, on_progress=progress), "local-result")
+        self.assertEqual(calls, [("local", (payload,), {"on_progress": progress})])
+
+    def test_non_tiny_or_malformed_fixture_refuses_without_replacing_original(self):
+        for fixture in ({}, {"schemaVersion": "training-host-fixture-v1"},
+                        {"schemaVersion": "training-host-fixture-v2", "inputProfile": "other"}, None, []):
+            with self.subTest(fixture=fixture):
+                application, tasks, calls = self.modules()
+                original = application.train_model
+                with self.assertRaises(ValueError):
+                    worker.bind_private_local_training_entry(application, tasks, fixture)
+                self.assertIs(application.train_model, original)
+                self.assertEqual(calls, [])
+
+    def test_missing_alias_or_foreign_private_function_cannot_fall_back(self):
+        for changed in ("missing", "alias", "foreign", "callable-object"):
+            with self.subTest(changed=changed):
+                application, tasks, calls = self.modules()
+                original = application.train_model
+                if changed == "missing":
+                    del tasks.train_model_from_local_files
+                elif changed == "alias":
+                    tasks.train_model_from_local_files = tasks.train_model
+                elif changed == "foreign":
+                    tasks.train_model_from_local_files.__module__ = "synthetic_foreign"
+                else:
+                    class Active:
+                        def __call__(self, *_args, **_kwargs):
+                            raise AssertionError("A callable object must not run.")
+                    tasks.train_model_from_local_files = Active()
+                with self.assertRaises(ValueError):
+                    worker.bind_private_local_training_entry(application, tasks, self.fixture())
+                self.assertIs(application.train_model, original)
+                self.assertEqual(calls, [])
+
+    def test_changed_application_or_training_default_function_is_not_adopted(self):
+        for target in ("application", "tasks"):
+            with self.subTest(target=target):
+                application, tasks, calls = self.modules()
+                replacement = lambda *_args, **_kwargs: self.fail("Replacement must not run.")
+                (application if target == "application" else tasks).train_model = replacement
+                original = application.train_model
+                with self.assertRaises(ValueError):
+                    worker.bind_private_local_training_entry(application, tasks, self.fixture())
+                self.assertIs(application.train_model, original)
+                self.assertEqual(calls, [])
+
+    def test_arbitrary_or_subclassed_modules_cannot_run_attribute_hooks(self):
+        class ActiveModule(ModuleType):
+            def __getattribute__(self, _key):
+                raise AssertionError("A module hook must not run.")
+        application, tasks, calls = self.modules()
+        for candidate_app, candidate_tasks in ((object(), tasks), (application, object()),
+                                               (ActiveModule("synthetic"), tasks), (application, ActiveModule("synthetic"))):
+            with self.assertRaises(ValueError):
+                worker.bind_private_local_training_entry(candidate_app, candidate_tasks, self.fixture())
+        self.assertEqual(calls, [])
+
+    def test_task_module_cannot_be_rewritten_as_the_application(self):
+        _application, tasks, calls = self.modules()
+        ordinary = tasks.train_model
+        with self.assertRaises(ValueError):
+            worker.bind_private_local_training_entry(tasks, tasks, self.fixture())
+        self.assertIs(tasks.train_model, ordinary)
+        self.assertEqual(calls, [])
+
+    def test_active_fixture_or_function_module_labels_are_not_evaluated(self):
+        class Active:
+            def __eq__(self, _other):
+                raise AssertionError("A label hook must not run.")
+        for target in ("schemaVersion", "inputProfile", "function-module"):
+            application, tasks, calls = self.modules()
+            fixture = self.fixture()
+            if target == "function-module":
+                tasks.train_model_from_local_files.__module__ = Active()
+            else:
+                fixture[target] = Active()
+            original = application.train_model
+            with self.assertRaises(ValueError):
+                worker.bind_private_local_training_entry(application, tasks, fixture)
+            self.assertIs(application.train_model, original)
+            self.assertEqual(calls, [])
+
+    def test_main_selects_private_entry_only_under_existing_tiny_guard_before_dispatch(self):
+        # Source wiring only; the later actual native journey remains required.
+        tree = ast.parse(Path(worker.__file__).read_text())
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
+        calls = [node for node in ast.walk(main) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Name) and node.func.id == "bind_private_local_training_entry"]
+        self.assertEqual(len(calls), 1)
+        guards = [node for node in ast.walk(main) if isinstance(node, ast.If) and ast.unparse(node.test) == "tiny"
+                  and calls[0] in list(ast.walk(node))]
+        self.assertEqual(len(guards), 1)
+        imports = [node for node in ast.walk(guards[0]) if isinstance(node, ast.Call)
+                   and isinstance(node.func, ast.Attribute) and node.func.attr == "import_module"]
+        self.assertTrue(any(node.args and isinstance(node.args[0], ast.Constant)
+                            and node.args[0].value == "_ai_system_builder_worker.tasks.train_model" for node in imports))
+        dispatch = next(node for node in ast.walk(main) if isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Name) and node.func.id == "single_training_dispatch")
+        self.assertLess(calls[0].lineno, dispatch.lineno)
+
+
 class TrainingQualificationWorkerTests(unittest.TestCase):
     def setUp(self):
         self.fixture = {"workspaceId": "workspace.training", "baseModelRecordId": "model.input", "datasetArtifactIds": ["data.train", "data.validation"]}

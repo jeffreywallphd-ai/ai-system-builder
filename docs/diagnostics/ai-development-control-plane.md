@@ -2950,3 +2950,16 @@ completion and ordinary lifecycle behavior remain covered. Related Model-source
 owner/identity/ASGI fixtures protect the unchanged private branch. These checks
 do not establish private Headless progress/cancel authority, model execution,
 installed readiness, resources, native custody or parent qualification.
+
+The exact training-local-loader-fixture-unit profile executes the complete inert
+training-qualification-worker test file through the existing tracked-file helper.
+Its mandatory routing harness also executes the actual fixture assertions; shape
+checks alone cannot pass. It covers Tiny-only original/private function identity,
+active/missing/aliased/foreign module refusal and source wiring without engines.
+
+Only the two exact adapter/test files, with all three required files present,
+replace automatic operational-ui selection. An explicit operational-ui request,
+any other operational source, and unavailable-file fallback preserve the original
+profile; explicitly requested focused-tests also stays. Developer/worker READMEs
+borrow this coverage only alongside a selected exact source. Source verification
+does not execute or qualify the later reviewed native/package/UI/model journey.

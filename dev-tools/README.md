@@ -2280,3 +2280,13 @@ ignores errors. An optional inert setup loads the actual MJS/TypeScript definiti
 before the test worker, without opening an executing provider fixture. The original
 standalone loader-proof modes remain available. These checks start no browser,
 provider or model and grant no private UI, native, model or parent qualification.
+
+The fixed generated-Tiny Desktop training test selects the actual private
+`train_model_from_local_files` entry in its test-only worker composition. It
+compares the original application/training-module function identities and denies
+missing, aliased, foreign or active support without ordinary fallback. The
+legacy qualification profile and product roots stay unchanged. Inert fixture
+checks run no engine/model; a real result still needs current reviewed source,
+runtime/package witnesses, fresh owned native admission and the actual UI run.
+Keep all prior evidence and native limits. Do not adopt old temporary trees or
+reuse a consumed retry. This feature check does not repeat accepted accuracy.

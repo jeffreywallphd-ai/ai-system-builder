@@ -1019,3 +1019,11 @@ overwrite its Future after a late submit reply. Preserve normal inline completio
 and the existing dedicated Model-source owner protocol. This prerequisite grants
 no private progress/cancel, approval, installed-runtime, model/native/resource or
 Headless host authority. Those remain separate requirements before activation.
+
+Reuse the existing generated-Tiny Desktop training fixture for later physical
+private-loader checks. Its test-only composition selects the actual distinct
+private training function after source-bound module loading; changed/missing
+support fails instead of falling back to the ordinary loader. Keep the legacy
+profile, native limits/witnesses and product roots unchanged. Inert function and
+wiring tests are source support only. A fresh separately reviewed effect plan and
+real current-source run remain necessary; this is no Headless activation/pass.

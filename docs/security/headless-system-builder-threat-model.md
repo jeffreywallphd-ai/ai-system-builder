@@ -1779,3 +1779,19 @@ Legacy generic progress/cancel interfaces remain ID based and cannot supply a
 private Headless task's original actor/approval or ownership proof. Resource,
 file/native custody, installed-only training and actual-host checks stay pending.
 Rollback must preserve original-row refusal, never restore shared-row adoption.
+
+### Private loader qualification binding
+
+The generated-Tiny test must not claim private loading after silently using the
+ordinary entry. Require its exact validated profile, exact ModuleType namespaces,
+the original shared ordinary FunctionType identity and a distinct private function
+from that training module before test-only assignment. Reject module subclasses,
+active labels and missing/aliased/changed functions without evaluating supplier
+hooks or invoking training. Legacy qualification and product roots are unchanged.
+
+These structural checks are not module authenticity or runtime authority. The
+existing source/runtime/package witnesses, fresh native ownership, limits and
+actual UI/model evidence remain mandatory. Inert source tests and a callback
+selection do not qualify physical training, cleanup or Headless controls. Preserve
+old evidence/stop markers; rollback disables Tiny private qualification rather
+than restoring an ordinary fallback.
