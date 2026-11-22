@@ -1130,6 +1130,123 @@ describe("TrainModelUseCase", () => {
     expect(storage.retrieveArtifact).not.toHaveBeenCalled(); expect(runtimeTaskRegistry.startTask).not.toHaveBeenCalled();
   });
 
+
+  function sharedImageStagingFixture() {
+    const ids = ["images/a/image.png", "images/b/image.png", "images/c/image.png"];
+    const datasets = ["manifest-train", "manifest-validation"];
+    const byDataset = new Map([[datasets[0]!, [ids[0]!, ids[1]!]], [datasets[1]!, [ids[1]!, ids[2]!]]]);
+    const bindings = new Map([...datasets.map(id => [id, "datasets/" + id] as const), ...ids.map(id => [id, "images/" + id] as const)]);
+    const sourceReads = new Map<string, number>(), bindingReads = new Map<string, number>();
+    const state = {onBinding: undefined as ((id: string, count: number) => Promise<void>) | undefined, denied: new Set<string>()};
+    let issued = 0;
+    const starts = testDouble.fn(async (request: StartRuntimeTaskRequest) => {
+      const requestId = "shared-image-run-" + (++issued);
+      await rememberStage(request);
+      return {requestId, accepted: true, status: "queued" as const};
+    });
+    const runtime: RuntimeTaskRegistryPort = {...createRuntimeTaskRegistryFake(), startTask: starts,
+      getTaskStatus: async requestId => ({requestId, workspaceId: "workspace-a" as never,
+        taskType: TaskType.MODEL_TRAINING, status: "cancelled", concurrencyClass: "compute"}),
+    };
+    const storageBindings = {readArtifactStorageBindings: async ({artifactId}: {artifactId: string}) => {
+      const count = (bindingReads.get(artifactId) ?? 0) + 1; bindingReads.set(artifactId, count);
+      await state.onBinding?.(artifactId, count);
+      if (state.denied.has(artifactId)) return {ok: false as const, error: {code: "forbidden", message: "Synthetic source permission denied."}};
+      return {ok: true as const, value: {bindings: [{artifactId, workspaceId: "workspace-a" as never, role: "primary",
+        backing: {kind: "artifact-object" as const, provider: "local" as const, locator: bindings.get(artifactId)!}}]}};
+    }};
+    const bytesFor = (id: string) => new Uint8Array([137, 80, 78, 71, ids.indexOf(id) + 1]);
+    const storage = {retrieveArtifact: testDouble.fn(async ({key}: {key: string}) => {
+      const dataset = datasets.find(id => "datasets/" + id === key);
+      if (dataset) return {ok: true as const, value: {descriptor: {key, mediaType: "application/jsonl",
+        metadata: {sourceArtifactIds: byDataset.get(dataset)!}},
+        content: new TextEncoder().encode(byDataset.get(dataset)!.map(image => JSON.stringify({image, caption: "Synthetic"})).join("\n") + "\n")}};
+      const id = ids.find(id => bindings.get(id) === key);
+      if (!id) throw new Error("Unknown synthetic source.");
+      sourceReads.set(id, (sourceReads.get(id) ?? 0) + 1);
+      return {ok: true as const, value: {descriptor: {key, mediaType: "image/png"}, content: bytesFor(id)}};
+    })};
+    const useCase = new TrainModelUseCase({runtimeTaskRegistry: runtime, modelRegistry: baseRegistry,
+      storageBindings: storageBindings as never, storage: storage as never, taskPowerLifecycle: createLifecycleFake()});
+    const request = {...baseRequest, trainingTask: "diffusion-lora", datasets: [
+      {artifactId: datasets[0]!, splitRole: "train" as const}, {artifactId: datasets[1]!, splitRole: "validation" as const}]};
+    return {ids, datasets, byDataset, bindings, sourceReads, bindingReads, state, starts, runtime, storage, useCase, request, bytesFor};
+  }
+
+  it("shares one owned source copy and keeps different same-basename sources distinct across datasets", async () => {
+    const f = sharedImageStagingFixture(), result = await f.useCase.execute(f.request);
+    const payload = f.starts.mock.calls[0]![0].payload as {datasets: {metadata: {stagedSourceArtifactPaths: Record<string, string>}}[]};
+    const first = payload.datasets[0]!.metadata.stagedSourceArtifactPaths, second = payload.datasets[1]!.metadata.stagedSourceArtifactPaths;
+    expect(first[f.ids[1]!]).toBe(second[f.ids[1]!]);
+    const distinct = [first[f.ids[0]!]!, first[f.ids[1]!]!, second[f.ids[2]!]!];
+    expect(new Set(distinct).size).toBe(3);
+    for (const [index, id] of f.ids.entries()) {
+      expect(await readFile(distinct[index]!)).toEqual(Buffer.from(f.bytesFor(id)));
+      expect(f.sourceReads.get(id)).toBe(1);
+    }
+    expect(f.bindingReads.get(f.ids[1]!)).toBe(2);
+    expect(distinct.map(value => basename(value))).toEqual(["0001-image.png", "0002-image.png", "0003-image.png"]);
+    await f.useCase.read(result.runId!, "workspace-a");
+  });
+
+  it("rereads shared-source binding and denies a changed locator before dispatch", async () => {
+    const f = sharedImageStagingFixture(), shared = f.ids[1]!;
+    f.state.onBinding = async (id, count) => {if (id === shared && count === 2) f.bindings.set(id, "changed/shared.png");};
+    await expect(f.useCase.execute(f.request)).rejects.toThrow("Training source binding changed while staging");
+    expect(f.starts).not.toHaveBeenCalled(); expect(f.bindingReads.get(shared)).toBe(2);
+    expect(f.sourceReads.get(shared)).toBe(1);
+  });
+
+  it("does not use a cached source after its binding read is denied", async () => {
+    const f = sharedImageStagingFixture(), shared = f.ids[1]!;
+    f.state.onBinding = async (id, count) => {if (id === shared && count === 2) f.state.denied.add(id);};
+    await expect(f.useCase.execute(f.request)).rejects.toThrow("Synthetic source permission denied");
+    expect(f.starts).not.toHaveBeenCalled(); expect(f.bindingReads.get(shared)).toBe(2);
+    expect(f.sourceReads.get(shared)).toBe(1);
+  });
+
+  for (const mutation of ["changed-size", "replaced-file"] as const) {
+    it("refuses a changed owned source file on reuse: " + mutation, async () => {
+      const f = sharedImageStagingFixture(), shared = f.ids[1]!, observed: string[] = [];
+      const originalWrite = fsPromises.writeFile;
+      fsPromises.writeFile = (async (...args: Parameters<typeof writeFile>) => {
+        await originalWrite(...args);
+        if (typeof args[0] === "string" && basename(dirname(args[0])) === "sources") observed.push(args[0]);
+      }) as typeof writeFile;
+      syncBuiltinESMExports();
+      try {
+        f.state.onBinding = async (id, count) => {
+          if (id !== shared || count !== 2) return;
+          const source = observed[1]!, root = dirname(dirname(source));
+          assert.equal(await realpath(root), root);
+          assert.equal(dirname(root), await realpath(tmpdir()));
+          assert.match(basename(root), /^ai-system-builder-training-datasets-[A-Za-z0-9]{6}$/);
+          const identity = await lstat(root, {bigint: true}); ownedStages.set(root, {dev: identity.dev, ino: identity.ino});
+          if (mutation === "replaced-file") {
+            const retained = source + ".original";
+            assert.equal(dirname(retained), join(root, "sources"));
+            assert.equal(await lstat(retained).catch(() => undefined), undefined);
+            await rename(source, retained);
+            await originalWrite(source, f.bytesFor(shared), {flag: "wx"});
+          } else await originalWrite(source, new Uint8Array([1, 2, 3, 4, 5, 6]));
+        };
+        await expect(f.useCase.execute(f.request)).rejects.toThrow("Training source file changed while staging");
+        expect(f.starts).not.toHaveBeenCalled(); expect(f.sourceReads.get(shared)).toBe(1);
+      } finally {fsPromises.writeFile = originalWrite; syncBuiltinESMExports();}
+    });
+  }
+
+  it("keeps source copies isolated between concurrent runs of one service", async () => {
+    const f = sharedImageStagingFixture();
+    const results = await Promise.all([f.useCase.execute(f.request), f.useCase.execute(f.request)]);
+    expect(f.starts.mock.calls.length).toBe(2);
+    const paths = f.starts.mock.calls.map(call => (call[0].payload as {datasets: {metadata: {stagedSourceArtifactPaths: Record<string, string>}}[]})
+      .datasets[0]!.metadata.stagedSourceArtifactPaths[f.ids[1]!]!);
+    expect(paths[0]).not.toBe(paths[1]);
+    for (const id of f.ids) expect(f.sourceReads.get(id)).toBe(2);
+    for (const result of results) await f.useCase.read(result.runId!, "workspace-a");
+  });
+
   it("stages source artifact paths for image training datasets", async () => {
     const lifecycle = createLifecycleFake();
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();

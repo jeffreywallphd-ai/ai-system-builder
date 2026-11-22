@@ -978,3 +978,9 @@ One training source ID must have one exact declared path string across selected
 train/validation files and both supported map fields. Conflicting bindings fail
 instead of picking a later path; repeated identical bindings remain valid. This
 metadata check does not inspect or reconcile file identities, bytes or aliases.
+
+Reuse a source image only inside its originating training invocation, after a
+fresh binding lookup and read-time check of its owned staged-file facts. Assign
+unique source ordinals across the whole run. Never fabricate bindings, overwrite,
+adopt another path or share copies across runs. Keep existing quotas and original
+task/root cleanup custody; this adds no native fence or Headless execution pass.

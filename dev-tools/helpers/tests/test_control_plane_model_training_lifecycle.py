@@ -31,6 +31,12 @@ class ModelTrainingLifecycleRoutingTests(unittest.TestCase):
             self.assertNotIn("focused-tests", selected)
             self.assertNotIn("completion-all", selected)
 
+    def test_readme_borrows_only_the_selected_training_source_profile(self):
+        readme = "modules/application/use-cases/README.md"
+        self.assertNotIn("focused-tests", self.selected([self.source, readme]))
+        self.assertNotIn(self.unit, self.selected([readme]))
+        self.assertIn("focused-tests", self.selected([self.source, readme], ("focused-tests",)))
+
     def test_shared_unknown_and_explicit_generic_selection_stays_intact(self):
         self.assertIn("focused-tests", self.selected([self.source], ("focused-tests",)))
         self.assertIn("focused-tests", self.selected([self.source, "modules/application/use-cases/model/unknown-task.ts"]))

@@ -36,6 +36,33 @@ type UnconfirmedTrainingStages = {
   outputStage?: TrainingOutputStage;
 };
 
+type StagedTrainingSource = {
+  readonly storageKey: string;
+  readonly path: string;
+  readonly device: bigint;
+  readonly inode: bigint;
+  readonly size: bigint;
+  readonly modified: bigint;
+  readonly changed: bigint;
+  readonly mode: bigint;
+};
+
+async function captureStagedTrainingSource(path: string, storageKey: string, size: number): Promise<StagedTrainingSource> {
+  const facts = await lstat(path, {bigint: true}).catch(() => undefined);
+  if (!facts?.isFile() || facts.isSymbolicLink() || facts.ino === 0n || facts.nlink !== 1n ||
+      facts.size !== BigInt(size) || await realpath(path).catch(() => undefined) !== path)
+    throw new Error("Training source file changed while staging.");
+  return {storageKey, path, device: facts.dev, inode: facts.ino, size: facts.size,
+    modified: facts.mtimeNs, changed: facts.ctimeNs, mode: facts.mode};
+}
+
+async function assertStagedTrainingSource(source: StagedTrainingSource): Promise<void> {
+  const current = await captureStagedTrainingSource(source.path, source.storageKey, Number(source.size));
+  if (current.device !== source.device || current.inode !== source.inode || current.modified !== source.modified ||
+      current.changed !== source.changed || current.mode !== source.mode)
+    throw new Error("Training source file changed while staging.");
+}
+
 async function assertTrainingOutputStage(stage: TrainingOutputStage, kind: "input" | "output" = "output"): Promise<void> {
   const stats = await lstat(stage.path, { bigint: true }).catch(() => undefined);
   if (!stats?.isDirectory() || stats.dev !== stage.device || stats.ino !== stage.inode
@@ -324,6 +351,9 @@ export class TrainModelUseCase {
     let outputStage: TrainingOutputStage | undefined;
     let outputAdmissionUnconfirmed = false;
     let stagedBytes = 0;
+    // Per invocation only. A shared source has one owned copy/path, never a
+    // process-wide cache, guessed binding, overwrite or file adoption.
+    const stagedSources = new Map<string, StagedTrainingSource>();
     const accountBytes = (bytes: number) => { stagedBytes += bytes; if (stagedBytes > 256 * 1024 * 1024) throw new Error("Training inputs exceed the aggregate byte budget."); };
     try {
       enterStage("dataset-resolution");
@@ -335,7 +365,7 @@ export class TrainModelUseCase {
           if (!stats.isDirectory() || stats.isSymbolicLink() || stats.ino === 0n || await realpath(value) !== value)
             throw new Error("Training input folder could not be verified.");
           runtimeDatasetStage = {path: value, device: stats.dev, inode: stats.ino};
-        }, accountBytes);
+        }, accountBytes, stagedSources);
         resolvedDatasets.push(resolved);
       }
 
@@ -923,6 +953,7 @@ export class TrainModelUseCase {
     getRuntimeDatasetDir: () => string | undefined,
     setRuntimeDatasetDir: (value: string) => Promise<void>,
     accountBytes: (bytes: number) => void,
+    stagedSources: Map<string, StagedTrainingSource>,
   ): Promise<ModelTrainingRequest["datasets"][number]> {
     const bindingsResult = await this.dependencies.storageBindings.readArtifactStorageBindings({
       ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
@@ -950,7 +981,7 @@ export class TrainModelUseCase {
     const bytes = trainingSourceBytes(retrieved.value.content); accountBytes(bytes.byteLength);
     await writeFile(localPath, bytes, { flag: "wx", mode: 0o600 });
     const stagedSourceArtifactPaths = isImageTrainingTask(request.trainingTask)
-      ? await this.stageSourceArtifactsForRuntime(request, datasetArtifactMetadata, runtimeDatasetDir, accountBytes)
+      ? await this.stageSourceArtifactsForRuntime(request, datasetArtifactMetadata, runtimeDatasetDir, accountBytes, stagedSources)
       : undefined;
     const datasetRuntimeMetadata = {
       ...dataset.metadata,
@@ -975,6 +1006,7 @@ export class TrainModelUseCase {
     datasetMetadata: Record<string, unknown> | undefined,
     runtimeDatasetDir: string,
     accountBytes: (bytes: number) => void,
+    stagedSources: Map<string, StagedTrainingSource>,
   ): Promise<Record<string, string>> {
     const sourceArtifactIds = extractSourceArtifactIds(datasetMetadata);
     if (sourceArtifactIds.length > 128) throw new Error("Training source artifact count exceeds its limit.");
@@ -985,7 +1017,7 @@ export class TrainModelUseCase {
     const stagedSourceArtifactPaths: Record<string, string> = {};
     await mkdir(join(runtimeDatasetDir, "sources"), { recursive: true });
 
-    for (const [sourceIndex, artifactId] of sourceArtifactIds.entries()) {
+    for (const artifactId of sourceArtifactIds) {
       const bindingsResult = await this.dependencies.storageBindings.readArtifactStorageBindings({
         ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
         artifactId,
@@ -999,14 +1031,23 @@ export class TrainModelUseCase {
         throw new Error(`Storage locator missing for source artifact '${artifactId}'.`);
       }
 
+      const cached = stagedSources.get(artifactId);
+      if (cached) {
+        if (cached.storageKey !== storageKey) throw new Error("Training source binding changed while staging.");
+        await assertStagedTrainingSource(cached);
+        stagedSourceArtifactPaths[artifactId] = cached.path;
+        continue;
+      }
+
       const retrieved = await this.dependencies.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey, { maximumBytes: MAXIMUM_TRAINING_SOURCE_BYTES }), { workspaceId: request.workspaceId });
       if (!retrieved.ok) {
         throw new Error(`Failed to retrieve source artifact '${artifactId}' from artifact-object storage key '${storageKey}': ${retrieved.error.message}`);
       }
 
-      const localPath = buildRuntimeSourceArtifactPath(runtimeDatasetDir, artifactId, retrieved.value.descriptor.mediaType, sourceIndex);
+      const localPath = buildRuntimeSourceArtifactPath(runtimeDatasetDir, artifactId, retrieved.value.descriptor.mediaType, stagedSources.size);
       const bytes = trainingSourceBytes(retrieved.value.content); accountBytes(bytes.byteLength);
       await writeFile(localPath, bytes, { flag: "wx", mode: 0o600 });
+      stagedSources.set(artifactId, await captureStagedTrainingSource(localPath, storageKey, bytes.byteLength));
       stagedSourceArtifactPaths[artifactId] = localPath;
     }
 

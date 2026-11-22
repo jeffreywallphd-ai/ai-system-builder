@@ -2914,3 +2914,13 @@ between train files and across train/validation maps, including case differences
 They retain exact duplicate bindings and nonconflicting validation references.
 Path-probe spies keep this proof metadata-only; no identity or byte adoption is
 used to reconcile ambiguity. Preserve the original reviewed collision evidence.
+
+Lifecycle unit/source-type checks also cover per-run image staging: overlapping
+sources, identical basenames, current binding refusal, changed owned files and
+concurrent run isolation using real disposable files with a synthetic runtime.
+Related image/text worker profiles preserve exact source-map compatibility. The
+shared application README borrows this lifecycle profile only with an exact
+selected source; README-only, unknown and explicit generic fallback remain.
+These are application materialization controls, not actual model/native/resource,
+Headless activation or parent qualification. Existing strict lifecycle compilation
+covers production source and its dependencies, not the legacy test file.

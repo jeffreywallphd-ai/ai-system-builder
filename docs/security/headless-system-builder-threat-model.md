@@ -1724,3 +1724,12 @@ One training source ID must have one exact declared path string across selected
 train/validation files and both supported map fields. Conflicting bindings fail
 instead of picking a later path; repeated identical bindings remain valid. This
 metadata check does not inspect or reconcile file identities, bytes or aliases.
+
+Training image staging cannot adopt a changed binding or substituted private
+source copy on reuse. A run-local source table follows real workspace binding
+reads, fresh wx writes and regular single-link canonical identity capture; later
+references compare device/inode/size/timestamps/mode and reject drift. Unique
+source ordinals avoid basename collisions without overwrites. Per-run isolation,
+physical-byte accounting and original stage/task custody remain. Real disposable
+staging and mutation cases prove these controls without models; no hostile-native
+fence, original-source ownership or actual model/resource/host proof is claimed.

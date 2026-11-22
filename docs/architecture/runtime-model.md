@@ -2023,3 +2023,20 @@ One training source ID must have one exact declared path string across selected
 train/validation files and both supported map fields. Conflicting bindings fail
 instead of picking a later path; repeated identical bindings remain valid. This
 metadata check does not inspect or reconcile file identities, bytes or aliases.
+
+### Run-local training image copies
+
+The existing training use case keeps one private staged copy per source image ID
+inside each invocation. Every reference still rereads its actual workspace local
+binding. A changed locator or changed staged-file identity denies before dispatch;
+no metadata binding is invented or adopted. Source filenames use unique per-run
+ordinals, so separate source IDs with the same basename cannot collide. Repeated
+references use the exact original path string, matching the worker's unambiguous
+source-map rule. There is no cross-run cache or source overwrite.
+
+Fresh copies retain existing source-count and 64 MiB file/256 MiB aggregate
+budgets. Charge physical bytes once per created copy. Reuse checks regular-file,
+single-link, canonical path/device/inode/size/timestamp/mode facts. Existing input/
+output root identity and uncertain-start retention still own cleanup. These are
+read-time known-copy checks, not an adversarial native fence, model/resource or
+actual-host qualification. Original stored images are never moved or deleted.

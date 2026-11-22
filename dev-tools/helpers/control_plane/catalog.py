@@ -218,6 +218,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
         ),
         "sources": (
+            "modules/application/use-cases/README.md",
             "modules/application/use-cases/model/train-model.use-case.ts",
             "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
         ),
