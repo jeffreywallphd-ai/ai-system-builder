@@ -678,3 +678,17 @@ The UI attempt keeps the existing generated Tiny model, 690-second deadline,
 accuracy rerun is included. Portable fixtures forbid Native construction and
 process launch. Source qualification grants no app/model or parent pass; rebuilding
 and the one actual UI attempt require separate current-source effect review.
+
+The corrected rebuild has its own private `_reserve_reviewed_training_loader_package`
+and `_reviewed_training_loader_package_intent` pair. It rechecks the same complete
+retirement chain but uses separate `reviewed-training-loader-package-20261122.json`
+and `reviewed-training-loader-package-used-20261122.json` records and a separate
+fresh run. Its opaque permit selects only the existing `training-package` v2
+offline command with the original 420-second, 2 GiB process, 4 GiB Job and
+32-process ceilings. It cannot invoke a UI/model or consume a UI permit.
+The ordinary package issuer stays family-fenced. Wrong-role use consumes the
+reserved attempt without granting another role. Package-phase stops are checked
+again at final admission. Actual metadata preparation/build still needs a concrete
+independent effect review; UI execution uses a later, separately reviewed invocation
+after successful build and owned retirement. These cooperative local guards do
+not claim a system-wide scheduler or hostile-process exclusion.

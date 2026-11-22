@@ -45,6 +45,8 @@ _TRAINING_UI_REPEAT_USED="reviewed-training-ui-repeat-used-20261122.json"
 _TRAINING_UI_LOADER_PRIOR_RUN="65f21a80323e4b19b0bee230ccaf78ee"
 _TRAINING_UI_LOADER_CLAIM="reviewed-training-ui-loader-repeat-20261122.json"
 _TRAINING_UI_LOADER_USED="reviewed-training-ui-loader-repeat-used-20261122.json"
+_TRAINING_LOADER_PACKAGE_CLAIM="reviewed-training-loader-package-20261122.json"
+_TRAINING_LOADER_PACKAGE_USED="reviewed-training-loader-package-used-20261122.json"
 _TRAINING_UI_TITLE="packaged desktop trains one local adapter, reviews privately, saves and reopens it"
 _FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget","ocr-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
@@ -403,7 +405,8 @@ def _training_run(phase,run,folder,review_digest,*,_ui_repeat=None):
     if _ui_repeat is None:
         _prior_family_clear(family)
     else:
-        need(phase=="training-ui","training-ui-repeat-role")
+        need(type(_ui_repeat) is _TrainingUIRepeat and phase==_training_ui_repeat_phase(_ui_repeat.profile),
+             "training-ui-repeat-role")
         _training_ui_repeat_bindings(_ui_repeat,run)
     _prior_family_clear(run)
     _regular_directory(folder,_REPO)
@@ -454,7 +457,8 @@ def _training_intent(phase,*,node_executable,node_sha256,run,folder,
     cwd, source/consumer names, environment and limits have no caller selectors.
     """
     need(type(operator_version) is str and operator_version in ("v1","v2"),"unknown-fixed-training-operator")
-    need(_ui_repeat is None or (phase=="training-ui" and operator_version=="v2"),"training-ui-repeat-role")
+    need(_ui_repeat is None or (type(_ui_repeat) is _TrainingUIRepeat and
+         phase==_training_ui_repeat_phase(_ui_repeat.profile) and operator_version=="v2"),"training-ui-repeat-role")
     need(type(phase) is str and phase in _TRAINING_DEADLINES and phase!="training-budget","unknown-fixed-training-role")
     if phase!="training-ui":need(package_hashes is None,"unexpected-training-package-witness")
     short=_training_run(phase,run,folder,review_digest,_ui_repeat=_ui_repeat)
@@ -683,9 +687,10 @@ def _validate_intent(intent,folder):
     need(_implementation_hashes()==dict(intent.source_hashes),"launcher-source-drift")
     repeat=_TRAINING_UI_REPEAT_INTENTS.get(id(intent))
     if repeat is not None:
-        need(repeat["intent"] is intent and intent.phase=="training-ui" and folder==repeat["run"]/"training-ui",
+        need(repeat["intent"] is intent and intent.phase==repeat["phase"] and
+             intent.phase in ("training-ui","training-package") and folder==repeat["run"]/intent.phase,
              "training-ui-repeat-intent")
-        _training_ui_repeat_clear_successor(repeat["run"])
+        _training_ui_repeat_clear_successor(repeat["run"],intent.phase)
     if intent.phase in _TRAINING_DEADLINES or intent.phase in _SOURCE_ROLES or intent.phase==_SERIAL_PROVIDED_PHASE:
         for name,value in intent.consumer_hashes.items():
             if repeat is not None and name in repeat["proof_limits"]:
@@ -702,7 +707,7 @@ def _validate_intent(intent,folder):
         _reviewed_host_home(intent.cwd,intent.environment)
     _regular_directory(folder,_REPO)
     if repeat is not None:
-        _training_ui_repeat_clear_successor(repeat["run"])
+        _training_ui_repeat_clear_successor(repeat["run"],intent.phase)
         _assert_no_pending()
 
 
@@ -1346,9 +1351,15 @@ def _training_ui_json(raw):
 
 
 def _training_ui_repeat_profile(profile):
-    need(type(profile) is str and profile in ("startup","loader"),"training-ui-repeat-profile")
+    need(type(profile) is str and profile in ("startup","loader","loader-package"),"training-ui-repeat-profile")
     return ((_TRAINING_UI_PRIOR_RUN,_TRAINING_UI_REPEAT_CLAIM,_TRAINING_UI_REPEAT_USED)
-        if profile=="startup" else (_TRAINING_UI_LOADER_PRIOR_RUN,_TRAINING_UI_LOADER_CLAIM,_TRAINING_UI_LOADER_USED))
+        if profile=="startup" else (_TRAINING_UI_LOADER_PRIOR_RUN,_TRAINING_UI_LOADER_CLAIM,_TRAINING_UI_LOADER_USED)
+        if profile=="loader" else (_TRAINING_UI_LOADER_PRIOR_RUN,_TRAINING_LOADER_PACKAGE_CLAIM,_TRAINING_LOADER_PACKAGE_USED))
+
+
+def _training_ui_repeat_phase(profile):
+    _training_ui_repeat_profile(profile)
+    return "training-package" if profile=="loader-package" else "training-ui"
 
 
 def _training_ui_repeat_files(review_file,profile="startup"):
@@ -1363,7 +1374,7 @@ def _training_ui_repeat_files(review_file,profile="startup"):
         "stdout":phase/"stdout.log","stderr":phase/"stderr.log",
         "playwright":phase/"playwright-result.json","review":review_file,
         "cleanup":_REPO/"artifacts/qualification/visual-composer/runs"/case/"owned-host"/("cleanup-"+key+".json")}
-    if profile=="loader":
+    if profile!="startup":
         paths.update({"prior-claim":prior.parent.parent/_TRAINING_UI_REPEAT_CLAIM,
                       "prior-used":prior.parent.parent/_TRAINING_UI_REPEAT_USED})
     return paths
@@ -1496,11 +1507,11 @@ def _training_ui_repeat_evidence(proof_hashes,review_file,profile="startup"):
          and review.get("source_identity")==cleanup["sourceRevision"]
          and type(reviewed) is dict
          and all(reviewed.get(({"native":"native_result","playwright":"playwright_result",
-             "cleanup":"owned_desktop_cleanup"}.get(name,name) if profile=="loader" else name))==hashes[name]
+             "cleanup":"owned_desktop_cleanup"}.get(name,name) if profile!="startup" else name))==hashes[name]
              for name in ("native","playwright","stdout","stderr","cleanup")),
          "training-ui-repeat-prior-review")
     bindings={str(path):hashes[name] for name,path in paths.items()}
-    if profile=="loader":
+    if profile!="startup":
         # The first repeat's permanent records bind the original failed case.
         # Reread that entire proof chain; a later clean exit cannot replace it.
         claim=_training_ui_json(raw["prior-claim"]);used=_training_ui_json(raw["prior-used"])
@@ -1542,12 +1553,13 @@ class _TrainingUIRepeat:
     profile:str="startup"
 
 
-def _training_ui_repeat_clear_successor(run):
+def _training_ui_repeat_clear_successor(run,phase="training-ui"):
     family=_REPO/".local-codex/native-training-host-v1"
     need(type(run) is type(_REPO) and run.parent==family/"runs"
          and re.fullmatch("[a-f0-9]{32}",run.name) and run.name!=_TRAINING_UI_PRIOR_RUN,
          "training-ui-repeat-successor")
-    for directory in (run.parent,run,run/"training-ui"):_prior_family_clear(directory)
+    need(type(phase) is str and phase in ("training-ui","training-package"),"training-ui-repeat-role")
+    for directory in (run.parent,run,run/phase):_prior_family_clear(directory)
 
 
 def _reserve_reviewed_training_ui_repeat(*,run_id,proof_hashes,prior_review_file,review_digest):
@@ -1562,8 +1574,15 @@ def _reserve_reviewed_training_ui_loader_repeat(*,run_id,proof_hashes,prior_revi
         prior_review_file=prior_review_file,review_digest=review_digest)
 
 
+def _reserve_reviewed_training_loader_package(*,run_id,proof_hashes,prior_review_file,review_digest):
+    """One fixed corrected-package build; never consumes the UI allowance."""
+    return _reserve_training_ui_repeat_profile("loader-package",run_id=run_id,proof_hashes=proof_hashes,
+        prior_review_file=prior_review_file,review_digest=review_digest)
+
+
 def _reserve_training_ui_repeat_profile(profile,*,run_id,proof_hashes,prior_review_file,review_digest):
     prior_id,claim_name,used_name=_training_ui_repeat_profile(profile)
+    phase=_training_ui_repeat_phase(profile)
     need(os.name=="nt" and c.sizeof(c.c_void_p)==8,"actual-Windows-x64-required")
     _assert_no_pending()
     need(not _LIVE and not _TRAINING_UI_REPEAT_PERMITS and not _TRAINING_UI_REPEAT_INTENTS,
@@ -1574,7 +1593,7 @@ def _reserve_training_ui_repeat_profile(profile,*,run_id,proof_hashes,prior_revi
          "training-ui-repeat-review-witness")
     need(type(proof_hashes) is dict,"training-ui-repeat-proof-set");hashes=dict(proof_hashes)
     family=_REPO/".local-codex/native-training-host-v1";run=family/"runs"/run_id
-    _regular_directory(family/"runs",_REPO);_training_ui_repeat_clear_successor(run)
+    _regular_directory(family/"runs",_REPO);_training_ui_repeat_clear_successor(run,phase)
     def fresh(path):
         try:path.lstat()
         except FileNotFoundError:return
@@ -1586,7 +1605,9 @@ def _reserve_training_ui_repeat_profile(profile,*,run_id,proof_hashes,prior_revi
         fresh(path)
     _training_ui_repeat_evidence(hashes,prior_review_file,profile)
     source=_implementation_hashes()
-    value={"schema_version":"reviewed-training-ui-repeat-v1" if profile=="startup" else "reviewed-training-ui-loader-repeat-v1",
+    schema={"startup":"reviewed-training-ui-repeat-v1","loader":"reviewed-training-ui-loader-repeat-v1",
+            "loader-package":"reviewed-training-loader-package-v1"}[profile]
+    value={"schema_version":schema,
         "authority_ref":"user-allow-one-guarded-desktop-training-repeat-20261122" if profile=="startup" else
             "user-allow-one-new-guarded-desktop-training-attempt-after-review-20261122",
         "prior_run_id":prior_id,"run_id":run_id,"proof_hashes":hashes,
@@ -1596,7 +1617,7 @@ def _reserve_training_ui_repeat_profile(profile,*,run_id,proof_hashes,prior_revi
     dump(family/claim_name,value)
     _retry_bytes(family/claim_name,expected,16384)
     _training_ui_repeat_evidence(hashes,prior_review_file,profile)
-    _training_ui_repeat_clear_successor(run);_assert_no_pending()
+    _training_ui_repeat_clear_successor(run,phase);_assert_no_pending()
     need(not _LIVE and _implementation_hashes()==source,"training-ui-repeat-owner-or-source-drift")
     permit=_TrainingUIRepeat(run,prior_review_file,MappingProxyType(hashes),MappingProxyType(source),expected,profile)
     _TRAINING_UI_REPEAT_PERMITS[id(permit)]={"permit":permit,"state":"reserved"}
@@ -1611,7 +1632,7 @@ def _training_ui_repeat_bindings(permit,run):
          "training-ui-repeat-permit")
     _assert_no_pending();need(not _LIVE,"training-ui-repeat-owner-present")
     need(_implementation_hashes()==dict(permit.source_hashes),"training-ui-repeat-source-drift")
-    _training_ui_repeat_clear_successor(run)
+    _training_ui_repeat_clear_successor(run,_training_ui_repeat_phase(permit.profile))
     _,claim_name,used_name=_training_ui_repeat_profile(permit.profile)
     bindings=_training_ui_repeat_evidence(dict(permit.proof_hashes),permit.review_file,permit.profile)
     family=run.parent.parent;claim=family/claim_name;used=family/used_name
@@ -1622,6 +1643,22 @@ def _training_ui_repeat_bindings(permit,run):
 
 def _reviewed_training_ui_repeat_intent(*,permit,node_executable,node_sha256,run,folder,
         reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes):
+    return _consume_reviewed_training_repeat_intent("training-ui",permit=permit,node_executable=node_executable,
+        node_sha256=node_sha256,run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,
+        runtime_file_hashes=runtime_file_hashes,input_manifest_sha256=input_manifest_sha256,
+        review_digest=review_digest,package_hashes=package_hashes)
+
+
+def _reviewed_training_loader_package_intent(*,permit,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest):
+    return _consume_reviewed_training_repeat_intent("training-package",permit=permit,node_executable=node_executable,
+        node_sha256=node_sha256,run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,
+        runtime_file_hashes=runtime_file_hashes,input_manifest_sha256=input_manifest_sha256,
+        review_digest=review_digest,package_hashes=None)
+
+
+def _consume_reviewed_training_repeat_intent(phase,*,permit,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes):
     """Consume the sole permit even if source/input admission then refuses."""
     owns=False
     try:
@@ -1631,24 +1668,26 @@ def _reviewed_training_ui_repeat_intent(*,permit,node_executable,node_sha256,run
             need(type(entry) is dict and entry.get("permit") is permit and entry.get("state")=="reserved",
                  "training-ui-repeat-permit")
             entry["state"]="building";owns=True
-        need(type(run) is type(_REPO) and run==permit.run and folder==run/"training-ui"
+        need(type(phase) is str and phase==_training_ui_repeat_phase(permit.profile)
+             and type(run) is type(_REPO) and run==permit.run and folder==run/phase
              and type(review_digest) is str and re.fullmatch("[a-f0-9]{64}",review_digest),
              "training-ui-repeat-successor")
-        value={"schema_version":"reviewed-training-ui-repeat-used-v1" if permit.profile=="startup" else
-            "reviewed-training-ui-loader-repeat-used-v1","run_id":run.name,
+        schema={"startup":"reviewed-training-ui-repeat-used-v1","loader":"reviewed-training-ui-loader-repeat-used-v1",
+                "loader-package":"reviewed-training-loader-package-used-v1"}[permit.profile]
+        value={"schema_version":schema,"run_id":run.name,
             "claim_sha256":permit.claim_sha256,"effect_review_digest":review_digest,"automatic_retry_allowed":False}
         entry["used_sha256"]=hashlib.sha256((json.dumps(value,indent=2)+"\n").encode()).hexdigest()
         _,claim_name,used_name=_training_ui_repeat_profile(permit.profile)
         dump(run.parent.parent/used_name,value)
         bindings=_training_ui_repeat_bindings(permit,run)
-        intent=_training_intent("training-ui",node_executable=node_executable,node_sha256=node_sha256,
+        intent=_training_intent(phase,node_executable=node_executable,node_sha256=node_sha256,
             run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,runtime_file_hashes=runtime_file_hashes,
             input_manifest_sha256=input_manifest_sha256,review_digest=review_digest,
             package_hashes=package_hashes,operator_version="v2",_ui_repeat=permit)
         limits={name:LOG_CAP if Path(name).name in ("stdout.log","stderr.log") else 1024**2 for name in bindings}
         limits.update({str(run.parent.parent/claim_name):16384,
                        str(run.parent.parent/used_name):16384})
-        _TRAINING_UI_REPEAT_INTENTS[id(intent)]={"intent":intent,"run":run,
+        _TRAINING_UI_REPEAT_INTENTS[id(intent)]={"intent":intent,"run":run,"phase":phase,
             "proof_limits":MappingProxyType(limits),"owner":None}
         return intent
     finally:

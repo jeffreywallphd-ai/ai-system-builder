@@ -2339,6 +2339,90 @@ class TrainingUILoaderReviewedRepeatTests(unittest.TestCase):
                 with self.assertRaises(job.NativeFailure):job._training_ui_repeat_files(case.paths["review"],profile)
 
 
+class TrainingLoaderPackageReviewedTests(unittest.TestCase):
+    def prepare(self,case,permit):
+        run=permit.run;phase=run/"training-package";phase.mkdir(parents=True)
+        short=case.root/".local-codex/q"/run.name[:8]
+        for directory in (short/"t",short/"h/AppData/Local",short/"h/AppData/Roaming",short/"c/node_modules"):
+            directory.mkdir(parents=True)
+        helpers=case.root/".local-codex/native-training-host-operator/v2"/run.name/"training-package";helpers.mkdir(parents=True)
+        legacy=case.root/".local-codex/native-training-host-operator/v1"
+        for name in job._CONSUMER_FILES:(helpers/name).write_bytes((legacy/name).read_bytes())
+        manifest=case.root/".local-codex/training-inputs"/("tiny-"+str(job.uuid.UUID(hex=run.name)))/"input.json"
+        manifest.parent.mkdir();manifest.write_bytes(b"inert exact input manifest")
+        return {**case.kwargs,"permit":permit,"run":run,"folder":phase,"input_manifest_sha256":job._digest(manifest)}
+
+    def assert_ui_unspent(self,case):
+        family=case.root/".local-codex/native-training-host-v1"
+        for name in (job._TRAINING_UI_LOADER_CLAIM,job._TRAINING_UI_LOADER_USED):self.assertFalse((family/name).exists())
+
+    def test_fixed_package_only_intent_preserves_ui_and_original_limits(self):
+        with TrainingUILoaderReviewedRepeatTests().subject() as case:
+            permit=job._reserve_reviewed_training_loader_package(**case.args)
+            self.assertEqual(permit.profile,"loader-package");self.assert_ui_unspent(case)
+            args=self.prepare(case,permit)
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_intent_v2("training-package",**{k:v for k,v in args.items() if k!="permit"})
+            intent=job._reviewed_training_loader_package_intent(**args)
+            self.assertEqual(intent.phase,"training-package");self.assertEqual(intent.seconds,420)
+            self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+            self.assertEqual(intent.argv,(str(args["node_executable"]),str(case.root/".local-codex/native-training-host-operator/v2"/permit.run.name/"training-package/offline-package.mjs")))
+            self.assertEqual(intent.cwd,case.root/".local-codex/q"/permit.run.name[:8]/"c")
+            self.assertEqual(intent.environment["HF_HUB_OFFLINE"],"1");self.assertEqual(intent.environment["PIP_NO_INDEX"],"1")
+            self.assertNotIn("OPENAI_API_KEY",intent.environment);self.assertNotIn("HF_TOKEN",intent.environment)
+            self.assertTrue(set(map(str,case.original))<=set(intent.consumer_hashes))
+            job._validate_intent(intent,args["folder"]);self.assert_ui_unspent(case)
+            family=permit.run.parent.parent
+            self.assertEqual(json.loads((family/job._TRAINING_LOADER_PACKAGE_USED).read_bytes())["schema_version"],"reviewed-training-loader-package-used-v1")
+            self.assertEqual(case.original,{path:path.read_bytes()for path in case.original})
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_loader_package_intent(**args)
+            with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_loader_package(**case.args)
+
+    def test_package_permit_cannot_select_ui_and_ui_permit_cannot_build(self):
+        for kind in ("package-to-ui","ui-to-package"):
+            with self.subTest(kind=kind),TrainingUILoaderReviewedRepeatTests().subject() as case:
+                if kind=="package-to-ui":
+                    permit=job._reserve_reviewed_training_loader_package(**case.args);args=self.prepare(case,permit)
+                    with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args,package_hashes=case.package)
+                    self.assert_ui_unspent(case)
+                else:
+                    permit=job._reserve_reviewed_training_ui_loader_repeat(**case.args)
+                    args=TrainingUIReviewedRepeatTests().prepare(case,permit);args.pop("package_hashes")
+                    with self.assertRaises(job.NativeFailure):job._reviewed_training_loader_package_intent(**args)
+                    self.assertFalse((permit.run.parent.parent/job._TRAINING_LOADER_PACKAGE_CLAIM).exists())
+                self.assertFalse(job._TRAINING_UI_REPEAT_PERMITS)
+
+    def test_occupied_build_records_and_caller_selectors_are_refused(self):
+        for name in (job._TRAINING_LOADER_PACKAGE_CLAIM,job._TRAINING_LOADER_PACKAGE_USED):
+            with self.subTest(name=name),TrainingUILoaderReviewedRepeatTests().subject() as case:
+                marker=case.root/".local-codex/native-training-host-v1"/name;marker.write_bytes(b"occupied")
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_loader_package(**case.args)
+                self.assertEqual(marker.read_bytes(),b"occupied");self.assert_ui_unspent(case)
+        with TrainingUILoaderReviewedRepeatTests().subject() as case:
+            for key in ("phase","command","environment","seconds","process_bytes","job_bytes"):
+                with self.subTest(key=key),self.assertRaises(TypeError):job._reserve_reviewed_training_loader_package(**case.args,**{key:"untrusted"})
+            self.assert_ui_unspent(case)
+
+    def test_transitive_proof_drift_consumes_build_only(self):
+        with TrainingUILoaderReviewedRepeatTests().subject() as case:
+            permit=job._reserve_reviewed_training_loader_package(**case.args);args=self.prepare(case,permit)
+            case.prior.paths["cleanup"].write_bytes(b"changed original cleanup")
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_loader_package_intent(**args)
+            self.assertTrue((permit.run.parent.parent/job._TRAINING_LOADER_PACKAGE_USED).exists())
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_loader_package_intent(**args)
+            self.assert_ui_unspent(case)
+
+    def test_new_package_phase_stop_is_checked_at_intent_and_final_admission(self):
+        for when in ("intent","validation"):
+            with self.subTest(when=when),TrainingUILoaderReviewedRepeatTests().subject() as case:
+                permit=job._reserve_reviewed_training_loader_package(**case.args);args=self.prepare(case,permit)
+                intent=job._reviewed_training_loader_package_intent(**args) if when=="validation" else None
+                stop=args["folder"]/"FENCED.json";stop.write_bytes(b"unknown package stop")
+                with self.assertRaises(job.NativeFailure):
+                    if when=="intent":job._reviewed_training_loader_package_intent(**args)
+                    else:job._validate_intent(intent,args["folder"])
+                self.assertEqual(stop.read_bytes(),b"unknown package stop");self.assert_ui_unspent(case)
+
+
 class ControlledWindowsNativeTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("AISB_RUN_FIXED_NATIVE_QUALIFICATION")=="1" and os.name=="nt" and ctypes.sizeof(ctypes.c_void_p)==8,"pending physical Windows qualification; explicit model-free native opt-in required")
     def test_actual_nine_native_lifecycle_and_standard_ocr_budget_cases(self):

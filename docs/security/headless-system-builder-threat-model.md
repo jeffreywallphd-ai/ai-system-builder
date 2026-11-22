@@ -1884,3 +1884,12 @@ one-use permit preserve old failures/stops and forbid replay or reset. The fixed
 Tiny input and existing memory/process/deadline limits remain. Source tests mock
 Native/process boundaries; only separate current-source effect review may admit
 the actual UI attempt. No public retry, model accuracy rerun or parent pass follows.
+
+The required package rebuild has a distinct fixed one-use permit with independent
+records/run and the same transitive retirement chain. It admits only the existing
+offline package consumer at its unchanged 420-second/2 GiB-process/4 GiB-Job bounds.
+Package and UI permits reject each other's roles. The ordinary package factory
+remains family-fenced, and a new package-phase stop denies final admission.
+Actual metadata/build authority and its outcome/retirement need separate review
+before the later UI invocation. These trusted local operator guards do not assert
+system-wide scheduling or authorization against hostile same-user code.

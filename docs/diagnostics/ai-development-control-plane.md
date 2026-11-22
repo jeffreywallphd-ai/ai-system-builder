@@ -3030,3 +3030,12 @@ input and 2 GiB/process, 4 GiB total, 32-process and 690-second limits. Source
 fixtures forbid Native/process effects. A rebuilt current package, fresh concrete
 execution plan and independent effect review are still required. A passing guard
 test is not model, app-host, training-quality or parent qualification.
+
+The prerequisite package rebuild uses a separate fixed build-only permit and
+permanent records. It keeps the original `training-package` offline command,
+420-second, 2 GiB/process, 4 GiB Job and 32-process limits. It cannot select the
+UI role or spend its allowance. The ordinary family-fenced path stays closed.
+Recheck the complete retirement chain, source and exact package-phase stop at
+admission. Review the concrete metadata/build plan before running it, then review
+the actual build/retirement outcome before the later UI invocation. Source-only
+fixtures qualify neither effect and provide no cross-process scheduling guarantee.

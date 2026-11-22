@@ -2238,3 +2238,12 @@ bytes. The original installed runtime, generated Tiny input, 2 GiB process,
 4 GiB Job, 32-process and 690-second UI bounds remain. This is neither an
 application retry API nor a general recovery policy. Portable guard checks start
 no Native role; actual rebuild/UI effects need a separate current-source review.
+
+A separate package-only qualification permit admits the corrected rebuild through
+the existing `training-package` v2 consumer. It has independent exclusive records
+and a fresh run; it cannot reuse or consume either UI permit. The original
+420-second/2 GiB-process/4 GiB-Job/32-process bounds and offline source/runtime
+witnesses remain. Role/profile checks and package-phase stop checks precede the
+fixed Native effect. The normal family-fenced path remains denied. The operator
+must separately review and run the build, confirm its outcome and owned retirement,
+then review the later UI attempt. No machine-wide scheduler is introduced.
