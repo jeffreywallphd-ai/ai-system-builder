@@ -239,7 +239,9 @@ export function composeManagedHeadlessPlanApprovals(options: {
           step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
           step.operation === "context.generate-pack" || step.operation === "context.generate-rag" || step.operation === "context.save-result");
         const usesModel = ready.preview.steps.some(step => step.operation === "context.generate-rag" || step.operation === "context.query");
-        const writesModel = ready.preview.steps.some(step => step.operation === "models.download");
+        // Saving a downloaded reference writes the Model library too. Preserve
+        // current Model scopes through view, decision and reply publication.
+        const writesModel = ready.preview.steps.some(step => step.operation === "models.download" || step.operation === "models.save-download");
         const requiredScopes = [...(usesModel ? fileSave ? ragScopes : [...planScopes, "artifact:read", "model:read"] as const : fileSave ? filePlanScopes : planScopes),
           ...(writesModel ? ["model:read", "model:write"] as const : [])];
         if (!await verifyAccess(identity, workspaceId, active, requiredScopes)) return forbidden;

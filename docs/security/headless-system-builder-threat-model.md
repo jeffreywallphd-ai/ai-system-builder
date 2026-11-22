@@ -1827,3 +1827,20 @@ validation subset, not a quality pass or proof of generalization. The Tiny test
 does not complete model/data/recipe/hardware provenance. Inert routing tests leave
 actual UI/model/cleanup qualification pending and preserve failed histories,
 consumed stops and all existing limits. They grant no retry or public capability.
+
+### Current Model policy during saved-reference approval
+
+Creating a library reference with `models.save-download` is a Model write even
+when no bytes are transferred. Managed approval must classify it with downloads
+for current `model:read` and `model:write` requirements. Enforce those scopes for
+the review view, the approval transaction and both stable-read response
+publication boundaries under the original actor/document/plan. Do not rely on a
+later execution check or earlier permission to disclose or approve the plan.
+Refused decisions leave approval pending; withdrawal after an acknowledged
+decision withholds its reply without rewriting already committed history.
+
+Focused fixtures use the real SQLite accepted-task/plan ledger and Managed
+approval composition with denial at the existing authorization-service seam.
+They check declared Model scopes, zero publication after denial, unchanged saved
+records and existing permitted approval behavior. These source checks start no
+provider or model, enable no public route and qualify no physical host.

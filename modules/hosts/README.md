@@ -1,3 +1,9 @@
+Managed approval treats both a model download and saving its downloaded reference
+as Model writes. Require current `model:read` and `model:write` when opening the
+review, deciding it and publishing either response. Recheck through the existing
+transaction and stable-read publication seams. A later execution check does not
+replace approval-stage policy. Ordinary plans and the existing separate result
+save approval stay unchanged; source fixtures grant no actual host qualification.
 
 Optional completed Model read bindings use the original accepted task/source ledger and
 already loaded application owner. Copy exact task/plan selectors, scope and

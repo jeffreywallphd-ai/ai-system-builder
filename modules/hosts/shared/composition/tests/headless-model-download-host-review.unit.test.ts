@@ -19,7 +19,7 @@ import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {createTenantPlacementConfig} from "../../../../contracts/config";
 import {readModelDownloadSource, type ModelInventoryRecord} from "../../../../contracts/model";
-import {HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest,
+import {HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest, readDesktopPlanApprovalView,
   type HeadlessHostIncarnationId} from "../../../../contracts/headless";
 import {prepareHeadlessModelDownloadReviews} from "../headlessModelDownloadReview";
 import {prepareHeadlessModelReferenceSaveReviews} from "../headlessModelReferenceSave";
@@ -377,6 +377,60 @@ async function reviewedSave(t: TestContext, host: Host, complete = true) {
   };
   return {...f, owner, input, taskId, parsed, selection, saveSubmit: submit.request, saveRun: run, saveRows: rows, approveSave: approve};
 }
+
+for (const scope of ["model:read", "model:write"] as const)
+for (const boundary of ["open", "decide", "publish-open", "publish-decision"] as const)
+test(`Managed saved-model approval requires ${scope} at ${boundary}`, async t => {
+  const f = await reviewedSave(t, "Managed");
+  assert.ok((await f.execute(f.saveSubmit, f.owner)).ok);
+  let deny = false, refusals = 0, published = 0;
+  const original = AuthorizeWorkspaceOperationService.prototype.authorizeWorkspaceOperation;
+  t.mock.method(AuthorizeWorkspaceOperationService.prototype, "authorizeWorkspaceOperation",
+    async function(this: AuthorizeWorkspaceOperationService, input: Parameters<typeof original>[0]) {
+      if (deny && input.requiredScopes.includes(scope)) {refusals++; throw new Error("Synthetic current Model policy refusal.");}
+      return Reflect.apply(original, this, [input]);
+    });
+  const approvals = f.makeManagedApprovals(false, true);
+  const channel = boundary === "decide" || boundary === "publish-decision" ? "authenticated-chat" : "app-popup";
+  const open = () => approvals({operation: "open", document: f.document, selection: f.selection},
+    f.identity, () => true, () => true, channel);
+  if (boundary === "open") {
+    deny = true;
+    assert.equal((await open()).ok, false, "Missing current Model permission must refuse before disclosure.");
+  } else {
+    const opened = await open(); assert.ok(opened.ok && "value" in opened);
+    const view = readDesktopPlanApprovalView(opened.value, f.selection, {allowLocalFileSave: false, allowModelReferenceSave: true});
+    assert.ok(view, "The opened response must match the exact Model-save view contract.");
+    if (boundary === "publish-open") {
+      assert.equal(typeof opened.publishIfCurrent, "function", "Model save views need a current-policy publication fence.");
+      deny = true;
+      assert.equal(await opened.publishIfCurrent!(() => {published++; return true;}), false);
+    } else {
+      const mode = boundary === "decide" ? "each-change" as const : "whole-plan" as const;
+      const decision = mode === "each-change" ? {kind: "approve" as const, mode, step: 1} : {kind: "approve" as const, mode};
+      deny = boundary === "decide";
+      const decided = await approvals({operation: "decide", document: f.document, decision: {
+        selection: f.selection, viewId: view.viewId, expectedRevision: 1, decision}},
+        f.identity, () => true, () => true, channel);
+      if (boundary === "decide") {
+        assert.equal(decided.ok, false, "Current Model permission is required to approve the saved reference.");
+        deny = false;
+        const latest = await open(); assert.ok(latest.ok && "value" in latest);
+        const latestView = readDesktopPlanApprovalView(latest.value, f.selection, {allowLocalFileSave: false, allowModelReferenceSave: true});
+        assert.ok(latestView, "The reopened response must still match the exact Model-save view contract.");
+        assert.equal(latestView.state.status, "pending", "Refusal must not commit an approval.");
+      } else {
+        assert.ok(decided.ok);
+        assert.equal(typeof decided.publishIfCurrent, "function", "Model decisions need a current-policy publication fence.");
+        deny = true;
+        assert.equal(await decided.publishIfCurrent!(() => {published++; return true;}), false);
+      }
+    }
+  }
+  assert.ok(refusals > 0, "The real host must request the missing Model scope from its authorization service.");
+  assert.equal(published, 0);
+  assert.deepEqual(await f.saveRows(), [], "Approval tests do not write a saved Model record.");
+});
 
 for (const mutation of ["replace", "mutate"] as const)
 test(`Model save review captures the original target before first policy wait (${mutation})`, async t => {
