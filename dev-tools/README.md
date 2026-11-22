@@ -2,6 +2,13 @@
 
 ## Training package input bytes
 
+One separately approved private Desktop training repeat can use the repaired
+startup fixture. Its exclusive reservation, unchanged stop records, proof checks,
+one-use dispatch and original resource limits are documented in
+[native-qualification/README.md](helpers/native-qualification/README.md).
+The native-host-policy profile tests those controls using disposable evidence
+and inert process objects. Source tests do not start the repeat or qualify it.
+
 The fixed Desktop training test worker starts the shipped worker through its
 existing `_run_runtime` function. This keeps the exclusive listening socket and
 private startup proof that the managed host requires. A missing or failed

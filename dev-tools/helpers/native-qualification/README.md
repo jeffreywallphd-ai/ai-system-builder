@@ -2,6 +2,44 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+## One approved Desktop training repeat
+
+The private training repeat is limited to the known pre-acceptance failure from
+22 November 2026. It requires the user's separate one-attempt direction and
+independent source and effect reviews. It does not clear the old family, run or
+phase stop records. Both ordinary training issuers still refuse those records.
+
+The private reservation checks the original failed UI case, Native and app/worker
+retirement, independent failure review and all three stops. Reads use fixed
+derived paths, stable single-link files, bounded UTF-8 JSON with duplicate/depth
+checks and exact hashes. No saved PID or log path selects an action. It flushes
+one exclusive family claim before a caller prepares fresh metadata. Existing or
+partial claims, occupied slots, unknown owners and changed proof refuse
+admission. There is no reset or public retry interface.
+
+The identity-sealed permit admits only the private reviewed training-UI issuer.
+Its first invocation consumes the permission, including a refused invocation.
+The issued intent can have only one original Native owner. The fixed v2 Desktop
+case keeps its offline witnesses, 690-second deadline, 2 GiB process, 4 GiB Job
+and 32-process limits. Exact proof, claim and consumed-marker hashes remain
+bound through dispatch; new successor stops and changed proof deny launch and
+resume. No other role, command, environment or quota can be selected.
+
+Repeat validation checks successor stops again after its last source/proof read.
+It runs at the final process-creation boundary after attribute setup and at the
+final resume boundary after membership/limit checks. Controlled callback tests
+cover a stop arriving during each of those handoffs. These are cooperative
+read-time checks; they do not supply an atomic hostile-writer fence.
+
+The separately reviewed caller must copy only the six known synthetic model
+files and exact retained package into new namespaces with the existing bounded
+byte helpers. It must preserve all old bytes and unknown ownership. Any failure
+retains the claim, consumed state and new stop records; it grants no second
+attempt. Actual eight-phase UI results, full retirement and separate outcome
+review remain required. No model accuracy or Headless/parent pass follows from
+the source checks. These cooperative local witnesses do not authenticate users
+or reviewers, fence hostile writers or prove unrelated process retirement.
+
 This helper owns newly created qualification trees on Windows x64. Its public
 selftests remain model-free. The public CLI exposes `--native-selftest`; it has no caller command, PID,
 working-directory, shell or JSON execution option. Private child roles are fixed.

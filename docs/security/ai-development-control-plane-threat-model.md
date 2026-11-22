@@ -1,5 +1,30 @@
 # AI Development Control Plane Threat Model
 
+The expressly approved Desktop training repeat is a closed exception for one
+known, retired pre-acceptance failure. The original issuers retain their stop
+guards. The private reservation checks exact original Native/UI/cleanup/review
+bytes and three unchanged stops, then exclusively flushes one family claim
+before fresh metadata preparation. A process-local identity-sealed permit is
+consumed by its first fixed UI issuer invocation, even on refusal. Partial
+writes, forged/reused permits, changed proof, unknown owners or new successor
+stops deny without resetting or adopting old ownership.
+
+The sole intent retains the existing offline v2 command and 690-second,
+2 GiB-process/4 GiB-Job/32-process limits. One original Native owner can claim
+that intent; dispatch and resume recheck its proof and consumed-marker hashes.
+For the repeat only, validation checks successor stops after its final file read
+and runs immediately before process creation and resume, after attribute and
+membership/limit preparation. Causal tests insert stops at those handoffs.
+Evidence files use their own closed byte limits and single-link stable reads;
+ordinary source/runtime file rules are unchanged. The parser rejects non-UTF-8,
+duplicate/deep JSON, boolean integer aliases, partial retirement, PID-absence
+substitutes and a different/retried UI case. Saved paths and PIDs grant no action.
+Tests use only known disposable bytes and inert Native objects. Actual result
+and separate retirement review remain necessary; no accuracy, training,
+Headless or parent qualification is inferred. Review/hash attestations are
+cooperative local evidence, not authenticated authority, a hostile-writer fence,
+an independent admission watchdog or proof about unrelated processes.
+
 The Desktop training test composition must preserve the production worker's
 listener ownership check. Its final serving step calls the exact shipped
 `main._run_runtime` function. The worker owns the exclusive socket and emits its

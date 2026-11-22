@@ -9,7 +9,9 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import builtins
+import base64
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -22,12 +24,15 @@ job=importlib.util.module_from_spec(spec);sys.modules[spec.name]=job;spec.loader
 class PortableNativePolicyTests(unittest.TestCase):
     def setUp(self):
         self.pending=dict(job._PENDING);self.live=dict(job._LIVE);self.issued=dict(job._ISSUED)
+        self.ui_permits=dict(job._TRAINING_UI_REPEAT_PERMITS);self.ui_intents=dict(job._TRAINING_UI_REPEAT_INTENTS)
 
     def tearDown(self):
         # Restore only injected test objects; production has no reset API.
         job._PENDING.clear();job._PENDING.update(self.pending)
         job._LIVE.clear();job._LIVE.update(self.live)
         job._ISSUED.clear();job._ISSUED.update(self.issued)
+        job._TRAINING_UI_REPEAT_PERMITS.clear();job._TRAINING_UI_REPEAT_PERMITS.update(self.ui_permits)
+        job._TRAINING_UI_REPEAT_INTENTS.clear();job._TRAINING_UI_REPEAT_INTENTS.update(self.ui_intents)
 
     def issued_intent(self,phase):
         return job._remember(job._Intent(phase,(),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
@@ -1748,6 +1753,448 @@ class PortableNativePolicyTests(unittest.TestCase):
         self.assertEqual(job._PENDING,{})
         self.assertEqual(job._LIVE,{})
         self.assertFalse(hasattr(job,"run_command"));self.assertFalse(hasattr(job,"terminate_pid"))
+
+
+class TrainingUIReviewedRepeatTests(unittest.TestCase):
+    """Real disposable proof bytes and inert references; never a Native run."""
+    setUp=PortableNativePolicyTests.setUp
+    tearDown=PortableNativePolicyTests.tearDown
+    training_policy_fixture=PortableNativePolicyTests.training_policy_fixture
+
+    @contextlib.contextmanager
+    def subject(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes), \
+             patch.dict(job._TRAINING_UI_REPEAT_PERMITS,{},clear=True), \
+             patch.dict(job._TRAINING_UI_REPEAT_INTENTS,{},clear=True), \
+             patch.object(job,"os",SimpleNamespace(**{**vars(os),"name":"nt"})), \
+             patch.object(job,"_Win",side_effect=AssertionError("No Native construction")) as native, \
+             patch.object(job.subprocess,"Popen",side_effect=AssertionError("No process launch")) as launch:
+            review_file=root/".local-codex/review/failure.json"
+            paths=job._training_ui_repeat_files(review_file);hashes={}
+            def write(name,value):
+                raw=value if type(value) is bytes else (json.dumps(value,indent=2)+"\n").encode()
+                path=paths[name];path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+                hashes[name]=hashlib.sha256(raw).hexdigest()
+            stop={"schema_version":"current-training-ui-stop-v1","reason":"failed-or-unconfirmed-training-ui",
+                "error_type":"ValueError","run_id":job._TRAINING_UI_PRIOR_RUN,
+                "automatic_retry_allowed":False,"prior_data_preserved":True}
+            for name in ("family-stop","run-stop","phase-stop"):write(name,stop)
+            write("stdout",b"synthetic retained startup failure\n");write("stderr",b"")
+            value={"root_exit_code":1,"command_passed":False,"reviewed_retry_possible":True,"reason":None,
+                "fence_required":False,"forced_owned_job_termination":False,"cleanup_confirmed":True,
+                "all_owned_handles_close_acknowledged":True,"cleanup_errors":[],"assigned_at_creation":True,
+                "resumed_after_membership":True,"automatic_retry_allowed":False,"log_overflow":False,
+                "completion_message_overflow":False,"observed_limit_messages":[],"observed_limit_notifications":[],
+                "reported_pids_are_process_identity":False,"native_proof_for_old_processes":False,
+                "job_handle_inherited":False,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,
+                "job_accounting":{"total":3,"active":0,"terminated":0},"peak_active_observed":3,
+                "peak_commit":{"process_commit_bytes":65536,"job_commit_bytes":131072},
+                "limits":{"flags":job.LIMIT_FLAGS,"process_bytes":2*1024**3,"job_bytes":4*1024**3,"active_limit":32},
+                "logs":{name:{"complete":True,"path":str(paths[name]),"bytes":paths[name].stat().st_size,
+                    "observed_bytes":paths[name].stat().st_size,"sha256":hashes[name],"cap_bytes":job.LOG_CAP}
+                    for name in ("stdout","stderr")}}
+            write("native",value)
+            cleanup={"schemaVersion":"owned-host-outcome-v1","kind":"cleanup","status":"passed",
+                "sourceRevision":"source."+"c"*64,"willQuitAcknowledged":True,"mainExitCode":0,
+                "physicalWorkersAlive":0,"physicalWorkersObserved":1,"physicalWorkersNativeObserved":1,
+                "physicalWorkersPidAbsenceObserved":0,"failures":0,"failureTypes":[],"failureStages":[]}
+            write("cleanup",cleanup)
+            report={"schemaVersion":"training-host-ui-outcome-v1","status":"failed","host":"packaged-desktop",
+                "inputProfile":"generated-tiny-qwen2-v1","phases":["workspace-and-inputs-visible","configuration-bounded"],
+                "nextPhase":"training-accepted","parentQualificationGranted":False}
+            ui={"stats":{"expected":0,"unexpected":1,"flaky":0,"skipped":0},"errors":[],
+                "suites":[{"specs":[{"title":job._TRAINING_UI_TITLE,"ok":False,"tests":[{
+                    "projectName":"packaged-desktop","status":"unexpected","results":[{
+                        "status":"failed","retry":0,"attachments":[{"name":"training-host-ui",
+                            "contentType":"application/json","body":base64.b64encode(json.dumps(report).encode()).decode()}]}]}]}]}]}
+            write("playwright",ui)
+            review={"schema_version":"independent-native-ui-result-review-v1",
+                "disposition":"accepted-failure-and-confirmed-retirement-only","run_id":job._TRAINING_UI_PRIOR_RUN,
+                "native_result_sha256":hashes["native"],"playwright_result_sha256":hashes["playwright"],
+                "source_identity":cleanup["sourceRevision"],
+                "actual_artifacts_sha256":{name:hashes[name] for name in ("native","playwright","stdout","stderr","cleanup")}}
+            write("review",review)
+            args={"run_id":"b"*32,"proof_hashes":hashes,"prior_review_file":review_file,"review_digest":"d"*64}
+            original={name:path.read_bytes() for name,path in paths.items()}
+            yield SimpleNamespace(root=root,kwargs=kwargs,package=package_hashes,paths=paths,hashes=hashes,
+                write=write,native=native,launch=launch,args=args,original=original)
+            native.assert_not_called();launch.assert_not_called()
+
+    def prepare(self,case,permit):
+        """Create only this fixture's new inert input and package references."""
+        run=permit.run;phase=run/"training-ui";phase.mkdir(parents=True)
+        short=case.root/".local-codex/q"/run.name[:8]
+        for directory in (short/"t",short/"h/AppData/Local",short/"h/AppData/Roaming"):
+            directory.mkdir(parents=True,exist_ok=True)
+        helpers=case.root/".local-codex/native-training-host-operator/v2"/run.name/"training-ui"
+        helpers.mkdir(parents=True)
+        legacy=case.root/".local-codex/native-training-host-operator/v1"
+        for name in job._CONSUMER_FILES:(helpers/name).write_bytes((legacy/name).read_bytes())
+        package=short/"o/ai-system-builder-win32-x64";(package/"resources/worker").mkdir(parents=True)
+        (package/"ai-system-builder.exe").write_bytes(b"inert packaged application identity")
+        (package/"resources/worker/main.py").write_bytes((case.root/job._TRAINING_SOURCES[5]).read_bytes())
+        manifest=case.root/".local-codex/training-inputs"/("tiny-"+str(job.uuid.UUID(hex=run.name)))/"input.json"
+        manifest.parent.mkdir();manifest.write_bytes(b"inert exact input manifest")
+        return {**case.kwargs,"permit":permit,"run":run,"folder":phase,
+            "input_manifest_sha256":job._digest(manifest),"package_hashes":case.package}
+
+    def test_known_retired_failure_is_read_only_and_bound_to_its_review(self):
+        with self.subject() as case:
+            bindings=job._training_ui_repeat_evidence(case.hashes,case.paths["review"])
+            self.assertEqual(bindings,{str(path):case.hashes[name] for name,path in case.paths.items()})
+            self.assertEqual(case.original,{name:path.read_bytes() for name,path in case.paths.items()})
+            self.assertEqual(job._TRAINING_UI_REPEAT_PERMITS,{})
+
+    def test_reservation_is_exclusive_detached_and_never_clears_prior_stops(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args)
+            self.assertFalse(permit.run.exists())
+            claim=permit.run.parent.parent/job._TRAINING_UI_REPEAT_CLAIM
+            self.assertTrue(claim.is_file())
+            case.hashes.clear()
+            self.assertEqual(len(permit.proof_hashes),9)
+            with self.assertRaises(TypeError):permit.proof_hashes["native"]="0"*64
+            with self.assertRaises((AttributeError,TypeError)):permit.run=case.root
+            with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+            self.assertEqual(case.original,{name:path.read_bytes() for name,path in case.paths.items()})
+
+    def test_original_factory_stays_fenced_while_exact_private_intent_keeps_command_and_limits(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            ordinary={key:value for key,value in args.items() if key!="permit"}
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_intent_v2("training-ui",**ordinary)
+            intent=job._reviewed_training_ui_repeat_intent(**args)
+            self.assertEqual(intent.phase,"training-ui");self.assertEqual(intent.seconds,690)
+            self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+            self.assertEqual(intent.argv[-3:],("--project=packaged-desktop","--grep",job._TRAINING_UI_TITLE+"$"))
+            self.assertEqual(intent.environment["HF_HUB_OFFLINE"],"1")
+            self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+            self.assertNotIn("HF_TOKEN",intent.environment);self.assertNotIn("OPENAI_API_KEY",intent.environment)
+            self.assertEqual(len(set(case.paths.values())-set(map(Path,intent.consumer_hashes))),0)
+            job._validate_intent(intent,args["folder"])
+            self.assertEqual(case.original,{name:path.read_bytes() for name,path in case.paths.items()})
+            self.assertFalse(job._TRAINING_UI_REPEAT_PERMITS)
+            with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+
+    def test_changed_retirement_or_stop_hash_refuses_before_reservation(self):
+        for name in ("family-stop","run-stop","phase-stop","native","stdout","stderr","playwright","cleanup","review"):
+            with self.subTest(name=name),self.subject() as case:
+                case.paths[name].write_bytes(b"changed proof")
+                with self.assertRaises((job.NativeFailure,OSError)):
+                    job._reserve_reviewed_training_ui_repeat(**case.args)
+                self.assertFalse((case.root/".local-codex/native-training-host-v1"/job._TRAINING_UI_REPEAT_CLAIM).exists())
+
+    def test_semantically_unsafe_retirement_cannot_be_admitted_by_new_hash(self):
+        mutations=(
+            ("native",lambda v:v.update(cleanup_confirmed=False)),
+            ("native",lambda v:v["job_accounting"].update(active=1)),
+            ("native",lambda v:v["job_accounting"].update(active=False)),
+            ("native",lambda v:v.update(all_owned_handles_close_acknowledged=False)),
+            ("native",lambda v:v.update(forced_owned_job_termination=True)),
+            ("native",lambda v:v["limits"].update(job_bytes=8*1024**3)),
+            ("cleanup",lambda v:v.update(physicalWorkersNativeObserved=0,physicalWorkersPidAbsenceObserved=1)),
+            ("cleanup",lambda v:v.update(physicalWorkersAlive=False)),
+            ("cleanup",lambda v:v.update(status="pending")),
+            ("review",lambda v:v.update(disposition="accepted")),
+            ("family-stop",lambda v:v.update(automatic_retry_allowed=0)),
+            ("phase-stop",lambda v:v.update(prior_data_preserved=1)),
+        )
+        for name,mutate in mutations:
+            with self.subTest(name=name,mutation=mutate),self.subject() as case:
+                value=json.loads(case.paths[name].read_bytes());mutate(value);case.write(name,value)
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+
+    def test_wrong_case_retry_or_publication_report_is_not_the_known_preacceptance_failure(self):
+        for change in ("project","retry","phases","title","source"):
+            with self.subTest(change=change),self.subject() as case:
+                ui=json.loads(case.paths["playwright"].read_bytes());spec=ui["suites"][0]["specs"][0]
+                result=spec["tests"][0]["results"][0]
+                if change=="project":spec["tests"][0]["projectName"]="other-host"
+                elif change=="retry":result["retry"]=1
+                elif change=="title":spec["title"]="another test"
+                elif change=="source":
+                    value=json.loads(case.paths["cleanup"].read_bytes());value["sourceRevision"]="source."+"e"*64
+                    case.write("cleanup",value)
+                else:
+                    row=result["attachments"][0];value=json.loads(base64.b64decode(row["body"]))
+                    value["phases"].append("training-accepted")
+                    row["body"]=base64.b64encode(json.dumps(value).encode()).decode()
+                case.write("playwright",ui)
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+
+    def test_json_is_utf8_depth_duplicate_and_constant_bounded(self):
+        for raw in (b'{"x":1,"x":2}',b'{"x":NaN}',b'{"x":Infinity}',b'[]',b'null',
+                    b'{"x":'+b'['*65+b'0'+b']'*65+b'}','{"x":1}'.encode("utf16"),b'x'*(1024**2+1)):
+            with self.subTest(size=len(raw)),self.assertRaises(job.NativeFailure):job._training_ui_json(raw)
+        self.assertEqual(job._training_ui_json(b'{"x":"[{}]\\\\\\""}'),{"x":'[{}]\\"'})
+
+    def test_missing_extra_active_and_outside_proof_inputs_are_refused(self):
+        with self.subject() as case:
+            for hashes in (None,{},dict(case.hashes,extra="a"*64)):
+                with self.assertRaises(job.NativeFailure):
+                    job._reserve_reviewed_training_ui_repeat(**{**case.args,"proof_hashes":hashes})
+            class Active(dict):
+                def items(self):raise AssertionError("Active input must not be traversed")
+            with self.assertRaises(job.NativeFailure):
+                job._reserve_reviewed_training_ui_repeat(**{**case.args,"proof_hashes":Active(case.hashes)})
+            with self.assertRaises(job.NativeFailure):
+                job._reserve_reviewed_training_ui_repeat(**{**case.args,"prior_review_file":case.root.parent/"outside.json"})
+
+    def test_relinked_review_and_unknown_successor_or_parent_stop_are_preserved(self):
+        with self.subject() as case:
+            link=case.paths["review"].with_name("other-link.json");os.link(case.paths["review"],link)
+            with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+            self.assertEqual(link.read_bytes(),case.original["review"])
+        for kind in ("short-slot","parent-stop"):
+            with self.subTest(kind=kind),self.subject() as case:
+                path=(case.root/".local-codex/q"/("b"*8) if kind=="short-slot" else
+                      case.root/".local-codex/native-training-host-v1/runs/FENCED.json")
+                path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"unknown retained entry")
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+                self.assertEqual(path.read_bytes(),b"unknown retained entry")
+
+    def test_live_or_pending_owner_blocks_before_writing_a_claim(self):
+        for registry in (job._LIVE,job._PENDING):
+            with self.subTest(registry=registry),self.subject() as case:
+                registry[123]=object()
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+                registry.pop(123)
+                self.assertFalse((case.root/".local-codex/native-training-host-v1"/job._TRAINING_UI_REPEAT_CLAIM).exists())
+
+    def test_partial_claim_and_used_writes_permanently_refuse_another_attempt(self):
+        for stage in ("claim","used"):
+            with self.subTest(stage=stage),self.subject() as case:
+                original=job.dump
+                def partial(path,value):
+                    if path.name==(job._TRAINING_UI_REPEAT_CLAIM if stage=="claim" else job._TRAINING_UI_REPEAT_USED):
+                        path.write_bytes(b"{");raise OSError("synthetic flush failure")
+                    return original(path,value)
+                if stage=="claim":
+                    with patch.object(job,"dump",partial),self.assertRaises(OSError):
+                        job._reserve_reviewed_training_ui_repeat(**case.args)
+                else:
+                    permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+                    with patch.object(job,"dump",partial),self.assertRaises(OSError):
+                        job._reviewed_training_ui_repeat_intent(**args)
+                    with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+                target=case.root/".local-codex/native-training-host-v1"/(
+                    job._TRAINING_UI_REPEAT_CLAIM if stage=="claim" else job._TRAINING_UI_REPEAT_USED)
+                self.assertEqual(target.read_bytes(),b"{")
+
+    def test_forged_or_wrong_run_permit_and_bad_source_consume_no_native_effect(self):
+        for kind in ("forged","wrong-run","bad-source"):
+            with self.subTest(kind=kind),self.subject() as case:
+                permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+                if kind=="forged":
+                    args["permit"]=job._TrainingUIRepeat(permit.run,permit.review_file,permit.proof_hashes,
+                                                       permit.source_hashes,permit.claim_sha256)
+                elif kind=="wrong-run":args["run"]=args["run"].parent/("c"*32)
+                else:args["reviewed_file_hashes"]={}
+                with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+                with self.assertRaises(job.NativeFailure):job._reserve_reviewed_training_ui_repeat(**case.args)
+                if kind!="forged":
+                    with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+
+    def test_changed_source_or_claim_after_reservation_is_refused_and_cannot_issue_another_permit(self):
+        for kind in ("source","claim"):
+            with self.subTest(kind=kind),self.subject() as case:
+                permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+                if kind=="claim":
+                    (permit.run.parent.parent/job._TRAINING_UI_REPEAT_CLAIM).write_bytes(b"changed claim")
+                    with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+                else:
+                    with patch.object(job,"_implementation_hashes",return_value={"owned_command_job.py":"0"*64}), \
+                         self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+                with self.assertRaises(job.NativeFailure):job._reviewed_training_ui_repeat_intent(**args)
+
+    def test_changed_proof_or_new_stop_after_issuance_refuses_dispatch(self):
+        for kind in ("proof","used","run-stop","phase-stop","runs-stop"):
+            with self.subTest(kind=kind),self.subject() as case:
+                permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+                intent=job._reviewed_training_ui_repeat_intent(**args)
+                target={"proof":case.paths["stderr"],"used":permit.run.parent.parent/job._TRAINING_UI_REPEAT_USED,
+                    "run-stop":permit.run/"FENCED.json","phase-stop":args["folder"]/"FENCED.json",
+                    "runs-stop":permit.run.parent/"FENCED.json"}[kind]
+                target.write_bytes(b"retained changed or stopped state")
+                with self.assertRaises(job.NativeFailure):job._OwnedJob(intent,args["folder"])
+                self.assertEqual(target.read_bytes(),b"retained changed or stopped state")
+
+    def test_an_issued_repeat_has_only_one_original_native_owner_even_after_retirement(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            intent=job._reviewed_training_ui_repeat_intent(**args)
+            with patch.object(job,"_Win",return_value=SimpleNamespace()) as inert:
+                owner=job._OwnedJob(intent,args["folder"])
+                self.assertEqual(owner.owned,{})  # No native API or handles exist in this fixture.
+                job._LIVE.pop(id(owner))  # Retire only this fixture's inert identity.
+                with self.assertRaises(job.NativeFailure):job._OwnedJob(intent,args["folder"])
+                inert.assert_called_once()
+            self.assertEqual(case.original,{name:path.read_bytes() for name,path in case.paths.items()})
+
+    def test_new_factory_has_no_command_environment_phase_version_or_quota_selector(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            for name in ("command","environment","phase","operator_version","seconds","process_bytes","job_bytes"):
+                with self.subTest(name=name),self.assertRaises(TypeError):
+                    job._reviewed_training_ui_repeat_intent(**args,**{name:"caller choice"})
+
+    def test_concurrent_issuers_cannot_steal_or_duplicate_the_original_permit(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            gate=threading.Barrier(2,timeout=5);results=[];errors=[]
+            def issue():
+                try:
+                    gate.wait();results.append(job._reviewed_training_ui_repeat_intent(**args))
+                except BaseException as error:errors.append(error)
+            threads=[threading.Thread(target=issue,daemon=True) for _ in range(2)]
+            for thread in threads:thread.start()
+            for thread in threads:thread.join(10)
+            self.assertTrue(all(not thread.is_alive() for thread in threads))
+            self.assertEqual(len(results),1);self.assertEqual(len(errors),1)
+            self.assertIsInstance(errors[0],job.NativeFailure)
+            self.assertFalse(job._TRAINING_UI_REPEAT_PERMITS)
+            self.assertEqual(case.original,{name:path.read_bytes() for name,path in case.paths.items()})
+
+    def test_concurrent_constructors_can_claim_only_one_inert_native_owner(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            intent=job._reviewed_training_ui_repeat_intent(**args)
+            gate=threading.Barrier(2,timeout=5);owners=[];errors=[]
+            def create():
+                try:
+                    gate.wait();owners.append(job._OwnedJob(intent,args["folder"]))
+                except BaseException as error:errors.append(error)
+            with patch.object(job,"_Win",return_value=SimpleNamespace()) as inert:
+                threads=[threading.Thread(target=create,daemon=True) for _ in range(2)]
+                for thread in threads:thread.start()
+                for thread in threads:thread.join(10)
+                self.assertTrue(all(not thread.is_alive() for thread in threads))
+                self.assertEqual(len(owners),1);self.assertEqual(len(errors),1)
+                self.assertIsInstance(errors[0],job.NativeFailure);inert.assert_called_once()
+            self.assertEqual(owners[0].owned,{})  # Only a test object, no native handles.
+            job._LIVE.pop(id(owners[0]))
+
+    def test_new_stop_or_changed_proof_prevents_resume_before_any_native_call(self):
+        for kind in ("stop","proof"):
+            with self.subTest(kind=kind),self.subject() as case:
+                permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+                intent=job._reviewed_training_ui_repeat_intent(**args)
+                native=SimpleNamespace(k=SimpleNamespace(ResumeThread=unittest.mock.Mock()))
+                with patch.object(job,"_Win",return_value=native):
+                    owner=job._OwnedJob(intent,args["folder"]);owner.phase="prepared"
+                    target=args["folder"]/"FENCED.json" if kind=="stop" else case.paths["stderr"]
+                    target.write_bytes(b"retained stop or changed proof")
+                    pattern="prior-native-family-remains-fenced" if kind=="stop" else "retry-proof-drift"
+                    with self.assertRaisesRegex(job.NativeFailure,pattern):owner.resume()
+                    native.k.ResumeThread.assert_not_called()
+                    self.assertEqual(owner.owned,{})
+                    job._LIVE.pop(id(owner))  # Only this test's inert identity exists.
+
+    def test_unknown_native_constructor_retirement_retains_the_only_owner(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            intent=job._reviewed_training_ui_repeat_intent(**args)
+            with patch.object(job,"_Win",side_effect=RuntimeError("synthetic constructor refusal")) as failed:
+                with self.assertRaises(RuntimeError):job._OwnedJob(intent,args["folder"])
+                self.assertEqual(len(job._PENDING),1)
+                with self.assertRaises(job.NativeFailure):job._OwnedJob(intent,args["folder"])
+                failed.assert_called_once()
+            # The enclosing test owns these injected objects and no native handles.
+            self.assertTrue(all(owner.owned=={} and owner.n is None for owner in job._PENDING.values()))
+            for key,owner in list(job._PENDING.items()):
+                self.assertIs(owner.intent,intent)
+                job._PENDING.pop(key);job._LIVE.pop(key)
+            with self.assertRaises(job.NativeFailure):job._OwnedJob(intent,args["folder"])
+
+    def test_proof_hashes_are_captured_before_filesystem_callbacks(self):
+        with self.subject() as case:
+            original=job._retry_bytes;called=[]
+            def read(*args,**kwargs):
+                if not called:called.append(True);case.hashes.clear()
+                return original(*args,**kwargs)
+            with patch.object(job,"_retry_bytes",read):
+                permit=job._reserve_reviewed_training_ui_repeat(**case.args)
+            self.assertEqual(len(permit.proof_hashes),9);self.assertEqual(case.hashes,{})
+
+    def test_repeat_final_handoff_after_last_proof_or_limits_refuses_resume(self):
+        for mode in ("last-proof-read","limits-readback"):
+            with self.subTest(mode=mode),self.subject() as case:
+                permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+                intent=job._reviewed_training_ui_repeat_intent(**args)
+                native=SimpleNamespace(k=SimpleNamespace(ResumeThread=unittest.mock.Mock(return_value=1),
+                    CloseHandle=unittest.mock.Mock(return_value=True)),member=lambda *_:True)
+                with patch.object(job,"_Win",return_value=native):
+                    owner=job._OwnedJob(intent,args["folder"])
+                # These are inert integer handles, never process identities or OS handles.
+                owner.phase="prepared";owner.process=SimpleNamespace(process=101,thread=102)
+                owner.job=103;owner.owned={"root":101,"thread":102};owner.assigned=True
+                stop=args["folder"]/"FENCED.json";original=job._retry_bytes;injected=[]
+                def create_stop():
+                    self.assertFalse(stop.exists())
+                    stop.write_bytes(b"new stop during final controlled handoff\n");injected.append(True)
+                def proof(path,*a,**kw):
+                    raw=original(path,*a,**kw)
+                    if mode=="last-proof-read" and path.name==job._TRAINING_UI_REPEAT_USED and not injected:
+                        create_stop()
+                    return raw
+                def limits():
+                    if mode=="limits-readback":create_stop()
+                try:
+                    with patch.object(job,"_retry_bytes",proof),patch.object(owner,"limits",limits), \
+                         self.assertRaisesRegex(job.NativeFailure,"prior-native-family-remains-fenced"):
+                        owner.resume()
+                    self.assertEqual(injected,[True]);self.assertFalse(owner.resume_done)
+                    native.k.ResumeThread.assert_not_called()
+                finally:
+                    job._LIVE.pop(id(owner),None);job._PENDING.pop(id(owner),None)
+                    owner.owned.clear()  # Discard only the inert numbers above.
+
+    def test_repeat_final_handoff_after_attributes_refuses_process_creation(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            intent=job._reviewed_training_ui_repeat_intent(**args);stop=args["folder"]/"FENCED.json"
+            inherited=set();pipes=iter(((11,12),(13,14)));created=unittest.mock.Mock(return_value=0)
+            def pipe(read,write,*_):
+                read._obj.value,write._obj.value=next(pipes);inherited.add(write._obj.value);return 1
+            def initialize(storage,count,flags,size):
+                size._obj.value=128;return int(storage is not None)
+            def attribute(storage,flags,name,*_):
+                if name==job.HANDLE_LIST_ATTRIBUTE:
+                    self.assertFalse(stop.exists());stop.write_bytes(b"new stop during final attribute setup\n")
+                return 1
+            native=SimpleNamespace(k=SimpleNamespace(CreateJobObjectW=lambda *_:1,
+                SetInformationJobObject=lambda *_:1,CreateIoCompletionPort=lambda *_:2,CreatePipe=pipe,
+                SetHandleInformation=lambda *_:1,CreateFileW=lambda *_:30,
+                InitializeProcThreadAttributeList=initialize,UpdateProcThreadAttribute=attribute,
+                CreateProcessW=created,DeleteProcThreadAttributeList=lambda *_:None),
+                inheritable=lambda handle:handle in inherited or handle==30)
+            with patch.object(job,"_Win",return_value=native), \
+                 patch.object(job.c,"get_last_error",return_value=122,create=True):
+                owner=job._OwnedJob(intent,args["folder"])
+                try:
+                    with patch.object(owner,"limits"), \
+                         self.assertRaisesRegex(job.NativeFailure,"prior-native-family-remains-fenced"):
+                        owner.prepare()
+                    created.assert_not_called();self.assertTrue(stop.is_file())
+                finally:
+                    job._LIVE.pop(id(owner),None);job._PENDING.pop(id(owner),None)
+                    owner.owned.clear()  # Every handle above is an inert test number.
+
+    def test_repeat_final_handoff_during_last_read_refuses_direct_validation(self):
+        with self.subject() as case:
+            permit=job._reserve_reviewed_training_ui_repeat(**case.args);args=self.prepare(case,permit)
+            intent=job._reviewed_training_ui_repeat_intent(**args)
+            stop=args["folder"]/"FENCED.json";original=job._retry_bytes;injected=[]
+            def read(path,*a,**kw):
+                raw=original(path,*a,**kw)
+                if path.name==job._TRAINING_UI_REPEAT_USED and not injected:
+                    stop.write_bytes(b"new stop after the last proof read\n");injected.append(True)
+                return raw
+            with patch.object(job,"_retry_bytes",read), \
+                 self.assertRaisesRegex(job.NativeFailure,"prior-native-family-remains-fenced"):
+                job._validate_intent(intent,args["folder"])
+            self.assertEqual(injected,[True])
 
 
 class ControlledWindowsNativeTests(unittest.TestCase):

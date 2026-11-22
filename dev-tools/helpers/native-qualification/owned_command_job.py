@@ -11,6 +11,7 @@ it grants no model, retained-staging, production or parent qualification.
 """
 from __future__ import annotations
 import argparse
+import base64
 import copy
 import ctypes as c
 from dataclasses import dataclass
@@ -35,6 +36,13 @@ _SELFTEST_RUNS=_REPO/".local-codex/native-ocr-budget-command-selftests-v4"
 _PENDING={}
 _LIVE={}
 _ISSUED={}
+_TRAINING_UI_REPEAT_PERMITS={}
+_TRAINING_UI_REPEAT_INTENTS={}
+_TRAINING_UI_REPEAT_LOCK=threading.Lock()
+_TRAINING_UI_PRIOR_RUN="30430b9443254741986db4c15aae266d"
+_TRAINING_UI_REPEAT_CLAIM="reviewed-training-ui-repeat-20261122.json"
+_TRAINING_UI_REPEAT_USED="reviewed-training-ui-repeat-used-20261122.json"
+_TRAINING_UI_TITLE="packaged desktop trains one local adapter, reviews privately, saves and reopens it"
 _FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget","ocr-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
 _SERIAL_PROVIDED_PHASE="serial-provided"
@@ -382,14 +390,19 @@ def _training_file(path, expected):
     return count
 
 
-def _training_run(phase,run,folder,review_digest):
+def _training_run(phase,run,folder,review_digest,*,_ui_repeat=None):
     need(type(phase) is str and phase in _TRAINING_DEADLINES,"unknown-fixed-training-role")
     _assert_no_pending()
     need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}",review_digest),"training-review-witness")
     family=_REPO/".local-codex/native-training-host-v1"
     need(isinstance(run,Path) and isinstance(folder,Path) and run.parent==family/"runs" and
          re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/phase,"fixed-training-run")
-    _prior_family_clear(family);_prior_family_clear(run)
+    if _ui_repeat is None:
+        _prior_family_clear(family)
+    else:
+        need(phase=="training-ui","training-ui-repeat-role")
+        _training_ui_repeat_bindings(_ui_repeat,run)
+    _prior_family_clear(run)
     _regular_directory(folder,_REPO)
     return _REPO/".local-codex/q"/run.name[:8]
 
@@ -430,7 +443,7 @@ def _reviewed_training_intent_v2(phase,*,node_executable,node_sha256,run,folder,
 
 def _training_intent(phase,*,node_executable,node_sha256,run,folder,
         reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes,
-        operator_version):
+        operator_version,_ui_repeat=None):
     """Literal private roles; the separate effect review still grants authority.
 
     Node identity is a trusted host witness, as in the legacy private factory.
@@ -438,9 +451,10 @@ def _training_intent(phase,*,node_executable,node_sha256,run,folder,
     cwd, source/consumer names, environment and limits have no caller selectors.
     """
     need(type(operator_version) is str and operator_version in ("v1","v2"),"unknown-fixed-training-operator")
+    need(_ui_repeat is None or (phase=="training-ui" and operator_version=="v2"),"training-ui-repeat-role")
     need(type(phase) is str and phase in _TRAINING_DEADLINES and phase!="training-budget","unknown-fixed-training-role")
     if phase!="training-ui":need(package_hashes is None,"unexpected-training-package-witness")
-    short=_training_run(phase,run,folder,review_digest)
+    short=_training_run(phase,run,folder,review_digest,_ui_repeat=_ui_repeat)
     need(isinstance(node_executable,Path) and node_executable.name.lower() in ("node","node.exe"),"training-node-identity")
     _training_file(node_executable,node_sha256)
     base=Path(sys._base_executable).resolve();prefix=_REPO/"artifacts/tmp/lancedb-python312-ai-runtime"
@@ -511,7 +525,8 @@ def _training_intent(phase,*,node_executable,node_sha256,run,folder,
                               (package/"resources/worker/main.py",package_hashes["worker_main_sha256"])):
             _training_file(file,expected);bindings[str(file)]=expected
         argv=(str(node_executable),str(_REPO/_TRAINING_SOURCES[4]),"test","--config",str(helpers/"playwright.config.mjs"),
-              "--project=packaged-desktop","--grep","packaged desktop trains one local adapter, reviews privately, saves and reopens it$")
+              "--project=packaged-desktop","--grep",_TRAINING_UI_TITLE+"$")
+    if _ui_repeat is not None:bindings.update(_training_ui_repeat_bindings(_ui_repeat,run))
     return _remember(_Intent(phase,argv,cwd,MappingProxyType(env),_TRAINING_DEADLINES[phase],folder,
         MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
 
@@ -663,8 +678,17 @@ def _validate_intent(intent,folder):
     _assert_no_pending()
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent and folder==intent.folder,"external-intent-denied")
     need(_implementation_hashes()==dict(intent.source_hashes),"launcher-source-drift")
+    repeat=_TRAINING_UI_REPEAT_INTENTS.get(id(intent))
+    if repeat is not None:
+        need(repeat["intent"] is intent and intent.phase=="training-ui" and folder==repeat["run"]/"training-ui",
+             "training-ui-repeat-intent")
+        _training_ui_repeat_clear_successor(repeat["run"])
     if intent.phase in _TRAINING_DEADLINES or intent.phase in _SOURCE_ROLES or intent.phase==_SERIAL_PROVIDED_PHASE:
-        for name,value in intent.consumer_hashes.items():_training_file(Path(name),value)
+        for name,value in intent.consumer_hashes.items():
+            if repeat is not None and name in repeat["proof_limits"]:
+                _regular_directory(Path(name).parent,_REPO)
+                _retry_bytes(Path(name),value,repeat["proof_limits"][name])
+            else:_training_file(Path(name),value)
         if intent.phase in _SOURCE_ROLES:_source_session_fresh(folder)
         if intent.phase==_SERIAL_PROVIDED_PHASE:_serial_provided_fresh(folder)
         if intent.phase=="training-package":
@@ -674,6 +698,9 @@ def _validate_intent(intent,folder):
     if intent.phase in ("package",*_HOST_UI_PROJECTS,_SERIAL_PROVIDED_PHASE):
         _reviewed_host_home(intent.cwd,intent.environment)
     _regular_directory(folder,_REPO)
+    if repeat is not None:
+        _training_ui_repeat_clear_successor(repeat["run"])
+        _assert_no_pending()
 
 
 def _memory_limits(intent):
@@ -819,6 +846,12 @@ class _OwnedJob:
         self.n=None;self.job=None;self.process=None;self.owned={};self.threads=[];self.log_state={};self.overflow=threading.Event();self.pipe_error=threading.Event();self.first=queue.Queue(maxsize=1)
         self.resume_done=False;self.assigned=False;self.peak_active=0;self.forced=False;self.cleanup_errors=[];self.events=[];self.limit_messages=[];self.limit_notifications=[];self.event_overflow=False
         self.phase="new";self.final_result=None
+        repeat=_TRAINING_UI_REPEAT_INTENTS.get(id(intent))
+        if repeat is not None:
+            with _TRAINING_UI_REPEAT_LOCK:
+                need(repeat["owner"] is None,"training-ui-repeat-dispatch-consumed")
+                # Retain this original object even if registration/preparation fails.
+                repeat["owner"]=self
         _register_owner(self)
         try:self.n=_Win()
         except BaseException:
@@ -910,6 +943,7 @@ class _OwnedJob:
             startup=StartupEx();startup.startup.cb=c.sizeof(startup);startup.startup.flags=0x100;startup.startup.stdin=nul;startup.startup.stdout=stdout_write;startup.startup.stderr=stderr_write;startup.attributes=c.cast(storage,c.c_void_p)
             environment=c.create_unicode_buffer("\0".join(key+"="+value for key,value in sorted(self.intent.environment.items(),key=lambda item:item[0].upper()))+"\0")
             command=c.create_unicode_buffer(subprocess.list2cmdline(self.intent.argv));process=Process()
+            if id(self.intent) in _TRAINING_UI_REPEAT_INTENTS:_validate_intent(self.intent,self.folder)
             created=k.CreateProcessW(self.intent.argv[0],command,None,None,True,ROOT_CREATION_FLAGS,environment,str(self.intent.cwd),c.byref(startup),c.byref(process))
             if process.process:self.process=process;self.hold("root",process.process)
             if process.thread:self.hold("thread",process.thread)
@@ -927,9 +961,12 @@ class _OwnedJob:
     def resume(self):
         need(self.phase=="prepared","resume-terminal-or-reentry")
         _assert_no_pending()
+        if id(self.intent) in _TRAINING_UI_REPEAT_INTENTS:_validate_intent(self.intent,self.folder)
         need(self.process is not None and self.owned.get("root")==self.process.process and self.owned.get("thread")==self.process.thread,"owned-root-thread-ledger-required")
         need(self.process and self.assigned and not self.resume_done and self.n.member(self.process.process,self.job),"resume-admission")
-        self.limits();need(self.n.k.ResumeThread(self.process.thread)==1,"resume")
+        self.limits()
+        if id(self.intent) in _TRAINING_UI_REPEAT_INTENTS:_validate_intent(self.intent,self.folder)
+        need(self.n.k.ResumeThread(self.process.thread)==1,"resume")
         self.resume_done=True;self.phase="resumed";need(self.close("thread"),"thread-close")
 
     def _drain(self,name,handle):
@@ -1282,6 +1319,271 @@ def _retry_json(raw):
                        parse_constant=lambda _: need(False, "retry-proof-json"))
     need(type(value) is dict, "retry-proof-json")
     return value
+
+
+def _training_ui_json(raw):
+    """Bound UTF-8 and depth before the existing duplicate/constant decoder."""
+    need(type(raw) is bytes and 0<len(raw)<=1024**2,"training-ui-repeat-json")
+    try:
+        text=raw.decode("utf8");depth=0;quoted=False;escaped=False
+        for char in text:
+            if quoted:
+                if escaped:escaped=False
+                elif char=="\\":escaped=True
+                elif char=='"':quoted=False
+            elif char=='"':quoted=True
+            elif char in "[{":
+                depth+=1;need(depth<=64,"training-ui-repeat-json")
+            elif char in "]}":
+                depth-=1;need(depth>=0,"training-ui-repeat-json")
+        need(depth==0 and not quoted,"training-ui-repeat-json")
+        return _retry_json(text)
+    except (ValueError,UnicodeError,RecursionError):
+        raise NativeFailure("training-ui-repeat-json") from None
+
+
+def _training_ui_repeat_files(review_file):
+    need(type(review_file) is type(_REPO) and review_file.is_absolute()
+         and review_file.is_relative_to(_REPO),"training-ui-repeat-review-path")
+    prior=_REPO/".local-codex/native-training-host-v1/runs"/_TRAINING_UI_PRIOR_RUN
+    phase=prior/"training-ui";case="training-ui-"+prior.name+"-01"
+    key=hashlib.sha256(("packaged-desktop\0"+_TRAINING_UI_TITLE).encode()).hexdigest()[:16]
+    return {"family-stop":prior.parent.parent/"FENCED.json","run-stop":prior/"FENCED.json",
+        "phase-stop":phase/"FENCED.json","native":phase/"native-result.json",
+        "stdout":phase/"stdout.log","stderr":phase/"stderr.log",
+        "playwright":phase/"playwright-result.json","review":review_file,
+        "cleanup":_REPO/"artifacts/qualification/visual-composer/runs"/case/"owned-host"/("cleanup-"+key+".json")}
+
+
+def _training_ui_repeat_evidence(proof_hashes,review_file):
+    """Read only the known failed case. No saved path/PID selects an action."""
+    paths=_training_ui_repeat_files(review_file)
+    need(type(proof_hashes) is dict and set(proof_hashes)==set(paths),"training-ui-repeat-proof-set")
+    hashes=dict(proof_hashes)
+    need(all(type(value) is str and re.fullmatch("[a-f0-9]{64}",value) for value in hashes.values()),
+         "training-ui-repeat-proof-set")
+    raw={}
+    for name,path in paths.items():
+        _regular_directory(path.parent,_REPO)
+        raw[name]=_retry_bytes(path,hashes[name],LOG_CAP if name in ("stdout","stderr") else 1024**2)
+    stop={"schema_version":"current-training-ui-stop-v1","reason":"failed-or-unconfirmed-training-ui",
+        "error_type":"ValueError","run_id":_TRAINING_UI_PRIOR_RUN,
+        "automatic_retry_allowed":False,"prior_data_preserved":True}
+    for name in ("family-stop","run-stop","phase-stop"):
+        saved=_training_ui_json(raw[name])
+        need(saved==stop and saved["automatic_retry_allowed"] is False and saved["prior_data_preserved"] is True,
+             "training-ui-repeat-prior-stop")
+    native=_training_ui_json(raw["native"])
+    integer=lambda value,low,high:type(value) is int and low<=value<=high
+    need(type(native.get("root_exit_code")) is int and native["root_exit_code"]==1
+         and native.get("command_passed") is False and native.get("reviewed_retry_possible") is True
+         and native.get("reason") is None and native.get("fence_required") is False
+         and native.get("forced_owned_job_termination") is False
+         and native.get("cleanup_confirmed") is True and native.get("all_owned_handles_close_acknowledged") is True
+         and native.get("cleanup_errors")==[] and native.get("assigned_at_creation") is True
+         and native.get("resumed_after_membership") is True and native.get("automatic_retry_allowed") is False
+         and native.get("log_overflow") is False and native.get("completion_message_overflow") is False
+         and native.get("observed_limit_messages")==[] and native.get("observed_limit_notifications")==[]
+         and native.get("reported_pids_are_process_identity") is False
+         and native.get("native_proof_for_old_processes") is False and native.get("job_handle_inherited") is False
+         and native.get("absence_of_limit_hits_claimed") is False
+         and type(native.get("explicit_inherited_handles")) is int and native["explicit_inherited_handles"]==3,
+         "training-ui-repeat-prior-retirement")
+    accounting=native.get("job_accounting");peak=native.get("peak_commit")
+    need(type(accounting) is dict and set(accounting)=={"total","active","terminated"}
+         and integer(accounting["total"],1,1000000)
+         and type(accounting["active"]) is int and accounting["active"]==0
+         and type(accounting["terminated"]) is int and accounting["terminated"]==0
+         and integer(native.get("peak_active_observed"),1,MEMBERS)
+         and type(peak) is dict and set(peak)=={"process_commit_bytes","job_commit_bytes"}
+         and integer(peak["process_commit_bytes"],1,OCR_PROCESS_BYTES)
+         and integer(peak["job_commit_bytes"],1,OCR_JOB_BYTES),
+         "training-ui-repeat-prior-accounting")
+    limits=native.get("limits")
+    need(type(limits) is dict and all(type(value) is int for value in limits.values())
+         and limits=={"flags":LIMIT_FLAGS,"process_bytes":OCR_PROCESS_BYTES,
+                      "job_bytes":OCR_JOB_BYTES,"active_limit":MEMBERS},
+         "training-ui-repeat-prior-limits")
+    logs=native.get("logs")
+    need(type(logs) is dict and set(logs)=={"stdout","stderr"},"training-ui-repeat-prior-logs")
+    for name in ("stdout","stderr"):
+        row=logs[name]
+        need(type(row) is dict and row.get("complete") is True and row.get("path")==str(paths[name])
+             and type(row.get("bytes")) is int and type(row.get("observed_bytes")) is int
+             and row["bytes"]==row["observed_bytes"]==len(raw[name])
+             and row.get("sha256")==hashes[name] and type(row.get("cap_bytes")) is int
+             and row["cap_bytes"]==LOG_CAP,"training-ui-repeat-prior-logs")
+    cleanup=_training_ui_json(raw["cleanup"])
+    need(cleanup.get("schemaVersion")=="owned-host-outcome-v1" and cleanup.get("kind")=="cleanup"
+         and cleanup.get("status")=="passed" and cleanup.get("willQuitAcknowledged") is True
+         and type(cleanup.get("mainExitCode")) is int and cleanup["mainExitCode"]==0
+         and type(cleanup.get("physicalWorkersAlive")) is int and cleanup["physicalWorkersAlive"]==0
+         and integer(cleanup.get("physicalWorkersObserved"),1,4)
+         and type(cleanup.get("physicalWorkersNativeObserved")) is int
+         and cleanup["physicalWorkersNativeObserved"]==cleanup["physicalWorkersObserved"]
+         and type(cleanup.get("physicalWorkersPidAbsenceObserved")) is int
+         and cleanup["physicalWorkersPidAbsenceObserved"]==0
+         and type(cleanup.get("failures")) is int and cleanup["failures"]==0
+         and cleanup.get("failureTypes")==[] and cleanup.get("failureStages")==[],
+         "training-ui-repeat-prior-app-retirement")
+    ui=_training_ui_json(raw["playwright"]);stats=ui.get("stats")
+    need(type(stats) is dict and all(type(stats.get(key)) is int and stats[key]==expected
+         for key,expected in (("expected",0),("unexpected",1),("flaky",0),("skipped",0)))
+         and ui.get("errors")==[],"training-ui-repeat-prior-ui")
+    specs=[]
+    def visit(suites,depth=0):
+        need(type(suites) is list and len(suites)<=8 and depth<=4,"training-ui-repeat-prior-ui")
+        for suite in suites:
+            need(type(suite) is dict and type(suite.get("specs",[])) is list,"training-ui-repeat-prior-ui")
+            specs.extend(suite.get("specs",[]));need(len(specs)<=1,"training-ui-repeat-prior-ui")
+            visit(suite.get("suites",[]),depth+1)
+    visit(ui.get("suites"))
+    need(len(specs)==1 and type(specs[0]) is dict and specs[0].get("title")==_TRAINING_UI_TITLE
+         and specs[0].get("ok") is False,"training-ui-repeat-prior-ui")
+    tests=specs[0].get("tests")
+    need(type(tests) is list and len(tests)==1 and type(tests[0]) is dict
+         and tests[0].get("projectName")=="packaged-desktop" and tests[0].get("status")=="unexpected",
+         "training-ui-repeat-prior-ui")
+    results=tests[0].get("results")
+    need(type(results) is list and len(results)==1 and type(results[0]) is dict
+         and results[0].get("status")=="failed" and type(results[0].get("retry")) is int
+         and results[0]["retry"]==0,"training-ui-repeat-prior-ui")
+    attachments=results[0].get("attachments")
+    need(type(attachments) is list and 1<=len(attachments)<=8
+         and all(type(row) is dict for row in attachments),"training-ui-repeat-prior-ui")
+    matches=[row for row in attachments if row.get("name")=="training-host-ui"]
+    need(len(matches)==1 and matches[0].get("contentType")=="application/json"
+         and "path" not in matches[0] and type(matches[0].get("body")) is str
+         and len(matches[0]["body"])<=16384,"training-ui-repeat-prior-ui")
+    try:report=_training_ui_json(base64.b64decode(matches[0]["body"],validate=True))
+    except ValueError:raise NativeFailure("training-ui-repeat-prior-ui") from None
+    need(report.get("schemaVersion")=="training-host-ui-outcome-v1" and report.get("status")=="failed"
+         and report.get("host")=="packaged-desktop" and report.get("inputProfile")=="generated-tiny-qwen2-v1"
+         and report.get("phases")==["workspace-and-inputs-visible","configuration-bounded"]
+         and report.get("nextPhase")=="training-accepted" and report.get("parentQualificationGranted") is False,
+         "training-ui-repeat-prior-ui")
+    review=_training_ui_json(raw["review"])
+    reviewed=review.get("actual_artifacts_sha256")
+    need(review.get("schema_version")=="independent-native-ui-result-review-v1"
+         and review.get("disposition")=="accepted-failure-and-confirmed-retirement-only"
+         and review.get("run_id")==_TRAINING_UI_PRIOR_RUN
+         and review.get("native_result_sha256")==hashes["native"]
+         and review.get("playwright_result_sha256")==hashes["playwright"]
+         and type(cleanup.get("sourceRevision")) is str
+         and re.fullmatch("source\\.[a-f0-9]{64}",cleanup["sourceRevision"])
+         and review.get("source_identity")==cleanup["sourceRevision"]
+         and type(reviewed) is dict
+         and all(reviewed.get(name)==hashes[name] for name in ("native","playwright","stdout","stderr","cleanup")),
+         "training-ui-repeat-prior-review")
+    return {str(path):hashes[name] for name,path in paths.items()}
+
+
+@dataclass(frozen=True,eq=False)
+class _TrainingUIRepeat:
+    run:Path
+    review_file:Path
+    proof_hashes:object
+    source_hashes:object
+    claim_sha256:str
+
+
+def _training_ui_repeat_clear_successor(run):
+    family=_REPO/".local-codex/native-training-host-v1"
+    need(type(run) is type(_REPO) and run.parent==family/"runs"
+         and re.fullmatch("[a-f0-9]{32}",run.name) and run.name!=_TRAINING_UI_PRIOR_RUN,
+         "training-ui-repeat-successor")
+    for directory in (run.parent,run,run/"training-ui"):_prior_family_clear(directory)
+
+
+def _reserve_reviewed_training_ui_repeat(*,run_id,proof_hashes,prior_review_file,review_digest):
+    """One explicitly authorized cooperative exception; no launch or public route."""
+    need(os.name=="nt" and c.sizeof(c.c_void_p)==8,"actual-Windows-x64-required")
+    _assert_no_pending()
+    need(not _LIVE and not _TRAINING_UI_REPEAT_PERMITS and not _TRAINING_UI_REPEAT_INTENTS,
+         "training-ui-repeat-owner-present")
+    need(type(run_id) is str and re.fullmatch("[a-f0-9]{32}",run_id)
+         and run_id[:8]!=_TRAINING_UI_PRIOR_RUN[:8],"training-ui-repeat-successor")
+    need(type(review_digest) is str and re.fullmatch("[a-f0-9]{64}",review_digest),
+         "training-ui-repeat-review-witness")
+    need(type(proof_hashes) is dict,"training-ui-repeat-proof-set");hashes=dict(proof_hashes)
+    family=_REPO/".local-codex/native-training-host-v1";run=family/"runs"/run_id
+    _regular_directory(family/"runs",_REPO);_training_ui_repeat_clear_successor(run)
+    def fresh(path):
+        try:path.lstat()
+        except FileNotFoundError:return
+        raise NativeFailure("training-ui-repeat-slot-occupied")
+    for path in (family/_TRAINING_UI_REPEAT_CLAIM,family/_TRAINING_UI_REPEAT_USED,run,
+                 _REPO/".local-codex/q"/run_id[:8],
+                 _REPO/".local-codex/native-training-host-operator/v2"/run_id,
+                 _REPO/".local-codex/training-inputs"/("tiny-"+str(uuid.UUID(hex=run_id)))):
+        fresh(path)
+    _training_ui_repeat_evidence(hashes,prior_review_file)
+    source=_implementation_hashes()
+    value={"schema_version":"reviewed-training-ui-repeat-v1",
+        "authority_ref":"user-allow-one-guarded-desktop-training-repeat-20261122",
+        "prior_run_id":_TRAINING_UI_PRIOR_RUN,"run_id":run_id,"proof_hashes":hashes,
+        "prior_review":prior_review_file.relative_to(_REPO).as_posix(),"source_hashes":source,
+        "review_digest":review_digest,"automatic_retry_allowed":False}
+    expected=hashlib.sha256((json.dumps(value,indent=2)+"\n").encode()).hexdigest()
+    dump(family/_TRAINING_UI_REPEAT_CLAIM,value)
+    _retry_bytes(family/_TRAINING_UI_REPEAT_CLAIM,expected,16384)
+    _training_ui_repeat_evidence(hashes,prior_review_file)
+    _training_ui_repeat_clear_successor(run);_assert_no_pending()
+    need(not _LIVE and _implementation_hashes()==source,"training-ui-repeat-owner-or-source-drift")
+    permit=_TrainingUIRepeat(run,prior_review_file,MappingProxyType(hashes),MappingProxyType(source),expected)
+    _TRAINING_UI_REPEAT_PERMITS[id(permit)]={"permit":permit,"state":"reserved"}
+    return permit
+
+
+def _training_ui_repeat_bindings(permit,run):
+    need(type(permit) is _TrainingUIRepeat and type(run) is type(_REPO) and run==permit.run,
+         "training-ui-repeat-permit")
+    entry=_TRAINING_UI_REPEAT_PERMITS.get(id(permit))
+    need(type(entry) is dict and entry.get("permit") is permit and entry.get("state")=="building",
+         "training-ui-repeat-permit")
+    _assert_no_pending();need(not _LIVE,"training-ui-repeat-owner-present")
+    need(_implementation_hashes()==dict(permit.source_hashes),"training-ui-repeat-source-drift")
+    _training_ui_repeat_clear_successor(run)
+    bindings=_training_ui_repeat_evidence(dict(permit.proof_hashes),permit.review_file)
+    family=run.parent.parent;claim=family/_TRAINING_UI_REPEAT_CLAIM;used=family/_TRAINING_UI_REPEAT_USED
+    _retry_bytes(claim,permit.claim_sha256,16384);_retry_bytes(used,entry["used_sha256"],16384)
+    bindings.update({str(claim):permit.claim_sha256,str(used):entry["used_sha256"]})
+    return bindings
+
+
+def _reviewed_training_ui_repeat_intent(*,permit,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes):
+    """Consume the sole permit even if source/input admission then refuses."""
+    owns=False
+    try:
+        need(type(permit) is _TrainingUIRepeat,"training-ui-repeat-permit")
+        with _TRAINING_UI_REPEAT_LOCK:
+            entry=_TRAINING_UI_REPEAT_PERMITS.get(id(permit))
+            need(type(entry) is dict and entry.get("permit") is permit and entry.get("state")=="reserved",
+                 "training-ui-repeat-permit")
+            entry["state"]="building";owns=True
+        need(type(run) is type(_REPO) and run==permit.run and folder==run/"training-ui"
+             and type(review_digest) is str and re.fullmatch("[a-f0-9]{64}",review_digest),
+             "training-ui-repeat-successor")
+        value={"schema_version":"reviewed-training-ui-repeat-used-v1","run_id":run.name,
+            "claim_sha256":permit.claim_sha256,"effect_review_digest":review_digest,"automatic_retry_allowed":False}
+        entry["used_sha256"]=hashlib.sha256((json.dumps(value,indent=2)+"\n").encode()).hexdigest()
+        dump(run.parent.parent/_TRAINING_UI_REPEAT_USED,value)
+        _training_ui_repeat_bindings(permit,run)
+        intent=_training_intent("training-ui",node_executable=node_executable,node_sha256=node_sha256,
+            run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,runtime_file_hashes=runtime_file_hashes,
+            input_manifest_sha256=input_manifest_sha256,review_digest=review_digest,
+            package_hashes=package_hashes,operator_version="v2",_ui_repeat=permit)
+        paths=_training_ui_repeat_files(permit.review_file)
+        limits={str(path):LOG_CAP if name in ("stdout","stderr") else 1024**2 for name,path in paths.items()}
+        limits.update({str(run.parent.parent/_TRAINING_UI_REPEAT_CLAIM):16384,
+                       str(run.parent.parent/_TRAINING_UI_REPEAT_USED):16384})
+        _TRAINING_UI_REPEAT_INTENTS[id(intent)]={"intent":intent,"run":run,
+            "proof_limits":MappingProxyType(limits),"owner":None}
+        return intent
+    finally:
+        if owns:
+            with _TRAINING_UI_REPEAT_LOCK:_TRAINING_UI_REPEAT_PERMITS.pop(id(permit),None)
 
 
 def _validate_reviewed_retry(prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest):
