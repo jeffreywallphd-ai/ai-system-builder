@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import stat
 import tempfile
 from shutil import rmtree
 from datetime import datetime, timezone
@@ -268,7 +269,35 @@ def _resolve_base_model(payload: TrainModelTaskRequest) -> str:
     raise ValueError("baseModel must include modelId or localPath for Python-side training.")
 
 
-def _load_transformers_objects(base_model_ref: str, method: str, quantization: dict[str, Any]) -> tuple[Any, Any]:
+def _local_training_model_reference(reference: str | None) -> str:
+    # Read-time preflight only; the execution owner still needs exact Model
+    # content/custody proof. No ancestor or native mutation fence is asserted.
+    try:
+        if not isinstance(reference, str) or not reference.strip():
+            raise ValueError()
+        path = Path(reference.strip())
+        if not path.is_absolute():
+            raise ValueError()
+        facts = path.lstat()
+        if not stat.S_ISDIR(facts.st_mode) or getattr(facts, "st_file_attributes", 0) & 0x400:
+            raise ValueError()
+        try:
+            (path / "adapter_config.json").lstat()
+        except FileNotFoundError:
+            return str(path)
+    except (OSError, ValueError):
+        raise ValueError("A local model directory is required for private training.") from None
+    # Pinned Transformers auto-discovers this entry, substitutes another base
+    # locator and loads adapter weights via PEFT's separate kwargs/weight path.
+    # Neither malformed, linked nor directory entries authorize that topology.
+    raise ValueError("Adapter model loading is unavailable for private training.")
+
+
+def _load_transformers_objects(
+    base_model_ref: str, method: str, quantization: dict[str, Any], *, local_files_only: bool = False,
+) -> tuple[Any, Any]:
+    if local_files_only:
+        base_model_ref = _local_training_model_reference(base_model_ref)
     try:
         from transformers import AutoModelForCausalLM, AutoTokenizer
     except Exception as error:  # pragma: no cover
@@ -294,7 +323,10 @@ def _load_transformers_objects(base_model_ref: str, method: str, quantization: d
         )
         model_kwargs["device_map"] = "auto"
 
-    tokenizer = AutoTokenizer.from_pretrained(base_model_ref, use_fast=True)
+    # Chosen by the private Python entry, never by a raw Task payload flag.
+    # Failure must propagate; retrying ordinary loading would weaken this policy.
+    local_kwargs = {"local_files_only": True, "trust_remote_code": False, "token": False} if local_files_only else {}
+    tokenizer = AutoTokenizer.from_pretrained(base_model_ref, use_fast=True, **local_kwargs)
     if tokenizer.pad_token is None:
         if tokenizer.eos_token is not None:
             tokenizer.pad_token = tokenizer.eos_token
@@ -303,6 +335,11 @@ def _load_transformers_objects(base_model_ref: str, method: str, quantization: d
         else:
             raise RuntimeError("Tokenizer does not define a pad or EOS token and cannot add a pad token.")
 
+    if local_files_only:
+        # Tokenizer/import callbacks and intervening work grant no permission to
+        # discover an adapter. Observe again at the model-factory handoff.
+        _local_training_model_reference(base_model_ref)
+        model_kwargs.update(local_kwargs, use_safetensors=True, weights_only=True)
     model = AutoModelForCausalLM.from_pretrained(base_model_ref, **model_kwargs)
     _synchronize_model_token_embeddings(model, tokenizer)
     return model, tokenizer
@@ -659,6 +696,33 @@ def train_model(
     *,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> TrainModelTaskResult:
+    return _train_model(payload, on_progress=on_progress)
+
+
+def train_model_from_local_files(
+    payload: TrainModelTaskRequest,
+    *,
+    on_progress: Callable[[dict[str, Any]], None] | None = None,
+) -> TrainModelTaskResult:
+    """Private load policy, not task admission or Model integrity/ownership proof.
+
+    The execution owner must independently prove authority, installed readiness,
+    exact model bytes/custody and resource limits before calling this entry.
+    No raw task route or capability activates this function.
+    """
+    if _resolve_training_task(payload) not in TEXT_CAUSAL_TRAINING_TASKS:
+        raise ValueError("This private training task is unavailable.")
+    # Capture the original local locator before progress/supplier callbacks.
+    local_model_ref = _local_training_model_reference(payload.baseModel.localPath)
+    return _train_model(payload, on_progress=on_progress, local_model_ref=local_model_ref)
+
+
+def _train_model(
+    payload: TrainModelTaskRequest,
+    *,
+    on_progress: Callable[[dict[str, Any]], None] | None = None,
+    local_model_ref: str | None = None,
+) -> TrainModelTaskResult:
     _require_non_empty(payload.output.get("outputModelName"), "output.outputModelName")
     training_task = _resolve_training_task(payload)
 
@@ -730,14 +794,17 @@ def train_model(
             on_progress({"stage": "initializing", "message": "Loading training datasets and model assets..."})
 
         stage = "base-model-resolution"
-        base_model_ref = _resolve_base_model(payload)
+        base_model_ref = _local_training_model_reference(local_model_ref) if local_model_ref is not None else _resolve_base_model(payload)
         stage = "dataset-loading"
         dataset, eval_dataset = _load_dataset(payload)
 
         stage = "model-loading"
         advanced = _to_dict(payload.advancedParameters)
         quantization = _to_dict(advanced.get("quantization"))
-        model, tokenizer = _load_transformers_objects(base_model_ref, payload.method, quantization)
+        model, tokenizer = (
+            _load_transformers_objects(base_model_ref, payload.method, quantization, local_files_only=True)
+            if local_model_ref is not None else _load_transformers_objects(base_model_ref, payload.method, quantization)
+        )
 
         stage = "sequence-length"
         effective_sequence_length, sequence_length_warning = _resolve_effective_sequence_length(

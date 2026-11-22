@@ -2040,3 +2040,32 @@ single-link, canonical path/device/inode/size/timestamp/mode facts. Existing inp
 output root identity and uncertain-start retention still own cleanup. These are
 read-time known-copy checks, not an adversarial native fence, model/resource or
 actual-host qualification. Original stored images are never moved or deleted.
+
+## Private local-only text training load policy
+
+The private Python `train_model_from_local_files` entry shares the existing text
+training orchestration. Before output allocation or dependency imports, require
+an absolute existing directory without a link/reparse root and capture its path.
+Never substitute a provider ID after callbacks. Only existing causal text tasks
+are admitted by this entry; unsupported multimodal methods stay unavailable.
+
+Force tokenizer/model local-only loading, deny custom remote code and implicit
+token use, and require safetensors with restricted weight loading. Failed loading
+cannot retry the ordinary policy. Preserve ordinary callers and existing QLoRA
+installed-package/CUDA requirements. A private Python entry is not a raw payload
+option, public task route, advertised capability or Headless activation.
+
+This policy does not verify provenance/manifest bytes, immutable file ownership,
+runtime readiness, actor/approval, resource limits or training quality. The later
+execution owner must prove those separately before using the entry. Root checks
+are read-time facts; they do not fence ancestor substitution or native mutation.
+Synthetic loader/serialization tests supply feature evidence, not real training,
+native, hardware or host qualification.
+
+Reject existing adapter-model roots in this private profile. Any
+`adapter_config.json` entry, including malformed, directory/link or inaccessible
+presence, cannot authorize Transformers' implicit base-locator substitution and
+PEFT's separate adapter-weight loader. Repeat refusal before Dataset/model
+imports and at the model-factory handoff after tokenizer callbacks. LoRA from a
+full base remains available; ordinary adapter policy is unchanged. These are
+read-time observations, not protection against native changes after the checks.

@@ -984,3 +984,28 @@ fresh binding lookup and read-time check of its owned staged-file facts. Assign
 unique source ordinals across the whole run. Never fabricate bindings, overwrite,
 adopt another path or share copies across runs. Keep existing quotas and original
 task/root cleanup custody; this adds no native fence or Headless execution pass.
+
+### Fixed local model loading before admitted fine-tuning
+
+Reuse the ordinary worker orchestration through a separate private text-training
+entry. Capture a present absolute nonlink/reparse-root local directory before
+callbacks; do not fall back to a provider ID. Fix tokenizer/model loading to local
+files with remote code and implicit token use disabled, and require safetensors
+and restricted weights. Never retry a weaker loader after failure. Keep ordinary
+provider/multimodal behavior and installed QLoRA/CUDA requirements unchanged.
+
+Do not expose a caller load-policy flag or activate a task/capability. This is a
+load-policy prerequisite, not authority, installation, provenance/byte integrity,
+native custody, resource admission or training-quality proof. Actual Headless
+execution must independently provide every required proof; unsupported private
+multimodal training remains unavailable.
+
+The fixed private profile excludes existing adapter-model roots. Refuse any
+`adapter_config.json` entry or unknown presence before effects/imports and repeat
+the observation before the model factory after tokenizer work. The pinned
+[Transformers auto factory](https://github.com/huggingface/transformers/blob/v4.51.3/src/transformers/models/auto/auto_factory.py)
+can substitute the adapter's base locator, while the pinned
+[PEFT loader](https://github.com/huggingface/peft/blob/v0.15.2/src/peft/utils/save_and_load.py)
+has its own adapter weight path. Top-level flags are insufficient for that
+topology. Keep LoRA training from a full local base and ordinary adapter behavior;
+do not claim native fencing, content proof or private adapter support.

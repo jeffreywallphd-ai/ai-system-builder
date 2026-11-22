@@ -2924,3 +2924,20 @@ selected source; README-only, unknown and explicit generic fallback remain.
 These are application materialization controls, not actual model/native/resource,
 Headless activation or parent qualification. Existing strict lifecycle compilation
 covers production source and its dependencies, not the legacy test file.
+
+The fixed model-training-worker-unit profile also exercises the private local
+text-training entry: local directory/task preflight, captured locator, exact
+tokenizer/model safety flags, QLoRA CUDA refusal and no ordinary retry. Existing
+ordinary behavior and related image selection tests remain covered. Inert engine
+modules keep these checks independent of model downloads and installed training
+engines. A real disposable serialization handoff uses a controlled validation
+callback, never a fake Torch module inside the native tensor reader. No model,
+native/resource, installed-runtime, actual-host or parent qualification follows.
+
+Private local-training regressions also reproduce and deny the pinned
+auto-adapter topology: existing/malformed/directory config entries, unknown entry
+presence, config creation during progress/tokenizer handoffs and unchanged
+ordinary adapter loading. Supplier import/factory spies and inert weight-named
+fixtures prove refusal only; no actual PEFT, Torch, model or provider is executed.
+Preserve the independently found adapter issue and original passing-but-incomplete
+receipt alongside the fixed candidate's fresh checks and reviewed closure.

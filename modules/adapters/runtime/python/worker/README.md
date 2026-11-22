@@ -1633,3 +1633,36 @@ One training source ID must have one exact declared path string across selected
 train/validation files and both supported map fields. Conflicting bindings fail
 instead of picking a later path; repeated identical bindings remain valid. This
 metadata check does not inspect or reconcile file identities, bytes or aliases.
+
+## Private local-only text training entry
+
+`train_model_from_local_files` reuses text training orchestration with a fixed
+local model load policy. It requires a present absolute directory before output
+allocation or engine imports, rejects a link/reparse root, and captures that
+locator before callbacks. It supports only the existing causal text task group;
+the private multimodal path stays unavailable. Ordinary `train_model` behavior,
+including its provider lookup and multimodal delegates, stays unchanged.
+
+The private entry forces `local_files_only=True`, `trust_remote_code=False` and
+`token=False` for tokenizer and model, plus `use_safetensors=True` and
+`weights_only=True` for the model. A loading failure has no ordinary retry. These
+controls match the pinned [Transformers 4.51.3 model documentation](https://huggingface.co/docs/transformers/v4.51.3/en/main_classes/model)
+and [Auto classes documentation](https://huggingface.co/docs/transformers/v4.51.3/en/model_doc/auto).
+QLoRA still requires already-installed dependencies and available CUDA.
+
+There is no raw Task flag, route or advertised capability for this entry. The
+future execution owner must prove original actor/approval, installed readiness,
+exact model bytes/provenance, input/output custody and resource limits separately.
+Directory preflight is a read-time observation, not a durable native fence.
+Focused tests use inert loader modules, real disposable output serialization and
+a controlled validation callback; they do not load a model or qualify training.
+
+The private entry refuses any `adapter_config.json` root entry or unknown entry
+presence without reading its contents. Pinned Transformers can discover it and
+substitute another base-model locator; PEFT uses a separate adapter loader that
+can select `.bin` weights. Top-level flags alone do not govern that topology.
+Check before output allocation, before Dataset/model imports and again after
+tokenizer work before the model factory. LoRA training from a full local base is
+still supported; starting from an existing adapter is not admitted privately.
+Ordinary adapter loading is unchanged. These read-time observations do not prove
+a native mutation fence or exact model contents.

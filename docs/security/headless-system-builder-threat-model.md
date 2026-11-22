@@ -1733,3 +1733,32 @@ source ordinals avoid basename collisions without overwrites. Per-run isolation,
 physical-byte accounting and original stage/task custody remain. Real disposable
 staging and mutation cases prove these controls without models; no hostile-native
 fence, original-source ownership or actual model/resource/host proof is claimed.
+
+### Private local-only training load policy
+
+Untrusted model IDs, configuration and task payloads cannot grant a hidden
+download, credential use, custom remote code or pickle-weight fallback. A trusted
+private Python entry selects fixed local-only tokenizer/model flags, denies
+remote code and implicit token use, and requires safetensors/restricted weights.
+Capture the existing absolute directory before progress callbacks. Missing,
+relative, file, link/reparse-root and unsupported task selections refuse before
+output allocation or engine imports. No loader error retries a weaker policy.
+
+The ordinary entry and Task schema are unchanged; no new route, advertised
+capability or public activation is provided. Synthetic loader calls prove fixed
+flags and failure behavior, not a sandbox, verified model contents, ancestor
+containment, immutable/native custody, installed readiness, actor/approval or
+resource admission. Those proofs remain necessary before actual Headless use.
+Private multimodal training has no qualified loader and remains unavailable.
+Rollback must keep private execution unavailable rather than use ordinary loading.
+
+Pinned Transformers can discover `adapter_config.json`, substitute its base
+locator and invoke a separate PEFT adapter-weight loader. That path can choose
+`.bin` weights under its own options; this is not a claim of unrestricted
+unpickling or code execution. The private profile refuses any such root entry or
+unknown presence without parsing it, before effects/imports and again at later
+supplier handoffs. Tests create inert config/weight-named files and assert no
+engine/model entry, including config creation during progress/tokenizer work.
+Ordinary adapter loading and LoRA training from a full local base remain intact.
+Native mutation after a read-time check and exact content/custody proof remain
+outside this helper; an actual execution owner must establish those separately.

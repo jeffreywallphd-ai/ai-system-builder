@@ -14,6 +14,236 @@ train_model_module = importlib.import_module("modules.adapters.runtime.python.wo
 multimodal_module = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model_multimodal")
 
 
+def _inert_transformers(monkeypatch, fail_at=None, *, successful_output=False):
+    calls = []
+    def tokenizer(reference, **kwargs):
+        calls.append(("tokenizer", reference, kwargs))
+        if fail_at == "tokenizer":
+            raise OSError("Synthetic local tokenizer refusal.")
+        return _FakeTokenizer() if successful_output else SimpleNamespace(pad_token="<pad>", eos_token="<eos>")
+    def model(reference, **kwargs):
+        calls.append(("model", reference, kwargs))
+        if fail_at == "model":
+            raise OSError("Synthetic local model refusal.")
+        return _FakeModel() if successful_output else SimpleNamespace()
+    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(
+        AutoTokenizer=SimpleNamespace(from_pretrained=tokenizer),
+        AutoModelForCausalLM=SimpleNamespace(from_pretrained=model),
+        BitsAndBytesConfig=lambda **kwargs: kwargs,
+    ))
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: True), float16="float16"))
+    monkeypatch.setitem(sys.modules, "bitsandbytes", SimpleNamespace())
+    return calls
+
+
+@pytest.mark.parametrize("method", ["lora", "qlora", "full-finetune"])
+def test_private_training_loader_uses_only_local_safe_weights(monkeypatch, tmp_path, method):
+    calls = _inert_transformers(monkeypatch)
+    train_model_module._load_transformers_objects(str(tmp_path), method, {}, local_files_only=True)
+    assert [call[0] for call in calls] == ["tokenizer", "model"]
+    assert all(call[1] == str(tmp_path) for call in calls)
+    assert calls[0][2] == {"use_fast": True, "local_files_only": True, "trust_remote_code": False, "token": False}
+    expected = {"local_files_only": True, "trust_remote_code": False, "token": False, "use_safetensors": True, "weights_only": True}
+    if method == "qlora":
+        expected.update(device_map="auto", quantization_config={"load_in_4bit": True, "load_in_8bit": False,
+            "bnb_4bit_quant_type": "nf4", "bnb_4bit_compute_dtype": "float16"})
+    assert calls[1][2] == expected
+
+
+def test_ordinary_training_loader_keeps_its_existing_defaults(monkeypatch):
+    calls = _inert_transformers(monkeypatch)
+    train_model_module._load_transformers_objects("synthetic/base", "full-finetune", {})
+    assert calls == [("tokenizer", "synthetic/base", {"use_fast": True}), ("model", "synthetic/base", {})]
+
+
+@pytest.mark.parametrize("value", [None, "", "synthetic/base", "https://example.invalid/model", "missing", "file"])
+def test_private_training_requires_a_local_directory_before_output_or_dataset_io(monkeypatch, tmp_path, value):
+    payload = _request(tmp_path)
+    if value == "missing":
+        value = str(tmp_path / "missing-model")
+    elif value == "file":
+        file = tmp_path / "not-a-model-directory"
+        file.write_bytes(b"synthetic")
+        value = str(file)
+    payload.baseModel.localPath = value
+    monkeypatch.setattr(train_model_module, "_load_dataset", lambda *args: pytest.fail("Invalid source reached dataset IO."))
+    calls = _inert_transformers(monkeypatch)
+    with pytest.raises(ValueError, match="^A local model directory is required for private training\\.$"):
+        train_model_module.train_model_from_local_files(payload)
+    assert calls == [] and not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("training_task", sorted(train_model_module.NON_TEXT_TRAINING_TASKS))
+def test_private_training_refuses_unqualified_multimodal_loaders_before_effects(monkeypatch, tmp_path, training_task):
+    payload = _request(tmp_path, training_task=training_task)
+    payload.baseModel.localPath = str(tmp_path)
+    monkeypatch.setattr(train_model_module, "_load_dataset", lambda *args: pytest.fail("Unsupported task reached dataset IO."))
+    calls = _inert_transformers(monkeypatch)
+    with pytest.raises(ValueError, match="^This private training task is unavailable\\.$"):
+        train_model_module.train_model_from_local_files(payload)
+    assert calls == [] and not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("training_task", sorted(train_model_module.TEXT_CAUSAL_TRAINING_TASKS))
+@pytest.mark.parametrize("fail_at", ["tokenizer", "model"])
+def test_private_training_captures_original_directory_and_never_retries_ordinary_loader(monkeypatch, tmp_path, training_task, fail_at):
+    payload = _request(tmp_path, training_task=training_task)
+    local_model = tmp_path / "original-model"
+    local_model.mkdir()
+    payload.baseModel.localPath = str(local_model)
+    monkeypatch.setattr(train_model_module, "_load_dataset", lambda *args: ({"train": object()}, None))
+    calls = _inert_transformers(monkeypatch, fail_at)
+    def progress(record):
+        if record["stage"] == "initializing":
+            payload.baseModel.localPath = None
+            payload.baseModel.modelId = "synthetic/changed-provider"
+    result = train_model_module.train_model_from_local_files(payload, on_progress=progress)
+    assert result.status == "failed" and result.generatedModelCandidate is None
+    assert result.error["details"]["stage"] == "model-loading"
+    assert len(calls) == (1 if fail_at == "tokenizer" else 2)
+    assert all(reference == str(local_model) and kwargs["local_files_only"] is True
+               and kwargs["trust_remote_code"] is False and kwargs["token"] is False
+               for _, reference, kwargs in calls)
+    if fail_at == "model":
+        assert calls[1][2]["use_safetensors"] is True and calls[1][2]["weights_only"] is True
+
+
+def test_private_training_keeps_installed_cuda_requirement(monkeypatch, tmp_path):
+    calls = _inert_transformers(monkeypatch)
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: False)))
+    with pytest.raises(RuntimeError, match="QLoRA requires CUDA"):
+        train_model_module._load_transformers_objects(str(tmp_path), "qlora", {}, local_files_only=True)
+    assert calls == []
+
+
+@pytest.mark.parametrize("mode,attributes", [(0o120777, 0), (0o040700, 0x400)])
+def test_private_training_refuses_link_or_reparse_root_before_effects(monkeypatch, tmp_path, mode, attributes):
+    payload = _request(tmp_path)
+    root = tmp_path / "synthetic-model-root"
+    root.mkdir()
+    payload.baseModel.localPath = str(root)
+    original = Path.lstat
+    def lstat(path, *args, **kwargs):
+        return SimpleNamespace(st_mode=mode, st_file_attributes=attributes) if path == root else original(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "lstat", lstat)
+    calls = _inert_transformers(monkeypatch)
+    with pytest.raises(ValueError, match="^A local model directory is required for private training\\.$"):
+        train_model_module.train_model_from_local_files(payload)
+    assert calls == [] and not (tmp_path / "out").exists()
+
+
+def test_private_local_training_serializes_calls_validation_and_returns_candidate(monkeypatch, tmp_path):
+    payload = _request(tmp_path)
+    payload.baseModel.localPath = str(tmp_path)
+    calls = _inert_transformers(monkeypatch, successful_output=True)
+    monkeypatch.setattr(train_model_module, "_load_dataset", lambda payload: ({"train": object()}, None))
+    monkeypatch.setattr(train_model_module, "_tokenize_dataset", _tokenize_fixture)
+    monkeypatch.setattr(train_model_module, "_apply_lora", lambda model, payload: model)
+    monkeypatch.setattr(train_model_module, "_build_training_args", lambda payload, output: SimpleNamespace(output_dir=str(output / "ckpt")))
+    monkeypatch.setattr(train_model_module, "_run_trainer", lambda *args, **kwargs: ({"loss": 0.125}, []))
+    validated = []
+    def validate(output, **kwargs):
+        # Test the actual orchestration/serialization handoff, not tensor loading.
+        # A fake Torch module must never enter the real native tensor reader.
+        assert (output / "adapter_model.safetensors").is_file()
+        assert kwargs == {"expected_lora": True, "expected_recurrent_additions": False}
+        validated.append(output)
+        return {"status": "valid", "warnings": [], "errors": [], "validationReportPath": "synthetic-validation",
+                "serializationFormat": "adapter-safetensors"}
+    monkeypatch.setattr(train_model_module, "validate_model_output", validate)
+    result = train_model_module.train_model_from_local_files(payload)
+    assert result.status == "succeeded" and result.metrics == {"loss": 0.125}
+    assert result.generatedModelCandidate["artifactForm"] == "adapter"
+    assert result.generatedModelCandidate["baseModelId"] == "org/base"
+    assert result.generatedModelCandidate["metadata"]["validation"]["validationReportPath"]
+    assert (tmp_path / "out" / "adapter_model.safetensors").is_file()
+    assert (tmp_path / "out" / "training-run.json").is_file()
+    assert validated == [tmp_path / "out"]
+    assert [call[0] for call in calls] == ["tokenizer", "model"]
+    assert calls[1][2]["use_safetensors"] is True
+
+
+@pytest.mark.parametrize("entry", ["orchestration", "loader"])
+@pytest.mark.parametrize("config_kind", ["adapter", "malformed", "directory"])
+def test_private_training_refuses_adapter_roots_before_imports_or_output(monkeypatch, tmp_path, entry, config_kind):
+    import builtins
+    payload = _request(tmp_path)
+    payload.baseModel.localPath = str(tmp_path)
+    config = tmp_path / "adapter_config.json"
+    if config_kind == "directory":
+        config.mkdir()
+    else:
+        config.write_text('{"base_model_name_or_path":"synthetic/unapproved-base"}' if config_kind == "adapter" else "not-json")
+    (tmp_path / "adapter_model.bin").write_bytes(b"inert fixture; never deserialized")
+    original = builtins.__import__
+    def no_engine_import(name, *args, **kwargs):
+        if name in {"transformers", "datasets", "torch", "peft"}:
+            pytest.fail("An adapter root reached a training supplier import.")
+        return original(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, "__import__", no_engine_import)
+    with pytest.raises(ValueError, match="^Adapter model loading is unavailable for private training\\.$"):
+        if entry == "orchestration":
+            train_model_module.train_model_from_local_files(payload)
+        else:
+            train_model_module._load_transformers_objects(str(tmp_path), "lora", {}, local_files_only=True)
+    assert not (tmp_path / "out").exists()
+
+
+def test_private_training_rechecks_adapter_refusal_after_progress_before_dataset_io(monkeypatch, tmp_path):
+    payload = _request(tmp_path)
+    payload.baseModel.localPath = str(tmp_path)
+    dataset_reads = []
+    def unexpected_dataset_read(*args):
+        dataset_reads.append(True)
+        raise RuntimeError("Synthetic unexpected dataset read.")
+    monkeypatch.setattr(train_model_module, "_load_dataset", unexpected_dataset_read)
+    def progress(record):
+        if record["stage"] == "initializing":
+            (tmp_path / "adapter_config.json").write_text("{}")
+    result = train_model_module.train_model_from_local_files(payload, on_progress=progress)
+    assert result.status == "failed" and result.error["details"]["stage"] == "base-model-resolution"
+    assert dataset_reads == []
+
+
+def test_private_training_rechecks_adapter_refusal_after_tokenizer_before_model_factory(monkeypatch, tmp_path):
+    calls = _inert_transformers(monkeypatch)
+    original = sys.modules["transformers"].AutoTokenizer.from_pretrained
+    def tokenizer(reference, **kwargs):
+        (tmp_path / "adapter_config.json").write_text("{}")
+        return original(reference, **kwargs)
+    monkeypatch.setattr(sys.modules["transformers"].AutoTokenizer, "from_pretrained", tokenizer)
+    with pytest.raises(ValueError, match="^Adapter model loading is unavailable for private training\\.$"):
+        train_model_module._load_transformers_objects(str(tmp_path), "lora", {}, local_files_only=True)
+    assert [call[0] for call in calls] == ["tokenizer"]
+
+
+@pytest.mark.parametrize("entry", ["orchestration", "loader"])
+def test_private_training_refuses_unknown_adapter_config_presence(monkeypatch, tmp_path, entry):
+    payload = _request(tmp_path)
+    payload.baseModel.localPath = str(tmp_path)
+    original = Path.lstat
+    def lstat(path, *args, **kwargs):
+        if path == tmp_path / "adapter_config.json":
+            raise PermissionError("Synthetic inaccessible entry.")
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "lstat", lstat)
+    calls = _inert_transformers(monkeypatch)
+    monkeypatch.setattr(train_model_module, "_load_dataset", lambda *args: ({"train": object()}, None))
+    with pytest.raises(ValueError, match="^A local model directory is required for private training\\.$"):
+        if entry == "orchestration":
+            train_model_module.train_model_from_local_files(payload)
+        else:
+            train_model_module._load_transformers_objects(str(tmp_path), "lora", {}, local_files_only=True)
+    assert calls == [] and not (tmp_path / "out").exists()
+
+
+def test_ordinary_training_loader_keeps_adapter_loading_policy(monkeypatch, tmp_path):
+    (tmp_path / "adapter_config.json").write_text("{}")
+    calls = _inert_transformers(monkeypatch)
+    train_model_module._load_transformers_objects(str(tmp_path), "lora", {})
+    assert calls == [("tokenizer", str(tmp_path), {"use_fast": True}), ("model", str(tmp_path), {})]
+
+
 def _request(tmp_path: Path, method: str = "lora", training_task: str = "llm-instruction") -> TrainModelTaskRequest:
     dataset_path = tmp_path / "train.jsonl"
     dataset_path.write_text('{"text":"hello"}\n', encoding="utf-8")
