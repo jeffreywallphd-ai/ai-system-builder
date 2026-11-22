@@ -233,6 +233,46 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/model/headless-model-training-model.use-case.ts",
             "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts"),
     },
+    "training-ui-evidence-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "dev-tools/helpers/native-qualification/training_ui_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_ui_evidence.py",
+        ),
+        "automatic_required_files": (
+            "dev-tools/helpers/native-qualification/training_ui_evidence.py",
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/training_first_phase_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_ui_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_first_phase_evidence.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "dev-tools/helpers/native-qualification/training_ui_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_ui_evidence.py",
+            "dev-tools/helpers/native-qualification/README.md",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+                    "dev-tools/helpers/native-qualification/tests/test_training_ui_evidence.py"),
+    },
+    "training-ui-retained-evidence": {
+        "interpreter": "python",
+        "automatic_sources": ("docs/operations/headless-local-training-ui-qualification.json",),
+        "automatic_required_files": (
+            "docs/operations/headless-local-training-ui-qualification.json",
+            "dev-tools/helpers/native-qualification/training_ui_evidence.py",
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/training_first_phase_evidence.py",
+            "dev-tools/helpers/native-qualification/training_package_inputs.py",
+            "dev-tools/helpers/native-qualification/owned_command_job.py",
+        ),
+        "sources": (
+            "docs/operations/headless-local-training-ui-qualification.json",
+            "dev-tools/helpers/native-qualification/training_ui_evidence.py",
+        ),
+        "command": ("dev-tools/helpers/native-qualification/training_ui_evidence.py",),
+        "timeout": 180,
+    },
     "training-package-evidence-unit": {
         "interpreter": "python",
         "automatic_sources": (

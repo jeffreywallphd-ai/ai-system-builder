@@ -1047,3 +1047,26 @@ changes no native/effect/credential/retry authority and grants no test pass or
 completion. Rollback refuses the amendment without reviving prohibited scoring
 or weakening other controls. The normal technical-policy path remains closed to
 active/incomplete work.
+
+### Recorded Desktop training evidence boundary
+
+The UI evidence reader is security-relevant because false or misbound results
+could be mistaken for execution authority or a parent pass. Its finite recipe
+binds the actual plan, executor, separate effect/result reviews, source snapshots,
+consumed loader grant, original failure chain, package/input bytes, Native logs,
+readiness ledger and matching inline/on-disk app-worker cleanup. Altered,
+missing, foreign, stale, skipped, repeated or incomplete results deny.
+Attachment and observation paths are data and are never followed.
+
+Check the current primary guard's captured hash before importing its read-only
+proof validator. Preserve all old stops and consumed grants. The reader neither
+reserves nor executes a Native intent, adopts an old PID, changes file protection,
+deletes data or grants retry/cleanup authority. Nine explicit qualification-only
+exclusions preserve product-source drift refusal. The older package is used for
+recorded facts, without waiving its independent current-source check.
+
+Model-quality scoring is excluded. Controlled parser inputs are not real model
+scores or physical host passes. Local hashes and review records are cooperative
+evidence, not authenticated reviewer identity or hostile-filesystem custody.
+Keep physical runtime, public Headless, other-host and parent gaps separate.
+Rollback must retain failed history and fail-closed guards.

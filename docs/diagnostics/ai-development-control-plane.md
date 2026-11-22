@@ -3064,3 +3064,25 @@ app startup, training, Headless workflows or parent completion. The later fixed
 Tiny UI journey keeps real model quality scoring and before/after comparison
 disabled. The Headless testing policy retains evaluation-software checks with
 controlled metrics and all non-quality runtime, resource and security checks.
+
+### Read-only Desktop training workflow qualification
+
+training-ui-evidence-unit executes the focused portable UI evidence tests.
+The distinct training-ui-retained-evidence check automatically selects when
+the versioned Desktop training report changes. It must pass in the current
+component receipt; parser fixtures alone cannot qualify the physical run.
+Missing required sources preserve the existing automatic-check fallback.
+Unknown sources and explicit generic check requests keep their original checks.
+
+The retained result records one generated-Tiny Desktop journey, including private
+review, candidate absence before Save, explicit saving, reopen and renderer
+reload. Original owned Native/app/worker retirement and all eight ordered phases
+are checked from raw evidence. The reader follows only fixed recipe paths, never
+saved attachment or observation paths. It verifies the consumed one-use loader
+grant and the full earlier failure chain without reserving another attempt.
+
+The report is recorded-source workflow support. Model accuracy, real output
+quality and before/after loss comparison are excluded. The report grants no
+public Headless, other-host, parent, retry or cleanup authority. Future product
+changes require their own relevant evidence; an older package's recorded facts
+are not a current-all-repository package pass.

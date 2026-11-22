@@ -2259,3 +2259,24 @@ witnesses remain. Role/profile checks and package-phase stop checks precede the
 fixed Native effect. The normal family-fenced path remains denied. The operator
 must separately review and run the build, confirm its outcome and owned retirement,
 then review the later UI attempt. No machine-wide scheduler is introduced.
+
+### Recorded Desktop private training workflow
+
+The generated-Tiny loader-profile Desktop journey has actual recorded evidence
+for training acceptance, private review, an unregistered candidate, separate
+Save, reopening the same generated adapter and renderer-reload persistence.
+The original Native Job retired with zero active members, complete bounded
+logs and all owned-handle acknowledgements. The app and its observed worker
+also acknowledged shutdown. These observations concern the owned test only.
+
+The fixed report and read-only evidence reader preserve both earlier failures,
+all five stops and the now-consumed loader allowance. No model accuracy,
+real output-quality or before/after validation-loss scoring ran. The optional
+product evaluation feature remains available. The physical test uses its
+explicit no-comparison closure and unchecked validation control.
+
+This evidence qualifies the recorded private local loader workflow, not public
+Headless execution, another host, every training method or general hardware
+capacity. It does not grant a parent pass, another run or cleanup. The selected
+product inputs and retained build bytes remain separately checked; evidence
+metadata changes do not requalify the earlier package's complete source tree.

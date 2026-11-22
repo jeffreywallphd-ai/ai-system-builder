@@ -715,3 +715,34 @@ again at final admission. Actual metadata preparation/build still needs a concre
 independent effect review; UI execution uses a later, separately reviewed invocation
 after successful build and owned retirement. These cooperative local guards do
 not claim a system-wide scheduler or hostile-process exclusion.
+
+## Recorded Desktop training workflow evidence
+
+The fixed training-ui-retained-evidence command reads the versioned
+docs/operations/headless-local-training-ui-qualification.json and its closed
+47-role artifact recipe. It never launches the app, a model or a Native job.
+The separate training-ui-evidence-unit command runs portable parser and failure
+cases. A source-test pass cannot replace the actual retained-evidence check.
+
+The recorded loader-profile attempt passed all eight Desktop phases: select and
+configure the inputs, accept training, offer private review, keep the candidate
+unregistered, save explicitly, reopen, and preserve the record after renderer
+reload. Original Native logs/accounting/handle acknowledgements and the matching
+app/worker cleanup must pass. Both older failed attempts, their consumed grants
+and all five stops remain. The new UI allowance is also permanently consumed.
+
+The reader checks exact hashes, original grant lineage, source correspondence,
+the original and copied package trees, six Tiny files, deployed operators and
+twelve bounded readiness observations. Its nine qualification-only source
+exclusions cannot hide product edits. The older package contributes recorded
+facts and unchanged selected product bytes; its stale current-all-repository
+check is neither invoked nor waived. The three generated OCR build files stay
+bound to the retained package, not workspace build outputs.
+
+This is recorded-build private local training support. The fixed test disables
+validation comparison and performs no accuracy, output-quality or before/after
+loss scoring. It does not qualify public Headless training, other hosts,
+independent installations, hardware performance or the parent roadmap. These
+cooperative local evidence checks do not authenticate a reviewer or protect
+against hostile concurrent filesystem mutation. No run, retry or cleanup
+permission follows from reading the report.
