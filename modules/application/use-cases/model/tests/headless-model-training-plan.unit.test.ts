@@ -140,3 +140,25 @@ test("an unexpected or active input-owner reply and its private errors never bec
     assert.deepEqual(await f.owner.execute(f.request, f.authority), {ok: false, code: "headless.unavailable"}); assert.equal(hooks, 0);
   }
 });
+
+test("training proposal hash keeps all optional metadata and array order while ignoring object member order", async t => {
+  const f = await fixture(t), actualRead = f.inputs.execute.bind(f.inputs);
+  let reverse = false;
+  f.inputs.execute = async (...args) => {
+    const result = await actualRead(...args); assert.ok(result.ok);
+    const model = {...result.value.model, inferenceMode: "causal" as const, sizeBytes: 4096, parameterCount: 64};
+    return {...result, value: {...result.value, model: reverse ? Object.fromEntries(Object.entries(model).reverse()) as typeof model : model}};
+  };
+  const original = await f.owner.execute(f.request, f.authority); assert.ok(original.ok); reverse = true;
+  const reordered = await f.owner.execute(f.request, f.authority); assert.ok(reordered.ok);
+  assert.equal(JSON.stringify(reordered.prepared), JSON.stringify(original.prepared));
+  const model = reordered.prepared.inputs.model;
+  assert.equal(model.inferenceMode, "causal"); assert.equal(model.sizeBytes, 4096); assert.equal(model.parameterCount, 64);
+  assert.equal(model.modelId, "fixture/model"); assert.equal(model.serializationFormat, "safetensors");
+  assert.ok(Object.isFrozen(model)); assert.ok(Object.isFrozen(model.taskTags));
+  const readWithFacts = f.inputs.execute.bind(f.inputs);
+  f.inputs.execute = async (...args) => {const result = await readWithFacts(...args); assert.ok(result.ok);
+    return {...result, value: {...result.value, model: {...result.value.model, sizeBytes: 4097}}};};
+  const changed = await f.owner.execute(f.request, f.authority); assert.ok(changed.ok);
+  assert.notEqual(changed.prepared.proposalDigest, original.prepared.proposalDigest, "Every optional fact remains digest-bound.");
+});

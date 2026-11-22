@@ -14,11 +14,20 @@ import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../s
 import {createStructuredHeadlessPlanReviewRepository, createStructuredHeadlessStoredPlanReviewRepository, readStructuredApprovedPlan,
   readStructuredHeadlessPlanModelPermission, type BindModelTrainingReviews} from "../createStructuredHeadlessPlanReviewRepository";
 import {readModelTrainingReviewBindings} from "../headlessModelTrainingReviewBindings";
+import {PrepareHeadlessModelTrainingPlanUseCase} from "../../../../application/use-cases/model/headless-model-training-plan.use-case";
+import {ReadHeadlessModelMetadataUseCase} from "../../../../application/use-cases/model/headless-model-metadata.use-case";
 import {prepareStructuredHeadlessPlanStep} from "../createStructuredHeadlessPlanStepOperationStore";
 
 const namespace = "headless/system-builder/plan-reviews";
 const sha = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+function reorderedJson<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(reorderedJson) as T;
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value)
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([key, child]) => [key, reorderedJson(child)])) as T;
+  return value;
+}
 
 async function fixture(t: TestContext, storage: "Core" | "SQLite" = "Core", mixed = false, ordinaryPrefix = false) {
   const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(join(boundary, "training-bound-review-")));
@@ -210,3 +219,115 @@ test("a binder receives detached target/requests and cannot replace the original
   const record = (await f.partition.listDocuments<{modelTrainings: unknown}>(namespace))[0];
   assert.deepEqual(record.value.modelTrainings, f.bindings);
 });
+
+test("current compiler binding survives JSON member reordering without changing metadata or its digest", async t => {
+  const f = await fixture(t), request = f.parsed.requests[0]; assert.ok(request.operation === "models.train");
+  const compiler = new PrepareHeadlessModelTrainingPlanUseCase({organizationId: f.scope.organizationId,
+    inputs: {async execute() {return {ok: true, operation: "models.preview-training-inputs", value: f.bindings[0].inputs};}}});
+  const prepared = await compiler.execute(request, {hostIncarnationId: f.host, clientId: f.scope.registeredClientId,
+    context: {organizationId: f.scope.organizationId, principalId: f.scope.principalId, workspaceId: f.scope.workspaceId},
+    isCurrent: () => true, stillAllowed: async () => true});
+  assert.ok(prepared.ok);
+  const original = {step: 1, inputs: prepared.prepared.inputs, proposalDigest: prepared.prepared.proposalDigest};
+  const roundTrip = reorderedJson(original); assert.deepEqual(roundTrip, original, "Only object member order may change.");
+  assert.notEqual(JSON.stringify(roundTrip.inputs.model), JSON.stringify(original.inputs.model));
+  const decoded = readModelTrainingReviewBindings([roundTrip], [request]); assert.ok(decoded);
+  assert.equal(JSON.stringify(decoded[0]), JSON.stringify(original), "The full original binding representation must be recovered.");
+});
+
+for (const tagsPresent of [true, false]) {
+  test(`original metadata producer encoding survives reordered JSON with tags ${tagsPresent ? "stored" : "defaulted"}`, async t => {
+    const f = await fixture(t), request = f.parsed.requests[0]; assert.ok(request.operation === "models.train");
+    const row: Record<string, unknown> = {...f.bindings[0].inputs.model, workspaceId: f.scope.workspaceId,
+      sizeBytes: 4096, parameterCount: 64, inferenceMode: "causal"};
+    if (!tagsPresent) delete row.taskTags;
+    const reader = new ReadHeadlessModelMetadataUseCase({organizationId: f.scope.organizationId, models: {
+      // The real owner selects and validates only minimized metadata from this synthetic private row.
+      async readRecordedModel() {return row as never;}, async listModels() {assert.fail("No discovery.");}}});
+    const selected = await reader.execute({version: request.version, operation: "models.record", input: {
+      hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, modelRecordId: request.input.model.modelRecordId}}, {
+      hostIncarnationId: f.host, context: {organizationId: f.scope.organizationId, principalId: f.scope.principalId, workspaceId: f.scope.workspaceId},
+      isCurrent: () => true, stillAllowed: async () => true});
+    assert.ok(selected.ok && selected.operation === "models.record");
+    const inputs = {...f.bindings[0].inputs, model: selected.value.model};
+    const original = {step: 1, inputs, proposalDigest: "sha256:" + sha({request, inputs})};
+    const raw = readModelTrainingReviewBindings([original], [request]); assert.ok(raw);
+    assert.equal(JSON.stringify(raw[0]), JSON.stringify(original));
+    const reordered = reorderedJson(original); assert.deepEqual(reordered, original);
+    const restored = readModelTrainingReviewBindings([reordered], [request]); assert.ok(restored);
+    assert.equal(JSON.stringify(restored[0]), JSON.stringify(original), "Keep the original task identity encoding.");
+    assert.deepEqual(restored[0].inputs.model.taskTags, tagsPresent ? ["chat"] : []);
+    if (!tagsPresent) {
+      const impossibleDefault = copy(original); Object.assign(impossibleDefault.inputs.model, {taskTags: ["chat"]});
+      Object.assign(impossibleDefault, {proposalDigest: "sha256:" + sha({request, inputs: impossibleDefault.inputs})});
+      assert.ok(readModelTrainingReviewBindings([impossibleDefault], [request]), "Exact raw legacy remains readable.");
+      assert.equal(readModelTrainingReviewBindings([reorderedJson(impossibleDefault)], [request]), undefined,
+        "An omitted original tag column cannot be reconstructed as nonempty tags.");
+    }
+  });
+}
+
+test("JSON-order compatibility never omits facts, sorts arrays or guesses arbitrary legacy permutations", async t => {
+  const f = await fixture(t), request = f.parsed.requests[0]; assert.ok(request.operation === "models.train");
+  const legacy = f.bindings[0];
+  assert.ok(readModelTrainingReviewBindings([legacy], [request]), "Unchanged legacy raw encoding remains supported.");
+  // This old fixture used a non-producer model-member order. Its digest must not
+  // be guessed after a store loses that order; only recognized full encodings work.
+  assert.equal(readModelTrainingReviewBindings([reorderedJson(legacy)], [request]), undefined);
+  const compiler = new PrepareHeadlessModelTrainingPlanUseCase({organizationId: f.scope.organizationId,
+    inputs: {async execute() {return {ok: true, operation: "models.preview-training-inputs", value: legacy.inputs};}}});
+  const prepared = await compiler.execute(request, {hostIncarnationId: f.host, clientId: f.scope.registeredClientId,
+    context: {organizationId: f.scope.organizationId, principalId: f.scope.principalId, workspaceId: f.scope.workspaceId},
+    isCurrent: () => true, stillAllowed: async () => true}); assert.ok(prepared.ok);
+  const original = {step: 1, inputs: prepared.prepared.inputs, proposalDigest: prepared.prepared.proposalDigest};
+  assert.ok(readModelTrainingReviewBindings([reorderedJson(original)], [request]), "The exact reordered denial baseline must first pass.");
+  for (const mutate of [
+    (row: typeof original) => {Object.assign(row.inputs.model, {parameterCount: 65});},
+    (row: typeof original) => {Object.assign(row.inputs.dataset.version, {totalRows: 11});},
+    (row: typeof original) => {Object.assign(row.inputs.dataset.version, {splits: row.inputs.dataset.version.splits
+      .map((split, index) => index === 0 ? {...split, rowCount: 5} : split)});},
+  ]) {
+    const changed = copy(original); mutate(changed);
+    const roundTrip = reorderedJson(changed);
+    assert.ok(readHeadlessModelTrainingInputsValue(roundTrip.inputs, request.input), "Changed facts must pass the schema before exact hash refusal.");
+    assert.equal(readModelTrainingReviewBindings([roundTrip], [request]), undefined);
+  }
+  const unknown = copy(original); Object.assign(unknown.inputs.model, {displayName: "Unknown private field"});
+  assert.equal(readHeadlessModelTrainingInputsValue(unknown.inputs, request.input), undefined, "Unknown fields are a separate schema denial.");
+  assert.equal(readModelTrainingReviewBindings([reorderedJson(unknown)], [request]), undefined);
+  const invalidRoles = copy(original); Object.assign(invalidRoles.inputs.dataset.version,
+    {splits: [...invalidRoles.inputs.dataset.version.splits].reverse()});
+  assert.equal(readHeadlessModelTrainingInputsValue(invalidRoles.inputs, request.input), undefined,
+    "Reversing the required train/validation/test roles is a separate schema denial.");
+  assert.equal(readModelTrainingReviewBindings([reorderedJson(invalidRoles)], [request]), undefined);
+  const withTags = copy(original); Object.assign(withTags.inputs.model, {taskTags: ["chat", "embeddings"]});
+  Object.assign(withTags, {proposalDigest: "sha256:" + sha({request, inputs: withTags.inputs})});
+  assert.ok(readModelTrainingReviewBindings([withTags], [request]));
+  Object.assign(withTags.inputs.model, {taskTags: [...withTags.inputs.model.taskTags].reverse()});
+  assert.ok(readHeadlessModelTrainingInputsValue(withTags.inputs, request.input), "Reversed valid tags must still pass the schema.");
+  assert.equal(readModelTrainingReviewBindings([withTags], [request]), undefined, "Array order remains part of exact content.");
+});
+
+for (const storage of ["Core", "SQLite"] as const) {
+  test(`${storage}: stored approval preserves original training digest after JSON object members are reordered`, async t => {
+    const f = await fixture(t, storage), repository = f.reviews(), request = f.parsed.requests[0]; assert.ok(request.operation === "models.train");
+    const compiler = new PrepareHeadlessModelTrainingPlanUseCase({organizationId: f.scope.organizationId,
+      inputs: {async execute() {return {ok: true, operation: "models.preview-training-inputs", value: f.bindings[0].inputs};}}});
+    const prepared = await compiler.execute(request, {hostIncarnationId: f.host, clientId: f.scope.registeredClientId,
+      context: {organizationId: f.scope.organizationId, principalId: f.scope.principalId, workspaceId: f.scope.workspaceId},
+      isCurrent: () => true, stillAllowed: async () => true}); assert.ok(prepared.ok);
+    Object.assign(f.bindings[0], {inputs: prepared.prepared.inputs, proposalDigest: prepared.prepared.proposalDigest});
+    assert.ok((await repository.propose({...f.query, proposal: f.proposal})).ok);
+    assert.ok((await f.decide(repository, 1, {kind: "approve", mode: "whole-plan"})).ok);
+    const raw = (await f.partition.listDocuments<Record<string, unknown>>(namespace))[0];
+    // Simulate JSON storage member reordering while using the actual repository
+    // and Core/SQLite revision protocol. This is not a live PostgreSQL test.
+    await f.partition.writeDocument(namespace, raw.key, reorderedJson({...raw.value,
+      state: {...raw.value.state as Record<string, unknown>, revision: raw.revision + 1}}), {expectedRevision: raw.revision});
+    if (storage === "SQLite") await f.reopen();
+    const stored = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now, false, false, true);
+    const read = await stored.read(f.query); assert.ok(read.ok); assert.equal(read.snapshot.state.revision, 3);
+    const approved = await f.root.runInOwnedTransaction!(owner => readStructuredApprovedPlan(owner.forOrganization(f.scope.organizationId), f.target, 3, 1), () => {});
+    assert.equal(JSON.stringify(approved?.modelTrainings), JSON.stringify(f.bindings));
+  });
+}

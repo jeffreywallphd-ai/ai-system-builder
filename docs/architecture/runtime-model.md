@@ -1,5 +1,14 @@
 # Runtime Model
 
+Private Headless training proposal hashes use a fixed complete representation of
+already validated Model metadata. JSON stores may reorder object members. The
+binding reader therefore checks the full exact digest against current canonical,
+unchanged raw legacy and the two known original metadata-producer layouts, with
+at most four candidates. It returns the matching layout to preserve original task
+identity. It does not reorder arrays, omit facts or infer missing digests. Unknown
+legacy encodings remain unavailable. This representation repair enables no public
+training route and supplies no runtime, native ownership or host qualification.
+
 Private local training preparation reuses Context's cooperative configured-root
 inventory checks. The training profile needs full-model unsharded safe weights,
 configuration and `tokenizer.json`; adapter roots and shard indexes are unavailable.

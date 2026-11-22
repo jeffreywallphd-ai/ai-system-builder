@@ -349,3 +349,36 @@ test("training ownership point reads never enumerate history or persist private 
   const stored = JSON.stringify(await Promise.all(namespaces.map(namespace => f.partition.listDocuments(namespace))));
   assert.doesNotMatch(stored, /fixture\/base|Private training trial|commonParameters|verification|modelRecordId|datasetId|validation|qualityReport/);
 });
+
+for (const encoding of ["current", "original-stored-tags", "original-defaulted-tags"] as const) {
+test(`${encoding}: JSON member reordering replays the same accepted training task without another issuance`, async () => {
+  const f = await fixture();
+  if (encoding !== "current") {
+    const names: (keyof typeof f.binding.inputs.model)[] = ["modelRecordId", "source", "lifecycleStatus", "artifactForm", "provider",
+      "modelId", "inferenceMode", "serializationFormat", ...(encoding === "original-stored-tags" ? ["taskTags" as const] : []),
+      "sizeBytes", "parameterCount", "updatedAt", ...(encoding === "original-defaulted-tags" ? ["taskTags" as const] : [])];
+    const source = {...f.binding.inputs.model, ...(encoding === "original-defaulted-tags" ? {taskTags: []} : {})};
+    const model = Object.fromEntries(names.filter(name => Object.prototype.hasOwnProperty.call(source, name))
+      .map(name => [name, source[name]])) as unknown as typeof source;
+    Object.assign(f.binding, {inputs: {...f.binding.inputs, model}});
+    Object.assign(f.binding, {proposalDigest: "sha256:" + sha({request: f.effect.request, inputs: f.binding.inputs})});
+  }
+  const digest = f.binding.proposalDigest;
+  const reserved = await f.transaction(owner => reserveStructuredTrainingPlanTask(owner, f.effect, digest, 1));
+  assert.ok(reserved.kind === "new"); const taskId = reserved.taskId;
+  assert.ok(await f.transaction(owner => issueStructuredTrainingPlanTask(owner, f.effect, taskId, digest, 2)));
+  assert.ok(await f.transaction(owner => acceptStructuredTrainingPlanTask(owner, f.effect, taskId, 3)));
+  function reorder<T>(value: T): T {
+    if (Array.isArray(value)) return value.map(reorder) as T;
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).reverse().map(([key, child]) => [key, reorder(child)])) as T;
+    return value;
+  }
+  const changed = reorder(f.effect); assert.deepEqual(changed, f.effect);
+  const accepted = {kind: "accepted", reference: {workspaceId: f.scope.workspaceId, taskId}};
+  assert.deepEqual(await inspectStructuredTrainingPlanTask(f.partition, changed), accepted);
+  assert.deepEqual(await f.transaction(owner => reserveStructuredTrainingPlanTask(owner, changed, digest, 4)), accepted);
+  assert.equal(await f.transaction(owner => issueStructuredTrainingPlanTask(owner, changed, taskId, digest, 5)), false);
+  assert.equal((await f.partition.listDocuments(namespaces[0])).length, 1);
+  assert.deepEqual(await readStructuredOwnedTrainingPlanTaskByPlan(f.partition, f.scope, f.host, f.target.fingerprint, 1), {workspaceId: f.scope.workspaceId, taskId});
+});
+}

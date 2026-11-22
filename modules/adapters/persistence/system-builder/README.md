@@ -1,5 +1,15 @@
 # Saved System Builder and Headless plan persistence
 
+Private training proposals use a fixed complete Model-summary member order.
+Training binding reads validate passive metadata first, then require an exact
+request-plus-inputs SHA-256 match. They recognize at most four complete encodings:
+unchanged legacy raw, current canonical, and the original metadata owner's stored
+or defaulted tag layout. The defaulted layout requires empty tags. Return the
+matched representation so an accepted task keeps its original input hash.
+Never omit fields, reorder arrays, search permutations or accept an unknown hash.
+An arbitrary old encoding whose member order was lost remains refused. Controlled
+Core/SQLite serialization cases do not qualify live PostgreSQL or any runtime.
+
 Interactive Model approval uses the separate stored-review factory. It returns
 only read/decide and has an explicit default-off bound-Model read option. That
 option never enables Model proposal decoding, inline source authority or execution.

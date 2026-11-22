@@ -2,7 +2,8 @@ import {createHash} from "node:crypto";
 import {types} from "node:util";
 import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
 import {isOrganizationId, type OrganizationId} from "../../../contracts/organization";
-import {isDesktopHeadlessClientId, readHeadlessModelTrainingPlanRequest, readHeadlessModelTrainingInputsResult} from "../../../contracts/headless";
+import {isDesktopHeadlessClientId, readHeadlessModelTrainingPlanRequest, readHeadlessModelTrainingInputsResult,
+  type HeadlessModelTrainingInputsValue} from "../../../contracts/headless";
 import {copyHeadlessModelWorkflowData} from "./headless-model-download-preview.use-case";
 import type {PreviewHeadlessModelTrainingInputsUseCase} from "./headless-model-training-inputs.use-case";
 
@@ -10,6 +11,19 @@ type Authority = Parameters<PreviewHeadlessModelTrainingInputsUseCase["execute"]
 function freeze<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) freeze(child); Object.freeze(value);}
   return value;
+}
+/** Internal representation of already decoded passive metadata. Keep every
+ * validated field and array order; JSON object order is not a storage guarantee.
+ * This projection supplies no metadata, approval or runtime authority. */
+export function canonicalHeadlessModelTrainingInputs(inputs: HeadlessModelTrainingInputsValue): HeadlessModelTrainingInputsValue {
+  const model = inputs.model;
+  return {...inputs, model: {modelRecordId: model.modelRecordId, updatedAt: model.updatedAt, source: model.source,
+    lifecycleStatus: model.lifecycleStatus, artifactForm: model.artifactForm, provider: model.provider,
+    ...("modelId" in model ? {modelId: model.modelId} : {}),
+    ...("inferenceMode" in model ? {inferenceMode: model.inferenceMode} : {}),
+    ...("serializationFormat" in model ? {serializationFormat: model.serializationFormat} : {}),
+    taskTags: model.taskTags, ...("sizeBytes" in model ? {sizeBytes: model.sizeBytes} : {}),
+    ...("parameterCount" in model ? {parameterCount: model.parameterCount} : {})}};
 }
 /** Bind proposal settings to exact authorized saved metadata, without an effect
  * port or claim of execution/file/readiness/rights/quality/approval authority. */
@@ -64,7 +78,7 @@ export class PrepareHeadlessModelTrainingPlanUseCase {
       let allowed: unknown;
       try {allowed = await stillAllowed.call(authority);} catch {return forbidden;}
       if (allowed !== true || !current()) return forbidden;
-      const proposal = freeze({request, inputs: result.value});
+      const proposal = freeze({request, inputs: canonicalHeadlessModelTrainingInputs(result.value)});
       const proposalDigest = "sha256:" + createHash("sha256").update(JSON.stringify(proposal)).digest("hex");
       if (!current()) return forbidden;
       return {ok: true, prepared: freeze({...proposal, proposalDigest, trainingApprovalRequired: true as const,

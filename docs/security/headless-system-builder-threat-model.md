@@ -1,5 +1,17 @@
 # Headless System Builder threat model
 
+Training bindings must survive JSON object-member reordering without weakening
+integrity or changing an accepted task identity. Decode the complete bounded
+passive inputs first. New proposals use a fixed complete Model-summary layout.
+The private reader recognizes only the unchanged raw, canonical and two known
+original producer layouts, each with the full exact request-plus-inputs SHA-256.
+The defaulted-tag layout is valid only for empty tags. Keep the matched input
+representation for task replay. Unknown hashes, changed facts, unknown fields and
+array reordering still deny; never search arbitrary permutations or omit fields.
+Earlier raw records remain readable unchanged. Unknown legacy member orders lost
+by a store stay refused. Synthetic Core/SQLite serialization tests are not live
+PostgreSQL, runtime, native-resource, model-output or parent qualification.
+
 ### Accepted Model task observation
 The `models.task` read protects original host, organization, actor, client,
 workspace and accepted source identity. Passive exact selectors are copied before
