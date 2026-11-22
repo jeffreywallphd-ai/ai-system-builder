@@ -1864,3 +1864,13 @@ replacement cannot restore the original withdrawn authority or erase accepted
 cleanup ownership. Local SQLite composition fixtures supply no public activation,
 PostgreSQL, physical model/provider/native or parent qualification. Rollback
 disconnects these bindings and preserves current-policy denial.
+
+Product read roots bind the shared readers to the original platform store and
+host incarnation. Desktop retains the already-created lazy Model owner; peeking
+cannot load it. Managed uses the exact original application owner and refuses
+after reconciler admission closes. Current policy and accepted task lineage are
+still reconstructed inside the shared read composition, independently of the
+transport's actor checks. No Model creation, cancellation or save approval/effect
+flag is enabled here. Wiring assertions are not proof of a live app/provider or
+native run. Rollback removes only these outward read bindings and preserves
+accepted task/result custody, ordinary behavior and current-policy denial.

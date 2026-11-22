@@ -110,3 +110,53 @@ test("both production host sources bind the captured cache into existing storage
     assert.ok(text.includes("modelSourceDownloadPort: pythonRuntimeTaskRegistry") || text.includes("approvedModelSourceDownload: pythonRuntimeTaskRegistry"));
   }
 });
+
+for (const host of ["Desktop", "Managed"] as const)
+test(`${host} root connects read-only original Model task ownership without enabling effects`, async () => {
+  const relative = host === "Desktop" ? "modules/hosts/desktop/composition/composeDesktopHost.ts"
+    : "modules/hosts/server/composition/composeServerHost.ts";
+  const text = await readFile(relative, "utf8"), source = ts.createSourceFile(relative, text, ts.ScriptTarget.Latest, true);
+  const calls: ts.CallExpression[] = [], assignments: ts.BinaryExpression[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node)) calls.push(node);
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        node.left.getText(source) === "modelDownloadTaskOwner") assignments.push(node);
+    ts.forEachChild(node, visit);
+  }; visit(source);
+  const named = (name: string) => calls.filter(call => call.expression.getText(source) === name);
+  const properties = (call: ts.CallExpression) => {
+    const value = call.arguments[0]; assert.ok(value && ts.isObjectLiteralExpression(value));
+    return new Map(value.properties.filter(ts.isPropertyAssignment).map(field => [field.name.getText(source), field.initializer]));
+  };
+  const factory = named("composeHeadlessModelTaskReaders"); assert.equal(factory.length, 1);
+  const config = properties(factory[0]!);
+  assert.equal(config.get("documents")?.getText(source), host === "Desktop" ? "platformDocuments" : "managedDocuments");
+  assert.equal(config.get("rootDirectory")?.getText(source), "registerOptions.storageRootDirectory");
+  const configArgument = factory[0]!.arguments[0]; assert.ok(ts.isObjectLiteralExpression(configArgument));
+  assert.ok(configArgument.properties.some(field => ts.isShorthandPropertyAssignment(field) && field.name.text === "hostIncarnationId"));
+  const peek = config.get("peekOwner"); assert.ok(peek && ts.isArrowFunction(peek));
+  assert.equal(peek.parameters.length, 0);
+  assert.equal(peek.body.getText(source), host === "Desktop" ? "modelDownloadTaskOwner" : "modelDownloadTasksUseCase",
+    "Read composition must peek the exact retained owner, not call a feature getter.");
+  const current = config.get("isHostCurrent"); assert.ok(current && ts.isArrowFunction(current));
+  assert.equal(current.modifiers?.some(value => value.kind === ts.SyntaxKind.AsyncKeyword) ?? false, false);
+  if (host === "Desktop") {
+    assert.equal(current.body.getText(source), "!headlessReadAdmissionClosed");
+    assert.equal(config.get("placement")?.getText(source), 'createTenantPlacementConfig({mode: "dedicated", organizationId: identity.organizationId})');
+    assert.equal(assignments.length, 1); assert.equal(assignments[0]!.right.getText(source), "feature.modelDownloadTasksUseCase");
+  } else {
+    assert.match(current.body.getText(source), /taskReconciler\.assertAccepting\(\); return true;/);
+    assert.match(current.body.getText(source), /catch\s*\{return false;\}/);
+    assert.equal(config.get("placement")?.getText(source), "options.managedHeadlessAgent.placement");
+  }
+  const handlers = named(host === "Desktop" ? "composeDesktopHeadlessReads" : "composeManagedAgentReads");
+  assert.equal(handlers.length, 1);
+  const reads = properties(handlers[0]!);
+  for (const name of ["readModelTask", "readModelCompletion"])
+    assert.equal(reads.get(name)?.getText(source), `modelTaskReaders?.${name}`);
+  const plans = named(host === "Desktop" ? "composeDesktopHeadlessPlanReview" : "composeManagedHeadlessPlanReview");
+  assert.equal(plans.length, 1);
+  const plan = properties(plans[0]!);
+  for (const name of ["getModelDownloadStart", "peekModelDownloadTasks", "peekModelReferenceSave"])
+    assert.equal(plan.has(name), false, "Read wiring cannot activate a Model effect.");
+});

@@ -1,4 +1,5 @@
 import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
+import {composeHeadlessModelTaskReaders} from "../../shared/composition/headlessModelDownloadTasks";
 import { requireManagedComfyUiInstall, resolveComfyUiAutoInstall } from "../../shared/resolveComfyUiAutoInstall";
 import { createStructuredAssetDefinitionPublication } from "../../../adapters/persistence/asset-publication";
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
@@ -1695,6 +1696,11 @@ export function composeServerHost(
       if (options.managedHeadlessAgent && managedDocuments && systemBuilder && contexts && workspaceAuthorization) {
         const workspaces = workspaceFoundation.workspaceRepositories.workspaceRepository;
         const scoped = {hostIncarnationId, workspaces, contexts, authorization: workspaceAuthorization};
+        const modelTaskReaders = managedDocuments.organizationId === undefined && managedDocuments.runInOwnedTransaction
+          ? composeHeadlessModelTaskReaders({documents: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
+            hostIncarnationId, placement: options.managedHeadlessAgent.placement,
+            isHostCurrent: () => {try {taskReconciler.assertAccepting(); return true;} catch {return false;}},
+            peekOwner: () => modelDownloadTasksUseCase}) : undefined;
         const authoring = composeManagedHeadlessAuthoring({...scoped, platform: managedDocuments,
           rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
         const localFileSave = options.managedHeadlessAgent.browserObservationAuthorizer &&
@@ -1705,6 +1711,8 @@ export function composeServerHost(
           ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks,
+            readModelTask: modelTaskReaders?.readModelTask,
+            readModelCompletion: modelTaskReaders?.readModelCompletion,
             getContextTask: async () => {
               const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
               return composeHeadlessContextTask(managedDocuments, async () => contextGenerationUseCase,

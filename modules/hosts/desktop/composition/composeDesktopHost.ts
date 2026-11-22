@@ -1,4 +1,5 @@
 import { createPythonRuntimeStartupDiagnostics } from "../../../adapters/runtime/python";
+import {composeHeadlessModelTaskReaders} from "../../shared/composition/headlessModelDownloadTasks";
 import { captureStudioStart, captureStudioPropose, captureStudioReview, captureStudioDraftCreate, captureStudioDraftUpdate, captureStudioDraftRead, captureStudioDraftList, captureStudioDraftTransition } from "../../../application/services/asset-studio/capture-studio-requests";
 import { capturePackageInspection, capturePackageAdmission, capturePackageActivation } from "../../../application/services/asset-package/capture-package-commands";
 import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
@@ -158,6 +159,7 @@ import {
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import {
   createLoggingConfig,
+  createTenantPlacementConfig,
   type LoggingConfig,
 } from "../../../contracts/config";
 import { SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY } from "../../../contracts/settings";
@@ -998,14 +1000,15 @@ export function composeDesktopHost(
             });
         },
       });
+      let modelDownloadTaskOwner: import("../../../application/use-cases/model").ModelDownloadTasksUseCase | undefined;
       const getModelFeatures = featureLifecycle.registerAsyncFeature({
         featureKey: "model-registry",
         policy: DESKTOP_FEATURE_LIFECYCLE_POLICIES["model-registry"],
         milestoneBase: "desktop.host.model-features",
         importFeature: async () => {
           const module = await import("./composeDesktopModelFeature");
-          return () =>
-            module.composeDesktopModelFeature({
+          return () => {
+            const feature = module.composeDesktopModelFeature({
               taskReconciler,
               storageRootDirectory: registerOptions.storageRootDirectory,
               now,
@@ -1017,6 +1020,9 @@ export function composeDesktopHost(
               getPythonRuntimeFoundation,
               revealModelPath: registerOptions.revealModelPath,
             });
+            modelDownloadTaskOwner = feature.modelDownloadTasksUseCase;
+            return feature;
+          };
         },
       });
       const getImageGenerationFeatures = featureLifecycle.registerAsyncFeature({
@@ -2268,12 +2274,18 @@ export function composeDesktopHost(
               });
             })() : undefined;
           let headlessModelSource: Promise<import("../../../application/use-cases/model").PreviewHeadlessModelSourceUseCase> | undefined;
+          const modelTaskReaders = platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction
+            ? composeHeadlessModelTaskReaders({documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+              hostIncarnationId, placement: createTenantPlacementConfig({mode: "dedicated", organizationId: identity.organizationId}),
+              isHostCurrent: () => !headlessReadAdmissionClosed, peekOwner: () => modelDownloadTaskOwner}) : undefined;
           headlessReadHandler = composeDesktopHeadlessReads({
             hostIncarnationId,
             identity,
             authorization: workspaceAuthorization,
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
+            readModelTask: modelTaskReaders?.readModelTask,
+            readModelCompletion: modelTaskReaders?.readModelCompletion,
             getContextTask: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
               const {composeHeadlessContextTask} = await import("../../shared/composition/headlessContextExecution");
               return composeHeadlessContextTask(platformDocuments, async () => (await getContextManagementFeatures()).generation,

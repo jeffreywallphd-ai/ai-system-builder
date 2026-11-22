@@ -2218,3 +2218,14 @@ metadata while the original accepted business/cleanup owner remains intact.
 Existing Desktop/Managed handlers still correlate selectors and filter replies.
 Local SQLite composition and controlled-task checks do not qualify PostgreSQL,
 physical hosts, actual provider/model work or final public activation.
+
+Desktop and Managed product roots now supply these read-only callbacks. Desktop
+captures its retained Model task owner when the existing lazy feature is created;
+status reads never request that feature. Managed closes over its original Model
+task use case. Both use the platform transaction owner and tenant placement.
+Desktop read admission and Managed reconciler shutdown fence the original host
+lifetime. Missing transaction support leaves the bindings unavailable. This
+connects existing read operations only: creation, cancellation and save approval
+or execution flags remain unconfigured pending complete workflow qualification.
+AST wiring assertions and controlled SQLite reader tests are source evidence,
+not a real product-host or model/provider/native qualification.

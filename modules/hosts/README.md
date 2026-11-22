@@ -199,3 +199,12 @@ client/actor/workspace/task lineage. The last policy check and source cancellati
 run outside transactions. Once an effect may have happened, failed/withdrawn
 outcomes are unconfirmed. Acknowledgement does not settle native custody.
 No ordinary fallback, restart, registry save or public activation follows.
+
+Both product roots connect the original-task and cached-completion read bindings.
+Desktop retains the original download owner only after its existing lazy Model
+feature is constructed. A read only peeks that owner. Managed uses its original
+application owner. Each binds the platform transaction store, current tenant
+placement and original host lifetime; shutdown denies further disclosure.
+These read bindings do not configure Model download, training, cancellation or
+save approval/effect paths. Source-wiring checks and controlled reader fixtures
+remain separate from actual app/provider/native and parent qualification.
