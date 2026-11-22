@@ -3,6 +3,7 @@ export * from "./model-details.port";
 export * from "./model-registry.port";
 export * from "./model-download-completion.port";
 export * from "./model-training.port";
+export * from "./model-training-files.port";
 
 export * from "./model-validation.port";
 export * from "./model-publisher.port";

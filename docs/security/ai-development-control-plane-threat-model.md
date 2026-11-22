@@ -1,5 +1,24 @@
 # AI Development Control Plane Threat Model
 
+The private training-file preparer keeps original ModelRead authority separate
+from a cooperative filesystem observation. It captures host/client/actor/context
+and callback identities and dependency methods, checks them after awaits, and
+compares repeated saved Model and configured-root layout results. Proxy/getter
+inputs, changed authority/selection, absent or malformed ports and unsupported or
+truncated layouts fail closed. Context retains its existing inspection profile;
+training adds only the explicit unsharded safe-weight/tokenizer layout and refuses
+adapter roots. Neither profile performs discovery, installation, loading or writes.
+No pathname/presence result becomes content integrity, native custody, immutable
+bytes, resource admission, rights, approval, a public capability or a task start.
+Original loader/ownership/qualification requirements and failed Native stops remain.
+The new exact unit/type/controller profile runs real temporary-file and Core/SQLite
+cases, retains generic coverage when inputs are missing and supplies no model pass.
+Original methods are captured before policy waits, every caller continuation
+rechecks lifetime and snapshots replies before later waits, and a final Model read
+detects replacement during the last inspection. Reserved markers deny any occupied
+entry, including directories or links. Shared barrels/earlier regressions alone
+cannot activate the new narrow source profile or suppress generic coverage.
+
 The fixed offline training qualifier admits only the application's canonical,
 empty, direct-child output folder under the isolated declared temporary root.
 Fixed naming, no-link/no-reparse, nonzero identity and stable read-time directory

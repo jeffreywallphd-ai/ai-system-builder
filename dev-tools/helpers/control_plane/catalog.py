@@ -169,7 +169,41 @@ HEADLESS_MCP_SOURCES = (
     "skills/control-ai-system-builder/references/mcp-tools.json",
 )
 
+TRAINING_LOCAL_MODEL_TESTS = (
+    "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts",
+    "modules/application/use-cases/model/tests/headless-model-training-local-files.unit.test.ts",
+    "modules/adapters/model/local/tests/context-embedding-model-files.unit.test.ts",
+    "modules/adapters/model/local/tests/local-training-model-files.unit.test.ts",
+)
+TRAINING_LOCAL_MODEL_CODE = (
+    "modules/application/ports/model/model-training-files.port.ts",
+    "modules/application/ports/model/index.ts",
+    "modules/application/use-cases/model/headless-model-training-local-files.use-case.ts",
+    "modules/adapters/model/local/localSafeModelDirectoryInspector.ts",
+    "modules/adapters/model/local/createLocalContextEmbeddingModelFilesAdapter.ts",
+    "modules/adapters/model/local/createLocalTrainingModelFilesAdapter.ts",
+    "modules/adapters/model/local/index.ts",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-local-files-unit": {
+        "automatic_sources": tuple(path for path in TRAINING_LOCAL_MODEL_CODE if not path.endswith("/index.ts")) + (
+            "modules/application/use-cases/model/tests/headless-model-training-local-files.unit.test.ts",
+            "modules/adapters/model/local/tests/local-training-model-files.unit.test.ts"),
+        "automatic_required_files": TRAINING_LOCAL_MODEL_CODE + TRAINING_LOCAL_MODEL_TESTS,
+        "sources": TRAINING_LOCAL_MODEL_CODE + TRAINING_LOCAL_MODEL_TESTS + (
+            "modules/adapters/model/local/README.md", "modules/application/use-cases/README.md"),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--", *TRAINING_LOCAL_MODEL_TESTS),
+    },
+    "headless-training-local-files-types": {
+        "companion_to": "headless-training-local-files-unit",
+        "sources": TRAINING_LOCAL_MODEL_CODE + TRAINING_LOCAL_MODEL_TESTS,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
+            "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop",
+            "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/application/use-cases/model/headless-model-training-local-files.use-case.ts",
+            *TRAINING_LOCAL_MODEL_TESTS),
+    },
     "headless-training-model-record-unit": {
         "automatic_sources": (
             "modules/application/use-cases/model/headless-model-training-model.use-case.ts",

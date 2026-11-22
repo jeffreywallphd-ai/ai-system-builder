@@ -1,4 +1,15 @@
 
+The fixed `headless-training-local-files-unit` and companion type checks execute
+the actual private Model/file-preparation tests, including Core/SQLite records,
+temporary layouts and unchanged Context behavior. Exact source/test presence is
+required for automatic selection. Missing, nonregular, unknown/shared sources and
+explicit generic checks retain their existing fallback. The controller executes
+the selected Node assertions and types; mere file presence supplies no pass.
+Shared barrels and earlier regression files cannot activate the new feature alone;
+they borrow its coverage only when a feature-owned source or test selects it.
+This feature verifies cooperative layout preparation only. It starts no model,
+installer or Native/app qualification and grants no training or parent completion.
+
 The fixed Model owner unit/type checks also cover the `models.task` contract
 and both actual host-reader compositions using the accepted ledger, application
 owner and reconciler. Cases cover exact task/plan selectors, original client,

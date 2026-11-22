@@ -4,3 +4,4 @@ export * from "./createLocalModelFileListerAdapter";
 export * from "./createLocalModelFilesDeleteAdapter";
 export * from "./createLocalModelLocationAuthorityAdapter";
 export * from "./createLocalContextEmbeddingModelFilesAdapter";
+export * from "./createLocalTrainingModelFilesAdapter";

@@ -1,5 +1,17 @@
 # Local model adapters
 
+`createLocalTrainingModelFilesAdapter` reuses the same configured-root,
+bounded-inventory inspection as Context. Its narrower training profile needs
+nonempty `config.json`, unsharded `model.safetensors` and `tokenizer.json`.
+Adapter roots and shard indexes remain unavailable. Context retains its existing
+tokenizer choices and behavior. The shared helper captures roots before awaits.
+Reserved adapter/shard names are refused for any occupied entry, including empty
+directories or links; absence checks fail closed on IO errors.
+The returned training layout reference is private and proves presence only;
+weights/configuration validity, byte integrity, native custody, readiness,
+resources, training compatibility and ModelRead permission are not established.
+Neither factory installs, downloads, loads a model, writes or changes ownership.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `createLocalContextEmbeddingModelFilesAdapter` implements existing-file

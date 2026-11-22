@@ -1430,6 +1430,54 @@
           "Other unfinished memory and shutdown work stays separate."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "dd621c0b0c8d0f33fbd2e5cf0eb5bfe4329c83cd01f1533b84274d45b78ac15b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training test now accepts the empty output folder created by the app.",
+          "Regression checks use the real training workflow and runtime adapter with synthetic storage and a task that does not train a model.",
+          "All 81 focused worker tests and related helper and documentation checks passed.",
+          "Another agent reviewed the fix before commit b9185e73b."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e9fa9d7f4ac45ea411d5d4710ca1bc839931dce13753c0433ea4d53631094368",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This checks the test code.",
+          "It does not prove that model training finished or that Headless training is ready."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d4d7c2dc7ca9dc34583bb0ae0bcaac120c3339782a1141b84dcce0fe20b87b22",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both failed app tests and their shutdown records remain.",
+          "The agent must still run the app and host checks.",
+          "These results do not complete a work chunk, criterion or roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0d22e0aeb1f6260c08e43a223e934b1118a6c8e90473f23f0170a4524e769aeb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These references name completed local work at its recorded source version.",
+          "Another checkout may not have those records. Missing records do not count as passed checks.",
+          "The accepted model accuracy tests were not run again."
+        ]
+      }
     }
   ]
 }

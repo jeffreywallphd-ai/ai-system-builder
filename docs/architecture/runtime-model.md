@@ -1,5 +1,25 @@
 # Runtime Model
 
+Private local training preparation reuses Context's cooperative configured-root
+inventory checks. The training profile needs full-model unsharded safe weights,
+configuration and `tokenizer.json`; adapter roots and shard indexes are unavailable.
+Context's profile is unchanged. The application composes this read-only port with
+the exact persisted Model reader under the original host/client/actor and ModelRead
+callbacks, rechecking after awaits and comparing repeated selection/layout facts.
+An altered callback, actor, Model revision/reference or observation is refused.
+Captured methods retain their receivers and never use replacement accessors.
+Capture occurs before the first policy wait. Caller-side lifetime checks follow
+every awaited handoff; responses are copied before another policy await. A final
+saved-Model comparison follows the last layout observation. Reserved adapter/shard
+entries are denied even when they are directories rather than listed files.
+
+The result is a private frozen preparation hint, with content integrity, native
+custody, runtime readiness, compatibility, resources and rights still unchecked.
+No installation, discovery, file write, model load, task, public Headless route or
+approval follows. Read-time containment/presence is not hostile-writer fencing or
+physical-model qualification. Later execution must retain its own admission and
+current authority checks; ModelWrite alone does not grant ModelRead.
+
 The existing private local causal trainer can explicitly request a bounded
 validation-loss comparison. It evaluates the same first at most32 prepared
 validation rows before and after training with the same Trainer and tokenizer.

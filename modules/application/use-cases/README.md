@@ -1,5 +1,18 @@
 # Application Use Cases
 
+`InspectHeadlessLocalTrainingModelUseCase` privately composes the existing exact
+persisted Model reader with configured-root training-file inspection. It captures
+the original actor/client/host/context and callback identities, rechecks current
+ModelRead policy around each await and rereads both selection and layout. Changed
+authority, revision, location or inspection cannot be adopted. Captured dependency
+methods keep their original receivers; getters/proxies cannot replace them.
+Methods are captured before the first policy await. Caller continuations recheck
+lifetime after every await and copy replies before another policy wait. A final
+Model read follows the last file inspection to detect a same-time replacement.
+The frozen result remains private preparation data. Layout presence does not
+grant model loading, byte integrity, native custody, resources, training approval
+or save approval. No public route or capability is added.
+
 Private `ReadHeadlessModelTrainingModelUseCase` reuses the authorized Model
 metadata owner and persisted-only point reads to select a saved local reference.
 It retains original actor/client/host and read policy, captures reader methods
