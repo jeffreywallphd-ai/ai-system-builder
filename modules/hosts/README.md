@@ -208,3 +208,24 @@ placement and original host lifetime; shutdown denies further disclosure.
 These read bindings do not configure Model download, training, cancellation or
 save approval/effect paths. Source-wiring checks and controlled reader fixtures
 remain separate from actual app/provider/native and parent qualification.
+
+### Private training approval preparation
+
+The shared private training-review helper reuses the existing application compiler
+and original saved-input reader. It copies the exact target/requests, captures
+callbacks and the input reader across all awaits, and prepares minimized metadata
+outside the owned proposal transaction. Its binder only compares the original
+organization/actor/client/host/workspace/plan and request list; it performs no file,
+provider, model or runtime work. Current transaction policy remains mandatory.
+
+Private version-4 storage support does not configure a host capability. Public
+permission queries, source validators and legacy execution still refuse training.
+Actual training/task control, result Save and resource/native/host qualification
+remain separate implementation work. Software fixtures do not rerun model-quality
+checks or grant another app/Native test attempt.
+
+Capture the returned input reader synchronously as soon as its factory resolves,
+before the post-factory policy await. Inspect bounded ordinary prototype method
+descriptors; refuse accessors/proxies without invoking them. Retain the original
+receiver through a frozen facade without reading function name/length getters.
+Recheck policy before metadata invocation or reporting reader availability.

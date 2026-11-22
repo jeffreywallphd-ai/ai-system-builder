@@ -130,3 +130,21 @@ required at execution. The distinct prepared Model-reference step also verifies
 committed reference receipts before later ordered steps and publication. Legacy
 hosts, stored-only approval readers and unconfigured compositions refuse this
 new family unless explicitly enabled. Public transport/product roots remain off.
+
+## Private training review records
+
+Version-4 approval records bind every training step to the exact minimized saved
+Model/Dataset metadata and the original compiler's request-plus-inputs digest.
+New records require a trusted metadata-only binder and owned proposal validation.
+Prepare metadata before entering the transaction. Storage independently validates
+step order, selectors, settings and digest; inline claims cannot supply a binding.
+Mixed records require exactly the Model-transfer and RAG witnesses they use.
+Versions 1–3 retain their existing schemas and reject training requests or fields.
+
+Training review options are off by default. The stored-only factory can explicitly
+read/decide existing training records, with current policy and the existing
+expiry/revision/commit fences; it cannot submit proposals. Snapshots omit private
+bindings. Existing public permission/source/step owners continue to deny training,
+including earlier ordinary steps in a training-containing plan. A stored approval
+is no task, input-byte, runtime, resource, license or model-quality proof. Unsupported
+version-4 records remain unavailable on rollback; never downgrade or rewrite them.

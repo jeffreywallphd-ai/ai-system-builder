@@ -2295,3 +2295,19 @@ Unconfigured paths deny training. Input-file integrity, current authorization,
 runtime compatibility, resource admission, original task ownership and separate
 result Save must be implemented and qualified before activation. Model downloads,
 installation, publication and UI control are outside this preview's permission.
+
+### Private training review persistence
+
+After private v13 proposal preparation, a trusted metadata-only binder can create
+a version-4 approval record through the existing platform transaction owner.
+Every training step retains minimized recorded inputs and the original compiler's
+request-plus-inputs digest. Model-transfer and RAG witnesses remain separate in
+mixed plans. The original compiler and input reader run before the transaction;
+no runtime or provider operation is moved into a retriable callback.
+
+Existing state, actor policy, channel/mode, revision, deadline, quota and commit
+fences still govern read/decide. Unconfigured readers deny training; an explicit
+stored-read option exposes no submit or execution method. Existing public
+permission/source/step owners remain closed. Version-4 metadata is not a file,
+runtime, resource, rights, quality or task-admission witness. Historical approval
+cannot start a task or revive withdrawn permission. Versions 1–3 are unchanged.

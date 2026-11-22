@@ -51,8 +51,7 @@ test("training never enters default plans, public reads, or JSON-supplied capabi
     assert.equal(parseHeadlessBuildPlanProposal(f.proposal, f.host, caps).ok, false);
   assert.equal(parseHeadlessBuildPlanProposal({...f.proposal, allowModelTraining: true}, f.host, f.caps).ok, false);
   assert.equal(parseHeadlessBuildPlanProposal({...f.proposal, steps: [{...f.step, approved: true}]}, f.host, f.caps).ok, false);
-  assert.equal(parseHeadlessReadRequest({version: HEADLESS_CONTRACT_VERSION, operation: f.step.operation,
-    input: {...f.step, hostIncarnationId: f.host, workspaceId: f.proposal.workspaceId}}, f.host).ok, false);
+  assert.equal(parseHeadlessReadRequest(f.parsed.requests[0], f.host).ok, false);
   assert.equal(readDesktopPlanApprovalView(f.packet, f.selection), undefined);
   assert.equal(readManagedBrowserPlanApprovalValue(f.managed, f.packet), undefined);
 });

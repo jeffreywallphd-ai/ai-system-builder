@@ -1913,3 +1913,32 @@ active/malformed input, effect tampering, exact input changes, escaped display,
 both channels/modes, real unconfigured storage/host denial and related legacy
 regressions. Residual file/native/resource/task/actual-host qualification remains
 pending; software preview checks supply no current-source model execution pass.
+
+### Private version-4 training approval storage
+
+The new boundary is trusted original metadata preparation into an owned approval
+transaction. Protect organization, actor, client, host, workspace, plan, ordered
+step, exact Model timestamp, Dataset version/digest and training settings. Capture
+and copy callbacks/data before awaits; use the original compiler outside the
+transaction. Compare the original target/request list and independently re-decode
+minimized recorded metadata and its request-plus-inputs digest. Reject missing,
+extra, active, foreign, stale or substituted bindings. Mixed witness families
+cannot replace each other. Never persist model paths, prompts or source data.
+
+New training proposals require a trusted binder plus owned policy/validation.
+Stored-only read/decide is separately explicit and denied by default. Existing
+actor, expiry, revision, quota and commit fences remain; snapshots omit bindings.
+Legacy versions reject training, and rollback cannot downgrade new records.
+Public permission queries, saved-source validation and step execution still deny
+training, including an earlier ordinary step in the same plan. Tests use Core and
+SQLite metadata, controlled callbacks and actual approval logic. Model quality,
+file/native/resource/runtime proof and actual host/task integration remain outside
+this component; no consumed app/Native allowance or historical stop is changed.
+
+The factory-to-policy handoff is also a substitution boundary. Capture the
+original reader's value method and receiver immediately after factory resolution,
+before another await can replace it. Bounded descriptor lookup refuses active
+methods/proxies; reflective invocation avoids function name/length getter hooks.
+An unavailable reader is disclosed only after the post-factory policy check.
+Regressions replace the method during that policy await, refuse active readers
+and preserve a real class-prototype receiver. No model or runtime is invoked.

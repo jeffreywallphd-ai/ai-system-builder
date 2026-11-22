@@ -1053,3 +1053,22 @@ Existing unconfigured persistence, host source validation and step execution sta
 denied. Later execution integration must supply its own current proofs. This
 component needs focused software permission/interface tests, not real model
 quality scoring or another Native package/Desktop attempt.
+
+### Exact private training review binding
+
+Extend the existing approval owner with closed version-4 records for privately
+prepared training proposals. Keep the original target, exact saved selectors and
+training settings. Independently decode minimized input metadata and recompute
+the existing compiler's request-plus-inputs digest for every ordered training
+step. Preserve explicit false/zero and distinct Model-transfer/RAG witnesses.
+Inline proposal fields, storage flags and historical records supply no authority.
+
+Capture original callbacks and the saved-input reader for all awaited preparation.
+Do that work outside owned transactions; the trusted binder only compares copied
+original facts. Require owned policy and proposal validation before writing.
+Reuse state/expiry/revision/decision fences and quotas. Stored-only training
+read/decide is explicit and off by default, with no proposal method. Public
+permission/source/step compositions stay denied pending their separate integration.
+Snapshots omit private bindings. Keep versions 1–3 byte-compatible and refuse
+training in those schemas. Rollback leaves unsupported version 4 unavailable.
+No model-quality, runtime/native, task or parent pass follows from metadata tests.
