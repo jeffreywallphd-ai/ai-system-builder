@@ -170,6 +170,25 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "training-package-inputs-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "dev-tools/helpers/native-qualification/training_package_inputs.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_inputs.py",
+        ),
+        "automatic_required_files": (
+            "dev-tools/helpers/native-qualification/training_package_inputs.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_inputs.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "dev-tools/README.md", "dev-tools/helpers/native-qualification/README.md",
+            "dev-tools/helpers/native-qualification/training_package_inputs.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_inputs.py",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_inputs.py"),
+    },
     "training-local-loader-fixture-unit": {
         "interpreter": "python",
         "automatic_sources": (

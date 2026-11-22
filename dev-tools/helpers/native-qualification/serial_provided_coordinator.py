@@ -153,7 +153,24 @@ def unique(pairs):
 
 def decode(raw):
     try:
-        return json.loads(raw, object_pairs_hook=unique, parse_constant=lambda _: need(False, "nonfinite-json"))
+        # Match the paired Node template's 128-level JSON bound before parsing.
+        # Python versions have different recursion behavior; it is not a limit.
+        text = raw.decode("utf8")
+        depth, quoted, escaped = 0, False, False
+        for character in text:
+            if quoted:
+                if escaped: escaped = False
+                elif character == "\\": escaped = True
+                elif character == '"': quoted = False
+            elif character == '"': quoted = True
+            elif character in "[{":
+                depth += 1
+                need(depth <= 128, "json-depth-bound")
+            elif character in "]}":
+                depth -= 1
+                need(depth >= 0, "invalid-json")
+        need(depth == 0 and not quoted, "invalid-json")
+        return json.loads(text, object_pairs_hook=unique, parse_constant=lambda _: need(False, "nonfinite-json"))
     except (ValueError, UnicodeError, RecursionError) as error:
         raise Refused("invalid-json") from error
 

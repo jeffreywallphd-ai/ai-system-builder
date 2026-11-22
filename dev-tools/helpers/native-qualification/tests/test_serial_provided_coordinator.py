@@ -59,6 +59,17 @@ class CoordinatorTests(unittest.TestCase):
             self.assertEqual(S.read_json(file, 64, digest), {"a": 1})
         self.assertEqual(opened.call_count, 1)
 
+    def test_depth_bound_is_checked_before_python_parser(self):
+        with patch.object(S.json, 'loads', side_effect=AssertionError('Parser must not run')) as parser:
+            with self.assertRaises(S.Refused):
+                S.decode(b'[' * 129 + b'0' + b']' * 129)
+        parser.assert_not_called()
+
+    def test_depth_boundary_preserves_valid_strings_escapes_and_unicode(self):
+        self.assertEqual(S.decode(b'[' * 128 + b'0' + b']' * 128), json.loads('[' * 128 + '0' + ']' * 128))
+        value = {'text': '[{\\"' * 200 + '\u00e9', 'items': [1, {'label': ' ] } " '}]}
+        self.assertEqual(S.decode(json.dumps(value, ensure_ascii=False).encode('utf8')), value)
+
     def test_oversize_is_refused_before_open_and_bad_digest_is_not_parsed(self):
         file = self.root / "input.json"
         self.put(file, b"x" * 65)
@@ -278,6 +289,11 @@ class CoordinatorTests(unittest.TestCase):
             if added: added.unlink()
 
     def engine(self, fail=None, pending=False):
+        # Mocked phase-engine cases do not admit a real namespace. Keep their
+        # disposable paths short; separate manifest tests retain exact paths.
+        self.run = self.root / "r" / self.run.name
+        self.output = self.run / "serial-provided/coordinator"
+        self.output.parent.mkdir(parents=True, exist_ok=True)
         events = []
         m = {"root": str(self.root), "candidate": str(self.candidate), "run": str(self.run), "_manifest_sha256": "a" * 64,
              "helpers": {name: "a" * 64 for name in S.HELPERS[:-1]}, "node": {"path": "node.exe", "sha256": "a" * 64},
@@ -442,9 +458,9 @@ class CoordinatorTests(unittest.TestCase):
         with self.assertRaisesRegex(S.Refused, "file-digest-drift"): S.load_context(context, script)
 
     def test_enclosing_live_logs_are_not_adopted_as_child_outputs(self):
+        coordinator, job, _ = self.engine()
         self.put(self.output.parent / "stdout.log", b"outer-current")
         self.put(self.output.parent / "stderr.log", b"")
-        coordinator, job, _ = self.engine()
         with patch("builtins.print"):
             self.assertTrue(coordinator.execute(job)["passed"])
         self.assertEqual((self.output.parent / "stdout.log").read_bytes(), b"outer-current")

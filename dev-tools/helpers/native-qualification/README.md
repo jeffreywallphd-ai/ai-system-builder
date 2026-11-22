@@ -398,6 +398,41 @@ Unknown owners/fences and historical failures remain; there is no reset or retry
 authority. Completed model accuracy and OCR checks stay closed.
 
 
+## Bounded training package bytes
+
+`training_package_inputs.py` tracks the earlier reviewed source-copy and installed
+Electron ZIP algorithm. It has no CLI, subprocess, native or model entry point.
+A separately reviewed trusted operator must bind current source/runtime identities,
+complete manifests, fresh fixed destinations, stop controls and permitted effects
+before using it. A hash row alone grants no authority. This component does not
+deploy the four operator files or change the original native factory.
+
+Source manifests allow 4,096 files, 8 MiB per file and 128 MiB total. Electron
+manifests allow 512 files, 256 MiB per file and 1 GiB total; ZIP preparation retains
+the stricter earlier input ceiling below 511 MiB and a 512 MiB archive bound.
+Plain detached rows, Windows-safe names, case/file-directory collision refusal,
+bounded stable regular-file reads and exclusive outputs protect byte integrity.
+Reads now also require a single link; supplier files with multiple links need a
+separate reviewed plan, never an implicit compatibility fallback. ZIP members are
+rehashed after creation. Before `ZipFile` can allocate member objects, a bounded
+non-ZIP64 end record and actual central-directory walk require the exact reviewed
+member names, count and metadata bytes. Forged counts cannot bypass the walk.
+Fixed timestamps keep identical inputs reproducible.
+Failures preserve partial outputs and refuse reuse. There is no cleanup or retry.
+
+The focused disposable tests cover real copy/ZIP bytes and failure paths. Ordinary
+file checks cannot fence hostile concurrent filesystem mutation. Current-source
+deployment, actual packaging, native retirement, private training and Headless
+host/parent qualification still need separate evidence. Earlier failed or passed
+runs and their bytes remain unchanged; accepted model accuracy stays closed.
+
+The existing serial provided-data coordinator also checks UTF-8 JSON nesting
+before calling Python's parser. Its limit is the paired Node template's 128 levels;
+interpreter recursion behavior is not a resource guard. String contents and escapes
+do not count as structure. Portable phase-engine fixtures use shorter disposable
+paths; the separate exact namespace/authorization admission fixtures stay intact.
+This parser repair does not change commands, native limits or effect authority.
+
 ## Fresh tiny-input tokenizer metadata
 
 The fixed creator normalizes the pinned serializer's known generic tokenizer

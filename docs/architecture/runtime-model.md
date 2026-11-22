@@ -1,5 +1,15 @@
 # Runtime Model
 
+Training qualification byte preparation is a private developer-tool concern.
+The bounded copy/ZIP helper consumes reviewed current-source and installed-file
+references; it grants no runtime readiness, loader authority or native ownership.
+Its portable disposable tests do not launch Forge or a worker. A trusted reviewed
+operator still binds complete manifests, fresh fixed paths and the unchanged
+native lifecycle before any actual package/training run. Ordinary stable-file
+checks are cooperative observations, not hostile-filesystem protection. The old
+operator version and historical evidence remain unchanged until a separately
+reviewed successor is composed; they cannot qualify current private training.
+
 Headless Model task reads use the finite `models.task` operation. Optional Desktop
 and Managed readers accept an exact task or plan-step selector and delegate only
 to the original accepted ledger and already loaded source owner. Current

@@ -1,5 +1,17 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+## Training package input bytes
+
+The private [training byte helper](helpers/native-qualification/training_package_inputs.py)
+reuses bounded source-copy and offline Electron ZIP preparation. Its exact
+`training-package-inputs-unit` check runs disposable file/ZIP tests through the
+existing focused helper. The mandatory controller harness also executes those
+assertions; command selection alone is not evidence. Exact paired sources can
+borrow this profile. Unknown files and explicit generic checks keep their coverage.
+No build, operator deployment, model load or native launch happens in these tests.
+Use the [native qualification guide](helpers/native-qualification/README.md) for
+trusted-caller obligations, unchanged limits and pending actual qualification.
+
 ## Unused Windows cache-binding check
 
 The fixed `scripts/qualification/qualify_windows_offload_read_binding.py` entry

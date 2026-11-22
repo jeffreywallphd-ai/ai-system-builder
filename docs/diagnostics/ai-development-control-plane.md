@@ -161,6 +161,21 @@ forwarding. These are focused controlled fixtures, not physical model/resource,
 actual-host, query-window or parent/chunk qualification. Unknown neighbors and
 explicit generic requirements retain their fallback checks.
 
+The exact `training-package-inputs-unit` check executes disposable source-copy and
+installed-distribution ZIP assertions through the existing focused helper. The
+mandatory controller harness also runs the real command and refuses zero/skipped
+tests or child failure. Exact source/test paths and their paired READMEs can use
+this narrow profile; other native sources, missing/nonregular required files and
+explicit generic checks keep their existing coverage. These tests exercise byte
+preparation only. They deploy no operator, run no build/model/native role and
+grant no training, host or parent qualification. Current-source effects still
+need separate review and the unchanged native ownership controls.
+
+The paired portable native-policy check retains the physical selftest's explicit
+opt-in skip. It now also proves that the serial coordinator rejects excessive JSON
+nesting before parser invocation, including on Python versions that can parse
+deeper input. Source checks cannot replace the skipped physical qualification.
+
 # Contributor Control Plane
 
 The review browser now requests bounded server pages. Use Previous/Next for

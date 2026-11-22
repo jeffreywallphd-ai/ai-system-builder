@@ -1,5 +1,23 @@
 # AI Development Control Plane Threat Model
 
+Private training package byte preparation protects current source, installed
+supplier files and retained evidence. Plain detached bounded manifests reject
+malformed rows, unsafe Windows names, case/file-directory aliases and excess
+counts/bytes. Stable single-link regular-file reads and hashes bind observed
+bytes; exclusive copy/ZIP creation preserves occupied and failed outputs. Archive
+membership, sizes and content are verified after writing. Before archive parser
+allocation, a bounded non-ZIP64 end record and actual central-directory walk bind
+the expected member count, exact names and metadata size; forged counts fail.
+The serial coordinator checks UTF-8 JSON nesting before Python parsing at the
+paired Node template's 128 levels, independent of interpreter recursion behavior.
+No parser, helper or
+manifest can authorize a build, runtime, native launch, deletion, retry or parent
+pass. The separately reviewed trusted caller must bind source identity, complete
+selection, fresh fixed destinations and effect authority. These ordinary checks
+do not defeat hostile concurrent filesystem changes. Actual native custody,
+deployment and current-source training remain separate qualification. The focused
+tests use disposable synthetic bytes and never expose private inputs.
+
 Reviewed user descriptions are untrusted display input, not acceptance authority.
 The adapter binds criterion identity, complete description hash and qualification,
 or the exact title/objective hash. Support copy binds existing scope/limitation
