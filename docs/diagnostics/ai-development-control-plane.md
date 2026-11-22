@@ -949,6 +949,18 @@ delete snapshots to free index space or replace missing evidence with a pass.
 
 ## Review and complete
 
+For a retained current offline Desktop training build, the fixed
+`training-package-retained-evidence` check streams the actual package, copied
+source, installed supplier and ZIP bytes against their closed manifests and
+separate reviews. It checks original limits and retirement, not a copied status
+label. The companion unit/controller tests never stand in for those artifacts.
+Only its own nine literal qualification paths may differ from each recorded
+physical source map. It consumes earlier input/readiness facts without broadening
+the first reader's exclusions. Missing or changed evidence stays pending; the
+check never builds, extracts, launches an app, reruns accuracy or grants a parent
+pass. The [native helper guide](../../dev-tools/helpers/native-qualification/README.md)
+defines the remaining UI/training boundary.
+
 The fixed `training-first-phase-retained-evidence` check reads the saved primary
 tiny-input/readiness results and separate reviews through a bounded closed-path
 reader. Its versioned report records the historical execution commit and each

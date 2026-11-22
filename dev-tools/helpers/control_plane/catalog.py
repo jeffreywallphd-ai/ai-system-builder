@@ -170,6 +170,43 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "training-package-evidence-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_evidence.py",
+        ),
+        "automatic_required_files": (
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/training_first_phase_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_first_phase_evidence.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/tests/test_training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/README.md",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+                    "dev-tools/helpers/native-qualification/tests/test_training_package_evidence.py"),
+    },
+    "training-package-retained-evidence": {
+        "interpreter": "python",
+        "automatic_sources": ("docs/operations/headless-local-training-package-qualification.json",),
+        "automatic_required_files": (
+            "docs/operations/headless-local-training-package-qualification.json",
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+            "dev-tools/helpers/native-qualification/training_first_phase_evidence.py",
+            "dev-tools/helpers/native-qualification/training_package_inputs.py",
+        ),
+        "sources": (
+            "docs/operations/headless-local-training-package-qualification.json",
+            "dev-tools/helpers/native-qualification/training_package_evidence.py",
+        ),
+        "command": ("dev-tools/helpers/native-qualification/training_package_evidence.py",),
+        "timeout": 180,
+    },
     "training-first-phase-evidence-unit": {
         "interpreter": "python",
         "automatic_sources": (

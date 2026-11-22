@@ -1,5 +1,18 @@
 # AI Development Control Plane Threat Model
 
+Offline training package evidence is a separate read-only trust boundary. Fixed
+run/role paths and source-owned hashes bind source, metadata, scripts, separate
+reviews, actual Native logs/results and the full resource tree. The grader uses
+the existing bounded UTF-8 decoder, stable regular single-link reads and bounded
+ZIP directory/member validation. It streams binary bytes, rejects aliases and
+unknown or changed tree entries, checks original process limits/retirement and
+keeps all launch/model/parent authority false. Its two physical source maps allow
+only nine literal package-qualification changes. Earlier input/readiness facts
+are historical; their original source guard is not broadened. Existing hooks and
+optional OCR resources are retained without borrowing OCR qualification. These
+checks do not authenticate reviewers/suppliers, fence hostile writers, supply a
+network sandbox or authorize another Native attempt after a later failure.
+
 The private first-phase training evidence reader treats saved artifacts as
 untrusted data. A versioned source-owned report pins their hashes, and a closed
 run/role recipe supplies every path. Observed runtime paths and command fields

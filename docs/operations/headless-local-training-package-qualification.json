@@ -1,0 +1,43 @@
+{
+  "schema_version": "headless-local-training-package-qualification-v1",
+  "status": "qualified-recorded-source-offline-package-only",
+  "run_id": "30430b9443254741986db4c15aae266d",
+  "source_commit": "59a3fdbd6e773a016f12ac5a853621e47551b2ae",
+  "owner_source_digest": "472b6bd5b961174236d40134a3fd5ee87c72aef1f3b2f666a35d8415d8054988",
+  "execution_source_digest": "e60f0628463d18dbdf1f9bb9e2aff52d323a9c5c17602c96288d4f919181b3df",
+  "artifacts": {
+    "reference_plan": "956575835b813a293345fe023fff7bf8a90ab4dcdd0d5eed243e90e809cbec9c",
+    "plan": "9126202109aabc9bb10b01c09c96b0c0ad59071c35c9fa348c0d6d764265bf1f",
+    "metadata_script": "73caeb91ca93a6e7f840f4214fc5781d9227f345c4a4b41197d7a891c25998fc",
+    "script": "7bf7741fea389d6cadfc41626aad42311f00858867bc480dbd509607bf0a08d9",
+    "metadata_effect": "5d10cb76d1be7316b128ceccb835c368154a7a6a2ea5174a22a4b67b4667f53f",
+    "metadata": "1c662c16c435e8c067be6264d5ce479ca0e21d668370592b4dedc036856f5915",
+    "metadata_review": "4ec6c37881e7ef044a776118512ca597a80d763d45614c346a7b5be0025b461c",
+    "effect": "a687dadd992ee5c5851ea38b573c07e888e954f0ee968c77335b593792838622",
+    "review": "06b75abc962699fb7f7fcf56675988030a439083cd62892af0dd215e12eae578",
+    "observation": "07648c974e5d168bd52cfce51ec050ef9122c8d6d168667001875ec89266338b",
+    "source": "fac683f8c8b90f066fa8c52259f1bd7f752524b273d9dceb8aca9f7e3dee0a68",
+    "electron": "8a3f94f3b746e202b1a41edb0e6f2b6bc295e16ff05a4560dd2ef61c1af51c20",
+    "trailer": "4700fdd390f2b482b243212f6f4279510c2679031aac12caa5088d48f2056347",
+    "owner_snapshot": "899017ead38c1b4f4b8deb16547f1b27a2b28ce5d16b8aeb76ed5676b8541515",
+    "execution_snapshot": "3936624e3125ca6e738912f0cd618a0c139a2a2cd47cd159913a3f5642f2e48d",
+    "native": "de794515afae1af47f6415b2a2c8c2bc4e11e09be0ea07165ecc2d26c0f9bbc7",
+    "stdout": "571b32e700c0d1c6c7c98ec1fce78e9b880b2be1c09d9e39bc8e441753465e2a",
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tree": "506fe29b6961c6348b79e7936cfd2236f5387960577f0894b08a36d93952c4fc",
+    "package": "667a4a4d67a627c01112c0f6a2e6846c3d0c092956fe35796be29929d6073b39",
+    "inputs": "7fab387954dd7ea7fc050caa536104edfec3161a5e9239e0625bec467c518724",
+    "phase_source": "fac683f8c8b90f066fa8c52259f1bd7f752524b273d9dceb8aca9f7e3dee0a68",
+    "phase_electron": "8a3f94f3b746e202b1a41edb0e6f2b6bc295e16ff05a4560dd2ef61c1af51c20"
+  },
+  "scope": {
+    "application_executed": false,
+    "training_executed": false,
+    "accuracy_qualified": false,
+    "headless_qualified": false,
+    "independent_coding_installation": false,
+    "parent_pass": false,
+    "native_effect_allowed": false,
+    "automatic_retry_allowed": false
+  }
+}

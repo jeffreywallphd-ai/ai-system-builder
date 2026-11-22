@@ -438,6 +438,34 @@ No model accuracy, native retirement, Headless activation or parent pass follows
 
 ## Bounded training package bytes
 
+The read-only `training_package_evidence.py` grades the versioned
+`docs/operations/headless-local-training-package-qualification.json`. It checks
+the separately reviewed offline build, actual complete package tree and worker
+resources, source/copy/config-trailer hashes, installed Electron and its bounded
+ZIP, deployed fixed operator, original Native limits/logs/retirement and immutable
+metadata/effect/result lineage. It verifies the executable header and package
+entry point without executing either. No extraction or dependency repair occurs.
+The 256 MiB per-member bound matches the original Node capture. Recorded commit
+IDs remain strict forty-character lowercase Git hashes; a later qualification
+commit does not rewrite the historical execution identity.
+
+Its `training-package-evidence-unit` check executes disposable file/identity and
+hash-consistent refusal cases. `training-package-retained-evidence` reads actual
+retained artifacts and fails when they are absent. Both source maps belong to the
+physical primary/coding layout; exactly nine literal package-qualification paths
+may differ. Product/runtime source drift remains stale. The grader consumes the
+earlier input/readiness facts as historical support and rehashes the six inputs.
+It does not call or relax the first-phase reader's now-stale current-source check.
+That reader's original nine exclusions, source commit and history stay intact.
+
+The package supports a later separately reviewed UI/training attempt. It grants
+no app launch, model accuracy, public Headless workflow, independent coding-host
+installation or parent pass. Optional OCR resources retain the original hook and
+remain unqualified by this package check. Plain-file observations and cooperative
+review hashes are not hostile-writer custody, a native network sandbox or complete
+supplier authentication. Later failed phases cannot grant retries through this
+historical package evidence.
+
 `training_first_phase_evidence.py` reads the versioned
 `docs/operations/headless-local-training-input-qualification.json` and retained
 first-phase artifacts without starting any process, model or native effect.

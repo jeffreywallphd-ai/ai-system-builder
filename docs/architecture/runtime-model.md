@@ -1,5 +1,13 @@
 # Runtime Model
 
+A current offline training package is qualified separately from launching or
+training with it. Its read-only evidence grader checks the full actual resource
+tree, all worker source rows, copied build inputs and installed Electron ZIP,
+exact effect/result lineage and original Native retirement. Each physical source
+map keeps its own digest and nine fixed qualification-only exceptions. Historical
+input/readiness facts remain inspectable; their reader's original current-source
+guard is retained. A package pass grants no runtime/model/Headless/parent pass.
+
 The private training qualification reader records fresh generated-input and
 read-only installed-dependency observations separately from actual training.
 Its fixed primary/coding-checkout layout and two raw source snapshots prevent
