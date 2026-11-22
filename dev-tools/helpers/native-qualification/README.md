@@ -504,6 +504,29 @@ review hashes are not hostile-writer custody, a native network sandbox or comple
 supplier authentication. Later failed phases cannot grant retries through this
 historical package evidence.
 
+The version-2 report records the guarded package-only rebuild. It keeps the
+complete original version-1 report as both parsed data and exact UTF-8 bytes with
+their digest. The reader still accepts version 1 without treating it as current
+version-2 evidence. Version 2 additionally checks the distinct package claim and
+consumed record, current original guard source, all nineteen retained retirement
+bindings, the original input run, exact cloned Tiny manifest and the user's
+one-attempt direction. A UI permit or model result cannot replace package proof.
+
+The exact historical bytes must also match the report hash in the captured
+owner source snapshot. Reformatting the history and updating its own digest
+cannot replace that pre-build anchor; missing or changed anchors deny.
+
+The unit profile executes twenty-one portable cases, including consistently rehashed
+wrong-role, missing-proof, changed-history and extra-authority refusals. The
+separate retained profile reads the actual package and original Native result;
+unit fixtures cannot pass it. The original guard module must match the recorded
+source before its read-only proof checks. Existing routing, source availability
+and explicitly requested generic checks stay unchanged. The nine
+qualification-only exclusions remain unchanged.
+Neither report format permits another build, app launch, model test or retry.
+The later fixed Tiny UI test keeps real quality scoring and before/after model
+comparison disabled under the Headless workflow-only testing policy.
+
 `training_first_phase_evidence.py` reads the versioned
 `docs/operations/headless-local-training-input-qualification.json` and retained
 first-phase artifacts without starting any process, model or native effect.

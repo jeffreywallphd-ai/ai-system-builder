@@ -1,10 +1,12 @@
 """Read-only offline package evidence; never builds, extracts or launches code."""
 from pathlib import Path
+import importlib.util
 import json
 import os
 import re
 import stat
 import sys
+import uuid
 
 import training_first_phase_evidence as first
 import training_package_inputs as byte_inputs
@@ -34,7 +36,8 @@ def need(value):
         raise ValueError('Offline training package evidence is unavailable or inconsistent.')
 
 
-def recipe(run):
+def recipe(run, guarded=False):
+    need(type(guarded) is bool)
     # Reuse the closed run validation, never a path supplied by an artifact.
     first.recipe(run)
     packet = f'{first.PACKET}/native-package-{run}'
@@ -54,6 +57,13 @@ def recipe(run):
                        ('tree', 'package-tree.json'), ('package', 'package-result.json'), ('inputs', 'package-inputs.json'),
                        ('phase_source', 'source-inputs.json'), ('phase_electron', 'electron-inputs.json')):
         result[name] = ('primary', phase + '/' + leaf)
+    if guarded:
+        family = '.local-codex/native-training-host-v1'
+        result.update(guard_claim=('primary', family + '/reviewed-training-loader-package-20261122.json'),
+            guard_used=('primary', family + '/reviewed-training-loader-package-used-20261122.json'),
+            cloned_manifest=('primary', '.local-codex/training-inputs/tiny-' +
+                             str(uuid.UUID(hex=run)) + '/input.json'),
+            user_authority=('coding', first.PACKET + '/training-ui-loader-repeat-authority-20261122.json'))
     return result
 
 
@@ -75,7 +85,7 @@ def package_rows(files):
     return rows
 
 
-def validate(report, raw):
+def _validate_v1(report, raw):
     need(type(report) is dict and set(report) == {'schema_version', 'status', 'run_id', 'source_commit',
         'owner_source_digest', 'execution_source_digest', 'artifacts', 'scope'})
     need(report['schema_version'] == 'headless-local-training-package-qualification-v1'
@@ -206,6 +216,106 @@ def validate(report, raw):
     return values
 
 
+GUARDED_SCHEMA = 'headless-local-training-package-qualification-v2'
+ORIGINAL_INPUT_RUN = '30430b9443254741986db4c15aae266d'
+PRIOR_FAILED_UI_RUN = '65f21a80323e4b19b0bee230ccaf78ee'
+GUARD_SOURCE = 'dev-tools/helpers/native-qualification/owned_command_job.py'
+GUARD_PROOF_ROLES = frozenset(('family-stop', 'run-stop', 'phase-stop', 'native', 'stdout',
+    'stderr', 'playwright', 'review', 'cleanup', 'prior-claim', 'prior-used'))
+
+
+def historical_report(report, original_report_sha256):
+    history = report['previous_qualification']
+    need(type(history) is dict and set(history) == {'raw_utf8', 'sha256', 'report'}
+         and type(history['raw_utf8']) is str and len(history['raw_utf8']) <= byte_inputs.MIB)
+    encoded = history['raw_utf8'].encode('utf8')
+    previous = first.decode(encoded)
+    need(type(original_report_sha256) is str and re.fullmatch('[a-f0-9]{64}', original_report_sha256)
+         and first.sha(encoded) == history['sha256'] == original_report_sha256
+         and first.same(previous, history['report'])
+         and previous['schema_version'] == 'headless-local-training-package-qualification-v1'
+         and previous['run_id'] == report['input_run_id'] == ORIGINAL_INPUT_RUN)
+    return previous
+
+
+def validate(report, raw):
+    if type(report) is dict and report.get('schema_version') == 'headless-local-training-package-qualification-v1':
+        return _validate_v1(report, raw)
+    base = {'schema_version', 'status', 'run_id', 'source_commit', 'owner_source_digest',
+            'execution_source_digest', 'artifacts', 'scope'}
+    need(type(report) is dict and set(report) == base | {'input_run_id', 'guard_profile', 'previous_qualification'}
+         and report['schema_version'] == GUARDED_SCHEMA and report['guard_profile'] == 'loader-package'
+         and report['input_run_id'] == ORIGINAL_INPUT_RUN and report['run_id'] not in
+             (ORIGINAL_INPUT_RUN, PRIOR_FAILED_UI_RUN))
+    need(type(raw) is dict and set(raw) == set(recipe(report['run_id'], True)) == set(report['artifacts']))
+    for name, value in raw.items():
+        need(type(value) is bytes and first.sha(value) == report['artifacts'][name])
+    # Retain every v1 package/source/native/control check without declaring a v2
+    # record itself to be old evidence. Its added exception/lineage checks follow.
+    common_names = set(recipe(report['run_id']))
+    common = {key: report[key] for key in base}
+    common['schema_version'] = 'headless-local-training-package-qualification-v1'
+    common['artifacts'] = {key: report['artifacts'][key] for key in common_names}
+    values = _validate_v1(common, {key: raw[key] for key in common_names})
+    for name in set(raw) - common_names: values[name] = first.decode(raw[name])
+    historical_report(report, values['owner_snapshot']['files'].get(REPORT))
+    plan, reference, metadata = (values[key] for key in ('plan', 'reference_plan', 'metadata'))
+    claim, used = values['guard_claim'], values['guard_used']
+    need(type(claim) is dict and set(claim) == {'schema_version', 'authority_ref', 'prior_run_id', 'run_id',
+        'proof_hashes', 'prior_review', 'source_hashes', 'review_digest', 'automatic_retry_allowed'})
+    need(type(used) is dict and set(used) == {'schema_version', 'run_id', 'claim_sha256',
+        'effect_review_digest', 'automatic_retry_allowed'})
+    need(claim['schema_version'] == 'reviewed-training-loader-package-v1'
+         and used['schema_version'] == 'reviewed-training-loader-package-used-v1'
+         and claim['run_id'] == used['run_id'] == report['run_id']
+         and claim['prior_run_id'] == PRIOR_FAILED_UI_RUN
+         and claim['authority_ref'] == 'user-allow-one-new-guarded-desktop-training-attempt-after-review-20261122'
+         and claim['automatic_retry_allowed'] is used['automatic_retry_allowed'] is False
+         and claim['review_digest'] == used['effect_review_digest'] == report['artifacts']['effect']
+         and used['claim_sha256'] == report['artifacts']['guard_claim'])
+    prior_relative = '.local-codex/h/' + first.PACKET + '/native-ui-repeat-' + PRIOR_FAILED_UI_RUN + '/native-ui-result-independent-review.json'
+    need(claim['prior_review'] == plan['prior_review_relative'] == reference['prior_review_relative'] == prior_relative
+         and first.same(claim['source_hashes'], {'owned_command_job.py': values['execution_snapshot']['files'][GUARD_SOURCE]})
+         and plan['implementation_files'][GUARD_SOURCE] == values['execution_snapshot']['files'][GUARD_SOURCE])
+    proofs = claim['proof_hashes']
+    need(type(proofs) is dict and set(proofs) == GUARD_PROOF_ROLES
+         and all(type(value) is str and re.fullmatch('[a-f0-9]{64}', value) for value in proofs.values())
+         and first.same(proofs, plan['proof_hashes']) and first.same(proofs, reference['proof_hashes'])
+         and type(plan['proof_bindings']) is dict and len(plan['proof_bindings']) == 19
+         and first.same(plan['proof_bindings'], reference['proof_bindings']))
+    need(plan['input_run_id'] == reference['input_run_id'] == report['input_run_id']
+         and plan['guard_profile'] == reference['guard_profile'] == report['guard_profile']
+         and metadata['staging_relative'] == plan['staging_relative'] == reference['staging_relative']
+             == '.local-codex/z/' + report['run_id'][:8]
+         and metadata['guard_allowance_reserved'] is False
+         and type(metadata['staging_root_device']) is int and type(metadata['staging_root_inode']) is int
+         and metadata['staging_root_inode'] > 0)
+    need(values['effect']['package_reservation_and_final_copy_allowed'] is True
+         and values['effect']['ui_attempt_allowed'] is False)
+    observation = values['observation']
+    need(observation['input_run_id'] == report['input_run_id'] and observation['guard_profile'] == report['guard_profile']
+         and observation['guard_claim_sha256'] == report['artifacts']['guard_claim']
+         and observation['guard_used_sha256'] == report['artifacts']['guard_used'])
+    manifest = values['cloned_manifest']
+    need(first.sha(raw['cloned_manifest']) == plan['input_manifest_sha256']
+         and manifest['schemaVersion'] == 'tiny-training-input-v1'
+         and manifest['inputProfile'] == 'generated-tiny-qwen2-v1')
+    tiny = byte_inputs.validated_files(manifest['files'], 'source')
+    need(set(tiny) == {'config.json', 'generation_config.json', 'model.safetensors', 'special_tokens_map.json',
+                       'tokenizer.json', 'tokenizer_config.json'}
+         and first.same(metadata['tiny_rows'], {**tiny, 'input.json': {
+             'bytes': len(raw['cloned_manifest']), 'sha256': report['artifacts']['cloned_manifest']}}))
+    direction = values['user_authority']
+    need(direction['schema_version'] == 'qualification-user-direction-attestation-v1'
+         and direction['authority_ref'] == claim['authority_ref']
+         and type(direction['authorized_ui_attempts']) is int and direction['authorized_ui_attempts'] == 1
+         and direction['model_downloads_authorized'] is False and direction['accepted_accuracy_reruns_authorized'] is False
+         and direction['old_failure_and_stop_records_must_remain'] is True and direction['automatic_retry_authorized'] is False
+         and direction['record_is_operator_attestation_not_machine_authenticated_user_identity'] is True
+         and plan['user_authority_sha256'] == report['artifacts']['user_authority'])
+    return values
+
+
 def current_source(previous, current):
     changed = {name for name in previous.keys() | current.keys() if previous.get(name) != current.get(name)}
     need(changed <= QUALIFICATION_ONLY)
@@ -248,8 +358,25 @@ def check(root=ROOT):
     report = first.decode(first.raw_file(root / REPORT))
     raw = {name: first.raw_file((coding if role == 'coding' else primary) / path,
             8 * byte_inputs.MIB if name in ('stdout', 'stderr') else byte_inputs.MIB)
-           for name, (role, path) in recipe(report['run_id']).items()}
+           for name, (role, path) in recipe(report['run_id'], report.get('schema_version') == GUARDED_SCHEMA).items()}
     values = validate(report, raw)
+    guarded = report['schema_version'] == GUARDED_SCHEMA
+    input_run = report['input_run_id'] if guarded else report['run_id']
+    if guarded:
+        previous = historical_report(report, values['owner_snapshot']['files'].get(REPORT))
+        historical_raw = {name: first.raw_file((coding if role == 'coding' else primary) / path,
+            8 * byte_inputs.MIB if name in ('stdout', 'stderr') else byte_inputs.MIB)
+            for name, (role, path) in recipe(previous['run_id']).items()}
+        _validate_v1(previous, historical_raw)  # Historical facts only; no current-source or parent pass.
+        guard = primary / GUARD_SOURCE
+        need(first.sha(first.raw_file(guard)) == values['execution_snapshot']['files'][GUARD_SOURCE])
+        spec = importlib.util.spec_from_file_location('retained_primary_training_package_guard', guard)
+        job = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = job
+        spec.loader.exec_module(job)
+        prior_review = coding / first.PACKET / ('native-ui-repeat-' + PRIOR_FAILED_UI_RUN) / 'native-ui-result-independent-review.json'
+        need(first.same(job._training_ui_repeat_evidence(values['plan']['proof_hashes'], prior_review, 'loader-package'),
+                        values['plan']['proof_bindings']))
     sys.path.insert(0, str(root / 'dev-tools/helpers'))
     try:
         from control_plane.candidate import snapshot
@@ -261,12 +388,17 @@ def check(root=ROOT):
     # source check. Preserve its exact nine exclusions and original source HEAD.
     earlier = first.decode(first.raw_file(root / first.REPORT))
     payloads = {name: first.raw_file((coding if role == 'coding' else primary) / path)
-                for name, (role, path) in first.recipe(report['run_id']).items()}
+                for name, (role, path) in first.recipe(input_run).items()}
     earlier_values = first.validate_facts(earlier, payloads)
     need(first.sha(payloads['manifest']) == values['plan']['input_manifest_sha256'])
-    model_manifest = primary / first.recipe(report['run_id'])['manifest'][1]
+    model_manifest = primary / first.recipe(input_run)['manifest'][1]
+    need(earlier['run_id'] == input_run)
     for name, expected in earlier_values['manifest']['files'].items():
         byte_inputs._stream_reference(model_manifest.parent / name, expected, byte_inputs.MIB)
+        if guarded:
+            cloned = primary / recipe(report['run_id'], True)['cloned_manifest'][1]
+            need(first.raw_file(cloned) == payloads['manifest'])
+            byte_inputs._stream_reference(cloned.parent / name, expected, byte_inputs.MIB)
     short = primary / '.local-codex/q' / report['run_id'][:8]
     package_root = short / 'o/ai-system-builder-win32-x64'
     actual_files, actual_directories = walk_package(package_root)

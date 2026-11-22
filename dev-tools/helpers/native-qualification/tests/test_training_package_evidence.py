@@ -219,5 +219,124 @@ class TrainingPackageEvidenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):evidence.packaged_identity(root, rows)
 
 
+def guarded_repack(report,raw,values):
+    for key in ('cloned_manifest','user_authority'):raw[key]=encoded(values[key])
+    values['plan']['user_authority_sha256']=evidence.first.sha(raw['user_authority'])
+    values['plan']['input_manifest_sha256']=evidence.first.sha(raw['cloned_manifest'])
+    values['metadata']['tiny_rows']={**values['cloned_manifest']['files'],'input.json':row(raw['cloned_manifest'])}
+    repack(report,raw,values)
+    values['guard_claim']['review_digest']=evidence.first.sha(raw['effect'])
+    raw['guard_claim']=encoded(values['guard_claim'])
+    values['guard_used'].update(claim_sha256=evidence.first.sha(raw['guard_claim']),effect_review_digest=evidence.first.sha(raw['effect']))
+    raw['guard_used']=encoded(values['guard_used'])
+    values['observation'].update(guard_claim_sha256=evidence.first.sha(raw['guard_claim']),guard_used_sha256=evidence.first.sha(raw['guard_used']))
+    raw['observation']=encoded(values['observation'])
+    values['review']['operator_observation_sha256']=evidence.first.sha(raw['observation'])
+    raw['review']=encoded(values['review'])
+    report['artifacts']={key:evidence.first.sha(value)for key,value in raw.items()}
+
+def guarded_fixture():
+    previous,earlier_raw,earlier_values=fixture()
+    previous['run_id']=evidence.ORIGINAL_INPUT_RUN
+    for value in earlier_values.values():
+        if type(value)is dict and 'run_id'in value:value['run_id']=previous['run_id']
+    repack(previous,earlier_raw,earlier_values)
+    evidence.validate(previous,earlier_raw)
+    report,raw,values=fixture();run='c'*32;report['run_id']=run
+    guard_hash='e'*64
+    files={**values['execution_snapshot']['files'],evidence.GUARD_SOURCE:guard_hash,
+        evidence.REPORT:evidence.first.sha(encoded(previous))}
+    digest=evidence.first.sha(encoded(files));report.update(owner_source_digest=digest,execution_source_digest=digest)
+    for value in values.values():
+        if type(value)is not dict:continue
+        if 'run_id'in value:value['run_id']=run
+        if 'owner_source_digest'in value:value['owner_source_digest']=digest
+        if 'execution_source_digest'in value:value['execution_source_digest']=digest
+        if 'source_digest'in value:value['source_digest']=digest
+        if 'sourceDigest'in value:value['sourceDigest']=digest
+    for role in ('owner','execution'):
+        values[role+'_snapshot'].update(files=copy.deepcopy(files),source_digest=digest)
+    proof={key:'f'*64 for key in evidence.GUARD_PROOF_ROLES}
+    prior='.local-codex/h/'+evidence.first.PACKET+'/native-ui-repeat-'+evidence.PRIOR_FAILED_UI_RUN+'/native-ui-result-independent-review.json'
+    for key in ('reference_plan','plan'):
+        values[key].update(input_run_id=evidence.ORIGINAL_INPUT_RUN,guard_profile='loader-package',staging_relative='.local-codex/z/'+run[:8],
+            proof_hashes=copy.deepcopy(proof),prior_review_relative=prior,proof_bindings={f'C:/qualification/proof/{n}.json':'f'*64 for n in range(19)})
+    values['plan']['implementation_files']={evidence.GUARD_SOURCE:guard_hash}
+    values['metadata'].update(staging_relative='.local-codex/z/'+run[:8],guard_allowance_reserved=False,staging_root_device=1,staging_root_inode=2)
+    values['effect'].update(package_reservation_and_final_copy_allowed=True,ui_attempt_allowed=False)
+    values['observation'].update(input_run_id=evidence.ORIGINAL_INPUT_RUN,guard_profile='loader-package')
+    values['cloned_manifest']={'schemaVersion':'tiny-training-input-v1','inputProfile':'generated-tiny-qwen2-v1','files':{
+        key:row(('synthetic-'+key).encode())for key in ('config.json','generation_config.json','model.safetensors','special_tokens_map.json','tokenizer.json','tokenizer_config.json')}}
+    values['user_authority']={'schema_version':'qualification-user-direction-attestation-v1',
+        'authority_ref':'user-allow-one-new-guarded-desktop-training-attempt-after-review-20261122','authorized_ui_attempts':1,
+        'model_downloads_authorized':False,'accepted_accuracy_reruns_authorized':False,'old_failure_and_stop_records_must_remain':True,
+        'automatic_retry_authorized':False,'record_is_operator_attestation_not_machine_authenticated_user_identity':True}
+    values['guard_claim']={'schema_version':'reviewed-training-loader-package-v1','authority_ref':values['user_authority']['authority_ref'],
+        'prior_run_id':evidence.PRIOR_FAILED_UI_RUN,'run_id':run,'proof_hashes':copy.deepcopy(proof),'prior_review':prior,
+        'source_hashes':{'owned_command_job.py':guard_hash},'review_digest':'f'*64,'automatic_retry_allowed':False}
+    values['guard_used']={'schema_version':'reviewed-training-loader-package-used-v1','run_id':run,'claim_sha256':'f'*64,
+        'effect_review_digest':'f'*64,'automatic_retry_allowed':False}
+    report.update(schema_version=evidence.GUARDED_SCHEMA,input_run_id=evidence.ORIGINAL_INPUT_RUN,guard_profile='loader-package',
+        previous_qualification={'report':previous,'raw_utf8':encoded(previous).decode(),'sha256':evidence.first.sha(encoded(previous))})
+    guarded_repack(report,raw,values);return report,raw,values
+
+class GuardedParserTests(unittest.TestCase):
+    def test_guarded_closed_package_keeps_old_history_and_no_execution_authority(self):
+        report,raw,_=guarded_fixture();values=evidence.validate(report,raw)
+        self.assertEqual(values['guard_claim']['run_id'],report['run_id'])
+        self.assertTrue(all(v is False for v in report['scope'].values()))
+        self.assertEqual(evidence.historical_report(report,values['owner_snapshot']['files'][evidence.REPORT])['run_id'],evidence.ORIGINAL_INPUT_RUN)
+    def test_each_new_retained_blob_and_missing_role_is_rejected(self):
+        report,raw,_=guarded_fixture()
+        for key in ('guard_claim','guard_used','cloned_manifest','user_authority'):
+            with self.subTest(key=key),self.assertRaises(ValueError):evidence.validate(report,{k:v for k,v in raw.items()if k!=key})
+            with self.subTest(key=key),self.assertRaises(ValueError):evidence.validate(report,{**raw,key:raw[key]+b' '})
+    def test_relinked_ui_or_wrong_prior_guard_is_rejected(self):
+        for field,value in [('schema_version','reviewed-training-ui-loader-repeat-v1'),('prior_run_id','d'*32),('automatic_retry_allowed',True)]:
+            report,raw,values=guarded_fixture();values['guard_claim'][field]=value;guarded_repack(report,raw,values)
+            with self.subTest(field=field),self.assertRaises(ValueError):evidence.validate(report,raw)
+    def test_relinked_missing_original_retirement_role_is_rejected(self):
+        report,raw,values=guarded_fixture()
+        for key in ('guard_claim','reference_plan','plan'):del values[key]['proof_hashes']['prior-used']
+        guarded_repack(report,raw,values)
+        with self.assertRaises(ValueError):evidence.validate(report,raw)
+    def test_relinked_unsupported_extra_ui_or_copy_effect_is_rejected(self):
+        for field,value in [('ui_attempt_allowed',True),('package_reservation_and_final_copy_allowed',False)]:
+            report,raw,values=guarded_fixture();values['effect'][field]=value;guarded_repack(report,raw,values)
+            with self.subTest(field=field),self.assertRaises(ValueError):evidence.validate(report,raw)
+    def test_relinked_source_and_unconfirmed_staging_are_rejected(self):
+        for field,value in [('guard_allowance_reserved',True),('staging_root_inode',False)]:
+            report,raw,values=guarded_fixture();values['metadata'][field]=value;guarded_repack(report,raw,values)
+            with self.subTest(field=field),self.assertRaises(ValueError):evidence.validate(report,raw)
+        report,raw,values=guarded_fixture();values['guard_claim']['source_hashes']['owned_command_job.py']='d'*64;guarded_repack(report,raw,values)
+        with self.assertRaises(ValueError):evidence.validate(report,raw)
+    def test_changed_history_is_not_a_new_pass(self):
+        report,raw,_=guarded_fixture();report['previous_qualification']['report']['scope']['parent_pass']=True
+        with self.assertRaises(ValueError):evidence.validate(report,raw)
+
+    def test_rehashed_history_bytes_must_match_the_captured_owner_source(self):
+        report,raw,_=guarded_fixture()
+        original=report['previous_qualification']['raw_utf8']
+        for changed in (original.replace('\n','\r\n'),
+                        json.dumps(report['previous_qualification']['report'],separators=(',',':'))):
+            candidate=copy.deepcopy(report)
+            history=candidate['previous_qualification']
+            self.assertNotEqual(changed,original)
+            history['raw_utf8']=changed
+            history['sha256']=evidence.first.sha(changed.encode('utf8'))
+            # Parsed history and all current physical blobs remain unchanged.
+            self.assertEqual(json.loads(changed),history['report'])
+            with self.subTest(reformat=changed[:30]),self.assertRaises(ValueError):
+                evidence.validate(candidate,raw)
+        for missing_or_wrong in (None,True,'a'*64):
+            with self.subTest(anchor=missing_or_wrong),self.assertRaises(ValueError):
+                evidence.historical_report(report,missing_or_wrong)
+    def test_relinked_extra_authority_is_rejected(self):
+        for field,value in [('authorized_ui_attempts',True),('model_downloads_authorized',True),('accepted_accuracy_reruns_authorized',True)]:
+            report,raw,values=guarded_fixture();values['user_authority'][field]=value;guarded_repack(report,raw,values)
+            with self.subTest(field=field),self.assertRaises(ValueError):evidence.validate(report,raw)
+
+
+
 if __name__ == '__main__':
     unittest.main()

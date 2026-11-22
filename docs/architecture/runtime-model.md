@@ -65,6 +65,15 @@ map keeps its own digest and nine fixed qualification-only exceptions. Historica
 input/readiness facts remain inspectable; their reader's original current-source
 guard is retained. A package pass grants no runtime/model/Headless/parent pass.
 
+The guarded package report retains version-1 evidence losslessly and adds the
+separate consumed build permit, original input/retirement chain and exact cloned
+Tiny manifest. Its read-only grader loads only the hash-verified physical primary
+guard to recheck the original nineteen proof bindings. It never reserves or
+consumes a permission. The same nine qualification-only source exceptions apply;
+other source drift remains stale. Package evidence cannot qualify the later
+Desktop training journey. That fixed Tiny journey disables real quality scoring
+and before/after model comparison; controlled metrics test evaluation software.
+
 The private training qualification reader records fresh generated-input and
 read-only installed-dependency observations separately from actual training.
 Its fixed primary/coding-checkout layout and two raw source snapshots prevent

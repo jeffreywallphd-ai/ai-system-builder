@@ -82,6 +82,22 @@ optional OCR resources are retained without borrowing OCR qualification. These
 checks do not authenticate reviewers/suppliers, fence hostile writers, supply a
 network sandbox or authorize another Native attempt after a later failure.
 
+The version-2 package record additionally binds the one-use package claim and
+consumed marker to the exact effect review, original guard source, original
+input run, cloned Tiny bytes and complete nineteen-proof retirement chain.
+Wrong-role UI records, partial or substituted claims, missing proof, extra
+authority and rehashed changed history deny. The original version-1 report is
+preserved as exact UTF-8 bytes, digest and parsed data. The original owner source
+snapshot binds those bytes independently of their self-declared digest; rehashed
+formatting changes and absent or invalid original hashes deny. Read-time validation also
+checks its actual retained artifacts without lending it current-source authority.
+The grader imports only the hash-verified physical primary guard for read-only
+proof checks. It issues no permission, Native command, model or retry. Portable
+cases and actual retained evidence use distinct checks. The original nine
+qualification-only exceptions and all false launch/quality/parent flags remain.
+Independent review hashes remain cooperative declarations, not authenticated
+user or reviewer identity. Completed model accuracy is not rerun.
+
 The private first-phase training evidence reader treats saved artifacts as
 untrusted data. A versioned source-owned report pins their hashes, and a closed
 run/role recipe supplies every path. Observed runtime paths and command fields

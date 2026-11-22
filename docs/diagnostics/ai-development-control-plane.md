@@ -3039,3 +3039,28 @@ Recheck the complete retirement chain, source and exact package-phase stop at
 admission. Review the concrete metadata/build plan before running it, then review
 the actual build/retirement outcome before the later UI invocation. Source-only
 fixtures qualify neither effect and provide no cross-process scheduling guarantee.
+
+### Guarded offline package evidence
+
+The version-2 training package report preserves the complete original version-1
+report and adds the distinct consumed package permit, original retirement proof,
+input lineage and cloned Tiny manifest. The reader rechecks the actual package,
+source/copies, installed Electron ZIP, operator and original Native retirement.
+It starts no process or model and grants no further attempt. All nine existing
+qualification-only source exceptions remain unchanged.
+
+`training-package-evidence-unit` runs twenty-one portable protocol, file and denial
+cases. The unchanged routing harness executes the registered unit command. The separate
+`training-package-retained-evidence` command must pass against the actual saved
+build; a fixture, declared status or historical package cannot substitute.
+The reader verifies the original guard source before its read-only proof checks.
+Catalog routing and explicit generic-check requirements stay unchanged. The
+original report remains inspectable history. Its exact UTF-8 bytes must match the
+report hash in the captured owner source snapshot; a new self-declared history
+hash cannot conceal a reformatted or changed original.
+
+The build proves packaging and owned process retirement only. It does not prove
+app startup, training, Headless workflows or parent completion. The later fixed
+Tiny UI journey keeps real model quality scoring and before/after comparison
+disabled. The Headless testing policy retains evaluation-software checks with
+controlled metrics and all non-quality runtime, resource and security checks.
