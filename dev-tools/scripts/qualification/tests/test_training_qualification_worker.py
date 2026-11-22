@@ -9,6 +9,7 @@ import os
 import json
 import stat
 import ast
+import sys
 from types import ModuleType
 from unittest.mock import patch
 
@@ -143,6 +144,103 @@ class PrivateLocalTrainingEntryBindingTests(unittest.TestCase):
         dispatch = next(node for node in ast.walk(main) if isinstance(node, ast.Call)
                         and isinstance(node.func, ast.Name) and node.func.id == "single_training_dispatch")
         self.assertLess(calls[0].lineno, dispatch.lineno)
+
+
+class TrainingWorkerOwnedStartupTests(unittest.TestCase):
+    """Run the actual fixture main with inert modules, not a real listener."""
+    def run_main(self, *, tiny=False, startup_error=None, missing_startup=False, configuration_error=None):
+        calls, raw_listener_calls = [], []
+        with tempfile.TemporaryDirectory(prefix="training-startup-") as folder:
+            root = Path(folder).resolve()
+            source = root / "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py"
+            source.parent.mkdir(parents=True); source.write_bytes(b"# synthetic fixture location\n")
+            shipped_worker = root / "shipped-worker"; shipped_worker.mkdir()
+            data_root = root / "artifacts/qualification/visual-composer/d/test-desktop/training"
+            cache, temp = data_root / "controlled-model-cache", data_root / "training-temp"
+            cache.mkdir(parents=True); temp.mkdir()
+            run, revision = "training-startup-qualification-01", "source." + "a" * 64
+            workspace = "workspace.training-host." + worker.hashlib.sha256((run + "\0training-host-v1").encode()).hexdigest()[:16]
+            fixture = {"schemaVersion": "training-host-fixture-v1", "runId": run, "sourceRevision": revision,
+                "workspaceId": workspace, "baseModelRecordId": "model.synthetic", "outputName": worker.OUTPUT_NAME,
+                "displayName": "Training host support adapter", "datasetArtifactIds": [
+                    f"workspaces/{workspace}/artifacts/files/training-host-{role}.jsonl" for role in ("train", "validation")]}
+            if tiny: fixture.update(schemaVersion="training-host-fixture-v2", inputProfile="generated-tiny-qwen2-v1")
+            environment = {name: "1" for name in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE", "PIP_NO_INDEX")}
+            environment.update(VISUAL_COMPOSER_QUALIFICATION_RUN_ID=run,
+                VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION=revision, VISUAL_COMPOSER_TRAINING_FIXTURE=json.dumps(fixture),
+                VISUAL_COMPOSER_DESKTOP_DATA_ROOT=str(data_root), HF_HUB_CACHE=str(cache), TEMP=str(temp), TMP=str(temp),
+                PYTHON_RUNTIME_STARTUP_PROOF="b" * 64)
+            application = ModuleType("synthetic_application")
+            application._run_task = lambda _: self.fail("A startup test must not dispatch training.")
+            tasks = ModuleType("synthetic_training_tasks")
+            def ordinary(*_args, **_kwargs): self.fail("Startup must not call the ordinary model loader.")
+            def local(*_args, **_kwargs): self.fail("Startup must not call the private model loader.")
+            ordinary.__module__ = local.__module__ = tasks.__name__
+            tasks.train_model = application.train_model = ordinary
+            tasks.train_model_from_local_files = local
+            shipped = ModuleType("synthetic_shipped_main")
+            def configuration():
+                calls.append("resolve")
+                if configuration_error is not None: raise configuration_error
+                return "127.0.0.1", 43111
+            def startup(host, port):
+                calls.append(("owned-runtime", host, port))
+                self.assertEqual(environment["PYTHON_RUNTIME_STARTUP_PROOF"], "b" * 64)
+                self.assertIs(application.train_model, local if tiny else ordinary)
+                if startup_error is not None: raise startup_error
+            shipped._resolve_launch_configuration = configuration
+            if not missing_startup: shipped._run_runtime = startup
+            shipped.app = object()  # A raw server must never consume this object.
+            inputs = {"modelRelativeDirectory": "model", **({"inputProfile": "generated-tiny-qwen2-v1"} if tiny else {})}
+            prerequisites = SimpleNamespace(inspect=lambda *_: inputs)
+            modules = {"training_input_prerequisites": prerequisites, "aisb_training_qualification_main": shipped}
+            def make_spec(name, _path):
+                self.assertIn(name, modules)
+                return SimpleNamespace(name=name, loader=SimpleNamespace(exec_module=lambda _: None))
+            def import_module(name):
+                known = {"_ai_system_builder_worker.app": application,
+                         "_ai_system_builder_worker.tasks.train_model": tasks}
+                self.assertIn(name, known)
+                return known[name]
+            def raw_listener(*args, **kwargs):
+                raw_listener_calls.append(True)
+                self.fail("A raw Uvicorn listener cannot satisfy managed worker ownership.")
+            fake_os = SimpleNamespace(name="nt", environ=environment, getenv=environment.get,
+                getpid=lambda: 42, getppid=lambda: 24)
+            imports = SimpleNamespace(util=SimpleNamespace(spec_from_file_location=make_spec,
+                module_from_spec=lambda spec: modules[spec.name]), import_module=import_module)
+            with patch.object(worker, "__file__", str(source)), patch.object(worker, "os", fake_os), \
+                    patch.object(worker, "sys", SimpleNamespace(argv=[str(source)])), \
+                    patch.object(worker, "importlib", imports), patch.object(worker.Path, "cwd", return_value=shipped_worker), \
+                    patch.object(worker, "training_worker_directory", return_value=shipped_worker), \
+                    patch.object(worker, "prepare_training_dataset_cache", return_value=None), \
+                    patch.object(worker, "activate_training_dataset_working_directory"), \
+                    patch.dict(sys.modules, {"uvicorn": SimpleNamespace(run=raw_listener)}):
+                try:
+                    worker.main()
+                finally:
+                    self.assertEqual(raw_listener_calls, [])
+                    if configuration_error is not None: self.assertEqual(list(cache.iterdir()), [])
+            return calls
+
+    def test_actual_main_delegates_to_shipped_owned_listener_bootstrap(self):
+        self.assertEqual(self.run_main(), ["resolve", ("owned-runtime", "127.0.0.1", 43111)])
+
+    def test_tiny_fixture_keeps_private_loader_before_owned_startup(self):
+        self.assertEqual(self.run_main(tiny=True), ["resolve", ("owned-runtime", "127.0.0.1", 43111)])
+
+    def test_owned_bootstrap_failure_is_preserved_without_raw_server_fallback(self):
+        error = RuntimeError("synthetic owned-startup refusal")
+        with self.assertRaises(RuntimeError) as actual: self.run_main(startup_error=error)
+        self.assertIs(actual.exception, error)
+
+    def test_missing_owned_bootstrap_cannot_fall_back_to_uvicorn(self):
+        with self.assertRaises(AttributeError): self.run_main(missing_startup=True)
+
+    def test_launch_configuration_failure_remains_original_and_has_no_worker_marker(self):
+        error = RuntimeError("synthetic launch configuration refusal")
+        with self.assertRaises(RuntimeError) as actual: self.run_main(configuration_error=error)
+        self.assertIs(actual.exception, error)
 
 
 class TrainingQualificationWorkerTests(unittest.TestCase):

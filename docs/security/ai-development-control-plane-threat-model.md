@@ -1,5 +1,14 @@
 # AI Development Control Plane Threat Model
 
+The Desktop training test composition must preserve the production worker's
+listener ownership check. Its final serving step calls the exact shipped
+`main._run_runtime` function. The worker owns the exclusive socket and emits its
+private startup proof only after binding. The fixture cannot synthesize that
+proof, use HTTP health or a cleanup marker as a substitute, or fall back to raw
+Uvicorn serving. Inert full-entry tests cover delegation and original-error
+propagation. They do not run a listener, grant a retry or qualify Desktop training.
+Retained failed evidence and native family stop records stay unchanged.
+
 Offline training package evidence is a separate read-only trust boundary. Fixed
 run/role paths and source-owned hashes bind source, metadata, scripts, separate
 reviews, actual Native logs/results and the full resource tree. The grader uses

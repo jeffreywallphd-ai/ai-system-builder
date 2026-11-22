@@ -1,5 +1,13 @@
 # Runtime Model
 
+A Desktop training qualification worker must delegate server startup to the
+shipped worker's `_run_runtime(host, port)` after its existing fixed input and
+dispatch checks. This preserves the exclusive socket and current-child startup
+proof used by the managed foundation. A plain Uvicorn server or a cleanup marker
+cannot supply that proof. Missing or failed bootstrap remains a failure, with
+no fallback or timeout relaxation. Inert entry-point tests cover this wiring;
+actual Desktop training and Headless execution remain separate qualification.
+
 A current offline training package is qualified separately from launching or
 training with it. Its read-only evidence grader checks the full actual resource
 tree, all worker source rows, copied build inputs and installed Electron ZIP,

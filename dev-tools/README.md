@@ -2,6 +2,15 @@
 
 ## Training package input bytes
 
+The fixed Desktop training test worker starts the shipped worker through its
+existing `_run_runtime` function. This keeps the exclusive listening socket and
+private startup proof that the managed host requires. A missing or failed
+bootstrap stops the test; it cannot fall back to a plain Uvicorn server. The
+`training-local-loader-fixture-unit` check runs the actual fixture entry point
+with inert modules and temporary files to test that delegation and failure
+behavior. It starts no socket, worker process or model. A source-test pass does
+not close the retained failed Desktop journey or authorize another native run.
+
 The adjacent private `training_operator.py` renders four fixed current-source
 training operator templates. The existing `native-host-policy` check executes
 their renderer, syntax and refusal cases with the portable role/fence fixtures.

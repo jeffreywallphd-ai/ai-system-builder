@@ -551,8 +551,9 @@ def main():
     application._ensure_model_download_data = deny_download
     with (cache / f"qualification-worker-identity-{os.getpid()}.json").open("x", encoding="utf-8") as stream:
         json.dump({"pid": os.getpid(), "parentPid": os.getppid(), "scenario": "training-model-host"}, stream)
-    import uvicorn
-    uvicorn.run(module.app, host=host, port=port, reload=False, access_log=False)
+    # Preserve the shipped worker's exclusive bind and current-child startup
+    # proof. A raw Uvicorn listener cannot satisfy managed host ownership.
+    module._run_runtime(host, port)
 
 
 if __name__ == "__main__":
