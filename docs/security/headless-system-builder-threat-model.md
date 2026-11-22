@@ -1651,6 +1651,23 @@ installation/publication authority. A new training approval and separate result
 save are still required. Metadata-only Core/SQLite checks do not qualify runtime
 effects, file integrity, hardware or model quality, and public roots remain off.
 
+The separate private training Model reader uses the existing authorized Model
+metadata owner before persisted-only private reference reads. ModelWrite cannot
+substitute for current ModelRead. Capture actor/client/host/callback identity and
+the original read methods before waits; repeat strict current and policy fences
+after each await, including return. Reject active replies before reflection and
+selected accessors without evaluating them. Unselected metadata is not traversed.
+Compare the final public summary and private reference; a changed path with the
+same timestamp remains stale. Missing, malformed, foreign, unsupported or
+withdrawn selections produce finite errors without paths or owner exceptions.
+
+The detached frozen path-bearing selection is private data only. It is not a
+public tool response or proof of installed/immutable safe bytes, source custody,
+compatibility, resources, rights or approval. There are no file, discovering
+record lookup, runtime, provider or write ports. Core/SQLite selection tests and
+their real controller command cover this boundary; actual training, private
+file/worker ownership, approved execution and host qualification remain pending.
+
 ## Training staging and uncertain acknowledgements
 
 An unconfirmed training start may still have a worker reading its input files.

@@ -1,5 +1,16 @@
 # Application Use Cases
 
+Private `ReadHeadlessModelTrainingModelUseCase` reuses the authorized Model
+metadata owner and persisted-only point reads to select a saved local reference.
+It retains original actor/client/host and read policy, captures reader methods
+before waits, and compares both metadata and the private reference before return.
+It never uses discovery, ordinary record resolution, ModelWrite, files, providers
+or runtime ports. Its detached frozen path-bearing result is private execution
+preparation, not a public tool response. It checks no installation, Model bytes,
+native custody, compatibility, resources or license rights, and grants no training
+or save approval. The narrow feature check includes actual Core/SQLite cases;
+the controller executes those assertions and the paired type check.
+
 Private `ReadHeadlessModelTrainingDatasetUseCase` reads actual saved Dataset
 training/validation and recipe bytes under original current authority. It reuses
 the authorized exact-version reader and scoped storage with explicit byte limits,

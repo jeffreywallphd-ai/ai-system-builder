@@ -170,6 +170,35 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-model-record-unit": {
+        "automatic_sources": (
+            "modules/application/use-cases/model/headless-model-training-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts",
+        ),
+        "automatic_required_files": (
+            "modules/application/use-cases/model/headless-model-training-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts",
+        ),
+        "sources": (
+            "modules/application/use-cases/model/headless-model-training-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts",
+            "modules/application/use-cases/README.md",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--",
+            "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts"),
+    },
+    "headless-training-model-record-types": {
+        "companion_to": "headless-training-model-record-unit",
+        "sources": (
+            "modules/application/use-cases/model/headless-model-training-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
+            "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop",
+            "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            "modules/application/use-cases/model/headless-model-training-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-model-training-model.unit.test.ts"),
+    },
     "training-package-evidence-unit": {
         "interpreter": "python",
         "automatic_sources": (

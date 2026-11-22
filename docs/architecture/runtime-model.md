@@ -1,5 +1,15 @@
 # Runtime Model
 
+The private Headless training Model reader obtains the exact saved reference
+through the existing authorized Model metadata owner and `readRecordedModel`.
+It captures original read methods and actor/client/host policy across waits,
+compares public metadata and private location twice, and returns a frozen private
+selection. It never calls discovering `getModelRecord`, ModelWrite, file or
+runtime ports. A nonempty absolute local reference is recorded metadata, not
+installation, file integrity, native custody, compatibility, hardware admission
+or rights. The future execution owner must establish those checks and exact
+training/save approvals. This reader does not activate a public plan operation.
+
 A Desktop training qualification worker must delegate server startup to the
 shipped worker's `_run_runtime(host, port)` after its existing fixed input and
 dispatch checks. This preserves the exclusive socket and current-child startup
