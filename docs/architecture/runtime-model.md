@@ -1,5 +1,24 @@
 # Runtime Model
 
+The existing private local causal trainer can explicitly request a bounded
+validation-loss comparison. It evaluates the same first at most32 prepared
+validation rows before and after training with the same Trainer and tokenizer.
+The bounded subset is also the Trainer's evaluation dataset. Missing/empty data,
+invalid or nonfinite losses and supplier evaluation failure do not silently pass.
+Existing task progress checks cancellation at every comparison boundary and
+preserves the original cancellation signal.
+No held-out test input is selected. Defaults and ordinary training remain intact;
+the comparison cannot select the ordinary download-capable loader.
+
+Private run and candidate history retains the fixed protocol, sample count,
+baseline/trained loss and signed difference as measurements only. It supplies
+neither an accuracy/generalization claim nor a save or qualification decision.
+The option is internal, not a public payload flag, worker route or Headless
+activation. Exact original model/data authority, file custody, installed readiness,
+resource admission, actual task/result ownership and real model/host qualification
+remain required before execution can be exposed. Accepted model accuracy stays
+closed; inert source regressions grant no model or Native retry authority.
+
 The private Headless training Model reader obtains the exact saved reference
 through the existing authorized Model metadata owner and `readRecordedModel`.
 It captures original read methods and actor/client/host policy across waits,

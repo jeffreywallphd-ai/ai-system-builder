@@ -14,6 +14,158 @@ train_model_module = importlib.import_module("modules.adapters.runtime.python.wo
 multimodal_module = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model_multimodal")
 
 
+def _validation_comparison_fixture(monkeypatch, *, baseline=4.0, candidate=3.0, fail_at=None):
+    calls = []
+    class Dataset:
+        def __init__(self, rows): self.rows = list(rows)
+        def __len__(self): return len(self.rows)
+        def select(self, indices):
+            calls.append(("select", tuple(indices)))
+            return Dataset(self.rows[index] for index in indices)
+    validation = Dataset(range(100))
+    class Trainer:
+        def __init__(self, **kwargs):
+            self.validation = kwargs["eval_dataset"]
+            self.state = SimpleNamespace(log_history=[])
+            calls.append(("create", self.validation))
+        def evaluate(self, *, eval_dataset, metric_key_prefix):
+            assert eval_dataset is self.validation
+            calls.append((metric_key_prefix, eval_dataset))
+            if fail_at == metric_key_prefix: raise ValueError("synthetic-private-evaluation-failure")
+            value = baseline if metric_key_prefix == "baseline_validation" else candidate
+            return {metric_key_prefix + "_loss": value, "private": "must-not-be-copied"}
+        def train(self):
+            calls.append(("train",))
+            return SimpleNamespace(metrics={"loss": 2.0, "baseline_validation_loss": 999.0})
+    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(Trainer=Trainer,
+        TrainerCallback=type("Callback", (), {}), DataCollatorForLanguageModeling=lambda **_: object()))
+    def run(**options):
+        return train_model_module._run_trainer(object(), object(), {"train": [1, 2]}, options.pop("validation", validation),
+            SimpleNamespace(output_dir="synthetic-checkpoints"), **options)
+    return run, calls, validation
+
+
+def test_validation_baseline_compares_same_bounded_subset_before_and_after_training(monkeypatch):
+    run, calls, original = _validation_comparison_fixture(monkeypatch)
+    metrics, checkpoints = run(compare_validation_baseline=True)
+    assert [row[0] for row in calls] == ["select", "create", "baseline_validation", "train", "trained_validation"]
+    assert calls[0][1] == tuple(range(32))
+    selected = calls[1][1]
+    assert selected is not original and selected.rows == list(range(32))
+    assert calls[2][1] is calls[4][1] is selected
+    assert metrics == {"loss": 2.0, "baseline_validation_loss": 4.0, "trained_validation_loss": 3.0,
+                       "validation_loss_delta": -1.0, "validation_sample_count": 32.0}
+    assert checkpoints == [] and "private" not in json.dumps(metrics)
+
+
+def test_validation_baseline_is_opt_in_and_does_not_change_ordinary_training(monkeypatch):
+    run, calls, validation = _validation_comparison_fixture(monkeypatch)
+    metrics, _ = run()
+    assert calls == [("create", validation), ("train",)]
+    assert metrics == {"loss": 2.0, "baseline_validation_loss": 999.0}
+
+
+@pytest.mark.parametrize("value", [None, 1, "true", {}, []])
+def test_validation_baseline_requires_an_explicit_internal_boolean(monkeypatch, value):
+    run, calls, _ = _validation_comparison_fixture(monkeypatch)
+    with pytest.raises(ValueError): run(compare_validation_baseline=value)
+    assert calls == []
+
+
+@pytest.mark.parametrize("missing", [None, []])
+def test_validation_baseline_missing_data_fails_before_trainer_or_training(monkeypatch, missing):
+    run, calls, _ = _validation_comparison_fixture(monkeypatch)
+    with pytest.raises(ValueError): run(compare_validation_baseline=True, validation=missing)
+    assert calls == []
+
+
+@pytest.mark.parametrize("baseline,candidate", [(True, 1.0), (float("nan"), 1.0), (float("inf"), 1.0), (-1.0, 1.0),
+                                               (1.0, False), (1.0, float("nan")), (1.0, float("inf")), (1.0, -1.0), (1.0, "1.0")])
+def test_validation_baseline_rejects_invalid_measurements_without_success(monkeypatch, baseline, candidate):
+    run, calls, _ = _validation_comparison_fixture(monkeypatch, baseline=baseline, candidate=candidate)
+    with pytest.raises(ValueError): run(compare_validation_baseline=True)
+    if type(baseline) is not float or not 0 <= baseline < float("inf"):
+        assert not any(row[0] == "train" for row in calls)
+
+
+@pytest.mark.parametrize("stage", ["baseline_validation", "trained_validation"])
+def test_validation_baseline_supplier_failure_is_not_retried_or_hidden(monkeypatch, stage):
+    run, calls, _ = _validation_comparison_fixture(monkeypatch, fail_at=stage)
+    with pytest.raises(ValueError, match="The validation comparison could not be measured.") as failure:
+        run(compare_validation_baseline=True)
+    assert str(failure.value.__cause__) == "synthetic-private-evaluation-failure"
+    assert "private" not in str(failure.value)
+    assert sum(row[0] == stage for row in calls) == 1
+    assert sum(row[0] == "train" for row in calls) == (0 if stage == "baseline_validation" else 1)
+
+
+def test_validation_baseline_small_dataset_uses_only_its_available_rows(monkeypatch):
+    run, calls, validation = _validation_comparison_fixture(monkeypatch, baseline=0.0, candidate=0.0)
+    validation.rows = ["first", "second"]
+    metrics, _ = run(compare_validation_baseline=True)
+    assert calls[0] == ("select", (0, 1))
+    assert metrics["validation_sample_count"] == 2.0 and metrics["validation_loss_delta"] == 0.0
+
+
+@pytest.mark.parametrize("report", [{}, {"wrong_loss": 1.0}, {"baseline_validation_loss": None}, [], None])
+def test_validation_baseline_missing_or_foreign_supplier_keys_do_not_become_zero(report):
+    with pytest.raises(ValueError): train_model_module._validation_loss(report, "baseline_validation_loss")
+
+
+@pytest.mark.parametrize("key,value", [("validation_sample_count", 0.0), ("validation_sample_count", 33.0),
+                                      ("validation_sample_count", 1.5), ("validation_loss_delta", 1.0),
+                                      ("validation_loss_delta", float("nan")), ("baseline_validation_loss", True)])
+def test_validation_baseline_history_requires_consistent_measured_facts(key, value):
+    metrics = {"baseline_validation_loss": 4.0, "trained_validation_loss": 3.0,
+               "validation_sample_count": 2.0, "validation_loss_delta": -1.0}
+    metrics[key] = value
+    with pytest.raises(ValueError): train_model_module._validation_comparison_report(metrics)
+
+
+def test_validation_baseline_wrong_subset_size_cannot_silently_expand_evaluation(monkeypatch):
+    run, calls, validation = _validation_comparison_fixture(monkeypatch)
+    validation.select = lambda _: validation
+    with pytest.raises(ValueError): run(compare_validation_baseline=True)
+    assert calls == []
+
+
+@pytest.mark.parametrize("value", [1, "true", None])
+def test_validation_baseline_invalid_private_option_fails_before_model_paths_or_output(monkeypatch, tmp_path, value):
+    request = _request(tmp_path)
+    monkeypatch.setattr(train_model_module, "_local_training_model_reference", lambda _: pytest.fail("No model path inspection."))
+    with pytest.raises(ValueError): train_model_module.train_model_from_local_files(request, compare_validation_baseline=value)
+    assert not (tmp_path / "out").exists()
+
+
+def test_validation_baseline_cannot_select_the_ordinary_download_capable_loader(tmp_path):
+    request = _request(tmp_path)
+    with pytest.raises(ValueError): train_model_module._train_model(request, compare_validation_baseline=True)
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("phase,expected_training", [("baseline-validation", 0), ("training", 0), ("trained-validation", 1), ("comparison-complete", 1)])
+def test_validation_baseline_checks_existing_cancellation_at_each_phase(monkeypatch, phase, expected_training):
+    run, calls, _ = _validation_comparison_fixture(monkeypatch)
+    cancellation = train_model_module.TrainingCancellationRequested("synthetic-cancelled")
+    phases = []
+    def progress(value):
+        phases.append(value)
+        if value == phase: raise cancellation
+    with pytest.raises(train_model_module.TrainingCancellationRequested) as failure:
+        run(compare_validation_baseline=True, on_validation_progress=progress)
+    assert failure.value is cancellation and phases[-1] == phase
+    assert sum(row[0] == "train" for row in calls) == expected_training
+
+
+def test_validation_baseline_evaluator_cancellation_keeps_original_identity():
+    cancellation = train_model_module.TrainingCancellationRequested("synthetic-cancelled")
+    class CancelledTrainer:
+        def evaluate(self, **_): raise cancellation
+    with pytest.raises(train_model_module.TrainingCancellationRequested) as failure:
+        train_model_module._measure_validation_loss(CancelledTrainer(), object(), "baseline_validation")
+    assert failure.value is cancellation
+
+
 def _inert_transformers(monkeypatch, fail_at=None, *, successful_output=False):
     calls = []
     def tokenizer(reference, **kwargs):
@@ -132,7 +284,8 @@ def test_private_training_refuses_link_or_reparse_root_before_effects(monkeypatc
     assert calls == [] and not (tmp_path / "out").exists()
 
 
-def test_private_local_training_serializes_calls_validation_and_returns_candidate(monkeypatch, tmp_path):
+@pytest.mark.parametrize("compare", [False, True])
+def test_private_local_training_serializes_calls_validation_and_returns_candidate(monkeypatch, tmp_path, compare):
     payload = _request(tmp_path)
     payload.baseModel.localPath = str(tmp_path)
     calls = _inert_transformers(monkeypatch, successful_output=True)
@@ -140,7 +293,16 @@ def test_private_local_training_serializes_calls_validation_and_returns_candidat
     monkeypatch.setattr(train_model_module, "_tokenize_dataset", _tokenize_fixture)
     monkeypatch.setattr(train_model_module, "_apply_lora", lambda model, payload: model)
     monkeypatch.setattr(train_model_module, "_build_training_args", lambda payload, output: SimpleNamespace(output_dir=str(output / "ckpt")))
-    monkeypatch.setattr(train_model_module, "_run_trainer", lambda *args, **kwargs: ({"loss": 0.125}, []))
+    measured = {"loss": 0.125, **({"baseline_validation_loss": 4.0, "trained_validation_loss": 3.0,
+                    "validation_loss_delta": -1.0, "validation_sample_count": 2.0} if compare else {})}
+    observed_progress = []
+    def run_trainer(*args, **kwargs):
+        assert kwargs.get("compare_validation_baseline", False) is compare
+        if compare:
+            for phase in ("baseline-validation", "training", "trained-validation", "comparison-complete"):
+                kwargs["on_validation_progress"](phase)
+        return measured, []
+    monkeypatch.setattr(train_model_module, "_run_trainer", run_trainer)
     validated = []
     def validate(output, **kwargs):
         # Test the actual orchestration/serialization handoff, not tensor loading.
@@ -151,13 +313,22 @@ def test_private_local_training_serializes_calls_validation_and_returns_candidat
         return {"status": "valid", "warnings": [], "errors": [], "validationReportPath": "synthetic-validation",
                 "serializationFormat": "adapter-safetensors"}
     monkeypatch.setattr(train_model_module, "validate_model_output", validate)
-    result = train_model_module.train_model_from_local_files(payload)
-    assert result.status == "succeeded" and result.metrics == {"loss": 0.125}
+    result = train_model_module.train_model_from_local_files(payload, compare_validation_baseline=compare, on_progress=observed_progress.append)
+    assert result.status == "succeeded" and result.metrics == measured
     assert result.generatedModelCandidate["artifactForm"] == "adapter"
     assert result.generatedModelCandidate["baseModelId"] == "org/base"
     assert result.generatedModelCandidate["metadata"]["validation"]["validationReportPath"]
     assert (tmp_path / "out" / "adapter_model.safetensors").is_file()
     assert (tmp_path / "out" / "training-run.json").is_file()
+    run_history = json.loads((tmp_path / "out" / "training-run.json").read_text(encoding="utf8"))
+    if compare:
+        expected = {"protocol": "fixed-first-32-validation-loss-v1", "maximumRows": 32, "sampleCount": 2,
+                    "baselineLoss": 4.0, "trainedLoss": 3.0, "lossDelta": -1.0, "interpretation": "measurement-only"}
+        assert run_history["validationComparison"] == result.generatedModelCandidate["metadata"]["validationComparison"] == expected
+        assert "passed" not in json.dumps(expected) and "accuracy" not in json.dumps(expected)
+        assert [row["stage"] for row in observed_progress if row.get("stage") in {"baseline-validation", "trained-validation", "comparison-complete"}] == ["baseline-validation", "trained-validation", "comparison-complete"]
+    else:
+        assert "validationComparison" not in run_history and "validationComparison" not in result.generatedModelCandidate["metadata"]
     assert validated == [tmp_path / "out"]
     assert [call[0] for call in calls] == ["tokenizer", "model"]
     assert calls[1][2]["use_safetensors"] is True

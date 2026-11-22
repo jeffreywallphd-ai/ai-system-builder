@@ -13,6 +13,29 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+## Private training validation comparison
+
+The internal `train_model_from_local_files` function has an explicit
+`compare_validation_baseline=True` option. It compares the original and trained
+model on the same first at most 32 rows of the saved validation split. Both
+measurements use the same prepared dataset, tokenizer and Trainer. No held-out
+test split is selected. Missing validation, invalid loss values or an evaluation
+failure cannot produce a successful comparison. Supplier error text stays out
+of the new comparison error; its cause remains private in memory.
+The existing task progress callback checks cancellation before each measurement,
+before training and before returning the comparison. Cancellation keeps its
+original type; it is not converted into an evaluation failure.
+
+The run file and generated candidate retain the protocol, sample count, finite
+nonnegative losses and signed loss difference as `measurement-only` history.
+A decrease is not task accuracy, proof of generalization or approval to save.
+No passing threshold is inferred. Ordinary training and private defaults stay
+unchanged. There is no public request flag, new worker route or advertised
+Headless capability. Real admission, file custody, resources, task ownership,
+model quality and host qualification remain separate requirements. Source tests
+use synthetic data and inert suppliers; they load no model and do not rerun
+accepted ordinary model accuracy.
+
 The host's source acquisition now treats this worker's successful task as an
 intermediate transfer. Its existing Model Task entry owns Node receipt/hash
 verification, one-use persistent import, known receiver cleanup and the separate

@@ -6,7 +6,7 @@ import stat
 import tempfile
 from shutil import rmtree
 from datetime import datetime, timezone
-from math import ceil
+from math import ceil, isfinite
 from pathlib import Path
 from typing import Any, Callable
 
@@ -607,6 +607,57 @@ def _apply_lora(model: Any, payload: TrainModelTaskRequest) -> Any:
     return get_peft_model(model, lora_config)
 
 
+def _validation_loss(report: Any, key: str) -> float:
+    value = report.get(key) if type(report) is dict else None
+    if type(value) not in (int, float):
+        raise ValueError("The validation comparison needs finite nonnegative loss measurements.")
+    try:
+        result = float(value)
+    except (OverflowError, ValueError):
+        raise ValueError("The validation comparison needs finite nonnegative loss measurements.") from None
+    if not isfinite(result) or result < 0:
+        raise ValueError("The validation comparison needs finite nonnegative loss measurements.")
+    return result
+
+
+def _validation_subset(dataset: Any) -> tuple[Any, int]:
+    try:
+        count = min(len(dataset), 32) if dataset is not None else 0
+        if count < 1:
+            raise ValueError()
+        subset = dataset.select(range(count))
+        if len(subset) != count:
+            raise ValueError()
+        return subset, count
+    except TrainingCancellationRequested:
+        raise
+    except Exception:
+        raise ValueError("The saved validation sample is unavailable.") from None
+
+
+def _measure_validation_loss(trainer: Any, subset: Any, prefix: str) -> float:
+    try:
+        measured = trainer.evaluate(eval_dataset=subset, metric_key_prefix=prefix)
+    except TrainingCancellationRequested:
+        raise
+    except Exception as error:
+        # Retain the cause in memory; do not copy supplier messages into the
+        # existing task error/progress/log output.
+        raise ValueError("The validation comparison could not be measured.") from error
+    return _validation_loss(measured, prefix + "_loss")
+
+
+def _validation_comparison_report(metrics: dict[str, float]) -> dict[str, Any]:
+    baseline = _validation_loss(metrics, "baseline_validation_loss")
+    trained = _validation_loss(metrics, "trained_validation_loss")
+    count = _validation_loss(metrics, "validation_sample_count")
+    delta = metrics.get("validation_loss_delta")
+    if not 1 <= count <= 32 or count != int(count) or type(delta) not in (int, float) or delta != trained - baseline:
+        raise ValueError("The validation comparison summary is unavailable.")
+    return {"protocol": "fixed-first-32-validation-loss-v1", "maximumRows": 32, "sampleCount": int(count),
+            "baselineLoss": baseline, "trainedLoss": trained, "lossDelta": float(delta), "interpretation": "measurement-only"}
+
+
 def _run_trainer(
     model: Any,
     tokenizer: Any,
@@ -615,7 +666,14 @@ def _run_trainer(
     args: Any,
     *,
     on_progress: Callable[[dict[str, int]], None] | None = None,
+    compare_validation_baseline: bool = False,
+    on_validation_progress: Callable[[str], None] | None = None,
 ) -> tuple[dict[str, float], list[dict[str, Any]]]:
+    if type(compare_validation_baseline) is not bool:
+        raise ValueError("The private validation comparison option is unavailable.")
+    sample_count = 0
+    if compare_validation_baseline:
+        eval_dataset, sample_count = _validation_subset(eval_dataset)
     try:
         from transformers import DataCollatorForLanguageModeling, Trainer, TrainerCallback
     except Exception as error:  # pragma: no cover
@@ -675,8 +733,22 @@ def _run_trainer(
             "batch": 0,
             "totalBatches": estimate_total_batches(),
         })
+    if compare_validation_baseline and on_validation_progress is not None:
+        on_validation_progress("baseline-validation")
+    baseline = _measure_validation_loss(trainer, eval_dataset, "baseline_validation") if compare_validation_baseline else None
+    if compare_validation_baseline and on_validation_progress is not None:
+        on_validation_progress("training")
     train_result = trainer.train()
     metrics: dict[str, float] = {k: float(v) for k, v in train_result.metrics.items() if isinstance(v, (int, float))}
+    if compare_validation_baseline:
+        if on_validation_progress is not None:
+            on_validation_progress("trained-validation")
+        trained = _measure_validation_loss(trainer, eval_dataset, "trained_validation")
+        if on_validation_progress is not None:
+            on_validation_progress("comparison-complete")
+        # These exact measured fields override similarly named supplier metrics.
+        metrics.update(baseline_validation_loss=baseline, trained_validation_loss=trained,
+                       validation_loss_delta=trained - baseline, validation_sample_count=float(sample_count))
 
     checkpoints = []
     for state in trainer.state.log_history:
@@ -703,6 +775,7 @@ def train_model_from_local_files(
     payload: TrainModelTaskRequest,
     *,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
+    compare_validation_baseline: bool = False,
 ) -> TrainModelTaskResult:
     """Private load policy, not task admission or Model integrity/ownership proof.
 
@@ -710,11 +783,14 @@ def train_model_from_local_files(
     exact model bytes/custody and resource limits before calling this entry.
     No raw task route or capability activates this function.
     """
+    if type(compare_validation_baseline) is not bool:
+        raise ValueError("The private validation comparison option is unavailable.")
     if _resolve_training_task(payload) not in TEXT_CAUSAL_TRAINING_TASKS:
         raise ValueError("This private training task is unavailable.")
     # Capture the original local locator before progress/supplier callbacks.
     local_model_ref = _local_training_model_reference(payload.baseModel.localPath)
-    return _train_model(payload, on_progress=on_progress, local_model_ref=local_model_ref)
+    return _train_model(payload, on_progress=on_progress, local_model_ref=local_model_ref,
+                        compare_validation_baseline=compare_validation_baseline)
 
 
 def _train_model(
@@ -722,7 +798,10 @@ def _train_model(
     *,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     local_model_ref: str | None = None,
+    compare_validation_baseline: bool = False,
 ) -> TrainModelTaskResult:
+    if type(compare_validation_baseline) is not bool or compare_validation_baseline and local_model_ref is None:
+        raise ValueError("The private local validation comparison is unavailable.")
     _require_non_empty(payload.output.get("outputModelName"), "output.outputModelName")
     training_task = _resolve_training_task(payload)
 
@@ -843,7 +922,17 @@ def _train_model(
                 on_progress({**progress, "message": message, "stage": "training"})
 
         stage = "training-loop"
-        metrics, checkpoints = _run_trainer(model, tokenizer, tokenized, tokenized_eval, train_args, on_progress=on_training_progress)
+        def on_validation_progress(phase: str) -> None:
+            messages = {"baseline-validation": "Measuring starting validation loss.", "training": "Training the selected model.",
+                        "trained-validation": "Measuring trained validation loss.", "comparison-complete": "Validation measurements are ready for review."}
+            if phase not in messages:
+                raise ValueError("The private validation progress phase is unavailable.")
+            if on_progress is not None:
+                # The existing task callback checks cancellation at each boundary.
+                on_progress({"stage": phase, "message": messages[phase]})
+        metrics, checkpoints = _run_trainer(model, tokenizer, tokenized, tokenized_eval, train_args, on_progress=on_training_progress,
+            **({"compare_validation_baseline": True, "on_validation_progress": on_validation_progress} if compare_validation_baseline else {}))
+        comparison = _validation_comparison_report(metrics) if compare_validation_baseline else None
 
         stage = "serialization"
         if on_progress is not None:
@@ -904,6 +993,7 @@ def _train_model(
                 "startedAt": datetime.now(timezone.utc).isoformat(),
                 "status": "failed" if validation_enabled and validation["status"] == "invalid" else "succeeded",
                 "serializationManifestPath": manifest_path,
+                **({"validationComparison": comparison} if comparison is not None else {}),
             },
         )
 
@@ -920,6 +1010,7 @@ def _train_model(
             "runMetadataPath": run_metadata_path,
             "validation": validation,
             "serialization": serialization,
+            **({"validationComparison": comparison} if comparison is not None else {}),
         }
 
         final_status = "failed" if validation_enabled and validation["status"] == "invalid" else "succeeded"
