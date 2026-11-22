@@ -20,6 +20,10 @@ research, formal planning or current-receipt qualification. Preserve these denia
 and round-trip tests on every supported agent host. Reinstalling a skill grants
 no execution or completion authority.
 The fixed `tests/test_roadmap.py` runner also collects the refinement sidecar.
+Keep the restricted Headless lineage validator and its causal and corruption
+cases with this runner. It retains the original no-quality-test restriction and
+requires exact later refinement archive/event links; installing an older engine
+cannot repair a saved chain by rewriting its root.
 Keep its direct-runner bridge and nonzero-collection regression when installing;
 placing a new test file beside a fixed runner does not make that gate execute it.
 

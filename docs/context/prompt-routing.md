@@ -188,3 +188,9 @@ The browser description adapter reads `docs/operations/roadmap-user-descriptions
 Review semantic completeness before binding current source/qualification hashes.
 Retain the technical CLI and canonical JSON for agent work; stale copy means an
 agent must update the description. Display formatting cannot change qualification.
+
+For Headless workflow-only test-restriction tracking failures, use the roadmap
+skill's event reference and restricted-lineage tests. Preserve the fixed amendment
+archive; later chunk additions must have their exact chronological event/archive
+chain. Do not restore model-quality tests or turn progress metadata into technical
+qualification.

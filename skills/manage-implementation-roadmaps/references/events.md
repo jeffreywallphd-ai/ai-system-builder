@@ -362,6 +362,17 @@ Finish any current source verification/review and checkpoint before changing its
 plan. Inspect and independently review actual obligation coverage; IDs and hashes
 cannot prove that rewritten prose retains its full meaning.
 
+For the fixed Headless workflow-only test restriction, tracking additions also
+require a complete chronological archive/event chain from its immutable restricted
+plan to the current plan. Keep every original chunk definition and order, plan
+creation time and nonchunk requirement unchanged. Each new refinement history row
+binds the complete archive with `chunkPlanRevisionDigest`. New archives also keep
+`eventFingerprint` from the original submitted event, before text normalization.
+The fixed target retains its exact narrowed approval digest even after later
+roadmap revisions; a current unrelated approval cannot rewrite old authority. Missing, duplicate, detached or reordered
+records refuse. Do not rewrite the restriction archive or use a new root to repair
+an invalid chain. Semantic scope review remains required; hashes do not prove it.
+
 ### `chunk-recorded`
 
 ```json

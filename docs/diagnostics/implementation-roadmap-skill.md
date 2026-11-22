@@ -271,3 +271,17 @@ Skill changes require:
 Review future repetitive interactions for new skills or bounded helpers, but do
 not combine unrelated authority or destructive behavior merely to reduce
 prompts.
+
+## Restricted Headless chunk tracking
+
+The fixed Headless workflow-only testing amendment retains its exact original
+archive and event. Later chunk additions follow a complete ordered refinement
+chain rooted in that restricted plan. All original chunks and nonchunk requirements
+stay unchanged. New refinement history rows bind their complete archive, including
+completed IDs and the recorded approval digest. The target keeps its fixed
+narrowed-scope approval. New archives preserve the original event fingerprint
+separately from normalized text. Malformed history has a bounded refusal.
+Missing or altered links refuse.
+This is local consistency checking, not authenticated approval or a test pass.
+Keep the engine, portable regression cases and event/install guidance together.
+Model-quality tests remain excluded; actual runtime and host checks remain pending.

@@ -2358,6 +2358,190 @@ class HeadlessWorkflowRestrictionTest(unittest.TestCase):
             with self.subTest(which=which), self.assertRaises(roadmap.RoadmapError):
                 roadmap.validate_state_shape(self.repo, state)
 
+    def approved_restriction(self):
+        return roadmap.apply_event(roadmap.apply_event(self.pending(), self.event()), {
+            "type": "roadmap-approved", "note": "Retain the explicit workflow-only testing scope."})
+
+    def refinement(self, state, suffix="permission-views"):
+        target = roadmap.find_increment(state, "models-training-and-generation")
+        plan = {key: copy.deepcopy(value) for key, value in target["plan"].items()
+                if key not in {"recordedAt", "fingerprint", "outlineOnly"}}
+        plan["chunks"].insert(len(target["completedChunks"]), {
+            "id": suffix, "title": "Review exact saved training permissions",
+            "outcome": "Test the local permission views only. Actual training and host qualification remain pending.",
+            "criteriaIds": ["training-and-generation-quality", "security-model-supply-and-limits"]})
+        return {"type": "work-chunks-reconfigured", "incrementId": target["id"],
+                "expectedPlanDigest": roadmap.fingerprint(target["plan"]), "plan": plan,
+                "authorityRef": "user-meaningful-work-chunks", "reason": "Expose a distinct reviewed software component."}
+
+    def test_restricted_plan_accepts_only_connected_chunk_progress_without_quality_tests_or_parent_pass(self):
+        original = self.approved_restriction()
+        changed = roadmap.apply_event(original, self.refinement(original))
+        roadmap.validate_state_shape(self.repo, changed)
+        recorded = roadmap.apply_event(changed, {
+            "type": "chunk-recorded", "chunkId": "permission-views", "summary": "Synthetic local UI component tests passed.",
+            "areas": ["Permission view"], "tests": ["Controlled UI fixture; no model quality tests"],
+            "documentation": [], "feedbackAddressed": []})
+        roadmap.validate_state_shape(self.repo, recorded)
+        later = roadmap.apply_event(recorded, self.refinement(recorded, "approval-storage"))
+        roadmap.validate_state_shape(self.repo, later)
+        for state in (changed, recorded, later):
+            target = roadmap.find_increment(state, "models-training-and-generation")
+            self.assertEqual(state["technicalAcceptanceRevisions"], original["technicalAcceptanceRevisions"])
+            self.assertEqual(state["evidence"], original["evidence"])
+            self.assertEqual(state["roadmapApproval"], original["roadmapApproval"])
+            self.assertEqual(target["status"], "implementing")
+            self.assertTrue(roadmap.approval_is_current(state))
+            self.assertFalse(roadmap.implementation_ready_for_overall(state))
+            self.denied(state, {"type": "increment-completed", "summary": "Tracking cannot qualify a host."})
+        # A later approval event is not a new chunk-plan root or a quality pass.
+        again = roadmap.apply_event(later, {"type": "roadmap-approved", "note": "Same unchanged scope."})
+        roadmap.validate_state_shape(self.repo, again)
+        target = roadmap.find_increment(again, "models-training-and-generation")
+        self.assertEqual(len(target["completedChunks"]), 10)
+        self.assertEqual(len(target["plan"]["chunks"]), 15)
+        self.assertEqual(len(original["increments"]), len(again["increments"]))
+
+    def test_restricted_chunk_lineage_refuses_missing_changed_or_disconnected_records(self):
+        base = self.approved_restriction()
+        first = roadmap.apply_event(base, self.refinement(base))
+        second = roadmap.apply_event(first, self.refinement(first, "approval-storage"))
+        for mutation in ("no-archive", "truncated", "duplicate-archive", "reverse-archives", "detached",
+                         "missing-history", "duplicate-history", "reverse-history", "unmatched-history",
+                         "event-hash", "archive-marker", "scope-digest", "criterion-ids", "completed-ids",
+                         "plan-time", "plan-fingerprint", "direct-current", "root-tests", "root-pending",
+                         "root-completed", "restriction-archive", "restriction-history"):
+            state = copy.deepcopy(second)
+            target = roadmap.find_increment(state, "models-training-and-generation")
+            archives = state["workChunkPlanRevisions"]
+            last = archives[-1]
+            rows = [i for i, row in enumerate(state["history"]) if row["type"] == "work-chunks-reconfigured"]
+            if mutation == "no-archive": del archives[-2:]
+            elif mutation == "truncated": archives.pop()
+            elif mutation == "duplicate-archive": archives.append(copy.deepcopy(last))
+            elif mutation == "reverse-archives": archives[-2:] = reversed(archives[-2:])
+            elif mutation == "detached":
+                last["originalPlan"] = copy.deepcopy(roadmap.find_increment(base, "models-training-and-generation")["plan"])
+                last["originalPlanDigest"] = roadmap.fingerprint(last["originalPlan"])
+            elif mutation == "missing-history": state["history"].pop(rows[-1])
+            elif mutation == "duplicate-history": state["history"].append(copy.deepcopy(state["history"][rows[-1]]))
+            elif mutation == "reverse-history":
+                a, b = rows[-2:]; state["history"][a], state["history"][b] = state["history"][b], state["history"][a]
+            elif mutation == "unmatched-history":
+                state["history"].append({"type": "work-chunks-reconfigured", "eventFingerprint": "a" * 64,
+                                         "sequence": len(state["history"]) + 1, "recordedAt": "Synthetic fixture time"})
+            elif mutation == "event-hash": state["history"][rows[-1]]["eventFingerprint"] = "a" * 64
+            elif mutation == "archive-marker": state["history"][rows[-1]].pop("chunkPlanRevisionDigest", None)
+            elif mutation == "scope-digest": last["approvedScopeDigest"] = "a" * 64
+            elif mutation == "criterion-ids": last["criterionIds"] = list(reversed(last["criterionIds"]))
+            elif mutation == "completed-ids": last["completedChunkIds"] = []
+            elif mutation == "plan-time":
+                last["replacementPlan"]["recordedAt"] = "Changed creation time"
+                last["replacementPlanDigest"] = roadmap.fingerprint(last["replacementPlan"])
+            elif mutation == "plan-fingerprint":
+                last["replacementPlan"]["fingerprint"] = "a" * 64
+                last["replacementPlanDigest"] = roadmap.fingerprint(last["replacementPlan"])
+            elif mutation == "direct-current": target["plan"]["chunks"][-1]["outcome"] = "Skip host qualification."
+            elif mutation in {"root-tests", "root-pending", "root-completed"}:
+                event = self.refinement(base)
+                if mutation == "root-tests": event["plan"]["completionTests"][0] = "Skip actual hosts."
+                else:
+                    index = -1 if mutation == "root-pending" else 0
+                    event["plan"]["chunks"][index]["outcome"] = "Remove original obligation."
+                revised = roadmap.apply_event(base, event) if mutation == "root-pending" else None
+                if revised is None:
+                    self.denied(base, event)
+                    continue
+                state = revised
+            elif mutation == "restriction-archive": state["technicalAcceptanceRevisions"][-1]["revisedPlan"]["summary"] = "Changed scope"
+            else:
+                next(row for row in state["history"] if row.get("restrictionProfile"))["revisionDigest"] = "a" * 64
+            # Reach structural/lineage checks rather than only detecting stale
+            # hashes when a locally rewritten archive has been self-rehashed.
+            if mutation in {"detached", "criterion-ids", "completed-ids", "plan-time", "plan-fingerprint"}:
+                data = {key: value for key, value in last["replacementPlan"].items()
+                        if key not in {"recordedAt", "fingerprint", "outlineOnly"}}
+                event = {"type": "work-chunks-reconfigured", "incrementId": last["incrementId"],
+                         "expectedPlanDigest": last["originalPlanDigest"], "plan": data,
+                         "authorityRef": last["authorityRef"], "reason": last["reason"]}
+                row = state["history"][rows[-1]]
+                last["eventFingerprint"] = roadmap.fingerprint(event)
+                row["eventFingerprint"] = last["eventFingerprint"]
+                row["chunkPlanRevisionDigest"] = roadmap.fingerprint(last)
+            before = copy.deepcopy(state)
+            with self.subTest(mutation=mutation), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, state)
+            self.assertEqual(state, before)
+
+    def test_restricted_progress_preserves_other_pending_outlines_and_two_local_completions(self):
+        base = self.approved_restriction()
+        changed = base
+        for suffix in ("permission-views", "approval-storage"):
+            changed = roadmap.apply_event(changed, self.refinement(changed, suffix))
+            changed = roadmap.apply_event(changed, {
+                "type": "chunk-recorded", "chunkId": suffix, "summary": "Synthetic local software proof only.",
+                "areas": ["Approval software"], "tests": ["Controlled feature fixture"],
+                "documentation": [], "feedbackAddressed": []})
+            roadmap.validate_state_shape(self.repo, changed)
+        target = roadmap.find_increment(changed, "models-training-and-generation")
+        self.assertEqual(len(target["completedChunks"]), 11)
+        self.assertEqual(len(target["plan"]["chunks"]), 15)
+        pending = roadmap.find_increment(changed, "asset-selection-and-custom-creation")
+        original_pending = copy.deepcopy(pending)
+        outline = {key: copy.deepcopy(value) for key, value in pending["plan"].items()
+                   if key not in {"recordedAt", "fingerprint", "outlineOnly"}}
+        outline["chunks"].append({**copy.deepcopy(outline["chunks"][-1]), "id": "future-reviewed-variation"})
+        later = roadmap.apply_event(changed, {"type": "work-chunks-reconfigured", "incrementId": pending["id"],
+            "expectedPlanDigest": roadmap.fingerprint(pending["plan"]), "plan": outline,
+            "authorityRef": "user-work-chunk-sizing", "reason": "Retain a future outline without starting work."})
+        roadmap.validate_state_shape(self.repo, later)
+        self.assertEqual(roadmap.find_increment(later, target["id"]), target)
+        self.assertEqual(roadmap.find_increment(later, pending["id"])["status"], original_pending["status"])
+        self.assertFalse(roadmap.implementation_ready_for_overall(later))
+        self.assertEqual(later["evidence"], base["evidence"])
+
+    def test_restricted_chunk_archive_keeps_original_scope_binding_after_consistent_rehash(self):
+        base = self.approved_restriction()
+        self.assertEqual(base["roadmapApproval"]["fingerprint"],
+                         "51b0491098c31d5f85984900b46e144de132d310aef6922068ed153aa53ba3aa")
+        changed = roadmap.apply_event(base, self.refinement(base))
+        changed["workChunkPlanRevisions"][-1]["approvedScopeDigest"] = "f" * 64
+        changed["history"][-1]["chunkPlanRevisionDigest"] = roadmap.fingerprint(changed["workChunkPlanRevisions"][-1])
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, changed)
+
+    def test_restricted_chunk_history_has_bounded_refusal_for_malformed_rows(self):
+        base = self.approved_restriction()
+        for raw in (None, 7, "Synthetic malformed history"):
+            changed = roadmap.apply_event(base, self.refinement(base))
+            changed["history"].append(raw)
+            before = copy.deepcopy(changed)
+            with self.subTest(raw=raw), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, changed)
+            self.assertEqual(changed, before)
+
+    def test_restricted_chunk_history_preserves_raw_identity_for_normalized_inputs(self):
+        base = self.approved_restriction()
+        event = self.refinement(base)
+        event["reason"] = "  " + event["reason"] + "  "
+        event["authorityRef"] = "  " + event["authorityRef"] + "  "
+        event["plan"]["summary"] = "  " + event["plan"]["summary"] + "  "
+        event["plan"]["chunks"][9]["title"] = "  " + event["plan"]["chunks"][9]["title"] + "  "
+        changed = roadmap.apply_event(base, event)
+        roadmap.validate_state_shape(self.repo, changed)
+        archive = changed["workChunkPlanRevisions"][-1]
+        self.assertEqual(archive["reason"], event["reason"].strip())
+        self.assertEqual(archive["eventFingerprint"], roadmap.fingerprint(event))
+        self.assertEqual(changed["history"][-1]["eventFingerprint"], roadmap.fingerprint(event))
+        for mutation in ("archive-digest", "history-digest"):
+            altered = copy.deepcopy(changed)
+            if mutation == "archive-digest":
+                altered["workChunkPlanRevisions"][-1]["eventFingerprint"] = "a" * 64
+                altered["history"][-1]["chunkPlanRevisionDigest"] = roadmap.fingerprint(altered["workChunkPlanRevisions"][-1])
+            else: altered["history"][-1]["eventFingerprint"] = "a" * 64
+            with self.subTest(mutation=mutation), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, altered)
+
     def test_versioned_policy_matches_the_exact_finite_profile(self):
         root = Path(__file__).resolve().parents[3]
         policy = self.fixture()["policy"]

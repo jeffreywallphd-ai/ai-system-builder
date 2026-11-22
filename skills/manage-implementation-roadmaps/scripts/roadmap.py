@@ -1088,6 +1088,7 @@ def handle_work_chunks_reconfigured(state: dict[str, Any], event: dict[str, Any]
         "approvedScopeDigest": state["roadmapApproval"]["fingerprint"],
         "authorityRef": require_identifier(event.get("authorityRef"), "event.authorityRef"),
         "reason": require_string(event.get("reason"), "event.reason"), "recordedAt": now_utc(),
+        "eventFingerprint": fingerprint(event),
     })
     target["plan"] = replacement
 
@@ -1309,6 +1310,7 @@ HEADLESS_WORKFLOW_AUTHORITY = "user-headless-i7-no-model-quality-tests-20261122"
 HEADLESS_WORKFLOW_POLICY = "headless-i7-workflow-only-testing-policy-v1"
 HEADLESS_WORKFLOW_POLICY_DIGEST = "58cef3ecdf4039c5d4c45d75e225e68560c4669050d9d64b991801406e3bf877"
 HEADLESS_WORKFLOW_BASELINE = "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05"
+HEADLESS_WORKFLOW_REAPPROVED_SCOPE = "51b0491098c31d5f85984900b46e144de132d310aef6922068ed153aa53ba3aa"
 HEADLESS_WORKFLOW_PINS = {
     "originalCriterion": "01b297ee463e96fcc3db4851eb4c9ca09aae12a9c033e6433f9dae362cda356f",
     "originalPlan": "e7c8ae87701ca3cfd000ba46c9550dba1b5a4c445a7a9e8cfa865161ae9f3f7a",
@@ -1447,6 +1449,62 @@ def validate_headless_workflow_restriction_history(state: dict[str, Any]) -> Non
         or row["eventFingerprint"] != fingerprint(event) or row["revisionDigest"] != fingerprint(revision)):
         raise RoadmapError("The Headless restriction history must bind its exact event and archive.")
     require_string(row["recordedAt"], "Headless restriction history.recordedAt", maximum=80)
+
+
+def validate_headless_workflow_chunk_lineage(state: dict[str, Any], restriction: dict[str, Any],
+                                            increment: dict[str, Any]) -> None:
+    """Accept tracking additions, never a replacement of the fixed test scope.
+
+    The original archive remains immutable. Each later refinement must retain
+    its complete event/archive lineage and every original chunk obligation.
+    This is local consistency, not authentication against a whole-state writer.
+    """
+    history = [require_object(row, "Headless history row") for row in state["history"]]
+    marker = next(index for index, row in enumerate(history)
+                  if row.get("restrictionProfile") == HEADLESS_WORKFLOW_RESTRICTION)
+    rows = [(index, row) for index, row in enumerate(history)
+            if row.get("type") == "work-chunks-reconfigured"]
+    archives = state.get("workChunkPlanRevisions", [])
+    if len(rows) != len(archives):
+        raise RoadmapError("The Headless chunk lineage requires every refinement archive and event.")
+    root = restriction["revisedPlan"]
+    expected = root
+    original_chunks = {chunk["id"]: chunk for chunk in root["chunks"]}
+    criterion_ids = [criterion["id"] for criterion in increment["acceptanceCriteria"]]
+    for archive, (index, row) in zip(archives, rows):
+        replacement = archive["replacementPlan"]
+        data = {key: value for key, value in replacement.items()
+                if key not in {"recordedAt", "fingerprint", "outlineOnly"}}
+        if type(row.get("sequence")) is not int or row["sequence"] != index + 1:
+            raise RoadmapError("The Headless chunk archives must keep their ordered refinement events.")
+        if index <= marker:
+            continue
+        # The event contains original input; the archive contains normalized
+        # values. Preserve raw event identity instead of reconstructing it from
+        # trimmed prose. Bind all normalized fields in the same history row.
+        event_digest = archive.get("eventFingerprint")
+        if (not isinstance(event_digest, str) or not re.fullmatch(r"[a-f0-9]{64}", event_digest)
+                or row.get("eventFingerprint") != event_digest
+                or row.get("chunkPlanRevisionDigest") != fingerprint(archive)):
+            raise RoadmapError("Later Headless chunk events must bind their original event and complete archive.")
+        if archive["incrementId"] != increment["id"]:
+            continue
+        canonical = {**data, "recordedAt": expected["recordedAt"]}
+        canonical["fingerprint"] = fingerprint(canonical)
+        completed = archive["completedChunkIds"]
+        chunks = {chunk["id"]: chunk for chunk in replacement["chunks"]}
+        if (archive["originalPlan"] != expected or replacement != canonical
+                or archive["criterionIds"] != criterion_ids
+                or archive["approvedScopeDigest"] != HEADLESS_WORKFLOW_REAPPROVED_SCOPE
+                or tuple(completed[:len(HEADLESS_WORKFLOW_COMPLETED)]) != HEADLESS_WORKFLOW_COMPLETED
+                or completed != increment["completedChunks"][:len(completed)]
+                or any(data[key] != root[key] for key in data if key != "chunks")
+                or any(chunks.get(key) != value for key, value in original_chunks.items())
+                or [key for key in chunks if key in original_chunks] != list(original_chunks)):
+            raise RoadmapError("The Headless chunk chain must preserve its exact root scope and original work.")
+        expected = replacement
+    if increment["plan"] != expected:
+        raise RoadmapError("The current Headless plan must end its exact restricted chunk lineage.")
 
 
 def validate_technical_replacement(value: Any, label: str) -> dict[str, Any]:
@@ -2254,6 +2312,8 @@ def apply_event(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
     if event_type == "technical-acceptance-revised" and event.get("restrictionProfile") == HEADLESS_WORKFLOW_RESTRICTION:
         history_row.update(restrictionProfile=HEADLESS_WORKFLOW_RESTRICTION,
                            revisionDigest=fingerprint(updated["technicalAcceptanceRevisions"][-1]))
+    if event_type == "work-chunks-reconfigured":
+        history_row["chunkPlanRevisionDigest"] = fingerprint(updated["workChunkPlanRevisions"][-1])
     updated["history"].append(history_row)
     return updated
 
@@ -2298,8 +2358,11 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         revision = require_object(revision, "chunk plan revision")
         reject_unknown(revision, {"incrementId", "originalPlan", "originalPlanDigest", "replacementPlan",
                                   "replacementPlanDigest", "completedChunkIds", "criterionIds", "approvedScopeDigest",
-                                  "authorityRef", "reason", "recordedAt"}, "chunk plan revision")
+                                  "authorityRef", "reason", "recordedAt", "eventFingerprint"}, "chunk plan revision")
         require_identifier(revision.get("incrementId"), "chunk plan revision.incrementId")
+        if "eventFingerprint" in revision and (not isinstance(revision["eventFingerprint"], str)
+                or not re.fullmatch(r"[a-f0-9]{64}", revision["eventFingerprint"])):
+            raise RoadmapError("A chunk archive event fingerprint must be an exact digest.")
         require_identifier(revision.get("authorityRef"), "chunk plan revision.authorityRef")
         require_string(revision.get("reason"), "chunk plan revision.reason")
         require_string(revision.get("recordedAt"), "chunk plan revision.recordedAt", maximum=80)
@@ -2413,12 +2476,13 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
             raise RoadmapError("Amended technical identity and qualification must remain active.")
         if "restrictionProfile" in revision and (
             state["slug"] != "headless-skills-ui-takeover"
-            or increment["plan"] != revision["revisedPlan"]
             or next(c for c in increment["acceptanceCriteria"] if c["id"] == "model-runtime-hosts")
                 != revision["revisedCriterion"]
             or tuple(increment["completedChunks"][:len(HEADLESS_WORKFLOW_COMPLETED)]) != HEADLESS_WORKFLOW_COMPLETED
         ):
             raise RoadmapError("The Headless restriction must retain its exact revised scope and completed history.")
+        if "restrictionProfile" in revision:
+            validate_headless_workflow_chunk_lineage(state, revision, increment)
     for transfer in require_list(state.get("humanAcceptanceTransfers", []), "state.humanAcceptanceTransfers"):
         reject_unknown(transfer, {"incrementId", "criteria", "originalPlan", "previousApproval", "authorityRef", "summary", "status", "recordedAt"}, "transfer")
         increment = find_increment(state, require_identifier(transfer.get("incrementId"), "transfer.incrementId"))

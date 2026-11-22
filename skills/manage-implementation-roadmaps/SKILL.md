@@ -84,6 +84,9 @@ exact original approval, criterion, plan, nine completed chunks, accepted feedba
 and pending requirement review. It archives the original and fixed revised plan,
 changes no completed chunk or evidence, and retains actual download, training,
 generation, permissions, resources, native ownership and cleanup qualification.
+Later tracking additions must follow the exact history-bound chunk refinement
+chain. Keep the fixed restriction archive, all original chunk definitions/order
+and nonchunk plan requirements unchanged. See `references/events.md`.
 Test evaluation software with controlled metrics; never claim those metrics are
 a real model score. Apply the actual narrow user-directed reapproval and obtain
 fresh checks and separate review. This exception cannot amend another active
