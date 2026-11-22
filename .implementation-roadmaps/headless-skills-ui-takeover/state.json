@@ -745,6 +745,35 @@
         "Training proposal: 14 focused cases, three routing tests, strict types and all eight selected feature/contributor groups passed. Receipt 6a9758a93dfb51cf0311b190fb5b0fc3388cd1ca952996da63104f0c5f3d9787; review 69ac0d2c1473f0bc4bce04d61d4e27d6505e387a58df3f0e98d5d42c833b54cb. Commit 28e7e573e386651a24e8447b23b301ddd83bb05d."
       ],
       "title": "Review fine-tuning inputs and settings"
+    },
+    {
+      "areas": [
+        "Private training Dataset-byte preparation",
+        "Text/image selection and source staging",
+        "Private local text loader and focused safety regressions"
+      ],
+      "chunkId": "prepare-local-training-files-and-load-policy",
+      "completedAt": "2026-11-22T01:15:26Z",
+      "criteriaIds": [
+        "training-and-generation-quality",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "documentation": [
+        "Owning application/worker README, runtime architecture, ADR0047, Headless threat model, runtime pack and control-plane diagnostics retain exact scope and unperformed qualification."
+      ],
+      "feedbackAddressed": [],
+      "id": "models-training-and-generation-prepare-local-training-files-and-load-policy",
+      "incrementId": "models-training-and-generation",
+      "summary": "Implemented and independently reviewed exact saved Dataset/recipe byte checks, held-out split/source-map controls, shared image staging and fixed private local-only text loading. Actual training/task controls, evaluation, separate result saving, generation, source/native custody, resource admission and real-host/parent qualification remain pending. No public training operation is activated.",
+      "tests": [
+        "Exact authorized saved train/validation/recipe byte preparation, digest/size and final metadata checks, held-out key/digest alias denial; no test bytes read. 59 focused cases plus routing/type/check groups; independent alias finding repaired. Receipt 6d0fa5c0e3964fc1e9f664e32172dd274c25b0fa1a4ce0c05990dc3b6b740f76; review 0f31f97ae3508268cdcb3c3d8d0ef51c842fc10a07839d8e5ef1f5fb69808587; commit fa9cd9baeaae8d713d29285e03c245ffa31eef0a.",
+        "Text train/validation preflight before optional dependency import; held-out test paths ignored and unknown roles refused. 52 focused worker cases; invalid original baseline and earlier stopped broad plan retained, no broad pass. Receipt feceac40aa0d498187f0f929c61ec557bb41dee016884cc44b50b7845eb6dd7b; review 05492f49a183a1537c1a564c91bb62284f276dfa5631f5ca2006d02302bb5fce; commit c6ca18f783eb48345494275119ca17e2cbc98ccd.",
+        "Image-manifest split ceiling and one exact source-ID/path map per selected file; conflicting paths denied. 16 focused methods with subcases, unchanged text/routing groups; independent map conflict repaired. Receipt bc310aeb7f7e1886ca188c65ee1d25129b6081defd745a3600ca14a32ba8a64c; review dd109d95a9e6675266083c41114bca402e0943f0568cc763b6bdb006d8a35421; commit f0179f96610592043911510f6298df754061cb65.",
+        "Real disposable application image staging reuses one run-owned copy after fresh binding/file-fact checks; unique ordinals prevent same-basename collisions. 55 application cases and related image/text/type groups. Receipt b9382dd44ee2b3d8a407e4b661281aef1e084432ebeb3f9f28161c548aa1481f; review 28955e6588601df2019a86510b19600d343f74c9748ea18f05fdd13e9a11c9dd; commit 156a00c8ed7147f38bb0a5aba72b6547b6ba71e3.",
+        "Private fixed local-only text loader reuses ordinary orchestration; explicit no remote code/token and safetensors/restricted weights, captured local path and adapter-root refusal before effects/imports and supplier handoffs. 91 focused text cases plus related image/docs/context checks; independent pinned auto-adapter finding repaired. No actual model or training engine executed. Receipt 814b90fc7ad16ac2b4883f2803ebe74ab57af78dc9a0d2beb469c0a86d9eda78; review 1e9914796cad20e8c2b72a76921e6d6c3f0edebf760ded71d8d9dac495e528b8; commit 3b17525c45ce9478989a5abb8c9c1ec219dc08db."
+      ],
+      "title": "Prepare training data and local loading controls"
     }
   ],
   "completion": null,
@@ -2350,6 +2379,18 @@
       "recordedAt": "2026-11-21T22:05:45Z",
       "sequence": 124,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3d71e743acc551e53cd924854c89fa8a328008f7776169a4968d75e85666c1c0",
+      "recordedAt": "2026-11-22T01:15:26Z",
+      "sequence": 125,
+      "type": "work-chunks-reconfigured"
+    },
+    {
+      "eventFingerprint": "1650855dba9216e6511b9911580da9fc320b3122cb195b01d7facfa85b1ff0bc",
+      "recordedAt": "2026-11-22T01:15:26Z",
+      "sequence": 126,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -3552,7 +3593,8 @@
         "execute-approved-model-download",
         "monitor-and-cancel-model-download",
         "review-and-save-downloaded-model",
-        "review-fine-tuning-inputs-and-settings"
+        "review-fine-tuning-inputs-and-settings",
+        "prepare-local-training-files-and-load-policy"
       ],
       "deliverables": [
         "Model download, training, evaluation and supported image/text generation tool families",
@@ -3639,6 +3681,16 @@
               "model-runtime-hosts",
               "security-model-supply-and-limits"
             ],
+            "id": "prepare-local-training-files-and-load-policy",
+            "outcome": "Use only the saved training and validation files and verify Dataset and recipe bytes. Keep held-out data out of training and reuse copied images without collisions. Prepare the private local model loader with explicit loading restrictions. Actual training execution, model-file custody, resource checks and real host qualification remain pending.",
+            "title": "Prepare training data and local loading controls"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
             "id": "run-approved-fine-tuning",
             "outcome": "Use the approved dataset version, exact base model and supported training settings. Show progress, checkpoints and output history. Keep hardware limits, clearly refuse unsupported or low-resource requests, and require separate approval to save the trained result.",
             "title": "Run a bounded fine-tuning task"
@@ -3686,7 +3738,7 @@
           "Portable skill/MCP schemas and both host permission disclosures",
           "Bounded genuine task/quality/resource/cleanup qualification reports"
         ],
-        "fingerprint": "ac5ec0606a7c5a16fe5e4a2141352b8ec03f32c5bc637b83c4b467a0c845cfed",
+        "fingerprint": "9e08915588c044a03b7eb72cdf3375ffd3100ae9a2db7353e6222fe87c14e02f",
         "focusedTests": [
           "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
           "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
@@ -4271,7 +4323,7 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-21T22:05:45Z",
+  "updatedAt": "2026-11-22T01:15:26Z",
   "workChunkPlanRevisions": [
     {
       "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
@@ -5075,6 +5127,307 @@
         "summary": "Deliver three integrated model outcomes: prepare and acquire an exact compatible model; fine-tune and evaluate authorized data with review before save; generate and reveal exact outcomes under separate revocable window consent. Reuse the existing host application/runtime owners and exact approved-plan receipt protocol."
       },
       "replacementPlanDigest": "314e642079c84cb5e154cfb5b2b56d06b8ae9c050fc317549cbaa8415e15441a"
+    },
+    {
+      "approvedScopeDigest": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
+      "authorityRef": "user-meaningful-headless-chunk-sizing",
+      "completedChunkIds": [
+        "inspect-installed-models",
+        "review-pinned-model-source",
+        "execute-approved-model-download",
+        "monitor-and-cancel-model-download",
+        "review-and-save-downloaded-model",
+        "review-fine-tuning-inputs-and-settings"
+      ],
+      "criterionIds": [
+        "compatible-download",
+        "training-and-generation-quality",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "incrementId": "models-training-and-generation",
+      "originalPlan": {
+        "assumptions": [
+          "The merged roadmap and both approval modes/channels are already approved; no new provider, engine, runtime topology, arbitrary loader or automatic purchasing is authorized.",
+          "Use existing authorized installed model assets and configured provider authority. A new model, paid action, external transfer/publication or unresolved security-policy change requires its existing explicit direction rather than hidden fallback.",
+          "Compatible availability is a measured supported profile, not a promise for all models/hardware. Preserve genuine unavailable qualification; technical pending is agent work unless a specific human action is required.",
+          "Latest user direction is feature-focused testing while implementing increments, followed by one combined comprehensive roadmap qualification boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "inspect-installed-models",
+            "outcome": "List already-saved models and open the exact selected record. Keep result pages bounded and apply the current user and workspace permissions. Listing must not scan model folders or start a runtime.",
+            "title": "Inspect installed models"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-pinned-model-source",
+            "outcome": "Show the exact provider version, files, sizes, format and license before download approval. Keep keys and local file locations private. Source metadata alone does not approve a transfer or prove model readiness.",
+            "title": "Inspect the exact model source"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "execute-approved-model-download",
+            "outcome": "Implement the approved download through the existing Model owner. Retries must not start it twice. Keep track of started or uncertain work if chat closes or permission changes. Controlled tests check this code; real provider and app qualification remain separate.",
+            "title": "Execute an exact approved download"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "monitor-and-cancel-model-download",
+            "outcome": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant\u2019s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
+            "title": "Connect downloads and owned task controls"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-and-save-downloaded-model",
+            "outcome": "Show the completed download for review. Add the exact result to saved models only after separate approval and a current permission check. Save the record atomically, prevent duplicates on retry, and preserve the downloaded result if approval ends.",
+            "title": "Review and save the completed model"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-fine-tuning-inputs-and-settings",
+            "outcome": "Review one exact saved Model revision and immutable Dataset version with supported training settings. Freeze a minimized proposal digest under current original authority. Keep file, compatibility, runtime, resource, rights and fresh quality checks pending, with new training and result-save approval required. This preparation starts no task and enables no public operation.",
+            "title": "Review fine-tuning inputs and settings"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "run-approved-fine-tuning",
+            "outcome": "Use the approved dataset version, exact base model and supported training settings. Show progress, checkpoints and output history. Keep hardware limits, clearly refuse unsupported or low-resource requests, and require separate approval to save the trained result.",
+            "title": "Run a bounded fine-tuning task"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "evaluate-trained-model-candidate",
+            "outcome": "Compare the trained candidate with the declared fixed baseline. Record model, data, recipe, hardware and task history. Separate readiness from output quality and review before saving. Do not repeat ordinary model accuracy checks already accepted by the user.",
+            "title": "Evaluate and review the trained candidate"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "generate-and-import-model-output",
+            "outcome": "Generate supported text and images and import outputs for review through existing tasks. Apply current permissions and resource limits. Keep prompts private, preserve exact output history and save only approved results.",
+            "title": "Generate and import supported outputs"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "qualify-model-workflows-on-hosts",
+            "outcome": "Test real approved model downloads, training, evaluation and generated outputs on Desktop and Managed browser through MCP and paired app views. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Simulated results cannot pass the real execution checks.",
+            "title": "Show and qualify exact model outcomes"
+          }
+        ],
+        "completionTests": [
+          "Actual stdio MCP client on packaged Desktop and authenticated Managed browser exercises the supported small pinned acquisition, declared local training/evaluation, generation/output import, task recovery/resource refusal and separate revocable status reveals. No fake accepted task, weights, worker or output can substitute for a claimed physical pass.",
+          "Predeclare task-specific baseline/quality/format/data/resource expectations before observation. Retain original accepted model-size accuracy policy, existing guard/deadline/native/offload controls and failed history; report each profile/device/method truthfully.",
+          "Run only this increment's relevant feature tests, builds/docs/dependency-direction gates and independent exact-criterion review. Reserve the combined standard/end-to-end/AI suite for after all roadmap implementation increments."
+        ],
+        "documentation": [
+          "Model/runtime contracts and application/host READMEs",
+          "ADR0047, Headless threat model and runtime architecture/profile boundaries",
+          "Portable skill/MCP schemas and both host permission disclosures",
+          "Bounded genuine task/quality/resource/cleanup qualification reports"
+        ],
+        "fingerprint": "ac5ec0606a7c5a16fe5e4a2141352b8ec03f32c5bc637b83c4b467a0c845cfed",
+        "focusedTests": [
+          "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
+          "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
+          "Finite training/generation settings, source/model substitution, admission/memory shortfall, protected prompt/data exclusion, review-before-save, failed/ambiguous tasks and current egress/consent/revoke fences.",
+          "Focused source-compatible application/worker/adapter/host and paired UI tests, real supported task profile with original safety controls and owned lifecycle/cleanup proof. No accepted ordinary Qwen accuracy rerun."
+        ],
+        "recordedAt": "2026-11-19T02:29:18Z",
+        "rollback": "Disable only newly advertised model/training/generation delegation and related presentation. Preserve ordinary app functionality, exact accepted task custody, installed models, dataset versions, reviewed candidates, receipts and all existing cleanup/resource/security controls.",
+        "steps": [
+          "Define strict bounded model metadata/preview/task contracts and private exact model witnesses. Bind persisted-only inventory and configured provider metadata to current actor/client/workspace/model authority. Extend the existing approved download path with immutable revision/integrity/resource admission and durable accepted-task lineage; no public raw path or worker error.",
+          "Compile exact saved dataset version/artifact and base-model witnesses into finite supported training/validation settings. Admit one current approved task through the existing owner, retain base/recipe/data/hardware/task lineage, expose minimized status and separate explicit result save. Evaluate a declared supported small profile against a fixed baseline, with honest unsupported/resource refusal outcomes.",
+          "Use existing approved text/image generation owners with bounded transient prompt handling and exact task/result lineage. Add finite model/download/training/generated-artifact presentation selectors to the existing consent/revoke delivery protocol on both hosts. Run the real scoped MCP/app workflows and relevant denial/cleanup tests before exact criterion qualification."
+        ],
+        "summary": "Deliver three integrated model outcomes: prepare and acquire an exact compatible model; fine-tune and evaluate authorized data with review before save; generate and reveal exact outcomes under separate revocable window consent. Reuse the existing host application/runtime owners and exact approved-plan receipt protocol."
+      },
+      "originalPlanDigest": "314e642079c84cb5e154cfb5b2b56d06b8ae9c050fc317549cbaa8415e15441a",
+      "reason": "Five complete tested independently reviewed source checkpoints provide a coherent training-data/materialization and fixed local-loading boundary. Show their bounded completion separately from unimplemented approved training/task/save execution. Preserve every prior chunk definition/order, criterion, test, approval, historical finding and actual qualification gap. API/chat publication remains after I7 completion and before I8.",
+      "recordedAt": "2026-11-22T01:15:26Z",
+      "replacementPlan": {
+        "assumptions": [
+          "The merged roadmap and both approval modes/channels are already approved; no new provider, engine, runtime topology, arbitrary loader or automatic purchasing is authorized.",
+          "Use existing authorized installed model assets and configured provider authority. A new model, paid action, external transfer/publication or unresolved security-policy change requires its existing explicit direction rather than hidden fallback.",
+          "Compatible availability is a measured supported profile, not a promise for all models/hardware. Preserve genuine unavailable qualification; technical pending is agent work unless a specific human action is required.",
+          "Latest user direction is feature-focused testing while implementing increments, followed by one combined comprehensive roadmap qualification boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "inspect-installed-models",
+            "outcome": "List already-saved models and open the exact selected record. Keep result pages bounded and apply the current user and workspace permissions. Listing must not scan model folders or start a runtime.",
+            "title": "Inspect installed models"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-pinned-model-source",
+            "outcome": "Show the exact provider version, files, sizes, format and license before download approval. Keep keys and local file locations private. Source metadata alone does not approve a transfer or prove model readiness.",
+            "title": "Inspect the exact model source"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "security-model-supply-and-limits"
+            ],
+            "id": "execute-approved-model-download",
+            "outcome": "Implement the approved download through the existing Model owner. Retries must not start it twice. Keep track of started or uncertain work if chat closes or permission changes. Controlled tests check this code; real provider and app qualification remain separate.",
+            "title": "Execute an exact approved download"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "monitor-and-cancel-model-download",
+            "outcome": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant\u2019s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
+            "title": "Connect downloads and owned task controls"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-and-save-downloaded-model",
+            "outcome": "Show the completed download for review. Add the exact result to saved models only after separate approval and a current permission check. Save the record atomically, prevent duplicates on retry, and preserve the downloaded result if approval ends.",
+            "title": "Review and save the completed model"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "review-fine-tuning-inputs-and-settings",
+            "outcome": "Review one exact saved Model revision and immutable Dataset version with supported training settings. Freeze a minimized proposal digest under current original authority. Keep file, compatibility, runtime, resource, rights and fresh quality checks pending, with new training and result-save approval required. This preparation starts no task and enables no public operation.",
+            "title": "Review fine-tuning inputs and settings"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "prepare-local-training-files-and-load-policy",
+            "outcome": "Use only the saved training and validation files and verify Dataset and recipe bytes. Keep held-out data out of training and reuse copied images without collisions. Prepare the private local model loader with explicit loading restrictions. Actual training execution, model-file custody, resource checks and real host qualification remain pending.",
+            "title": "Prepare training data and local loading controls"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "run-approved-fine-tuning",
+            "outcome": "Use the approved dataset version, exact base model and supported training settings. Show progress, checkpoints and output history. Keep hardware limits, clearly refuse unsupported or low-resource requests, and require separate approval to save the trained result.",
+            "title": "Run a bounded fine-tuning task"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "evaluate-trained-model-candidate",
+            "outcome": "Compare the trained candidate with the declared fixed baseline. Record model, data, recipe, hardware and task history. Separate readiness from output quality and review before saving. Do not repeat ordinary model accuracy checks already accepted by the user.",
+            "title": "Evaluate and review the trained candidate"
+          },
+          {
+            "criteriaIds": [
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "generate-and-import-model-output",
+            "outcome": "Generate supported text and images and import outputs for review through existing tasks. Apply current permissions and resource limits. Keep prompts private, preserve exact output history and save only approved results.",
+            "title": "Generate and import supported outputs"
+          },
+          {
+            "criteriaIds": [
+              "compatible-download",
+              "training-and-generation-quality",
+              "model-runtime-hosts",
+              "security-model-supply-and-limits"
+            ],
+            "id": "qualify-model-workflows-on-hosts",
+            "outcome": "Test real approved model downloads, training, evaluation and generated outputs on Desktop and Managed browser through MCP and paired app views. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Simulated results cannot pass the real execution checks.",
+            "title": "Show and qualify exact model outcomes"
+          }
+        ],
+        "completionTests": [
+          "Actual stdio MCP client on packaged Desktop and authenticated Managed browser exercises the supported small pinned acquisition, declared local training/evaluation, generation/output import, task recovery/resource refusal and separate revocable status reveals. No fake accepted task, weights, worker or output can substitute for a claimed physical pass.",
+          "Predeclare task-specific baseline/quality/format/data/resource expectations before observation. Retain original accepted model-size accuracy policy, existing guard/deadline/native/offload controls and failed history; report each profile/device/method truthfully.",
+          "Run only this increment's relevant feature tests, builds/docs/dependency-direction gates and independent exact-criterion review. Reserve the combined standard/end-to-end/AI suite for after all roadmap implementation increments."
+        ],
+        "documentation": [
+          "Model/runtime contracts and application/host READMEs",
+          "ADR0047, Headless threat model and runtime architecture/profile boundaries",
+          "Portable skill/MCP schemas and both host permission disclosures",
+          "Bounded genuine task/quality/resource/cleanup qualification reports"
+        ],
+        "fingerprint": "9e08915588c044a03b7eb72cdf3375ffd3100ae9a2db7353e6222fe87c14e02f",
+        "focusedTests": [
+          "Strict finite family/codecs, hostile/unknown/oversized input, private-field redaction, no runtime/ambient discovery on metadata, exact current actor/client/workspace/model/dataset/revision checks and unavailable adapter/provider refusal.",
+          "Pinned download propagation and integrity, format/license/provenance minimization, one-use issuance/ACK/durable acceptance, exact replay without duplicate work, scoped status/cancel/retry and existing ordinary download compatibility.",
+          "Finite training/generation settings, source/model substitution, admission/memory shortfall, protected prompt/data exclusion, review-before-save, failed/ambiguous tasks and current egress/consent/revoke fences.",
+          "Focused source-compatible application/worker/adapter/host and paired UI tests, real supported task profile with original safety controls and owned lifecycle/cleanup proof. No accepted ordinary Qwen accuracy rerun."
+        ],
+        "recordedAt": "2026-11-19T02:29:18Z",
+        "rollback": "Disable only newly advertised model/training/generation delegation and related presentation. Preserve ordinary app functionality, exact accepted task custody, installed models, dataset versions, reviewed candidates, receipts and all existing cleanup/resource/security controls.",
+        "steps": [
+          "Define strict bounded model metadata/preview/task contracts and private exact model witnesses. Bind persisted-only inventory and configured provider metadata to current actor/client/workspace/model authority. Extend the existing approved download path with immutable revision/integrity/resource admission and durable accepted-task lineage; no public raw path or worker error.",
+          "Compile exact saved dataset version/artifact and base-model witnesses into finite supported training/validation settings. Admit one current approved task through the existing owner, retain base/recipe/data/hardware/task lineage, expose minimized status and separate explicit result save. Evaluate a declared supported small profile against a fixed baseline, with honest unsupported/resource refusal outcomes.",
+          "Use existing approved text/image generation owners with bounded transient prompt handling and exact task/result lineage. Add finite model/download/training/generated-artifact presentation selectors to the existing consent/revoke delivery protocol on both hosts. Run the real scoped MCP/app workflows and relevant denial/cleanup tests before exact criterion qualification."
+        ],
+        "summary": "Deliver three integrated model outcomes: prepare and acquire an exact compatible model; fine-tune and evaluate authorized data with review before save; generate and reveal exact outcomes under separate revocable window consent. Reuse the existing host application/runtime owners and exact approved-plan receipt protocol."
+      },
+      "replacementPlanDigest": "2a2321738d81dd040f7bee573479453e5f8bc8b161b34cecca24e0b4279b6eed"
     }
   ]
 }
