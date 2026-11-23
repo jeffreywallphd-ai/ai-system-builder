@@ -324,6 +324,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
             "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
         ),
         "automatic_required_files": (
             "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
@@ -332,6 +334,8 @@ PUBLISHED_FORM_CHECKS = {
             "dev-tools/helpers/run_focused_checks.py",
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
             "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
         ),
         "sources": (
             "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
@@ -340,9 +344,12 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/README.md",
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
             "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
         ),
-        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
-            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py"),
+        "command": ("-B", "-m", "unittest", "-v",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py"),
     },
     "headless-training-local-files-unit": {
         "automatic_sources": tuple(path for path in TRAINING_LOCAL_MODEL_CODE if not path.endswith("/index.ts")) + (

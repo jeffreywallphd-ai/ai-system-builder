@@ -1,4 +1,15 @@
 
+The fixed `headless-training-runtime-worker-unit` profile runs the original
+training-session/controller tests and protected source-copy ABI fixtures.
+It requires the actual controller, both tests and their exact JSON fixtures.
+The source-copy cases use in-memory native replies; they never execute the
+controller entry point, load a model or consume a physical-effect grant. Related
+Node runtime and strict checks preserve original launch behavior. Missing or
+unknown sources keep the conservative generic fallback. A source-copy pass
+qualifies only the private producer/controller component: the Node source
+authority/reservation channel, worker bootstrap/lease, complete native producer,
+hard storage controls and actual-host qualification remain pending.
+
 The fixed `headless-training-local-files-unit` and companion type checks execute
 the actual private Model/file-preparation tests, including Core/SQLite records,
 temporary layouts and unchanged Context behavior. Exact source/test presence is

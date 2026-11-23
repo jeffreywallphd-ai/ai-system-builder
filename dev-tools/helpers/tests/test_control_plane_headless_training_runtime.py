@@ -29,6 +29,7 @@ class TrainingRuntimeRoutingTests(unittest.TestCase):
         self.assertIn("--strict", rows[self.profiles[1]]["argv"])
         self.assertIn(self.node_test, rows[self.profiles[1]]["argv"])
         self.assertIn(self.worker_test, rows[self.profiles[2]]["argv"])
+        self.assertIn("modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py", rows[self.profiles[2]]["argv"])
         for name in ("completion-all", "completion-standardande2e", "focused-tests"):
             self.assertNotIn(name, rows)
         self.assertFalse(any("model-blocker" in arg or "test:all" in arg for row in rows.values() for arg in row["argv"]))

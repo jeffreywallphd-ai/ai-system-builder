@@ -1,0 +1,18 @@
+{
+  "schema": "windows-original-model-graph-v1",
+  "definitionDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "modelId": "synthetic-safe-model",
+  "modelUpdatedAt": "2026-11-23T00:00:00Z",
+  "logicalPath": "X:\\models\\selected",
+  "sourcePath": "X:\\models\\selected",
+  "freshParent": "X:\\private\\training",
+  "freshName": "original-copy",
+  "files": [
+    {"name": "config.json", "sizeBytes": 2, "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"},
+    {"name": "tokenizer.json", "sizeBytes": 2, "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"},
+    {"name": "model.safetensors", "sizeBytes": 16, "sha256": "615949a888a3d598f114021095c5c05d4f1a3be27619dce65c50c15f2a2000a8"}
+  ],
+  "maximumCopyBytes": 65536,
+  "bufferBytes": 4096,
+  "preparationMs": 30000
+}

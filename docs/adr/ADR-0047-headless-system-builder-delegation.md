@@ -1,5 +1,20 @@
 # ADR-0047: Delegated Headless System Builder Access
 
+The original Windows resource controller may also own an execution-lifetime
+protected copy of the selected Model. This implements the existing native-custody
+decision without a second model executor. Native exclusive copy/hash/readback,
+private DACL/OWNER_RIGHTS sealing and read-only handle preparation precede app
+creation. Source Stop/EOF, original call ownership and retained byte accounting
+remain mandatory. Construction excludes foreign DAC/owner/metadata mutators at
+atomic creation, suppresses implicit owner DAC and positively attests original
+creator access. Later mutable-control pathname opens are absent. Directory
+sharing alone cannot replace complete post-seal enumeration. Unproven creator
+access denies preparation. Closing source handles is not file deletion and does
+not release candidate output. Production composition stays unavailable
+until the original Node authority/reservation handoff, inherited bootstrap,
+worker lease and full input/output producer qualify. Controlled ABI fixtures
+grant no physical Windows, installed-runtime, training or parent pass.
+
 Current-source training qualification reuses four tracked unbound operator
 templates and a pure closed-data renderer. A private v2 factory selects only the
 fixed fresh run/phase helper directory while sharing all original native roles,

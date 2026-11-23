@@ -1,5 +1,27 @@
 # Python runtime adapter
 
+## Private protected training source copy
+
+The original Windows controller has a private, default-off source-copy owner.
+Trusted composition must supply a complete safe-format manifest, current source
+authority and an existing measured storage reservation. It creates only a fresh
+directory, opens source files by native parent handle, checks hashes, copies and
+rehashes bytes, then seals private permissions with an OWNER_RIGHTS restriction.
+Read guards and read-only duplicate handles precede app process creation.
+The initial descriptor already denies foreign control and metadata writes and
+suppresses implicit owner DAC access. Only positively attested original creator
+handles may mutate the copy; no later mutable pathname open is used. If those
+creator rights are not granted, preparation fails closed.
+Stop and input closure are observed during preparation. Closing the original
+worker does not remove the copy or free its disk reservation: positive retained
+accounting is a separate requirement. Candidate output has a separate owner.
+
+This is a producer/controller component. Ordinary v1 BOOT and production roots
+do not configure it. The original Node authority/reservation channel, inherited
+bootstrap, worker-side lease and full input/output producer remain pending.
+Synthetic native-API tests do not qualify physical Windows behavior, an installed
+runtime, hard storage limits, real training or the parent roadmap.
+
 The foundation captures model-cache configuration once for both hosts, in the
 order `HF_HUB_CACHE`, `HUGGINGFACE_HUB_CACHE`, `TRANSFORMERS_CACHE`, then existing
 home/default resolution. Explicit relative roots still fail. Its trusted

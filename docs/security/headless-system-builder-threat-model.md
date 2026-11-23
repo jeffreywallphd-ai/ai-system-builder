@@ -2344,6 +2344,34 @@ Controlled semantic tests grant no Native/model/quality/public/parent authority.
   are no model calls, scoring runs or changed resource/retention policies.
 
 
+### Private native training source-copy component
+
+The protected asset is the exact approved Model source and its separate reserved
+copy bytes. Only trusted original composition can bind the private controller
+owner; production roots and v1 BOOT do not enable it. Require the complete safe
+manifest, fresh current business authority and an existing exclusive measured
+reservation before file construction. Refuse unsafe names, extra graph entries,
+links, reparse points, streams, hash changes and occupied fresh destinations.
+Retain native output slots before dispatch, bound streaming writes, verify the
+copied bytes and read back private DACL/OWNER_RIGHTS protection. Deny DAC, owner,
+metadata and delete mutations at atomic creation and suppress implicit owner
+DAC. Only positively attested original creators may finish the seal; no later
+mutable-control pathname opens are used. Exclusive sharing is not a directory
+namespace fence: complete post-seal enumeration remains mandatory. Missing
+creator access denies preparation. Keep original creator controls noninherited
+and separate from read-data guards and read-only creation-time duplicates.
+Stop/EOF/deadline must prevent later writes or app dispatch.
+
+Join original worker/Job/readers and source IO before closing source handles.
+Unknown write, seal, close or accounting acknowledgements remain retained and
+cannot authorize another attempt. Copies stay charged after close; source
+retirement grants no candidate-output credit or deletion/recovery authority.
+The Node authority/reservation handoff, worker bootstrap/live lease, full native
+producer, hard storage enforcement and actual Windows/runtime qualification are
+separate pending controls. In-memory ABI fixtures do not qualify those controls
+or any parent criterion. The existing safe loader and model-quality policy stay
+unchanged.
+
 The optional public training-progress read uses the original accepted task only.
 Threats include changed selectors, callback replacement, stale client/host/read
 authority, reply mutation during permission checks and private fields in numeric

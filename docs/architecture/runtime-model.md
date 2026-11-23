@@ -2581,6 +2581,23 @@ codec/Root or Save capability. Core/SQLite fixtures check policy/lineage and old
 progress/Stop compatibility; actual Native/output/host qualification stays separate.
 
 
+The private original Windows controller also contains a default-off protected
+source-copy component. Trusted original composition provides the explicit safe
+manifest, current admission and measured reservation; no v1 BOOT field selects
+it. Native parent-relative exclusive creation, complete hash/readback, private
+DACL/OWNER_RIGHTS sealing and read guards precede read-only handle duplication
+and app creation. Source Stop/EOF observation starts before preparation.
+Construction restricts non-share-governed mutators and implicit owner DAC at
+atomic creation. Positively attested original creator handles finish the seal;
+later pathname mutable-control opens are absent. Directory sharing alone does
+not fence child creation: complete enumeration after the root seal is required.
+Unproven or unsupported creator access fails closed. Source
+handle retirement and retained disk accounting are separate from app/Job exit
+and candidate-output custody. Unknown calls retain their original outputs.
+This producer/controller component does not supply the Node authorization
+channel, inherited bootstrap, worker lease, complete input/output producer or
+physical/host qualification. Those remain unavailable until composed and tested.
+
 The configured Headless read broker exposes original training progress through
 `models.training-task` and the existing MCP model-workflow tool. AI clients poll
 for task state, epoch, batch and percent; there is no unsolicited model callback.

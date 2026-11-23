@@ -13,6 +13,27 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+## Protected source-copy component
+
+The fixed original controller can privately construct a same-byte protected
+source copy before creating its app process. Source handles, native call outputs,
+fresh-file provenance and read-only inheritance remain owned by that controller.
+Its explicit manifest supports only flat safe-format files; executable code,
+pickle weights, shards, links, reparse points and unexpected entries are refused.
+The original selected Model and shared provider cache are never modified.
+Atomic construction restricts DAC, owner, metadata and delete rights; exclusive
+creator handles and complete post-seal enumeration remain necessary. Only the
+actual attested original creators can finish the seal. There are no later
+mutable-control pathname opens. Unsupported creator access is denied.
+Partial or unknown calls cannot be retried or treated as no-file effects.
+Retirement closes all original copy handles and requires retained byte accounting;
+it does not delete the files or release any candidate-output reservation.
+
+The worker still has no default native training producer. This component does
+not implement the authenticated original Node bootstrap or the worker-side live
+borrower. No BOOT flag, path, handle number or ready marker supplies that missing
+authority. Native API tests use in-memory bytes and start no process or model.
+
 ## Private training validation comparison
 
 The internal `train_model_from_local_files` function has an explicit
