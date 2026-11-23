@@ -1144,3 +1144,28 @@ continuations, and recheck local outcome before returning its acknowledgement.
 Expose a separate synchronous private start-lifetime fence for the original known
 reservation and local outcome. It neither replaces issue acknowledgement and
 fresh async policy/metadata/native checks nor disables historical requester reads.
+
+The optional shared training-step runner composes these existing owners outside
+metadata transactions. Original authorized private Model/Dataset readers must
+match the full saved minimized Model, Dataset version and recipe binding. Copy
+typed-array bytes intrinsically, verify exact content digests and bound the
+aggregate before later awaits. Pass only private aliases for selected training
+and validation data. Keep the original stored proposal digest.
+
+Start admission uses the original known step fence together with fresh async
+permission. Accepted lifetime uses separate original-actor Model/Data business
+permission and host lifetime. Retain the exact returned private task synchronously
+before awaited ledger acceptance or publication policy. Missing start, retention
+or acceptance acknowledgement never permits another task. Historical replay
+resolves no runtime or private input reader. The finite training start/replay
+codec is explicitly opt-in; neither it nor the runner activates a public root,
+native producer, task control or result Save. Controlled application/SQLite tests
+grant no actual runtime, source/resource, host or parent qualification.
+
+Keep retained business control independent from the caller from entry. The
+application can accept a session before its outward Promise finishes a later
+power-lifecycle hook. Awaiting that caller in accepted control can incorrectly
+cancel an accepted task. New-start authority stays in the separate synchronous
+admission fence and issued callback. The returned publication wrapper rechecks
+the original caller policy before the existing prepared publication fence;
+historical receipt disclosure does not renew business-write permission.

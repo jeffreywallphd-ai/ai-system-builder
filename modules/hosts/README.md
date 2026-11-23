@@ -1,3 +1,32 @@
+The internal `runPreparedHeadlessModelTraining` bridge composes the exact stored
+training step with the existing private Model/Dataset readers and
+`TrainModelUseCase.startApprovedLocal`. Reads and intrinsic byte copies occur
+outside metadata transactions. Compare the complete current minimized Model,
+Dataset version and recipe with the original stored binding. Retain that
+binding's original proposal digest, including its supported legacy encoding.
+Only selected training inputs enter private runtime aliases. With saved splits,
+use train/validation bytes and exclude held-out and aggregate artifacts. Without
+splits, preserve the existing prepared-Dataset training profile. Original source
+artifacts stay excluded in both cases.
+
+The bridge preserves original callback methods and receivers across waits. It
+uses fresh request/approval admission and the original synchronous step fence
+for starting, with separate original-actor Model/Data business permission for
+the accepted task's lifetime. That business control is independent from entry;
+acceptance can precede the outward start reply while a power hook waits. Capture
+the returned private task synchronously
+before awaited ledger acceptance. Unknown start/retention/acceptance replies
+keep the original owner and never trigger a new start. Replay resolves no
+reader, Model owner or runtime. Publish only finite correlated task references
+through the existing approval/publication fence. The training result codec
+requires its own explicit opt-in and grants no other capability.
+The publication wrapper rechecks the captured caller policy. A separately
+authorized historical receipt does not require a renewed business-write grant.
+
+Both public roots remain unconfigured for this bridge. No native producer,
+resource/readiness guarantee, task transport, result Save or physical/parent
+qualification is supplied by controlled Core/SQLite application fixtures.
+
 Managed approval treats both a model download and saving its downloaded reference
 as Model writes. Require current `model:read` and `model:write` when opening the
 review, deciding it and publishing either response. Recheck through the existing

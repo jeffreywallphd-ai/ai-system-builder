@@ -2059,3 +2059,42 @@ regressions cover this handoff. A separate private synchronous start fence close
 on local terminal/denied/unknown outcomes while historical requester reads remain
 available. It is not an issue ACK or async policy/source/native proof. The new
 wrapper must not implicitly enable unrelated optional gates such as downloads.
+
+### Approved training step to private task
+
+The shared internal runner composes original owners, not a caller-supplied
+execution flag. Capture original callbacks/receivers, request, scope, step and
+binding before waits. Require current request/approval and separate original-actor
+Model/Data business permission before resolving private input readers. Read only
+outside owned metadata transactions. Compare the complete saved minimized Model,
+Dataset version and recipe with the original binding, retaining its stored digest.
+
+Private reader results remain untrusted at this handoff. Reject active or changed
+facts, malformed/dense-array substitutions, wrong source roles, duplicate/source
+aliases and held-out content. Intrinsically copy and hash selected typed-array
+bytes, with existing per-source limits, a 512 KiB recipe limit and 256 MiB combined
+limit, before subsequent awaits. Do not pass original storage keys to the runtime.
+The private application owner copies and verifies its own inputs again.
+
+Supply the original synchronous start fence in addition to the issue ACK and
+fresh permission. Accepted business authority cannot depend on an ended outward
+request, approval deadline or window. Retain the exact private task synchronously
+before an awaited accept/policy call. Unknown start/retention/acceptance replies
+retain custody and issued history; never mark them not-started, discover another
+task or retry. Record a known non-start only before application entry or after its
+original owner explicitly proves non-start. Reauthorize finite response publication.
+
+Training result decoding requires explicit training support. Download support
+does not enable training, and training support enables no Save, installer, external
+provider or other operation. Public roots and the native producer remain
+unconfigured. Inert Core/SQLite/application sessions qualify only this software
+composition; real native/source/resource/readiness/rights, host, task transport,
+Save and parent gaps remain pending. No model output quality is measured here.
+
+Retained business control must not await caller admission even while the outward
+start Promise is unresolved: the application may already have accepted and
+started observation before finishing a post-ACK power hook. Keep startup guards
+in the separate admission/issue callbacks. Wrap the returned publication method
+with the captured caller policy and existing prepared approval fence. Current
+query authority permits historical references after business-write withdrawal;
+it does not permit another task start or private task action.

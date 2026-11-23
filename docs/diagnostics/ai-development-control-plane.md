@@ -3135,3 +3135,17 @@ explicit generic requests retain conservative fallback. The routing harness runs
 both fixed commands, checks real assertion totals and required family titles, and
 refuses skipped/failed/cancelled/todo tests. These checks qualify metadata software
 only; no model, native, runtime, actual host, Save or parent pass is supplied.
+
+`headless-training-execution-unit` selects only with the exact new training bridge
+fixture. Its fixed serial TAP command runs actual Core/SQLite bridge and private
+application cases, explicit training result codecs, training-step ownership and
+related unchanged Model/Data/Context transactions. Its type companion strictly
+compiles the actual helper and new integration/contract tests. It contains no
+actual model, native producer or full-system command.
+
+The automatic profile requires all declared source and fixture files to be
+regular. Shared helper/codec sources alone retain conservative generic impact;
+unknown, missing/nonregular or explicit generic requests cannot borrow the new
+coverage. The routing harness executes both fixed commands, checks real assertion
+counts/family titles and rejects every failed, skipped, cancelled or todo case.
+These are software component receipts, not public route, physical or parent passes.

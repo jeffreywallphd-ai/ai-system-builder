@@ -2403,3 +2403,29 @@ before returning an issued acknowledgement. The private synchronous start fence
 tracks only original reservation/local lifetime; requester `isCurrent` continues
 to guard historical query/publication. Neither replaces fresh async policy/source,
 issue acknowledgement or native proof. Other optional gates remain explicit.
+
+### Original approved training-step composition
+
+`runPreparedHeadlessModelTraining` connects the existing prepared training step,
+authorized private Model/Dataset readers and private application task owner.
+Read bytes outside metadata transactions. Match complete minimized saved facts;
+copy and verify bounded train/validation and recipe bytes before later policy
+awaits. Use private input aliases and retain the stored original proposal digest.
+No held-out test data or mutable Artifact binding lookup enters task dispatch.
+
+Keep request/approval admission and its synchronous original-step fence separate
+from accepted-task business permission. Recheck both at their owning handoffs.
+Retain the returned original private task synchronously before awaiting ledger
+acceptance. Unknown replies preserve original custody without retry or adoption.
+Replay reads the exact historical receipt and resolves no owner or runtime.
+Only an explicitly enabled finite task-reference codec can decode its response;
+default codecs and actual public roots remain unavailable. Real private native
+preparation, source integrity/custody, installed readiness, limits, task transport,
+result Save and host/parent qualification remain separate work.
+
+An accepted application task can precede the outward start reply while its
+power hook waits. Business control is therefore independent from entry, not
+switched after that Promise returns. The distinct start/issue fences still deny
+new admission after caller loss. Historical receipt publication rechecks current
+caller policy and the original prepared fence without acquiring a new business
+write grant or resolving another owner.

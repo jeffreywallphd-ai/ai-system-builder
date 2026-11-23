@@ -40,11 +40,14 @@ type StartedContextPackEffect = {readonly kind: "started" | "replayed"; readonly
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 type StartedModelDownloadEffect = {readonly kind: "started" | "replayed"; readonly operation: "models.download";
   readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
+
+type StartedModelTrainingEffect = {readonly kind: "started" | "replayed"; readonly operation: "models.train";
+  readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 type SavedModelReferenceEffect = {readonly kind: "committed" | "replayed"; readonly operation: "models.save-download";
   readonly reference: HeadlessSavedModelReference};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
   {readonly ok: false; readonly code: "headless.not-started"} |
-  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | SavedContextEffect | StartedContextPackEffect | StartedModelDownloadEffect | SavedModelReferenceEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect | SavedDatasetEffect | SavedContextEffect | StartedContextPackEffect | StartedModelDownloadEffect | StartedModelTrainingEffect | SavedModelReferenceEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -80,7 +83,7 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "code", "value"]);
     if (raw.ok === false && !("value" in raw)) {
       if (raw.code === "headless.not-started" && Object.keys(raw).length === 2 &&
-          (options?.allowContextPackGeneration === true || options?.allowContextRagGeneration === true || options?.allowContextQuery === true || options?.allowModelDownload === true))
+          (options?.allowContextPackGeneration === true || options?.allowContextRagGeneration === true || options?.allowContextQuery === true || options?.allowModelDownload === true || options?.allowModelTraining === true))
         return {ok: false, code: "headless.not-started"};
       const fault = readHeadlessAuthoringWireResult({ ok: false, code: raw.code });
       return fault.ok ? unavailable : fault;
@@ -98,8 +101,9 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
         const saved = readHeadlessSavedModelReference(reference, exact.workspaceId);
         return saved ? {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt, reference: saved}} : unavailable;
       }
-      if (operation === "models.download") {
-        if (options?.allowModelDownload !== true || (kind !== "started" && kind !== "replayed")) return unavailable;
+      if (operation === "models.download" || operation === "models.train") {
+        if ((operation === "models.download" ? options?.allowModelDownload !== true : options?.allowModelTraining !== true) ||
+            (kind !== "started" && kind !== "replayed")) return unavailable;
         const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId"]);
         if (fields.workspaceId !== exact.workspaceId || !isHeadlessHostIncarnationId(fields.taskId)) return unavailable;
         return {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt,

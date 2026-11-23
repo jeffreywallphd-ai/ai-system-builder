@@ -44,3 +44,20 @@ test("known Model non-start is finite capability-bound metadata and rejects extr
   assert.notDeepEqual(readHeadlessPlanStepResult({ok: false, code: "headless.not-started"}, exact), {ok: false, code: "headless.not-started"});
   assert.notDeepEqual(readHeadlessPlanStepResult({ok: false, code: "headless.not-started", error: "private"}, exact, caps), {ok: false, code: "headless.not-started"});
 });
+
+test("training task references require their own explicit opt-in and keep default and download decoding denied", () => {
+  const options = {allowLocalFileSave: false, allowModelTraining: true};
+  for (const kind of ["started", "replayed"]) {
+    const value = {ok: true, value: {...result().value, kind, operation: "models.train"}};
+    assert.deepEqual(readHeadlessPlanStepResult(value, exact, options), value);
+    assert.equal(readHeadlessPlanStepResult(value, exact).ok, false);
+    assert.equal(readHeadlessPlanStepResult(value, exact, caps).ok, false);
+    for (const patch of [{kind: "committed"}, {step: 2}, {approvalRevision: 3}, {fingerprint: "f".repeat(64)},
+      {expiresAt: 0}, {operation: "models.save-training"}, {localPath: "private/output"}])
+      assert.equal(readHeadlessPlanStepResult({...value, value: {...value.value, ...patch}}, exact, options).ok, false);
+    for (const patch of [{workspaceId: createWorkspaceId("foreign.workspace")}, {taskId: "shared-history"}, {outputDirectory: "private/output"}])
+      assert.equal(readHeadlessPlanStepResult({...value, value: {...value.value, reference: {...value.value.reference, ...patch}}}, exact, options).ok, false);
+  }
+  assert.deepEqual(readHeadlessPlanStepResult({ok: false, code: "headless.not-started"}, exact, options), {ok: false, code: "headless.not-started"});
+  assert.equal(readHeadlessPlanStepResult(result(), exact, options).ok, false);
+});
