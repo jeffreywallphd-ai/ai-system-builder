@@ -2277,3 +2277,27 @@ controller overhead, GPU, disk or retained-output limits. Native file custody,
 full producer, measured settings and actual enforcement/host qualification remain
 pending. No native test grants, qualification actors or model-quality results are
 reused or changed by this component.
+
+### Approved training semantics across native sealing
+
+Keep a separate original definition and capture expected owned schema data before
+the native callback. Validate the real host staging additions exactly: dataset
+paths and media-derived format, matching private output aliases and exact recipe
+digest/size. Other model/settings/destination/input order and roles remain fixed.
+Reject unknown fields before schema parsing can silently discard them; booleans
+cannot stand in for integers and opaque dictionaries retain null/false/array data.
+
+An exact typed object is not an approval proof. Read its closed raw fields,
+revalidate an owned copy and compare through original captured schema operations.
+Do not trust instance dump overrides, callback-mutated comparison inputs or an
+unvalidated constructed model. Allow only documented optional schema defaults
+and original native dataset/output aliases; retain the selected Model path.
+Cancellation/currentness loss during sealing cannot publish ready. Unknown or
+failed sealing retains custody and never repeats its native effect or starts
+the loader. Actual native bytes, path identity, protection, limits and retained
+output accounting still require their own producer and qualification.
+
+A shared synthetic path-slot fixture binds the actual application producer and
+Python consumer without adding an ML runtime to standard Node tests. Explicit
+fixed-loader stubs protect positive fixtures independently of invalid input.
+Controlled semantic tests grant no Native/model/quality/public/parent authority.

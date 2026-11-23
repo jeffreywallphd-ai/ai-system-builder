@@ -108,6 +108,40 @@ test("Approved local training owner stages exact copied data and a private outpu
   const running = await f.read(); assert.equal(running.status, "running"); assert.equal(running.runId, f.requestId);
 });
 
+test("actual approved training producer matches the shared Python sealing fixture", async t => {
+  const expected = JSON.parse(await readFile(join(__dirname,
+    "../../../../adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json"), "utf8"));
+  assert.equal(expected.schema_version, "approved-training-staged-input-fixture-v1");
+  const f = await fixture(t); await f.accepted();
+  // The private wire adds outputDirectory; the public request type omits it.
+  // Own the serialized data before normalizing its mutable test-only path nodes.
+  const stagedWire = JSON.parse(JSON.stringify(f.staged)) as {
+    payload: ModelTrainingRequest & {output: ModelTrainingRequest["output"] & {outputDirectory: string}};
+    recipe: {path: string; digest: string; sizeBytes: number}; outputDirectory: string;
+  };
+  assert.equal(f.definition!.requestId, f.requestId); assert.equal(f.definition!.workspaceId, f.workspaceId);
+  assert.equal(f.definition!.owner.clientId, f.admission.clientId);
+  assert.equal(f.definition!.owner.hostIncarnationId, f.admission.hostIncarnationId);
+  assert.equal(f.definition!.request.baseModel.localPath, join(f.root, "model"));
+  assert.equal(f.staged!.payload.baseModel.localPath, f.definition!.request.baseModel.localPath);
+  assert.equal(f.staged!.payload.datasets.length, 1);
+  assert.equal(dirname(dirname(f.staged!.payload.datasets[0].path!)), f.root);
+  assert.equal(dirname(f.staged!.recipe.path), dirname(f.staged!.payload.datasets[0].path!));
+  assert.equal(dirname(f.staged!.outputDirectory), f.root);
+  assert.equal(stagedWire.payload.output.outputDirectory, f.staged!.outputDirectory);
+  assert.equal(new Set([f.definition!.request.baseModel.localPath, f.staged!.payload.datasets[0].path,
+    f.staged!.recipe.path, f.staged!.outputDirectory]).size, 4);
+  const actual = clone({schema_version: expected.schema_version, approvedRequest: f.definition!.request,
+    inputs: f.definition!.inputs, recipeDigest: f.definition!.dataset.recipeDigest,
+    recipeSizeBytes: f.definition!.recipeSizeBytes, staged: stagedWire});
+  // Normalize only these checked path nodes; all other values and keys stay exact.
+  actual.approvedRequest.baseModel.localPath = actual.staged.payload.baseModel.localPath = "@model";
+  actual.staged.payload.datasets[0].path = "@input-0";
+  actual.staged.recipe.path = "@recipe";
+  actual.staged.payload.output.outputDirectory = actual.staged.outputDirectory = "@output";
+  assert.deepEqual(actual, expected);
+});
+
 for (const missing of ["port", "reconciler"] as const) test(`Approved local training owner refuses missing ${missing} before preparation`, async t => {
   const f = await fixture(t, {[missing]: false}); assert.deepEqual(await f.start(), {kind: "unavailable"});
   assert.equal(f.state.creates, 0); assert.equal(f.state.starts, 0); assert.equal(f.state.issues, 0);

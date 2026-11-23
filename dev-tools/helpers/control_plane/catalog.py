@@ -323,6 +323,7 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_sources": (
             "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "automatic_required_files": (
             "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
@@ -330,6 +331,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
             "dev-tools/helpers/run_focused_checks.py",
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "sources": (
             "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
@@ -337,6 +339,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
             "modules/adapters/runtime/python/worker/README.md",
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
             "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py"),
@@ -584,11 +587,13 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/ports/model/approved-local-model-training.port.ts",
             "modules/application/use-cases/model/train-model.use-case.ts",
             "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "automatic_required_files": (
             "modules/application/ports/model/approved-local-model-training.port.ts",
             "modules/application/use-cases/model/train-model.use-case.ts",
             "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "sources": (
             "modules/application/ports/model/approved-local-model-training.port.ts",
@@ -596,6 +601,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/README.md",
             "modules/application/use-cases/model/train-model.use-case.ts",
             "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
             "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts"),
@@ -607,6 +613,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/ports/model/index.ts",
             "modules/application/use-cases/model/train-model.use-case.ts",
             "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",

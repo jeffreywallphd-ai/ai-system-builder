@@ -3243,3 +3243,12 @@ These are deterministic source fixtures; they do not start the native controller
 The exact controller argv fixture requires `-I -S -B -u` before its fixed entry.
 The separate native fake-API fixture requires app argv `-I -B -u`, preserving SDK
 loading. Neither fixture invokes Python startup hooks, a real controller or a Job.
+
+The shared `approved_training_staged_input.json` fixture selects the existing
+original-training worker and approved-training application owner unit/strict
+profiles. Each consumer requires that fixture before automatic selection. The
+actual application checks the produced request after exact known path-slot
+normalization; Python checks before/after native semantics with an explicitly
+stubbed loader. Missing fixtures and unknown neighbors retain generic fallback.
+Routing tests execute the real fixed commands and require nonzero passing tests.
+No new runner, Native/model execution, output-quality score or parent pass follows.

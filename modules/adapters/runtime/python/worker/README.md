@@ -1780,3 +1780,31 @@ native handle closure; partial or missing native replies retain their original
 buffers and deny reuse. Controller loss never supplies worker retirement proof.
 Native file/input/output custody, the full training producer and actual Windows
 host qualification are still pending. No qualifier role or old grant is reused.
+
+## Approved settings during original training input sealing
+
+The original session retains a separate copy of its approved definition. Before
+calling the captured native seal method, require the actual host staging shape:
+the selected Model path is already approved, dataset paths/formats are added,
+and the private output alias matches its nested request value. Preserve all
+other settings, ordered roles and exact recipe digest/size. Only the eight
+documented JSON/CSV/Parquet media strings select their matching formats.
+
+Capture expected schema data before that callback. Reconstruct and revalidate
+only closed fields of its exact typed result through previously captured schema
+operations. Instance dump overrides and unvalidated `model_construct` results
+cannot fabricate equality. Preserve scalar kinds, opaque dictionary keys/nulls,
+false values and array order. Only known Pydantic optional defaults and native
+dataset/output aliases may differ; the selected Model path stays unchanged.
+Recheck currentness and cancellation before publishing ready. Failed sealing
+retains original ownership and cannot submit a loader or repeat native sealing.
+
+The actual application producer and Python consumer each check
+`tests/fixtures/approved_training_staged_input.json`. It contains synthetic data
+and explicit path slots. The application checks original identity/path relations
+before normalizing only those paths; Node tests need no Python installation.
+Python fixtures explicitly stub the fixed loader, so a missing model path or
+output name is never their barrier against accidental ML execution. These checks
+prove request correlation, not file bytes, native custody or output accounting.
+The production producer, public Roots, Save and physical qualification remain
+pending; no model-quality or loss-scoring test is part of this boundary.

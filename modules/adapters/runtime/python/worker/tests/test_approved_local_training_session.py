@@ -9,6 +9,7 @@ import ctypes
 import importlib.util
 import io
 import json
+import tempfile
 from pathlib import Path
 from queue import Queue
 
@@ -19,23 +20,38 @@ from modules.adapters.runtime.python.worker.tasks import approved_local_training
 TASK = "11111111-1111-4111-8111-111111111111"
 WORKSPACE = "22222222-2222-4222-8222-222222222222"
 DIGEST = "sha256:" + "a" * 64
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "approved_training_staged_input.json"
+
+
+def producer_fixture():
+    value = json.loads(FIXTURE_PATH.read_text(encoding="utf8"))
+    if value["schema_version"] != "approved-training-staged-input-fixture-v1": raise AssertionError("Unknown synthetic fixture version")
+    root = Path(tempfile.gettempdir()).resolve() / "aisb-inert-semantic-paths-no-io"
+    def slot(item, key, expected, target):
+        if item[key] != expected: raise AssertionError("Unexpected synthetic path slot")
+        item[key] = str(target)
+    slot(value["approvedRequest"]["baseModel"], "localPath", "@model", root / "model")
+    slot(value["staged"]["payload"]["baseModel"], "localPath", "@model", root / "model")
+    for index, item in enumerate(value["staged"]["payload"]["datasets"]):
+        slot(item, "path", "@input-" + str(index), root / "inputs" / ("input-" + str(index) + ".jsonl"))
+    slot(value["staged"]["recipe"], "path", "@recipe", root / "inputs" / "recipe.json")
+    slot(value["staged"]["payload"]["output"], "outputDirectory", "@output", root / "output")
+    slot(value["staged"], "outputDirectory", "@output", root / "output")
+    return value  # Only known path nodes; no files or model are opened.
 
 
 def definition():
+    source = producer_fixture()
+    request = source["approvedRequest"]; request["workspaceId"] = WORKSPACE
     return {"requestId": TASK, "workspaceId": WORKSPACE,
             "owner": {"organizationId": "org", "principalId": "actor", "clientId": TASK, "hostIncarnationId": WORKSPACE},
-            "modelUpdatedAt": "2026-11-23T00:00:00Z", "dataset": {"datasetId": "data", "versionId": "v1", "versionDigest": DIGEST, "recipeDigest": DIGEST},
-            "proposalDigest": DIGEST, "inputs": [{"artifactId": "input-0", "role": "train", "mediaType": "application/jsonl", "digest": DIGEST, "sizeBytes": 4}],
-            "recipeSizeBytes": 4,
-            "request": {"workspaceId": WORKSPACE, "trainingTask": "llm-instruction", "baseModel": {"modelRecordId": "base"},
-                        "datasets": [{"artifactId": "input-0", "splitRole": "train"}], "method": "lora", "output": {"destination": {"local": {"enabled": False}}}}}
+            "modelUpdatedAt": "2026-11-23T00:00:00Z", "dataset": {"datasetId": "data", "versionId": "v1", "versionDigest": DIGEST, "recipeDigest": source["recipeDigest"]},
+            "proposalDigest": DIGEST, "inputs": source["inputs"], "recipeSizeBytes": source["recipeSizeBytes"], "request": request}
 
 
 def staged():
-    payload = deepcopy(definition()["request"])
-    payload["baseModel"]["localPath"] = "inert/base"
-    payload["datasets"][0]["path"] = "inert/input"
-    return {"payload": payload, "recipe": {"path": "inert/recipe", "digest": DIGEST, "sizeBytes": 4}, "outputDirectory": "inert/output"}
+    value = producer_fixture()["staged"]; value["payload"]["workspaceId"] = WORKSPACE
+    return value
 
 
 class Resources(session.NativeTrainingResources):
@@ -68,6 +84,10 @@ class QueuedExecutor:
 
 
 class OriginalSessionTests(unittest.TestCase):
+    def setUp(self):
+        # Every ordinary test loader is explicitly inert, including valid data.
+        item = patch.object(session, "train_model_from_local_files", return_value=TrainModelTaskResult(runId="inert", status="succeeded"))
+        self.loader_stub = item.start(); self.addCleanup(item.stop)
     def test_only_positive_no_effect_capture_disarms_worker_exit_requirement(self):
         producer = Producer(); producer.capture = lambda _: None
         owner = session.OriginalTrainingSession(definition(), producer, lambda: True, lambda **_: True, lambda _: None)
@@ -79,10 +99,10 @@ class OriginalSessionTests(unittest.TestCase):
         producer.capture = unknown
         owner = session.OriginalTrainingSession(definition(), producer, lambda: True, lambda **_: True, lambda _: None)
         self.assertEqual(owner.prepare(), "unconfirmed"); self.assertTrue(owner.blocks_recovery)
-    def owner(self, submit=None):
+    def owner(self, submit=None, defined=None):
         self.resources = Resources(); self.producer = Producer(self.resources); self.executor = QueuedExecutor(); self.publications = []
         self.current = True
-        self.instance = session.OriginalTrainingSession(definition(), self.producer, lambda: self.current,
+        self.instance = session.OriginalTrainingSession(defined or definition(), self.producer, lambda: self.current,
             lambda **value: self.publications.append(value), submit or (lambda owner: self.executor.submit(owner.run)))
         return self.instance
     def ready(self, submit=None):
@@ -168,12 +188,140 @@ class OriginalSessionTests(unittest.TestCase):
             value = definition(); mutate(value)
             with self.assertRaises((session.TrainingSessionError, ValueError)): session.capture_definition(value)
 
+    def test_changed_host_staging_is_denied_before_native_seal(self):
+        cases = {
+            "model-id": lambda v: v["payload"]["baseModel"].update(modelRecordId="other"),
+            "model-path": lambda v: v["payload"]["baseModel"].update(localPath=v["outputDirectory"]),
+            "workspace": lambda v: v["payload"].update(workspaceId="other"),
+            "task": lambda v: v["payload"].update(trainingTask="causal-lm"),
+            "method": lambda v: v["payload"].update(method="full-finetune"),
+            "parameters": lambda v: v["payload"]["commonParameters"].update(maxSteps=99),
+            "boolean-number": lambda v: v["payload"]["commonParameters"].update(maxSteps=True),
+            "float-integer": lambda v: v["payload"]["commonParameters"].update(maxSteps=1.0),
+            "unknown-parameter": lambda v: v["payload"].update(advancedParameters={"new": 1}),
+            "unknown-outer": lambda v: v["payload"].update(ignoredByPydantic=True),
+            "unknown-model": lambda v: v["payload"]["baseModel"].update(ignoredByPydantic=True),
+            "unknown-dataset": lambda v: v["payload"]["datasets"][0].update(metadata={}),
+            "input-id": lambda v: v["payload"]["datasets"][0].update(artifactId="other"),
+            "input-role": lambda v: v["payload"]["datasets"][0].update(splitRole="validation"),
+            "format": lambda v: v["payload"]["datasets"][0].update(format="csv"),
+            "input-locator": lambda v: v["payload"]["datasets"][0].update(path="https://invalid.test/data"),
+            "input-control": lambda v: v["payload"]["datasets"][0].update(path="\x00private"),
+            "output-alias": lambda v: v["payload"]["output"].update(outputDirectory=v["recipe"]["path"]),
+            "output-name": lambda v: v["payload"]["output"].update(outputModelName="Changed"),
+            "output-destination": lambda v: v["payload"]["output"]["destination"]["local"].update(enabled=True),
+            "validation": lambda v: v["payload"]["validation"].update(enabled=True),
+            "recipe-digest": lambda v: v["recipe"].update(digest=DIGEST),
+            "recipe-size": lambda v: v["recipe"].update(sizeBytes=True),
+            "recipe-float": lambda v: v["recipe"].update(sizeBytes=float(v["recipe"]["sizeBytes"])),
+            "recipe-fields": lambda v: v["recipe"].update(ignored=True),
+            "missing-model-path": lambda v: v["payload"]["baseModel"].pop("localPath"),
+        }
+        for name, mutate in cases.items():
+            with self.subTest(name=name):
+                owner = self.owner(); owner.prepare(); value = staged(); mutate(value)
+                try: result = owner.seal(value)
+                except session.TrainingSessionError: result = "denied"
+                self.assertIn(result, ("unconfirmed", "denied"))
+                self.assertNotIn("seal", self.resources.calls); self.assertEqual(self.executor.calls, 0)
+                self.loader_stub.assert_not_called(); self.assertTrue(owner.blocks_recovery)
+
+    def test_changed_native_result_never_reaches_ready_or_loader(self):
+        for name in ("method", "parameter", "boolean-number", "model-path", "role", "metadata", "destination", "constructed", "dump-override", "input-mutation"):
+            with self.subTest(name=name):
+                owner = self.owner()
+                def seal(value):
+                    self.resources.calls.append("seal")
+                    if name == "input-mutation": value["payload"]["commonParameters"]["maxSteps"] = 8
+                    payload = TrainModelTaskRequest.model_validate(value["payload"])
+                    if name == "method": payload.method = "full-finetune"
+                    if name == "parameter": payload.commonParameters["maxSteps"] = 8
+                    if name == "boolean-number": payload.commonParameters["maxSteps"] = True
+                    if name == "model-path": payload.baseModel.localPath = value["outputDirectory"]
+                    if name == "role": payload.datasets[0].splitRole = "validation"
+                    if name == "metadata": payload.datasets[0].metadata = {"unapproved": True}
+                    if name == "destination": payload.output["destination"]["local"]["enabled"] = True
+                    if name == "constructed": payload = TrainModelTaskRequest.model_construct(method="lora")
+                    if name == "dump-override":
+                        payload.commonParameters["maxSteps"] = 8
+                        object.__setattr__(payload, "model_dump", lambda **_: value["payload"])
+                    return payload
+                self.resources.seal_inputs = seal; owner.prepare()
+                self.assertEqual(owner.seal(staged()), "unconfirmed")
+                with self.assertRaises(session.TrainingSessionError): owner.start()
+                with self.assertRaises(session.TrainingSessionError): owner.seal(staged())
+                self.assertEqual(self.resources.calls.count("seal"), 1)
+                self.assertEqual(self.executor.calls, 0); self.loader_stub.assert_not_called()
+                self.assertTrue(owner.blocks_recovery)
+
+    def test_documented_formats_and_native_private_aliases_preserve_semantics(self):
+        formats = {"application/x-ndjson": "jsonl", "application/jsonl": "jsonl", "application/json": "json", "text/json": "json",
+                   "text/csv": "csv", "application/csv": "csv", "application/x-parquet": "parquet", "application/vnd.apache.parquet": "parquet"}
+        for media, fmt in formats.items():
+            for original_format in (False, True):
+                with self.subTest(media=media, original_format=original_format):
+                    defined, value = definition(), staged(); defined["inputs"][0]["mediaType"] = media
+                    if original_format: defined["request"]["datasets"][0]["format"] = fmt
+                    else: defined["request"]["datasets"][0].pop("format", None)
+                    value["payload"] = deepcopy(defined["request"])
+                    value["payload"]["datasets"][0].update(format=fmt, path=staged()["payload"]["datasets"][0]["path"])
+                    value["payload"]["output"]["outputDirectory"] = value["outputDirectory"]
+                    owner = self.owner(defined=defined)
+                    def seal(data):
+                        self.resources.calls.append("seal"); result = TrainModelTaskRequest.model_validate(data["payload"])
+                        result.datasets[0].path += ".native-alias"; result.output["outputDirectory"] += "-native-alias"
+                        return result
+                    self.resources.seal_inputs = seal; owner.prepare()
+                    self.assertEqual(owner.seal(value), "ready"); self.assertEqual(owner.payload.baseModel.localPath, defined["request"]["baseModel"]["localPath"])
+                    self.loader_stub.assert_not_called()
+
+    def test_ordered_inputs_and_opaque_null_false_and_arrays_stay_exact(self):
+        for name in ("reorder", "drop-null", "false-number", "array-order", "unknown-media"):
+            with self.subTest(name=name):
+                defined, value = definition(), staged()
+                defined["request"]["commonParameters"].update(nullable=None, flag=False, targetModules=["one", "two"])
+                defined["inputs"].append({**defined["inputs"][0], "artifactId": "input-1", "role": "validation"})
+                defined["request"]["datasets"].append({"artifactId": "input-1", "splitRole": "validation", "format": "jsonl"})
+                value["payload"] = deepcopy(defined["request"])
+                for index, row in enumerate(value["payload"]["datasets"]): row["path"] = staged()["payload"]["datasets"][0]["path"] + str(index)
+                value["payload"]["output"]["outputDirectory"] = value["outputDirectory"]
+                if name == "reorder": value["payload"]["datasets"].reverse()
+                if name == "drop-null": value["payload"]["commonParameters"].pop("nullable")
+                if name == "false-number": value["payload"]["commonParameters"]["flag"] = 0
+                if name == "array-order": value["payload"]["commonParameters"]["targetModules"].reverse()
+                if name == "unknown-media": defined["inputs"][0]["mediaType"] = "unsupported/example"
+                owner = self.owner(defined=defined); owner.prepare()
+                self.assertEqual(owner.seal(value), "unconfirmed"); self.assertNotIn("seal", self.resources.calls)
+                self.assertEqual(self.executor.calls, 0); self.loader_stub.assert_not_called()
+
+    def test_schema_operations_are_captured_before_native_result_callback(self):
+        owner = self.owner(); reply = TrainModelTaskRequest.model_validate(staged()["payload"])
+        self.resources.seal_inputs = lambda _: reply; owner.prepare()
+        with patch.object(TrainModelTaskRequest, "__pydantic_validator__", None), patch.object(TrainModelTaskRequest, "__pydantic_serializer__", None):
+            self.assertEqual(owner.seal(staged()), "ready")
+        self.loader_stub.assert_not_called()
+
+    def test_currentness_or_cancellation_lost_during_native_seal_cannot_publish_ready(self):
+        for mode in ("current", "cancel"):
+            with self.subTest(mode=mode):
+                owner = self.owner()
+                def seal(value):
+                    result = TrainModelTaskRequest.model_validate(value["payload"])
+                    if mode == "current": self.current = False
+                    else: owner.cancel()
+                    return result
+                self.resources.seal_inputs = seal; owner.prepare()
+                self.assertEqual(owner.seal(staged()), "unconfirmed")
+                with self.assertRaises(session.TrainingSessionError): owner.start()
+                self.assertEqual(self.executor.calls, 0); self.loader_stub.assert_not_called()
+
 
 class OriginalRoutesTests(unittest.TestCase):
     def setUp(self):
         self.registry = app.TASK_REGISTRY
         self.executor = QueuedExecutor(); self.resources = Resources(); self.producer = Producer(self.resources)
         self.patches = [patch.object(app, "TASK_REGISTRY", {}), patch.object(app, "TASK_EXECUTOR", self.executor),
+                        patch.object(session, "train_model_from_local_files", return_value=TrainModelTaskResult(runId="inert", status="succeeded")),
                         patch.object(app, "_ORIGINAL_TRAINING_PRODUCER", None), patch.object(app, "_ORIGINAL_TRAINING_PROFILE", None)]
         for item in self.patches: item.start()
         self.addCleanup(lambda: [item.stop() for item in reversed(self.patches)])

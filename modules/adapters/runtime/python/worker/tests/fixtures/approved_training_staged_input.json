@@ -1,0 +1,90 @@
+{
+  "schema_version": "approved-training-staged-input-fixture-v1",
+  "approvedRequest": {
+    "workspaceId": "workspace.private-training",
+    "trainingTask": "llm-instruction",
+    "baseModel": {
+      "modelRecordId": "model.synthetic",
+      "localPath": "@model"
+    },
+    "datasets": [
+      {
+        "artifactId": "input-0",
+        "splitRole": "train",
+        "format": "jsonl"
+      }
+    ],
+    "method": "lora",
+    "commonParameters": {
+      "maxSteps": 1,
+      "batchSize": 1
+    },
+    "output": {
+      "outputModelName": "Private candidate",
+      "destination": {
+        "local": {
+          "enabled": false
+        }
+      }
+    },
+    "validation": {
+      "enabled": false,
+      "expectedLoRA": false,
+      "expectedRecurrentAdditions": false
+    }
+  },
+  "inputs": [
+    {
+      "artifactId": "input-0",
+      "role": "train",
+      "mediaType": "application/x-ndjson",
+      "digest": "sha256:a4b4c4602873d1f087723c6f233f917c1b63c9816a0a6052ff3ae35fc252a010",
+      "sizeBytes": 62
+    }
+  ],
+  "recipeDigest": "sha256:a8198524f58e72b56283ab71ebddada22840f108b46ef7165bb3fca9919c5558",
+  "recipeSizeBytes": 18,
+  "staged": {
+    "payload": {
+      "workspaceId": "workspace.private-training",
+      "trainingTask": "llm-instruction",
+      "baseModel": {
+        "modelRecordId": "model.synthetic",
+        "localPath": "@model"
+      },
+      "datasets": [
+        {
+          "artifactId": "input-0",
+          "splitRole": "train",
+          "format": "jsonl",
+          "path": "@input-0"
+        }
+      ],
+      "method": "lora",
+      "commonParameters": {
+        "maxSteps": 1,
+        "batchSize": 1
+      },
+      "output": {
+        "outputModelName": "Private candidate",
+        "destination": {
+          "local": {
+            "enabled": false
+          }
+        },
+        "outputDirectory": "@output"
+      },
+      "validation": {
+        "enabled": false,
+        "expectedLoRA": false,
+        "expectedRecurrentAdditions": false
+      }
+    },
+    "recipe": {
+      "path": "@recipe",
+      "digest": "sha256:a8198524f58e72b56283ab71ebddada22840f108b46ef7165bb3fca9919c5558",
+      "sizeBytes": 18
+    },
+    "outputDirectory": "@output"
+  }
+}

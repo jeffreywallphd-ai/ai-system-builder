@@ -16,6 +16,7 @@ class TrainingRuntimeRoutingTests(unittest.TestCase):
     worker_test = "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py"
     native_node = "modules/adapters/runtime/python/supervisor/windowsOriginalWorkerLaunch.ts"
     native_python = "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py"
+    sealed_fixture = "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json"
     profiles = ("headless-training-runtime-unit", "headless-training-runtime-types", "headless-training-runtime-worker-unit")
 
     def select(self, paths, root=None):
@@ -104,6 +105,42 @@ class TrainingRuntimeRoutingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout[-6000:] + result.stderr[-2000:])
         self.assertIn("Ran ", result.stderr); self.assertIn("OK", result.stderr)
         self.assertNotIn("FAILED", result.stderr)
+
+    def test_shared_sealing_fixture_selects_both_real_consumers_and_strict_tests(self):
+        rows = self.select([self.sealed_fixture])
+        required = {self.profiles[2], "headless-approved-training-owner-unit", "headless-approved-training-owner-types"}
+        self.assertTrue(required <= set(rows)); self.assertNotIn("focused-tests", rows)
+        self.assertIn(self.worker_test, rows[self.profiles[2]]["argv"])
+        self.assertIn("modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+                      rows["headless-approved-training-owner-types"]["argv"])
+        self.assertIn("--strict", rows["headless-approved-training-owner-types"]["argv"])
+        for name in ("headless-approved-training-owner-unit", "headless-approved-training-owner-types"):
+            result = subprocess.run(rows[name]["argv"], cwd=self.root, text=True, capture_output=True, timeout=90)
+            self.assertEqual(result.returncode, 0, result.stdout[-6000:] + result.stderr[-2000:])
+            if name.endswith("-unit"):
+                self.assertIn("# fail 0", result.stdout)
+                self.assertIn("actual approved training producer matches the shared Python sealing fixture", result.stdout)
+        self.assertIn("focused-tests", self.select([self.sealed_fixture.replace("approved_training_staged_input", "unknown")]))
+
+    def test_missing_shared_fixture_preserves_generic_fallback_for_all_consumers(self):
+        boundary = Path(tempfile.gettempdir()).resolve()
+        directory = Path(tempfile.mkdtemp(prefix="trseal-", dir=boundary)).resolve(); before = directory.stat()
+        try:
+            for name in (self.profiles[2], "headless-approved-training-owner-unit"):
+                for relative in catalog.PUBLISHED_FORM_CHECKS[name].get("automatic_required_files", ()):
+                    target = directory / relative; target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes((self.root / relative).read_bytes())
+            (directory / self.sealed_fixture).unlink()
+            rows = self.select([self.sealed_fixture], directory)
+            self.assertIn("focused-tests", rows)
+            for name in (self.profiles[2], "headless-approved-training-owner-unit", "headless-approved-training-owner-types"):
+                self.assertNotIn(name, rows)
+        finally:
+            after = directory.lstat()
+            if (directory.parent != boundary or directory.is_symlink() or directory.resolve() != directory or
+                    (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)):
+                raise RuntimeError("Owned seal route fixture changed; cleanup refused.")
+            shutil.rmtree(directory)
 
 
 if __name__ == "__main__": unittest.main()

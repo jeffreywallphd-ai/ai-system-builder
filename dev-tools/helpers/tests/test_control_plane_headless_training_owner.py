@@ -50,7 +50,8 @@ class ApprovedTrainingOwnerRoutingTests(unittest.TestCase):
 
     def test_every_missing_or_nonregular_private_file_preserves_generic_coverage(self):
         required = catalog.PUBLISHED_FORM_CHECKS[self.unit]["automatic_required_files"]
-        self.assertEqual(set(required), {self.source, self.port, self.test})
+        self.assertEqual(set(required), {self.source, self.port, self.test,
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json"})
         for missing in required:
             with self.subTest(missing=missing), tempfile.TemporaryDirectory(prefix="private-training-presence-") as directory:
                 root = Path(directory)

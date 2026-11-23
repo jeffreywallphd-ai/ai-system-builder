@@ -11,13 +11,14 @@ from contextlib import AbstractContextManager
 from concurrent.futures import Future
 from dataclasses import dataclass
 import json
+import os
 import re
 from threading import RLock
 from time import monotonic
 from typing import Callable
 from uuid import UUID
 
-from ..models import TrainModelTaskRequest
+from ..models import TrainModelTaskRequest, TrainModelBaseModelInput, TrainModelDatasetInput
 from .train_model import TrainingCancellationRequested, train_model_from_local_files
 
 CAPABILITY = "train-model.original-session-v1"
@@ -111,6 +112,79 @@ def capture_definition(raw):
     return value
 
 
+_MEDIA_FORMATS = {"application/x-ndjson": "jsonl", "application/jsonl": "jsonl", "application/json": "json", "text/json": "json",
+                  "text/csv": "csv", "application/csv": "csv", "application/x-parquet": "parquet", "application/vnd.apache.parquet": "parquet"}
+
+
+def _same(left, right):
+    if type(left) is not type(right): return False
+    if type(left) is dict:
+        return set(left) == set(right) and all(_same(left[k], right[k]) for k in left)
+    if type(left) is list:
+        return len(left) == len(right) and all(_same(a, b) for a, b in zip(left, right))
+    return left == right
+
+
+def _local_locator(value):
+    _need(type(value) is str and 0 < len(value) <= 4096 and os.path.isabs(value)
+          and not value.startswith(("\\\\", "//")) and not any(ord(c) < 32 or ord(c) == 127 for c in value))
+    normalized = os.path.normpath(value)
+    _need(os.path.dirname(normalized) != normalized)
+    return value  # Lexical correlation only, never file/byte/native custody.
+
+
+def _capture_staged(definition, raw):
+    value = _copy(raw); _record(value, ("payload", "recipe", "outputDirectory"))
+    expected = _copy(definition["request"])
+    _need(type(expected["baseModel"]) is dict and set(expected["baseModel"]) <= {
+        "modelRecordId", "provider", "modelId", "localPath", "inferenceMode"})
+    _local_locator(expected["baseModel"].get("localPath"))
+    _need(type(expected["output"]) is dict and set(expected["output"]) <= {"outputModelName", "maxShardSize", "destination"})
+    output = _local_locator(value["outputDirectory"])
+    _need(type(value["payload"]) is dict and type(value["payload"].get("datasets")) is list
+          and len(value["payload"]["datasets"]) == len(expected["datasets"]))
+    for original, staged, source in zip(expected["datasets"], value["payload"]["datasets"], definition["inputs"]):
+        _need(type(original) is dict and set(original) <= {"artifactId", "splitRole", "format"} and type(staged) is dict)
+        fmt = _MEDIA_FORMATS.get(source["mediaType"]); _need(fmt is not None)
+        _need("format" not in original or original["format"] == fmt)
+        original.update(format=fmt, path=_local_locator(staged.get("path")))
+    expected["output"]["outputDirectory"] = output
+    _need(_same(value["payload"], expected))
+    recipe = _record(value["recipe"], ("path", "digest", "sizeBytes")); _local_locator(recipe["path"])
+    _need(_same(recipe["digest"], definition["dataset"]["recipeDigest"])
+          and _same(recipe["sizeBytes"], definition["recipeSizeBytes"]))
+    return value
+
+
+def _model_fields(instance, model_type, fields):
+    _need(type(instance) is model_type)
+    # Do not let an instance dump override or unvalidated construct fabricate
+    # the compared data. Read only its closed raw model fields, then revalidate.
+    data = object.__getattribute__(instance, "__dict__")
+    _need(type(data) is dict and set(data) <= fields)
+    extra = object.__getattribute__(instance, "__pydantic_extra__")
+    _need(extra is None or type(extra) is dict and not extra)
+    return dict(data)
+
+
+def _native_request_data(instance, request_fields, model_fields, dataset_fields):
+    data = _model_fields(instance, TrainModelTaskRequest, request_fields)
+    data["baseModel"] = _model_fields(data.get("baseModel"), TrainModelBaseModelInput, model_fields)
+    rows = data.get("datasets"); _need(type(rows) is list)
+    data["datasets"] = [_model_fields(row, TrainModelDatasetInput, dataset_fields) for row in rows]
+    return _copy(data)
+
+
+def _compare_native_payload(expected, observed):
+    expected, observed = _copy(expected), _copy(observed)
+    _need(len(observed["datasets"]) == len(expected["datasets"]))
+    for before, after in zip(expected["datasets"], observed["datasets"]):
+        _local_locator(after.get("path")); before.pop("path", None); after.pop("path", None)
+    _local_locator(observed["output"].get("outputDirectory"))
+    expected["output"].pop("outputDirectory", None); observed["output"].pop("outputDirectory", None)
+    _need(_same(expected, observed))
+
+
 @dataclass(frozen=True)
 class NativeTrainingProfile:
     """Required measured host configuration, not inferred production defaults."""
@@ -157,6 +231,14 @@ class OriginalTrainingSession:
     def __init__(self, definition, producer, current: Callable[[], bool], publish, submit, profile=None):
         self.loader = train_model_from_local_files
         self.definition = capture_definition(definition)
+        self._sealed_definition = _copy(self.definition)
+        # Capture the actual schemas before any producer/profile callback. A
+        # typed instance alone, or its replaceable dump method, is not a proof.
+        self._request_validator = TrainModelTaskRequest.__pydantic_validator__.validate_python
+        self._request_serializer = TrainModelTaskRequest.__pydantic_serializer__.to_python
+        self._request_fields = frozenset(TrainModelTaskRequest.model_fields)
+        self._model_fields = frozenset(TrainModelBaseModelInput.model_fields)
+        self._dataset_fields = frozenset(TrainModelDatasetInput.model_fields)
         self.task_id = self.definition["requestId"]
         self.workspace_id = self.definition["workspaceId"]
         self.producer = producer
@@ -237,17 +319,25 @@ class OriginalTrainingSession:
                 self.operations -= 1
 
     def seal(self, raw):
-        staged = _copy(raw)
-        _record(staged, ("payload", "recipe", "outputDirectory"))
         _need(self._current())
         with self.lock:
             _need(self.phase == "prepared" and not self.settled and not self.cancelled)
             self.phase = "sealing"; self.operations += 1
         try:
-            payload = self.native_seal(staged)
-            _need(type(payload) is TrainModelTaskRequest and self._current())
+            staged = _capture_staged(self._sealed_definition, raw)
+            expected = _copy(self._request_serializer(self._request_validator(staged["payload"]), mode="json"))
+            _need(self._current())
             with self.lock:
-                self.payload = payload.model_copy(deep=True); self.phase = "ready"
+                _need(self.phase == "sealing" and not self.cancelled and not self.settled)
+            payload = self.native_seal(_copy(staged))
+            _need(self._current())
+            owned = _native_request_data(payload, self._request_fields, self._model_fields, self._dataset_fields)
+            payload = self._request_validator(owned)
+            _compare_native_payload(expected, self._request_serializer(payload, mode="json"))
+            _need(self._current())
+            with self.lock:
+                _need(self.phase == "sealing" and not self.cancelled and not self.settled)
+                self.payload = payload; self.phase = "ready"
             return "ready"
         except Exception:
             with self.lock:
