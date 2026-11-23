@@ -1224,3 +1224,26 @@ to training. Recheck metadata for open/positive decisions and reply publication.
 Authorized negative decisions do not depend on stale metadata becoming current.
 Core/SQLite fixtures establish software behavior, not native, Root, PostgreSQL,
 model-quality, result Save or actual-host/parent qualification.
+
+### Private approved training execution in existing hosts
+
+Existing Desktop and Managed step owners can privately compose the training
+metadata compiler, dedicated ledger, original task book, private Model/Dataset
+readers and installed-only application start. Require complete captured
+configuration; Managed also needs stable reads and an independent host lifetime.
+Retain one book per host, never per request. WithTraining receives explicit existing
+download/reference gates; it cannot enable another family by default.
+
+Compile current saved facts inside the actual step transaction. Read copied bytes
+and resolve/start the original private application task outside transactions.
+Admission follows original current client/request and approval; accepted business
+control independently follows current original actor/workspace and host. Preserve
+the existing exact issuance/acceptance/publication/replay wrapper and uncertain
+outcomes. Neither caller loss nor replay can start another task.
+
+Private progress and Stop handlers use the book's exact accepted lineage. Task-ID
+workspace authorization has no invented plan fingerprint; lineage is checked
+separately before original task access. Periodic reads expose finite workflow
+progress, not metrics, paths or raw logs. Stop is at most one request, not physical
+retirement. No Root/public capability or transport, new native producer/profile,
+result Save or actual-host/parent qualification follows from component tests.

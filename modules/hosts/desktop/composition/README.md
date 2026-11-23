@@ -13,6 +13,23 @@ Both existing approval channels and modes use the same record. Current authorize
 deny/cancel/revoke remains possible after metadata changes. Root/transport training
 activation, native execution, result Save and real-host qualification remain pending.
 
+The private execution option also requires captured installed-only start and
+Model/Dataset readers. One original task book belongs to the host composition.
+Approved steps use the existing training ledger and same-owner metadata compiler;
+byte readers and the private start run outside transactions. Accepted work keeps
+fresh original actor/workspace business permission after an outward request ends.
+Replay never resolves another start or reader. Private progress/Stop handlers use
+exact accepted lineage and current registration/request policy. Progress is polled:
+finite state, epoch/batch totals and percentage when totals are known. Polling starts
+no model. Stop is one cancellation request, not proof of stopped IO. These components
+stay off in product Roots and advertise no new public capability. The concrete
+native producer/resources, public transport, result Save and actual hosts remain pending.
+
+Retain each fresh grant's original callbacks through later authorization,
+transaction, task and publication waits. A withdrawn request cannot be revived by
+another grant or callback replacement. The request-only map has a denial-only
+256-object bound; it never grants task capacity or accepted business authority.
+
 The existing Model download application owner has an internal approved-source
 entry. It retains original organization/principal, exact source, issuance ACK
 and a bounded reconciler lease before dispatch. Lazy runtime composition uses

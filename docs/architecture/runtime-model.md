@@ -2476,3 +2476,21 @@ Unknown private reads deny, positive decisions/publication recheck saved facts a
 authorized negative decisions remain available after drift. Root/transport training
 activation, native resources, actual execution, result Save and host qualification
 remain pending. No real model-quality evaluation is part of these component tests.
+
+Default-off Desktop and Managed training execution uses one original task book per
+host composition. Complete configuration captures the installed-only start and
+private Model/Dataset readers; Managed also captures its independent host lifetime.
+Use the existing WithTraining step owner with explicit download/reference gates.
+The current metadata compiler uses its supplied transaction owner. Byte retrieval,
+reader resolution and application dispatch stay outside metadata transactions.
+
+New admission requires the original current client/request and exact approval.
+Accepted business work uses fresh original actor/workspace policy and host lifetime
+independently from the outward request. Keep the original accepted task, unknown
+outcome and publication/replay wrapper; no replay resolves another start or reader.
+Private status/Stop reads exact accepted lineage, then invokes the original task
+outside transactions and rechecks current disclosure authority. Periodic status
+returns finite state, epoch/batch progress and percentage when known, with no model
+call, raw input, paths, logs or quality metrics. Cancellation is at most one request.
+The concrete native producer/process resources, public Roots/transports, result
+Save and actual host/parent qualification remain pending.

@@ -15,6 +15,7 @@ import {readModelTrainingReviewBindings, type ModelTrainingReviewBinding} from "
 import type {WorkspaceRepository} from "../../../application/ports/workspace";
 import type {WorkspaceOperationAuthorizationPort} from "../../../application/ports/security";
 import type {HeadlessPlanReviewTarget} from "../../../application/ports/system-builder/headless-build-plan-review.port";
+import type {CompileApprovedTrainingMetadata} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {ReadDatasetVersionUseCase, CompareDatasetVersionsUseCase} from "../../../application/use-cases/dataset-version/dataset-version-read.use-cases";
 import {ReadHeadlessDatasetMetadataUseCase} from "../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case";
 import {PreviewHeadlessModelTrainingInputsUseCase} from "../../../application/use-cases/model/headless-model-training-inputs.use-case";
@@ -86,27 +87,45 @@ export function composeOwnedHeadlessTrainingMetadata(owner: StructuredDocumentSt
   placement: TenantPlacementConfig, rawTarget: HeadlessPlanReviewTarget, isCurrent: () => boolean): OwnedHeadlessTrainingMetadata {
   const copied = copyHeadlessTrainingPlanInput(rawTarget);
   const target = Object.freeze({...copied, scope: Object.freeze({...copied.scope})});
+  if (!isHeadlessHostIncarnationId(target.hostIncarnationId) || !/^[a-f0-9]{64}$/.test(target.fingerprint)) throw unavailable();
+  return Object.freeze({...composeOwnedTrainingWorkspace(owner, rootDirectory, placement, target.scope, isCurrent), target});
+}
+
+function composeOwnedTrainingWorkspace(owner: StructuredDocumentStore, rootDirectory: string, placement: TenantPlacementConfig,
+  rawScope: HeadlessPlanReviewTarget["scope"], isCurrent: () => boolean): Omit<OwnedHeadlessTrainingMetadata, "target"> {
+  const scope = Object.freeze(copyHeadlessTrainingPlanInput(rawScope));
+  const fields = readStrictPassiveRecord(scope, ["organizationId", "principalId", "workspaceId", "registeredClientId"]);
   const selectedPlacement = createTenantPlacementConfig(copyHeadlessTrainingPlanInput(placement));
-  if (owner.organizationId !== undefined || !isOrganizationId(target.scope.organizationId)) throw unavailable();
+  if (Object.keys(fields).length !== 4 || owner.organizationId !== undefined || !isOrganizationId(scope.organizationId) ||
+      !isWorkspaceId(scope.workspaceId) || !isDesktopHeadlessClientId(scope.registeredClientId) ||
+      typeof scope.principalId !== "string" || !scope.principalId || scope.principalId.length > 160) throw unavailable();
   const current = () => isHeadlessReadCurrent(isCurrent);
-  const documents = owner.forOrganization(target.scope.organizationId);
-  if (documents.organizationId !== target.scope.organizationId) throw unavailable();
+  const documents = owner.forOrganization(scope.organizationId);
+  if (documents.organizationId !== scope.organizationId) throw unavailable();
   const workspaces = createLocalWorkspaceRepository({rootDirectory, documents});
   const policy = createOrganizationAuthorizationPolicy({...createStructuredOrganizationRepositories(owner), tenantPlacement: selectedPlacement});
   const authorization = new AuthorizeWorkspaceOperationService({organizationContext: {getCurrentOrganizationContext: () => ({
-    organizationId: target.scope.organizationId, principalId: target.scope.principalId})}, authorizer: {async execute(input) {
+    organizationId: scope.organizationId, principalId: scope.principalId})}, authorizer: {async execute(input) {
       if (!current() || !(await policy.authorize(input)).allowed || !current()) throw unavailable();
     }}});
   const stillAllowed = async () => {
     try {
       if (!current()) return false;
-      const workspace = await workspaces.readWorkspace(target.scope.workspaceId);
-      if (!current() || workspace?.workspaceId !== target.scope.workspaceId || workspace.organizationId !== target.scope.organizationId || workspace.status !== "active") return false;
+      const workspace = await workspaces.readWorkspace(scope.workspaceId);
+      if (!current() || workspace?.workspaceId !== scope.workspaceId || workspace.organizationId !== scope.organizationId || workspace.status !== "active") return false;
       await authorization.authorizeWorkspaceOperation({workspace, operation: "headless.training-review", requiredScopes: HEADLESS_TRAINING_REVIEW_SCOPES});
       return current();
     } catch {return false;}
   };
-  return Object.freeze({documents, rootDirectory, target, workspaces, authorization, isCurrent: current, stillAllowed});
+  return Object.freeze({documents, rootDirectory, workspaces, authorization, isCurrent: current, stillAllowed});
+}
+
+/** Workspace policy only; the task book separately proves exact accepted plan
+ * lineage. A task-ID query must not invent a plan fingerprint for this check. */
+export async function authorizeOwnedHeadlessTrainingWorkspace(owner: StructuredDocumentStore, rootDirectory: string,
+  placement: TenantPlacementConfig, scope: HeadlessPlanReviewTarget["scope"], isCurrent: () => boolean): Promise<boolean> {
+  try {return await composeOwnedTrainingWorkspace(owner, rootDirectory, placement, scope, isCurrent).stillAllowed();}
+  catch {return false;}
 }
 
 function captureOwnedMetadata(options: OwnedHeadlessTrainingMetadata): OwnedHeadlessTrainingMetadata | undefined {
@@ -165,4 +184,50 @@ export async function verifyStoredHeadlessTrainingReviewInputs(options: OwnedHea
     return !!saved && await verifyHeadlessTrainingReviewInputs({...captured, target, requests: saved.requests, bindings: saved.bindings,
       isCurrent: current, stillAllowed: allowed});
   } catch {return false;}
+}
+
+/** Recompile only recorded inputs in this exact step transaction. Byte readers,
+ * the outside preparation factory and runtime initialization stay outside. */
+export async function compileHeadlessTrainingStepMetadata(options: {
+  readonly owner: StructuredDocumentStore; readonly rootDirectory: string; readonly placement: TenantPlacementConfig;
+  readonly target: HeadlessPlanReviewTarget; readonly request: Parameters<CompileApprovedTrainingMetadata>[1];
+  readonly isCurrent: () => boolean;
+}): ReturnType<CompileApprovedTrainingMetadata> {
+  try {
+    const originalCurrent = captureHeadlessTrainingMethod<() => boolean>(options, "isCurrent");
+    if (!originalCurrent) return;
+    const current = () => isHeadlessReadCurrent(originalCurrent);
+    const request = copyHeadlessTrainingPlanInput(options.request);
+    const metadata = composeOwnedHeadlessTrainingMetadata(options.owner, options.rootDirectory, options.placement, options.target, current);
+    if (!current() || !await metadata.stillAllowed() || !current()) return;
+    const inputs = composeHeadlessTrainingPlanInputs(metadata.documents, metadata.rootDirectory, metadata.workspaces, metadata.authorization);
+    const compiled = await new PrepareHeadlessModelTrainingPlanUseCase({organizationId: metadata.target.scope.organizationId, inputs}).execute(request, {
+      hostIncarnationId: metadata.target.hostIncarnationId,
+      context: {organizationId: metadata.target.scope.organizationId, principalId: metadata.target.scope.principalId, workspaceId: metadata.target.scope.workspaceId},
+      clientId: metadata.target.scope.registeredClientId, isCurrent: current, stillAllowed: metadata.stillAllowed,
+    });
+    if (compiled.ok && current() && await metadata.stillAllowed() && current()) return compiled.prepared;
+  } catch {return;}
+}
+
+/** Accepted work keeps fresh original actor/workspace business permission after
+ * an outward request ends. This supplies no native or resource permission. */
+export function composeOwnedHeadlessTrainingBusinessPolicy(options: {
+  readonly documents: StructuredDocumentStore; readonly rootDirectory: string; readonly placement: TenantPlacementConfig;
+  readonly target: HeadlessPlanReviewTarget; readonly isHostCurrent: () => boolean;
+}): () => Promise<boolean> {
+  const originalCurrent = captureHeadlessTrainingMethod<() => boolean>(options, "isHostCurrent");
+  const transaction = captureHeadlessTrainingMethod<NonNullable<StructuredDocumentStore["runInOwnedTransaction"]>>(options.documents, "runInOwnedTransaction");
+  const target = copyHeadlessTrainingPlanInput(options.target), placement = copyHeadlessTrainingPlanInput(options.placement);
+  const rootDirectory = options.rootDirectory;
+  if (!originalCurrent || !transaction || options.documents.organizationId !== undefined) throw unavailable();
+  const current = () => isHeadlessReadCurrent(originalCurrent);
+  return async () => {
+    try {
+      if (!current()) return false;
+      const allowed = await transaction(owner => composeOwnedHeadlessTrainingMetadata(owner, rootDirectory, placement, target, current).stillAllowed(),
+        () => {if (!current()) throw unavailable();});
+      return allowed === true && current();
+    } catch {return false;}
+  };
 }

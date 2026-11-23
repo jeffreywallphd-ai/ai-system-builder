@@ -13,6 +13,17 @@ requirements. Unknown private lookups cannot borrow ordinary approval. Authorize
 negative decisions still work after metadata changes. Public Root/transport, actual
 training, result Save and real Managed/PostgreSQL qualification remain pending.
 
+Private training execution additionally requires original installed-only start,
+private Model/Dataset readers and an independent captured host lifetime. Keep one
+task book per composition. The existing stable-read step owner recompiles metadata
+in its supplied transaction, then the book performs byte/start work outside it.
+Accepted business work keeps current original actor/workspace policy independent
+of the HTTP lifetime; request loss still denies replies and new admission. Replay
+resolves no new start/readers. Progress/Stop handlers use exact accepted lineage and
+fresh current registration/workspace policy, returning finite polled progress only.
+One Stop request grants no native retirement. Product Roots, public task transport,
+concrete native resources, result Save and actual-host qualification remain pending.
+
 Managed Model downloads compose the same internal approved-source application
 owner, original result handle and installed-only runtime/storage configuration
 as Desktop. The foundation captures the cache root once; the host passes it to

@@ -21,6 +21,14 @@ import {DATASET_VERSION_NAMESPACE} from "../../../../adapters/persistence/datase
 import {createStructuredHeadlessPlanReviewRepository, readStructuredHeadlessPlanModelPermission,
   readStructuredHeadlessTrainingPlanReview, readStructuredHeadlessTrainingPlanPermission} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy} from "../../../../application/services/security";
+import {ReadDatasetVersionUseCase} from "../../../../application/use-cases/dataset-version/dataset-version-read.use-cases";
+import {ReadHeadlessModelTrainingModelUseCase} from "../../../../application/use-cases/model/headless-model-training-model.use-case";
+import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/use-cases/model/headless-model-training-dataset.use-case";
+import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
+import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl} from "../../../../application/ports/model";
+import type {ModelTrainingResult} from "../../../../contracts/model";
+import {composeHeadlessModelMetadata} from "../headlessModelMetadata";
+import type {OriginalTrainingRunOptions} from "../headlessModelTrainingTasks";
 import {version as datasetFixture} from "../../../../application/use-cases/dataset-version/tests/headless-dataset-metadata.fixture";
 import {prepareHeadlessModelTrainingReviews} from "../headlessModelTrainingReview";
 import {composeDesktopHeadlessPlanReview} from "../../../desktop/composition/composeDesktopHeadlessPlanReview";
@@ -33,7 +41,7 @@ import {composeHeadlessTrainingPlanInputs, HEADLESS_TRAINING_REVIEW_SCOPES, veri
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 | 2 = 1, emptyTags = false) {
+async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 | 2 = 1, emptyTags = false, executionData = false) {
   const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(join(boundary, "tapproval-")));
   const identity = await lstat(directory, {bigint: true});
   const database = storage === "SQLite" ? await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: directory})}) : undefined;
@@ -80,9 +88,24 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     discovery: {enabled: false}, now: () => at});
   await models.registerDownloadedModel({workspaceId, modelRecordId: "model.synthetic", displayName: "PRIVATE-MODEL-LABEL", source: "local",
     provider: "huggingface", artifactForm: "full-model", modelId: "fixture/base", localPath: "PRIVATE-MODEL-PATH",
-    inferenceMode: "causal", serializationFormat: "safetensors", taskTags: emptyTags ? [] : ["chat", "text-generation"]});
+    inferenceMode: "causal", serializationFormat: "safetensors", taskTags: emptyTags ? [] : ["chat", "text-generation"],
+    ...(executionData ? {localPath: join(directory, "synthetic-base-model")} : {})});
   const model = await models.readRecordedModel!(workspaceId, "model.synthetic"); assert.ok(model);
-  const version = normalizeDatasetVersionRecord({...datasetFixture(1), organizationId, workspaceId, createdBy: principalId,
+  let sourceVersion = clone(datasetFixture(1)); const content = new Map<string, Uint8Array>();
+  if (executionData) {
+    const artifacts = sourceVersion.artifacts.map(artifact => {
+      const bytes = new TextEncoder().encode(JSON.stringify({text: "Synthetic " + artifact.role}) + "\n");
+      content.set(artifact.artifactKey, bytes);
+      return {...artifact, digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const, sizeBytes: bytes.byteLength};
+    });
+    const recipe = new TextEncoder().encode('{"synthetic":true}');
+    const recipeDigest = `sha256:${createHash("sha256").update(recipe).digest("hex")}` as const;
+    sourceVersion = {...sourceVersion, artifacts: [...artifacts, {role: "recipe", artifactKey: sourceVersion.lineage.recipe.artifactKey,
+      digest: recipeDigest, mediaType: "application/json", sizeBytes: recipe.byteLength}],
+      lineage: {...sourceVersion.lineage, recipe: {...sourceVersion.lineage.recipe, digest: recipeDigest}}};
+    content.set(sourceVersion.lineage.recipe.artifactKey, recipe);
+  }
+  const version = normalizeDatasetVersionRecord({...sourceVersion, organizationId, workspaceId, createdBy: principalId,
     documentation: {...datasetFixture(1).documentation, license: "CC0-1.0"}});
   await createStructuredDatasetVersionRepository(documents).createVersion(version);
   const scope = {organizationId, principalId, workspaceId, registeredClientId};
@@ -99,7 +122,7 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
   const status = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.status",
     input: {hostIncarnationId, workspaceId, fingerprint: target.fingerprint}}, hostIncarnationId); assert.ok(status.ok);
   const grant = {...scope, planReview: true as const, operations: [], workspaceIds: [workspaceId] as const,
-    isCurrent: () => state.current, isReadCurrent: () => state.readCurrent};
+    isCurrent: () => state.current, isReadCurrent: () => state.readCurrent, isOperationCurrent: () => state.current && state.readCurrent};
   const registration = {...scope, purpose: "plan-review" as const, isCurrent: () => state.current};
   const stillAllowed = async () => {
     if (!state.current) return false;
@@ -126,13 +149,13 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     await documents.writeDocument(DATASET_VERSION_NAMESPACE, key, {...version,
       lineage: {...version.lineage, recipe: {...version.lineage.recipe, digest: "sha256:" + "f".repeat(64)}}}, {expectedRevision: row.revision});
   }
-  function desktop(enabled = true) {
+  function desktop(enabled = true, extension: Partial<Parameters<typeof composeDesktopHeadlessPlanReview>[0]> = {}) {
     const options: Parameters<typeof composeDesktopHeadlessPlanReview>[0] = {hostIncarnationId, identity: {organizationId, principalId, principalDisplayName: "Synthetic", createdAt: at, updatedAt: at},
       platform, rootDirectory: directory, workspaces, authorization, isOpen: () => state.hostOpen,
       getModelTrainingInputs: enabled ? async function(this: Parameters<typeof composeDesktopHeadlessPlanReview>[0]) {
         assert.equal(this, options); assert.equal(transactionDepth, 0, "Outside factory cannot run in a metadata transaction.");
         state.preparations++; await state.onFactory?.(); return outsideInputs;
-      } : undefined};
+      } : undefined, ...extension};
     const owner = composeDesktopHeadlessPlanReview(options);
     return {owner, options};
   }
@@ -142,13 +165,13 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
       platform, rootDirectory: directory, isOpen: () => state.hostOpen, allowModelTrainingReview: enabled,
       capturePlanReviewClients: async () => [{registeredClientId, isCurrent: () => state.current}]});
   }
-  function managed(enabled = true, stable = true) {
+  function managed(enabled = true, stable = true, extension: Partial<Parameters<typeof composeManagedHeadlessPlanReview>[0]> = {}) {
     const options: Parameters<typeof composeManagedHeadlessPlanReview>[0] = {hostIncarnationId, platform: stable ? managedPlatform : platform,
       rootDirectory: directory, workspaces, contexts, authorization, placement,
       getModelTrainingInputs: enabled ? async function(this: Parameters<typeof composeManagedHeadlessPlanReview>[0]) {
         assert.equal(this, options); assert.equal(transactionDepth, 0, "Outside factory cannot run in a metadata transaction.");
         state.preparations++; await state.onFactory?.(); return outsideInputs;
-      } : undefined};
+      } : undefined, ...extension};
     return {owner: composeManagedHeadlessPlanReview(options), options};
   }
   const browserDocument = {hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID()};
@@ -156,14 +179,49 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     return composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId: registeredClientId,
       platform: stable ? managedPlatform : platform, rootDirectory: directory, contexts, placement, allowModelTrainingReview: enabled});
   }
+  const execution = {starts: 0, reads: 0, cancels: 0, resolutions: 0, readerFactories: 0,
+    currentState: "running" as ModelTrainingResult["status"], onStart: undefined as (() => Promise<void>) | undefined,
+    onRead: undefined as (() => Promise<void>) | undefined, onCancel: undefined as (() => Promise<void>) | undefined,
+    business: undefined as ApprovedLocalTrainingControl | undefined, admission: undefined as ApprovedLocalTrainingAdmission | undefined};
+  const retrieved: string[] = [];
+  const modelReader = new ReadHeadlessModelTrainingModelUseCase({organizationId, models, metadata: composeHeadlessModelMetadata(documents, directory)});
+  const datasetReader = new ReadHeadlessModelTrainingDatasetUseCase({organizationId,
+    versions: new ReadDatasetVersionUseCase({repository: createStructuredDatasetVersionRepository(documents),
+      workspaceRepository: workspaces, workspaceAuthorization: authorization}),
+    artifacts: {retrieveArtifact: (async (request: {key: string}) => {
+      assert.equal(transactionDepth, 0, "Private byte retrieval must stay outside metadata transactions.");
+      const bytes = content.get(request.key); assert.ok(bytes); retrieved.push(request.key);
+      const artifact = version.artifacts.find(row => row.artifactKey === request.key); assert.ok(artifact);
+      return {ok: true, value: {content: new Uint8Array(bytes), descriptor: {key: request.key, mediaType: artifact.mediaType, sizeBytes: artifact.sizeBytes}}};
+    }) as ArtifactObjectStoragePort["retrieveArtifact"]}});
+  const getModelTrainingReaders: OriginalTrainingRunOptions["getReaders"] = async () => {
+    assert.equal(transactionDepth, 0); execution.readerFactories++; return {model: modelReader, dataset: datasetReader};
+  };
+  const getModelTrainingStart: OriginalTrainingRunOptions["resolveStart"] = async () => {
+    assert.equal(transactionDepth, 0); execution.resolutions++;
+    return async (_request, admission) => {
+      assert.equal(transactionDepth, 0); execution.starts++; execution.admission = admission; execution.business = admission.control;
+      if (!admission.isAdmissionCurrent() || !await admission.control.stillAllowed() || !await admission.acknowledgeIssued()) return {kind: "unavailable"};
+      await execution.onStart?.();
+      const summary = (): ModelTrainingResult => ({runId: admission.requestId, status: execution.currentState,
+        progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}});
+      return {kind: "accepted", value: {runId: admission.requestId, status: "running"},
+        task: {requestId: admission.requestId, workspaceId,
+          async read(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.reads++; await execution.onRead?.(); return summary();},
+          async cancel(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.cancels++; await execution.onCancel?.(); execution.currentState = "cancelled"; return summary();}}};
+    };
+  };
+  const executionOptions = {systems: {composeHeadlessAuthoring() {assert.fail("Training must not dispatch ordinary authoring.");}},
+    getModelTrainingStart, getModelTrainingReaders, isModelHostCurrent: () => state.hostOpen};
   return {platform, documents, directory, scope, target, parsed, proposal, model, models, version, metadata, bindings,
     state, inputs, prepared, save, changeDataset, authorization, workspaces, contexts, placement, repositories, membership, at,
-    desktop, desktopApprovals, managed, managedApprovals, managedPlatform, browserDocument,
+    desktop, desktopApprovals, managed, managedApprovals, managedPlatform, browserDocument, execution, executionOptions, retrieved,
     actor: {organizationId, principalId}, selection: {workspaceId, registeredClientId, fingerprint: target.fingerprint},
     grant, registration, submit: submit.request, status: status.request};
 }
 
-async function inspectServiceScopes<T>(denied: readonly SecurityScope[], run: (seen: readonly SecurityScope[][]) => Promise<T>): Promise<T> {
+async function inspectServiceScopes<T>(denied: readonly SecurityScope[], run: (seen: readonly SecurityScope[][]) => Promise<T>,
+  afterAuthorization?: (input: Parameters<AuthorizeWorkspaceOperationService["authorizeWorkspaceOperation"]>[0]) => void): Promise<T> {
   const prototype = AuthorizeWorkspaceOperationService.prototype, key = "authorizeWorkspaceOperation";
   const descriptor = Object.getOwnPropertyDescriptor(prototype, key); assert.ok(descriptor && typeof descriptor.value === "function");
   const original = descriptor.value, seen: SecurityScope[][] = [];
@@ -171,6 +229,7 @@ async function inspectServiceScopes<T>(denied: readonly SecurityScope[], run: (s
     seen.push([...input.requiredScopes]);
     if (input.requiredScopes.some(scope => denied.includes(scope))) throw new Error("PRIVATE-SYNTHETIC-SCOPE-DENIAL");
     await Reflect.apply(original, this, [input]);
+    afterAuthorization?.(input);
   };
   Object.defineProperty(prototype, key, {...descriptor, value: wrapped});
   try {return await run(seen);}
@@ -455,3 +514,191 @@ test(`${storage}/${host}: proposal captures the original metadata factory and re
   assert.equal(rejected.ok, false);
   assert.equal(await readStructuredHeadlessTrainingPlanReview(g.documents, g.target, async () => true), undefined);
 });
+
+async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite", host: "Desktop" | "Managed") {
+  const f = await fixture(t, storage, 1, false, true), current = () => f.state.current;
+  const desktop = host === "Desktop" ? f.desktop(true, f.executionOptions) : undefined;
+  const managed = host === "Managed" ? f.managed(true, true, f.executionOptions) : undefined;
+  const submitted = desktop ? await desktop.owner.execute(f.submit, f.grant, async () => f.grant)
+    : await managed!.owner(f.submit, f.registration, current);
+  assert.ok(submitted.ok, JSON.stringify(submitted));
+  if (desktop) {
+    const approved = await f.desktopApprovals().decide(f.selection, {fingerprint: f.target.fingerprint, expectedRevision: 1,
+      decision: {kind: "approve", mode: "whole-plan"}}, {channel: "app-popup", isCurrent: current});
+    assert.ok(approved.ok, JSON.stringify(approved));
+  } else {
+    const approvals = f.managedApprovals(), opened = await approvals({operation: "open", document: f.browserDocument,
+      selection: f.selection}, f.actor, current, current);
+    assert.ok(opened.ok && "value" in opened && opened.value && typeof opened.value === "object" && "viewId" in opened.value);
+    assert.ok((await approvals({operation: "decide", document: f.browserDocument, decision: {selection: f.selection,
+      viewId: opened.value.viewId, expectedRevision: 1, decision: {kind: "approve", mode: "whole-plan"}}}, f.actor, current, current)).ok);
+  }
+  const step = {version: HEADLESS_CONTRACT_VERSION, operation: "plan.run-step" as const, input: {hostIncarnationId: f.target.hostIncarnationId,
+    workspaceId: f.scope.workspaceId, fingerprint: f.target.fingerprint, approvalRevision: 2, step: 1}} as const;
+  const run = () => desktop ? desktop.owner.runStep!(step, f.grant, async () => f.grant) : managed!.owner.runStep!(step, f.registration, current);
+  const query = (action: "read" | "cancel", selection: {kind: "task"; taskId: string} | {kind: "plan-step"; fingerprint: string; step: number} =
+    {kind: "plan-step", fingerprint: f.target.fingerprint, step: 1}) => ({version: HEADLESS_CONTRACT_VERSION,
+    operation: action === "read" ? "models.training-task" : "models.cancel-training",
+    input: {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId, selection}});
+  const control = (action: "read" | "cancel", selection?: Parameters<typeof query>[1]) => {
+    if (desktop) return (action === "read" ? desktop.owner.readTrainingTask! : desktop.owner.cancelTrainingTask!)(query(action, selection), f.grant, async () => f.grant);
+    return (action === "read" ? managed!.owner.readTrainingTask! : managed!.owner.cancelTrainingTask!)(query(action, selection), f.registration, current);
+  };
+  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control};
+}
+
+for (const storage of ["Core", "SQLite"] as const) {
+  test(`${storage}/Desktop: first fresh training grant cannot be replaced after withdrawal before step selection`, async t => {
+    const f = await executableTrainingHost(t, storage, "Desktop"); let firstCurrent = true, observations = 0, armed = true;
+    const first = {...f.grant, isCurrent: () => firstCurrent, isOperationCurrent: () => firstCurrent};
+    const later = {...f.grant};
+    f.state.beforePolicy = async () => {if (armed) {armed = false; firstCurrent = false;}};
+    const result = await f.desktopHost!.owner.runStep!(f.step, f.grant, async () => ++observations === 1 ? first : later);
+    assert.equal(firstCurrent, false); assert.equal(f.state.current, true);
+    assert.equal(result.result.ok, false); assert.equal(f.execution.starts, 0); assert.deepEqual(f.retrieved, []);
+  });
+
+  test(`${storage}/Desktop: retained fresh operation lifetime fences later publication transactions and cannot be revived`, async t => {
+    const f = await executableTrainingHost(t, storage, "Desktop"); let operationCurrent = true;
+    const fresh = {...f.grant, isOperationCurrent: () => operationCurrent};
+    const result = await f.desktopHost!.owner.runStep!(f.step, f.grant, async () => fresh); assert.ok(result.result.ok);
+    assert.ok("publishIfCurrent" in result && typeof result.publishIfCurrent === "function");
+    const publishIfCurrent = result.publishIfCurrent; let policies = 0, published = 0;
+    await inspectServiceScopes([], async () => {
+      assert.equal(await publishIfCurrent(() => {published++; return true;}), false);
+    }, input => {if (input.operation === "headless.plan.run-step" && ++policies === 2) operationCurrent = false;});
+    assert.ok(policies >= 2); assert.equal(published, 0); assert.equal(f.state.current, true);
+    operationCurrent = true;
+    assert.equal(await publishIfCurrent(() => {published++; return true;}), false, "A withdrawn original fresh lifetime cannot be revived.");
+    assert.equal(published, 0);
+  });
+
+  test(`${storage}/Desktop: fresh read-only lifetime withdrawal cannot reach the original progress reader`, async t => {
+    const f = await executableTrainingHost(t, storage, "Desktop"); assert.ok((await f.run()).result.ok);
+    let readCurrent = true, armed = true;
+    const fresh = {...f.grant, isReadCurrent: () => readCurrent};
+    f.state.beforePolicy = async () => {if (armed) {armed = false; readCurrent = false;}};
+    const result = await f.desktopHost!.owner.readTrainingTask!(f.query("read"), f.grant, async () => fresh);
+    assert.equal(result.ok, false); assert.equal(f.execution.reads, 0); assert.equal(f.state.current, true);
+  });
+
+  test(`${storage}/Desktop: fresh training grant withdrawal during publication policy prevents disclosure`, async t => {
+    const f = await executableTrainingHost(t, storage, "Desktop"); let freshCurrent = true;
+    const fresh = {...f.grant, isCurrent: () => freshCurrent, isOperationCurrent: () => freshCurrent};
+    const result = await f.desktopHost!.owner.runStep!(f.step, f.grant, async () => fresh);
+    assert.ok(result.result.ok); assert.equal(f.execution.starts, 1);
+    assert.ok("publishIfCurrent" in result && typeof result.publishIfCurrent === "function");
+    let armed = true, published = 0;
+    f.state.beforePolicy = async () => {if (armed) {armed = false; freshCurrent = false;}};
+    const allowed = await result.publishIfCurrent(() => {published++; return true;});
+    assert.equal(freshCurrent, false); assert.equal(f.state.current, true);
+    assert.deepEqual({allowed, published}, {allowed: false, published: 0});
+  });
+
+  test(`${storage}/Desktop: fresh training grant withdrawal during cancellation policy prevents the original request`, async t => {
+    const f = await executableTrainingHost(t, storage, "Desktop"); assert.ok((await f.run()).result.ok);
+    let freshCurrent = true, armed = true;
+    const fresh = {...f.grant, isCurrent: () => freshCurrent, isOperationCurrent: () => freshCurrent};
+    f.state.beforePolicy = async () => {if (armed) {armed = false; freshCurrent = false;}};
+    const result = await f.desktopHost!.owner.cancelTrainingTask!(f.query("cancel"), f.grant, async () => fresh);
+    assert.equal(freshCurrent, false); assert.equal(f.state.current, true);
+    assert.equal(result.ok, false); assert.equal(f.execution.cancels, 0);
+  });
+}
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: concurrent approved training calls cannot issue another original task`, {timeout: 5000}, async t => {
+    let release!: () => void, signal!: () => void;
+    const held = new Promise<void>(resolve => {release = resolve;}), entered = new Promise<void>(resolve => {signal = resolve;});
+    t.after(() => release());
+    const f = await executableTrainingHost(t, storage, host);
+    f.execution.onStart = async () => {signal(); await held;};
+    const first = f.run(); await entered;
+    try {assert.equal((await f.run()).result.ok, false); assert.equal(f.execution.starts, 1);}
+    finally {release();}
+    assert.ok((await first).result.ok); assert.equal(f.execution.starts, 1); assert.equal(f.execution.resolutions, 1);
+    assert.equal((await f.documents.listDocuments("headless/models/training-plan-tasks")).length, 1);
+  });
+
+  test(`${storage}/${host}: foreign training task scope and active payloads cannot adopt or observe a task`, async t => {
+    const f = await executableTrainingHost(t, storage, host); assert.ok((await f.run()).result.ok);
+    const request = f.query("read"), forgedClient = {...f.grant, registeredClientId: randomUUID()};
+    const denied = f.desktopHost ? await f.desktopHost.owner.readTrainingTask!(request, forgedClient, async () => forgedClient)
+      : await f.managedHost!.owner.readTrainingTask!(request, {...f.registration, registeredClientId: randomUUID()}, () => true);
+    assert.equal(denied.ok, false); assert.equal(f.execution.reads, 0);
+    assert.equal((await f.control("read", {kind: "task", taskId: randomUUID()})).ok, false); assert.equal(f.execution.reads, 0);
+    let getters = 0;
+    const active = Object.defineProperty({}, "version", {enumerable: true, get() {getters++; throw new Error("PRIVATE");}});
+    const result = f.desktopHost ? await f.desktopHost.owner.readTrainingTask!(active, f.grant, async () => f.grant)
+      : await f.managedHost!.owner.readTrainingTask!(active, f.registration, () => true);
+    assert.equal(result.ok, false); assert.equal(getters, 0); assert.equal(f.execution.reads, 0);
+  });
+
+  test(`${storage}/${host}: approved training execution and regular progress polling keep one original accepted task`, async t => {
+    const f = await executableTrainingHost(t, storage, host), result = await f.run();
+    assert.ok(result.result.ok, JSON.stringify(result)); assert.equal(result.result.value.kind, "started");
+    assert.ok("reference" in result.result.value); const taskId = result.result.value.reference.taskId;
+    assert.equal(f.execution.starts, 1); assert.equal(f.execution.readerFactories, 1); assert.equal(f.execution.resolutions, 1);
+    assert.deepEqual(f.retrieved, f.version.artifacts.filter(row => ["train", "validation", "recipe"].includes(row.role)).map(row => row.artifactKey));
+    const before = {...f.execution}, retrieved = [...f.retrieved];
+    const replay = await f.run(); assert.ok(replay.result.ok, JSON.stringify(replay)); assert.equal(replay.result.value.kind, "replayed");
+    for (const key of ["starts", "readerFactories", "resolutions"] as const) assert.equal(f.execution[key], before[key]);
+    assert.deepEqual(f.retrieved, retrieved);
+    for (const selection of [{kind: "task" as const, taskId}, {kind: "plan-step" as const, fingerprint: f.target.fingerprint, step: 1}]) {
+      const progress = await f.control("read", selection); assert.ok(progress.ok, JSON.stringify(progress));
+      assert.equal(progress.operation, "models.training-task"); assert.equal(progress.value.state, "running");
+      assert.equal(progress.value.percent, 50); assert.equal(progress.value.progress.batch, 2); assert.equal(progress.value.outputQuality, "not-evaluated");
+      assert.doesNotMatch(JSON.stringify(progress), /PRIVATE|private\/|synthetic-base-model|recipeDigest|Synthetic train/);
+    }
+    assert.equal(f.execution.reads, 2);
+    const cancelled = await f.control("cancel"); assert.ok(cancelled.ok, JSON.stringify(cancelled)); assert.equal(cancelled.value.state, "cancelled");
+    assert.equal(f.execution.cancels, 1); assert.equal((await f.control("cancel")).ok, false); assert.equal(f.execution.cancels, 1);
+    assert.ok("publishIfCurrent" in result && typeof result.publishIfCurrent === "function");
+    assert.equal(await result.publishIfCurrent(() => true), true);
+    f.state.current = false; assert.equal(await result.publishIfCurrent(() => true), false);
+  });
+
+  test(`${storage}/${host}: incomplete or unavailable private configuration never starts ordinary training`, async t => {
+    const f = await executableTrainingHost(t, storage, host);
+    for (const missing of ["getModelTrainingInputs", "getModelTrainingStart", "getModelTrainingReaders"] as const) {
+      const options = {...f.executionOptions, [missing]: undefined};
+      const result = host === "Desktop" ? await f.desktop(true, options).owner.runStep!(f.step, f.grant, async () => f.grant)
+        : await f.managed(true, true, options).owner.runStep!(f.step, f.registration, () => f.state.current);
+      assert.equal(result.result.ok, false, missing);
+    }
+    const options = {...f.executionOptions, getModelTrainingStart: async () => undefined};
+    const unavailable = host === "Desktop" ? await f.desktop(true, options).owner.runStep!(f.step, f.grant, async () => f.grant)
+      : await f.managed(true, true, options).owner.runStep!(f.step, f.registration, () => f.state.current);
+    assert.equal(unavailable.result.ok, false); assert.equal(f.execution.starts, 0); assert.deepEqual(f.retrieved, []);
+    assert.equal(f.desktop().owner.readTrainingTask, undefined); assert.equal(f.managed().owner.readTrainingTask, undefined);
+  });
+
+  test(`${storage}/${host}: changed saved metadata or current permission denies training before task or byte IO`, async t => {
+    const f = await executableTrainingHost(t, storage, host); await f.changeDataset();
+    assert.equal((await f.run()).result.ok, false); assert.equal(f.execution.starts, 0); assert.deepEqual(f.retrieved, []);
+    const g = await executableTrainingHost(t, storage, host);
+    await inspectServiceScopes(["artifact:read"], async () => {assert.equal((await g.run()).result.ok, false);});
+    assert.equal(g.execution.starts, 0); assert.deepEqual(g.retrieved, []);
+  });
+
+  test(`${storage}/${host}: an original accepted task survives caller loss without renewing disclosure or business permission`, async t => {
+    const f = await executableTrainingHost(t, storage, host);
+    f.execution.onStart = async () => {f.state.current = false;};
+    const result = await f.run(); assert.equal(result.result.ok, false); assert.equal(f.execution.starts, 1);
+    const rows = await f.documents.listDocuments<{phase: string}>("headless/models/training-plan-tasks");
+    assert.equal(rows.length, 1); assert.equal(rows[0].value.phase, "accepted");
+    assert.ok(f.execution.business); assert.equal(f.execution.business.isCurrent(), true); assert.equal(await f.execution.business.stillAllowed(), true);
+    assert.equal((await f.control("read")).ok, false);
+    await f.repositories.memberships.saveMembership({...f.membership, status: "suspended"});
+    assert.equal(await f.execution.business.stillAllowed(), false);
+  });
+
+  test(`${storage}/${host}: retired reads and lost cancellation replies expose no private output and never cancel twice`, async t => {
+    const f = await executableTrainingHost(t, storage, host); assert.ok((await f.run()).result.ok);
+    f.execution.onCancel = async () => {throw new Error("PRIVATE-CANCEL-PATH");};
+    const failed = await f.control("cancel"); assert.equal(failed.ok, false); assert.doesNotMatch(JSON.stringify(failed), /PRIVATE/);
+    assert.equal((await f.control("cancel")).ok, false); assert.equal(f.execution.cancels, 1);
+    f.execution.onRead = async () => {f.state.current = false;};
+    const retired = await f.control("read"); assert.equal(retired.ok, false); assert.doesNotMatch(JSON.stringify(retired), /PRIVATE/);
+  });
+}

@@ -1,6 +1,8 @@
 import {prepareHeadlessModelTrainingReviews, type GetHeadlessModelTrainingInputs} from "../../shared/composition/headlessModelTrainingReview";
 import {captureHeadlessTrainingMethod, copyHeadlessTrainingPlanInput, composeOwnedHeadlessTrainingMetadata,
-  verifyHeadlessTrainingReviewInputs, verifyStoredHeadlessTrainingReviewInputs} from "../../shared/composition/headlessTrainingPlanInputs";
+  verifyHeadlessTrainingReviewInputs, verifyStoredHeadlessTrainingReviewInputs, compileHeadlessTrainingStepMetadata,
+  composeOwnedHeadlessTrainingBusinessPolicy, authorizeOwnedHeadlessTrainingWorkspace} from "../../shared/composition/headlessTrainingPlanInputs";
+import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions} from "../../shared/composition/headlessModelTrainingTasks";
 import {readStructuredHeadlessTrainingPlanPermission, type BindModelTrainingReviews} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {compileHeadlessContextQueryInputs, runPreparedHeadlessContextQuery, composeOwnedHeadlessContextQueryPolicy,
   type HeadlessContextQueryOwner} from "../../shared/composition/headlessContextQueryExecution";
@@ -12,7 +14,7 @@ import {prepareHeadlessModelReferenceSaveReviews, runPreparedHeadlessModelRefere
   type HeadlessModelReferenceSaveOwner} from "../../shared/composition/headlessModelReferenceSave";
 import {runOwnedHeadlessModelDownloadCancellation, type OwnedHeadlessModelSourceTasks} from "../../shared/composition/headlessModelDownloadTasks";
 import {readHeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
-import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels, prepareStructuredHeadlessPlanStepWithTraining } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolicy, type StartHeadlessModelDownload}
   from "../../shared/composition/headlessModelDownloadExecution";
 import {createTenantPlacementConfig} from "../../../contracts/config";
@@ -23,7 +25,7 @@ import type { DesktopHeadlessAuthoringWireGrant, startDesktopHeadlessLoopback } 
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHostIncarnationId,
-  type HeadlessPlanReviewAgentRequest } from "../../../contracts/headless";
+  readHeadlessTrainingTaskRequest, type HeadlessTrainingTaskResult, type HeadlessPlanReviewAgentRequest } from "../../../contracts/headless";
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
@@ -50,6 +52,8 @@ const ragScopes = [...fileSaveScopes, "model:read"] as const;
 const queryScopes = [...requiredScopes, "artifact:read", "model:read"] as const;
 type CancelModelDownload = (request: unknown, initial: DesktopHeadlessAuthoringWireGrant,
   currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessModelTaskCancellationResult>;
+type TrainingTaskControl = (request: unknown, initial: DesktopHeadlessAuthoringWireGrant,
+  currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessTrainingTaskResult>;
 
 export function composeDesktopHeadlessPlanReview(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -69,6 +73,9 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly getModelSourcePreview?: GetHeadlessModelSourcePreview;
   /** Private saved-input review only. No public capability or execution. */
   readonly getModelTrainingInputs?: GetHeadlessModelTrainingInputs;
+  /** Complete private execution configuration; no Root or transport activation. */
+  readonly getModelTrainingStart?: OriginalTrainingRunOptions["resolveStart"];
+  readonly getModelTrainingReaders?: OriginalTrainingRunOptions["getReaders"];
   /** Private execution opt-in; public roots remain unconfigured until status/save qualify. */
   readonly getModelDownloadStart?: () => Promise<StartHeadlessModelDownload | undefined>;
   readonly peekModelDownloadTasks?: () => OwnedHeadlessModelSourceTasks | undefined;
@@ -77,18 +84,22 @@ export function composeDesktopHeadlessPlanReview(options: {
   /** Only an already loaded retained owner; never start dependencies in a proposal transaction. */
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
   readonly audit?: DesktopHeadlessAudit;
-}): LoopbackPlanReview & {readonly cancelModelDownload?: CancelModelDownload} {
+}): LoopbackPlanReview & {readonly cancelModelDownload?: CancelModelDownload;
+  readonly readTrainingTask?: TrainingTaskControl; readonly cancelTrainingTask?: TrainingTaskControl} {
   const { hostIncarnationId, identity: configuredIdentity, platform, rootDirectory, workspaces, authorization, isOpen: configuredIsOpen, systems, getIngestionTasks, getModelSourcePreview, getModelDownloadStart, peekModelDownloadTasks } = options;
   const getModelTrainingInputs = captureHeadlessTrainingMethod<GetHeadlessModelTrainingInputs>(options, "getModelTrainingInputs");
   const identity = getModelTrainingInputs ? Object.freeze(copyHeadlessTrainingPlanInput(configuredIdentity)) : configuredIdentity;
   const isOpen = getModelTrainingInputs ? captureHeadlessTrainingMethod<() => boolean>(options, "isOpen") ?? (() => false) : configuredIsOpen;
+  const getModelTrainingStart = captureHeadlessTrainingMethod<OriginalTrainingRunOptions["resolveStart"]>(options, "getModelTrainingStart");
+  const getModelTrainingReaders = captureHeadlessTrainingMethod<OriginalTrainingRunOptions["getReaders"]>(options, "getModelTrainingReaders");
+  const trainingTasks = getModelTrainingInputs && getModelTrainingStart && getModelTrainingReaders ? createOriginalHeadlessTrainingTaskOwner() : undefined;
   const peekModelReferenceSave = options.peekModelReferenceSave;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan review requires the platform transaction owner.");
 
   async function authorize(
     repository: typeof workspaces, policy: WorkspaceOperationAuthorizationPort,
-    workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step" | "models.cancel-download",
+    workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step" | "models.cancel-download" | "models.training-task" | "models.cancel-training",
     savesFile = false, usesModel = false, modelPurpose?: "prepare" | "review" | "execute" | "training", training = false,
   ) {
     try {
@@ -111,24 +122,70 @@ export function composeDesktopHeadlessPlanReview(options: {
       grant.principalId === identity.principalId && grant.workspaceIds.includes(workspaceId));
   }
 
+  /** Keep each original fresh-grant lifetime through later transaction/task
+   * awaits. A replacement grant cannot revive this request after withdrawal. */
+  function trainingGrantFence(clientId: string, workspaceId: WorkspaceId, lifetimeName: "isReadCurrent" | "isOperationCurrent") {
+    const grants = new Map<DesktopHeadlessAuthoringWireGrant, {registration: () => boolean; lifetime: () => boolean}>();
+    let retired = false;
+    const current = () => {
+      if (retired) return false;
+      try {
+        for (const [grant, callbacks] of grants) {
+          if (!admits(grant, clientId, workspaceId, callbacks.registration) || !isHeadlessReadCurrent(callbacks.lifetime)) {
+            retired = true; return false;
+          }
+        }
+        return true;
+      } catch {retired = true; return false;}
+    };
+    return Object.freeze({current, retain(grant: DesktopHeadlessAuthoringWireGrant | undefined) {
+      if (!grant || !current()) {retired = true; return false;}
+      const registration = captureHeadlessTrainingMethod<() => boolean>(grant, "isCurrent");
+      const lifetime = captureHeadlessTrainingMethod<() => boolean>(grant, lifetimeName);
+      if (!registration || !lifetime || !admits(grant, clientId, workspaceId, registration) || !isHeadlessReadCurrent(lifetime)) {
+        retired = true; return false;
+      }
+      if (!grants.has(grant)) {
+        // Denial-only metadata bound, scoped to this one request. It grants no
+        // task capacity or business authority and never discards old fences.
+        if (grants.size >= 256) {retired = true; return false;}
+        grants.set(grant, {registration, lifetime});
+      }
+      return current();
+    }});
+  }
+
   const runStep: NonNullable<LoopbackPlanReview["runStep"]> = async (incoming, initial, currentGrant) => {
-    const question = incoming.transient?.contextQuery;
-    const request = {version: incoming.version, operation: incoming.operation, input: {...incoming.input}};
+    let captured = incoming;
+    if (trainingTasks) {try {captured = copyHeadlessTrainingPlanInput(incoming);} catch {return {result: forbidden};}}
+    const question = captured.transient?.contextQuery;
+    const request = trainingTasks ? captured
+      : {version: captured.version, operation: captured.operation, input: {...captured.input}};
     const { workspaceId, fingerprint, approvalRevision, step } = request.input;
     const { registeredClientId } = initial;
     if (!systems || request.input.hostIncarnationId !== hostIncarnationId ||
         !isDesktopHeadlessClientId(registeredClientId)) return { result: forbidden };
     const { organizationId, principalId } = identity;
     const scope = { organizationId, principalId, registeredClientId, workspaceId };
-    const operationCurrent = initial.isOperationCurrent;
+    const operationCurrent = trainingTasks ? captureHeadlessTrainingMethod<() => boolean>(initial, "isOperationCurrent") : initial.isOperationCurrent;
+    const originalCurrent = trainingTasks ? captureHeadlessTrainingMethod<() => boolean>(initial, "isCurrent") : undefined;
+    const freshGrants = trainingGrantFence(registeredClientId, workspaceId, "isOperationCurrent");
     let isModelStep = false;
+    let isTrainingStep = false;
     // Selection is established by the owned stored request. Thereafter every
     // reservation/issue/dispatch fence includes this request's synchronous life.
-    const isCurrent = () => admits(initial, registeredClientId, workspaceId) &&
-      (!isModelStep || isHeadlessReadCurrent(operationCurrent));
-    const canUse = async (savesFile = false, usesModel = false, modelPurpose?: "execute") =>
-      isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
-      await authorize(workspaces, authorization, workspaceId, request.operation, savesFile, usesModel, modelPurpose) && isCurrent();
+    const isCurrent = () => admits(initial, registeredClientId, workspaceId, isTrainingStep ? originalCurrent ?? (() => false) : undefined) &&
+      (!isModelStep || isHeadlessReadCurrent(operationCurrent)) && (!isTrainingStep || freshGrants.current());
+    const canUse = async (savesFile = false, usesModel = false, modelPurpose?: "execute" | "training") => {
+      if (!isCurrent()) return false;
+      const fresh = await currentGrant();
+      // Retain the first observation before the stored operation is selected.
+      // Apply this extra fence only to training; preserve other family gates.
+      const retained = trainingTasks ? freshGrants.retain(fresh) : true;
+      if (isTrainingStep ? !retained : !admits(fresh, registeredClientId, workspaceId)) return false;
+      return await authorize(workspaces, authorization, workspaceId, request.operation, savesFile, usesModel,
+        modelPurpose ?? (isTrainingStep ? "training" : undefined), isTrainingStep) && isCurrent();
+    };
     let savingFile: "local-data-save" | "provider-data-save" | "local-dataset-start" | "local-dataset-save" | "context-pack-start" | "context-rag-start" | "context-result-save" | undefined;
     function localFailure(result: typeof forbidden | typeof unconfirmed | {readonly ok: false; readonly code: "headless.not-started"}) {
       options.audit?.backend(savingFile ?? "local-data-save", workspaceId,
@@ -137,18 +194,21 @@ export function composeDesktopHeadlessPlanReview(options: {
     }
     try {
       if (!await canUse()) return { result: forbidden };
-      const prepare = getModelDownloadStart || peekModelReferenceSave ? prepareStructuredHeadlessPlanStepWithModels : prepareStructuredHeadlessPlanStep;
+      const prepare = trainingTasks ? prepareStructuredHeadlessPlanStepWithTraining
+        : getModelDownloadStart || peekModelReferenceSave ? prepareStructuredHeadlessPlanStepWithModels : prepareStructuredHeadlessPlanStep;
       const prepared = await prepare(platform, {
         target: { hostIncarnationId, fingerprint, scope }, approvalRevision, step, isCurrent,
       }, async (owner, _scope, approvedRequest) => {
         if (approvedRequest?.operation === "models.download" || approvedRequest?.operation === "models.save-download") isModelStep = true;
+        if (approvedRequest?.operation === "models.train") {isModelStep = true; isTrainingStep = true;}
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
         return await authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
           workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source" ||
             approvedRequest?.operation === "data.save-provider-source" || approvedRequest?.operation === "data.prepare-local-dataset" ||
             approvedRequest?.operation === "data.save-prepared-dataset" || approvedRequest?.operation === "context.generate-pack" ||
             approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.save-result", (approvedRequest?.operation === "context.generate-rag" || approvedRequest?.operation === "context.query"),
-          approvedRequest?.operation === "models.download" || approvedRequest?.operation === "models.save-download" ? "execute" : undefined) && isCurrent();
+          approvedRequest?.operation === "models.train" ? "training" : approvedRequest?.operation === "models.download" || approvedRequest?.operation === "models.save-download" ? "execute" : undefined,
+          approvedRequest?.operation === "models.train") && isCurrent();
       }, Date.now, "serialized-owner", Boolean(getIngestionTasks), getIngestionTasks
         ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
         : undefined, options.getDatasetStart ? async (owner, selected, taskScope) => {
@@ -172,8 +232,17 @@ export function composeDesktopHeadlessPlanReview(options: {
           const policy = composeDesktopWorkspaceAuthorization({documents: owner, localIdentity: identity});
           return compileHeadlessContextQueryInputs(owner.forOrganization(organizationId), rootDirectory, selected, taskScope,
             async () => isCurrent() && await authorize(repository, policy, workspaceId, request.operation, false, true));
-        } : undefined, Boolean(getModelDownloadStart), Boolean(peekModelReferenceSave));
+        } : undefined, Boolean(getModelDownloadStart), Boolean(peekModelReferenceSave), trainingTasks ? (owner, selected, taskScope) =>
+          compileHeadlessTrainingStepMetadata({owner, rootDirectory, placement: createTenantPlacementConfig({mode: "dedicated", organizationId}),
+            target: {hostIncarnationId, fingerprint, scope: taskScope}, request: selected, isCurrent}) : undefined);
       if (!prepared || !await canUse() || !prepared.isCurrent() || question !== undefined && prepared.kind !== "context-query") return { result: forbidden };
+      if (prepared.kind === "model-training") {
+        if (!trainingTasks || !getModelTrainingStart || !getModelTrainingReaders) return {result: forbidden};
+        return trainingTasks.runPrepared({prepared, request, context: scope, canUse: () => canUse(false, false, "training"),
+          isHostCurrent: isOpen, resolveStart: getModelTrainingStart, getReaders: getModelTrainingReaders,
+          stillBusinessAllowed: composeOwnedHeadlessTrainingBusinessPolicy({documents: platform, rootDirectory,
+            placement: createTenantPlacementConfig({mode: "dedicated", organizationId}), target: {hostIncarnationId, fingerprint, scope}, isHostCurrent: isOpen})});
+      }
       if (prepared.kind === "model-reference") {
         if (!peekModelReferenceSave) return {result: forbidden};
         return runPreparedHeadlessModelReferenceSave({documents: platform, rootDirectory, prepared, request,
@@ -316,9 +385,45 @@ export function composeDesktopHeadlessPlanReview(options: {
     } catch {return current() ? unavailable : forbidden;}
   } : undefined;
 
+  const controlTraining = async (incoming: unknown, initial: DesktopHeadlessAuthoringWireGrant,
+    currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult> => {
+    let effectPossible = false;
+    try {
+      if (!trainingTasks) return forbidden;
+      const parsed = readHeadlessTrainingTaskRequest(copyHeadlessTrainingPlanInput(incoming), hostIncarnationId);
+      if (!parsed.ok) return parsed;
+      if (parsed.request.operation !== (action === "read" ? "models.training-task" : "models.cancel-training")) return forbidden;
+      const {workspaceId} = parsed.request.input, {registeredClientId} = initial;
+      const originalCurrent = captureHeadlessTrainingMethod<() => boolean>(initial, "isCurrent");
+      const lifetimeName = action === "read" ? "isReadCurrent" : "isOperationCurrent";
+      const lifetime = captureHeadlessTrainingMethod<() => boolean>(initial, lifetimeName);
+      const freshGrants = trainingGrantFence(registeredClientId, workspaceId, lifetimeName);
+      const current = () => isHeadlessReadCurrent(isOpen) && isHeadlessReadCurrent(lifetime) &&
+        admits(initial, registeredClientId, workspaceId, originalCurrent ?? (() => false)) && freshGrants.current();
+      if (!isDesktopHeadlessClientId(registeredClientId) || !current()) return forbidden;
+      const scope = Object.freeze({organizationId: identity.organizationId, principalId: identity.principalId, registeredClientId, workspaceId});
+      const canUse = async () => {
+        if (!current()) return false;
+        const fresh = await currentGrant();
+        return current() && freshGrants.retain(fresh) &&
+          await authorize(workspaces, authorization, workspaceId, parsed.request.operation, false, false, "training", true) && current();
+      };
+      if (!await canUse()) return forbidden;
+      const query = {documents: platform, hostIncarnationId, scope, request: parsed.request, isCurrent: current,
+        authorize: async (owner: StructuredDocumentStore) => current() && await authorizeOwnedHeadlessTrainingWorkspace(owner, rootDirectory,
+          createTenantPlacementConfig({mode: "dedicated", organizationId: scope.organizationId}), scope, current) && current()};
+      effectPossible = action === "cancel";
+      const result = await (action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
+      if (!await canUse()) return effectPossible ? unconfirmed : forbidden;
+      return result;
+    } catch {return effectPossible ? unconfirmed : unavailable;}
+  };
+
   return {
     hostIncarnationId,
     cancelModelDownload,
+    readTrainingTask: trainingTasks ? (request, grant, fresh) => controlTraining(request, grant, fresh, "read") : undefined,
+    cancelTrainingTask: trainingTasks ? (request, grant, fresh) => controlTraining(request, grant, fresh, "cancel") : undefined,
     ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
     ...(getIngestionTasks ? { allowProviderFileSave: true as const } : {}),
     ...(options.getDatasetStart ? {allowLocalDatasetPreparation: true as const} : {}),

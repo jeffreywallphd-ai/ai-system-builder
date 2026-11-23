@@ -3190,3 +3190,15 @@ and require nonzero passing assertions with no failure, skip, cancellation or to
 Every declared source/fixture must be regular; missing/unknown/shared-only impact
 and explicit generic requests retain conservative selection. No model/native/app
 is started, no quality test is run and no Root, Save or parent pass is granted.
+
+The same saved-training host fixture also exercises private approved execution,
+accepted-task progress polling and Stop. Reuse its existing fixed unit/strict/server
+build profiles and the existing `headless-training-execution-unit` and
+`headless-training-execution-types` checks for the application/step bridge. Extend
+the fixture locally instead of importing a registered test module or changing the
+catalog for this feature. Actual Core/SQLite proposal/approval/step transactions
+and authorized Model/Dataset readers use controlled original task sessions. Check
+accepted replay, missing configuration, stale facts/policy, request withdrawal,
+independent business lifetime, finite progress and one cancellation after a lost
+reply. These feature checks start no model/native/app or real quality evaluation;
+public transport, native resources, result Save and host/parent qualification remain.

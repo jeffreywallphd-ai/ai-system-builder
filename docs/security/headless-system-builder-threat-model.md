@@ -2168,3 +2168,37 @@ repair. Controlled Core/SQLite and ordinary-download compatibility tests are loc
 software evidence only. Public activation, native production/resources/retirement,
 actual execution, result Save and real hosts remain pending; model accuracy is not
 tested or requalified by this work.
+
+### Private training step execution and progress in host components
+
+Protect exact approval/client/host scope, private Model/Dataset bytes, original
+accepted task identity and uncertain effects. Threats include partial configuration
+falling back to ordinary training, new books on replay, replaced callbacks, byte IO
+inside retryable transactions, request lifetime becoming business authority, foreign
+task adoption, repeated cancellation after lost replies and private progress output.
+
+Require complete captured default-off configuration and one original host book.
+Use the existing training step/ledger with explicit other-family gates. Recompile
+current metadata in the supplied owner; perform byte reads and original application
+start outside transactions. Preserve original issuance/acceptance and publication
+fences. Current client/request admission is separate from accepted original actor/
+workspace/host business policy. Unknown replies retain original custody; replay
+does not resolve another start or reader. Never invent a plan fingerprint to check
+task-ID workspace policy; exact accepted lineage is a separate book requirement.
+
+Progress/Stop handlers require current original registration/request and workspace
+policy before/after original task calls. Polling returns finite state/epoch/batch/
+percentage, with no raw data, paths, logs, error text or quality metrics. One Stop
+request is not native retirement. Core/SQLite host transactions, actual metadata/
+Dataset readers and controlled private task fixtures cover these software controls.
+They load no model or worker and grant no native/profile, Root/public transport,
+result Save, actual-host or parent pass. Accepted model-quality tests stay closed.
+
+Desktop retains the original registration and operation/read callbacks of each
+observed fresh grant in the request's synchronous current fence. Check them through
+later policy/transaction/task/publication awaits and latch withdrawal. Replacing
+a grant cannot revive that request. The 256-object denial-only bound cannot clear
+old fences or grant business capacity. Independent causal fixtures exposed a
+before-policy-only check; durable Core/SQLite regressions require denial before
+publication or cancellation and at later transaction/read handoffs. Accepted
+business-only controls remain independent from this request map.
