@@ -1,3 +1,24 @@
+The private `createOriginalHeadlessTrainingTaskOwner` wraps the existing training
+bridge. It reserves a bounded slot before awaiting the original start resolver
+and captures the returned private task before ledger acceptance. A caller timeout
+or lost acknowledgement cannot release possible work or trigger another start.
+Only positive original non-start proof releases that slot; terminal status or a
+cancellation acknowledgement does not settle physical resource custody.
+
+Training status and cancellation use exact accepted training-ledger lineage and
+proposal digest. Require fresh caller, host and business policy in owned metadata
+transactions, then invoke only the captured task outside those transactions.
+Capture callback methods and receivers before waits, and recheck authority before
+disclosure. Cancellation is at most one original request, including unknown
+replies. No generic lookup, download-task namespace or replay can adopt a task.
+
+Closed private summaries expose finite progress and pending-review availability.
+They expose no paths, logs, raw data, recipes or model scores and grant no result
+Save. Issued-only records cannot be adopted through accepted-task reads. These
+controls do not activate public roots, supply a native producer or qualify actual
+execution, resource retirement or hosts. Core/SQLite and inert application tests
+are component evidence; model-quality tests remain excluded.
+
 The internal `runPreparedHeadlessModelTraining` bridge composes the exact stored
 training step with the existing private Model/Dataset readers and
 `TrainModelUseCase.startApprovedLocal`. Reads and intrinsic byte copies occur

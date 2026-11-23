@@ -1,5 +1,18 @@
 # Contracts
 
+The private training task family defines separate `models.training-task` and
+`models.cancel-training` codecs. Both use the exact task or approved-plan-step
+selector, with copied host and workspace identity. Download support does not
+enable them, and these codecs add no public operation catalog or transport.
+
+Training replies carry original task/plan identity, allowlisted status and finite
+numeric progress. Completed status permits only a pending-review indicator;
+runtime readiness remains unchecked and output quality is not evaluated. No
+paths, logs, raw training inputs, candidate details or scores are accepted.
+Cancellation distinguishes a request from confirmed terminal status, and neither
+grants registration or Save. Hosts must independently prove original accepted
+task ownership and fresh policy; decoding alone confers no authority.
+
 `models.review-download` uses the same exact task or approved-plan-step
 selector as Model task controls. Its closed summary includes original lineage,
 model revision, manifest digest, provider-declared or unknown license, selected

@@ -1186,3 +1186,21 @@ lookup, status, PID absence or process restart cannot supply it. Settlement is
 permanent, unknown effects are not repeated, and retained output accounting stays
 with separate reviewed Save/discard ownership. Inert protocol tests establish
 software behavior only; native production and real host qualification remain.
+
+### Original private training task controls
+
+The shared original-task owner wraps the existing approved training runner and
+private application task. Reserve bounded retention before awaiting the start
+resolver; retain the exact returned task synchronously before acceptance waits.
+Keep possible starts and uncertain replies. Release only unused reservation or
+positive original non-start proof, without releasing native resource custody.
+
+Read exact accepted training-ledger lineage and the original proposal digest in
+the owning metadata transaction under fresh caller/host and business policy.
+Invoke captured private read/cancel methods outside that transaction, reauthorize
+disclosure, and issue cancellation at most once even after a lost reply. No
+generic ID, download task, replay, issued-only record or replacement owner can
+acquire this capability. Closed private training codecs expose finite workflow
+facts and review availability, with no private inputs, paths, logs or model scores.
+Result Save remains separately approved. These components do not activate public
+roots or qualify native execution, measured limits, physical retirement or hosts.

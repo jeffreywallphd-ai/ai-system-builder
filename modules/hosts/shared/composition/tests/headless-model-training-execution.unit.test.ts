@@ -25,6 +25,7 @@ import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, parseHeadlessBui
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import type {ModelInventoryRecord} from "../../../../contracts/model";
 import {runPreparedHeadlessModelTraining, type RetainedHeadlessTrainingTask} from "../headlessModelTrainingExecution";
+import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions, type OriginalTrainingTaskQuery} from "../headlessModelTrainingTasks";
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const sha = (value: Uint8Array | string) => "sha256:" + createHash("sha256").update(value).digest("hex");
@@ -48,6 +49,9 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
     onPrepare: undefined as (() => Promise<void>) | undefined,
     onStart: undefined as (() => Promise<void>) | undefined,
     onPowerStart: undefined as (() => Promise<void>) | undefined,
+    onRead: undefined as (() => Promise<void>) | undefined,
+    onCancel: undefined as (() => Promise<void>) | undefined,
+    progress: undefined as RuntimeTaskRecord["progress"],
     afterCommit: undefined as ((value: unknown) => Promise<void>) | undefined,
     dropWhen: undefined as ((value: unknown) => boolean) | undefined,
     transformModel: undefined as ((value: unknown) => unknown) | undefined,
@@ -150,8 +154,8 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
         async prepare() {state.prepares++; await state.onPrepare?.(); return "ready" as const;},
         async start(input, isCurrent) {assert.equal(isCurrent(), true); state.starts++; staged = input; await state.onStart?.();
           return {kind: "accepted" as const, requestId: value.requestId, workspaceId: value.workspaceId, status: "queued" as const};},
-        async read() {state.reads++; return {requestId: value.requestId, workspaceId: value.workspaceId, taskType: TaskType.MODEL_TRAINING, status: state.status, concurrencyClass: "unknown" as const};},
-        async cancel() {state.cancels++; state.status = "cancelled"; return {requestId: value.requestId, cancelled: true, status: "cancelled" as const};},
+        async read() {state.reads++; await state.onRead?.(); return {requestId: value.requestId, workspaceId: value.workspaceId, taskType: TaskType.MODEL_TRAINING, status: state.status, concurrencyClass: "unknown" as const, ...(state.progress ? {progress: state.progress} : {})};},
+        async cancel() {state.cancels++; await state.onCancel?.(); state.status = "cancelled"; return {requestId: value.requestId, cancelled: true, status: "cancelled" as const};},
         async settle() {return true;}};
     }}}),
     runtimeTaskRegistry: {async startTask() {assert.fail("No ordinary runtime.");}, async startTaskWithoutInstalling() {assert.fail("No generic installed-only fallback.");},
@@ -181,7 +185,7 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
   const gate = () => {let open!: () => void, entered!: () => void; const waiting = new Promise<void>(r => open = r), started = new Promise<void>(r => entered = r);
     releases.push(open); return {started, release: open, async wait() {entered(); await waiting;}};};
   return {state, scope, context, host, root, request, binding, inputs, version, content, retrieved, modelRecord, modelReader, datasetReader,
-    train, prepare, makeOptions, run, gate, get retained() {return retained;}, get definition() {return definition;}, get staged() {return staged;},
+    train, prepare, makeOptions, run, gate, track: tracked, get retained() {return retained;}, get definition() {return definition;}, get staged() {return staged;},
     get control() {return control;}, rows: () => root.forOrganization(scope.organizationId).listDocuments<{phase: string}>("headless/models/training-plan-tasks")};
 }
 
@@ -403,4 +407,175 @@ test("a new training attempt checks business policy before resolving an applicat
   const f = await fixture(t); f.state.business = false;
   assert.equal((await f.run()).result.ok, false); assert.equal(f.state.resolves, 0); assert.equal(f.state.gets, 0);
   assert.equal((await f.rows()).length, 0);
+});
+
+async function bookOptions(f: Awaited<ReturnType<typeof fixture>>): Promise<OriginalTrainingRunOptions> {
+  const {retainTask: _retentionIsOwnedByBook, ...options} = await f.makeOptions(); return options;
+}
+function taskQuery(f: Awaited<ReturnType<typeof fixture>>, operation: "models.training-task" | "models.cancel-training" = "models.training-task"): OriginalTrainingTaskQuery {
+  return {documents: f.root, hostIncarnationId: f.host, scope: f.scope, isCurrent: () => f.state.host,
+    authorize: async () => f.state.allowed, request: {version: HEADLESS_CONTRACT_VERSION, operation,
+      input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.definition!.requestId}}}};
+}
+for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + ": original training book composes actual ledger and private App progress/cancellation without Save or raw data", async t => {
+    const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner();
+    const started = await book.runPrepared(await bookOptions(f)); assert.ok(started.result.ok, JSON.stringify(started));
+    assert.equal(f.state.starts, 1); f.state.status = "running";
+    f.state.progress = {message: "PRIVATE MESSAGE", details: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4, path: "PRIVATE"}};
+    const observed = await book.read(taskQuery(f)); assert.ok(observed.ok, JSON.stringify(observed));
+    assert.equal(observed.value.state, "running"); assert.equal(observed.value.percent, 50);
+    assert.deepEqual(observed.value.progress, {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4});
+    assert.equal(observed.value.outputQuality, "not-evaluated"); assert.equal(observed.value.runtimeReadiness, "not-checked");
+    assert.equal(observed.value.registration, "requires-separate-approval");
+    assert.equal(JSON.stringify(observed).includes("PRIVATE"), false);
+    assert.equal(JSON.stringify(observed).includes(f.staged!.outputDirectory), false);
+    const cancelled = await book.cancel(taskQuery(f, "models.cancel-training")); assert.ok(cancelled.ok);
+    assert.equal(cancelled.value.state, "cancelled"); assert.equal(f.state.cancels, 1);
+    assert.deepEqual(await book.cancel(taskQuery(f, "models.cancel-training")), {ok: false, code: "headless.operation-unconfirmed"});
+    assert.equal(f.state.cancels, 1); assert.equal(f.state.starts, 1);
+  });
+
+  test(engine + ": lost ledger acceptance preserves book custody before replay and new caller observation", async t => {
+    const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner();
+    const options = await bookOptions(f);
+    f.state.dropWhen = value => f.state.starts === 1 && value === true;
+    assert.deepEqual((await book.runPrepared(options)).result, {ok: false, code: "headless.operation-unconfirmed"});
+    assert.equal((await f.rows())[0].value.phase, "accepted");
+    f.state.current = false;
+    const observed = await book.read(taskQuery(f)); assert.ok(observed.ok, JSON.stringify(observed));
+    assert.equal(observed.value.taskId, f.definition!.requestId);
+    const query = taskQuery(f), rawRequest = query.request as {input: object};
+    const byPlan = await book.read({...query, request: {...rawRequest, input: {...rawRequest.input,
+      selection: {kind: "plan-step", fingerprint: options.request.input.fingerprint, step: options.request.input.step}}}});
+    assert.deepEqual(byPlan, observed);
+    f.state.current = true; const before = {gets: f.state.gets, resolves: f.state.resolves, starts: f.state.starts};
+    const replay = await book.runPrepared(await bookOptions(f)); assert.ok(replay.result.ok); assert.equal(replay.result.value.kind, "replayed");
+    assert.deepEqual({gets: f.state.gets, resolves: f.state.resolves, starts: f.state.starts}, before);
+  });
+
+  test(engine + ": fresh book never adopts an accepted private task by generic ID or replay", async t => {
+    const f = await fixture(t, engine); assert.ok((await f.run()).result.ok);
+    const book = createOriginalHeadlessTrainingTaskOwner(), before = {...f.state};
+    assert.deepEqual(await book.read(taskQuery(f)), {ok: false, code: "headless.unavailable"});
+    const replay = await book.runPrepared(await bookOptions(f)); assert.ok(replay.result.ok); assert.equal(replay.result.value.kind, "replayed");
+    assert.deepEqual(await book.cancel(taskQuery(f, "models.cancel-training")), {ok: false, code: "headless.unavailable"});
+    for (const name of ["reads", "cancels", "starts", "gets", "resolves"] as const) assert.equal(f.state[name], before[name]);
+  });
+
+  test(engine + ": training control rejects foreign actor/client/workspace/host and changed proposal before App actions", async t => {
+    const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner();
+    assert.ok((await book.runPrepared(await bookOptions(f))).result.ok);
+    const query = taskQuery(f), before = f.state.reads;
+    for (const scope of [{...f.scope, principalId: "foreign"}, {...f.scope, registeredClientId: randomUUID()},
+      {...f.scope, organizationId: createOrganizationId("org.foreign")}, {...f.scope, workspaceId: createWorkspaceId("workspace.foreign")}])
+      assert.equal((await book.read({...query, scope})).ok, false);
+    const host = randomUUID(), request = query.request as {input: object};
+    assert.equal((await book.read({...query, hostIncarnationId: host, request: {...request, input: {...request.input, hostIncarnationId: host}}})).ok, false);
+    assert.equal(f.state.reads, before);
+    const row = (await f.rows())[0];
+    await f.root.forOrganization(f.scope.organizationId).writeDocument("headless/models/training-plan-tasks", row.key,
+      {...row.value, proposalDigest: "sha256:" + "f".repeat(64)}, {expectedRevision: row.revision});
+    assert.equal((await book.read(query)).ok, false); assert.equal(f.state.reads, before);
+  });
+}
+
+test("book reserves retention before resolver wait and denies another task before owner resolution", async t => {
+  const first = await fixture(t), second = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner({maximumRetainedTasks: 1});
+  const original = await bookOptions(first), held = first.gate();
+  const running = first.track(book.runPrepared({...original, async resolveStart() {await held.wait(); return original.resolveStart();}}));
+  try {
+    await held.started; assert.equal(first.state.starts, 0);
+    assert.equal((await book.runPrepared(await bookOptions(second))).result.ok, false);
+    assert.equal(second.state.resolves, 0); assert.equal(second.state.gets, 0); assert.equal(second.state.starts, 0);
+    assert.equal((await second.rows()).length, 0);
+  } finally {held.release();}
+  assert.ok((await running).result.ok);
+});
+
+test("book releases only its own never-started slot while unknown application starts remain retained", async t => {
+  const first = await fixture(t), second = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner({maximumRetainedTasks: 1});
+  assert.equal((await book.runPrepared({...await bookOptions(first), resolveStart: async () => undefined})).result.ok, false);
+  second.state.onStart = async () => {throw Error("Synthetic lost original App ACK");};
+  assert.deepEqual((await book.runPrepared(await bookOptions(second))).result, {ok: false, code: "headless.operation-unconfirmed"});
+  assert.equal(second.state.starts, 1);
+  assert.equal((await book.runPrepared(await bookOptions(first))).result.ok, false);
+  assert.equal(first.state.starts, 0);
+  assert.deepEqual((await book.runPrepared(await bookOptions(second))).result, {ok: false, code: "headless.operation-unconfirmed"});
+  assert.equal(second.state.starts, 1);
+});
+
+test("book cancellation remains one original effect through held and lost acknowledgements", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner();
+  assert.ok((await book.runPrepared(await bookOptions(f))).result.ok);
+  const held = f.gate(); f.state.onCancel = async () => {await held.wait(); throw Error("PRIVATE lost cancellation ACK");};
+  const first = f.track(book.cancel(taskQuery(f, "models.cancel-training")));
+  try {
+    await held.started;
+    assert.deepEqual(await book.cancel(taskQuery(f, "models.cancel-training")), {ok: false, code: "headless.operation-unconfirmed"});
+    assert.equal(f.state.cancels, 1);
+  } finally {held.release();}
+  assert.deepEqual(await first, {ok: false, code: "headless.operation-unconfirmed"});
+  assert.deepEqual(await book.cancel(taskQuery(f, "models.cancel-training")), {ok: false, code: "headless.operation-unconfirmed"});
+  assert.equal(f.state.cancels, 1);
+});
+
+test("book checks fresh business/caller policy and denies disclosure after a held App read", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner();
+  assert.ok((await book.runPrepared(await bookOptions(f))).result.ok);
+  const held = f.gate(); f.state.onRead = held.wait;
+  const reading = f.track(book.read(taskQuery(f)));
+  try {await held.started; f.state.allowed = false;} finally {held.release();}
+  assert.equal((await reading).ok, false);
+  assert.equal((await book.cancel(taskQuery(f, "models.cancel-training"))).ok, false); assert.equal(f.state.cancels, 0);
+  f.state.allowed = true; f.state.business = false; f.state.onRead = undefined;
+  assert.equal((await book.read(taskQuery(f))).ok, false);
+});
+
+for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + ": positive original App non-start releases host capacity without granting a Native lease", async t => {
+    const first = await fixture(t, engine, {port: false}), second = await fixture(t, engine);
+    const book = createOriginalHeadlessTrainingTaskOwner({maximumRetainedTasks: 1});
+    assert.deepEqual((await book.runPrepared(await bookOptions(first))).result, {ok: false, code: "headless.not-started"});
+    assert.equal((await first.rows())[0].value.phase, "not-started"); assert.equal(first.state.creates, 0);
+    assert.ok((await book.runPrepared(await bookOptions(second))).result.ok); assert.equal(second.state.starts, 1);
+  });
+}
+
+test("book captures original callback receivers before policy and resolver waits", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner();
+  const options: {-readonly [K in keyof OriginalTrainingRunOptions]: OriginalTrainingRunOptions[K]} = {...await bookOptions(f)};
+  const readers = options.getReaders, resolver = options.resolveStart, held = f.gate();
+  let first = true;
+  options.canUse = async function(this: OriginalTrainingRunOptions) {assert.equal(this, options); if (first) {first = false; await held.wait();} return true;};
+  options.getReaders = async function(this: OriginalTrainingRunOptions) {assert.equal(this, options); return readers();};
+  options.resolveStart = async function(this: OriginalTrainingRunOptions) {assert.equal(this, options); return resolver();};
+  const running = f.track(book.runPrepared(options));
+  try {
+    await held.started;
+    options.getReaders = async () => {assert.fail("Replaced reader resolver.");};
+    options.resolveStart = async () => {assert.fail("Replaced application resolver.");};
+    options.canUse = async () => {assert.fail("Replaced caller policy.");};
+  } finally {held.release();}
+  assert.ok((await running).result.ok);
+});
+
+test("book candidate availability never exposes private candidate metadata or measured quality", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+  const resolved = await options.resolveStart(); assert.ok(resolved);
+  const result = await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const started = await resolved(...args); if (started.kind !== "accepted") return started;
+    const read = started.task.read;
+    return {...started, task: {...started.task, async read(control) {
+      await read(control);
+      // Controlled fields only: no loss computation, output scoring or model.
+      return {runId: started.task.requestId, status: "succeeded", reviewPending: true, outputDirectory: "PRIVATE-DIRECTORY",
+        generatedModelCandidate: {displayName: "PRIVATE-CANDIDATE", localPath: "PRIVATE-PATH", metadata: {prompt: "PRIVATE-PROMPT"}},
+        logs: ["PRIVATE-LOG"], metrics: {loss: 0.123}};
+    }}};
+  }});
+  assert.ok(result.result.ok); const observed = await book.read(taskQuery(f)); assert.ok(observed.ok);
+  assert.equal(observed.value.resultReview, "pending"); assert.equal(observed.value.outputQuality, "not-evaluated");
+  assert.equal(observed.value.runtimeReadiness, "not-checked"); assert.equal(observed.value.registration, "requires-separate-approval");
+  assert.equal(JSON.stringify(observed).includes("PRIVATE"), false); assert.equal(JSON.stringify(observed).includes("loss"), false);
 });

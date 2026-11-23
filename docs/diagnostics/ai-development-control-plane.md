@@ -3161,3 +3161,19 @@ profiles retain generic impact selection. Source-only shared runtime changes
 cannot silently borrow this scoped profile. The routing harness checks command
 selection, missing-fixture fallback and executes the registered Node commands.
 These checks do not close real training, output, native or host qualification.
+
+The exact private training task-control or contract fixture selects
+`headless-training-task-controls-unit` and its strict
+`headless-training-task-controls-types` companion. The serial TAP command runs
+actual contract, original task owner and existing Core/SQLite/application bridge
+cases. The type command compiles the actual owner and those consumers. Routing
+tests execute both commands, require nonzero passing assertions and refuse every
+failed, skipped, cancelled or todo case. Existing training-ledger routing tests
+remain intact beside the new controls.
+
+All declared required files must be regular. Missing fixtures, shared-only or
+unknown source impact and explicit generic requests retain conservative fallback.
+Shared barrels and README files borrow this scoped coverage only with an exact
+selected fixture. These are software checks with inert runtime responses. They
+start no model, native producer or application, evaluate no model accuracy/loss,
+and supply no public activation, Save, physical, host or parent pass.

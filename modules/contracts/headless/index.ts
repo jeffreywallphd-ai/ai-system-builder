@@ -128,3 +128,4 @@ export * from "./headless-context-rebuild";
 export * from "./headless-context-query-preview";
 export * from "./headless-context-query-plan";
 export * from "./headless-model-task";
+export * from "./headless-model-training-task";

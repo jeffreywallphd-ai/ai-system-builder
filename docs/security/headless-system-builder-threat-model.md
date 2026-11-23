@@ -2117,3 +2117,29 @@ dispatch and IO retirement still require a qualified producer and measured Root
 configuration. Inert denial/race/protocol checks do not grant actual execution,
 Save, external publication or host/parent qualification. Model-quality tests stay
 outside this increment's workflow evidence.
+
+### Original private training task retention and control
+
+Protected assets are private task identity, original actor/client/workspace/host
+authority, training data and candidate metadata, and uncertain resource custody.
+Threats include capacity races before resolver waits, accepted-ID adoption,
+proposal or callback replacement, cross-user observation, repeated cancellation
+after a lost reply, policy withdrawal during reads, and private output in errors.
+
+Reserve bounded host retention synchronously before resolving the existing start
+owner. Capture the exact private task before acceptance waits. Unknown start or
+acceptance cannot discard its slot; only unused or positively proven original
+non-start can release metadata capacity. Read accepted training-ledger lineage
+and immutable proposal digest under fresh owned-transaction authority. Invoke
+only captured original task methods outside that transaction, with repeated
+caller/host and business policy. Capture method receivers before awaits. Do not
+adopt generic IDs, download tasks, issued-only records or historical replays.
+
+Request cancellation at most once even if its reply is unknown. Strict summaries
+allow only finite workflow progress and review availability, with no paths, raw
+inputs, candidate payloads, logs, errors or model scores. Cancellation does not
+prove permanent I/O retirement, and observation does not approve result Save.
+Controlled Core/SQLite and application denial/race fixtures cover these controls.
+Public root activation, native production/protection/accounting, measured limits,
+result Save and actual host/parent qualification remain pending. No model-quality
+evaluation or new physical test allowance follows from these software checks.

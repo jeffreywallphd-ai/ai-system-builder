@@ -186,6 +186,53 @@ TRAINING_LOCAL_MODEL_CODE = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-task-controls-unit": {
+        "automatic_sources": (
+            "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts",
+        ),
+        "automatic_required_files": (
+            "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
+            "modules/hosts/shared/composition/headlessModelTrainingExecution.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/contracts/headless/headless-model-training-task.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts",
+        ),
+        "sources": (
+            "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
+            "modules/contracts/headless/headless-model-training-task.ts",
+            "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/hosts/README.md", "modules/contracts/README.md",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts"),
+    },
+    "headless-training-task-controls-types": {
+        "companion_to": "headless-training-task-controls-unit",
+        "sources": (
+            "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
+            "modules/contracts/headless/headless-model-training-task.ts",
+            "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts",
+            "modules/contracts/headless/index.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
+            "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts"),
+    },
     "headless-training-runtime-unit": {
         "automatic_sources": ("modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",),
         "automatic_required_files": (

@@ -2443,3 +2443,19 @@ Permanent retirement includes preparation, sealing, worker execution and client
 flights; later reads use cached metadata. Execution availability and retained
 candidate-byte accounting are separate. This mechanism does not yet supply the
 native producer, measured Root profile, public activation or real-host evidence.
+
+The shared private training task owner reserves bounded host retention before
+resolving a possible start. It wraps the existing approved-step runner and captures
+the original private application task before any acceptance/publication await.
+Unknown starts retain their slot; only unused or positively proven original
+non-start releases it. Capacity is a metadata bound, not native memory admission.
+
+Observation and cancellation require exact accepted training-ledger identity and
+proposal digest, current original actor/client/workspace and host policy. Metadata
+transactions establish lineage; task read/cancel runs outside them through the
+captured original methods and receivers. Reauthorize disclosure after awaits.
+Cancellation is one original request, not a physical-stop receipt. Replay or
+issued-only history cannot discover or adopt a task. Status, finite progress and
+pending-review availability carry no paths, raw data, logs or quality scores.
+Native protection/accounting, actual host composition, result Save and physical
+qualification remain separate; controlled fixtures do not supply those passes.
