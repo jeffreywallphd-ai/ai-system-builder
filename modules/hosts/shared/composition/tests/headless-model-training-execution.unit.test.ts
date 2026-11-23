@@ -154,7 +154,11 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
         async prepare() {state.prepares++; await state.onPrepare?.(); return "ready" as const;},
         async start(input, isCurrent) {assert.equal(isCurrent(), true); state.starts++; staged = input; await state.onStart?.();
           return {kind: "accepted" as const, requestId: value.requestId, workspaceId: value.workspaceId, status: "queued" as const};},
-        async read() {state.reads++; await state.onRead?.(); return {requestId: value.requestId, workspaceId: value.workspaceId, taskType: TaskType.MODEL_TRAINING, status: state.status, concurrencyClass: "unknown" as const, ...(state.progress ? {progress: state.progress} : {})};},
+        async read() {state.reads++; await state.onRead?.(); return {requestId: value.requestId, workspaceId: value.workspaceId, taskType: TaskType.MODEL_TRAINING,
+          status: state.status, concurrencyClass: "unknown" as const, ...(state.progress ? {progress: state.progress} : {}),
+          ...(state.status === "succeeded" ? {data: {runId: value.requestId, status: "succeeded", outputDirectory: staged!.outputDirectory,
+            generatedModelCandidate: {displayName: "Controlled candidate", artifactForm: "adapter", localPath: staged!.outputDirectory,
+              serializationFormat: "adapter-safetensors", metadata: {privatePath: staged!.outputDirectory, privateData: "PRIVATE TRAINING TEXT"}}}} : {})};},
         async cancel() {state.cancels++; await state.onCancel?.(); state.status = "cancelled"; return {requestId: value.requestId, cancelled: true, status: "cancelled" as const};},
         async settle() {return true;}};
     }}}),
@@ -417,6 +421,105 @@ function taskQuery(f: Awaited<ReturnType<typeof fixture>>, operation: "models.tr
     authorize: async () => f.state.allowed, request: {version: HEADLESS_CONTRACT_VERSION, operation,
       input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.definition!.requestId}}}};
 }
+for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + ": original book completion review reads actual cached App provenance without runtime or Save", async t => {
+    const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner();
+    const started = await book.runPrepared(await bookOptions(f)); assert.ok(started.result.ok, JSON.stringify(started));
+    const query = taskQuery(f), before = {...f.state};
+    assert.deepEqual(await book.reviewCompletion(query), {ok: true, value: {kind: "not-ready"}});
+    assert.equal(f.state.reads, before.reads); f.state.status = "succeeded";
+    const status = await book.read(query); assert.ok(status.ok, JSON.stringify(status)); assert.equal(status.value.state, "succeeded");
+    const settled = {...f.state}, reviewed = await book.reviewCompletion(query);
+    assert.ok(reviewed.ok, JSON.stringify(reviewed)); assert.equal(reviewed.value.kind, "ready");
+    if (reviewed.value.kind !== "ready") throw Error("Missing original cached completion.");
+    assert.equal(reviewed.value.requestId, f.definition!.requestId); assert.equal(reviewed.value.workspaceId, f.scope.workspaceId);
+    assert.equal(reviewed.value.provenance.proposalDigest, f.binding.proposalDigest);
+    assert.equal(reviewed.value.provenance.modelRecordId, f.request.input.model.modelRecordId);
+    assert.equal(reviewed.value.provenance.versionDigest, f.version.versionDigest);
+    assert.equal(reviewed.value.candidate.serializationFormat, "adapter-safetensors");
+    assert.equal(reviewed.value.registration, "requires-separate-approval");
+    assert.equal(reviewed.value.verification.retainedFiles, "not-checked");
+    assert.equal(reviewed.value.verification.outputQuality, "not-evaluated");
+    assert.doesNotMatch(JSON.stringify(reviewed), /PRIVATE|localPath|outputDirectory|rawRecipe|logs/);
+    assert.equal(JSON.stringify(reviewed).includes(f.staged!.outputDirectory), false);
+    for (const key of ["reads", "starts", "cancels", "modelReads", "datasetReads", "gets", "resolves"] as const)
+      assert.equal(f.state[key], settled[key], key + " must not run during cached review.");
+    assert.equal((await book.reviewCompletion({...query, authorize: async () => false})).ok, false);
+    assert.equal((await book.reviewCompletion({...query, scope: {...query.scope, principalId: "principal.other"}})).ok, false);
+    let authorizations = 0;
+    assert.equal((await book.reviewCompletion({...query, authorize: async () => ++authorizations < 4})).ok, false,
+      "Do not disclose a reply after permission changes during a policy wait.");
+    assert.equal(f.state.reads, settled.reads); assert.equal(f.state.starts, 1);
+  });
+}
+
+test("missing original completion capability does not fall back to progress, runtime or task discovery", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+  const original = await options.resolveStart(); assert.ok(original);
+  const started = await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const result = await original(...args); if (result.kind !== "accepted") return result;
+    const task = result.task;
+    return {...result, task: {requestId: task.requestId, workspaceId: task.workspaceId, read: task.read, cancel: task.cancel}};
+  }});
+  assert.ok(started.result.ok); const reads = f.state.reads;
+  assert.deepEqual(await book.reviewCompletion(taskQuery(f)), {ok: false, code: "headless.unavailable"});
+  assert.equal(f.state.reads, reads); assert.equal(f.state.starts, 1); assert.equal(f.state.cancels, 0);
+  assert.ok((await book.read(taskQuery(f))).ok, "Old progress remains available on a task without the optional method.");
+});
+
+test("completion book captures original method receiver and copies its reply before later policy waits", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+  const original = await options.resolveStart(); assert.ok(original);
+  let calls = 0, reply: any, originalOwner: any;
+  const started = await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const result = await original(...args); if (result.kind !== "accepted") return result;
+    const task = result.task;
+    const owner = {requestId: task.requestId, workspaceId: task.workspaceId, read: task.read, cancel: task.cancel,
+      async reviewCompletion(control: ApprovedLocalTrainingControl) {
+        assert.equal(this, owner); calls++; reply = await task.reviewCompletion!(control); return reply;
+      }};
+    originalOwner = owner; return {...result, task: owner};
+  }});
+  assert.ok(started.result.ok); f.state.status = "succeeded"; assert.ok((await book.read(taskQuery(f))).ok);
+  originalOwner.reviewCompletion = async () => {assert.fail("A replaced method must never run.");};
+  const reviewed = await book.reviewCompletion({...taskQuery(f), authorize: async () => {
+    if (reply?.kind === "ready") {reply.provenance.modelRecordId = "model.changed-after-return"; reply.candidate.requestedName = "PRIVATE-CHANGED";}
+    return true;
+  }});
+  assert.ok(reviewed.ok, JSON.stringify(reviewed)); assert.equal(reviewed.value.kind, "ready");
+  if (reviewed.value.kind !== "ready") throw Error("Missing completion.");
+  assert.equal(reviewed.value.provenance.modelRecordId, f.request.input.model.modelRecordId);
+  assert.equal(JSON.stringify(reviewed).includes("PRIVATE-CHANGED"), false); assert.equal(calls, 1);
+});
+
+test("completion book refuses foreign, forged or active replies without releasing the accepted task", async t => {
+  for (const variant of ["task", "workspace", "proposal", "extra", "quality", "report", "proxy", "getter"] as const) {
+    await t.test(variant, async t => {
+      const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+      const original = await options.resolveStart(); assert.ok(original); let hooks = 0;
+      const started = await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+        const result = await original(...args); if (result.kind !== "accepted") return result;
+        return {...result, task: {...result.task, async reviewCompletion(control: ApprovedLocalTrainingControl) {
+          const value: any = await result.task.reviewCompletion!(control); assert.equal(value.kind, "ready");
+          if (variant === "task") value.requestId = randomUUID();
+          if (variant === "workspace") value.workspaceId = createWorkspaceId("workspace.other");
+          if (variant === "proposal") value.provenance.proposalDigest = "sha256:" + "f".repeat(64);
+          if (variant === "extra") value.logs = ["PRIVATE"];
+          if (variant === "quality") value.verification.outputQuality = "passed";
+          if (variant === "report") value.comparison = {state: "recorded", report: {interpretation: "passed"}};
+          if (variant === "proxy") value.provenance = new Proxy(value.provenance, {getPrototypeOf() {hooks++; throw Error("PRIVATE");}});
+          if (variant === "getter") Object.defineProperty(value.candidate, "requestedName", {enumerable: true, get() {hooks++; throw Error("PRIVATE");}});
+          return value;
+        }}};
+      }});
+      assert.ok(started.result.ok); f.state.status = "succeeded"; assert.ok((await book.read(taskQuery(f))).ok);
+      const reads = f.state.reads;
+      const reviewed = await book.reviewCompletion(taskQuery(f)); assert.deepEqual(reviewed, {ok: false, code: "headless.unavailable"});
+      assert.equal(hooks, 0); assert.equal(JSON.stringify(reviewed).includes("PRIVATE"), false);
+      assert.equal(f.state.reads, reads); assert.equal(f.state.starts, 1); assert.ok((await book.read(taskQuery(f))).ok);
+    });
+  }
+});
 for (const engine of ["Core", "SQLite"] as const) {
   test(engine + ": original training book composes actual ledger and private App progress/cancellation without Save or raw data", async t => {
     const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner();

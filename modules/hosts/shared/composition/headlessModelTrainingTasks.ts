@@ -4,14 +4,18 @@ import type {StructuredDocumentStore} from "../../../adapters/persistence/shared
 import {readStructuredOwnedTrainingPlanTask, readStructuredOwnedTrainingPlanTaskByPlan,
   readStructuredOwnedTrainingPlanTaskProposalDigest, readStructuredTrainingPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
-import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask} from "../../../application/ports/model";
+import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask, ApprovedLocalTrainingCompletionReview} from "../../../application/ports/model";
 import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessTrainingTaskRequest,
-  readHeadlessTrainingTaskValue, type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue} from "../../../contracts/headless";
+  readHeadlessTrainingTaskValue, isHeadlessModelRecordId, isHeadlessModelTimestamp,
+  type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue} from "../../../contracts/headless";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {isOrganizationId} from "../../../contracts/organization";
-import {MODEL_TRAINING_STATUSES, type ModelTrainingStatus} from "../../../contracts/model";
+import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, type ModelTrainingStatus} from "../../../contracts/model";
+import {DATASET_PREPARATION_TASK_TYPES} from "../../../contracts/runtime";
+import {normalizeDatasetId, normalizeDatasetVersionId, normalizeDatasetVersionDigest} from "../../../contracts/dataset";
 import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
+import {copyHeadlessModelPlanData} from "./headlessModelDownloadReview";
 import {runPreparedHeadlessModelTraining, type RetainedHeadlessTrainingTask, type StartHeadlessModelTraining} from "./headlessModelTrainingExecution";
 
 type Run = Parameters<typeof runPreparedHeadlessModelTraining>[0];
@@ -25,6 +29,9 @@ export interface OriginalTrainingTaskQuery {
   readonly isCurrent: () => boolean;
   readonly authorize: (owner: StructuredDocumentStore, scope: HeadlessOperationScope, action: "read" | "cancel") => Promise<boolean>;
 }
+/** Internal host result only. This is not a public tool/transport response. */
+export type OriginalTrainingCompletionQueryResult = {readonly ok: true; readonly value: ApprovedLocalTrainingCompletionReview} |
+  Extract<HeadlessTrainingTaskResult, {ok: false}>;
 interface Slot {
   readonly scope: HeadlessOperationScope;
   readonly selection: Selection;
@@ -51,6 +58,57 @@ function capture<Fn extends (...args: any[]) => any>(owner: object, key: string)
     return ((...args: unknown[]) => Reflect.apply(method, owner, args)) as Fn;
   }
   throw failed();
+}
+function optionalCompletion(owner: ApprovedLocalTrainingTask): ApprovedLocalTrainingTask["reviewCompletion"] {
+  for (let at: object | null = owner, depth = 0; at && at !== Object.prototype && depth < 8; at = Object.getPrototypeOf(at), depth++) {
+    need(!types.isProxy(at));
+    if (Object.getOwnPropertyDescriptor(at, "reviewCompletion"))
+      return capture<NonNullable<ApprovedLocalTrainingTask["reviewCompletion"]>>(owner, "reviewCompletion");
+  }
+  return undefined;
+}
+function completion(raw: unknown, taskId: string, workspaceId: string, proposalDigest: string): ApprovedLocalTrainingCompletionReview {
+  const full = (value: unknown, fields: readonly string[]) => {
+    const result = record(value, fields); need(Object.keys(result).length === fields.length); return result;
+  };
+  const row = record(raw, ["kind", "requestId", "workspaceId", "provenance", "candidate", "comparison", "verification", "registration"]);
+  if (row.kind === "not-ready") {need(Object.keys(row).length === 1); return {kind: "not-ready"};}
+  need(row.kind === "ready" && Object.keys(row).length === 8 && row.requestId === taskId && row.workspaceId === workspaceId &&
+    row.registration === "requires-separate-approval");
+  const provenance = full(row.provenance, ["modelRecordId", "modelUpdatedAt", "datasetId", "versionId", "versionDigest", "recipeDigest", "proposalDigest",
+    "trainingTask", "method", "trainingInputCount", "validationInputCount", "inputBytes", "recipeBytes"]);
+  need(isHeadlessModelRecordId(provenance.modelRecordId) && isHeadlessModelTimestamp(provenance.modelUpdatedAt) &&
+    typeof provenance.datasetId === "string" && normalizeDatasetId(provenance.datasetId) === provenance.datasetId &&
+    typeof provenance.versionId === "string" && normalizeDatasetVersionId(provenance.versionId) === provenance.versionId &&
+    typeof provenance.versionDigest === "string" && normalizeDatasetVersionDigest(provenance.versionDigest) === provenance.versionDigest && provenance.proposalDigest === proposalDigest &&
+    typeof provenance.recipeDigest === "string" && /^sha256:[a-f0-9]{64}$/.test(provenance.recipeDigest) &&
+    MODEL_TRAINING_METHODS.includes(provenance.method as never) && DATASET_PREPARATION_TASK_TYPES.includes(provenance.trainingTask as never));
+  const integer = (value: unknown, minimum: number, maximum: number): value is number => Number.isSafeInteger(value) && (value as number) >= minimum && (value as number) <= maximum;
+  need(integer(provenance.trainingInputCount, 1, 16) && integer(provenance.validationInputCount, 0, 16) &&
+    provenance.trainingInputCount + provenance.validationInputCount <= 16 && integer(provenance.inputBytes, 1, 256 * 1024 ** 2) &&
+    integer(provenance.recipeBytes, 1, 512 * 1024) && provenance.inputBytes + provenance.recipeBytes <= 256 * 1024 ** 2);
+  const candidate = full(row.candidate, ["requestedName", "artifactForm", "serializationFormat", "recordedSizeBytes"]);
+  need([provenance.modelRecordId, provenance.datasetId, provenance.versionId, candidate.requestedName]
+    .every(value => typeof value === "string" && !hasKnownPassiveCredential(value)));
+  need(typeof candidate.requestedName === "string" && candidate.requestedName.length > 0 && candidate.requestedName.length <= 200 &&
+    !/[\x00-\x1f\x7f]/.test(candidate.requestedName) &&
+    [null, "adapter", "merged-model", "full-model", "checkpoint"].includes(candidate.artifactForm as never) &&
+    [null, "safetensors", "sharded-safetensors", "adapter-safetensors"].includes(candidate.serializationFormat as never) &&
+    (candidate.recordedSizeBytes === null || integer(candidate.recordedSizeBytes, 0, Number.MAX_SAFE_INTEGER)));
+  const comparison = record(row.comparison, ["state", "report"]);
+  if (comparison.state === "not-recorded") need(Object.keys(comparison).length === 1);
+  else {
+    need(comparison.state === "recorded" && Object.keys(comparison).length === 2);
+    const report = full(comparison.report, ["protocol", "maximumRows", "sampleCount", "baselineLoss", "trainedLoss", "lossDelta", "interpretation"]);
+    const loss = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+    need(report.protocol === "fixed-first-32-validation-loss-v1" && report.maximumRows === 32 && integer(report.sampleCount, 1, 32) &&
+      loss(report.baselineLoss) && loss(report.trainedLoss) && typeof report.lossDelta === "number" && Number.isFinite(report.lossDelta) &&
+      report.lossDelta === report.trainedLoss - report.baselineLoss && report.interpretation === "measurement-only");
+  }
+  const verification = full(row.verification, ["inputs", "retainedFiles", "runtimeReadiness", "hardware", "outputQuality"]);
+  need(verification.inputs === "recorded-not-rechecked" && verification.retainedFiles === "not-checked" && verification.runtimeReadiness === "not-checked" &&
+    verification.hardware === "not-recorded" && verification.outputQuality === "not-evaluated");
+  return row as unknown as ApprovedLocalTrainingCompletionReview;
 }
 function scope(raw: unknown): HeadlessOperationScope {
   const value = record(copy(raw), ["organizationId", "principalId", "workspaceId", "registeredClientId"]);
@@ -139,11 +197,13 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
           const retained = record(value, ["scope", "selection", "proposalDigest", "task"]);
           if (!isDeepStrictEqual(copy(retained.scope), slot.scope) || !isDeepStrictEqual(copy(retained.selection), slot.selection) || retained.proposalDigest !== slot.proposalDigest) return false;
           const task = retained.task as ApprovedLocalTrainingTask;
-          const identity = record(task, ["requestId", "workspaceId", "read", "cancel"]);
+          const identity = record(task, ["requestId", "workspaceId", "read", "cancel", "reviewCompletion"]);
           if (identity.requestId !== slot.expectedTaskId || identity.workspaceId !== slot.scope.workspaceId) return false;
           // Custody only; never renew the ended outward caller's admission here.
+          const reviewCompletion = optionalCompletion(task);
           slot.task = Object.freeze({requestId: task.requestId, workspaceId: task.workspaceId,
-            read: capture<ApprovedLocalTrainingTask["read"]>(task, "read"), cancel: capture<ApprovedLocalTrainingTask["cancel"]>(task, "cancel")});
+            read: capture<ApprovedLocalTrainingTask["read"]>(task, "read"), cancel: capture<ApprovedLocalTrainingTask["cancel"]>(task, "cancel"),
+            ...(reviewCompletion ? {reviewCompletion} : {})});
           return true;
         },
       });
@@ -161,7 +221,9 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
     }
   }
 
-  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult> {
+  function control(raw: OriginalTrainingTaskQuery, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
+  function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
+  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult> {
     let effectPossible = false;
     try {
       const fields = record(raw, ["documents", "hostIncarnationId", "scope", "request", "isCurrent", "authorize"]);
@@ -169,7 +231,7 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       if (!isHeadlessHostIncarnationId(host)) return forbidden;
       const parsed = readHeadlessTrainingTaskRequest(fields.request, host);
       if (!parsed.ok) return parsed;
-      if (parsed.request.input.workspaceId !== originalScope.workspaceId || parsed.request.operation !== (action === "read" ? "models.training-task" : "models.cancel-training")) return forbidden;
+      if (parsed.request.input.workspaceId !== originalScope.workspaceId || parsed.request.operation !== (action === "cancel" ? "models.cancel-training" : "models.training-task")) return forbidden;
       const documents = fields.documents as StructuredDocumentStore;
       const currentMethod = capture<OriginalTrainingTaskQuery["isCurrent"]>(raw, "isCurrent");
       const authorize = capture<OriginalTrainingTaskQuery["authorize"]>(raw, "authorize");
@@ -179,7 +241,7 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const selected = parsed.request.input.selection;
       const fence = () => need(current());
       const admit = () => transaction(async owner => {
-        if (!current() || await authorize(owner, originalScope, action) !== true || !current()) return;
+        if (!current() || await authorize(owner, originalScope, action === "cancel" ? "cancel" : "read") !== true || !current()) return;
         const partition = owner.forOrganization(originalScope.organizationId);
         const reference = selected.kind === "task" ? await readStructuredOwnedTrainingPlanTask(partition, originalScope, host, selected.taskId)
           : await readStructuredOwnedTrainingPlanTaskByPlan(partition, originalScope, host, selected.fingerprint, selected.step);
@@ -197,6 +259,14 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const same = () => current() && slots.get(originalKey) === slot && slot.task === task;
       const fresh = async () => {const value = await admit(); return !!value && same() && isDeepStrictEqual(value, admitted);};
       const caller: ApprovedLocalTrainingControl = Object.freeze({isCurrent: same, stillAllowed: fresh});
+      if (action === "review") {
+        if (!task.reviewCompletion) return unavailable; // No ordinary read or runtime fallback.
+        const owned = copyHeadlessModelPlanData(await task.reviewCompletion(caller)); // Reject proxies; own reply BEFORE policy waits.
+        if (!await fresh() || !same()) return forbidden;
+        const value = completion(owned, task.requestId, originalScope.workspaceId, admitted.proposalDigest);
+        if (!await fresh() || !same()) return forbidden;
+        return {ok: true, value};
+      }
       let result: unknown;
       if (action === "cancel") {
         if (slot.cancellationAttempted) return unconfirmed;
@@ -212,5 +282,6 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
     } catch {return effectPossible ? unconfirmed : unavailable;}
   }
   return Object.freeze({runPrepared, read: (query: OriginalTrainingTaskQuery) => control(query, "read"),
-    cancel: (query: OriginalTrainingTaskQuery) => control(query, "cancel")});
+    cancel: (query: OriginalTrainingTaskQuery) => control(query, "cancel"),
+    reviewCompletion: (query: OriginalTrainingTaskQuery) => control(query, "review")});
 }

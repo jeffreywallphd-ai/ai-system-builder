@@ -57,6 +57,14 @@ function capture<Fn extends (...args: any[]) => any>(owner: object, key: string)
   }
   throw unavailable();
 }
+function optionalCompletion(owner: ApprovedLocalTrainingTask): ApprovedLocalTrainingTask["reviewCompletion"] {
+  for (let at: object | null = owner, depth = 0; at && at !== Object.prototype && depth < 8; at = Object.getPrototypeOf(at), depth++) {
+    if (types.isProxy(at)) throw unavailable();
+    if (Object.getOwnPropertyDescriptor(at, "reviewCompletion"))
+      return capture<NonNullable<ApprovedLocalTrainingTask["reviewCompletion"]>>(owner, "reviewCompletion");
+  }
+  return undefined;
+}
 function bytes(raw: unknown, size: number, digest: string, maximum: number) {
   if (!types.isUint8Array(raw) || types.isProxy(raw) || types.isSharedArrayBuffer(arrayBuffer.call(raw)) ||
       !Number.isSafeInteger(size) || size < 1 || size > maximum || byteLength.call(raw) !== size) throw unavailable();
@@ -244,9 +252,11 @@ export async function runPreparedHeadlessModelTraining(options: {
           if (response.kind !== "accepted" || Object.keys(response).length !== 3) return unconfirmed;
           const value = record(copy(response.value), ["runId", "status"]), task = response.task as ApprovedLocalTrainingTask;
           if (value.runId !== taskId || !["queued", "running"].includes(value.status as string) ||
-              record(task, ["requestId", "workspaceId", "read", "cancel"]).requestId !== taskId || task.workspaceId !== scope.workspaceId) return unconfirmed;
+              record(task, ["requestId", "workspaceId", "read", "cancel", "reviewCompletion"]).requestId !== taskId || task.workspaceId !== scope.workspaceId) return unconfirmed;
+          const reviewCompletion = optionalCompletion(task);
           const retainedTask = Object.freeze({requestId: taskId, workspaceId: scope.workspaceId,
-            read: capture<ApprovedLocalTrainingTask["read"]>(task, "read"), cancel: capture<ApprovedLocalTrainingTask["cancel"]>(task, "cancel")});
+            read: capture<ApprovedLocalTrainingTask["read"]>(task, "read"), cancel: capture<ApprovedLocalTrainingTask["cancel"]>(task, "cancel"),
+            ...(reviewCompletion ? {reviewCompletion} : {})});
           // No await between the original ACK and capturing its private owner.
           const retained: unknown = Reflect.apply(retainTask, undefined, [Object.freeze({scope, selection, proposalDigest, task: retainedTask})]);
           if (types.isPromise(retained)) void Promise.prototype.then.call(retained, undefined, () => {});

@@ -1,5 +1,18 @@
 # Application Use Cases
 
+The original private training task has an optional `reviewCompletion` read.
+`TrainModelUseCase` returns only settled, cached pending-result history and the
+immutable approved Model, Dataset version, recipe and proposal references. It
+never calls the ordinary training reader, runtime, file, provider or registry
+paths during this review. Fresh original business and reader controls still
+apply before and after the read. A missing or unsettled result is not ready.
+Candidate format and recorded size are bounded metadata; they prove no current
+file custody or resource readiness. Optional stored comparison reports must
+match their recorded metrics and remain measurement-only. Tests use controlled
+numbers and never measure a model. Hardware remains explicitly unrecorded.
+Private output retention, separate Save and actual-host qualification remain
+required; this method enables no public tool or transport.
+
 `InspectHeadlessLocalTrainingModelUseCase` privately composes the existing exact
 persisted Model reader with configured-root training-file inspection. It captures
 the original actor/client/host/context and callback identities, rechecks current

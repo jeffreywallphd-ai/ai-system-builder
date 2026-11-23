@@ -1309,3 +1309,20 @@ Explicit resource settings require later measurement and qualification. Job
 committed-memory limits do not imply RSS, controller/host, GPU, disk or retained
 output budgets. The full native source/input/output producer remains absent,
 public Roots remain unconfigured and physical qualification remains pending.
+### Private cached training completion implementation note
+
+Within the existing original-task authority, add an optional cached completion
+read without a new public operation. The application reads only settled retained
+result metadata and its immutable approved definition. The host captures the
+original method/receiver before acceptance waits and reuses the existing exact
+accepted-task ledger and fresh read policy. Copy returned data before later
+policy waits and validate task/workspace/proposal lineage and closed fields.
+Missing capability or uncertain/malformed data has no runtime lookup fallback.
+
+The review returns historical approved input/result facts, not raw paths,
+logs, training material or recipes. Stored fixed-subset report numbers remain
+measurement-only; tests use controlled values, never model-quality scoring.
+Current file/native/resource proof, hardware history, output retention/accounting,
+Save, public codecs/Root activation and actual-host qualification remain pending.
+This implements the accepted private read boundary and chooses no new provider,
+execution actor, budget, retention/deletion policy or approval family.

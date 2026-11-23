@@ -89,7 +89,43 @@ export interface ApprovedLocalTrainingTask {
   readonly workspaceId: WorkspaceId;
   read(control: ApprovedLocalTrainingControl): Promise<ModelTrainingResult>;
   cancel(control: ApprovedLocalTrainingControl): Promise<ModelTrainingResult>;
+  /** Optional original cached read; absence grants no generic read fallback.
+   * Never starts/observes a runtime, reads files or saves a candidate. */
+  reviewCompletion?(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCompletionReview>;
 }
+/** Historical approved facts, not current file, native, resource or quality proof.
+ * Private host data only; no public transport is enabled by this shape. */
+export type ApprovedLocalTrainingCompletionReview = {readonly kind: "not-ready"} | {
+  readonly kind: "ready";
+  readonly requestId: string;
+  readonly workspaceId: WorkspaceId;
+  readonly provenance: {
+    readonly modelRecordId: string;
+    readonly modelUpdatedAt: string;
+    readonly datasetId: string;
+    readonly versionId: string;
+    readonly versionDigest: string;
+    readonly recipeDigest: string;
+    readonly proposalDigest: string;
+    readonly trainingTask: ModelTrainingRequest["trainingTask"];
+    readonly method: ModelTrainingRequest["method"];
+    readonly trainingInputCount: number;
+    readonly validationInputCount: number;
+    readonly inputBytes: number;
+    readonly recipeBytes: number;
+  };
+  readonly candidate: {readonly requestedName: string;
+    readonly artifactForm: "adapter" | "merged-model" | "full-model" | "checkpoint" | null;
+    readonly serializationFormat: "safetensors" | "sharded-safetensors" | "adapter-safetensors" | null;
+    readonly recordedSizeBytes: number | null};
+  readonly comparison: {readonly state: "not-recorded"} | {readonly state: "recorded"; readonly report: {
+    readonly protocol: "fixed-first-32-validation-loss-v1"; readonly maximumRows: 32; readonly sampleCount: number;
+    readonly baselineLoss: number; readonly trainedLoss: number; readonly lossDelta: number;
+    readonly interpretation: "measurement-only"}};
+  readonly verification: {readonly inputs: "recorded-not-rechecked"; readonly retainedFiles: "not-checked";
+    readonly runtimeReadiness: "not-checked"; readonly hardware: "not-recorded"; readonly outputQuality: "not-evaluated"};
+  readonly registration: "requires-separate-approval";
+};
 export type ApprovedLocalTrainingStart =
   {readonly kind: "accepted"; readonly value: ModelTrainingResult; readonly task: ApprovedLocalTrainingTask} |
   {readonly kind: "unavailable" | "unconfirmed"};

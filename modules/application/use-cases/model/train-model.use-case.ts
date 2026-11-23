@@ -19,7 +19,7 @@ import { isWorkspaceId } from "../../../contracts/workspace";
 import type { GeneratedModelStoragePort, ModelPublisherPort, ModelRegistryPort } from "../../ports/model";
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl,
   ApprovedLocalTrainingDefinition, ApprovedLocalTrainingSession, ApprovedLocalTrainingStart,
-  ApprovedLocalTrainingTask, ApprovedLocalTrainingBytes} from "../../ports/model";
+  ApprovedLocalTrainingTask, ApprovedLocalTrainingBytes, ApprovedLocalTrainingCompletionReview} from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../../ports/storage";
 import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
@@ -563,6 +563,8 @@ export class TrainModelUseCase {
       try {await this.dependencies.taskPowerLifecycle.startTask(id, TaskType.MODEL_TRAINING);} catch {}
       const task: ApprovedLocalTrainingTask = Object.freeze({requestId: id, workspaceId: definition.workspaceId,
         read: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, () => this.readTrainingInWorkspace(id, definition.workspaceId)),
+        reviewCompletion: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action,
+          async () => this.reviewPrivateTrainingCompletion(owner)),
         cancel: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, async () => {
           if (!owner.settled) {
             const raw = copyPrivateTrainingData(await owner.session!.cancel()), cancel = privateRecord(raw, ["requestId", "cancelled", "status", "message"]);
@@ -584,7 +586,7 @@ export class TrainModelUseCase {
     if (!owner.session || await owner.session.settle() !== true) throw privateUnavailable();
     owner.settled = true;
   }
-  private async usePrivateTraining(owner: PrivateTrainingOwner, raw: ApprovedLocalTrainingControl, action: () => Promise<ModelTrainingResult>): Promise<ModelTrainingResult> {
+  private async usePrivateTraining<T>(owner: PrivateTrainingOwner, raw: ApprovedLocalTrainingControl, action: () => Promise<T>): Promise<T> {
     const control = capturePrivateControl(raw), current = () => this.privateTrainingOwners.get(owner.definition.requestId) === owner && owner.phase === "accepted" && owner.control.isCurrent() && control.isCurrent();
     const allowed = async () => {try {
       if (!current() || await control.stillAllowed() !== true || !current()) return false;
@@ -594,6 +596,45 @@ export class TrainModelUseCase {
     owner.actions++;
     try {const result = await action(); if (!await allowed() || !current()) throw privateUnavailable(); return copyPrivateTrainingData(result);}
     finally {owner.actions--;}
+  }
+
+  /** Cache and original definition only. In particular, do not call readOwned:
+   * that path may still settle a runtime or reconcile temporary files. */
+  private reviewPrivateTrainingCompletion(owner: PrivateTrainingOwner): ApprovedLocalTrainingCompletionReview {
+    const definition = owner.definition, pending = this.pendingResultsByRequestId.get(definition.requestId);
+    if (!owner.settled || !pending || pending.status !== "succeeded" || !pending.generatedModelCandidate) return {kind: "not-ready"};
+    if (pending.runId !== definition.requestId || typeof definition.request.baseModel.modelRecordId !== "string") throw privateUnavailable();
+    const source = pending.generatedModelCandidate;
+    const artifactForm = source.artifactForm ?? null, serializationFormat = source.serializationFormat ?? null, recordedSizeBytes = source.sizeBytes ?? null;
+    if ((artifactForm !== null && !["adapter", "merged-model", "full-model", "checkpoint"].includes(artifactForm)) ||
+        (serializationFormat !== null && !["safetensors", "sharded-safetensors", "adapter-safetensors"].includes(serializationFormat)) ||
+        (recordedSizeBytes !== null && (!Number.isSafeInteger(recordedSizeBytes) || recordedSizeBytes < 0))) throw privateUnavailable();
+    let comparison: Extract<ApprovedLocalTrainingCompletionReview, {kind: "ready"}>["comparison"] = {state: "not-recorded"};
+    const rawReport = source.metadata?.validationComparison;
+    if (rawReport !== undefined) {
+      const report = privateRecord(copyPrivateTrainingData(rawReport), ["protocol", "maximumRows", "sampleCount", "baselineLoss", "trainedLoss", "lossDelta", "interpretation"]);
+      const loss = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+      const {baselineLoss, trainedLoss, sampleCount, lossDelta} = report;
+      if (Object.keys(report).length !== 7 || report.protocol !== "fixed-first-32-validation-loss-v1" || report.maximumRows !== 32 ||
+          report.interpretation !== "measurement-only" || !loss(baselineLoss) || !loss(trainedLoss) ||
+          typeof sampleCount !== "number" || !Number.isSafeInteger(sampleCount) || sampleCount < 1 || sampleCount > 32 ||
+          typeof lossDelta !== "number" || !Number.isFinite(lossDelta) || lossDelta !== trainedLoss - baselineLoss ||
+          pending.metrics?.baseline_validation_loss !== baselineLoss || pending.metrics?.trained_validation_loss !== trainedLoss ||
+          pending.metrics?.validation_sample_count !== sampleCount || pending.metrics?.validation_loss_delta !== lossDelta) throw privateUnavailable();
+      comparison = {state: "recorded", report: {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32,
+        sampleCount, baselineLoss, trainedLoss, lossDelta, interpretation: "measurement-only"}};
+    }
+    return {kind: "ready", requestId: definition.requestId, workspaceId: definition.workspaceId,
+      provenance: {modelRecordId: definition.request.baseModel.modelRecordId, modelUpdatedAt: definition.modelUpdatedAt,
+        datasetId: definition.dataset.datasetId, versionId: definition.dataset.versionId, versionDigest: definition.dataset.versionDigest,
+        recipeDigest: definition.dataset.recipeDigest, proposalDigest: definition.proposalDigest, trainingTask: definition.request.trainingTask,
+        method: definition.request.method, trainingInputCount: definition.inputs.filter(row => row.role === "train").length,
+        validationInputCount: definition.inputs.filter(row => row.role === "validation").length,
+        inputBytes: definition.inputs.reduce((sum, row) => sum + row.sizeBytes, 0), recipeBytes: definition.recipeSizeBytes},
+      candidate: {requestedName: definition.request.output.outputModelName, artifactForm,
+        serializationFormat: serializationFormat as "safetensors" | "sharded-safetensors" | "adapter-safetensors" | null, recordedSizeBytes},
+      comparison, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked", runtimeReadiness: "not-checked",
+        hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"};
   }
 
   private async executeOwned(request: ModelTrainingRequest, lease?: OwnedTaskLease): Promise<ModelTrainingResult> {

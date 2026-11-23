@@ -2544,3 +2544,28 @@ closure requires settled original reads and actual zero-construction evidence.
 Worker/Job quiescence, finished readers and acknowledged handles precede actual
 retirement. Component tests are inert; measured limits, file/output custody, full
 producer, public activation and physical host qualification remain pending.
+### Cached original training completion history
+
+The original private application task exposes an optional `reviewCompletion`
+capability. It reads only an already-settled pending-result cache and its captured
+approved definition. It must not invoke the ordinary result reader, runtime,
+filesystem, Model/Dataset discovery, provider or registry during this read.
+Starting approval can end while accepted history remains readable under fresh
+original business and caller policy. A terminal status alone is not settlement.
+
+The existing host bridge/book captures this method before ledger acceptance and
+reuses exact accepted task/proposal/client/host/workspace lineage. Missing
+capability has no fallback. Copy its passive reply before policy awaits, reject
+active objects without running their hooks, validate the closed private DTO and
+recheck original authority before disclosure. Keep progress and Stop contracts
+unchanged; the internal selection does not add a public operation or codec.
+
+Return bounded historical Model/Dataset/recipe/proposal references, task/method,
+input counts/bytes and candidate format/recorded size. Never return paths, logs,
+raw candidate metadata, recipes or training content. Optional fixed-subset loss
+reports must match their stored metrics, remain measurement-only and never
+constitute a quality pass. Controlled fixtures test report handling without
+running a model. Mark hardware as unrecorded and current file/resource/readiness
+checks as unchecked. Complete native production, retained output/accounting,
+separately approved Save, public integration and actual-host qualification remain
+separate obligations. Cached metadata grants none of those authorities.

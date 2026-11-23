@@ -142,6 +142,113 @@ test("actual approved training producer matches the shared Python sealing fixtur
   assert.deepEqual(actual, expected);
 });
 
+test("original completion review uses only settled cached history and approved provenance", async t => {
+  const f = await fixture(t), accepted = await f.accepted();
+  assert.equal(typeof accepted.task.reviewCompletion, "function");
+  const before = {...f.state};
+  assert.deepEqual(await accepted.task.reviewCompletion!(f.readControl), {kind: "not-ready"});
+  assert.equal(f.state.reads, before.reads); assert.equal(f.state.settles, before.settles);
+  f.state.status = "succeeded";
+  assert.deepEqual(await accepted.task.reviewCompletion!(f.readControl), {kind: "not-ready"}, "Terminal metadata alone is insufficient.");
+  await f.read();
+  const settled = {...f.state}, review = await accepted.task.reviewCompletion!(f.readControl);
+  assert.equal(review.kind, "ready"); if (review.kind !== "ready") throw Error("Missing completion history.");
+  assert.equal(review.requestId, f.requestId); assert.equal(review.workspaceId, f.workspaceId);
+  assert.deepEqual(review.provenance, {modelRecordId: f.request.baseModel.modelRecordId, modelUpdatedAt: f.admission.modelUpdatedAt,
+    datasetId: f.admission.datasetId, versionId: f.admission.versionId, versionDigest: f.admission.versionDigest,
+    recipeDigest: f.admission.recipe.digest, proposalDigest: f.admission.proposalDigest, trainingTask: f.request.trainingTask,
+    method: f.request.method, trainingInputCount: 1, validationInputCount: 0, inputBytes: f.input.byteLength, recipeBytes: f.recipe.byteLength});
+  assert.deepEqual(review.candidate, {requestedName: f.request.output.outputModelName, artifactForm: "adapter", serializationFormat: null, recordedSizeBytes: null});
+  assert.deepEqual(review.comparison, {state: "not-recorded"});
+  assert.deepEqual(review.verification, {inputs: "recorded-not-rechecked", retainedFiles: "not-checked", runtimeReadiness: "not-checked",
+    hardware: "not-recorded", outputQuality: "not-evaluated"});
+  assert.equal(review.registration, "requires-separate-approval");
+  assert.equal(f.state.reads, settled.reads); assert.equal(f.state.settles, settled.settles);
+  assert.equal(f.state.starts, settled.starts); assert.equal(f.state.cancels, settled.cancels);
+  assert.equal(JSON.stringify(review).includes(f.root), false); assert.doesNotMatch(JSON.stringify(review), /Synthetic answer|localPath|outputDirectory|logs/);
+  (review.provenance as {modelRecordId: string}).modelRecordId = "edited";
+  const again = await accepted.task.reviewCompletion!(f.readControl); assert.equal(again.kind, "ready");
+  if (again.kind === "ready") assert.equal(again.provenance.modelRecordId, f.request.baseModel.modelRecordId);
+  assert.ok(await exists(f.staged!.outputDirectory), "Review never saves, removes or reacquires the candidate.");
+});
+
+test("cached completion review keeps reader and original business controls fresh without runtime IO", async t => {
+  const f = await fixture(t), accepted = await f.accepted(); f.state.status = "succeeded"; await f.read();
+  assert.equal(typeof accepted.task.reviewCompletion, "function"); const before = {...f.state};
+  for (const flag of ["host", "allowed", "reader", "readAllowed"] as const) {
+    f.state[flag] = false; await assert.rejects(accepted.task.reviewCompletion!(f.readControl), /private training/); f.state[flag] = true;
+  }
+  await assert.rejects(accepted.task.reviewCompletion!({isCurrent: () => f.state.reader, stillAllowed: async () => {
+    f.state.reader = false; return true;
+  }}), /private training/); f.state.reader = true;
+  let calls = 0;
+  await assert.rejects(accepted.task.reviewCompletion!({isCurrent: () => true, stillAllowed: async () => ++calls === 1}), /private training/);
+  assert.equal(f.state.reads, before.reads); assert.equal(f.state.settles, before.settles);
+  assert.equal(f.state.starts, before.starts); assert.equal(f.state.cancels, before.cancels);
+});
+
+test("completion history remains bound to the approved inputs after caller edits or ended start admission", async t => {
+  const f = await fixture(t), accepted = await f.accepted(); f.state.status = "succeeded"; await f.read();
+  const original = clone(f.definition!);
+  f.request.baseModel.modelRecordId = "model.edited"; f.request.output.outputModelName = "Edited name";
+  Object.assign(f.admission, {datasetId: "dataset.edited", modelUpdatedAt: "2030-01-01T00:00:00.000Z"});
+  f.state.admission = false;
+  const reviewed = await accepted.task.reviewCompletion!(f.readControl); assert.equal(reviewed.kind, "ready");
+  if (reviewed.kind !== "ready") throw Error("Missing historical review.");
+  assert.equal(reviewed.provenance.modelRecordId, original.request.baseModel.modelRecordId);
+  assert.equal(reviewed.provenance.datasetId, original.dataset.datasetId);
+  assert.equal(reviewed.provenance.modelUpdatedAt, original.modelUpdatedAt);
+  assert.equal(reviewed.candidate.requestedName, original.request.output.outputModelName);
+  assert.equal(f.state.starts, 1);
+});
+
+test("cached completion projects controlled stored loss reports without measuring or passing model quality", async t => {
+  for (const trainedLoss of [0.75, 1.5]) {
+    await t.test("stored value " + trainedLoss, async t => {
+    const f = await fixture(t), accepted = await f.accepted();
+    const report = {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32, sampleCount: 2,
+      baselineLoss: 1.25, trainedLoss, lossDelta: trainedLoss - 1.25, interpretation: "measurement-only"};
+    f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING, status: "succeeded", concurrencyClass: "unknown",
+      data: {runId: f.requestId, status: "succeeded", outputDirectory: f.staged!.outputDirectory,
+        metrics: {baseline_validation_loss: report.baselineLoss, trained_validation_loss: trainedLoss,
+          validation_sample_count: 2, validation_loss_delta: report.lossDelta},
+        generatedModelCandidate: {displayName: "Synthetic candidate", artifactForm: "full-model", serializationFormat: "safetensors",
+          sizeBytes: 128, localPath: f.staged!.outputDirectory, metadata: {validationComparison: report, privateText: "PRIVATE TRAINING DATA"}}}});
+    await f.read(); const reads = f.state.reads;
+    const reviewed = await accepted.task.reviewCompletion!(f.readControl); assert.equal(reviewed.kind, "ready");
+    if (reviewed.kind !== "ready") throw Error("Missing stored report.");
+    assert.deepEqual(reviewed.comparison, {state: "recorded", report});
+    assert.equal(reviewed.verification.outputQuality, "not-evaluated", "Neither lower nor higher stored loss is a quality pass.");
+    assert.equal(reviewed.candidate.recordedSizeBytes, 128); assert.equal(f.state.reads, reads);
+    assert.equal(JSON.stringify(reviewed).includes("PRIVATE"), false);
+    });
+  }
+});
+
+test("completion review refuses malformed stored reports and unsupported formats while retaining output", async t => {
+  for (const variant of ["extra", "missing", "rows", "delta", "metrics", "format"] as const) {
+    await t.test(variant, async t => {
+    const f = await fixture(t), accepted = await f.accepted();
+    const report: Record<string, unknown> = {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32, sampleCount: 2,
+      baselineLoss: 1.25, trainedLoss: 0.75, lossDelta: -0.5, interpretation: "measurement-only"};
+    if (variant === "extra") report.privatePath = f.staged!.outputDirectory;
+    if (variant === "missing") delete report.interpretation;
+    if (variant === "rows") report.sampleCount = 33;
+    if (variant === "delta") report.lossDelta = 0;
+    f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING, status: "succeeded", concurrencyClass: "unknown",
+      data: {runId: f.requestId, status: "succeeded", outputDirectory: f.staged!.outputDirectory,
+        metrics: {baseline_validation_loss: 1.25, trained_validation_loss: variant === "metrics" ? 2 : 0.75,
+          validation_sample_count: 2, validation_loss_delta: -0.5},
+        generatedModelCandidate: {displayName: "Synthetic candidate", artifactForm: "full-model", localPath: f.staged!.outputDirectory,
+          serializationFormat: variant === "format" ? "pickle" : "safetensors", metadata: {validationComparison: report}}}});
+    await f.read(); const reads = f.state.reads;
+    await assert.rejects(accepted.task.reviewCompletion!(f.readControl));
+    assert.equal(f.state.reads, reads); assert.equal(f.state.starts, 1);
+    assert.ok(await exists(f.staged!.outputDirectory), "An invalid summary does not grant removal or a replacement run.");
+    });
+  }
+});
+
 for (const missing of ["port", "reconciler"] as const) test(`Approved local training owner refuses missing ${missing} before preparation`, async t => {
   const f = await fixture(t, {[missing]: false}); assert.deepEqual(await f.start(), {kind: "unavailable"});
   assert.equal(f.state.creates, 0); assert.equal(f.state.starts, 0); assert.equal(f.state.issues, 0);

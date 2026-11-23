@@ -1,3 +1,16 @@
+Private `reviewCompletion` reuses the original accepted training task book and
+its existing selection and current read policy. The bridge and book capture the
+optional original method and receiver before acceptance waits. An absent method
+returns unavailable without a progress/runtime lookup. Replies are copied with
+the existing proxy-safe Model data helper before policy waits, checked against
+the original task/workspace/proposal, and validated as closed historical facts.
+Permission or lineage loss prevents disclosure. No path, log or raw training
+material is returned. Stored report numbers are measurement-only, with quality,
+current file/resource checks and hardware qualification still unclaimed.
+This is an internal host read, not a new public selector or response codec.
+Public transport integration, protected output retention, Save and actual-host
+qualification remain pending. Existing progress and Stop responses are unchanged.
+
 The private `createOriginalHeadlessTrainingTaskOwner` wraps the existing training
 bridge. It reserves a bounded slot before awaiting the original start resolver
 and captures the returned private task before ledger acceptance. A caller timeout

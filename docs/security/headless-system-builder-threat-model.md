@@ -2301,3 +2301,28 @@ A shared synthetic path-slot fixture binds the actual application producer and
 Python consumer without adding an ML runtime to standard Node tests. Explicit
 fixed-loader stubs protect positive fixtures independently of invalid input.
 Controlled semantic tests grant no Native/model/quality/public/parent authority.
+### Private cached training completion review
+
+- **Assets and boundary:** approved training provenance and private candidate
+  history cross the original application-task to trusted host-book read boundary.
+  No public transport, runtime, file, provider or registry operation is added.
+- **Authority:** exact original accepted task/workspace/proposal and original
+  actor/client/host lineage, with fresh read and business checks before/after
+  disclosure. Ending start approval does not grant adoption or erase custody.
+- **Abuse cases:** foreign task/proposal replies; absent original capability;
+  changed callback/receiver or permission; mutable replies during policy waits;
+  getters/proxies; leaked paths/raw metadata; forged quality/readiness claims;
+  malformed stored comparison reports; ordinary runtime/Save fallback.
+- **Controls:** original optional method captured before acceptance waits; only
+  already-settled private cache/definition read; existing proxy-safe passive-copy
+  helper before policy waits; exact closed shape and lineage validation; fresh
+  policy before publication; finite format/count/size/report fields. A missing
+  method, malformed reply or incomplete history grants no fallback or release.
+- **Evidence:** actual application and Core/SQLite host fixtures check cached
+  history, receivers, copied replies, missing capabilities, policy/lineage loss,
+  active/foreign data denial and compatibility with progress/Stop. Controlled
+  stored numbers test report handling without model/loss/accuracy measurements.
+- **Residual limits:** metadata is historical, not current byte/native/resource
+  proof or a quality pass. Hardware is explicitly unrecorded. Complete producer,
+  protected output/accounting, separate Save, public integration, real hosts and
+  parent qualification remain pending. Earlier failed evidence stays preserved.
