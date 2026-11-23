@@ -159,6 +159,16 @@ including earlier ordinary steps in a training-containing plan. A stored approva
 is no task, input-byte, runtime, resource, license or model-quality proof. Unsupported
 version-4 records remain unavailable on rollback; never downgrade or rewrite them.
 
+The separate private pending-training reader returns bindings only to the current
+exact-owner metadata caller. Its permission projection is distinct from the older
+Model permission reader, which still refuses training. The optional training binder
+receives the actual unscoped transaction owner as its fourth argument; existing
+three-argument binders remain compatible. Hosts use that owner to recompile current
+recorded metadata, without another transaction or an outer factory. Positive approval
+requires current complete facts and preserves the recognized original digest.
+Negative decisions still require current policy, but do not require stale inputs
+to become current. These metadata checks authorize no execution or result Save.
+
 ## Private training task records
 
 The training-plan task store uses dedicated namespaces and the existing owned

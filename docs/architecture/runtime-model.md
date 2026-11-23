@@ -2459,3 +2459,20 @@ issued-only history cannot discover or adopt a task. Status, finite progress and
 pending-review availability carry no paths, raw data, logs or quality scores.
 Native protection/accounting, actual host composition, result Save and physical
 qualification remain separate; controlled fixtures do not supply those passes.
+
+Private training-review host components prepare recorded-only Model and authorized
+Dataset metadata outside proposal transactions. The binder receives the actual
+unscoped transaction owner and rebuilds those readers within that owner. Complete
+current facts must equal the prepared binding; recognized legacy representations
+retain their original digest. No outer factory, nested transaction, model/provider
+runtime or input-byte IO is used in that metadata transaction.
+
+Default-off Desktop and Managed approval components reuse both existing channels
+and modes. Capture original context/method receivers before waits; check original
+actor/client/workspace/host, document/response lifetime and current workspace/asset
+plan scopes plus ArtifactRead and ModelRead/Write. Pure training has no ArtifactWrite
+or provider-key requirement; mixed plans preserve those requirements where used.
+Unknown private reads deny, positive decisions/publication recheck saved facts and
+authorized negative decisions remain available after drift. Root/transport training
+activation, native resources, actual execution, result Save and host qualification
+remain pending. No real model-quality evaluation is part of these component tests.

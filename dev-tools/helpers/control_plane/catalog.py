@@ -185,7 +185,47 @@ TRAINING_LOCAL_MODEL_CODE = (
     "modules/adapters/model/local/index.ts",
 )
 
+TRAINING_HOST_REVIEW_TEST = "modules/hosts/shared/composition/tests/headless-model-training-host-review.unit.test.ts"
+TRAINING_HOST_REVIEW_CODE = (
+    "modules/hosts/shared/composition/headlessTrainingPlanInputs.ts",
+    "modules/hosts/shared/composition/headlessPlanReview.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals.ts",
+    "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+    "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
+    "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository.ts",
+)
+TRAINING_HOST_REVIEW_TESTS = (
+    TRAINING_HOST_REVIEW_TEST,
+    "modules/hosts/shared/composition/tests/headless-model-download-host-review.unit.test.ts",
+    "modules/hosts/shared/composition/tests/headless-model-training-review.unit.test.ts",
+    "modules/adapters/persistence/system-builder/tests/structured-headless-model-training-review.unit.test.ts",
+)
+TRAINING_HOST_REVIEW_SOURCES = TRAINING_HOST_REVIEW_CODE + TRAINING_HOST_REVIEW_TESTS + (
+    "modules/hosts/desktop/composition/README.md",
+    "modules/hosts/server/composition/README.md",
+    "modules/adapters/persistence/system-builder/README.md",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-host-review-unit": {
+        "automatic_sources": (TRAINING_HOST_REVIEW_TEST,),
+        "automatic_required_files": TRAINING_HOST_REVIEW_CODE + TRAINING_HOST_REVIEW_TESTS,
+        "sources": TRAINING_HOST_REVIEW_SOURCES,
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--") + TRAINING_HOST_REVIEW_TESTS,
+    },
+    "headless-training-host-review-types": {
+        "companion_to": "headless-training-host-review-unit",
+        "sources": TRAINING_HOST_REVIEW_SOURCES,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") +
+            TRAINING_HOST_REVIEW_CODE + TRAINING_HOST_REVIEW_TESTS,
+    },
+    "headless-training-host-review-server-build": {
+        "companion_to": "headless-training-host-review-unit",
+        "sources": TRAINING_HOST_REVIEW_SOURCES,
+        "command": ("node_modules/typescript/bin/tsc", "-p", "apps/server/tsconfig.json"),
+    },
     "headless-training-task-controls-unit": {
         "automatic_sources": (
             "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",

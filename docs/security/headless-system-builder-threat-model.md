@@ -2143,3 +2143,28 @@ Controlled Core/SQLite and application denial/race fixtures cover these controls
 Public root activation, native production/protection/accounting, measured limits,
 result Save and actual host/parent qualification remain pending. No model-quality
 evaluation or new physical test allowance follows from these software checks.
+
+### Saved training metadata through existing host approvals
+
+Protect original actor/client/workspace/host authority, private saved metadata and
+approval revisions. Threats include stale recipes/model facts between preview and
+commit, callback/context replacement, foreign scope, unknown private reads becoming
+ordinary approvals, inherited excessive write/key permissions and leaked paths.
+
+Use explicit default-off components. Capture passive requests, target/context and
+original method receivers before waits. Prepare outside transactions, then recompile
+complete facts through the actual proposal transaction owner with recorded-only
+Model and authorized Dataset readers. No outer factory, nested transaction, runtime,
+provider or byte IO runs there. Preserve recognized original binding hashes; reject
+semantic/array changes and unknown encodings. A separate private pending reader
+requires current exact-owner authorization; the older Model reader refuses training.
+
+Both approval channels/modes require current workspace/asset plan scopes plus
+ArtifactRead and ModelRead/Write. Pure local training gains neither ArtifactWrite
+nor provider-key use. Mixed plans retain their original requirements. Metadata
+checks fence open, positive decisions and publication; failed private lookups deny.
+Current authorized deny/cancel/revoke survives metadata drift without revision
+repair. Controlled Core/SQLite and ordinary-download compatibility tests are local
+software evidence only. Public activation, native production/resources/retirement,
+actual execution, result Save and real hosts remain pending; model accuracy is not
+tested or requalified by this work.

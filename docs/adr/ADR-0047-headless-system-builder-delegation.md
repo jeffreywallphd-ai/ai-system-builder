@@ -1204,3 +1204,23 @@ acquire this capability. Closed private training codecs expose finite workflow
 facts and review availability, with no private inputs, paths, logs or model scores.
 Result Save remains separately approved. These components do not activate public
 roots or qualify native execution, measured limits, physical retirement or hosts.
+
+### Private saved-training review in existing host owners
+
+Desktop and Managed proposal/status and interactive approval components can opt
+into existing version-4 training metadata. Product Roots and public transports stay
+unconfigured. Prepare metadata outside proposal transactions. Pass the actual
+unscoped transaction owner to the trusted binder, then recompile recorded-only
+Model and authorized Dataset facts within that same transaction. Compare complete
+canonical facts and preserve the original recognized digest/representation.
+
+Both existing channels and modes require current original actor/client/workspace/
+host authority. Pure training requires the existing workspace/asset plan scopes,
+ArtifactRead and ModelRead/Write; it does not inherit RAG ArtifactWrite or provider
+key-use permission. Mixed plans retain their own source consent and permissions.
+Capture original methods, receivers and request/context facts before awaits.
+Unknown private reads deny; the old nontraining permission reader remains closed
+to training. Recheck metadata for open/positive decisions and reply publication.
+Authorized negative decisions do not depend on stale metadata becoming current.
+Core/SQLite fixtures establish software behavior, not native, Root, PostgreSQL,
+model-quality, result Save or actual-host/parent qualification.

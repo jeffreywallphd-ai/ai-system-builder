@@ -1,5 +1,18 @@
 # Server host composition
 
+Private saved-training proposal and browser-approval components require explicit
+default-off configuration and stable owned reads. Capture the original context,
+actor, request and callback receivers before waits. Prepare recorded Model and
+authorized Dataset metadata outside the transaction, then recompile complete facts
+through the actual transaction owner without resolving the outer factory or doing
+runtime/provider/input-byte IO. Preserve the original recognized binding digest.
+Both channels/modes recheck the exact client, document and response lifetime plus
+workspace/asset read-write, ArtifactRead and ModelRead/Write. Pure local training
+does not acquire ArtifactWrite or provider-key use. Mixed plans keep their existing
+requirements. Unknown private lookups cannot borrow ordinary approval. Authorized
+negative decisions still work after metadata changes. Public Root/transport, actual
+training, result Save and real Managed/PostgreSQL qualification remain pending.
+
 Managed Model downloads compose the same internal approved-source application
 owner, original result handle and installed-only runtime/storage configuration
 as Desktop. The foundation captures the cache root once; the host passes it to

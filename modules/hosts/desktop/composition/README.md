@@ -1,5 +1,18 @@
 # Desktop host composition
 
+Private saved-training proposal and approval components have explicit, default-off
+configuration. They prepare recorded Model and authorized Dataset metadata outside
+the proposal transaction, then rebuild the same metadata from its actual owning
+transaction. No outer factory, runtime, provider or input-byte reader runs there.
+Current complete facts must match the original binding; recognized legacy digests
+are preserved. Open, positive decisions and response checks require the original
+actor/client/workspace/host plus workspace/asset read-write, ArtifactRead and
+ModelRead/Write. Pure local training needs no ArtifactWrite or provider-key use;
+mixed transfer/Context plans retain their separate permissions and source consent.
+Both existing approval channels and modes use the same record. Current authorized
+deny/cancel/revoke remains possible after metadata changes. Root/transport training
+activation, native execution, result Save and real-host qualification remain pending.
+
 The existing Model download application owner has an internal approved-source
 entry. It retains original organization/principal, exact source, issuance ACK
 and a bounded reconciler lease before dispatch. Lazy runtime composition uses

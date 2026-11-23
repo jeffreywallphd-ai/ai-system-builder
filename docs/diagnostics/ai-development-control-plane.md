@@ -3177,3 +3177,16 @@ Shared barrels and README files borrow this scoped coverage only with an exact
 selected fixture. These are software checks with inert runtime responses. They
 start no model, native producer or application, evaluate no model accuracy/loss,
 and supply no public activation, Save, physical, host or parent pass.
+
+The exact saved-training host-review fixture selects
+`headless-training-host-review-unit`, its strict
+`headless-training-host-review-types` companion and the existing server TypeScript
+build through `headless-training-host-review-server-build`. The unit command runs
+actual Core/SQLite Desktop/Managed proposal/approval cases plus existing Model
+download host and training preparation/storage compatibility. Both channels/modes,
+partial revisions, current permissions, saved-fact drift and recognized legacy
+digests are checked without a runtime. Routing tests execute the fixed commands
+and require nonzero passing assertions with no failure, skip, cancellation or todo.
+Every declared source/fixture must be regular; missing/unknown/shared-only impact
+and explicit generic requests retain conservative selection. No model/native/app
+is started, no quality test is run and no Root, Save or parent pass is granted.

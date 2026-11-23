@@ -2,7 +2,11 @@ import {
   createStructuredHeadlessStoredPlanReviewRepository,
   listStructuredHeadlessPlanReviews,
   readStructuredHeadlessPlanModelPermission,
+  readStructuredHeadlessTrainingPlanPermission,
 } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import {captureHeadlessTrainingMethod, copyHeadlessTrainingPlanInput, composeOwnedHeadlessTrainingMetadata,
+  verifyStoredHeadlessTrainingReviewInputs, HEADLESS_TRAINING_REVIEW_SCOPES, trainingReviewNeedsFreshMetadata} from "../../shared/composition/headlessTrainingPlanInputs";
+import {createTenantPlacementConfig} from "../../../contracts/config";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { createDesktopHeadlessClientAuthority } from "../../../adapters/security/headless/createDesktopHeadlessClientAuthority";
@@ -45,15 +49,22 @@ export function composeDesktopHeadlessPlanApprovals(options: {
   /** Private opt-in; actual roots stay disabled until the complete workflow qualifies. */
   readonly allowModelDownloadReview?: boolean;
   readonly allowModelReferenceSaveReview?: boolean;
+  readonly allowModelTrainingReview?: boolean;
 }) {
-  const { hostIncarnationId, identity, platform, rootDirectory, isOpen, capturePlanReviewClients, now = Date.now } = options;
+  const { hostIncarnationId, identity: configuredIdentity, platform, rootDirectory, isOpen: configuredIsOpen,
+    capturePlanReviewClients: configuredCaptureClients, now = Date.now } = options;
+  const allowModelTraining = options.allowModelTrainingReview === true;
+  const identity = allowModelTraining ? Object.freeze(copyHeadlessTrainingPlanInput(configuredIdentity)) : configuredIdentity;
+  const isOpen = allowModelTraining ? captureHeadlessTrainingMethod<() => boolean>(options, "isOpen") ?? (() => false) : configuredIsOpen;
+  const capturePlanReviewClients = allowModelTraining
+    ? captureHeadlessTrainingMethod<CapturePlanReviewClients>(options, "capturePlanReviewClients") ?? (async () => []) : configuredCaptureClients;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan approvals require the platform transaction owner.");
   const ownedTransaction = platform.runInOwnedTransaction.bind(platform);
   const { organizationId, principalId } = identity;
 
   async function authorize(owner: StructuredDocumentStore, workspaceId: WorkspaceId, operation: "list" | "read" | "decide",
-    current: () => boolean, usesModel = false, savesContext = false, writesModel = false) {
+    current: () => boolean, usesModel = false, savesContext = false, writesModel = false, training = false) {
     try {
       if (!current() || !isWorkspaceId(workspaceId)) return false;
       const documents = owner.forOrganization(organizationId);
@@ -64,38 +75,55 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       await composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }).authorizeWorkspaceOperation({
         workspace, operation: `headless.plan-approval.${operation}`, requiredScopes: [
           ...(usesModel ? ragScopes : savesContext ? contextSaveScopes : requiredScopes),
-          ...(writesModel ? ["model:read", "model:write"] as const : [])],
+          ...(writesModel ? ["model:read", "model:write"] as const : []),
+          ...(training ? HEADLESS_TRAINING_REVIEW_SCOPES : [])],
       });
       return current();
     } catch { return false; }
   }
 
-  function reviewSelection(selection: DesktopPlanReviewSelection, caller: DesktopPlanReviewCaller, kind: "read" | "decide") {
+  function reviewSelection(incoming: DesktopPlanReviewSelection, caller: DesktopPlanReviewCaller, kind: "read" | "decide", freshMetadata = true) {
+    let selection = incoming;
+    if (allowModelTraining) {try {selection = copyHeadlessTrainingPlanInput(incoming);} catch {return;}}
     const { workspaceId, registeredClientId, fingerprint } = selection;
     if (!isWorkspaceId(workspaceId) || !isDesktopHeadlessClientId(registeredClientId) ||
         typeof fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(fingerprint)) return;
     let requesterCurrent: (() => boolean) | undefined;
-    const current = () => isOpen() && caller.isCurrent() && (requesterCurrent?.() ?? true);
+    const originalCaller = allowModelTraining ? captureHeadlessTrainingMethod<() => boolean>(caller, "isCurrent") : undefined;
+    const current = () => isOpen() && (allowModelTraining ? originalCaller?.() === true : caller.isCurrent()) && (requesterCurrent?.() ?? true);
     const target: HeadlessPlanReviewTarget = {
       hostIncarnationId, fingerprint, scope: { organizationId, principalId, workspaceId, registeredClientId },
     };
     async function canAccess(owner: StructuredDocumentStore) {
       if (!await authorize(owner, workspaceId, kind, current)) return false;
-      const permissions = await readStructuredHeadlessPlanModelPermission(owner.forOrganization(organizationId), target);
+      const partition = owner.forOrganization(organizationId);
+      const modelPermissions = await readStructuredHeadlessPlanModelPermission(partition, target);
+      const trainingPermissions = !modelPermissions && allowModelTraining
+        ? await readStructuredHeadlessTrainingPlanPermission(partition, target, async () => current()) : undefined;
+      const permissions = modelPermissions ?? trainingPermissions;
       if (!permissions || !current() || (permissions.requiresModelRead && !await authorize(owner, workspaceId, kind, current, true))) return false;
       if (permissions.requiresModelWrite && !await authorize(owner, workspaceId, kind, current, false, false, true)) return false;
       if (permissions.requiresArtifactWrite && !await authorize(owner, workspaceId, kind, current, permissions.requiresModelRead, true)) return false;
+      if (trainingPermissions) {
+        if (!await authorize(owner, workspaceId, kind, current, false, false, false, true)) return false;
+        if (freshMetadata) {
+          const metadata = composeOwnedHeadlessTrainingMetadata(owner, rootDirectory,
+            createTenantPlacementConfig({mode: "dedicated", organizationId}), target, current);
+          if (!await verifyStoredHeadlessTrainingReviewInputs(metadata)) return false;
+        }
+      }
       const clients = await capturePlanReviewClients(owner.forOrganization(organizationId), workspaceId);
       const requester = clients.find(client => client.registeredClientId === registeredClientId);
       if (!requester || !current()) return false;
-      requesterCurrent = requester.isCurrent;
+      requesterCurrent = allowModelTraining ? captureHeadlessTrainingMethod<() => boolean>(requester, "isCurrent") : requester.isCurrent;
+      if (!requesterCurrent) return false;
       return current();
     }
     const store = createStructuredHeadlessStoredPlanReviewRepository(platform, async (owner, actual, action) =>
       action === kind && actual.hostIncarnationId === hostIncarnationId && actual.fingerprint === fingerprint &&
       actual.scope.organizationId === organizationId && actual.scope.principalId === principalId &&
       actual.scope.workspaceId === workspaceId && actual.scope.registeredClientId === registeredClientId &&
-      await canAccess(owner), now, options.allowModelDownloadReview === true, options.allowModelReferenceSaveReview === true);
+      await canAccess(owner), now, options.allowModelDownloadReview === true, options.allowModelReferenceSaveReview === true, allowModelTraining);
     async function verify() {
       try {
         const allowed = await ownedTransaction(canAccess, () => {
@@ -122,7 +150,8 @@ export function composeDesktopHeadlessPlanApprovals(options: {
         if (!result.ok) return result;
         if (!current()) return forbidden;
         const observedAt = now();
-        const liveClients = new Map(clients.map(client => [client.registeredClientId, client.isCurrent]));
+        const liveClients = new Map(clients.map(client => [client.registeredClientId, allowModelTraining
+          ? captureHeadlessTrainingMethod<() => boolean>(client, "isCurrent") : client.isCurrent]));
         return { ok: true, requests: result.requests.filter(entry =>
           entry.expiresAt > observedAt && liveClients.get(entry.registeredClientId)?.() === true) } as const;
       } catch { return current() ? unconfirmed : forbidden; }
@@ -137,11 +166,14 @@ export function composeDesktopHeadlessPlanApprovals(options: {
         return result;
       } catch { return review.current() ? unconfirmed : forbidden; }
     },
-    async decide(selection: DesktopPlanReviewSelection, raw: unknown, caller: DesktopPlanReviewCaller) {
-      const review = reviewSelection(selection, caller, "decide");
+    async decide(selection: DesktopPlanReviewSelection, incoming: unknown, caller: DesktopPlanReviewCaller) {
+      let raw = incoming;
+      if (allowModelTraining) {try {raw = copyHeadlessTrainingPlanInput(incoming);} catch {return {ok: false, code: "invalid"} as const;}}
+      const channel = caller.channel;
+      const review = reviewSelection(selection, caller, "decide", !allowModelTraining || trainingReviewNeedsFreshMetadata(raw));
       if (!review) return forbidden;
       const result = await new HeadlessBuildPlanReviewUseCase(review.store, now).decide(raw, hostIncarnationId, review.target.scope, {
-        organizationId, principalId, channel: caller.channel,
+        organizationId, principalId, channel,
         isCurrent: review.current, canDecide: async actual =>
           actual.fingerprint === review.target.fingerprint && await review.verify(),
       });

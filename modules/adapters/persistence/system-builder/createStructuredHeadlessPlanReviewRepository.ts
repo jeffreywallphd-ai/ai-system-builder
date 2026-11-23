@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import {types} from "node:util";
 import type {
   HeadlessPlanReviewQuery, HeadlessPlanReviewRepository, HeadlessPlanReviewResult, HeadlessPlanReviewState,
   HeadlessPlanReviewTarget,
@@ -44,8 +45,11 @@ type RecordValue = {readonly version: 1; readonly proposal: unknown; readonly st
 export type BindModelDownloadReviews = (partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget,
   requests: readonly HeadlessBuildPlanRequest[]) => Promise<readonly ModelDownloadReviewBinding[] | undefined>;
 
+/** The optional fourth argument preserves legacy binders. New host revalidation
+ * must require the actual owning transaction supplied here, never a retained
+ * outer/root lookup or a new nested transaction. */
 export type BindModelTrainingReviews = (partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget,
-  requests: readonly HeadlessBuildPlanRequest[]) => Promise<readonly ModelTrainingReviewBinding[] | undefined>;
+  requests: readonly HeadlessBuildPlanRequest[], owningTransaction?: StructuredDocumentStore) => Promise<readonly ModelTrainingReviewBinding[] | undefined>;
 
 /** Trusted metadata configuration only, never an untrusted wire capability. */
 export interface ModelTrainingReviewOptions {
@@ -100,7 +104,7 @@ export function createStructuredHeadlessPlanReviewRepository(
   async function run<T>(
     input: HeadlessPlanReviewQuery, action: Action,
     visit: (store: StructuredDocumentStore, target: HeadlessPlanReviewTarget, key: string,
-      requireFresh: (deadline: number) => boolean) => Promise<T>,
+      requireFresh: (deadline: number) => boolean, owningTransaction: StructuredDocumentStore) => Promise<T>,
   ): Promise<T | Failure> {
     const target = { ...input.target, scope: { ...input.target.scope } };
     if (!validTarget(target) || !input.isCurrent()) return denied;
@@ -123,7 +127,7 @@ export function createStructuredHeadlessPlanReviewRepository(
         checkFence();
         if (!await policy(owner, target, action)) return denied;
         checkFence();
-        return visit(owner.forOrganization(target.scope.organizationId), target, key, requireFresh);
+        return visit(owner.forOrganization(target.scope.organizationId), target, key, requireFresh, owner);
       }, checkFence);
       if (!input.isCurrent()) return denied;
       return deadline !== undefined && !currentTimeBefore(deadline) ? expired : outcome;
@@ -143,7 +147,7 @@ export function createStructuredHeadlessPlanReviewRepository(
         allowContextQuery && Boolean(validateNewProposal), Boolean(bindModelDownloads && validateNewProposal),
         allowModelReferenceSave && Boolean(validateNewProposal), Boolean(bindModelTrainings && validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
-      return run(input, "propose", async (store, target, key, requireFresh) => {
+      return run(input, "propose", async (store, target, key, requireFresh, owningTransaction) => {
         const existing = await readReview(store, target, key);
         if (existing?.requests.some(request => request.operation === "models.download") && !bindModelDownloads) return denied;
         if (existing?.requests.some(request => request.operation === "models.train") && !bindModelTrainings) return denied;
@@ -161,7 +165,7 @@ export function createStructuredHeadlessPlanReviewRepository(
         if ((hasDownloads && !modelDownloads) || !input.isCurrent()) return denied;
         const hasTraining = proposal.requests.some(request => request.operation === "models.train");
         const modelTrainings = hasTraining ? readModelTrainingReviewBindings(await bindModelTrainings?.(
-          store, structuredClone(target), structuredClone(proposal.requests)), proposal.requests) : undefined;
+          store, structuredClone(target), structuredClone(proposal.requests), owningTransaction), proposal.requests) : undefined;
         if ((hasTraining && !modelTrainings) || !input.isCurrent()) return denied;
         const countKey = sha256(JSON.stringify(scopeParts(target)));
         const count = await store.readDocument(COUNTS, countKey);
@@ -310,6 +314,36 @@ export async function readStructuredHeadlessPlanModelPermission(partition: Struc
   return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag" || request.operation === "context.query"),
     requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result"),
     ...(review.requests.some(request => request.operation === "models.download" || request.operation === "models.save-download") ? {requiresModelWrite: true as const} : {})} : undefined;
+}
+
+/** Private owning-transaction metadata only. The host must supply current exact
+ * original-target authority. This is neither a public read nor execution proof. */
+export async function readStructuredHeadlessTrainingPlanReview(partition: StructuredDocumentStore,
+  rawTarget: HeadlessPlanReviewTarget, stillAllowed: () => Promise<boolean>) {
+  try {
+    if (types.isProxy(rawTarget) || typeof stillAllowed !== "function" || types.isProxy(stillAllowed)) return;
+    const outer = readStrictPassiveRecord(rawTarget, ["hostIncarnationId", "fingerprint", "scope"]);
+    if (Object.keys(outer).length !== 3 || types.isProxy(outer.scope)) return;
+    const scope = readStrictPassiveRecord(outer.scope, ["organizationId", "workspaceId", "principalId", "registeredClientId"]);
+    if (Object.keys(scope).length !== 4) return;
+    const target = copyBoundedPassiveData(rawTarget) as HeadlessPlanReviewTarget;
+    if (!validTarget(target) || partition.organizationId !== target.scope.organizationId || await stillAllowed() !== true) return;
+    const review = await readReview(partition, target, planKey(target));
+    if (!review || review.record.version !== 4 || await stillAllowed() !== true) return;
+    return structuredClone({requests: review.requests, bindings: review.record.modelTrainings, state: review.state});
+  } catch {return;}
+}
+
+/** Separate private training policy. Legacy/default Model permission reads above
+ * still refuse training. Never expose bindings through a permission summary. */
+export async function readStructuredHeadlessTrainingPlanPermission(partition: StructuredDocumentStore,
+  target: HeadlessPlanReviewTarget, stillAllowed: () => Promise<boolean>) {
+  const review = await readStructuredHeadlessTrainingPlanReview(partition, target, stillAllowed);
+  if (!review) return;
+  return {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag" || request.operation === "context.query"),
+    requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result"),
+    requiresModelWrite: true as const, requiresTrainingInputs: true as const,
+    requiresModelSourceRead: review.requests.some(request => request.operation === "models.download" || request.operation === "models.save-download")};
 }
 
 /** Historic definition, never historic permission. The caller must first prove
