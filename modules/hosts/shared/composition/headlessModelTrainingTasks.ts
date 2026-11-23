@@ -7,7 +7,7 @@ import type {HeadlessOperationScope} from "../../../application/ports/system-bui
 import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask, ApprovedLocalTrainingCompletionReview} from "../../../application/ports/model";
 import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessTrainingTaskRequest,
   readHeadlessTrainingTaskValue, isHeadlessModelRecordId, isHeadlessModelTimestamp,
-  type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue} from "../../../contracts/headless";
+  type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue, type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {isOrganizationId} from "../../../contracts/organization";
 import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, type ModelTrainingStatus} from "../../../contracts/model";
@@ -21,6 +21,12 @@ import {runPreparedHeadlessModelTraining, type RetainedHeadlessTrainingTask, typ
 type Run = Parameters<typeof runPreparedHeadlessModelTraining>[0];
 type Selection = RetainedHeadlessTrainingTask["selection"];
 export type OriginalTrainingRunOptions = Omit<Run, "retainTask">;
+/** Trusted original-task callback, captured by read composition before waits.
+ * No factory/setup fallback; its reply still needs independent closed decoding.
+ * The original owner can observe existing work and retire its owned lifecycle. */
+export type OwnedHeadlessTrainingTaskReader = (query: {readonly scope: HeadlessOperationScope;
+  readonly selection: HeadlessTrainingTaskReadRequest["input"]["selection"];
+  readonly isCurrent: () => boolean}) => Promise<unknown>;
 export interface OriginalTrainingTaskQuery {
   readonly documents: StructuredDocumentStore;
   readonly hostIncarnationId: string;

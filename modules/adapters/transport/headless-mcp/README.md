@@ -342,3 +342,17 @@ Acknowledgement does not prove shutdown or cleanup. Observe the original task.
 Actual source/save/task-control roots remain unconfigured pending complete
 integration; protocol fixtures are not host/provider/native/parent qualification.
 Install the whole portable skill and generated catalog from the same revision.
+
+
+### Observe original training progress
+
+The existing `aisb_model_workflow` tool also accepts `kind: training-task` with a
+`task` selector (an exact task or plan step). Use it only when the plan-review
+host advertises `models.training-task`. Poll for state, epoch, batch and percent;
+the host does not push unsolicited updates to an idle model. The read requires
+current Model read permission and the original client/workspace/task owner.
+It starts no new task and grants no retry, cancellation, Save, readiness or
+quality result. The original task reader can observe its accepted worker and
+perform its already-owned terminal retirement/cleanup under business policy.
+Both hosts, both transports and the SDK independently bound and correlate the
+reply. Missing configured readers stay unavailable. Tool counts are unchanged.

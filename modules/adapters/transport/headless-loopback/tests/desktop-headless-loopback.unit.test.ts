@@ -965,3 +965,53 @@ test("closing the connector terminates owned TCP sockets still waiting for TLS",
     await connector.close();
   }
 });
+
+
+test("pinned training progress broker correlates both selectors and refuses private or revoked reads", {timeout: 15_000}, async () => {
+  const registry = createDesktopHeadlessClientAuthority({documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity, canReadWorkspace: async id => id === workspaceId, canReviewPlans: async id => id === workspaceId});
+  const pending = await registry.beginPairing(workspaceId, () => true, "plan-review"); assert.equal(pending.status, "ready");
+  const paired = await registry.completePairing(pending.pairingCode); assert.equal(paired.status, "paired");
+  const value = {workspaceId, taskId: incarnation, plan: {fingerprint: "a".repeat(64), step: 1}, state: "running", percent: 50,
+    progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}, resultReview: "not-ready",
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked", outputQuality: "not-evaluated"};
+  let live = true, mode = "valid", reads = 0;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {...registry, async verifyCredential(credential) {
+      const grant = await registry.verifyCredential(credential);
+      return grant && live ? {...grant, isCurrent: () => live} : undefined;
+    }},
+    planReview: {hostIncarnationId: incarnation, async execute() {return {ok: false, code: "headless.forbidden"};}},
+    async read(raw, currentGrant) {
+      reads++; assert.equal((raw as {operation: string}).operation, "models.training-task");
+      assert.ok(Object.isFrozen(raw)); assert.equal((await currentGrant())?.isReadCurrent?.(), true);
+      if (mode === "withdraw") live = false;
+      return {ok: true, operation: mode === "tag" ? "models.task" : "models.training-task", value: {...value,
+        ...(mode === "task" ? {taskId: "f8cd6a41-ad96-47f3-bebf-7ef995a251f0"} : {}),
+        ...(mode === "workspace" ? {workspaceId: "workspace.foreign"} : {}),
+        ...(mode === "plan" ? {plan: {fingerprint: "b".repeat(64), step: 1}} : {}),
+        ...(mode === "private" ? {logs: ["PRIVATE"]} : {}),
+        ...(mode === "percent" ? {percent: 25} : {})}} as never;
+    },
+  });
+  const headers = {Authorization: `Bearer ${paired.credential}`};
+  const command = (selection: object) => JSON.stringify({version: HEADLESS_CONTRACT_VERSION, operation: "models.training-task",
+    input: {hostIncarnationId: incarnation, workspaceId, selection}});
+  const task = {kind: "task", taskId: incarnation}, plan = {kind: "plan-step", ...value.plan};
+  try {
+    for (const selection of [task, plan]) {
+      const result = await post(connector, readPath, command(selection), headers);
+      assert.equal(result.status, 200); assert.deepEqual(result.json, {ok: true, operation: "models.training-task", value});
+    }
+    for (const failure of ["tag", "task", "workspace", "plan", "private", "percent"]) {
+      mode = failure; const result = await post(connector, readPath, command(failure === "plan" ? plan : task), headers);
+      assert.equal(result.status, 503, failure); assert.deepEqual(result.json, {ok: false, code: "headless.unavailable"});
+    }
+    const before = reads;
+    assert.equal((await post(connector, readPath, command({...task, path: "PRIVATE"}), headers)).status, 400);
+    assert.equal(reads, before);
+    mode = "withdraw";
+    const result = await post(connector, readPath, command(task), headers);
+    assert.equal(result.status, 403); assert.deepEqual(result.json, {ok: false, code: "headless.forbidden"});
+  } finally {await connector.close();}
+});

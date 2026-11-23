@@ -3,6 +3,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:https";
 import type { Duplex } from "node:stream";
 import {types} from "node:util";
+import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult,
+  type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
 import {HEADLESS_MODEL_TASK_CONTROL_PATH, readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationResult,
   readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult, type HeadlessModelDownloadReviewRequest,
   type HeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult} from "../../../contracts/headless";
@@ -482,6 +484,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     }
     let result: HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult;
     let modelReviewTarget: HeadlessModelDownloadReviewRequest["input"] | undefined;
+    let trainingTarget: HeadlessTrainingTaskReadRequest["input"] | undefined;
     if (request.url === AUTHOR_PATH && dependencies.authoring) {
       const { hostIncarnationId, execute } = dependencies.authoring;
       if (!initialGrant.authoring?.length || !initialGrant.isCurrent) { fail(response, 403, "headless.forbidden"); return; }
@@ -517,7 +520,23 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       result = readHeadlessApprovedTurnResult(await execute(input, { grant, currentGrant: () => currentGrant(false), fingerprint }));
     } else {
       const modelReview = !!body && typeof body === "object" && "operation" in body && body.operation === "models.review-download";
+      const trainingProgress = !!body && typeof body === "object" && "operation" in body && body.operation === "models.training-task";
       let readBody = body;
+      if (trainingProgress) {
+        if (initialGrant.planReview !== true || !callbackIsCurrent(initialReadFence, true)) {fail(response, 403, "headless.forbidden"); return;}
+        if (!dependencies.planReview) {fail(response, 400, "headless.unsupported-operation"); return;}
+        const parsed = readHeadlessTrainingTaskReadRequest(body, dependencies.planReview.hostIncarnationId);
+        if (!parsed.ok) {fail(response, errorStatus(parsed.code), parsed.code); return;}
+        const proof = readHeadlessTrainingTaskReadRequest(parsed.request, dependencies.planReview.hostIncarnationId);
+        if (!proof.ok) {fail(response, 400, "headless.invalid-request"); return;}
+        trainingTarget = proof.request.input;
+        const grant = await currentGrant();
+        if (!grant || grant.planReview !== true || !grant.operations.includes("models.training-task") ||
+            !grant.workspaceIds.includes(trainingTarget.workspaceId) || !callbackIsCurrent(initialReadFence, true)) {
+          fail(response, 403, "headless.forbidden"); return;
+        }
+        readBody = parsed.request;
+      }
       if (modelReview) {
         if (initialGrant.planReview !== true || !callbackIsCurrent(initialReadFence, true)) {fail(response, 403, "headless.forbidden"); return;}
         if (!dependencies.planReview) {fail(response, 400, "headless.unsupported-operation"); return;}
@@ -536,16 +555,17 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         fail(response, 403, "headless.forbidden"); return;
       }
       const readCurrent = () => admitting() && !response.destroyed && !response.writableEnded &&
-        (!modelReview || callbackIsCurrent(initialReadFence, true));
+        (!(modelReview || trainingProgress) || callbackIsCurrent(initialReadFence, true));
       result = await dependencies.read(readBody, async () => {
         const grant = await currentGrant();
         return grant && readCurrent() ? {...grant, isReadCurrent: readCurrent} : undefined;
       });
       if (modelReviewTarget) result = readHeadlessModelDownloadReviewResult(result, modelReviewTarget);
+      if (trainingTarget) result = readHeadlessTrainingTaskReadResult(result, trainingTarget);
     }
     const finalGrant = await currentGrant();
     if (!admitting() || response.destroyed) return;
-    if (!finalGrant || !grantIsCurrent(finalGrant, requiresFence) || modelReviewTarget && !callbackIsCurrent(initialReadFence, true)) {
+    if (!finalGrant || !grantIsCurrent(finalGrant, requiresFence) || (modelReviewTarget || trainingTarget) && !callbackIsCurrent(initialReadFence, true)) {
       fail(response, 403, "headless.forbidden");
       return;
     }

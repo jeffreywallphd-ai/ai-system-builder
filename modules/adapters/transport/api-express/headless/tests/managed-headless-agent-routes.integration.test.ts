@@ -141,6 +141,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let acceptedModelPlanFingerprint = "a".repeat(64);
   let modelControlEnabled = true, modelControlCalls = 0, modelControlMode = "valid";
   let modelReviewMode = "valid", modelReviewCalls = 0;
+  let trainingProgressMode = "valid", trainingProgressCalls = 0;
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -193,6 +194,20 @@ test("managed plan routes admit only exact proposals, status and an approved ste
           selectedFileCount: source.files.length, totalBytes: source.totalBytes, fromCache: false,
           selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked",
           ...(modelReviewMode === "private" ? {localPath: "private/model/path"} : {}),
+        }} as never;
+      }
+      if (request.operation === "models.training-task") {
+        trainingProgressCalls++;
+        if (trainingProgressMode === "withdraw") current = false;
+        if (trainingProgressMode === "denied") return {ok: false, code: "headless.forbidden"};
+        return {ok: true, operation: trainingProgressMode === "tag" ? "models.task" : request.operation, value: {
+          workspaceId: trainingProgressMode === "workspace" ? "workspace.foreign" : workspaceId,
+          taskId: trainingProgressMode === "task" ? randomUUID() : acceptedDatasetTaskId,
+          plan: {fingerprint: trainingProgressMode === "plan" ? "b".repeat(64) : acceptedModelPlanFingerprint, step: 1},
+          state: "running", percent: trainingProgressMode === "percent" ? 25 : 50,
+          progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}, resultReview: "not-ready",
+          registration: "requires-separate-approval", runtimeReadiness: "not-checked", outputQuality: "not-evaluated",
+          ...(trainingProgressMode === "private" ? {logs: ["PRIVATE"]} : {}),
         }} as never;
       }
       if (request.operation === "models.task") {
@@ -420,6 +435,30 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     modelReviewMode = "withdraw";
     assert.equal((await request(reviewRequest, "fixture-plan", readRouteForReview)).status, 403);
     modelReviewMode = "valid"; current = true;
+    const trainingRequest = {...reviewRequest, operation: "models.training-task"};
+    for (const selection of [{kind: "task", taskId: acceptedDatasetTaskId},
+      {kind: "plan-step", fingerprint: acceptedModelPlanFingerprint, step: 1}]) {
+      const result = await request({...trainingRequest, input: {...trainingRequest.input, selection}}, "fixture-plan", readRouteForReview);
+      assert.equal(result.status, 200); assert.equal(result.body.operation, "models.training-task");
+      assert.equal(result.body.value.percent, 50); assert.equal(result.body.value.outputQuality, "not-evaluated");
+    }
+    const beforeBadTraining = trainingProgressCalls;
+    assert.equal((await request({...trainingRequest, operation: "models.cancel-training"}, "fixture-plan", readRouteForReview)).status, 400);
+    assert.equal(trainingProgressCalls, beforeBadTraining);
+    for (const mode of ["tag", "workspace", "task", "plan", "private", "percent"]) {
+      trainingProgressMode = mode;
+      const selection = mode === "task" ? {kind: "task", taskId: acceptedDatasetTaskId}
+        : {kind: "plan-step", fingerprint: acceptedModelPlanFingerprint, step: 1};
+      const result = await request({...trainingRequest, input: {...trainingRequest.input, selection}}, "fixture-plan", readRouteForReview);
+      assert.equal(result.status, 503, mode); assert.deepEqual(result.body, {ok: false, code: "headless.unavailable"});
+    }
+    for (const mode of ["denied", "withdraw"]) {
+      trainingProgressMode = mode;
+      assert.equal((await request(trainingRequest, "fixture-plan", readRouteForReview)).status, 403);
+      current = true;
+    }
+    trainingProgressMode = "valid";
+
     const proposal = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.submit", input:{...scope, fingerprint, steps}};
     const planPath = MANAGED_HEADLESS_AGENT_PATHS["plan-review"];
     async function request(body: object | string, token = "fixture-plan", route = planPath, org = organizationId) {

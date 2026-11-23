@@ -1342,3 +1342,16 @@ Controlled Core/SQLite host fixtures establish this composition. They do not
 qualify actual execution, native file/resource ownership, protected output,
 separate Save, public activation, real hosts or model quality. No new architecture,
 approval family, supplier, resource budget or retention policy is selected.
+
+
+The existing read broker has a separately configured training-progress extension:
+`models.training-task` uses only the original accepted task reader, current
+plan-review/ModelRead authority and exact original client/workspace/host lineage.
+Reuse `aisb_model_workflow` with `training-task` and an exact task/plan selector;
+no new tool or public cancellation operation is added. Copy closed numeric
+replies before later policy waits and correlate the operation, workspace and
+selector independently in each transport and the SDK. Captured read lifetime is
+sticky after observed loss. An original read can observe accepted work and retire
+its owned lifecycle under business control; it does not acquire a new runtime,
+start another task or grant Save. This source integration activates no Root and
+provides no native, resource, output, actual-host or parent qualification.

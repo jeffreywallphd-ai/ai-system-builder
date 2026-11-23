@@ -1,3 +1,4 @@
+import {types} from "node:util";
 import type {PreviewHeadlessContextInputsUseCase} from "../../../application/use-cases/context-management/headless-context-preview.use-case";
 import type {ReadHeadlessContextTaskUseCase} from "../../../application/use-cases/context-management";
 import type {ReadHeadlessContextSavedUseCase} from "../../../application/use-cases/context-management";
@@ -11,6 +12,9 @@ import {readVerifiedHeadlessModelSourcePreview} from "../../shared/composition/h
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
 import {readHeadlessModelTaskValue, isHeadlessModelTaskReadOperation, readHeadlessModelDownloadReviewResult} from "../../../contracts/headless";
 import type {OwnedHeadlessModelTaskReader, OwnedHeadlessModelCompletionReader} from "../../shared/composition/headlessModelDownloadTasks";
+import type {OwnedHeadlessTrainingTaskReader} from "../../shared/composition/headlessModelTrainingTasks";
+import {copyHeadlessModelPlanData} from "../../shared/composition/headlessModelDownloadReview";
+import {readHeadlessTrainingTaskReadResult} from "../../../contracts/headless";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
@@ -87,6 +91,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   /** Bound to the original accepted ledger and an already loaded source owner. */
   readonly readModelTask?: OwnedHeadlessModelTaskReader;
   readonly readModelCompletion?: OwnedHeadlessModelCompletionReader;
+  readonly readTrainingTask?: OwnedHeadlessTrainingTaskReader;
   readonly getModelSource?: () => Promise<Pick<PreviewHeadlessModelSourceUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
@@ -99,11 +104,14 @@ export function composeDesktopHeadlessReads(dependencies: {
 }): DesktopHeadlessReadHandler {
   const { hostIncarnationId, identity: suppliedIdentity, workspaceRepository, authorization, getUseCases, committedChanges,
     workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen, readModelTask, readModelCompletion } = dependencies;
+  const trainingReader = dependencies.readTrainingTask;
+  const readTrainingTask = trainingReader?.bind(dependencies);
   const identity = {organizationId: suppliedIdentity.organizationId, principalId: suppliedIdentity.principalId};
   const sameIdentity = () => suppliedIdentity.organizationId === identity.organizationId && suppliedIdentity.principalId === identity.principalId;
 
   const supports = (operation: HeadlessReadOperation) => {
     if (operation === "models.task") return Boolean(readModelTask);
+    if (operation === "models.training-task") return Boolean(readTrainingTask);
     if (operation === "models.review-download") return Boolean(readModelCompletion);
     if (operation === "models.preview-source") return Boolean(dependencies.getModelSource);
     if (isHeadlessModelReadOperation(operation)) return Boolean(dependencies.getModelMetadata);
@@ -151,13 +159,59 @@ export function composeDesktopHeadlessReads(dependencies: {
   return async (request, getCurrentGrant) => {
     try {
       const parsed = parseHeadlessReadRequest(request, hostIncarnationId);
+      const trainingTarget = parsed.ok && parsed.request.operation === "models.training-task" ? parsed.request.input : undefined;
+      let trainingAuthorityLive = true;
+      let checkingTrainingGrants = false;
+      const trainingGrants = new Map<DesktopHeadlessReadGrant, () => boolean>();
+      // Denial-only request-local capture. A newer grant cannot forgive loss of
+      // an earlier observation while policy or the original reader was waiting.
+      const trainingGrantsLive = () => {
+        if (!trainingTarget) return true;
+        if (checkingTrainingGrants) {trainingAuthorityLive = false; return false;}
+        checkingTrainingGrants = true;
+        try {for (const check of trainingGrants.values()) if (!check()) trainingAuthorityLive = false;}
+        catch {trainingAuthorityLive = false;}
+        finally {checkingTrainingGrants = false;}
+        return trainingAuthorityLive;
+      };
+      const retainTrainingGrant = (candidate: DesktopHeadlessReadGrant | undefined) => {
+        if (!trainingTarget) return true;
+        try {
+          if (!candidate || types.isProxy(candidate)) throw new Error("Unavailable training read grant.");
+          if (!trainingGrants.has(candidate)) {
+            if (trainingGrants.size >= 16) throw new Error("Training read grant observations exceed their bound.");
+            const keys = ["organizationId", "principalId", "registeredClientId", "workspaceIds", "operations",
+              "planReview", "isCurrent", "isReadCurrent"] as const;
+            const fields: Record<string, unknown> = {};
+            for (const key of keys) {
+              const field = Object.getOwnPropertyDescriptor(candidate, key);
+              if (!field || !("value" in field) || !field.enumerable) throw new Error("Unavailable training read grant.");
+              fields[key] = field.value;
+            }
+            const currentCheck = fields.isCurrent, readCheck = fields.isReadCurrent;
+            if (fields.planReview !== true || typeof currentCheck !== "function" || types.isProxy(currentCheck) ||
+                typeof readCheck !== "function" || types.isProxy(readCheck)) throw new Error("Unavailable training read grant.");
+            const scope = () => copyHeadlessModelPlanData({workspaceIds: fields.workspaceIds, operations: fields.operations});
+            const originalScope = JSON.stringify(scope());
+            const same = () => keys.every(key => {
+              const field = Object.getOwnPropertyDescriptor(candidate, key);
+              return field && "value" in field && field.enumerable && field.value === fields[key];
+            }) && JSON.stringify(scope()) === originalScope;
+            trainingGrants.set(candidate, () => same() &&
+              isHeadlessReadCurrent(() => Reflect.apply(currentCheck, candidate, [])) &&
+              isHeadlessReadCurrent(() => Reflect.apply(readCheck, candidate, [])) && same());
+          }
+          return trainingGrantsLive();
+        } catch {trainingAuthorityLive = false; return false;}
+      };
       if (parsed.ok && (isHeadlessModelReadOperation(parsed.request.operation) || parsed.request.operation === "models.preview-source")) {
         Object.freeze(parsed.request.input);
         Object.freeze(parsed.request);
       }
       const current = async () => {
-        if (!isOpen() || !sameIdentity()) return undefined;
+        if (!isOpen() || !sameIdentity() || !trainingGrantsLive()) return undefined;
         const grant = await getCurrentGrant();
+        if (!retainTrainingGrant(grant) || !trainingGrantsLive()) return undefined;
         return isOpen() && sameIdentity() && grant?.registeredClientId &&
           grant.organizationId === identity.organizationId && grant.principalId === identity.principalId
           ? grant : undefined;
@@ -169,18 +223,18 @@ export function composeDesktopHeadlessReads(dependencies: {
       const modelRead = isHeadlessModelReadOperation(operation) || operation === "models.preview-source" || isHeadlessModelTaskReadOperation(operation), modelFence = grant.isCurrent;
       const sourceFence = grant.isReadCurrent;
       if (operation === "models.preview-source" && (grant.modelSourceRead !== true || !isHeadlessReadCurrent(sourceFence))) return forbidden;
-      if (isHeadlessModelTaskReadOperation(operation) && !isHeadlessReadCurrent(sourceFence)) return forbidden;
+      if (isHeadlessModelTaskReadOperation(operation) && !(trainingTarget ? trainingGrantsLive() : isHeadlessReadCurrent(sourceFence))) return forbidden;
       if (!grant.operations.includes(operation)) return forbidden;
       if ((modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") && grant.planReview !== true) return forbidden;
-      if (modelRead && !isHeadlessReadCurrent(modelFence)) return forbidden;
+      if (modelRead && !(trainingTarget ? trainingGrantsLive() : isHeadlessReadCurrent(modelFence))) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
-          (!(modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") || latest.planReview === true && (modelRead ? isHeadlessReadCurrent(latest.isCurrent) : latest.isCurrent?.() !== false)) &&
+          (!(modelRead || isHeadlessDataReadOperation(operation) || isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") || latest.planReview === true && (modelRead ? (trainingTarget ? trainingGrantsLive() : isHeadlessReadCurrent(latest.isCurrent)) : latest.isCurrent?.() !== false)) &&
           (operation !== "models.preview-source" || latest.modelSourceRead === true && isHeadlessReadCurrent(latest.isReadCurrent)) &&
-          (!isHeadlessModelTaskReadOperation(operation) || isHeadlessReadCurrent(latest.isReadCurrent)) &&
+          (!isHeadlessModelTaskReadOperation(operation) || (trainingTarget ? trainingGrantsLive() : isHeadlessReadCurrent(latest.isReadCurrent))) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -216,6 +270,23 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "models.training-task": {
+          let live = true;
+          const trainingCurrent = () => {
+            live = live && isOpen() && sameIdentity() && trainingGrantsLive();
+            return live;
+          };
+          const allowed = async () => {
+            live = trainingCurrent() && Boolean(await currentScopedGrant([workspaceId]) &&
+              await authorizedWorkspace(workspaceId, operation)) && trainingCurrent();
+            return live;
+          };
+          if (!readTrainingTask || !await allowed()) return forbidden;
+          const result = readHeadlessTrainingTaskReadResult(copyHeadlessModelPlanData(await readTrainingTask({
+            scope: Object.freeze({...identity, workspaceId, registeredClientId: clientId}),
+            selection: input.selection, isCurrent: trainingCurrent})), input);
+          return await allowed() ? result : forbidden;
+        }
         case "models.review-download": {
           const currentModel = () => isOpen() && sameIdentity() && isHeadlessReadCurrent(modelFence) && isHeadlessReadCurrent(sourceFence);
           const allowed = async () => currentModel() && Boolean(await currentScopedGrant([workspaceId]) &&

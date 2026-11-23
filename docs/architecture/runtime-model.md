@@ -2579,3 +2579,15 @@ The read resolves no dependency factory, file, model or provider. Missing privat
 configuration leaves it absent. This private composition adds no public response
 codec/Root or Save capability. Core/SQLite fixtures check policy/lineage and old
 progress/Stop compatibility; actual Native/output/host qualification stays separate.
+
+
+The configured Headless read broker exposes original training progress through
+`models.training-task` and the existing MCP model-workflow tool. AI clients poll
+for task state, epoch, batch and percent; there is no unsolicited model callback.
+Both host composers capture the original reader/receiver and require current
+plan-review, ModelRead and exact actor/client/workspace/host ownership. Read loss
+stays latched. Replies are copied before later policy waits and independently
+correlated by the Desktop/Managed transport and SDK. The original task reader
+can observe its running worker and perform original terminal retirement/cleanup
+under business authority. There is no new setup/start/discovery or Root opt-in;
+native custody, retained output, saving and real-host qualification stay separate.

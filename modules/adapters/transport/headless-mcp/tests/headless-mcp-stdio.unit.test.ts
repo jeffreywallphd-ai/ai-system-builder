@@ -80,6 +80,11 @@ function modelSourcePreview() {
   {provider: "huggingface", modelId: "Qwen/synthetic-model"});
   return {workspaceId, source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex"), downloadApprovalRequired: true};
 }
+function modelTrainingProgressValue() {
+  return {workspaceId, taskId: modelTaskValue.taskId, plan: {...modelTaskValue.plan}, state: "running", percent: 50,
+    progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}, resultReview: "not-ready",
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked", outputQuality: "not-evaluated"} as const;
+}
 function modelCompletionReviewValue() {
   const {source, manifestDigest} = modelSourcePreview();
   return {workspaceId, taskId: modelTaskValue.taskId, plan: {...modelTaskValue.plan}, modelId: source.modelId,
@@ -130,6 +135,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let invalidStatusReply = false;
   let cancellationCalls = 0;
   let completionReviewMode = "valid";
+  let trainingProgressMode = "valid";
   let wrongQuestionDigest = false;
   let changedPreparation = false;
   let sourceReady = true;
@@ -217,6 +223,20 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           value: {...modelCompletionReviewValue(), ...(completionReviewMode === "private" ? {localPath: "private/model/path"} : {}),
             ...(completionReviewMode === "workspace" ? {workspaceId: "workspace.foreign"} : {})}});
         response.writeHead(completionReviewMode === "not-ready" ? 409 : 200,
+          {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.training-task") {
+        const payload = JSON.stringify(trainingProgressMode === "denied" ? {ok: false, code: "headless.forbidden"} : {
+          ok: true, operation: trainingProgressMode === "tag" ? "models.task" : input.operation,
+          value: {...modelTrainingProgressValue(),
+            ...(trainingProgressMode === "task" ? {taskId: randomUUID()} : {}),
+            ...(trainingProgressMode === "plan" ? {plan: {fingerprint: "b".repeat(64), step: 1}} : {}),
+            ...(trainingProgressMode === "workspace" ? {workspaceId: "workspace.foreign"} : {}),
+            ...(trainingProgressMode === "private" ? {logs: ["PRIVATE"]} : {}),
+            ...(trainingProgressMode === "quality" ? {outputQuality: "passed"} : {}),
+            ...(trainingProgressMode === "percent" ? {percent: 25} : {})}});
+        response.writeHead(trainingProgressMode === "denied" ? 403 : 200,
           {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -478,6 +498,26 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     completionReviewMode = "valid";
     assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
       selection: {kind: "completed-download", task: {kind: "task", taskId: randomUUID()}}}})), {ok: false, code: "headless.unavailable"});
+    for (const task of [{kind: "task", taskId: modelTaskValue.taskId},
+      {kind: "plan-step", fingerprint: modelTaskValue.plan.fingerprint, step: modelTaskValue.plan.step}]) {
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "training-task", task}}})), {ok: true, operation: "models.training-task", value: modelTrainingProgressValue()});
+      assert.equal(requests.at(-1)?.url, "/api/headless/agent/read");
+    }
+    for (const mode of ["tag", "task", "plan", "workspace", "private", "quality", "percent"]) {
+      trainingProgressMode = mode;
+      const task = mode === "plan" ? {kind: "plan-step", ...modelTaskValue.plan} : {kind: "task", taskId: modelTaskValue.taskId};
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "training-task", task}}})), {ok: false, code: "headless.unavailable"}, mode);
+    }
+    trainingProgressMode = "denied";
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "training-task", task: {kind: "task", taskId: modelTaskValue.taskId}}}})), {ok: false, code: "headless.forbidden"});
+    trainingProgressMode = "valid";
+    const beforeBadTraining = requests.length;
+    assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "training-task", task: {kind: "task", taskId: modelTaskValue.taskId, path: "PRIVATE"}}}})).isError, true);
+    assert.equal(requests.length, beforeBadTraining);
     const beforeBadReview = requests.length;
     for (const task of [{kind: "task", taskId: modelTaskValue.taskId, path: "private"},
       {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}])

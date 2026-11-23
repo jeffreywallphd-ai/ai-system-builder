@@ -142,3 +142,27 @@ It adds one tool within the existing 32-tool limit. It grants no host permission
 Install this guide, `SKILL.md` and the generated `mcp-tools.json` from the same
 repository revision. The optional tool alone is not real-host or native cleanup
 qualification; actual source/save activation remains separately guarded.
+
+
+## Observe an approved training task
+
+1. Check that the plan-review host advertises `models.training-task`. If it does
+   not, report that this connection cannot read training progress. Do not use
+   another runtime, file tool or task-discovery path.
+2. Call `aisb_model_workflow` with `selection.kind: training-task` and `selection.task`.
+   Select the exact returned task ID, or the original plan fingerprint and step.
+   Keep the same registered client, host and workspace. Current Model read
+   permission is required.
+3. Poll while the task is running. Replies contain state, epochs, batches and
+   progress percentage. Updates arrive when you request them; the app does not
+   send messages to an idle model. Keep polling bounded by the user's request.
+4. Report terminal status separately from review, saving and runtime readiness.
+   A pending result still needs separate review and approval to save. An unknown
+   result grants no new attempt. This read cannot cancel or start training.
+
+Prompts, training rows, paths, raw errors, worker logs, loss and output-quality
+claims are excluded. The original reader can observe an accepted task and finish
+its original lifecycle cleanup; it is not a cache-only or zero-IO operation.
+A configured read connection does not qualify the native training producer,
+retained outputs, saving or real-host execution. Install this guide and the
+generated tool catalog from the same revision.

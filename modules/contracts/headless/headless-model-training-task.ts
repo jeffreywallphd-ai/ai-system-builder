@@ -1,4 +1,4 @@
-/** Private training-control codecs. These exports enable no network capability. */
+/** Training controls stay private. The read-only specialization enables no host by itself. */
 import {copyBoundedPassiveData, readStrictPassiveRecord} from "../shared";
 import {isWorkspaceId, type WorkspaceId} from "../workspace";
 import {MODEL_TRAINING_STATUSES, type ModelTrainingStatus} from "../model";
@@ -12,6 +12,9 @@ export interface HeadlessTrainingTaskRequest {
   readonly input: {readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId;
     readonly selection: HeadlessModelTaskSelection};
 }
+export type HeadlessTrainingTaskReadRequest = Omit<HeadlessTrainingTaskRequest, "operation"> & {
+  readonly operation: "models.training-task";
+};
 export interface HeadlessTrainingTaskValue {
   readonly workspaceId: WorkspaceId;
   readonly taskId: string;
@@ -35,6 +38,12 @@ export type HeadlessTrainingTaskResult =
   | {readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" | "headless.forbidden" |
       "headless.unavailable" | "headless.operation-unconfirmed"};
 const invalid = {ok: false, code: "headless.invalid-request"} as const;
+const unavailable = {ok: false, code: "headless.unavailable"} as const;
+const readFailures = ["headless.invalid-request", "headless.host-changed", "headless.forbidden",
+  "headless.unavailable", "headless.unsupported-operation", "headless.not-found"] as const;
+export type HeadlessTrainingTaskReadResult =
+  | {readonly ok: true; readonly operation: "models.training-task"; readonly value: HeadlessTrainingTaskValue}
+  | {readonly ok: false; readonly code: typeof readFailures[number]};
 function exact(raw: unknown, keys: readonly string[]) {
   const result = readStrictPassiveRecord(raw, keys);
   if (Object.keys(result).length !== keys.length) throw new Error("Incomplete private training task summary.");
@@ -52,6 +61,37 @@ export function readHeadlessTrainingTaskRequest(raw: unknown, host: HeadlessHost
     return {ok: true, request: {version: HEADLESS_CONTRACT_VERSION, operation: value.operation,
       input: {hostIncarnationId: host, workspaceId: input.workspaceId, selection}} as HeadlessTrainingTaskRequest} as const;
   } catch {return invalid;}
+}
+/** A read endpoint must never accept the private cancellation operation. */
+export function readHeadlessTrainingTaskReadRequest(raw: unknown, host: HeadlessHostIncarnationId) {
+  const parsed = readHeadlessTrainingTaskRequest(raw, host);
+  if (!parsed.ok) return parsed;
+  if (parsed.request.operation !== "models.training-task") return invalid;
+  Object.freeze(parsed.request.input.selection);
+  Object.freeze(parsed.request.input);
+  return {ok: true, request: Object.freeze(parsed.request) as HeadlessTrainingTaskReadRequest} as const;
+}
+
+/** Independently copy and correlate a finite reply before later policy waits. */
+export function readHeadlessTrainingTaskReadResult(raw: unknown,
+  expected: HeadlessTrainingTaskReadRequest["input"]): HeadlessTrainingTaskReadResult {
+  try {
+    const outer = readStrictPassiveRecord(copyBoundedPassiveData(raw), ["ok", "operation", "value", "code"]);
+    if (outer.ok === false) {
+      return Object.keys(outer).length === 2 && readFailures.some(code => code === outer.code)
+        ? {ok: false, code: outer.code as typeof readFailures[number]} : unavailable;
+    }
+    if (outer.ok !== true || outer.operation !== "models.training-task" || Object.keys(outer).length !== 3) return unavailable;
+    const target = readHeadlessTrainingTaskReadRequest({version: HEADLESS_CONTRACT_VERSION,
+      operation: "models.training-task", input: expected}, expected.hostIncarnationId);
+    if (!target.ok) return unavailable;
+    const value = readHeadlessTrainingTaskValue(outer.value);
+    const selection = target.request.input.selection;
+    if (!value || value.workspaceId !== target.request.input.workspaceId || (selection.kind === "task"
+      ? value.taskId !== selection.taskId
+      : value.plan.fingerprint !== selection.fingerprint || value.plan.step !== selection.step)) return unavailable;
+    return {ok: true, operation: "models.training-task", value};
+  } catch {return unavailable;}
 }
 export function readHeadlessTrainingTaskValue(raw: unknown, cancellation = false): HeadlessTrainingTaskValue | HeadlessTrainingCancellationValue | undefined {
   try {

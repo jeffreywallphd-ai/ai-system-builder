@@ -478,3 +478,17 @@ After dispatch, treat lost, malformed or withheld replies as unconfirmed and
 never retry automatically. Do not substitute generic HTTP, shell or task tools.
 Actual source/save/task-control root activation and physical/provider
 qualification remain separate from these protocol fixtures.
+
+
+## Read original training progress
+
+Install the complete portable skill folder, including the updated Model guide
+and generated `mcp-tools.json`, from the same revision. The existing
+`aisb_model_workflow` training-task selector uses `models.training-task` on a
+plan-review connection. Check the host's advertised operations first. Missing
+configured support is unavailable; no alternate runtime or file lookup is allowed.
+Current original-client, workspace, host and Model read authority apply on each
+poll. Replies contain numeric workflow status only, not samples, logs or loss.
+This read can invoke the original task's observation and owned retirement/cleanup;
+it starts no new task. Root activation, native training, candidate Save and
+actual-host qualification remain separate.

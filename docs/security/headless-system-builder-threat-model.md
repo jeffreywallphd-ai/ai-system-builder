@@ -2342,3 +2342,16 @@ Controlled semantic tests grant no Native/model/quality/public/parent authority.
 - **Limits:** internal historical DTO only. No public codec/Root, Native producer,
   protected output/accounting, Save or real-host/quality proof is granted. There
   are no model calls, scoring runs or changed resource/retention policies.
+
+
+The optional public training-progress read uses the original accepted task only.
+Threats include changed selectors, callback replacement, stale client/host/read
+authority, reply mutation during permission checks and private fields in numeric
+status. Capture the original callback and receiver, freeze copied requests,
+copy/close replies before later waits, latch observed read loss and reauthorize
+before disclosure. Each host, transport and SDK checks operation, workspace and
+exact task/plan correlation. Exclude samples, prompts, paths, logs, raw errors,
+loss and quality claims. Cancellation stays private. Missing support cannot
+resolve another runtime or task. The original reader's existing observation and
+owned retirement/cleanup remain under accepted business control; caller read
+permission supplies no new acquisition/start/Save/native or Root authority.

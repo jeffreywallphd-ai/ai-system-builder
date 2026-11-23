@@ -229,16 +229,22 @@ function addSystemBuilderTools(server: McpServer) {
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
     server.registerTool("aisb_model_workflow", {
-      description: "Inspect a Hugging Face source, observe original download progress, or review its historical completion by exact task or plan-step. Source inspection can contact Hugging Face with the configured credential under current permission and returns pinned provider metadata only. Completion review uses kind completed-download with an exact task selector; it returns recorded revision/license/file-count/bytes and verification at completion, never current file/save/readiness authority. Task reads return finite progress without private errors or discovery; unknown grants no retry. Check host operations first. No download, cancellation, model run or registry save is authorized. Saved inventory stays in aisb_model_metadata.",
+      description: "Inspect a Hugging Face source, observe original download or training progress, or review a completed download by exact task or plan-step. For training select kind training-task with an exact task selector; requires models.training-task in host operations. Poll for state, epoch, batch and percent; no unsolicited model updates. The original owner can observe accepted work and retire its owned lifecycle; this read starts no new task. Source inspection can contact Hugging Face using the configured credential and returns pinned metadata only. Completion review uses completed-download and returns historical revision/license/file-count/bytes, never current file/save/readiness authority. No prompts, samples, private errors, paths, logs, loss or quality claims. Unknown grants no retry. No new download, cancellation, model run or registry save is authorized. Saved inventory stays in aisb_model_metadata.",
       inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
         z.strictObject({kind: z.literal("source"), modelId: z.string().min(3).max(193), revision: z.string().regex(/^[a-f0-9]{40}$/).optional()}),
         z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
         z.strictObject({kind: z.literal("plan-step"), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
           step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
         z.strictObject({kind: z.literal("completed-download"), task: ownedModelSelection}),
+        z.strictObject({kind: z.literal("training-task"), task: ownedModelSelection}),
       ])}),
       annotations: {...queryHints, openWorldHint: true},
     }, ({selection, ...target}, context) => {
+      if (selection.kind === "training-task") {
+        const parsed = headless.readHeadlessTrainingTaskReadRequest({version, operation: "models.training-task",
+          input: {...target, selection: selection.task}}, target.hostIncarnationId as HeadlessHostIncarnationId);
+        return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+      }
       if (selection.kind === "completed-download") {
         const parsed = headless.readHeadlessModelDownloadReviewRequest({version, operation: "models.review-download",
           input: {...target, selection: selection.task}}, target.hostIncarnationId as HeadlessHostIncarnationId);

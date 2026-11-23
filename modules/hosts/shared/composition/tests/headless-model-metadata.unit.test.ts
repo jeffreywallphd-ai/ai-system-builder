@@ -193,3 +193,175 @@ for (const host of ["desktop", "managed"] as const) {
     assert.notStrictEqual(state.requestAfterRead, request);
   });
 }
+
+
+function trainingReadFixture(host: "desktop" | "managed", configured = true) {
+  const taskId = "f8cd6a41-ad96-47f3-bebf-7ef995a251f0";
+  const clientId = "e576326e-6802-4f44-b9bd-7e80467e4b8c";
+  const request = {version: version as typeof version, operation: "models.training-task" as const,
+    input: {hostIncarnationId, workspaceId, selection: {kind: "task" as const, taskId}}};
+  const progress = () => ({workspaceId, taskId, plan: {fingerprint: "a".repeat(64), step: 1}, state: "running",
+    percent: 50, progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}, resultReview: "not-ready",
+    registration: "requires-separate-approval", runtimeReadiness: "not-checked", outputQuality: "not-evaluated"});
+  const state = {live: true, readLive: true, planning: true, allowed: true, reads: 0, policies: 0,
+    afterRead: false, onPolicy: () => {}, onRead: (_query: {isCurrent: () => boolean}) => {},
+    reply: {ok: true, operation: "models.training-task", value: progress()} as unknown};
+  const identity = {organizationId, principalId: "principal.synthetic", registeredClientId: clientId,
+    purpose: "plan-review" as "plan-review" | "agent"};
+  const workspaces = {async readWorkspace(id: unknown) {return id === workspaceId ? {workspaceId, organizationId,
+    displayName: "Synthetic", status: "active" as const, createdAt: at, updatedAt: at} : undefined;}};
+  const authorization = {async authorizeWorkspaceOperation({requiredScopes}: {requiredScopes: readonly string[]}) {
+    assert.deepEqual(requiredScopes, ["workspace:read", "model:read"]); state.policies++; state.onPolicy();
+    if (!state.allowed) throw new Error("PRIVATE policy denial");
+  }};
+  let dependencies: object;
+  const readTrainingTask = async function(this: unknown, query: {scope: {registeredClientId: string}; isCurrent: () => boolean}) {
+    assert.strictEqual(this, dependencies); assert.equal(query.scope.registeredClientId, clientId);
+    state.reads++; state.onRead(query); state.afterRead = true; return state.reply;
+  };
+  const unexpected = () => {assert.fail("Training observation must not resolve another feature or task owner.");};
+  const read = host === "desktop" ? (() => {
+    const options = {hostIncarnationId, identity, workspaceRepository: workspaces, authorization,
+      getUseCases: unexpected, isOpen: () => state.live, ...(configured ? {readTrainingTask} : {})};
+    dependencies = options;
+    const handler = composeDesktopHeadlessReads(options);
+    return (input: HeadlessReadRequest = request) => handler(input, async () => ({...identity,
+      workspaceIds: [workspaceId], operations: HEADLESS_READ_OPERATIONS, ...(state.planning ? {planReview: true as const} : {}),
+      isCurrent: () => state.live, isReadCurrent: () => state.readLive}));
+  })() : (() => {
+    const options = {hostIncarnationId, contexts: {getCurrentOrganizationContext: () => identity}, workspaces, authorization,
+      systems: {listTemplates: {execute: unexpected}, read: {execute: unexpected}}, ...(configured ? {readTrainingTask} : {})};
+    dependencies = options;
+    const handler = composeManagedAgentReads(options);
+    return (input: HeadlessReadRequest = request) => {
+      identity.purpose = state.planning ? "plan-review" : "agent";
+      return handler(input, identity, () => state.live && state.readLive);
+    };
+  })();
+  return {state, identity, request, progress, read, dependencies: dependencies!};
+}
+for (const host of ["desktop", "managed"] as const) {
+  test(`${host} training progress broker advertises only configured original readers and preserves numeric progress`, async () => {
+    const f = trainingReadFixture(host);
+    const description = await f.read({version, operation: "host.describe", input: {}});
+    assert.ok(description.ok && description.operation === "host.describe");
+    assert.ok(description.value.operations.includes("models.training-task"));
+    assert.deepEqual(await f.read(), {ok: true, operation: "models.training-task", value: f.progress()});
+    const advanced = {...f.progress(), percent: 75, progress: {epoch: 1, totalEpochs: 2, batch: 3, totalBatches: 4}};
+    f.state.reply = {ok: true, operation: "models.training-task", value: advanced};
+    assert.deepEqual(await f.read({...f.request, input: {...f.request.input,
+      selection: {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}}}),
+      {ok: true, operation: "models.training-task", value: advanced});
+    assert.equal(f.state.reads, 2);
+    const missing = trainingReadFixture(host, false);
+    const absent = await missing.read({version, operation: "host.describe", input: {}});
+    assert.ok(absent.ok && absent.operation === "host.describe");
+    assert.equal(absent.value.operations.includes("models.training-task"), false);
+    assert.deepEqual(await missing.read(), {ok: false, code: "headless.unsupported-operation"});
+    assert.equal(missing.state.reads, 0);
+  });
+  test(`${host} training progress broker requires current planning, read permission and original live identity`, async () => {
+    for (const withdraw of [(f: ReturnType<typeof trainingReadFixture>) => {f.state.planning = false;},
+      (f: ReturnType<typeof trainingReadFixture>) => {f.state.allowed = false;},
+      (f: ReturnType<typeof trainingReadFixture>) => {f.state.readLive = false;}]) {
+      const f = trainingReadFixture(host); withdraw(f); assert.deepEqual(await f.read(), denied); assert.equal(f.state.reads, 0);
+    }
+    const f = trainingReadFixture(host); f.state.onRead = () => {f.state.allowed = false;};
+    assert.deepEqual(await f.read(), denied); assert.equal(f.state.reads, 1);
+    const g = trainingReadFixture(host); g.state.onRead = () => {g.identity.registeredClientId = hostIncarnationId;};
+    assert.deepEqual(await g.read(), denied);
+  });
+  test(`${host} training progress broker preserves sticky read loss and original callback receiver`, async () => {
+    const f = trainingReadFixture(host); f.state.onRead = query => {
+      f.state.readLive = false; assert.equal(query.isCurrent(), false); f.state.readLive = true; assert.equal(query.isCurrent(), false);
+    };
+    assert.deepEqual(await f.read(), denied);
+    const g = trainingReadFixture(host); g.state.onPolicy = () => {
+      Object.assign(g.dependencies, {readTrainingTask: () => assert.fail("No callback replacement.")});
+    };
+    assert.deepEqual(await g.read(), {ok: true, operation: "models.training-task", value: g.progress()});
+  });
+  test(`${host} training progress broker detaches requests and replies before later policy waits`, async () => {
+    const f = trainingReadFixture(host); f.state.onPolicy = () => {f.request.input.selection.taskId = hostIncarnationId;};
+    assert.deepEqual(await f.read(), {ok: true, operation: "models.training-task", value: f.progress()});
+    const g = trainingReadFixture(host); const expected = g.progress();
+    g.state.onPolicy = () => {if (g.state.afterRead) Object.assign((g.state.reply as {value: unknown}).value!,
+      {percent: 75, progress: {epoch: 1, totalEpochs: 2, batch: 3, totalBatches: 4}});};
+    assert.deepEqual(await g.read(), {ok: true, operation: "models.training-task", value: expected});
+  });
+  test(`${host} training progress broker refuses private, foreign, malformed and active original replies`, async () => {
+    for (const reply of [{ok: true, operation: "models.task", value: trainingReadFixture(host).progress()},
+      {ok: true, operation: "models.training-task", value: {...trainingReadFixture(host).progress(), taskId: hostIncarnationId}},
+      {ok: true, operation: "models.training-task", value: {...trainingReadFixture(host).progress(), localPath: "PRIVATE"}},
+      {ok: false, code: "PRIVATE"}]) {
+      const f = trainingReadFixture(host); f.state.reply = reply; assert.deepEqual(await f.read(), unavailable);
+    }
+    let traps = 0; const f = trainingReadFixture(host);
+    f.state.reply = new Proxy({}, {getPrototypeOf() {traps++; throw Error("PRIVATE");}});
+    assert.deepEqual(await f.read(), unavailable); assert.equal(traps, 0);
+  });
+}
+
+
+function trainingFreshGrantFixture(field: "isCurrent" | "isReadCurrent", atPolicy: number,
+  change: "revoke" | "replace" | "scope" | "receiver" | "recursive" = "revoke") {
+  const f = trainingReadFixture("desktop");
+  const views: {grant: object; live: {isCurrent: boolean; isReadCurrent: boolean}}[] = [];
+  const state = {reads: 0, policies: 0, checks: 0};
+  let currentRead: (() => boolean) | undefined;
+  const reader = composeDesktopHeadlessReads({hostIncarnationId, identity: f.identity, isOpen: () => true,
+    getUseCases() {assert.fail("No fallback from original training observation.");},
+    workspaceRepository: {async readWorkspace() {return {workspaceId, organizationId, displayName: "Synthetic",
+      status: "active", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      assert.deepEqual(requiredScopes, ["workspace:read", "model:read"]);
+      if (++state.policies === atPolicy) {
+        const last = views[views.length - 1]; assert.notStrictEqual(last, views[0]);
+        if (change === "replace") Object.assign(last.grant, {[field]: () => true});
+        else if (change === "scope") Object.assign(last.grant, {operations: []});
+        else last.live[field] = false;
+        await Promise.resolve();
+      }
+    }},
+    async readTrainingTask(query) {state.reads++; assert.equal(query.isCurrent(), true);
+      if (change === "recursive") currentRead = query.isCurrent;
+      return {ok: true, operation: "models.training-task", value: f.progress()};},
+  });
+  const grant = async () => {
+    const live = {isCurrent: true, isReadCurrent: true};
+    const view = {...f.identity, workspaceIds: [workspaceId], operations: HEADLESS_READ_OPERATIONS,
+      planReview: true as const, live,
+      isCurrent: () => {state.checks++; return change === "recursive" && currentRead ? currentRead() : live.isCurrent;},
+      isReadCurrent: () => live.isReadCurrent};
+    if (change === "receiver") {
+      view.isCurrent = function(this: typeof view) {return this.live.isCurrent;};
+      view.isReadCurrent = function(this: typeof view) {return this.live.isReadCurrent;};
+    }
+    views.push({grant: view, live}); return view;
+  };
+  return {run: () => reader(f.request, grant), state, views};
+}
+for (const field of ["isCurrent", "isReadCurrent"] as const) for (const policy of [2, 3]) {
+  test(`desktop training progress retains fresh ${field} across policy wait ${policy}`, async () => {
+    const f = trainingFreshGrantFixture(field, policy);
+    assert.deepEqual(await f.run(), denied);
+    assert.equal(f.state.reads, policy === 2 ? 0 : 1);
+    assert.deepEqual(f.views[0].live, {isCurrent: true, isReadCurrent: true});
+  });
+}
+test("desktop training progress retains fresh callback references and scopes", async () => {
+  for (const change of ["replace", "scope"] as const) for (const field of ["isCurrent", "isReadCurrent"] as const) {
+    const f = trainingFreshGrantFixture(field, 2, change);
+    assert.deepEqual(await f.run(), denied); assert.equal(f.state.reads, 0);
+  }
+});
+test("desktop training progress accepts unchanged fresh grants and original callback receivers", async () => {
+  for (const change of ["revoke", "receiver"] as const) {
+    const f = trainingFreshGrantFixture("isCurrent", -1, change);
+    assert.equal((await f.run()).ok, true); assert.equal(f.state.reads, 1);
+  }
+});
+test("desktop training progress refuses recursive original authority without unbounded callbacks", async () => {
+  const f = trainingFreshGrantFixture("isCurrent", -1, "recursive");
+  assert.deepEqual(await f.run(), denied); assert.equal(f.state.reads, 1); assert.ok(f.state.checks < 100);
+});

@@ -59,6 +59,7 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
 const resultValue = {
   "models.preview-source": z.unknown(),
   "models.task": z.unknown(),
+  "models.training-task": z.unknown(),
   "models.review-download": z.unknown(),
   "models.inventory": z.unknown(),
   "models.record": z.unknown(),
@@ -286,6 +287,11 @@ function createForwarder(options: {
     }
     // Both Desktop and Managed callers must lose their mutable request reference
     // before transport awaits. Correlate only against this exact dispatched copy.
+    if (input.operation === "models.training-task") {
+      const copied = headless.readHeadlessTrainingTaskReadRequest(input, input.input.hostIncarnationId);
+      if (!copied.ok) return copied;
+      input = copied.request;
+    }
     if (input.operation === "models.task") {
       const copied = headless.readHeadlessModelTaskRequest(input, input.input.hostIncarnationId);
       if (!copied.ok) return copied;
@@ -468,6 +474,10 @@ function createForwarder(options: {
         if (signal?.aborted) return unavailable;
         const value = headless.readHeadlessModelTaskValue(parsed.data.value, input.input);
         return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
+      if (input.operation === "models.training-task") {
+        if (signal?.aborted) return unavailable;
+        return headless.readHeadlessTrainingTaskReadResult(parsed.data, input.input);
       }
       if (input.operation === "models.review-download") {
         if (signal?.aborted) return unavailable;

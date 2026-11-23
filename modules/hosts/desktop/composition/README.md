@@ -317,3 +317,15 @@ new query/save, source sharing or task adoption follows. Context shares only the
 selector and view IDs. Generation-task display retains its artifact-only policy
 and rejects query DTOs. Controlled feature checks leave physical and actual-host
 qualification separate. See the Context architecture and portable skill guide.
+
+
+### Original training progress in the read broker
+
+`composeDesktopHeadlessReads` accepts an optional original `readTrainingTask`
+callback. Only configured plan-review hosts advertise `models.training-task`.
+Capture the original callback and receiver before waits. Each read requires the
+original current client/workspace and ModelRead, with captured read fences and
+fresh grants before and after the detached reply. The callback may observe its
+accepted task and retire its owned lifecycle under the original business policy;
+there is no setup/start/discovery fallback. Numeric status is independently
+correlated in the loopback adapter and SDK. Roots do not opt in by this addition.

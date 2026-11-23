@@ -289,3 +289,14 @@ new query/save, source sharing or task adoption follows. Context shares only the
 selector and view IDs. Generation-task display retains its artifact-only policy
 and rejects query DTOs. Controlled feature checks leave physical and actual-host
 qualification separate. See the Context architecture and portable skill guide.
+
+
+### Original training progress in the Managed read broker
+
+`composeManagedAgentReads` accepts an optional original `readTrainingTask`
+callback and advertises `models.training-task` only for configured plan-review
+connections. Preserve the original callback/receiver, current registration,
+tenant/workspace ModelRead and sticky read lifetime. Copy and correlate numeric
+status before later permission waits; the API and SDK validate it independently.
+The original task can observe accepted work and retire its owned lifecycle.
+No new setup/start/discovery, public Root activation or candidate Save follows.

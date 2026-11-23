@@ -21,6 +21,7 @@ import {readHeadlessContextQueryPreviewRequest, type HeadlessContextQueryPreview
 import {readHeadlessModelSourcePreviewRequest, type HeadlessModelSourcePreviewRequest} from "./headless-model-source-preview";
 import {readHeadlessModelTaskRequest, type HeadlessModelTaskRequest,
   HEADLESS_MODEL_TASK_READ_OPERATIONS, readHeadlessModelDownloadReviewRequest, type HeadlessModelDownloadReviewRequest} from "./headless-model-task";
+import {readHeadlessTrainingTaskReadRequest, type HeadlessTrainingTaskReadRequest} from "./headless-model-training-task";
 
 export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
   "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation", "data.dataset-task-status", "data.dataset-task-review",
@@ -76,6 +77,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 };
 
 export type HeadlessReadRequest =
+  | HeadlessTrainingTaskReadRequest
   | HeadlessModelDownloadReviewRequest
   | HeadlessModelTaskRequest
   | HeadlessModelSourcePreviewRequest
@@ -187,6 +189,7 @@ export function parseHeadlessReadRequest(
   if (isHeadlessModelReadOperation(operation)) return readHeadlessModelMetadataRequest(value, currentHost);
   if (operation === "models.preview-source") return readHeadlessModelSourcePreviewRequest(value, currentHost);
   if (operation === "models.task") return readHeadlessModelTaskRequest(value, currentHost);
+  if (operation === "models.training-task") return readHeadlessTrainingTaskReadRequest(value, currentHost);
   if (operation === "models.review-download") return readHeadlessModelDownloadReviewRequest(value, currentHost);
   if (operation === "context.task") return readHeadlessContextTaskRequest(value, currentHost);
   if (operation === "context.saved") return readHeadlessContextSavedRequest(value, currentHost);
