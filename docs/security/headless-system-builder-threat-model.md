@@ -2024,3 +2024,38 @@ disclosure, including in-flight withdrawal. Charge recipe bytes to the existing
 256 MiB total before session creation. Six retained causal regressions cover
 these omissions; controlled adapter-wait cases test the callback handoff without
 claiming a native dispatch or shutdown proof.
+
+### Private approved training step admission
+
+Protect exact original scope, approval, step, settings and complete Model/Dataset
+metadata, plus one original training task and its unknown outcomes. A separate
+internal wrapper requires a trusted pure metadata compiler. Legacy wrappers clear
+it and refuse all training-containing plans before earlier ordinary mutations.
+No public data flag, host route or runtime capability activates this component.
+
+For new reserve/issue admission, compile only through supplied transaction metadata
+reads, then recheck current exact request authorization and the approval fence.
+Passively copy complete compiler results; refuse active/extra/readiness/installation
+claims and changed valid requests or facts. Preserve all semantic fields and array
+order, and retain the original matched stored digest through canonical/legacy
+representation differences. Use the training-only ledger, original scoped step-key
+and existing quota/indices. Historical accepted replay never resolves another
+compiler/runtime; previous training steps require original accepted receipts.
+
+Only the acknowledged new reservation owns issuance and trusted outcome recording.
+Unknown reservation/issue/accept replies cannot grant a repeat or conflicting
+non-start record. Preserve admitted outcomes after outward admission ends while
+refusing stale publication. These requester/approval controls cannot replace
+original business policy for retained application work. Core/SQLite cases cover
+actual approval/commit/reopen, loss, races, metadata substitution and legacy denial;
+related Model/Data/Context regressions remain. Actual bytes/native/resources,
+dispatch, private controls, result Save, public hosts and parent qualification are
+still pending. No model quality test, physical effect or prior allowance is used.
+
+Reserve the in-flight issuance state before awaiting its transaction/reply. Deny
+conflicting terminal continuation until it settles, and recheck terminal state
+before returning the original acknowledgement. Core/SQLite after-commit held-reply
+regressions cover this handoff. A separate private synchronous start fence closes
+on local terminal/denied/unknown outcomes while historical requester reads remain
+available. It is not an issue ACK or async policy/source/native proof. The new
+wrapper must not implicitly enable unrelated optional gates such as downloads.

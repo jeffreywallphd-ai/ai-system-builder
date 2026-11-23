@@ -181,3 +181,44 @@ Records contain identity and hashes, not paths, prompts, dataset/model bytes or
 provider replies. Download, Data and Context task records remain separate. No
 public route, task dispatcher, runtime/native ownership, model-quality or host
 qualification follows. Keep unsupported records unavailable on rollback.
+
+## Private training step admission
+
+`prepareStructuredHeadlessPlanStepWithTraining` reuses the existing stored-step
+adapter and training-only task ledger. It requires a trusted metadata compiler.
+Both older wrappers discard that compiler and still refuse the entire
+training-containing plan, including an earlier ordinary step. No public host or
+capability selects the new wrapper here. Other optional gates, including Model
+downloads, stay at their explicit/default values; the training wrapper grants none.
+
+New reservation and issuance compare complete freshly compiled request/input
+metadata to the approved version-4 binding in the supplied owned transaction.
+The compiler must use only that transaction's metadata and pure compilation;
+file reads, runtime preparation, provider I/O and nested/ambient stores are not
+permitted. Recheck exact request authorization and current approval after awaits.
+Preserve the original matched stored binding and digest even when the fresh
+compiler uses canonical JSON order. Arrays and all facts retain their meaning.
+
+Use a separate scoped training step-key domain, the existing quota/dual indices
+and approval fence. One acknowledged new reservation owns issuance and trusted
+outcome recording. Missing commit replies stay uncertain; a later caller cannot
+issue or mark that attempt as not started. Acceptance or proven non-start can
+record the original outcome after outward admission ends, without publishing it.
+Terminal outcomes cannot reopen compilation or issuance. Historical accepted
+replay does not invoke a new compiler, file or runtime operation. Mixed-plan
+predecessors require their own accepted training receipts; publication rechecks
+current query/approval authority. These request admission controls do not replace
+the accepted application's retained original business policy.
+
+Core/SQLite tests exercise actual approval, transactions, legacy digest identity,
+lost replies, permission races, ordered steps and reopening. The component starts
+no task and qualifies no native custody, model/resource readiness, actual host,
+result Save or parent criterion. Those remain separate pending work.
+
+An unresolved issuance blocks conflicting terminal continuations. Recheck the
+local terminal state before returning its acknowledgement. `isStartCurrent()` is
+a synchronous original-reservation/local-outcome fence for later dispatch wiring;
+it is false while issue is in flight and after terminal, denied or unknown issue.
+It is not an issue acknowledgement, async policy/metadata check or native proof.
+Keep it separate from requester `isCurrent()` so legitimate historical reads still
+work. Future execution must compose both with its own required current proofs.

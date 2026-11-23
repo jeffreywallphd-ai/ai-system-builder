@@ -1118,3 +1118,29 @@ business/host control after acceptance. This function is not serialized authorit
 or native proof. Private actions check original business permission and fresh
 caller policy before use and disclosure. Include recipe bytes in the existing
 256 MiB aggregate; a valid per-file bound cannot bypass the total.
+
+### Private training step transaction protocol
+
+Extend the existing stored-step adapter with a distinct internal training wrapper.
+Its configured compiler performs only supplied-transaction metadata reads and pure
+compilation for new reserve/issue admission. Existing legacy and download wrappers
+explicitly clear it and retain whole-plan training denial. Public hosts and runtime
+ports remain unconfigured by this component.
+
+Compare complete validated current facts, preserving the original matched stored
+binding/digest for the existing training-only ledger. Keep its scoped step-key,
+quota, indices and fenced single issuance. Retain unknown replies without another
+attempt. Accepted replay reads original history without a new compiler or runtime.
+Only the original new reservation supplies trusted accepted/non-start continuation;
+outward request expiry cannot erase an admitted outcome or authorize publication.
+Retain mixed-plan ordering and fresh publication policy. These admission controls
+are separate from the accepted application's original business lifetime. Real
+source/native/resource, dispatch, private task controls, Save and host qualification
+remain required before activation; metadata tests supply no such authority.
+
+The new wrapper does not implicitly enable Model downloads or other optional
+gates. Track original issuance in flight before awaits, deny conflicting terminal
+continuations, and recheck local outcome before returning its acknowledgement.
+Expose a separate synchronous private start-lifetime fence for the original known
+reservation and local outcome. It neither replaces issue acknowledgement and
+fresh async policy/metadata/native checks nor disables historical requester reads.

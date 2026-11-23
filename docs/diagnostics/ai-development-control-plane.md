@@ -3123,3 +3123,15 @@ counts and the original plus JSON-order regression titles. Additional passing
 cases can extend that suite without a false failure or a weaker zero-test check.
 Failed historical receipts and independent causal findings remain inspectable;
 an immutable work-scope repair uses an explicitly linked successor contract.
+
+The exact training-step fixture selects `headless-training-step-unit` and
+`headless-training-step-types`. The unit command runs actual Core/SQLite training
+step cases plus unchanged related Model download, Data/file and Context transaction
+cases. The strict command compiles the actual new fixture and shared step source.
+Shared step source alone retains generic impact; its broad ordinary behavior must
+not borrow this coverage from an unrelated change. The README borrows only with a
+selected exact fixture. Missing/nonregular required files, unknown sources and
+explicit generic requests retain conservative fallback. The routing harness runs
+both fixed commands, checks real assertion totals and required family titles, and
+refuses skipped/failed/cancelled/todo tests. These checks qualify metadata software
+only; no model, native, runtime, actual host, Save or parent pass is supplied.

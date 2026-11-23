@@ -568,6 +568,45 @@ PUBLISHED_FORM_CHECKS = {
             "modules.adapters.runtime.python.worker.tests.test_worker_app.WorkerAppTests.test_async_model_download_task_updates_progress",
             "modules.adapters.runtime.python.worker.tests.test_worker_app.WorkerAppTests.test_async_model_download_failure_preserves_retryable_safe_error"),
     },
+    "headless-training-step-unit": {
+        "automatic_sources": (
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-step.unit.test.ts",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore.ts",
+            "modules/adapters/persistence/system-builder/headlessModelTrainingReviewBindings.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-step.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-headless-local-file-plan-step-store.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/headless-reviewed-dataset-hosts.integration.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-execution.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts",
+        ),
+        "sources": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-step.unit.test.ts",
+            "modules/adapters/persistence/system-builder/README.md",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-step.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-model-download-execution.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-headless-local-file-plan-step-store.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/headless-reviewed-dataset-hosts.integration.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-execution.unit.test.ts",
+            "modules/hosts/shared/composition/tests/headless-context-result-execution.unit.test.ts"),
+    },
+    "headless-training-step-types": {
+        "companion_to": "headless-training-step-unit",
+        "sources": (
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-step.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-training-plan-step.unit.test.ts"),
+    },
     "headless-training-task-ledger-unit": {
         "automatic_sources": (
             "modules/adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore.ts",

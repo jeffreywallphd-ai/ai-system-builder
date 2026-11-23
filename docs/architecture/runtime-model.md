@@ -2378,3 +2378,28 @@ after its own waits and before physical dispatch. Keep it separate from retained
 business control so outward request completion cannot erase an accepted result.
 Private actions check both original and caller permission around their operation.
 Recipe and selected data share the existing 256 MiB total byte budget.
+
+### Private training plan-step records
+
+The existing stored-step adapter has a separate internal training wrapper. Its
+metadata-only compiler uses the supplied owned transaction for fresh new-start
+input checks; it never prepares files or runtime there. Legacy wrappers explicitly
+discard it and deny the whole training-containing plan. No public root selects it.
+
+Reserve and issue recheck exact approval, current request-specific permission and
+complete compiled metadata against the stored binding. Keep the original matched
+legacy digest as task identity. Reuse the training-only ledger and a separate
+scoped step-key domain. Unknown commits retain original state without a new start.
+An accepted receipt replays without compilation, file or runtime effects. Only the
+original new reservation records its admitted accepted/proven non-start outcome
+after outward admission ends; live publication remains guarded. Prepared request/
+approval controls are not the original business controls for accepted work.
+Real dispatch, native/source/resource ownership, task controls, Save and supported
+host qualification remain pending. Source-tested metadata is not physical proof.
+
+Track pending issue acknowledgements before awaits so a conflicting non-start
+cannot commit while the original reply is held. Recheck local terminal outcome
+before returning an issued acknowledgement. The private synchronous start fence
+tracks only original reservation/local lifetime; requester `isCurrent` continues
+to guard historical query/publication. Neither replaces fresh async policy/source,
+issue acknowledgement or native proof. Other optional gates remain explicit.
