@@ -2,6 +2,9 @@ import { lstat, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { basename, isAbsolute, join, parse, relative, resolve } from "node:path";
 import { types } from "node:util";
+import {createHash} from "node:crypto";
+import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
+import {isOrganizationId} from "../../../contracts/organization";
 
 import {
   normalizeModelTrainingRequest,
@@ -14,6 +17,9 @@ import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
 import { normalizeStorageArtifactKey, createRetrieveArtifactRequest, type ArtifactStorageBinding } from "../../../contracts/storage";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import type { GeneratedModelStoragePort, ModelPublisherPort, ModelRegistryPort } from "../../ports/model";
+import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl,
+  ApprovedLocalTrainingDefinition, ApprovedLocalTrainingSession, ApprovedLocalTrainingStart,
+  ApprovedLocalTrainingTask, ApprovedLocalTrainingBytes} from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../../ports/storage";
 import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
@@ -23,6 +29,152 @@ type TrainingStartStage = "request-validation" | "runtime-readiness" | "base-mod
   | "dataset-resolution" | "task-dispatch" | "task-registration";
 
 const TRAINING_SESSION_LIMIT = 1024;
+const PRIVATE_TRAINING_TASKS = new Set(["llm-instruction", "llm-classification", "llm-extraction", "llm-embedding", "llm-reranker"]);
+const PRIVATE_TRAINING_MEDIA: Readonly<Record<string, string>> = {"application/x-ndjson": "jsonl", "application/jsonl": "jsonl",
+  "application/json": "json", "text/json": "json", "text/csv": "csv", "application/csv": "csv",
+  "application/x-parquet": "parquet", "application/vnd.apache.parquet": "parquet"};
+const privateUnavailable = () => new Error("The original private training task is unavailable.");
+const privateDigest = (bytes: Uint8Array) => "sha256:" + createHash("sha256").update(bytes).digest("hex");
+const isPrivateDigest = (value: unknown): value is string => typeof value === "string" && /^sha256:[a-f0-9]{64}$/.test(value);
+const isPrivateId = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+function privateRecord(value: unknown, keys: readonly string[]) {
+  if (types.isProxy(value)) throw privateUnavailable();
+  return readStrictPassiveRecord(value, keys);
+}
+/** Private JSON-shaped data, copied without evaluating hooks. Optional undefined
+ * object members are omitted; arrays must be dense. Byte inputs use intrinsics. */
+function copyPrivateTrainingData<T>(value: T): T {
+  let nodes = 0, bytes = 0; const ancestors = new Set<object>();
+  function visit(value: unknown, depth: number): unknown {
+    if (++nodes > 8192 || depth > 24) throw privateUnavailable();
+    if (value === null || typeof value === "boolean" || value === undefined) return value;
+    if (typeof value === "string") {bytes += Buffer.byteLength(value); if (value.length > 65536 || bytes > 1024 * 1024) throw privateUnavailable(); return value;}
+    if (typeof value === "number") {if (!Number.isFinite(value)) throw privateUnavailable(); return value;}
+    if (typeof value !== "object" || types.isProxy(value) || ancestors.has(value)) throw privateUnavailable();
+    const array = Array.isArray(value), proto = Object.getPrototypeOf(value), keys = Reflect.ownKeys(value);
+    if (array ? proto !== Array.prototype || value.length > 1024 || keys.length !== value.length + 1 :
+        proto !== Object.prototype && proto !== null || keys.length > 128) throw privateUnavailable();
+    ancestors.add(value);
+    const result: Record<string, unknown> | unknown[] = array ? [] : {};
+    for (const key of keys) {
+      if (array && key === "length") continue;
+      if (typeof key !== "string" || ["__proto__", "prototype", "constructor"].includes(key) ||
+          array && (!/^(0|[1-9][0-9]*)$/.test(key) || !Number.isSafeInteger(Number(key)) || Number(key) >= (value as unknown[]).length)) throw privateUnavailable();
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable || !("value" in descriptor) || array && descriptor.value === undefined) throw privateUnavailable();
+      if (descriptor.value !== undefined) (result as Record<string, unknown>)[key] = visit(descriptor.value, depth + 1);
+    }
+    ancestors.delete(value); return result;
+  }
+  return visit(value, 0) as T;
+}
+function freezePrivate<T>(value: T): T {
+  if (value && typeof value === "object") {for (const item of Object.values(value)) freezePrivate(item); Object.freeze(value);} return value;
+}
+function capturePrivateMethod<T extends (...args: any[]) => any>(owner: object, name: string): T {
+  if (types.isProxy(owner)) throw privateUnavailable();
+  let current: object | null = owner; const seen = new Set<object>();
+  for (let depth = 0; current && depth < 8; depth++) {
+    if (types.isProxy(current) || seen.has(current)) throw privateUnavailable(); seen.add(current);
+    const descriptor = Object.getOwnPropertyDescriptor(current, name);
+    if (descriptor) {
+      if (!("value" in descriptor) || typeof descriptor.value !== "function" || types.isProxy(descriptor.value)) throw privateUnavailable();
+      const method = descriptor.value;
+      // bind() reads a function's name/length and can evaluate accessors.
+      return ((...args: unknown[]) => Reflect.apply(method, owner, args)) as T;
+    }
+    current = Object.getPrototypeOf(current);
+  }
+  throw privateUnavailable();
+}
+function capturePrivateControl(raw: ApprovedLocalTrainingControl) {
+  const row = privateRecord(raw, ["isCurrent", "stillAllowed"]), {isCurrent, stillAllowed} = row;
+  if (Object.keys(row).length !== 2 || typeof isCurrent !== "function" || types.isProxy(isCurrent) ||
+      typeof stillAllowed !== "function" || types.isProxy(stillAllowed)) throw privateUnavailable();
+  const current = () => {try {
+    const now = privateRecord(raw, ["isCurrent", "stillAllowed"]);
+    if (now.isCurrent !== isCurrent || now.stillAllowed !== stillAllowed) return false;
+    const value: unknown = Reflect.apply(isCurrent, raw, []);
+    if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+    const final = privateRecord(raw, ["isCurrent", "stillAllowed"]);
+    return value === true && final.isCurrent === isCurrent && final.stillAllowed === stillAllowed;
+  } catch {return false;}};
+  return Object.freeze({isCurrent: current, stillAllowed: async () => {
+    if (!current()) return false; try {return await Reflect.apply(stillAllowed, raw, []) === true && current();} catch {return false;}
+  }});
+}
+function privateBytes(value: unknown, limit: number) {
+  if (!types.isUint8Array(value) || types.isProxy(value)) throw privateUnavailable();
+  const proto = Object.getPrototypeOf(Uint8Array.prototype), length = Object.getOwnPropertyDescriptor(proto, "byteLength")!.get!.call(value) as number;
+  const buffer = Object.getOwnPropertyDescriptor(proto, "buffer")!.get!.call(value);
+  if (types.isSharedArrayBuffer(buffer) || length < 1 || length > limit) throw privateUnavailable();
+  const copy = new Uint8Array(length); Uint8Array.prototype.set.call(copy, value); return copy;
+}
+function capturePrivateAdmission(rawRequest: ModelTrainingRequest, raw: ApprovedLocalTrainingAdmission) {
+  const row = privateRecord(raw, ["requestId", "organizationId", "principalId", "clientId", "hostIncarnationId", "modelUpdatedAt",
+    "datasetId", "versionId", "versionDigest", "proposalDigest", "inputs", "recipe", "control", "isAdmissionCurrent", "acknowledgeIssued"]);
+  if (Object.keys(row).length !== 15 || !isPrivateId(row.requestId) || !isPrivateId(row.clientId) || !isPrivateId(row.hostIncarnationId) ||
+      !isOrganizationId(row.organizationId) || typeof row.principalId !== "string" || !row.principalId || row.principalId.length > 160 ||
+      /[\x00-\x1f\x7f]/.test(row.principalId) || hasKnownPassiveCredential(row.principalId) ||
+      typeof row.modelUpdatedAt !== "string" || new Date(row.modelUpdatedAt).toISOString() !== row.modelUpdatedAt ||
+      !isPrivateDigest(row.versionDigest) || !isPrivateDigest(row.proposalDigest) ||
+      [row.datasetId, row.versionId].some(value => typeof value !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:@-]{0,199}$/.test(value) || hasKnownPassiveCredential(value)) ||
+      typeof row.isAdmissionCurrent !== "function" || types.isProxy(row.isAdmissionCurrent) ||
+      typeof row.acknowledgeIssued !== "function" || types.isProxy(row.acknowledgeIssued)) throw privateUnavailable();
+  const source = copyPrivateTrainingData(rawRequest);
+  privateRecord(source, ["workspaceId", "trainingTask", "baseModel", "datasets", "method", "commonParameters", "advancedParameters", "output", "validation"]);
+  privateRecord(source.baseModel, ["modelRecordId", "provider", "modelId", "localPath", "inferenceMode"]);
+  const output = privateRecord(source.output, ["outputModelName", "maxShardSize", "destination"]);
+  const destination = privateRecord(output.destination, ["local"]), local = privateRecord(destination.local, ["enabled"]);
+  if (local.enabled !== false) throw privateUnavailable();
+  for (const input of source.datasets) privateRecord(input, ["artifactId", "splitRole", "format"]);
+  const request = normalizeModelTrainingRequest(source);
+  if (!isWorkspaceId(request.workspaceId) || !PRIVATE_TRAINING_TASKS.has(request.trainingTask ?? "") || !request.baseModel.modelRecordId ||
+      !request.baseModel.localPath || !isAbsolute(request.baseModel.localPath) || /^[\\/]{2}/.test(request.baseModel.localPath) ||
+      request.baseModel.localPath.length > 4096 || /[\x00-\x1f\x7f]/.test(request.baseModel.localPath) ||
+      resolve(request.baseModel.localPath) === parse(request.baseModel.localPath).root || request.output.localOutputDirectory !== undefined ||
+      request.datasets.length < 1 || request.datasets.length > 16) throw privateUnavailable();
+  if (types.isProxy(row.inputs) || !Array.isArray(row.inputs) || Object.getPrototypeOf(row.inputs) !== Array.prototype ||
+      Reflect.ownKeys(row.inputs).length !== row.inputs.length + 1 || row.inputs.length !== request.datasets.length) throw privateUnavailable();
+  let total = 0;
+  const inputs: ApprovedLocalTrainingBytes[] = [];
+  for (let index = 0; index < row.inputs.length; index++) {
+    const item = Object.getOwnPropertyDescriptor(row.inputs, String(index)); if (!item?.enumerable || !("value" in item)) throw privateUnavailable();
+    const data = privateRecord(item.value, ["artifactId", "role", "mediaType", "digest", "content"]), expected = request.datasets[index];
+    if (Object.keys(data).length !== 5 || typeof data.artifactId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(data.artifactId) ||
+        data.artifactId !== expected.artifactId || !["train", "validation"].includes(data.role as string) || data.role !== expected.splitRole ||
+        typeof data.mediaType !== "string" || !PRIVATE_TRAINING_MEDIA[data.mediaType] ||
+        expected.format !== undefined && expected.format !== PRIVATE_TRAINING_MEDIA[data.mediaType] || !isPrivateDigest(data.digest)) throw privateUnavailable();
+    const content = privateBytes(data.content, MAXIMUM_TRAINING_SOURCE_BYTES); total += content.byteLength;
+    if (total > 256 * 1024 * 1024 || privateDigest(content) !== data.digest) throw privateUnavailable();
+    inputs.push(Object.freeze({artifactId: data.artifactId, role: data.role as "train" | "validation", mediaType: data.mediaType, digest: data.digest, content}));
+  }
+  if (!inputs.some(input => input.role === "train") || new Set(inputs.map(input => input.artifactId)).size !== inputs.length) throw privateUnavailable();
+  const recipeRow = privateRecord(row.recipe, ["digest", "content"]), recipe = privateBytes(recipeRow.content, 512 * 1024);
+  if (Object.keys(recipeRow).length !== 2 || !isPrivateDigest(recipeRow.digest) || privateDigest(recipe) !== recipeRow.digest ||
+      total + recipe.byteLength > 256 * 1024 * 1024) throw privateUnavailable();
+  const control = capturePrivateControl(row.control as ApprovedLocalTrainingControl), callback = row.isAdmissionCurrent, acknowledge = row.acknowledgeIssued;
+  const identityFields = ["requestId", "organizationId", "principalId", "clientId", "hostIncarnationId", "modelUpdatedAt",
+    "datasetId", "versionId", "versionDigest", "proposalDigest", "control"];
+  const isAdmissionCurrent = () => {try {
+    const now = privateRecord(raw, Object.keys(row)); if (now.isAdmissionCurrent !== callback || now.acknowledgeIssued !== acknowledge ||
+      identityFields.some(key => now[key] !== row[key])) return false;
+    const value: unknown = Reflect.apply(callback, raw, []); if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+    const final = privateRecord(raw, Object.keys(row)); return value === true && final.isAdmissionCurrent === callback && final.acknowledgeIssued === acknowledge &&
+      identityFields.every(key => final[key] === row[key]);
+  } catch {return false;}};
+  const definition: ApprovedLocalTrainingDefinition = freezePrivate({requestId: row.requestId, workspaceId: request.workspaceId,
+    owner: {organizationId: row.organizationId, principalId: row.principalId, clientId: row.clientId, hostIncarnationId: row.hostIncarnationId}, request,
+    modelUpdatedAt: row.modelUpdatedAt, dataset: {datasetId: row.datasetId as string, versionId: row.versionId as string,
+      versionDigest: row.versionDigest, recipeDigest: recipeRow.digest}, proposalDigest: row.proposalDigest,
+    inputs: inputs.map(({content, ...input}) => ({...input, sizeBytes: content.byteLength})), recipeSizeBytes: recipe.byteLength});
+  return {definition, inputs, recipe, control, isAdmissionCurrent, acknowledgeIssued: () => Reflect.apply(acknowledge, raw, []) as Promise<boolean>};
+}
+type PrivateTrainingOwner = {
+  readonly definition: ApprovedLocalTrainingDefinition; readonly control: ApprovedLocalTrainingControl; readonly lease: OwnedTaskLease;
+  phase: "preparing" | "accepted" | "unconfirmed" | "not-started"; settled: boolean; actions: number;
+  session?: ApprovedLocalTrainingSession; inputPath?: string; outputPath?: string; stageUnconfirmed?: boolean;
+};
 type TrainingOutputStage = {
   readonly path: string;
   readonly device: bigint;
@@ -236,6 +388,7 @@ function extractSourceArtifactIds(metadata: Record<string, unknown> | undefined)
 }
 
 export class TrainModelUseCase {
+  private readonly privateTrainingOwners = new Map<string, PrivateTrainingOwner>();
   private readonly reads = new Map<string, Promise<ModelTrainingResult>>();
   private readonly registeredResultsByRequestId = new Map<string, ModelTrainingResult>();
   private readonly pendingResultsByRequestId = new Map<string, ModelTrainingResult>();
@@ -287,6 +440,7 @@ export class TrainModelUseCase {
       modelPublisher?: ModelPublisherPort;
       taskPowerLifecycle: TaskPowerLifecyclePort;
       runtimeCapabilityGuard?: Pick<RuntimeCapabilityGuardService, "requireCapabilityReady">;
+      approvedLocalTraining?: ApprovedLocalModelTrainingPort;
     },
   ) {}
 
@@ -294,9 +448,157 @@ export class TrainModelUseCase {
     return this.dependencies.taskReconciler ? this.dependencies.taskReconciler.withLease("python", (lease) => this.executeOwned(request, lease)) : this.executeOwned(request);
   }
 
+  /** Trusted original-plan entry only. No configured port means no staging,
+   * readiness/install calls or ordinary fallback. Returned objects stay private. */
+  public async startApprovedLocal(rawRequest: ModelTrainingRequest, rawAdmission: ApprovedLocalTrainingAdmission): Promise<ApprovedLocalTrainingStart> {
+    let captured: ReturnType<typeof capturePrivateAdmission>, create: ApprovedLocalModelTrainingPort["createSession"];
+    const reconciler = this.dependencies.taskReconciler, port = this.dependencies.approvedLocalTraining;
+    if (!reconciler || !port) return {kind: "unavailable"};
+    try {create = capturePrivateMethod(port, "createSession"); captured = capturePrivateAdmission(rawRequest, rawAdmission);}
+    catch {return {kind: "unavailable"};}
+    const {definition, inputs, recipe, control, isAdmissionCurrent, acknowledgeIssued} = captured, id = definition.requestId;
+    if (this.privateTrainingOwners.has(id) || this.workspaceIdByRequestId.has(id) || this.trainingSessionCount() >= TRAINING_SESSION_LIMIT)
+      return {kind: "unavailable"};
+    let lease: OwnedTaskLease; try {lease = reconciler.reserve();} catch {return {kind: "unavailable"};}
+    const owner: PrivateTrainingOwner = {definition, control, lease, phase: "preparing", settled: false, actions: 0};
+    this.privateTrainingOwners.set(id, owner);
+    let observing = false;
+    const retained = () => {
+      if (observing) return; observing = true;
+      lease.start(async () => {
+        if (owner.phase !== "accepted") return false;
+        if (!owner.control.isCurrent() || await owner.control.stillAllowed() !== true || !owner.control.isCurrent()) await owner.session?.cancel();
+        await this.readTrainingInWorkspace(id, definition.workspaceId);
+        return owner.settled;
+      }, async () => {
+        if (owner.phase === "accepted") await owner.session?.cancel();
+      }, async () => {
+        // A generic Python stop cannot close a different original native/IO owner.
+        if (this.reads.has(id) || owner.actions || this.reviewActionRequestIds.has(id)) throw privateUnavailable();
+        await this.settlePrivateTraining(owner);
+        if (this.reads.has(id) || owner.actions) throw privateUnavailable();
+        if (owner.stageUnconfirmed) throw privateUnavailable();
+        await this.cleanupRuntimeDatasetDir(id);
+        if (owner.phase === "accepted") this.stoppedTaskIds.add(id);
+        if (!this.pendingResultsByRequestId.has(id)) {
+          await this.cleanupRuntimeOutputDirectory(id);
+          if (owner.phase === "accepted" && !this.registeredResultsByRequestId.has(id)) {
+            this.registeredResultsByRequestId.set(id, normalizeModelTrainingResult({runId: id, status: "failed",
+              error: {code: "host_stopped", message: "The host stopped before training completed."}}));
+            await this.completePowerLifecycle(id, "failed");
+          }
+        }
+      });
+    };
+    const uncertain = (): ApprovedLocalTrainingStart => {owner.phase = "unconfirmed"; try {retained();} catch {} return {kind: "unconfirmed"};};
+    const current = () => this.privateTrainingOwners.get(id) === owner && control.isCurrent();
+    const startCurrent = () => {try {
+      reconciler.assertAccepting();
+      return owner.phase === "preparing" && current() && isAdmissionCurrent() && current();
+    } catch {return false;}};
+    const admit = async () => {try {
+      return startCurrent() && await control.stillAllowed() === true && startCurrent();
+    } catch {return false;}};
+    const unavailable = async (): Promise<ApprovedLocalTrainingStart> => {
+      try {
+        if (owner.session) await this.settlePrivateTraining(owner); else owner.settled = true;
+        if (owner.stageUnconfirmed) return uncertain();
+        await this.cleanupRuntimeDatasetDir(id); await this.cleanupRuntimeOutputDirectory(id);
+        owner.phase = "not-started"; lease.release(); return {kind: "unavailable"};
+      } catch {return uncertain();}
+    };
+    try {
+      if (!await admit() || !startCurrent()) {this.privateTrainingOwners.delete(id); lease.release(); return {kind: "unavailable"};}
+      const session = create(definition, Object.freeze({isCurrent: current, stillAllowed: async () => current() && await control.stillAllowed() === true && current()}));
+      if (session === undefined) {this.privateTrainingOwners.delete(id); lease.release(); return {kind: "unavailable"};}
+      if (types.isPromise(session)) {void Promise.prototype.then.call(session, undefined, () => {}); return uncertain();}
+      // Capture the retirement owner before prepare/start can have an unknown reply.
+      if (!session || types.isProxy(session)) return uncertain();
+      const requestId = Object.getOwnPropertyDescriptor(session, "requestId"), workspaceId = Object.getOwnPropertyDescriptor(session, "workspaceId");
+      if (!requestId || !("value" in requestId) || requestId.value !== id || !workspaceId || !("value" in workspaceId) || workspaceId.value !== definition.workspaceId) return uncertain();
+      owner.session = Object.freeze({requestId: id, workspaceId: definition.workspaceId,
+        prepare: capturePrivateMethod(session, "prepare"), start: capturePrivateMethod(session, "start"),
+        read: capturePrivateMethod(session, "read"), cancel: capturePrivateMethod(session, "cancel"), settle: capturePrivateMethod(session, "settle")});
+      const ready = await owner.session.prepare();
+      if (ready === "unavailable") return await unavailable();
+      if (ready !== "ready") return uncertain();
+      if (!await admit() || !startCurrent()) return await unavailable();
+      // Private copies never consult Model discovery or mutable Artifact bindings.
+      owner.inputPath = await mkdtemp(join(await realpath(tmpdir()), "ai-system-builder-training-datasets-"));
+      owner.stageUnconfirmed = true;
+      const inputIdentity = await lstat(owner.inputPath, {bigint: true});
+      if (!inputIdentity.isDirectory() || inputIdentity.isSymbolicLink() || inputIdentity.ino === 0n || await realpath(owner.inputPath) !== owner.inputPath) return uncertain();
+      this.runtimeDatasetStagesByRequestId.set(id, {path: owner.inputPath, device: inputIdentity.dev, inode: inputIdentity.ino});
+      owner.stageUnconfirmed = false;
+      if (!await admit() || !startCurrent()) return await unavailable();
+      const datasets = [];
+      for (let index = 0; index < inputs.length; index++) {
+        const source = inputs[index], path = buildRuntimeDatasetPath(owner.inputPath, source.artifactId, source.mediaType, index);
+        await writeFile(path, source.content, {flag: "wx", mode: 0o600});
+        if (!await admit() || !startCurrent()) return await unavailable();
+        datasets.push({...definition.request.datasets[index], format: PRIVATE_TRAINING_MEDIA[source.mediaType], path});
+      }
+      const recipePath = join(owner.inputPath, "approved-recipe.json"); await writeFile(recipePath, recipe, {flag: "wx", mode: 0o600});
+      if (!await admit() || !startCurrent()) return await unavailable();
+      owner.outputPath = await mkdtemp(join(await realpath(tmpdir()), "ai-system-builder-training-output-")); owner.stageUnconfirmed = true;
+      const outputIdentity = await lstat(owner.outputPath, {bigint: true});
+      if (!outputIdentity.isDirectory() || outputIdentity.isSymbolicLink() || outputIdentity.ino === 0n || await realpath(owner.outputPath) !== owner.outputPath) return uncertain();
+      this.runtimeOutputStages.set(id, {path: owner.outputPath, device: outputIdentity.dev, inode: outputIdentity.ino}); owner.stageUnconfirmed = false;
+      if (!await admit() || !startCurrent()) return await unavailable();
+      // Invoke at most once. A thrown acknowledgement is not a known non-start.
+      if (await acknowledgeIssued() !== true) return await unavailable();
+      if (!await admit() || !startCurrent()) return await unavailable();
+      const payload = freezePrivate({...definition.request, datasets, output: {...definition.request.output, outputDirectory: owner.outputPath}});
+      const response = copyPrivateTrainingData(await owner.session.start(Object.freeze({payload,
+        recipe: Object.freeze({path: recipePath, digest: definition.dataset.recipeDigest, sizeBytes: recipe.byteLength}), outputDirectory: owner.outputPath}), startCurrent));
+      const ack = privateRecord(response, ["kind", "requestId", "workspaceId", "status"]);
+      if (ack.kind === "unavailable" && Object.keys(ack).length === 1) return await unavailable();
+      if (ack.kind !== "accepted" || Object.keys(ack).length !== 4 || ack.requestId !== id || ack.workspaceId !== definition.workspaceId ||
+          !["queued", "running"].includes(ack.status as string)) return uncertain();
+      // Preserve the original ACK even if the outward caller ended meanwhile.
+      owner.phase = "accepted";
+      this.workspaceIdByRequestId.set(id, definition.workspaceId);
+      this.requestContextByRequestId.set(id, {normalizedRequest: definition.request, baseModelRecordId: definition.request.baseModel.modelRecordId});
+      retained();
+      try {await this.dependencies.taskPowerLifecycle.startTask(id, TaskType.MODEL_TRAINING);} catch {}
+      const task: ApprovedLocalTrainingTask = Object.freeze({requestId: id, workspaceId: definition.workspaceId,
+        read: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, () => this.readTrainingInWorkspace(id, definition.workspaceId)),
+        cancel: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, async () => {
+          if (!owner.settled) {
+            const raw = copyPrivateTrainingData(await owner.session!.cancel()), cancel = privateRecord(raw, ["requestId", "cancelled", "status", "message"]);
+            if (cancel.requestId !== id || typeof cancel.cancelled !== "boolean" ||
+                !["queued", "running", "succeeded", "failed", "cancelled", "unknown"].includes(cancel.status as string)) throw privateUnavailable();
+          }
+          // Cancellation ACK is not physical settlement or deletion authority.
+          return this.readTrainingInWorkspace(id, definition.workspaceId);
+        })});
+      return {kind: "accepted", value: {runId: id, status: ack.status as "queued" | "running"}, task};
+    } catch {return uncertain();}
+  }
+
+  private trainingSessionCount(): number {
+    return new Set([...this.workspaceIdByRequestId.keys(), ...this.privateTrainingOwners.keys()]).size + this.startingRuns + this.unconfirmedStarts.size;
+  }
+  private async settlePrivateTraining(owner: PrivateTrainingOwner): Promise<void> {
+    if (owner.settled) return;
+    if (!owner.session || await owner.session.settle() !== true) throw privateUnavailable();
+    owner.settled = true;
+  }
+  private async usePrivateTraining(owner: PrivateTrainingOwner, raw: ApprovedLocalTrainingControl, action: () => Promise<ModelTrainingResult>): Promise<ModelTrainingResult> {
+    const control = capturePrivateControl(raw), current = () => this.privateTrainingOwners.get(owner.definition.requestId) === owner && owner.phase === "accepted" && owner.control.isCurrent() && control.isCurrent();
+    const allowed = async () => {try {
+      if (!current() || await control.stillAllowed() !== true || !current()) return false;
+      return await owner.control.stillAllowed() === true && current();
+    } catch {return false;}};
+    if (!await allowed() || !current()) throw privateUnavailable();
+    owner.actions++;
+    try {const result = await action(); if (!await allowed() || !current()) throw privateUnavailable(); return copyPrivateTrainingData(result);}
+    finally {owner.actions--;}
+  }
+
   private async executeOwned(request: ModelTrainingRequest, lease?: OwnedTaskLease): Promise<ModelTrainingResult> {
     let stage: TrainingStartStage = "request-validation";
-    if (this.workspaceIdByRequestId.size + this.startingRuns + this.unconfirmedStarts.size >= TRAINING_SESSION_LIMIT) {
+    if (this.trainingSessionCount() >= TRAINING_SESSION_LIMIT) {
       lease?.release();
       throw trainingStartFailure(new Error("Training session task capacity is unavailable."), stage);
     }
@@ -461,6 +763,11 @@ export class TrainModelUseCase {
   }
 
   public async read(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (this.privateTrainingOwners.has(requestId)) throw privateUnavailable();
+    return this.readTrainingInWorkspace(requestId, workspaceId);
+  }
+
+  private async readTrainingInWorkspace(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
     if (
       !isWorkspaceId(workspaceId)
       || this.workspaceIdByRequestId.get(requestId) !== workspaceId
@@ -489,8 +796,16 @@ export class TrainModelUseCase {
 
     if (this.stoppedTaskIds.has(requestId)) throw new Error("Training stopped before a result was confirmed.");
 
-    const statusRecord = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
+    const privateOwner = this.privateTrainingOwners.get(requestId);
+    if (privateOwner && privateOwner.phase !== "accepted") throw privateUnavailable();
+    const statusRecord = privateOwner ? copyPrivateTrainingData(await privateOwner.session!.read()) : await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
     if (this.stoppedTaskIds.has(requestId)) throw new Error("Training stopped before a result was confirmed.");
+    if (privateOwner) {
+      if ("recordType" in statusRecord || statusRecord.requestId !== requestId || statusRecord.workspaceId !== privateOwner.definition.workspaceId ||
+          statusRecord.taskType !== TaskType.MODEL_TRAINING || !["queued", "running", "succeeded", "failed", "cancelled", "unknown"].includes(statusRecord.status) ||
+          this.privateTrainingOwners.get(requestId) !== privateOwner) throw privateUnavailable();
+      if (["succeeded", "failed", "cancelled"].includes(statusRecord.status)) await this.settlePrivateTraining(privateOwner);
+    }
     if (!("recordType" in statusRecord) && (statusRecord.requestId !== requestId || statusRecord.workspaceId !== this.workspaceIdByRequestId.get(requestId) || statusRecord.taskType !== TaskType.MODEL_TRAINING)) throw new Error("Model training status could not be verified.");
     if (statusRecord.status === "succeeded") {
       return this.resolveSucceededResult(statusRecord);
@@ -518,6 +833,7 @@ export class TrainModelUseCase {
   }
 
   public async cancel(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (this.privateTrainingOwners.has(requestId)) throw privateUnavailable();
     if (!isWorkspaceId(workspaceId)) {
       throw new Error("A valid workspace is required to stop model training.");
     }
@@ -567,6 +883,7 @@ export class TrainModelUseCase {
   }
 
   public async save(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (this.privateTrainingOwners.has(requestId)) throw privateUnavailable();
     if (isWorkspaceId(workspaceId) && this.workspaceIdByRequestId.get(requestId) === workspaceId && this.registeredResultsByRequestId.has(requestId)) return this.read(requestId, workspaceId);
     const pending = this.requireOwnedPendingResult(requestId, workspaceId);
     if (this.reviewActionRequestIds.has(requestId)) {
@@ -591,6 +908,7 @@ export class TrainModelUseCase {
   }
 
   public async discard(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (this.privateTrainingOwners.has(requestId)) throw privateUnavailable();
     this.requireOwnedPendingResult(requestId, workspaceId);
     if (this.reviewActionRequestIds.has(requestId)) {
       throw new Error("A model training review action is already in progress.");
@@ -1063,6 +1381,8 @@ export class TrainModelUseCase {
   }
 
   private async cleanupRuntimeDatasetDir(requestId: string): Promise<void> {
+    const privateOwner = this.privateTrainingOwners.get(requestId);
+    if (privateOwner && !privateOwner.settled) throw privateUnavailable();
     const stage = this.runtimeDatasetStagesByRequestId.get(requestId);
     if (!stage) {
       return;
@@ -1073,6 +1393,8 @@ export class TrainModelUseCase {
   }
 
   private async cleanupRuntimeOutputDirectory(requestId: string, storedLocalDirectory?: string): Promise<void> {
+    const privateOwner = this.privateTrainingOwners.get(requestId);
+    if (privateOwner && !privateOwner.settled) throw privateUnavailable();
     const outputStage = this.runtimeOutputStages.get(requestId);
     if (!outputStage) return;
     if (outputStage.cleanup) return outputStage.cleanup;

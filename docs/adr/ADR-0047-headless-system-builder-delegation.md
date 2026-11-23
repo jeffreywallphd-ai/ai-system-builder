@@ -1088,3 +1088,33 @@ This private metadata component changes no public capability or execution root.
 Its Core/SQLite/type checks qualify neither runtime/model/native resources nor
 real task/host behavior or the parent. Runtime admission, original task controls,
 separate result Save and full qualification remain required.
+
+### Private installed-only training application owner
+
+Extend the existing training application owner through an optional trusted
+`ApprovedLocalModelTrainingPort`; do not introduce a second training executor or
+a public execution flag. The port binds an original session synchronously before
+awaited preparation. Its configured implementation must establish exact local
+Model/data custody, installed readiness and existing resource admission for the
+fixed local text-causal full-base loader. The application supplies copied verified
+Dataset/recipe bytes, preserves one original task identity and acknowledges
+issuance once. Missing/foreign replies retain uncertainty without discovery or
+retry. No root configures this port in this component.
+
+Keep start admission separate from the original task's ongoing host/business
+policy. Retain original methods and receivers across waits. Private task status
+and cancellation require current caller policy; ordinary training APIs cannot
+adopt private IDs, including cached results. Reuse the existing reconciler, but
+require the original private session's permanent settled-I/O barrier in addition
+to generic runtime shutdown before cleanup or lease release. Status and cancel
+acknowledgements are insufficient. Retain private candidate bytes for a later
+separate Save path. This source-tested owner adds no host, native, model-quality,
+resource or parent qualification; adapter and execution integration remain pending.
+
+Recheck admission after each policy wait and synchronously at its caller handoff.
+Pass a separate captured synchronous dispatch fence to the private session for
+checks after its own waits and immediately before physical start; retain original
+business/host control after acceptance. This function is not serialized authority
+or native proof. Private actions check original business permission and fresh
+caller policy before use and disclosure. Include recipe bytes in the existing
+256 MiB aggregate; a valid per-file bound cannot bypass the total.

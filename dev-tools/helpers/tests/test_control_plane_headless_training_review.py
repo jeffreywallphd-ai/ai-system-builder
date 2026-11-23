@@ -1,6 +1,7 @@
 """Execute private metadata/approval fixtures without model or runtime effects."""
 from pathlib import Path
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -71,7 +72,14 @@ class TrainingReviewRoutingTests(unittest.TestCase):
         result = subprocess.run([owner["argv"][0], "--import", "tsx", "--test", "--", *self.sources[2:]],
                                 cwd=self.root, env=environment, capture_output=True, text=True, timeout=90, check=False)
         self.assertEqual(result.returncode, 0, result.stdout[-12000:] + result.stderr[-12000:])
-        for expected in ("tests 14", "pass 14", "fail 0", "SQLite", "original input reader", "each-change approvals", "factory-to-policy handoff"):
+        counts = {name: int(value) for name, value in re.findall(r"(?m)^(?:# |ℹ )(tests|pass|fail|cancelled|skipped|todo) (\d+)$", result.stdout)}
+        self.assertGreaterEqual(counts.get("tests", 0), 20)
+        self.assertEqual(counts.get("tests"), counts.get("pass"))
+        for name in ("fail", "cancelled", "skipped", "todo"):
+            self.assertEqual(counts.get(name), 0)
+        for expected in ("SQLite", "original input reader", "each-change approvals", "factory-to-policy handoff",
+                         "current compiler binding survives JSON member reordering", "original metadata producer encoding",
+                         "JSON-order compatibility never omits facts", "stored approval preserves original training digest"):
             self.assertIn(expected, result.stdout)
 
 

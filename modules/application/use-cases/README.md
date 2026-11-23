@@ -346,3 +346,41 @@ single-link, canonical path/device/inode/size/timestamp/mode facts. Existing inp
 output root identity and uncertain-start retention still own cleanup. These are
 read-time known-copy checks, not an adversarial native fence, model/resource or
 actual-host qualification. Original stored images are never moved or deleted.
+
+### Private approved local training owner
+
+`TrainModelUseCase.startApprovedLocal` consumes copied, digest-checked private
+train/validation data and recipe bytes through an optional configured
+`ApprovedLocalModelTrainingPort`. It reuses staging, result review and the existing
+task reconciler. It does not resolve private aliases through mutable Artifact
+bindings, install software or fall back to provider/ordinary training loaders.
+The trusted port must prove installed readiness, exact local Model/data custody
+and host resource admission before its fixed text-causal full-base loader runs.
+Absent support stays unavailable; no product root enables this port yet.
+
+Capture original methods, receivers, identity and bounded bytes before waits.
+Reserve the supplied task identity and private mode before preparation. Acknowledge
+issuance once; a missing or foreign start reply remains uncertain and cannot
+trigger another start or shared-history lookup. Request admission can end after
+acceptance while original host/business permission continues to govern the task.
+Private status/cancel handles also require current caller policy. Ordinary
+read/cancel/Save/discard refuse private IDs before cached and pending fast paths.
+
+Terminal status, cancellation acknowledgement and generic Python shutdown do not
+prove that private readers or native I/O stopped. Only the captured original
+session's permanent settled-I/O proof permits staged-data cleanup. A held read,
+unknown dispatch, changed stage identity or unconfirmed settlement retains custody
+and capacity. A pending candidate stays private and retained; the task handle
+grants no Save. Runtime adapter, exact plan-step/host activation, separately
+approved Save and actual host/native/resource qualification remain pending.
+Controlled owner tests cover real temporary-file staging and failure races without
+loading a model or testing model quality.
+
+The 256 MiB input total includes recipe bytes. Recheck original business permission
+and fresh caller permission before private read/cancel and before disclosing their
+results. Start admission also checks the reconciler after policy waits and at the
+synchronous caller handoff. The session receives a separate original synchronous
+dispatch fence; its adapter must check that fence and business policy after its
+own waits and immediately before physical dispatch. It cannot serialize this
+callback or treat it as native proof. Admission ending after dispatch does not
+erase the original acknowledgement or revoke otherwise permitted accepted work.

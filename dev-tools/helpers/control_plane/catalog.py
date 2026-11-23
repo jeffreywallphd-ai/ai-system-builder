@@ -424,6 +424,40 @@ PUBLISHED_FORM_CHECKS = {
         "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
             "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"),
     },
+    "headless-approved-training-owner-unit": {
+        "automatic_sources": (
+            "modules/application/ports/model/approved-local-model-training.port.ts",
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+        ),
+        "automatic_required_files": (
+            "modules/application/ports/model/approved-local-model-training.port.ts",
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+        ),
+        "sources": (
+            "modules/application/ports/model/approved-local-model-training.port.ts",
+            "modules/application/ports/model/index.ts",
+            "modules/application/use-cases/README.md",
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts"),
+    },
+    "headless-approved-training-owner-types": {
+        "companion_to": "headless-approved-training-owner-unit",
+        "sources": (
+            "modules/application/ports/model/approved-local-model-training.port.ts",
+            "modules/application/ports/model/index.ts",
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/application/use-cases/model/train-model.use-case.ts",
+            "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts"),
+    },
     "model-training-lifecycle-unit": {
         "automatic_sources": (
             "modules/application/use-cases/model/train-model.use-case.ts",

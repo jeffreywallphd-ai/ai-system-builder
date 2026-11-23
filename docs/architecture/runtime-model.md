@@ -2345,3 +2345,36 @@ records. Actual approval/source policy stays in the future owning composition.
 This store starts no task and supplies no runtime, model-byte, native, resource,
 result-Save, public-host or parent qualification. Core/SQLite metadata fixtures
 and strict types test this boundary without model loading or quality scoring.
+
+### Private approved training task lifetime
+
+The existing `TrainModelUseCase` has an optional private installed-only port. A
+synchronously captured original session owns preparation, start, status, cancel
+and permanent I/O settlement. The application reserves private mode before waits,
+copies and rehashes bounded train/validation/recipe bytes, and stages them without
+ordinary Artifact lookup or provider/installer fallback. Trusted preparation must
+prove actual Model/data custody and current installed/resource readiness; passive
+metadata and data-supplied flags cannot supply that proof. Product roots leave
+this port unconfigured pending native/runtime and host integration.
+
+The exact issuance callback runs once before start. Unknown acknowledgement
+retains the original task, stages and lease; shared history cannot recover it or
+authorize another start. Outward request lifetime is separate from retained
+original host/business policy. Current authorized private handles control that
+task; ordinary read/cancel/Save/discard reject it before result caches.
+
+The existing reconciler retains a private lease until the original session proves
+its worker and all private readers/I/O stopped. Terminal task metadata, cancel
+acknowledgement and generic Python stop alone cannot release it. In-flight reads
+prevent cleanup; later settled reads use cached metadata. Private pending outputs
+remain retained for separately authorized Save and keep their own accounting.
+Controlled filesystem/lifecycle tests supply software evidence only, with no
+actual model-quality, native, resource, public-host or parent pass.
+
+The session's start method receives a separate original synchronous admission
+fence. The application checks admission after policy awaits and at the caller
+handoff; the future adapter must check the fence and current business permission
+after its own waits and before physical dispatch. Keep it separate from retained
+business control so outward request completion cannot erase an accepted result.
+Private actions check both original and caller permission around their operation.
+Recipe and selected data share the existing 256 MiB total byte budget.

@@ -1985,3 +1985,42 @@ active-value refusal, unchanged download behavior and real reopen. These are
 metadata software checks. Native custody, current model/source rights, runtime
 readiness/resources, task dispatch/cancellation/result saving and actual hosts
 still need separate implementation/qualification. No model-quality tests run.
+
+### Private training application execution boundary
+
+Protect original actor/client/host/workspace/task identity, exact admitted
+settings, copied Dataset/recipe bytes, private stage/output ownership and retained
+capacity. Capture passive bounded metadata, intrinsic byte copies and original
+methods/receivers before waits. Refuse proxies, accessors, sparse malformed arrays,
+changed identity, unsupported loaders and outward destinations. Reflective method
+invocation avoids function name, length and call getter hooks. Rehash every copy
+against its exact manifest. This does not prove local Model bytes or native fences.
+
+Require a configured trusted installed-only session and reconciler before staging.
+Its preparation must establish actual bytes, native custody and existing host
+limits. Never convert missing support into install/provider/ordinary loader or
+mutable Artifact lookup. Bind the original task before awaits; acknowledge issue
+once. Lost, throwing or foreign replies retain uncertainty without retry or shared
+task discovery. Original host/business permission governs accepted work after the
+outward request ends; every private caller also needs fresh read/cancel policy.
+Ordinary read/cancel/Save/discard cannot adopt queued, cached or pending private IDs.
+
+Require the captured original session's permanent settled-I/O proof before data
+cleanup or lease release, including after generic Python stop. Unknown settlement,
+held reads and changed stage identity retain ownership. Cancel acknowledgement or
+terminal status is not a close proof. A pending candidate stays private and
+retained with no Save grant. Tests cover copied real temporary files, original
+receivers, changed policy, missing replies, cleanup races and ordinary compatibility
+using controlled runtime responses. Actual adapter/root/task-route, result Save,
+native/resource and host qualification remain pending; no physical/model-quality
+test allowance is used or reset.
+
+Close the awaited-policy and promise-to-caller shutdown handoffs with both a
+post-wait admission check and an immediate synchronous caller fence. Supply the
+original separate fence to the adapter for its own awaited work and final physical
+dispatch; do not replace retained business policy with request lifetime. Check
+original business and fresh caller permissions before private action and result
+disclosure, including in-flight withdrawal. Charge recipe bytes to the existing
+256 MiB total before session creation. Six retained causal regressions cover
+these omissions; controlled adapter-wait cases test the callback handoff without
+claiming a native dispatch or shutdown proof.

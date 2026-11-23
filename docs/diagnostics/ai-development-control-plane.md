@@ -3098,3 +3098,28 @@ retain their existing fallback. The shared persistence README borrows this
 coverage only with a selected exact source. No app, worker, model, provider or
 Native command is selected. These passes do not qualify actual training, host
 activation, physical custody/resources, model quality or the parent roadmap.
+
+The exact approved-local-training port, shared training owner and private owner
+fixture select `headless-approved-training-owner-unit` and
+`headless-approved-training-owner-types`. The unit command executes actual copied
+file, permission, original task, unknown reply and settled-I/O race cases. The type
+command strictly compiles the source and actual private tests. Editing the shared
+owner also selects the unchanged `model-training-lifecycle-unit` and type profile,
+so ordinary training remains covered by its own fixed command.
+
+Shared barrel/README files borrow this private coverage only with an exact owned
+source. Every required file must be regular; missing/nonregular support and
+unknown/shared-only impact retain generic fallback. Explicit generic checks stay
+selected. Routing tests run the actual registered commands and require nonzero
+passing assertions with zero skipped/failed/cancelled/todo cases. These are
+application software checks with controlled runtime responses, not a model load,
+quality score, native/host qualification or parent criterion pass. No consumed
+package/Desktop allowance is repeated and no product root enables private training.
+
+The related private approval routing harness parses executed Node test totals
+rather than expecting the old fourteen-case display. It requires at least the
+twenty existing cases, equality of test/pass counts, zero failure/skip/cancel/todo
+counts and the original plus JSON-order regression titles. Additional passing
+cases can extend that suite without a false failure or a weaker zero-test check.
+Failed historical receipts and independent causal findings remain inspectable;
+an immutable work-scope repair uses an explicitly linked successor contract.
