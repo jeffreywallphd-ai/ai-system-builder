@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {EventEmitter} from "node:events";
 import {PassThrough} from "node:stream";
-import {createOriginalTrainingPort, ORIGINAL_TRAINING_CAPABILITY, type OriginalTrainingChannel} from "../client/approvedTrainingTaskSession";
+import {createOriginalTrainingPort, ORIGINAL_TRAINING_CAPABILITY, type OriginalTrainingOwnedChannel} from "../client/approvedTrainingTaskSession";
 import {createPythonRuntimeHttpClient} from "../client/createPythonRuntimeHttpClient";
 import {createPythonRuntimeAdapterFoundation} from "../createPythonRuntimePort";
 import {OWNED_RUNTIME_READY_PREFIX} from "../supervisor/ownedPythonRuntimeProof";
@@ -29,9 +29,13 @@ function fixture() {
   const calls: string[] = [];
   const f = {calls, captures: 0, hook: undefined as undefined | ((action: string) => Promise<unknown> | unknown),
     status: "running", retirement: "settled", before: undefined as undefined | (() => void),
+    workerClosed: true, workerRetirements: 0, unusedReleases: 0,
+    retireHook: undefined as undefined | (() => Promise<boolean>),
     end() {current = false;}, deny() {permission = false;}, get releases() {return releases;},
   };
-  const channel: OriginalTrainingChannel = {identity, assertCurrent() {if (!current) throw Error("retired");},
+  const channel: OriginalTrainingOwnedChannel = {identity, assertCurrent() {if (!current) throw Error("retired");},
+    async retireOriginalWorker() {assert.equal(this, channel); f.workerRetirements++; return f.retireHook ? f.retireHook() : f.workerClosed;},
+    releaseUnusedWorker() {assert.equal(this, channel); f.unusedReleases++;},
     async send(endpoint, _body, dispatch) {
       f.before?.(); dispatch?.(); const segments = endpoint.split("/"), action = segments[segments.length - 1]!; calls.push(action);
       const override = await f.hook?.(action); if (override !== undefined) return override;
@@ -46,6 +50,9 @@ function fixture() {
   const session = port.createSession(definition(), {isCurrent: () => current, stillAllowed: async () => permission})!;
   return {...f, session, channel, get releases() {return releases;}, get status() {return f.status;}, set status(value: string) {f.status = value;},
     get retirement() {return f.retirement;}, set retirement(value: string) {f.retirement = value;},
+    get workerClosed() {return f.workerClosed;}, set workerClosed(value: boolean) {f.workerClosed = value;},
+    get workerRetirements() {return f.workerRetirements;}, get unusedReleases() {return f.unusedReleases;},
+    get retireHook() {return f.retireHook;}, set retireHook(value: typeof f.retireHook) {f.retireHook = value;},
     get hook(): typeof f.hook {return f.hook;}, set hook(value: typeof f.hook) {f.hook = value;},
     get before(): typeof f.before {return f.before;}, set before(value: typeof f.before) {f.before = value;}};
 }
@@ -121,6 +128,77 @@ test("binding mismatch and stale business policy do not disclose original data",
   await assert.rejects(() => f.session.read()); assert.equal(f.calls.length, count);
 });
 
+test("remote settlement retains custody until original worker close and never uses HTTP again", async () => {
+  const f = fixture(); f.workerClosed = false;
+  await f.session.prepare(); await f.session.start(staged(), () => true); f.status = "succeeded";
+  assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
+  const calls = [...f.calls]; f.hook = () => {throw Error("remote owner retired");};
+  assert.equal((await f.session.read()).status, "succeeded");
+  assert.equal((await f.session.cancel()).status, "succeeded");
+  assert.equal(await f.session.settle(), false); assert.deepEqual(f.calls, calls);
+  f.workerClosed = true; assert.equal(await f.session.settle(), true); assert.equal(f.releases, 1);
+  assert.equal(await f.session.settle(), true); assert.equal(f.workerRetirements, 3);
+  assert.deepEqual(f.calls, calls);
+});
+
+test("cache-only mode precedes the first local retirement await and retains original methods", async () => {
+  const f = fixture(); let release!: (closed: boolean) => void, entered!: () => void;
+  const observed = new Promise<void>(resolve => {entered = resolve;});
+  f.retireHook = () => {entered(); return new Promise<boolean>(resolve => {release = resolve;});};
+  await f.session.prepare(); await f.session.start(staged(), () => true); f.status = "succeeded";
+  f.channel.retireOriginalWorker = async () => {throw Error("replacement must not run");};
+  const retiring = f.session.settle(); await observed;
+  try {
+    const calls = [...f.calls]; assert.equal(await f.session.settle(), false);
+    assert.equal((await f.session.read()).status, "succeeded"); await f.session.cancel();
+    assert.deepEqual(f.calls, calls); assert.equal(f.releases, 0);
+  } finally {release(true);}
+  assert.equal(await retiring, true); assert.equal(f.workerRetirements, 1); assert.equal(f.releases, 1);
+});
+
+test("lost remote retirement cannot request worker termination", async () => {
+  const f = fixture(); await f.session.prepare(); await f.session.start(staged(), () => true); f.status = "succeeded";
+  f.hook = action => {if (action === "settle") throw Error("lost acknowledgement");};
+  assert.equal(await f.session.settle(), false); assert.equal(await f.session.settle(), false);
+  assert.equal(f.workerRetirements, 0); assert.equal(f.releases, 0);
+});
+
+test("positive no-effect preparation releases its unused worker claim without stopping it", async () => {
+  const f = fixture(); f.hook = action => action === "prepare" ? {binding, phase: "unavailable"} : undefined;
+  assert.equal(await f.session.prepare(), "unavailable"); assert.equal(f.unusedReleases, 1);
+  assert.equal(f.workerRetirements, 0); assert.equal(f.releases, 1);
+  assert.equal(await f.session.settle(), true); assert.equal(f.workerRetirements, 0);
+});
+
+test("uncertain unused-claim release cannot release the foundation reservation", async () => {
+  const f = fixture(); f.channel.releaseUnusedWorker = () => {throw Error("original claim changed");};
+  f.hook = action => action === "prepare" ? {binding, phase: "unavailable"} : undefined;
+  assert.equal(await f.session.prepare(), "unconfirmed"); assert.equal(f.releases, 0);
+});
+
+for (const result of ["false", "pending", "rejected"] as const) test(`unused release requires synchronous acknowledgement (${result})`, async () => {
+  const f = fixture(); f.channel.releaseUnusedWorker = () => {
+    if (result === "false") return false;
+    if (result === "rejected") return Promise.reject(Error("private release failed"));
+    return new Promise<void>(() => {});
+  };
+  f.hook = action => action === "prepare" ? {binding, phase: "unavailable"} : undefined;
+  assert.equal(await f.session.prepare(), "unconfirmed"); assert.equal(f.releases, 0); assert.equal(f.workerRetirements, 0);
+});
+
+test("missing original local ownership cannot fall back to authenticated HTTP", async () => {
+  const f = fixture(); f.channel.retireOriginalWorker = undefined as never;
+  assert.equal(await f.session.prepare(), "unconfirmed"); assert.deepEqual(f.calls, []); assert.equal(f.releases, 0);
+});
+
+test("unknown local retirement is observed later without repeating remote cleanup", async () => {
+  const f = fixture(); await f.session.prepare(); await f.session.start(staged(), () => true); f.status = "succeeded";
+  f.retireHook = async () => {throw Error("lost original close observation");};
+  assert.equal(await f.session.settle(), false); const calls = [...f.calls]; assert.equal(f.releases, 0);
+  f.retireHook = async () => true; assert.equal(await f.session.settle(), true);
+  assert.deepEqual(f.calls, calls); assert.equal(f.releases, 1);
+});
+
 test("HTTP capture uses its own capability; serialized readiness cannot configure it", async () => {
   const calls: string[] = [];
   const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: "synthetic-token-".padEnd(40, "x"),
@@ -187,4 +265,60 @@ test("foundation reserves before installed startup and retains uncertainty throu
   await assert.rejects(() => foundation.runtimePort.startTask({requestId: "sibling-after-exit", taskType: "train-model", payload: {}}));
   assert.equal(await session.settle(), false); assert.equal(port.createSession({...definition(), requestId: workspace}, {isCurrent: () => true, stillAllowed: async () => true}), undefined);
   child.stdout.destroy(); child.stderr.destroy();
+});
+
+function retirementFoundation() {
+  let alive = false, taskStatus = "running", preparePhase = "ready", kills = 0;
+  const calls: string[] = [];
+  const child = new EventEmitter() as EventEmitter & {stdout: PassThrough; stderr: PassThrough; kill: () => boolean};
+  child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.kill = () => {kills++; return false;};
+  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async url => {
+    const endpoint = new URL(String(url)).pathname; calls.push(endpoint);
+    if (endpoint === "/health") return Response.json({healthy: alive, status: {...runtime, status: alive ? "ready" : "stopped"}});
+    if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId, capabilities: [ORIGINAL_TRAINING_CAPABILITY]});
+    const segments = endpoint.split("/"), action = segments[segments.length - 1];
+    if (action === "prepare" || action === "seal") return Response.json({binding, phase: action === "prepare" ? preparePhase : "ready"});
+    if (action === "start") return Response.json({binding, kind: "accepted", requestId: id, workspaceId: workspace, status: "running"});
+    if (action === "read") return Response.json({binding, record: {requestId: id, taskType: "train-model", status: taskStatus, metadata: {workspaceId: workspace}}});
+    if (action === "settle") return Response.json({binding, settled: true, retirement: "settled"});
+    throw Error("unexpected synthetic endpoint");
+  }) as typeof fetch}, supervisor: {command: "inert-python", startupTimeoutMs: 200, healthCheckIntervalMs: 1,
+    verifyRuntimeEnvironment: async () => true,
+    spawnImplementation: ((_command: unknown, _args: unknown, options: any) => {
+      alive = true;
+      queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:" + options.env.PYTHON_RUNTIME_PORT + "\n"));
+      return child;
+    }) as never}});
+  foundation.bindHostAdmission(() => {});
+  const port = foundation.createApprovedTrainingPort(profile);
+  const create = (requestId = id) => port.createSession({...definition(), requestId}, {isCurrent: () => true, stillAllowed: async () => true});
+  return {foundation, child, calls, create, get kills() {return kills;},
+    succeed() {taskStatus = "succeeded";}, unavailable() {preparePhase = "unavailable";},
+    exit() {alive = false; child.emit("exit", 0, null);},
+    close() {alive = false; child.stdout.destroy(); child.stderr.destroy(); child.emit("close", 0, null);}};
+}
+
+test("foundation composes both original acknowledgements and denies unloading through uncertainty", async () => {
+  const f = retirementFoundation(), session = f.create()!;
+  assert.equal(await session.prepare(), "ready");
+  const before = f.calls.length; await assert.rejects(() => f.foundation.runtimePort.unloadModels());
+  assert.equal(f.calls.length, before);
+  assert.equal((await session.start(staged(), () => true)).kind, "accepted"); f.succeed();
+  assert.equal(await session.settle(), false); assert.equal(f.kills, 1);
+  const remoteClosed = [...f.calls]; await assert.rejects(() => f.foundation.runtimePort.unloadModels());
+  assert.equal((await session.read()).status, "succeeded"); await session.cancel();
+  assert.deepEqual(f.calls, remoteClosed); assert.equal(f.create(workspace), undefined);
+  f.exit(); await assert.rejects(() => f.foundation.supervisor.startWithoutInstalling!(), /closure/);
+  assert.equal(f.create(workspace), undefined); f.close();
+  assert.equal(await session.settle(), true); assert.equal(f.kills, 1); assert.deepEqual(f.calls, remoteClosed);
+  const next = f.create(workspace); assert.ok(next); assert.equal(await next.settle(), true);
+});
+
+test("foundation no-effect preparation disarms the unused supervisor claim without termination", async () => {
+  const f = retirementFoundation(); f.unavailable();
+  assert.equal(await f.create()!.prepare(), "unavailable"); assert.equal(f.kills, 0);
+  const freshOwner = f.foundation.supervisor.captureOriginalWorkerRetirement!(); freshOwner.assertCurrent();
+  freshOwner.releaseUnused();
+  const next = f.create(workspace); assert.ok(next); assert.equal(await next.settle(), true);
+  assert.equal(f.kills, 0); f.close();
 });

@@ -530,7 +530,7 @@ export function createPythonRuntimeAdapterFoundation(
     resolveModelDownloadTaskResult: (payload, expectedManifest) =>
       client.resolveModelDownloadTaskResult(payload, expectedManifest),
     getModelStatus: () => client.getModelStatus(),
-    unloadModels: () => client.unloadModels(),
+    unloadModels: async () => {assertAdmissionAvailable(); return client.unloadModels();},
   };
 
   const foundation: PythonRuntimeAdapterFoundation = {
@@ -541,6 +541,7 @@ export function createPythonRuntimeAdapterFoundation(
       if (rawProfile === undefined) return Object.freeze({createSession: () => undefined});
       const profile = captureTrainingProfile(rawProfile);
       const startInstalled = supervisor.startWithoutInstalling?.bind(supervisor);
+      const captureRetirement = supervisor.captureOriginalWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
       return createOriginalTrainingPort({
         reserve(requestId) {
@@ -556,10 +557,22 @@ export function createPythonRuntimeAdapterFoundation(
         },
         async captureChannel() {
           assertHostAccepting();
-          if (!startInstalled) throw new Error("Installed-only training startup is unavailable.");
+          if (!startInstalled || !captureRetirement) throw new Error("Installed-only training startup is unavailable.");
           await startInstalled(); assertHostAccepting();
-          const original = await captureOriginal(profile); assertHostAccepting(); original.assertCurrent();
-          return original;
+          const worker = captureRetirement(), workerCurrent = worker.assertCurrent.bind(worker);
+          const retire = worker.retireOriginal.bind(worker), unused = worker.releaseUnused.bind(worker);
+          workerCurrent();
+          const original = await captureOriginal(profile);
+          const channelCurrent = original.assertCurrent.bind(original), sendOriginal = original.send.bind(original);
+          const current = () => {workerCurrent(); channelCurrent();};
+          assertHostAccepting(); current();
+          return Object.freeze({identity: original.identity, assertCurrent: current,
+            retireOriginalWorker: retire, releaseUnusedWorker: unused,
+            async send(endpoint: string, body: unknown, dispatch?: () => void) {
+              current();
+              const reply = await sendOriginal(endpoint, body, () => {current(); dispatch?.(); current();});
+              current(); return reply;
+            }});
         },
       });
     },

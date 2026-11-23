@@ -2494,3 +2494,18 @@ returns finite state, epoch/batch progress and percentage when known, with no mo
 call, raw input, paths, logs or quality metrics. Cancellation is at most one request.
 The concrete native producer/process resources, public Roots/transports, result
 Save and actual host/parent qualification remain pending.
+
+Private training settlement has two acknowledgements: original remote session
+retirement and original supervisor-owned worker closure. A mandatory owned-channel
+composition adds captured local retirement to the authenticated HTTP channel;
+the HTTP channel alone cannot release the foundation reservation. The supervisor
+retains its claim across exit and waits for close, attempts termination once and
+allows later observations without repeating the effect. Stop shares this owner.
+Unclosed claimed workers cannot be replaced. No-effect preparation releases an
+unused claim without stopping its process or leaving a reusable old capability.
+
+After remote retirement, status/Stop use cached authorized metadata while local
+closure is pending. No subsequent HTTP effects are permitted. Model unload is
+denied through live or uncertain custody. Focused inert tests cover this lifecycle
+and existing ordinary runtime compatibility. Actual descendant/resource and file
+custody, native producer configuration and real host qualification remain separate.

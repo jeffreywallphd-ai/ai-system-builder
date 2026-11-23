@@ -8,6 +8,7 @@ import {
   testDouble,
 } from "../../../../testing/node-test";
 import { createPythonRuntimeSupervisor } from "../supervisor/createPythonRuntimeSupervisor";
+import { OWNED_RUNTIME_READY_PREFIX } from "../supervisor/ownedPythonRuntimeProof";
 
 function createMockChildProcess() {
   const emitter = new EventEmitter() as EventEmitter & {
@@ -504,7 +505,7 @@ it("binds coalesced and retried starts to actual tokens and preserves preparatio
 it("captures controls, capabilities and bound client methods before a mutating diagnostic getter", async () => {
   const args = ["main.py"], capabilities = ["required"], env = { SAFE: "original" };
   let healthCalls = 0, prepared = 0, launched = 0, spawned = 0, getters = 0;
-  const client = { marker: "bound", async getHealthStatus() { assert.equal(this.marker, "bound"); healthCalls++; if (healthCalls === 1) throw new Error("not started"); return { healthy: true, status: { runtimeId: "fixture", status: "ready" as const } }; }, async getCapabilities() { assert.equal(this.marker, "bound"); return { runtimeId: "fixture", capabilities: [] }; } };
+  const client = { marker: "bound", async getHealthStatus() { assert.equal(this.marker, "bound"); healthCalls++; if (healthCalls === 1) throw new Error("not started"); return { healthy: true, status: { runtimeId: "fixture", status: "ready" as const } }; }, async getCapabilities() { assert.equal(this.marker, "bound"); return { runtimeId: "fixture", capabilities: [] as string[] }; } };
   const options: any = { command: "original", args, cwd: "original-cwd", env, requiredCapabilities: capabilities, runtimeClient: client,
     prepareRuntimeEnvironment(context: any) { prepared++; assert.equal(context.command, "original"); assert.equal(context.cwd, "original-cwd"); assert.deepEqual(context.args, ["main.py"]); assert.equal(context.env.SAFE, "original"); },
     prepareLaunchEnvironment(context: any) { launched++; context.env.ROTATED = "owned"; },
@@ -526,4 +527,92 @@ it("retires an in-flight startup report and reports a vanished attached worker w
   await supervisor.start(); await supervisor.start(); assert.equal(attached.read().attempt, 1);
   available = false; await assert.rejects(supervisor.start(), /Externally attached/);
   assert.equal(attached.read().attempt, 1); assert.equal(attached.read().outcome, "failed"); assert.equal(attached.read().reason, "health-failed");
+});
+
+function originalRetirementHarness() {
+  const children: ReturnType<typeof createMockChildProcess>[] = []; let kills = 0;
+  const supervisor = createPythonRuntimeSupervisor({command: "inert-python", requireOwnedStartupProof: true,
+    env: {PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: "43111"},
+    verifyRuntimeEnvironment: async () => true, startupTimeoutMs: 200, healthCheckIntervalMs: 1,
+    runtimeClient: {async getHealthStatus() {return {healthy: true, status: {runtimeId: "inert-runtime", status: "ready" as const}};}},
+    spawnImplementation: ((_command: unknown, _args: unknown, options: any) => {
+      const child = createMockChildProcess(); children.push(child);
+      child.kill = function () {assert.equal(this, child); kills++; queueMicrotask(() => child.emit("exit", 0, "SIGTERM")); return true;};
+      queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:43111\n"));
+      return child;
+    }) as never});
+  const close = (child = children[children.length - 1]!) => {
+    child.stdout.destroy(); child.stderr.destroy(); child.emit("close", 0, null);
+  };
+  return {supervisor, children, close, get kills() {return kills;}};
+}
+
+it("captures only an owned bound-ready child, never attached HTTP readiness", async () => {
+  const h = originalRetirementHarness(); assert.throws(() => h.supervisor.captureOriginalWorkerRetirement!());
+  const attached = createPythonRuntimeSupervisor({command: "inert", runtimeClient: {async getHealthStatus() {
+    return {healthy: true, status: {runtimeId: "external", status: "ready" as const}};
+  }}, spawnImplementation: (() => {throw Error("must not spawn");}) as never});
+  await attached.start(); assert.throws(() => attached.captureOriginalWorkerRetirement!());
+  await h.supervisor.startWithoutInstalling!(); const owner = h.supervisor.captureOriginalWorkerRetirement!();
+  owner.assertCurrent(); owner.releaseUnused(); h.close();
+});
+
+it("waits for original close after exit, shares Stop and never terminates a replacement", async () => {
+  const h = originalRetirementHarness(); await h.supervisor.startWithoutInstalling!();
+  const child = h.children[0]!, owner = h.supervisor.captureOriginalWorkerRetirement!();
+  child.kill = () => {throw Error("replacement method must not be used");};
+  const retirement = owner.retireOriginal(), joined = owner.retireOriginal(), stop = h.supervisor.stop();
+  await new Promise(resolve => setTimeout(resolve, 0)); assert.equal(h.kills, 1);
+  assert.throws(() => owner.assertCurrent());
+  await assert.rejects(h.supervisor.startWithoutInstalling!(), /stopping|closure/);
+  let settled = false; void retirement.then(() => {settled = true;});
+  await new Promise(resolve => setTimeout(resolve, 0)); assert.equal(settled, false);
+  h.close(child); assert.equal(await retirement, true); assert.equal(await joined, true); await stop;
+  await h.supervisor.startWithoutInstalling!(); assert.equal(h.children.length, 2);
+  assert.equal(await owner.retireOriginal(), true); assert.equal(h.kills, 1); assert.equal(h.supervisor.getStatus(), "ready");
+  h.close(h.children[1]);
+});
+
+it("retains a strong claim after natural exit and accepts late close without a kill", async () => {
+  const h = originalRetirementHarness(); await h.supervisor.startWithoutInstalling!();
+  const child = h.children[0]!, owner = h.supervisor.captureOriginalWorkerRetirement!();
+  child.emit("exit", 0, null); assert.equal(h.supervisor.getStatus(), "stopped");
+  await assert.rejects(h.supervisor.startWithoutInstalling!(), /closure/);
+  assert.equal(await owner.retireOriginal(), false); assert.equal(h.kills, 0);
+  h.close(child); assert.equal(await owner.retireOriginal(), true); assert.equal(h.kills, 0);
+});
+
+for (const failure of ["false", "throw"] as const) it(`does not repeat an unknown original kill (${failure})`, async () => {
+  const h = originalRetirementHarness(); await h.supervisor.startWithoutInstalling!();
+  const child = h.children[0]!; let attempts = 0;
+  child.kill = function () {assert.equal(this, child); attempts++; if (failure === "throw") throw Error("private failure"); return false;};
+  const owner = h.supervisor.captureOriginalWorkerRetirement!();
+  assert.equal(await owner.retireOriginal(), false); assert.equal(attempts, 1);
+  const observation = owner.retireOriginal(), stop = h.supervisor.stop();
+  await new Promise(resolve => setTimeout(resolve, 0)); assert.equal(attempts, 1);
+  h.close(child); assert.equal(await observation, true); await stop; assert.equal(attempts, 1);
+});
+
+it("disarms an unused claim and cannot revive it when the same child is reused", async () => {
+  const h = originalRetirementHarness(); await h.supervisor.startWithoutInstalling!();
+  const original = h.supervisor.captureOriginalWorkerRetirement!(); original.releaseUnused();
+  assert.throws(() => original.assertCurrent()); assert.throws(() => original.releaseUnused());
+  assert.equal(await original.retireOriginal(), false); assert.equal(h.kills, 0);
+  const next = h.supervisor.captureOriginalWorkerRetirement!(); assert.notEqual(next, original); next.assertCurrent();
+  assert.equal(await original.retireOriginal(), false); assert.equal(h.kills, 0);
+  next.releaseUnused(); const stopping = h.supervisor.stop(); await stopping; // ordinary exit-only compatibility
+  assert.equal(h.kills, 1); h.close(h.children[0]);
+});
+
+it("a timed-out close observation retains its original one-attempt claim", async context => {
+  const h = originalRetirementHarness(); await h.supervisor.startWithoutInstalling!();
+  const child = h.children[0]!, owner = h.supervisor.captureOriginalWorkerRetirement!();
+  context.mock.timers.enable({apis: ["setTimeout"]});
+  try {
+    const first = owner.retireOriginal(); await Promise.resolve(); await Promise.resolve();
+    context.mock.timers.tick(5_000); assert.equal(await first, false); assert.equal(h.kills, 1);
+    await assert.rejects(h.supervisor.startWithoutInstalling!(), /closure/);
+    const late = owner.retireOriginal(); await Promise.resolve(); h.close(child);
+    assert.equal(await late, true); assert.equal(h.kills, 1);
+  } finally {context.mock.timers.reset(); h.close(child);}
 });

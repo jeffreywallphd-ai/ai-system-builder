@@ -36,9 +36,19 @@ export interface PythonRuntimeSupervisor {
   start(): Promise<void>;
   /** Host-only restrictive path. Absence is not permission to call start(). */
   startWithoutInstalling?(): Promise<void>;
+  /** Private original-child capability. HTTP identity alone cannot supply it. */
+  captureOriginalWorkerRetirement?(): OriginalPythonWorkerRetirement;
   stop(): Promise<void>;
   restart(): Promise<void>;
   getStatus(): PythonRuntimeSupervisorStatus;
+}
+
+export interface OriginalPythonWorkerRetirement {
+  assertCurrent(): void;
+  /** At most one termination attempt; later calls observe the same close. */
+  retireOriginal(): Promise<boolean>;
+  /** Positive original no-effect preparation only; never stops the worker. */
+  releaseUnused(): void;
 }
 
 export interface CreatePythonRuntimeSupervisorOptions {
@@ -108,6 +118,11 @@ export function createPythonRuntimeSupervisor(
 
   let childProcess: ChildProcess | undefined;
   let boundReadyProcess: ChildProcess | undefined;
+  type WorkerClose = {closed: boolean; observers: Set<() => void>; retirement?: OriginalPythonWorkerRetirement};
+  const workerCloses = new WeakMap<ChildProcess, WorkerClose>();
+  // Keep the original claim after exit clears childProcess. Exit is not close.
+  let privateWorkerClaim: {process: ChildProcess; close: WorkerClose; attempted: boolean;
+    capability: OriginalPythonWorkerRetirement} | undefined;
   let startupToken: object | undefined;
   const observeStartup = (type: PythonStartupEvent["type"], token = startupToken) => {
     if (!token) return;
@@ -226,6 +241,13 @@ export function createPythonRuntimeSupervisor(
   };
 
   const applyChildExitBinding = (processHandle: ChildProcess, proof?: ReturnType<typeof createOwnedPythonRuntimeProof>) => {
+    const close: WorkerClose = {closed: false, observers: new Set()};
+    workerCloses.set(processHandle, close);
+    processHandle.once("close", () => {
+      close.closed = true;
+      for (const observer of close.observers) observer();
+      close.observers.clear();
+    });
     const onTerminal = (code: number | null, signal: NodeJS.Signals | null) => {
       if (childProcess !== processHandle) return;
       const exitDetail = `Python runtime process exited during lifecycle (code=${String(code ?? "null")}, signal=${String(signal ?? "null")}).`;
@@ -457,6 +479,9 @@ export function createPythonRuntimeSupervisor(
       if (policy === "installed-only" && !verifyRuntimeEnvironment)
         throw new Error("Installed Python runtime verification is unavailable.");
       if (stopFlight) throw new Error("Python runtime is stopping; retry after confirmed termination.");
+      if (privateWorkerClaim && !privateWorkerClaim.close.closed &&
+          (privateWorkerClaim.attempted || childProcess !== privateWorkerClaim.process))
+        throw new Error("Original training worker closure is still unconfirmed.");
       if (startFlight) {
         if (startGeneration !== lifecycleGeneration) throw new Error("Previous Python runtime startup is still stopping.");
         if (startPolicy !== policy) throw new Error("Python runtime startup authority differs from the active attempt.");
@@ -619,8 +644,75 @@ export function createPythonRuntimeSupervisor(
     start: () => start("ordinary"),
     startWithoutInstalling: () => start("installed-only"),
 
+    captureOriginalWorkerRetirement() {
+      const owner = childProcess, close = owner && workerCloses.get(owner);
+      const unavailable = () => new Error("Original training worker ownership is unavailable.");
+      if (!requireOwnedStartupProof || !owner || !close || close.closed || status !== "ready" ||
+          boundReadyProcess !== owner || owner.exitCode != null || owner.signalCode != null || stopFlight || startFlight)
+        throw unavailable();
+      if (close.retirement) {close.retirement.assertCurrent(); return close.retirement;}
+      const generation = lifecycleGeneration, kill = owner.kill.bind(owner);
+      let active = true, flight: Promise<boolean> | undefined;
+      const claim = {process: owner, close, attempted: false, capability: undefined as unknown as OriginalPythonWorkerRetirement};
+      const assertCurrent = () => {
+        if (!active || claim.attempted || close.closed || privateWorkerClaim !== claim || childProcess !== owner ||
+            boundReadyProcess !== owner || lifecycleGeneration !== generation || status !== "ready" ||
+            owner.exitCode != null || owner.signalCode != null) throw unavailable();
+      };
+      const observeClose = () => close.closed ? Promise.resolve(true) : new Promise<boolean>(resolve => {
+        let timer: ReturnType<typeof setTimeout>;
+        const finished = () => {clearTimeout(timer); close.observers.delete(finished); resolve(true);};
+        close.observers.add(finished);
+        timer = setTimeout(() => {close.observers.delete(finished); resolve(close.closed);}, 5_000);
+        if (close.closed) finished();
+      });
+      const capability: OriginalPythonWorkerRetirement = Object.freeze({assertCurrent,
+        releaseUnused() {
+          assertCurrent(); active = false;
+          if (close.retirement === capability) close.retirement = undefined;
+          if (privateWorkerClaim === claim) privateWorkerClaim = undefined;
+        },
+        retireOriginal() {
+          if (!active) return Promise.resolve(false);
+          if (close.closed) return Promise.resolve(true);
+          if (flight) return flight;
+          const first = !claim.attempted;
+          if (first) {
+            try {assertCurrent();} catch {return Promise.resolve(false);}
+            claim.attempted = true;
+            lifecycleGeneration++; boundReadyProcess = undefined; status = "failed";
+          }
+          // Publish before diagnostics/kill callbacks can reenter supervisor.stop.
+          const operation = Promise.resolve().then(() => {
+            if (first) {
+              observeStartup("retired");
+              emitEvent("stop-requested", "Stopping the original training worker.");
+              try {if (!kill("SIGTERM")) return close.closed;} catch {return close.closed;}
+            }
+            return observeClose();
+          });
+          flight = operation;
+          void operation.finally(() => {if (flight === operation) flight = undefined;});
+          return operation;
+        },
+      });
+      claim.capability = capability; close.retirement = capability; privateWorkerClaim = claim;
+      return capability;
+    },
+
     async stop() {
       if (stopFlight) return stopFlight;
+      const original = childProcess ? workerCloses.get(childProcess)?.retirement :
+        privateWorkerClaim && !privateWorkerClaim.close.closed ? privateWorkerClaim.capability : undefined;
+      if (original) {
+        const retire = original.retireOriginal.bind(original);
+        const operation = Promise.resolve().then(async () => {
+          if (await retire() !== true) throw new Error("Original training worker closure is still unconfirmed.");
+        });
+        stopFlight = operation;
+        try {await operation;} finally {if (stopFlight === operation) stopFlight = undefined;}
+        return;
+      }
       observeStartup("retired");
       lifecycleGeneration++;
       boundReadyProcess = undefined;

@@ -665,3 +665,21 @@ accepted task, and is not a synchronous native-dispatch callback across processe
 Permanent settlement requires the original worker/native owner and all client
 flights to retire. Later reads serve cached metadata only. Retained output bytes
 remain charged for separate reviewed Save/discard work.
+
+The configured foundation requires a separate original-worker retirement
+capability captured before HTTP waits. Only its owned, bound-ready child can
+supply it. A bare authenticated HTTP channel cannot release local custody.
+After positive remote retirement, reads and Stop return cached metadata; further
+settlement observes only the original local close. Unloading models is denied
+while training custody is live or uncertain.
+
+The private supervisor claim survives `exit`. Only `close`, which follows process
+and stdio closure, confirms this local boundary. Termination is attempted once;
+lost acknowledgement or a five-second observation timeout retains ownership.
+Later observations cannot send another signal or affect a replacement worker.
+Ordinary Stop shares that original attempt. Positive no-effect preparation
+disarms an unused claim without stopping the worker; the old capability cannot
+be revived when the worker is reused. Uncertain or asynchronous unused-release
+acknowledgements retain custody. Unclaimed supervisor behavior is unchanged.
+These are process-lifecycle controls, not descendant Job retirement, native file
+custody, resource-limit enforcement or actual-host qualification.

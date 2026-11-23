@@ -6,6 +6,7 @@ import {TaskType} from "../../../../contracts/runtime";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import {capturePassiveModelData} from "./modelDownloadManifest";
 import {mapTaskStatusResponse} from "../protocol/pythonRuntimeHttpProtocol";
+import {types} from "node:util";
 
 export const ORIGINAL_TRAINING_CAPABILITY = "train-model.original-session-v1";
 export interface OriginalTrainingProfile {readonly profileId: string; readonly profileFingerprint: string}
@@ -14,6 +15,12 @@ export interface OriginalTrainingChannel {
   readonly identity: OriginalTrainingIdentity;
   readonly assertCurrent: () => void;
   send(endpoint: string, body: unknown, beforeDispatch?: () => void): Promise<unknown>;
+}
+/** The foundation must add the exact supervisor owner; HTTP cannot create it. */
+export interface OriginalTrainingOwnedChannel extends OriginalTrainingChannel {
+  retireOriginalWorker(): Promise<boolean>;
+  /** Must acknowledge synchronously with undefined, not an async void Promise. */
+  releaseUnusedWorker(): void;
 }
 const unavailable = () => new Error("The original private training session is unavailable.");
 const need = (value: unknown): void => {if (value !== true) throw unavailable();};
@@ -32,7 +39,7 @@ export function captureTrainingProfile(raw: OriginalTrainingProfile): OriginalTr
 /** Capture before ANY startup/capture/HTTP await. The reservation is released
  * only by permanent original retirement; unknown outcomes retain it. */
 export function createOriginalTrainingPort(options: {
-  captureChannel: () => Promise<OriginalTrainingChannel>;
+  captureChannel: () => Promise<OriginalTrainingOwnedChannel>;
   reserve: (requestId: string) => (() => void) | undefined;
 }): ApprovedLocalModelTrainingPort {
   const capture = options.captureChannel, reserve = options.reserve;
@@ -45,6 +52,7 @@ export function createOriginalTrainingPort(options: {
     let phase: "bound" | "preparing" | "ready" | "issuing" | "accepted" | "unconfirmed" | "settled" = "bound";
     let channel: OriginalTrainingChannel | undefined, binding: Record<string, unknown> | undefined;
     let operations = 0, cancelAttempted = false, closeAttempted = false, closing = false;
+    let remoteRetired = false, retireWorker: (() => Promise<boolean>) | undefined, releaseUnusedWorker: (() => void) | undefined;
     let cached: RuntimeTaskRecord | undefined, cancellation: boolean | undefined;
     const permission = async () => {current(); need(await allowed.call(rawControl) === true); current();};
     const send = async (action: string, input?: unknown, dispatch?: () => void) => {
@@ -63,6 +71,14 @@ export function createOriginalTrainingPort(options: {
         try {
           await permission(); const original = await capture(); current();
           const identity = copy(original.identity), assertCurrent = original.assertCurrent, sendOriginal = original.send;
+          const retireOriginalWorker = original.retireOriginalWorker, releaseOriginalUnused = original.releaseUnusedWorker;
+          need(typeof retireOriginalWorker === "function" && typeof releaseOriginalUnused === "function");
+          retireWorker = () => retireOriginalWorker.call(original);
+          releaseUnusedWorker = () => {
+            const result: unknown = releaseOriginalUnused.call(original);
+            if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+            need(result === undefined); // A void type alone also admits async/value callbacks.
+          };
           channel = Object.freeze({identity, assertCurrent: () => assertCurrent.call(original),
             send: (endpoint: string, body: unknown, dispatch?: () => void) => sendOriginal.call(original, endpoint, body, dispatch)});
           channel.assertCurrent();
@@ -75,6 +91,7 @@ export function createOriginalTrainingPort(options: {
           binding = candidate;
           if (reply.phase === "unavailable") {
             // Only the original producer's positive no-effect/settlement reply.
+            releaseUnusedWorker();
             phase = "settled"; release(); return "unavailable" as const;
           }
           need(reply.phase === "ready"); phase = "ready"; return "ready" as const;
@@ -100,7 +117,7 @@ export function createOriginalTrainingPort(options: {
       },
       async read() {
         await permission();
-        if (phase === "settled") {need(!!cached); return copy(cached!);}
+        if (phase === "settled" || remoteRetired) {need(!!cached); return copy(cached!);}
         need(!closing);
         operations++;
         try {
@@ -115,7 +132,7 @@ export function createOriginalTrainingPort(options: {
       },
       async cancel() {
         await permission();
-        if (phase === "settled") return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};
+        if (phase === "settled" || remoteRetired) return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};
         need(!closing);
         if (!cancelAttempted) {
           cancelAttempted = true; operations++;
@@ -127,27 +144,32 @@ export function createOriginalTrainingPort(options: {
       },
       async settle() {
         if (phase === "settled") return true;
-        if (operations || closeAttempted || closing) return false;
+        if (operations || (!remoteRetired && closeAttempted) || closing) return false;
         if (phase === "bound") {phase = "settled"; release(); return true;}
         if (!binding) return false; // Lost preparation cannot adopt a record by ID.
         closing = true; operations++;
         try {
-          // Observe original metadata before permanent retirement; no reads afterward.
-          const result = mapTaskStatusResponse((await send("read")).record);
-          need(result.requestId === definition.requestId && result.taskType === "train-model" && result.status !== "unknown" &&
-            result.metadata?.workspaceId === definition.workspaceId);
-          cached = copy({...result, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
-            progress: result.progress ? {details: result.progress} : undefined,
-            status: result.status as RuntimeTaskRecord["status"], concurrencyClass: "gpu-exclusive"} as RuntimeTaskRecord);
-          if (!cancelAttempted && phase !== "accepted") {
-            cancelAttempted = true; const cancelled = await send("cancel"); need(typeof cancelled.cancelled === "boolean");
-            cancellation = cancelled.cancelled as boolean;
+          if (!remoteRetired) {
+            // Observe original metadata before permanent retirement; no reads afterward.
+            const result = mapTaskStatusResponse((await send("read")).record);
+            need(result.requestId === definition.requestId && result.taskType === "train-model" && result.status !== "unknown" &&
+              result.metadata?.workspaceId === definition.workspaceId);
+            cached = copy({...result, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
+              progress: result.progress ? {details: result.progress} : undefined,
+              status: result.status as RuntimeTaskRecord["status"], concurrencyClass: "gpu-exclusive"} as RuntimeTaskRecord);
+            if (!cancelAttempted && phase !== "accepted") {
+              cancelAttempted = true; const cancelled = await send("cancel"); need(typeof cancelled.cancelled === "boolean");
+              cancellation = cancelled.cancelled as boolean;
+            }
+            if (phase === "accepted" && !["succeeded", "failed", "cancelled"].includes(result.status)) return false;
+            closeAttempted = true;
+            const retirement = await send("settle");
+            if (retirement.settled === false && retirement.retirement === "pending") {closeAttempted = false; return false;}
+            need(retirement.settled === true && retirement.retirement === "settled");
+            // No further remote reads or effects, even if local close is uncertain.
+            remoteRetired = true;
           }
-          if (phase === "accepted" && !["succeeded", "failed", "cancelled"].includes(result.status)) return false;
-          closeAttempted = true;
-          const retirement = await send("settle");
-          if (retirement.settled === false && retirement.retirement === "pending") {closeAttempted = false; return false;}
-          need(retirement.settled === true && retirement.retirement === "settled");
+          need(!!retireWorker && await retireWorker() === true);
           need(operations === 1);
           phase = "settled"; release(); return true;
         } catch {phase = "unconfirmed"; return false;}

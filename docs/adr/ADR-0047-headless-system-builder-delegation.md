@@ -1247,3 +1247,24 @@ separately before original task access. Periodic reads expose finite workflow
 progress, not metrics, paths or raw logs. Stop is at most one request, not physical
 retirement. No Root/public capability or transport, new native producer/profile,
 result Save or actual-host/parent qualification follows from component tests.
+
+### Original worker closure for private training
+
+The foundation composes the original HTTP training channel with a separate
+supervisor-owned retirement capability. Capture it before channel waits. Require
+the exact current bound-ready child; external attachment and serialized IDs do
+not grant termination authority. Capture original methods and receivers.
+
+Keep a strong original claim after `exit` clears ordinary active-process state.
+Wait for the original `close` before releasing private training custody. One
+termination attempt is shared with Stop. Unknown outcomes keep ownership; later
+calls observe the same close without another signal. Do not replace an unclosed
+claimed worker. Positive no-effect preparation disarms the unused capability
+without killing; a disarmed capability cannot later stop a reused worker.
+
+Record remote retirement before awaiting local close. Thereafter serve only
+cached authorized metadata, with no repeated HTTP read/cancel/settle effects.
+Block model unload during retained training custody. Ordinary unclaimed runtime
+startup/stop semantics remain compatible. This adds no process topology, Job,
+native producer, resource profile, file protection or public activation. Those
+production requirements and physical host qualification remain pending.

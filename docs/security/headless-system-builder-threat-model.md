@@ -2202,3 +2202,26 @@ old fences or grant business capacity. Independent causal fixtures exposed a
 before-policy-only check; durable Core/SQLite regressions require denial before
 publication or cancellation and at later transaction/read handoffs. Accepted
 business-only controls remain independent from this request map.
+
+### Original training worker closure
+
+Do not confuse remote session settlement, successful signal delivery or process
+exit with local process/stdio closure. The foundation captures a separate private
+retirement capability for the exact bound-ready owned child before HTTP waits.
+The supervisor retains a strong claim after exit; a replacement child, attached
+HTTP service or serialized PID cannot satisfy it. Capture original methods and
+receivers. One termination attempt is shared with Stop. Failed or timed-out
+observation retains ownership; late original close may settle without another
+signal or authority over a replacement.
+
+Only a positive original no-effect preparation response can disarm unused local
+custody without termination. Require synchronous unused-release acknowledgement;
+throwing, Promise or value-returning callbacks leave the reservation uncertain.
+Handle rejected JavaScript Promises without exposing their error. Disable the
+capability so reuse of the
+same worker cannot revive it. After acknowledged remote retirement, publish
+cache-only authorized metadata before the local await. Never send another remote
+read/cancel/settle. Deny model unload while custody remains uncertain. Inert
+positive/denial tests establish software lifecycle behavior, not descendant Job
+closure, native file protection, resource enforcement, output accounting or host
+qualification. No production native producer or public capability is enabled.

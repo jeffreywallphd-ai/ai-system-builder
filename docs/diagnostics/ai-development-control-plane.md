@@ -3202,3 +3202,15 @@ accepted replay, missing configuration, stale facts/policy, request withdrawal,
 independent business lifetime, finite progress and one cancellation after a lost
 reply. These feature checks start no model/native/app or real quality evaluation;
 public transport, native resources, result Save and host/parent qualification remain.
+
+Original training-worker retirement uses the existing fixed
+`headless-training-runtime-unit`, `headless-training-runtime-types` and
+`headless-context-existing-runtime` checks, with documentation and architecture
+checks. Extend the inert original-session/foundation and supervisor fixtures.
+Cover remote settlement with local close pending, exit before close, unknown
+signal results, one shared Stop attempt, replacement isolation, unused-claim
+release, cached metadata and unload denial. Strictly compile the changed test
+consumers during implementation. No catalog change or full-system suite is
+needed for this software slice. Child close evidence is not descendant Job,
+native file/resource or actual-host qualification; accepted model-quality checks
+remain closed and are not repeated.
