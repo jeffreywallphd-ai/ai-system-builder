@@ -12,9 +12,9 @@ import {readVerifiedHeadlessModelSourcePreview} from "../../shared/composition/h
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
 import {readHeadlessModelTaskValue, isHeadlessModelTaskReadOperation, readHeadlessModelDownloadReviewResult} from "../../../contracts/headless";
 import type {OwnedHeadlessModelTaskReader, OwnedHeadlessModelCompletionReader} from "../../shared/composition/headlessModelDownloadTasks";
-import type {OwnedHeadlessTrainingTaskReader} from "../../shared/composition/headlessModelTrainingTasks";
+import type {OwnedHeadlessTrainingTaskReader, OwnedHeadlessTrainingCompletionReader} from "../../shared/composition/headlessModelTrainingTasks";
 import {copyHeadlessModelPlanData} from "../../shared/composition/headlessModelDownloadReview";
-import {readHeadlessTrainingTaskReadResult} from "../../../contracts/headless";
+import {readHeadlessTrainingTaskReadResult, readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult} from "../../../contracts/headless";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
@@ -92,6 +92,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly readModelTask?: OwnedHeadlessModelTaskReader;
   readonly readModelCompletion?: OwnedHeadlessModelCompletionReader;
   readonly readTrainingTask?: OwnedHeadlessTrainingTaskReader;
+  readonly readTrainingReview?: OwnedHeadlessTrainingCompletionReader;
   readonly getModelSource?: () => Promise<Pick<PreviewHeadlessModelSourceUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
@@ -106,12 +107,15 @@ export function composeDesktopHeadlessReads(dependencies: {
     workflows, readWorkflowRole, conversationStatus, getIngestionTasks, getDatasetQueries, getDatasetInputs, isOpen, readModelTask, readModelCompletion } = dependencies;
   const trainingReader = dependencies.readTrainingTask;
   const readTrainingTask = trainingReader?.bind(dependencies);
+  const completionReader = dependencies.readTrainingReview;
+  const readTrainingReview = completionReader?.bind(dependencies);
   const identity = {organizationId: suppliedIdentity.organizationId, principalId: suppliedIdentity.principalId};
   const sameIdentity = () => suppliedIdentity.organizationId === identity.organizationId && suppliedIdentity.principalId === identity.principalId;
 
   const supports = (operation: HeadlessReadOperation) => {
     if (operation === "models.task") return Boolean(readModelTask);
     if (operation === "models.training-task") return Boolean(readTrainingTask);
+    if (operation === "models.review-training") return Boolean(readTrainingReview);
     if (operation === "models.review-download") return Boolean(readModelCompletion);
     if (operation === "models.preview-source") return Boolean(dependencies.getModelSource);
     if (isHeadlessModelReadOperation(operation)) return Boolean(dependencies.getModelMetadata);
@@ -159,7 +163,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   return async (request, getCurrentGrant) => {
     try {
       const parsed = parseHeadlessReadRequest(request, hostIncarnationId);
-      const trainingTarget = parsed.ok && parsed.request.operation === "models.training-task" ? parsed.request.input : undefined;
+      const trainingTarget = parsed.ok && (parsed.request.operation === "models.training-task" || parsed.request.operation === "models.review-training") ? parsed.request.input : undefined;
       let trainingAuthorityLive = true;
       let checkingTrainingGrants = false;
       const trainingGrants = new Map<DesktopHeadlessReadGrant, () => boolean>();
@@ -270,7 +274,10 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "models.review-training":
         case "models.training-task": {
+          const reader = operation === "models.review-training" ? readTrainingReview : readTrainingTask;
+          const decode = operation === "models.review-training" ? readHeadlessTrainingCompletionResult : readHeadlessTrainingTaskReadResult;
           let live = true;
           const trainingCurrent = () => {
             live = live && isOpen() && sameIdentity() && trainingGrantsLive();
@@ -281,8 +288,8 @@ export function composeDesktopHeadlessReads(dependencies: {
               await authorizedWorkspace(workspaceId, operation)) && trainingCurrent();
             return live;
           };
-          if (!readTrainingTask || !await allowed()) return forbidden;
-          const result = readHeadlessTrainingTaskReadResult(copyHeadlessModelPlanData(await readTrainingTask({
+          if (!reader || !await allowed()) return forbidden;
+          const result = decode(copyHeadlessModelPlanData(await reader({
             scope: Object.freeze({...identity, workspaceId, registeredClientId: clientId}),
             selection: input.selection, isCurrent: trainingCurrent})), input);
           return await allowed() ? result : forbidden;

@@ -22,7 +22,7 @@ import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolic
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
 import {runOwnedHeadlessModelDownloadCancellation, type OwnedHeadlessModelSourceTasks} from "../../shared/composition/headlessModelDownloadTasks";
 import {readHeadlessModelTaskCancellationRequest, type HeadlessModelTaskCancellationResult,
-  readHeadlessTrainingTaskRequest, type HeadlessTrainingTaskResult} from "../../../contracts/headless";
+  readHeadlessTrainingTaskRequest, readHeadlessTrainingCompletionRequest, type HeadlessTrainingTaskResult, type HeadlessTrainingCompletionResult} from "../../../contracts/headless";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
@@ -529,14 +529,18 @@ export function composeManagedHeadlessPlanReview(options: {
     isOpen: () => boolean, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
   function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
     isOpen: () => boolean, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
+  function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
+    isOpen: () => boolean, action: "read-completion"): Promise<HeadlessTrainingCompletionResult>;
   async function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
-    isOpen: () => boolean, action: "read" | "cancel" | "review"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult> {
+    isOpen: () => boolean, action: "read" | "cancel" | "review" | "read-completion"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | HeadlessTrainingCompletionResult> {
     let effectPossible = false;
     try {
       if (!trainingTasks || !trainingHostCurrent) return forbidden;
-      const parsed = readHeadlessTrainingTaskRequest(copyHeadlessTrainingPlanInput(incoming), hostIncarnationId);
+      const parsed = action === "read-completion"
+        ? readHeadlessTrainingCompletionRequest(copyHeadlessTrainingPlanInput(incoming), hostIncarnationId)
+        : readHeadlessTrainingTaskRequest(copyHeadlessTrainingPlanInput(incoming), hostIncarnationId);
       if (!parsed.ok) return parsed;
-      if (parsed.request.operation !== (action === "cancel" ? "models.cancel-training" : "models.training-task")) return forbidden;
+      if (parsed.request.operation !== (action === "cancel" ? "models.cancel-training" : action === "read-completion" ? "models.review-training" : "models.training-task")) return forbidden;
       const registration = captureTrainingRegistration(originalRegistration);
       const current = () => isHeadlessReadCurrent(isOpen) && isHeadlessReadCurrent(trainingHostCurrent);
       const access = admitWorkspace(parsed.request.input, parsed.request.operation, registration, current, HEADLESS_TRAINING_REVIEW_SCOPES);
@@ -546,7 +550,7 @@ export function composeManagedHeadlessPlanReview(options: {
         authorize: async (owner: StructuredDocumentStore) => access.current() &&
           await authorizeOwnedHeadlessTrainingWorkspace(owner, rootDirectory, placement, scope, access.current) && access.current()};
       effectPossible = action === "cancel";
-      const result = await (action === "review" ? trainingTasks.reviewCompletion(query) : action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
+      const result = await (action === "read-completion" ? trainingTasks.readCompletion(query) : action === "review" ? trainingTasks.reviewCompletion(query) : action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
       if (!access.current() || !await access.authorizeCurrent() || !access.current()) return effectPossible ? unconfirmed : forbidden;
       return result;
     } catch {return effectPossible ? unconfirmed : unavailable;}
@@ -567,6 +571,8 @@ export function composeManagedHeadlessPlanReview(options: {
       controlTraining(request, registration, current, "read") : undefined,
     cancelTrainingTask: trainingTasks ? (request: unknown, registration: ManagedPlanReviewRegistration, current: () => boolean) =>
       controlTraining(request, registration, current, "cancel") : undefined,
+    readTrainingReview: trainingTasks ? (request: unknown, registration: ManagedPlanReviewRegistration, current: () => boolean) =>
+      controlTraining(request, registration, current, "read-completion") : undefined,
     readTrainingCompletion: trainingTasks ? (request: unknown, registration: ManagedPlanReviewRegistration, current: () => boolean) =>
       controlTraining(request, registration, current, "review") : undefined,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads

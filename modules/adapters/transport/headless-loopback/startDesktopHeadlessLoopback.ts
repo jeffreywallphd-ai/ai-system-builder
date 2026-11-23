@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:https";
 import type { Duplex } from "node:stream";
 import {types} from "node:util";
-import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult,
+import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult, readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult,
   type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
 import {HEADLESS_MODEL_TASK_CONTROL_PATH, readHeadlessModelTaskCancellationRequest, readHeadlessModelTaskCancellationResult,
   readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult, type HeadlessModelDownloadReviewRequest,
@@ -485,6 +485,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     let result: HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult;
     let modelReviewTarget: HeadlessModelDownloadReviewRequest["input"] | undefined;
     let trainingTarget: HeadlessTrainingTaskReadRequest["input"] | undefined;
+    let trainingCompletion = false;
     if (request.url === AUTHOR_PATH && dependencies.authoring) {
       const { hostIncarnationId, execute } = dependencies.authoring;
       if (!initialGrant.authoring?.length || !initialGrant.isCurrent) { fail(response, 403, "headless.forbidden"); return; }
@@ -521,17 +522,20 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     } else {
       const modelReview = !!body && typeof body === "object" && "operation" in body && body.operation === "models.review-download";
       const trainingProgress = !!body && typeof body === "object" && "operation" in body && body.operation === "models.training-task";
+      const trainingReview = !!body && typeof body === "object" && "operation" in body && body.operation === "models.review-training";
       let readBody = body;
-      if (trainingProgress) {
+      if (trainingProgress || trainingReview) {
         if (initialGrant.planReview !== true || !callbackIsCurrent(initialReadFence, true)) {fail(response, 403, "headless.forbidden"); return;}
         if (!dependencies.planReview) {fail(response, 400, "headless.unsupported-operation"); return;}
-        const parsed = readHeadlessTrainingTaskReadRequest(body, dependencies.planReview.hostIncarnationId);
+        const decode = trainingReview ? readHeadlessTrainingCompletionRequest : readHeadlessTrainingTaskReadRequest;
+        const parsed = decode(body, dependencies.planReview.hostIncarnationId);
         if (!parsed.ok) {fail(response, errorStatus(parsed.code), parsed.code); return;}
-        const proof = readHeadlessTrainingTaskReadRequest(parsed.request, dependencies.planReview.hostIncarnationId);
+        const proof = decode(parsed.request, dependencies.planReview.hostIncarnationId);
         if (!proof.ok) {fail(response, 400, "headless.invalid-request"); return;}
         trainingTarget = proof.request.input;
+        trainingCompletion = proof.request.operation === "models.review-training";
         const grant = await currentGrant();
-        if (!grant || grant.planReview !== true || !grant.operations.includes("models.training-task") ||
+        if (!grant || grant.planReview !== true || !grant.operations.includes(proof.request.operation) ||
             !grant.workspaceIds.includes(trainingTarget.workspaceId) || !callbackIsCurrent(initialReadFence, true)) {
           fail(response, 403, "headless.forbidden"); return;
         }
@@ -555,13 +559,14 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         fail(response, 403, "headless.forbidden"); return;
       }
       const readCurrent = () => admitting() && !response.destroyed && !response.writableEnded &&
-        (!(modelReview || trainingProgress) || callbackIsCurrent(initialReadFence, true));
+        (!(modelReview || trainingProgress || trainingReview) || callbackIsCurrent(initialReadFence, true));
       result = await dependencies.read(readBody, async () => {
         const grant = await currentGrant();
         return grant && readCurrent() ? {...grant, isReadCurrent: readCurrent} : undefined;
       });
       if (modelReviewTarget) result = readHeadlessModelDownloadReviewResult(result, modelReviewTarget);
-      if (trainingTarget) result = readHeadlessTrainingTaskReadResult(result, trainingTarget);
+      if (trainingTarget) result = trainingCompletion ? readHeadlessTrainingCompletionResult(result, trainingTarget)
+        : readHeadlessTrainingTaskReadResult(result, trainingTarget);
     }
     const finalGrant = await currentGrant();
     if (!admitting() || response.destroyed) return;

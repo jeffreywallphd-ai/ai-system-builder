@@ -142,6 +142,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let modelControlEnabled = true, modelControlCalls = 0, modelControlMode = "valid";
   let modelReviewMode = "valid", modelReviewCalls = 0;
   let trainingProgressMode = "valid", trainingProgressCalls = 0;
+  let trainingReviewMode = "valid", trainingReviewCalls = 0;
   let statusCalls = 0;
   let preparationReady = true;
   const acceptedDatasetTaskId = randomUUID();
@@ -195,6 +196,19 @@ test("managed plan routes admit only exact proposals, status and an approved ste
           selectedFilesVerification: "verified-at-completion", registration: "requires-separate-approval", runtimeReadiness: "not-checked",
           ...(modelReviewMode === "private" ? {localPath: "private/model/path"} : {}),
         }} as never;
+      }
+      if (request.operation === "models.review-training") {
+        trainingReviewCalls++;
+        if (trainingReviewMode === "withdraw") current = false;
+        if (trainingReviewMode === "not-ready") return {ok: false, code: "headless.source-not-ready"};
+        if (trainingReviewMode === "denied") return {ok: false, code: "headless.forbidden"};
+        const value = recordedTrainingHistory(workspaceId, acceptedDatasetTaskId, {fingerprint: acceptedModelPlanFingerprint, step: 1});
+        return {ok: true, operation: trainingReviewMode === "tag" ? "models.task" : request.operation, value: {...value,
+          ...(trainingReviewMode === "workspace" ? {workspaceId: "workspace.foreign"} : {}),
+          ...(trainingReviewMode === "task" ? {taskId: randomUUID()} : {}),
+          ...(trainingReviewMode === "plan" ? {plan: {...value.plan, step: 2}} : {}),
+          ...(trainingReviewMode === "private" ? {logs: ["PRIVATE"]} : {}),
+          ...(trainingReviewMode === "quality" ? {verification: {...value.verification, outputQuality: "passed"}} : {})}} as never;
       }
       if (request.operation === "models.training-task") {
         trainingProgressCalls++;
@@ -458,6 +472,32 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       current = true;
     }
     trainingProgressMode = "valid";
+
+    const trainingReviewRequest = {...reviewRequest, operation: "models.review-training"};
+    for (const selection of [{kind: "task", taskId: acceptedDatasetTaskId},
+      {kind: "plan-step", fingerprint: acceptedModelPlanFingerprint, step: 1}]) {
+      const result = await request({...trainingReviewRequest, input: {...trainingReviewRequest.input, selection}}, "fixture-plan", readRouteForReview);
+      assert.equal(result.status, 200); assert.equal(result.body.operation, "models.review-training");
+      assert.equal(result.body.value.provenance.modelRecordId, "model.synthetic");
+      assert.equal(result.body.value.verification.outputQuality, "not-evaluated");
+    }
+    for (const mode of ["tag", "task", "workspace", "plan", "private", "quality"]) {
+      trainingReviewMode = mode;
+      const selection = mode === "plan" ? {kind: "plan-step", fingerprint: acceptedModelPlanFingerprint, step: 1}
+        : {kind: "task", taskId: acceptedDatasetTaskId};
+      const result = await request({...trainingReviewRequest, input: {...trainingReviewRequest.input, selection}}, "fixture-plan", readRouteForReview);
+      assert.equal(result.status, 503, mode); assert.deepEqual(result.body, {ok: false, code: "headless.unavailable"});
+    }
+    trainingReviewMode = "not-ready";
+    const missingTrainingReview = await request(trainingReviewRequest, "fixture-plan", readRouteForReview);
+    assert.equal(missingTrainingReview.status, 409); assert.deepEqual(missingTrainingReview.body, {ok: false, code: "headless.source-not-ready"});
+    for (const mode of ["denied", "withdraw"]) {
+      trainingReviewMode = mode; assert.equal((await request(trainingReviewRequest, "fixture-plan", readRouteForReview)).status, 403); current = true;
+    }
+    const beforeBadTrainingReview = trainingReviewCalls;
+    assert.equal((await request({...trainingReviewRequest, input: {...trainingReviewRequest.input,
+      selection: {kind: "task", taskId: acceptedDatasetTaskId, path: "PRIVATE"}}}, "fixture-plan", readRouteForReview)).status, 400);
+    assert.equal(trainingReviewCalls, beforeBadTrainingReview); trainingReviewMode = "valid";
 
     const proposal = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.submit", input:{...scope, fingerprint, steps}};
     const planPath = MANAGED_HEADLESS_AGENT_PATHS["plan-review"];
@@ -937,3 +977,13 @@ test("exact managed requests respect authentication, framing, authority lifetime
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
 });
+
+function recordedTrainingHistory(workspace: unknown, taskId: string, plan: {fingerprint: string; step: number}) {
+  return {workspaceId: workspace, taskId, plan: {...plan}, provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-21T00:00:00.000Z",
+    datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64),
+    recipeDigest: "sha256:" + "b".repeat(64), proposalDigest: "sha256:" + "c".repeat(64), trainingTask: "llm-instruction", method: "lora",
+    trainingInputCount: 1, validationInputCount: 1, inputBytes: 128, recipeBytes: 64},
+    candidate: {requestedName: "Small trial", artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: 256},
+    comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
+      runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"} as const;
+}

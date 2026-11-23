@@ -166,3 +166,32 @@ its original lifecycle cleanup; it is not a cache-only or zero-IO operation.
 A configured read connection does not qualify the native training producer,
 retained outputs, saving or real-host execution. Install this guide and the
 generated tool catalog from the same revision.
+
+## Review a completed training result
+
+1. Check that the host advertises `models.review-training`. Use
+   `aisb_model_workflow` with `selection.kind: completed-training` and
+   `selection.task`. Select the original task ID or plan fingerprint and step.
+   Keep the same registered client, host and workspace. The host applies current
+   Model read permission and its original plan-review access checks.
+2. If the reply is `headless.source-not-ready`, the original result cache is not
+   ready. You can check progress with `training-task` if that operation is
+   available. The completion read itself does not poll or settle training.
+   Missing support does not permit a file, runtime or task-discovery fallback.
+3. Read the recorded Model, Dataset version, recipe and candidate references.
+   An optional existing comparison is a historical measurement only; this
+   request does not compute it or run a quality test. Missing measurements stay
+   `not-recorded`. Do not treat these values as quality acceptance.
+4. Report the limits with the result: inputs were recorded but not rechecked;
+   retained files and runtime readiness are not checked; hardware is not
+   recorded; output quality is not evaluated. Saving the candidate requires
+   separate approval. Unknown or stale history grants no retry or new task.
+
+The app returns no prompts, training rows, paths, raw worker output, logs or
+private errors. This cached read starts no model or provider. It does not reopen
+model weights, training data or candidate artifacts. It still reads permission
+and accepted-task records from the app's storage.
+The original private review API remains separate. Install this guide and the
+complete generated tool reference from the same repository revision. Existing
+source, download, progress and cancellation selectors remain available under
+their own permissions; no additional MCP tool is added.

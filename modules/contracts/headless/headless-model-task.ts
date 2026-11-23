@@ -6,7 +6,7 @@ import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHos
 
 export const HEADLESS_MODEL_TASK_CONTROL_PATH = "/aisb-headless/v1/model-task-control";
 export const MANAGED_HEADLESS_MODEL_TASK_CONTROL_PATH = "/api/headless/agent/model-task-control";
-export const HEADLESS_MODEL_TASK_READ_OPERATIONS = Object.freeze(["models.task", "models.review-download", "models.training-task"] as const);
+export const HEADLESS_MODEL_TASK_READ_OPERATIONS = Object.freeze(["models.task", "models.review-download", "models.training-task", "models.review-training"] as const);
 export function isHeadlessModelTaskReadOperation(value: unknown): value is typeof HEADLESS_MODEL_TASK_READ_OPERATIONS[number] {
   return HEADLESS_MODEL_TASK_READ_OPERATIONS.some(operation => operation === value);
 }

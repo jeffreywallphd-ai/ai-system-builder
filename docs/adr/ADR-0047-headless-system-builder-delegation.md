@@ -1370,3 +1370,20 @@ sticky after observed loss. An original read can observe accepted work and retir
 its owned lifecycle under business control; it does not acquire a new runtime,
 start another task or grant Save. This source integration activates no Root and
 provides no native, resource, output, actual-host or parent qualification.
+
+### Configured training completion reads
+
+The existing headless read family includes additive `models.review-training`.
+Its owner is the original training task book and optional cached-completion port,
+not a second runtime executor. Desktop and Managed preserve the old private
+completion API and expose a separate configured reader under their existing
+plan-review/read policy. The public read composers and transports independently
+close and correlate copied metadata; Desktop applies the same sticky original
+and fresh-grant capture used for numeric training progress.
+
+The existing model-workflow MCP tool gains `completed-training`, without a new
+tool or authority. Historical provenance/candidate facts and optional finite
+measurement-only reports do not verify current files, hardware, runtime
+readiness, model quality or Save permission. Missing cache has no observation or
+runtime/file/provider fallback. No production Root activation, Native/model
+execution grant or parent qualification follows from this configured integration.

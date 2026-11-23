@@ -195,17 +195,17 @@ for (const host of ["desktop", "managed"] as const) {
 }
 
 
-function trainingReadFixture(host: "desktop" | "managed", configured = true) {
+function trainingReadFixture(host: "desktop" | "managed", configured = true, completion = false) {
   const taskId = "f8cd6a41-ad96-47f3-bebf-7ef995a251f0";
   const clientId = "e576326e-6802-4f44-b9bd-7e80467e4b8c";
-  const request = {version: version as typeof version, operation: "models.training-task" as const,
+  const request = {version: version as typeof version, operation: completion ? "models.review-training" as const : "models.training-task" as const,
     input: {hostIncarnationId, workspaceId, selection: {kind: "task" as const, taskId}}};
   const progress = () => ({workspaceId, taskId, plan: {fingerprint: "a".repeat(64), step: 1}, state: "running",
     percent: 50, progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}, resultReview: "not-ready",
     registration: "requires-separate-approval", runtimeReadiness: "not-checked", outputQuality: "not-evaluated"});
   const state = {live: true, readLive: true, planning: true, allowed: true, reads: 0, policies: 0,
     afterRead: false, onPolicy: () => {}, onRead: (_query: {isCurrent: () => boolean}) => {},
-    reply: {ok: true, operation: "models.training-task", value: progress()} as unknown};
+    reply: {ok: true, operation: request.operation, value: completion ? cachedTrainingHistory(progress()) : progress()} as unknown};
   const identity = {organizationId, principalId: "principal.synthetic", registeredClientId: clientId,
     purpose: "plan-review" as "plan-review" | "agent"};
   const workspaces = {async readWorkspace(id: unknown) {return id === workspaceId ? {workspaceId, organizationId,
@@ -222,7 +222,7 @@ function trainingReadFixture(host: "desktop" | "managed", configured = true) {
   const unexpected = () => {assert.fail("Training observation must not resolve another feature or task owner.");};
   const read = host === "desktop" ? (() => {
     const options = {hostIncarnationId, identity, workspaceRepository: workspaces, authorization,
-      getUseCases: unexpected, isOpen: () => state.live, ...(configured ? {readTrainingTask} : {})};
+      getUseCases: unexpected, isOpen: () => state.live, ...(configured ? completion ? {readTrainingReview: readTrainingTask} : {readTrainingTask} : {})};
     dependencies = options;
     const handler = composeDesktopHeadlessReads(options);
     return (input: HeadlessReadRequest = request) => handler(input, async () => ({...identity,
@@ -230,7 +230,7 @@ function trainingReadFixture(host: "desktop" | "managed", configured = true) {
       isCurrent: () => state.live, isReadCurrent: () => state.readLive}));
   })() : (() => {
     const options = {hostIncarnationId, contexts: {getCurrentOrganizationContext: () => identity}, workspaces, authorization,
-      systems: {listTemplates: {execute: unexpected}, read: {execute: unexpected}}, ...(configured ? {readTrainingTask} : {})};
+      systems: {listTemplates: {execute: unexpected}, read: {execute: unexpected}}, ...(configured ? completion ? {readTrainingReview: readTrainingTask} : {readTrainingTask} : {})};
     dependencies = options;
     const handler = composeManagedAgentReads(options);
     return (input: HeadlessReadRequest = request) => {
@@ -364,4 +364,96 @@ test("desktop training progress accepts unchanged fresh grants and original call
 test("desktop training progress refuses recursive original authority without unbounded callbacks", async () => {
   const f = trainingFreshGrantFixture("isCurrent", -1, "recursive");
   assert.deepEqual(await f.run(), denied); assert.equal(f.state.reads, 1); assert.ok(f.state.checks < 100);
+});
+
+function cachedTrainingHistory(summary: {workspaceId: typeof workspaceId; taskId: string; plan: {fingerprint: string; step: number}}) {
+  return {workspaceId: summary.workspaceId, taskId: summary.taskId, plan: {...summary.plan}, provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: at,
+    datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64),
+    recipeDigest: "sha256:" + "b".repeat(64), proposalDigest: "sha256:" + "c".repeat(64), trainingTask: "llm-instruction", method: "lora",
+    trainingInputCount: 1, validationInputCount: 1, inputBytes: 128, recipeBytes: 64},
+    candidate: {requestedName: "Small trial", artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: 256},
+    comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
+      runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"} as const;
+}
+for (const host of ["desktop", "managed"] as const) {
+  test(`${host} cached training review advertises configured-only support and returns historical facts`, async () => {
+    const f = trainingReadFixture(host, true, true), description = await f.read({version, operation: "host.describe", input: {}});
+    assert.ok(description.ok && description.operation === "host.describe");
+    assert.ok(description.value.operations.includes("models.review-training"));
+    assert.equal(description.value.operations.includes("models.training-task"), false, "No progress fallback or automatic activation.");
+    const expected = {ok: true, operation: "models.review-training", value: cachedTrainingHistory(f.progress())};
+    assert.deepEqual(await f.read(), expected); assert.equal(f.state.reads, 1);
+    const absent = trainingReadFixture(host, false, true), missing = await absent.read({version, operation: "host.describe", input: {}});
+    assert.ok(missing.ok && missing.operation === "host.describe"); assert.equal(missing.value.operations.includes("models.review-training"), false);
+    assert.equal((await absent.read()).ok, false); assert.equal(absent.state.reads, 0);
+    f.state.reply = {ok: false, code: "headless.source-not-ready"}; assert.deepEqual(await f.read(), f.state.reply);
+  });
+  test(`${host} cached training review denies foreign/private/stale data and retains copied selection and reply`, async () => {
+    for (const change of [{taskId: hostIncarnationId}, {workspaceId: createWorkspaceId("workspace.other")}, {logs: ["PRIVATE"]},
+      {registration: "saved"}, {verification: {inputs: "verified"}}]) {
+      const f = trainingReadFixture(host, true, true); f.state.reply = {ok: true, operation: "models.review-training", value: {...cachedTrainingHistory(f.progress()), ...change}};
+      assert.deepEqual(await f.read(), {ok: false, code: "headless.unavailable"});
+    }
+    for (const flag of ["live", "readLive", "planning", "allowed"] as const) {
+      const f = trainingReadFixture(host, true, true); f.state[flag] = false; assert.equal((await f.read()).ok, false); assert.equal(f.state.reads, 0);
+    }
+    const f = trainingReadFixture(host, true, true), original = cachedTrainingHistory(f.progress());
+    f.state.onPolicy = () => {if (f.state.afterRead) {
+      (f.state.reply as any).value.candidate.requestedName = "Changed later";
+      f.request.input.selection.taskId = hostIncarnationId;
+    }};
+    assert.deepEqual(await f.read(), {ok: true, operation: "models.review-training", value: original});
+    const g = trainingReadFixture(host, true, true); g.state.onRead = () => {g.state.readLive = false;};
+    assert.deepEqual(await g.read(), denied);
+  });
+}
+
+function completionFreshGrantFixture(field: "isCurrent" | "isReadCurrent", atPolicy: number,
+  change: "revoke" | "replace" | "scope" | "receiver" | "recursive" = "revoke") {
+  const f = trainingReadFixture("desktop", true, true);
+  const views: {grant: object; live: {isCurrent: boolean; isReadCurrent: boolean}}[] = [];
+  const state = {reads: 0, policies: 0, checks: 0};
+  let currentRead: (() => boolean) | undefined;
+  const reader = composeDesktopHeadlessReads({hostIncarnationId, identity: f.identity, isOpen: () => true,
+    getUseCases() {assert.fail("No fallback from original training observation.");},
+    workspaceRepository: {async readWorkspace() {return {workspaceId, organizationId, displayName: "Synthetic",
+      status: "active", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      assert.deepEqual(requiredScopes, ["workspace:read", "model:read"]);
+      if (++state.policies === atPolicy) {
+        const last = views[views.length - 1]; assert.notStrictEqual(last, views[0]);
+        if (change === "replace") Object.assign(last.grant, {[field]: () => true});
+        else if (change === "scope") Object.assign(last.grant, {operations: []});
+        else last.live[field] = false;
+        await Promise.resolve();
+      }
+    }},
+    async readTrainingReview(query) {state.reads++; assert.equal(query.isCurrent(), true);
+      if (change === "recursive") currentRead = query.isCurrent;
+      return {ok: true, operation: "models.review-training", value: cachedTrainingHistory(f.progress())};},
+  });
+  const grant = async () => {
+    const live = {isCurrent: true, isReadCurrent: true};
+    const view = {...f.identity, workspaceIds: [workspaceId], operations: HEADLESS_READ_OPERATIONS,
+      planReview: true as const, live,
+      isCurrent: () => {state.checks++; return change === "recursive" && currentRead ? currentRead() : live.isCurrent;},
+      isReadCurrent: () => live.isReadCurrent};
+    if (change === "receiver") {
+      view.isCurrent = function(this: typeof view) {return this.live.isCurrent;};
+      view.isReadCurrent = function(this: typeof view) {return this.live.isReadCurrent;};
+    }
+    views.push({grant: view, live}); return view;
+  };
+  return {run: () => reader(f.request, grant), state, views};
+}
+for (const field of ["isCurrent", "isReadCurrent"] as const) for (const policy of [2, 3]) {
+  test(`desktop cached completion retains fresh ${field} across policy wait ${policy}`, async () => {
+    const f = completionFreshGrantFixture(field, policy); assert.deepEqual(await f.run(), denied);
+    assert.equal(f.state.reads, policy === 2 ? 0 : 1);
+  });
+}
+test("desktop cached completion retains fresh callback identities and scope", async () => {
+  for (const change of ["replace", "scope"] as const) for (const field of ["isCurrent", "isReadCurrent"] as const) {
+    const f = completionFreshGrantFixture(field, 2, change); assert.deepEqual(await f.run(), denied); assert.equal(f.state.reads, 0);
+  }
 });

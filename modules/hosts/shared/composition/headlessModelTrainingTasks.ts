@@ -28,6 +28,8 @@ export type OriginalTrainingRunOptions = Omit<Run, "retainTask">;
 export type OwnedHeadlessTrainingTaskReader = (query: {readonly scope: HeadlessOperationScope;
   readonly selection: HeadlessTrainingTaskReadRequest["input"]["selection"];
   readonly isCurrent: () => boolean}) => Promise<unknown>;
+/** Only the captured original completion cache; no task observation or fallback. */
+export type OwnedHeadlessTrainingCompletionReader = OwnedHeadlessTrainingTaskReader;
 export interface OriginalTrainingTaskQuery {
   readonly documents: StructuredDocumentStore;
   readonly hostIncarnationId: string;

@@ -38,6 +38,7 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "models.preview-source": {...scope, modelId: "Qwen/synthetic-model", revision: "a".repeat(40)},
     "models.task": {...scope, selection: {kind: "task", taskId: host}},
     "models.training-task": {...scope, selection: {kind: "task", taskId: host}},
+    "models.review-training": {...scope, selection: {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}},
     "models.review-download": {...scope, selection: {kind: "plan-step", fingerprint: "a".repeat(64), step: 1}},
     "context.models": scope,
     "context.task": {...scope, selection: {kind: "task", taskId: host}},
@@ -88,7 +89,7 @@ test("detaches cursors and rejects extra authority data or malformed sequences",
   for (const invalidCursor of [
     { ...cursor, workspaceId: "another" }, { ...cursor, sequence: -1 }, { ...cursor, sequence: Number.MAX_SAFE_INTEGER + 1 },
     { ...cursor, scopeTag: cursor.scopeTag + "\n" }, { ...cursor, scopeTag: "not-a-tag" },
-    { ...cursor, get sequence() { assert.fail("Getter should not run"); } },
+    { ...cursor, get sequence() { return assert.fail("Getter should not run"); } },
   ]) {
     assert.deepEqual(parseHeadlessReadRequest({
       version, operation: "systems.changes", input: { ...scope, cursor: invalidCursor },

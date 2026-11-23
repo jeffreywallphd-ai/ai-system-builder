@@ -13,9 +13,9 @@ import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurren
 import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue, isHeadlessModelTaskReadOperation,
   readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult} from "../../../contracts/headless";
 import type {OwnedHeadlessModelTaskReader, OwnedHeadlessModelCompletionReader} from "../../shared/composition/headlessModelDownloadTasks";
-import type {OwnedHeadlessTrainingTaskReader} from "../../shared/composition/headlessModelTrainingTasks";
+import type {OwnedHeadlessTrainingTaskReader, OwnedHeadlessTrainingCompletionReader} from "../../shared/composition/headlessModelTrainingTasks";
 import {copyHeadlessModelPlanData} from "../../shared/composition/headlessModelDownloadReview";
-import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult} from "../../../contracts/headless";
+import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult, readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult} from "../../../contracts/headless";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
@@ -46,6 +46,7 @@ export function composeManagedAgentReads(options: {
   readonly readModelTask?: OwnedHeadlessModelTaskReader;
   readonly readModelCompletion?: OwnedHeadlessModelCompletionReader;
   readonly readTrainingTask?: OwnedHeadlessTrainingTaskReader;
+  readonly readTrainingReview?: OwnedHeadlessTrainingCompletionReader;
   readonly getModelSource?: () => Promise<Pick<PreviewHeadlessModelSourceUseCase, "execute">>;
   readonly getContextTask?: () => Promise<Pick<ReadHeadlessContextTaskUseCase, "execute">>;
   readonly getContextSaved?: () => Promise<Pick<ReadHeadlessContextSavedUseCase, "execute">>;
@@ -59,6 +60,8 @@ export function composeManagedAgentReads(options: {
   const readModelCompletion = options.readModelCompletion;
   const trainingReader = options.readTrainingTask;
   const readTrainingTask = trainingReader?.bind(options);
+  const completionReader = options.readTrainingReview;
+  const readTrainingReview = completionReader?.bind(options);
   return async (request: HeadlessReadRequest, suppliedIdentity: Pick<OrganizationRequestContext, "principalId" | "organizationId"> &
     { readonly purpose?: "agent" | "plan-review"; readonly registeredClientId?: string; readonly modelSourceRead?: true },
     isCurrent: () => boolean): Promise<HeadlessReadResult> => {
@@ -72,7 +75,8 @@ export function composeManagedAgentReads(options: {
       return sameIdentity() && context?.principalId === identity.principalId && context.organizationId === identity.organizationId;
     };
     if (!current()) return denied;
-    const trainingRequest = request.operation === "models.training-task"
+    const trainingRequest = request.operation === "models.review-training"
+      ? readHeadlessTrainingCompletionRequest(copyHeadlessModelPlanData(request), options.hostIncarnationId) : request.operation === "models.training-task"
       ? readHeadlessTrainingTaskReadRequest(copyHeadlessModelPlanData(request), options.hostIncarnationId) : undefined;
     if (trainingRequest && !trainingRequest.ok) return trainingRequest;
     const taskRequest = request.operation === "models.task" ? readHeadlessModelTaskRequest(request, options.hostIncarnationId) : undefined;
@@ -98,6 +102,7 @@ export function composeManagedAgentReads(options: {
           ...(identity.purpose === "plan-review" && options.getModelMetadata ? ["models.inventory", "models.record"] as const : []),
           ...(identity.purpose === "plan-review" && readModelTask ? ["models.task"] as const : []),
           ...(identity.purpose === "plan-review" && readTrainingTask ? ["models.training-task"] as const : []),
+          ...(identity.purpose === "plan-review" && readTrainingReview ? ["models.review-training"] as const : []),
           ...(identity.purpose === "plan-review" && readModelCompletion ? ["models.review-download"] as const : []),
           ...(identity.purpose === "plan-review" && identity.modelSourceRead === true && options.getModelSource ? ["models.preview-source"] as const : []),
           ...(identity.purpose === "plan-review" && options.getContextInputs ? ["context.models", "context.preview-generation"] as const : []),
@@ -111,7 +116,7 @@ export function composeManagedAgentReads(options: {
           ...(identity.purpose === "plan-review" && options.getDatasetTaskStatus ? ["data.dataset-task-status"] as const : []),
           ...(identity.purpose === "plan-review" && options.getDatasetTaskReview ? ["data.dataset-task-review"] as const : [])]}};
     }
-    if (operation !== "models.training-task" && operation !== "models.task" && operation !== "models.review-download" && operation !== "models.preview-source" && operation !== "models.inventory" && operation !== "models.record" && operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
+    if (operation !== "models.review-training" && operation !== "models.training-task" && operation !== "models.task" && operation !== "models.review-download" && operation !== "models.preview-source" && operation !== "models.inventory" && operation !== "models.record" && operation !== "context.preview-query" && operation !== "context.preview-rebuild" && operation !== "context.saved" && operation !== "context.task" && operation !== "context.models" && operation !== "context.preview-generation" && operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
         operation !== "data.ingestion-status" && operation !== "data.dataset-versions" && operation !== "data.compare-dataset-versions" &&
         operation !== "data.preview-dataset-preparation" && operation !== "data.dataset-task-status" && operation !== "data.dataset-task-review")
       return {ok: false, code: "headless.unsupported-operation"};
@@ -139,14 +144,16 @@ export function composeManagedAgentReads(options: {
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
-      if (operation === "models.training-task") {
-        if (!readTrainingTask) return {ok: false, code: "headless.unsupported-operation"};
+      if (operation === "models.training-task" || operation === "models.review-training") {
+        const reader = operation === "models.review-training" ? readTrainingReview : readTrainingTask;
+        const decode = operation === "models.review-training" ? readHeadlessTrainingCompletionResult : readHeadlessTrainingTaskReadResult;
+        if (!reader) return {ok: false, code: "headless.unsupported-operation"};
         if (!identity.registeredClientId) return denied;
         let live = true;
         const trainingCurrent = () => (live = live && current());
         const allowed = async () => (live = trainingCurrent() && await authorized(input.workspaceId) && trainingCurrent());
         if (!await allowed()) return denied;
-        const result = readHeadlessTrainingTaskReadResult(copyHeadlessModelPlanData(await readTrainingTask({
+        const result = decode(copyHeadlessModelPlanData(await reader({
           scope: Object.freeze({organizationId: identity.organizationId, principalId: identity.principalId,
             workspaceId: input.workspaceId, registeredClientId: identity.registeredClientId}),
           selection: input.selection, isCurrent: trainingCurrent})), input);

@@ -356,3 +356,19 @@ quality result. The original task reader can observe its accepted worker and
 perform its already-owned terminal retirement/cleanup under business policy.
 Both hosts, both transports and the SDK independently bound and correlate the
 reply. Missing configured readers stay unavailable. Tool counts are unchanged.
+
+### Recorded training result review
+
+The existing `aisb_model_workflow` also accepts `completed-training` with an
+exact original task or plan-step selector. It dispatches `models.review-training`
+through the authenticated read endpoint. The forwarder copies the request before
+transport waits and independently validates operation, workspace and task/plan
+on the reply. The strict selector adds no tool and changes no old selector.
+
+The reply is cached history only, with an optional previously recorded finite
+measurement-only comparison. No scoring is performed. File/readiness/hardware
+and quality sentinels stay unqualified; saving needs separate approval. Missing
+cache returns `headless.source-not-ready`. A missing configured original reader
+has no progress/runtime/file/provider fallback. Production Root activation,
+Native execution, retained output/Save and real-host qualification are separate.
+Generate/install the complete portable tool reference with the matching skill.

@@ -1015,3 +1015,65 @@ test("pinned training progress broker correlates both selectors and refuses priv
     assert.equal(result.status, 403); assert.deepEqual(result.json, {ok: false, code: "headless.forbidden"});
   } finally {await connector.close();}
 });
+
+function recordedTrainingHistory(workspace: unknown, taskId: string, plan: {fingerprint: string; step: number}) {
+  return {workspaceId: workspace, taskId, plan: {...plan}, provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-21T00:00:00.000Z",
+    datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64),
+    recipeDigest: "sha256:" + "b".repeat(64), proposalDigest: "sha256:" + "c".repeat(64), trainingTask: "llm-instruction", method: "lora",
+    trainingInputCount: 1, validationInputCount: 1, inputBytes: 128, recipeBytes: 64},
+    candidate: {requestedName: "Small trial", artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: 256},
+    comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
+      runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"} as const;
+}
+
+test("pinned cached training completion broker correlates both selectors and refuses private or revoked reads", {timeout: 15_000}, async () => {
+  const registry = createDesktopHeadlessClientAuthority({documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity, canReadWorkspace: async id => id === workspaceId, canReviewPlans: async id => id === workspaceId});
+  const pending = await registry.beginPairing(workspaceId, () => true, "plan-review"); assert.equal(pending.status, "ready");
+  const paired = await registry.completePairing(pending.pairingCode); assert.equal(paired.status, "paired");
+  const value = recordedTrainingHistory(workspaceId, incarnation, {fingerprint: "a".repeat(64), step: 1});
+  let live = true, mode = "valid", reads = 0;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {...registry, async verifyCredential(credential) {
+      const grant = await registry.verifyCredential(credential);
+      return grant && live ? {...grant, isCurrent: () => live} : undefined;
+    }},
+    planReview: {hostIncarnationId: incarnation, async execute() {return {ok: false, code: "headless.forbidden"};}},
+    async read(raw, currentGrant) {
+      reads++; assert.equal((raw as {operation: string}).operation, "models.review-training");
+      assert.ok(Object.isFrozen(raw)); assert.equal((await currentGrant())?.isReadCurrent?.(), true);
+      if (mode === "withdraw") live = false;
+      if (mode === "not-ready") return {ok: false, code: "headless.source-not-ready"};
+      return {ok: true, operation: mode === "tag" ? "models.task" : "models.review-training", value: {...value,
+        ...(mode === "task" ? {taskId: "f8cd6a41-ad96-47f3-bebf-7ef995a251f0"} : {}),
+        ...(mode === "workspace" ? {workspaceId: "workspace.foreign"} : {}),
+        ...(mode === "plan" ? {plan: {fingerprint: "b".repeat(64), step: 1}} : {}),
+        ...(mode === "private" ? {logs: ["PRIVATE"]} : {}),
+        ...(mode === "quality" ? {verification: {...value.verification, outputQuality: "passed"}} : {})}} as never;
+    },
+  });
+  const headers = {Authorization: `Bearer ${paired.credential}`};
+  const command = (selection: object) => JSON.stringify({version: HEADLESS_CONTRACT_VERSION, operation: "models.review-training",
+    input: {hostIncarnationId: incarnation, workspaceId, selection}});
+  const task = {kind: "task", taskId: incarnation}, plan = {kind: "plan-step", ...value.plan};
+  try {
+    for (const selection of [task, plan]) {
+      const result = await post(connector, readPath, command(selection), headers);
+      assert.equal(result.status, 200); assert.deepEqual(result.json, {ok: true, operation: "models.review-training", value});
+    }
+    for (const failure of ["tag", "task", "workspace", "plan", "private", "quality"]) {
+      mode = failure; const result = await post(connector, readPath, command(failure === "plan" ? plan : task), headers);
+      assert.equal(result.status, 503, failure); assert.deepEqual(result.json, {ok: false, code: "headless.unavailable"});
+    }
+    mode = "not-ready";
+    const waiting = await post(connector, readPath, command(task), headers);
+    assert.equal(waiting.status, 409); assert.deepEqual(waiting.json, {ok: false, code: "headless.source-not-ready"});
+    mode = "valid";
+    const before = reads;
+    assert.equal((await post(connector, readPath, command({...task, path: "PRIVATE"}), headers)).status, 400);
+    assert.equal(reads, before);
+    mode = "withdraw";
+    const result = await post(connector, readPath, command(task), headers);
+    assert.equal(result.status, 403); assert.deepEqual(result.json, {ok: false, code: "headless.forbidden"});
+  } finally {await connector.close();}
+});

@@ -2400,3 +2400,22 @@ credential-like identifiers and unsafe candidate text. Keep readiness, file,
 hardware and quality sentinels explicitly unqualified; no measurement implies
 quality acceptance or permission to register. This codec/book seam enables no
 public operation, Root wiring, native/model effect, new grant or parent pass.
+
+### Configured training completion transport boundary
+
+`models.review-training` now has an explicit, configured-only read path through
+both original host compositions and transports. The existing MCP workflow tool
+uses `completed-training`. The original task book remains the sole cache owner;
+no new task, provider, runtime or file fallback is resolved. Preserve the old
+private completion API and require original plan-review client/workspace/host,
+current Model read and the owning host's fresh authorization.
+
+Treat callback results as untrusted metadata. Capture the original callback and
+receiver, detach selectors and replies before asynchronous policy waits, retain
+observed registration/read-lifetime loss, and reauthorize before disclosure.
+Each transport and SDK independently checks operation, workspace and exact task
+or plan-step. Deny extra/private fields, mismatched replies and forged readiness,
+quality or Save claims. Missing cache is a closed source-not-ready failure.
+Only an existing fixed comparison can be reported, marked measurement-only;
+this read performs no scoring. No Native/model effects, Root activation,
+resource grant, candidate Save or real-host/parent qualification is granted.

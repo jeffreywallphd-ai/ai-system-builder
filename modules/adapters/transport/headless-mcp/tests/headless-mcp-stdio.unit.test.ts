@@ -136,6 +136,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let cancellationCalls = 0;
   let completionReviewMode = "valid";
   let trainingProgressMode = "valid";
+  let trainingReviewMode = "valid";
   let wrongQuestionDigest = false;
   let changedPreparation = false;
   let sourceReady = true;
@@ -223,6 +224,21 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           value: {...modelCompletionReviewValue(), ...(completionReviewMode === "private" ? {localPath: "private/model/path"} : {}),
             ...(completionReviewMode === "workspace" ? {workspaceId: "workspace.foreign"} : {})}});
         response.writeHead(completionReviewMode === "not-ready" ? 409 : 200,
+          {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "models.review-training") {
+        const value = recordedTrainingHistory(workspaceId, modelTaskValue.taskId, modelTaskValue.plan);
+        const payload = JSON.stringify(trainingReviewMode === "not-ready" ? {ok: false, code: "headless.source-not-ready"}
+          : trainingReviewMode === "denied" ? {ok: false, code: "headless.forbidden"} : {
+          ok: true, operation: trainingReviewMode === "tag" ? "models.task" : input.operation, value: {...value,
+            ...(trainingReviewMode === "measured" ? {comparison: recordedTrainingMeasurement()} : {}),
+            ...(trainingReviewMode === "task" ? {taskId: randomUUID()} : {}),
+            ...(trainingReviewMode === "plan" ? {plan: {...value.plan, step: 2}} : {}),
+            ...(trainingReviewMode === "workspace" ? {workspaceId: "workspace.foreign"} : {}),
+            ...(trainingReviewMode === "private" ? {logs: ["PRIVATE"]} : {}),
+            ...(trainingReviewMode === "quality" ? {verification: {...value.verification, outputQuality: "passed"}} : {})}});
+        response.writeHead(trainingReviewMode === "not-ready" ? 409 : trainingReviewMode === "denied" ? 403 : 200,
           {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -518,6 +534,34 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
       selection: {kind: "training-task", task: {kind: "task", taskId: modelTaskValue.taskId, path: "PRIVATE"}}}})).isError, true);
     assert.equal(requests.length, beforeBadTraining);
+    for (const task of [{kind: "task", taskId: modelTaskValue.taskId}, {kind: "plan-step", ...modelTaskValue.plan}]) {
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-training", task}}})), {ok: true, operation: "models.review-training",
+          value: recordedTrainingHistory(workspaceId, modelTaskValue.taskId, modelTaskValue.plan)});
+      assert.equal(requests.at(-1)?.url, "/api/headless/agent/read");
+    }
+    trainingReviewMode = "measured";
+    const measuredTraining = resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId}}}}));
+    assert.deepEqual(measuredTraining, {ok: true, operation: "models.review-training", value: {
+      ...recordedTrainingHistory(workspaceId, modelTaskValue.taskId, modelTaskValue.plan), comparison: recordedTrainingMeasurement()}});
+    trainingReviewMode = "valid";
+    for (const mode of ["tag", "task", "plan", "workspace", "private", "quality"]) {
+      trainingReviewMode = mode;
+      const task = mode === "plan" ? {kind: "plan-step", ...modelTaskValue.plan} : {kind: "task", taskId: modelTaskValue.taskId};
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-training", task}}})), {ok: false, code: "headless.unavailable"}, mode);
+    }
+    for (const [mode, code] of [["not-ready", "headless.source-not-ready"], ["denied", "headless.forbidden"]]) {
+      trainingReviewMode = mode;
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId}}}})), {ok: false, code});
+    }
+    trainingReviewMode = "valid";
+    const beforeBadCompletion = requests.length;
+    assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId, path: "PRIVATE"}}}})).isError, true);
+    assert.equal(requests.length, beforeBadCompletion);
     const beforeBadReview = requests.length;
     for (const task of [{kind: "task", taskId: modelTaskValue.taskId, path: "private"},
       {kind: "plan-step", fingerprint: "a".repeat(64), step: 0}])
@@ -1927,3 +1971,19 @@ test("does not queue no-ID traffic while the SDK pump has not retired an admitte
     stdout.destroy();
   }
 });
+
+function recordedTrainingHistory(workspace: unknown, taskId: string, plan: {fingerprint: string; step: number}) {
+  return {workspaceId: workspace, taskId, plan: {...plan}, provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-21T00:00:00.000Z",
+    datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64),
+    recipeDigest: "sha256:" + "b".repeat(64), proposalDigest: "sha256:" + "c".repeat(64), trainingTask: "llm-instruction", method: "lora",
+    trainingInputCount: 1, validationInputCount: 1, inputBytes: 128, recipeBytes: 64},
+    candidate: {requestedName: "Small trial", artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: 256},
+    comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
+      runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"} as const;
+}
+
+/** Fixed historical numeric protocol fixture only; no model or scoring runs. */
+function recordedTrainingMeasurement() {
+  return {state: "recorded", report: {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32,
+    sampleCount: 2, baselineLoss: 2, trainedLoss: 1.5, lossDelta: -0.5, interpretation: "measurement-only"}} as const;
+}

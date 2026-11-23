@@ -492,3 +492,22 @@ poll. Replies contain numeric workflow status only, not samples, logs or loss.
 This read can invoke the original task's observation and owned retirement/cleanup;
 it starts no new task. Root activation, native training, candidate Save and
 actual-host qualification remain separate.
+
+### Cached training result selector
+
+For a host that advertises `models.review-training`, the existing model-workflow
+tool accepts `completed-training` and an exact original task or plan-step. Both
+configured host readers, Desktop/Managed read transports and the MCP forwarder
+independently copy and correlate the result. They retain current registration,
+workspace, host, read lifetime and Model read checks. An observed lost Desktop
+read grant cannot be replaced to revive the request.
+
+The original task book reads only its captured settled-result cache. Absent
+cache returns `headless.source-not-ready`; absent capability is unsupported.
+There is no task observation, factory, runtime, file, discovery or provider
+fallback. Historical fixed comparisons are measurement-only and not recomputed;
+readiness, files, hardware and output quality remain unchecked or unrecorded.
+Separate Save approval and actual Native/host qualification remain required.
+The generated portable reference adds one selector to the existing tool, keeping
+the same tool count. Focused synthetic host/transport/stdio checks do not grant
+physical execution or parent-roadmap qualification.

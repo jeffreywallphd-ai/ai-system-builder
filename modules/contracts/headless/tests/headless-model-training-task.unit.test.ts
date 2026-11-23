@@ -101,12 +101,12 @@ const completionValue = () => ({workspaceId: workspace, taskId: task, plan: {fin
   comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
     runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"});
 
-test("cached training completion codecs preserve copied historical data and do not enable public reads", () => {
+test("cached training completion codecs preserve copied history and keep active controls separate", () => {
   const source = completionRequest(), parsed = readHeadlessTrainingCompletionRequest(source, host); assert.ok(parsed.ok);
   source.input.selection.taskId = host;
   assert.equal(parsed.request.input.selection.kind === "task" && parsed.request.input.selection.taskId, task);
   assert.ok(Object.isFrozen(parsed.request) && Object.isFrozen(parsed.request.input) && Object.isFrozen(parsed.request.input.selection));
-  assert.equal(parseHeadlessReadRequest(completionRequest(), host).ok, false, "Transport activation is separate work.");
+  assert.equal(parseHeadlessReadRequest(completionRequest(), host).ok, true, "Configured hosts separately advertise this additive read.");
   assert.equal(readHeadlessTrainingTaskReadRequest(completionRequest(), host).ok, false);
   const reply = {ok: true, operation: "models.review-training", value: completionValue()};
   assert.deepEqual(readHeadlessTrainingCompletionResult(reply, completionRequest().input), reply);

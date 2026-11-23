@@ -329,3 +329,22 @@ fresh grants before and after the detached reply. The callback may observe its
 accepted task and retire its owned lifecycle under the original business policy;
 there is no setup/start/discovery fallback. Numeric status is independently
 correlated in the loopback adapter and SDK. Roots do not opt in by this addition.
+
+### Configured cached training review
+
+The separate optional `readTrainingReview` entry returns the closed
+`models.review-training` result from the same original task book. It preserves
+private `readTrainingCompletion` behavior and uses read lifetime, original
+client/workspace/host lineage and fresh authorization. The shared read composer
+captures its original callback and receiver, advertises the operation only when
+configured, copies replies before later policy waits and independently checks
+exact operation/workspace/task-or-plan. Desktop retains observed grant losses
+through subsequent waits; Managed retains its original registration and request
+lifetime. No default Root configuration is added.
+
+The original cache can be absent (`headless.source-not-ready`). No progress,
+runtime, file, provider or factory fallback is allowed. Recorded provenance and
+optional finite comparison are historical facts only, not current verification
+or quality acceptance. Files/readiness/hardware/quality sentinels and separate
+Save approval remain in force. Native production wiring, protected retained
+outputs and real-host qualification are still pending.

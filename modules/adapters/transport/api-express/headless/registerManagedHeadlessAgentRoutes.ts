@@ -1,7 +1,7 @@
 import { raw, type Application, type Request, type Response } from "express";
 import {createHash} from "node:crypto";
 import {types} from "node:util";
-import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult} from "../../../../contracts/headless";
+import {readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult, readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult} from "../../../../contracts/headless";
 import {readHeadlessModelTaskRequest, readHeadlessModelTaskValue, readHeadlessModelTaskCancellationRequest,
   isHeadlessModelTaskReadOperation, readHeadlessModelDownloadReviewRequest, readHeadlessModelDownloadReviewResult,
   readHeadlessModelTaskCancellationResult, type HeadlessModelTaskCancellationRequest,
@@ -276,6 +276,8 @@ async function respond<Agent>(
         digest: "sha256:" + createHash("sha256").update(query, "utf8").digest("hex")};
     })() : undefined;
     // Keep an independent target so a faulty handler cannot change correlation.
+    const completionProof = parsed.request.operation === "models.review-training"
+      ? readHeadlessTrainingCompletionRequest(parsed.request, handlers.hostIncarnationId) : undefined;
     const trainingProof = parsed.request.operation === "models.training-task"
       ? readHeadlessTrainingTaskReadRequest(parsed.request, handlers.hostIncarnationId) : undefined;
     const taskProof = parsed.request.operation === "models.task"
@@ -290,9 +292,14 @@ async function respond<Agent>(
     if (taskProof && !taskProof.ok) return failure(response, 400, "headless.invalid-request");
     if (reviewProof && !reviewProof.ok) return failure(response, 400, "headless.invalid-request");
     if (modelProof && !modelProof.ok) return failure(response, 400, "headless.invalid-request");
+    if (completionProof && !completionProof.ok) return failure(response, 400, "headless.invalid-request");
     if (trainingProof && !trainingProof.ok) return failure(response, 400, "headless.invalid-request");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
+    if (completionProof?.ok) {
+      const decoded = readHeadlessTrainingCompletionResult(result, completionProof.request.input);
+      return decoded.ok ? send(response, decoded) : failure(response, requestErrorStatus(decoded.code), decoded.code);
+    }
     if (trainingProof?.ok) {
       const decoded = readHeadlessTrainingTaskReadResult(result, trainingProof.request.input);
       return decoded.ok ? send(response, decoded) : failure(response, requestErrorStatus(decoded.code), decoded.code);

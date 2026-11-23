@@ -564,7 +564,12 @@ async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite"
   const completion = (selection?: Parameters<typeof query>[1]) => desktop
     ? desktop.owner.readTrainingCompletion!(query("read", selection), f.grant, async () => f.grant)
     : managed!.owner.readTrainingCompletion!(query("read", selection), f.registration, current);
-  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion};
+  const review = (selection?: Parameters<typeof query>[1]) => {
+    const request = {...query("read", selection), operation: "models.review-training"};
+    return desktop ? desktop.owner.readTrainingReview!(request, f.grant, async () => f.grant)
+      : managed!.owner.readTrainingReview!(request, f.registration, current);
+  };
+  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion, review};
 }
 
 for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
@@ -770,5 +775,27 @@ for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop"
     assert.equal((await f.control("cancel")).ok, false); assert.equal(f.execution.cancels, 1);
     f.execution.onRead = async () => {f.state.current = false;};
     const retired = await f.control("read"); assert.equal(retired.ok, false); assert.doesNotMatch(JSON.stringify(retired), /PRIVATE/);
+  });
+}
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: broker review reuses original completion cache and private read lifetime`, async t => {
+    const f = await executableTrainingHost(t, storage, host); f.execution.completionEnabled = true;
+    assert.ok((await f.run()).result.ok);
+    const before = {...f.execution}, retrieved = [...f.retrieved];
+    assert.deepEqual(await f.review(), {ok: false, code: "headless.source-not-ready"});
+    assert.deepEqual(await f.completion(), {ok: true, value: {kind: "not-ready"}}, "Existing private API is unchanged.");
+    f.execution.currentState = "succeeded";
+    const result = await f.review(); assert.ok(result.ok, JSON.stringify(result));
+    assert.equal(result.operation, "models.review-training"); assert.equal(result.value.taskId, f.execution.admission!.requestId);
+    assert.deepEqual(result.value.plan, {fingerprint: f.target.fingerprint, step: 1});
+    assert.equal(result.value.workspaceId, f.scope.workspaceId); assert.equal(result.value.provenance.modelRecordId, f.model.modelRecordId);
+    assert.equal(result.value.verification.hardware, "not-recorded"); assert.equal(result.value.verification.outputQuality, "not-evaluated");
+    assert.deepEqual(await f.review({kind: "task", taskId: f.execution.admission!.requestId}), result);
+    assert.equal((await f.review({kind: "task", taskId: randomUUID()})).ok, false);
+    await inspectServiceScopes(["model:read"], async () => {assert.equal((await f.review()).ok, false);});
+    for (const key of ["starts", "reads", "cancels", "resolutions", "readerFactories"] as const) assert.equal(f.execution[key], before[key], key);
+    assert.deepEqual(f.retrieved, retrieved); assert.doesNotMatch(JSON.stringify(result), /localPath|outputDirectory|logs|Synthetic answer/);
+    f.state.current = false; assert.equal((await f.review()).ok, false);
   });
 }

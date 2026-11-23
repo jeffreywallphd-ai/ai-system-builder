@@ -62,9 +62,10 @@ import type {HeadlessContextQueryPreviewValue} from "./headless-context-query-pr
 import type {HeadlessModelInventory, HeadlessModelRecord} from "./headless-model-metadata";
 import type {HeadlessModelSourcePreview} from "./headless-model-source-preview";
 import type {HeadlessModelTaskValue, HeadlessModelDownloadReviewValue} from "./headless-model-task";
-import type {HeadlessTrainingTaskValue} from "./headless-model-training-task";
+import type {HeadlessTrainingTaskValue, HeadlessTrainingCompletionValue} from "./headless-model-training-task";
 
 export type HeadlessReadResult =
+  | {readonly ok: true; readonly operation: "models.review-training"; readonly value: HeadlessTrainingCompletionValue}
   | {readonly ok: true; readonly operation: "models.training-task"; readonly value: HeadlessTrainingTaskValue}
   | {readonly ok: true; readonly operation: "models.review-download"; readonly value: HeadlessModelDownloadReviewValue}
   | {readonly ok: true; readonly operation: "models.task"; readonly value: HeadlessModelTaskValue}

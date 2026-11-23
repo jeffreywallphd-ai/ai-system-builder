@@ -2626,3 +2626,21 @@ is not recorded, and output quality is not evaluated. Registration requires its
 own approval. This source seam does not add the operation to public read
 advertisements, transports, tools or production roots. Those integrations and
 actual native execution/host qualification remain separate pending work.
+
+### Configured training completion read integration
+
+The original Desktop/Managed plan owners expose a separate optional
+`readTrainingReview` using the cached book reader above. Shared read composers
+capture that callback and receiver and advertise `models.review-training` only
+when configured. Current plan-review registration, Model read and original host,
+client/workspace/read lifetime apply before and after disclosure. The Desktop
+request retains all observed original/fresh grant losses for both training read
+operations. Private `readTrainingCompletion` remains compatible.
+
+Desktop loopback, Managed HTTP and the MCP SDK each copy the original request
+and independently correlate its closed reply. The existing workflow tool uses
+`completed-training`; it does not add a tool. No production Root is enabled.
+Missing cache returns `headless.source-not-ready` without polling the original
+task. Historical fixed comparisons stay measurement-only, not recomputed or
+quality-qualified. Native producer/output/Save and real-host qualification
+remain separate from these synthetic protocol and composition checks.
