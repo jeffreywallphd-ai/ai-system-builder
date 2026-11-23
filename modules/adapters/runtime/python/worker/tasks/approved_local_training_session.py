@@ -178,6 +178,7 @@ class OriginalTrainingSession:
         self.close_attempted = False
         self.cancel_attempted = False
         self.cancel_result = False
+        self._worker_retirement_required = False
         self.started_at = None
         # Capture trusted methods and receivers before the first awaited IO.
         self.capture = producer.capture
@@ -190,7 +191,9 @@ class OriginalTrainingSession:
     @property
     def blocks_recovery(self):
         with self.lock:
-            return not self.settled
+            # Remote IO retirement never reopens this original worker. The
+            # supervisor still owns its process/Job until actual retirement.
+            return not self.settled or self._worker_retirement_required
 
     def _current(self):
         try:
@@ -205,9 +208,12 @@ class OriginalTrainingSession:
             self.phase = "preparing"; self.operations += 1
         try:
             _need(self._current())
+            with self.lock:
+                self._worker_retirement_required = True  # Before producer handoff.
             owner = self.capture(_copy(self.definition))
             if owner is None:
                 with self.lock:
+                    self._worker_retirement_required = False  # Positive no-effect only.
                     self.phase = "unavailable"; self.known_not_run = True; self.settled = True
                 return "unavailable"
             _need(isinstance(owner, NativeTrainingResources))

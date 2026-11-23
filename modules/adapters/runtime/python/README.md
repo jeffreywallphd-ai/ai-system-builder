@@ -683,3 +683,44 @@ be revived when the worker is reused. Uncertain or asynchronous unused-release
 acknowledgements retain custody. Unclaimed supervisor behavior is unchanged.
 These are process-lifecycle controls, not descendant Job retirement, native file
 custody, resource-limit enforcement or actual-host qualification.
+
+### Optional resource-bound original worker
+
+A trusted host can select `nativeWorkerResourceProfile` at boot. It has no
+defaults and is not request data. The private fixed controller launches the same
+installed Python worker under a Job before resuming it. Configured startup
+requires installed-runtime verification and does not install or fall back to
+ordinary unlimited launch. Unsupported platforms refuse before the controller
+supplier runs. Ordinary absent-configuration behavior is unchanged.
+
+Only the controller uses `-I -S -B -u`. Uppercase `-S` suppresses automatic
+`site`, executable `.pth` lines and site customization before the worker Job
+exists; isolated mode alone does not suppress them. The actual app child keeps
+`-I -B -u` so installed runtime SDKs remain available inside its assigned Job.
+
+Match the suspended image to the exact selected installed executable. Windows
+virtual environments can use a redirector whose image differs from the running
+controller's base interpreter. That redirector and its descendants stay in the
+same restrictive Job; this is not permission to choose another executable.
+Prelaunch refusals report failure without exposing private callback details.
+The controller latches receipt of Stop before considering queued Resume commands,
+then checks that latch and its deadline again after native readbacks. Drain final
+worker output before publishing original retirement.
+
+The supervisor keeps the native launch/Job owner independent of a per-training
+claim. Unused claim release leaves that Job alive; subsequent Stop still uses
+its original native retirement path. Controller close alone is never worker
+proof. The foundation requires the resource-bound capture for private training;
+missing configuration returns unavailable before startup. Current host lifetime
+is checked again after native suspension and before resume. Direct model download
+flights reserve admission before callbacks and prevent conflicting preparation.
+
+The Node owner separates outward admission loss from control integrity loss.
+It drains valid final frames after controller exit, including coalesced packets.
+Stop fences preflight before construction. Zero-construction settlement requires
+all original preflight reads to finish and proof that launch was not attempted,
+or that no bootstrap was issued and the original controller actually closed.
+Late original retirement observations cannot repeat create/resume/stop effects.
+All new component tests use inert processes and APIs. No Root or full native
+training producer is configured; file custody, measured resource settings, Save,
+actual enforcement and host/parent qualification remain pending.

@@ -1265,6 +1265,47 @@ without killing; a disarmed capability cannot later stop a reused worker.
 Record remote retirement before awaiting local close. Thereafter serve only
 cached authorized metadata, with no repeated HTTP read/cancel/settle effects.
 Block model unload during retained training custody. Ordinary unclaimed runtime
-startup/stop semantics remain compatible. This adds no process topology, Job,
-native producer, resource profile, file protection or public activation. Those
-production requirements and physical host qualification remain pending.
+startup/stop semantics remain compatible. That original child-close path supplies
+no Job, native producer, file protection or public activation. The optional
+resource-bound launch path below adds separate concrete resource ownership;
+full native production and physical host qualification remain pending.
+
+### Optional resource-bound launch of the same worker
+
+The existing supervisor can select a fixed private launch controller. It creates
+the same installed Python worker suspended with creation-time Job assignment,
+checks actual limits/membership/original identity, then resumes it once. This is
+a supervisor resource owner, not a second training worker or executor. Derive
+the fixed worker-root `main.py` without importing the app. Preserve restrictive
+enclosing Jobs and refuse unsupported platform/ABI/configuration without an
+ordinary launch fallback. The owning Job handle must not be inherited.
+
+The controller uses `-I -S -B -u` to suppress automatic site/customization hooks
+outside the app Job. The separate app child retains `-I -B -u` and its installed
+SDK site packages. Isolated mode alone does not disable automatic site loading.
+
+Bind the created image to the exact selected installed executable. Do not confuse
+a Windows venv redirector with the controller's base interpreter image. Its
+descendants stay under the original Job. Refused startup reports failed without
+private error detail. Stop receipt fences queued Resume; recheck it and the
+deadline after native readbacks. Drain final worker bytes before retirement.
+
+Keep launch/Job ownership independent of per-training claims. Positive unused
+disarm cannot close the Job or restore ordinary controller termination. Strict
+private training capture requires this resource owner; a plain child-close
+capability or serialized profile cannot substitute. Both host and worker retain
+admission across remote session settlement until original retirement. Account
+for direct download flights before native acquisition.
+
+The private protocol separates controller and worker streams, identities and
+retirement. Controller exit is admission loss, not proof of worker/Job closure.
+Drain authenticated final frames before deciding integrity; late observation may
+complete the original retirement without another effect. Fence preflight on Stop
+and acknowledge zero construction only after its actual reads/flight settle.
+Native output buffers/returns are retained before error-reader callbacks; failed
+or unknown native effects cannot be retried or replaced.
+
+Explicit resource settings require later measurement and qualification. Job
+committed-memory limits do not imply RSS, controller/host, GPU, disk or retained
+output budgets. The full native source/input/output producer remains absent,
+public Roots remain unconfigured and physical qualification remains pending.

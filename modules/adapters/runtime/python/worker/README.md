@@ -1731,10 +1731,52 @@ records survive pruning and unknown submit/cancel/close replies; no second effec
 is attempted. Cancellation is not retirement. Pending retirement may observe the
 same owner again; an unknown actual close cannot repeat. Native preparation,
 sealing, run and cancellation flights must return before permanent settlement.
-Settlement releases execution availability, not retained candidate accounting.
+Remote settlement does not reopen worker admission. After producer handoff, the
+worker keeps new tasks, another original session, downloads and model unload
+fenced until the supervisor retires this worker. Only positive no-effect capture
+can disarm that requirement. Retained candidate accounting remains separate.
+Direct synchronous downloads reserve admission under the registry lock before
+provider IO; preparation cannot race an already-running download.
 
 The sole eventual loader is captured before producer callbacks and uses
 `train_model_from_local_files` with `compare_validation_baseline=False`. Inert
 tests supply controlled results and fake native owners. They run no model,
 quality score or native acquisition, and do not qualify the missing producer,
 production profile, public activation, Save or actual host behavior.
+
+## Optional original-worker resource controller
+
+`native/windows_original_worker_launch.py` is a fixed standard-library controller
+for this same `main.py` and installed interpreter. It never imports the app to
+discover the entry point and runs no model or second training executor. It is
+unselected by default. The owning host must supply complete explicit resource
+configuration; source tests do not measure or approve production values.
+
+Launch only the controller with `-I -S -B -u` to suppress automatic site hooks
+before Job creation. The app child separately keeps `-I -B -u`, including its
+installed site packages. See Python's [`-S` option](https://docs.python.org/3/using/cmdline.html#cmdoption-S).
+
+The controller creates the worker suspended with creation-time `JOB_LIST`
+assignment and an explicit stdio `HANDLE_LIST`. It checks native limits, Job
+membership, original image/creation identity and accounting before one resume.
+The owning Job handle is never inherited. Required flags prohibit breakaway and
+retain kill-on-last-handle-close behavior. Configured limits cover worker/Job
+committed memory and active processes, not total host/controller RAM, working
+set, GPU memory, disk or retained outputs. Actual enforcement remains unqualified.
+
+Validate the child image against the exact selected installed executable. A
+Windows virtual-environment redirector can differ from the controller's running
+base image; its entire descendant tree stays in this Job. See the upstream
+[CPython redirector](https://github.com/python/cpython/blob/3.14/PC/venvlauncher.c).
+Receiving Stop permanently fences queued Resume, including after native readbacks.
+Recheck the deadline at that same dispatch boundary. Drain the stable final output
+queue after reader retirement and before publishing the final retirement frame.
+
+Private control frames and worker output use separate lanes and a separate
+launch nonce. Raw worker bytes cannot become controller commands or proof.
+One original Job termination is distinct from controller exit. Permanent closure
+needs original process/Job quiescence, finished pipe readers and acknowledged
+native handle closure; partial or missing native replies retain their original
+buffers and deny reuse. Controller loss never supplies worker retirement proof.
+Native file/input/output custody, the full training producer and actual Windows
+host qualification are still pending. No qualifier role or old grant is reused.

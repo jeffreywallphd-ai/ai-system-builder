@@ -2509,3 +2509,38 @@ closure is pending. No subsequent HTTP effects are permitted. Model unload is
 denied through live or uncertain custody. Focused inert tests cover this lifecycle
 and existing ordinary runtime compatibility. Actual descendant/resource and file
 custody, native producer configuration and real host qualification remain separate.
+
+An optional boot-only `nativeWorkerResourceProfile` selects a concrete original
+Windows launch controller. Use creation-time `JOB_LIST` and suspended launch to
+cover the worker before runtime/model allocations. Read back limits, membership,
+original image/creation identity and accounting before the sole resume. Preserve
+installed-only verification, fixed worker-root `main.py` and current host lifetime
+through controller waits. The same app and `TASK_EXECUTOR` run in that worker.
+No production limits are supplied by default.
+
+Use `-I -S -B -u` only for the fixed controller. This suppresses automatic
+site/customization code before Job creation. The separate app process retains
+`-I -B -u`, preserving installed SDKs under its assigned resource limits.
+
+The native image check follows the exact selected installed executable, including
+Windows virtual-environment redirectors, rather than assuming it equals the
+controller's running base image. Redirector descendants remain in the same Job.
+Prelaunch refusals settle startup to failed with a fixed public error. The
+controller records Stop receipt before queued Resume dispatch and rechecks its
+stop fence and deadline after native reads. Reader retirement precedes a final
+stable output drain and the retirement frame.
+
+The native launch owner and per-training claim are different owners. Unused
+disarm releases only the claim; supervisor Stop still retires the original Job.
+Private training requires resource-bound capture, not a plain child or profile
+string. Worker admission remains closed after remote settlement. Direct download
+operations are reserved before IO/callbacks to prevent acquisition races.
+
+Controller closure cannot stand in for worker/Job proof. A bounded private codec
+separates worker bytes from control frames; original final frames are drained
+after exit. One create/resume/termination and retained partial native results
+prevent replay. Stop during preflight denies subsequent construction; no-effect
+closure requires settled original reads and actual zero-construction evidence.
+Worker/Job quiescence, finished readers and acknowledged handles precede actual
+retirement. Component tests are inert; measured limits, file/output custody, full
+producer, public activation and physical host qualification remain pending.

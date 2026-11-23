@@ -3214,3 +3214,32 @@ consumers during implementation. No catalog change or full-system suite is
 needed for this software slice. Child close evidence is not descendant Job,
 native file/resource or actual-host qualification; accepted model-quality checks
 remain closed and are not repeated.
+
+The same exact runtime profiles cover the optional native launch source. Node
+unit/strict checks include the original controller codec, supervisor ownership
+and foundation consumers. Context runtime compatibility runs the supervisor
+fixture. The Python worker-session fixture imports the native controller only
+for ABI declarations and exercises its real call ordering through fake APIs.
+Its registered command never invokes the controller entry point. Routing tests
+require exact commands, missing-source fallback and passing nonzero feature tests.
+
+Cover creation-time Job/stdio attributes, one resume/stop, native partial returns,
+reader/close failures, original identity and controller-vs-worker retirement.
+Also cover coalesced final packets after exit, unsupported-platform refusal,
+preflight Stop/zero-construction proof, unused claim versus launch ownership,
+current host rechecks and worker/download admission. These source checks create
+no real Job, worker, model or quality score. Existing in-process ASGI unit tests
+may need the documented Windows sandbox exception; preserve a timeout and verify
+the same bounded test rather than changing runtime guards or installing packages.
+Physical Win32 enforcement, resource settings, native file/output ownership,
+full producer, public activation and actual-host qualification remain separate.
+
+Native launch regressions also distinguish the selected Windows venv executable
+from its controller base image while retaining foreign-image denial. Cover
+refused startup status, Stop received before a queued Resume, admission/deadline
+loss during native readbacks, and the final output drain before retirement.
+These are deterministic source fixtures; they do not start the native controller.
+
+The exact controller argv fixture requires `-I -S -B -u` before its fixed entry.
+The separate native fake-API fixture requires app argv `-I -B -u`, preserving SDK
+loading. Neither fixture invokes Python startup hooks, a real controller or a Job.

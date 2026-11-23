@@ -5,6 +5,7 @@ import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
 import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile} from "./client/approvedTrainingTaskSession";
+import {captureOriginalWorkerResourceProfile} from "./supervisor/windowsOriginalWorkerLaunch";
 import type {ApprovedLocalModelTrainingPort} from "../../../application/ports/model";
 import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
 import type {GeneratedModelStoragePort} from "../../../application/ports/model";
@@ -35,7 +36,7 @@ export interface CreatePythonRuntimePortOptions {
   >;
   supervisor: Omit<
     CreatePythonRuntimeSupervisorOptions,
-    "runtimeClient" | "prepareLaunchEnvironment" | "requireOwnedStartupProof"
+    "runtimeClient" | "prepareLaunchEnvironment" | "requireOwnedStartupProof" | "assertHostCurrent"
   >;
   generateAuthorizationToken?: () => string;
 }
@@ -115,6 +116,7 @@ export function createPythonRuntimeAdapterFoundation(
   // Original reservations survive worker exit, failed startup, and lost replies.
   // Their release is owned exclusively by permanent original session retirement.
   const trainingReservations = new Map<string, {settled: boolean}>();
+  let directModelDownloads = 0;
   const trainingCustodyLive = () => [...trainingReservations.values()].some(value => !value.settled);
   // A disconnected POST can already have started non-cancellable Dataset work.
   // Retain only identity/lifecycle facts, never request payloads, until proven done.
@@ -172,6 +174,9 @@ export function createPythonRuntimeAdapterFoundation(
   const supervisorInputs = { ...Object.defineProperties({}, supervisorDescriptors) } as CreatePythonRuntimePortOptions["supervisor"];
   if (supervisorInputs.args) supervisorInputs.args = [...supervisorInputs.args];
   if (supervisorInputs.requiredCapabilities) supervisorInputs.requiredCapabilities = [...supervisorInputs.requiredCapabilities];
+  if (supervisorInputs.nativeWorkerResourceProfile !== undefined)
+    supervisorInputs.nativeWorkerResourceProfile = captureOriginalWorkerResourceProfile(supervisorInputs.nativeWorkerResourceProfile);
+  const hasNativeTrainingConfiguration = supervisorInputs.nativeWorkerResourceProfile !== undefined;
   const spawnWorker = supervisorInputs.spawnImplementation ?? spawn;
   const verifyEnvironment = supervisorInputs.verifyRuntimeEnvironment;
   const prepareEnvironment = supervisorInputs.prepareRuntimeEnvironment;
@@ -198,6 +203,7 @@ export function createPythonRuntimeAdapterFoundation(
     },
     runtimeClient: client,
     requireOwnedStartupProof: true,
+    assertHostCurrent: assertHostAccepting,
     onEvent: (event) => {
       if (["start-requested", "startup-timeout", "process-exit", "process-error", "stop-requested", "stop-complete"].includes(event.type)) ownedLaunch = undefined;
       if (event.type === "owned-ready") ownedLaunch = {};
@@ -514,8 +520,9 @@ export function createPythonRuntimeAdapterFoundation(
     getHealthStatus: () => client.getHealthStatus(),
     getCapabilities: () => client.getCapabilities(),
     ensureModelDownloaded: async (request) => {
-      assertAdmissionAvailable();
+      directModelDownloads++;
       try {
+        assertAdmissionAvailable();
         return await client.ensureModelDownloaded(request);
       } catch (error) {
         if (
@@ -525,7 +532,7 @@ export function createPythonRuntimeAdapterFoundation(
           await recoverWorker(undefined, "failed");
         }
         throw error;
-      }
+      } finally {directModelDownloads--;}
     },
     resolveModelDownloadTaskResult: (payload, expectedManifest) =>
       client.resolveModelDownloadTaskResult(payload, expectedManifest),
@@ -538,18 +545,21 @@ export function createPythonRuntimeAdapterFoundation(
     supervisor,
     bindHostAdmission,
     createApprovedTrainingPort(rawProfile) {
-      if (rawProfile === undefined) return Object.freeze({createSession: () => undefined});
+      if (rawProfile === undefined || !hasNativeTrainingConfiguration) return Object.freeze({createSession: () => undefined});
       const profile = captureTrainingProfile(rawProfile);
       const startInstalled = supervisor.startWithoutInstalling?.bind(supervisor);
-      const captureRetirement = supervisor.captureOriginalWorkerRetirement?.bind(supervisor);
+      const captureRetirement = supervisor.captureOriginalTrainingWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
       return createOriginalTrainingPort({
         reserve(requestId) {
           if (!hostAdmission || trainingCustodyLive() || trainingReservations.has(requestId) || trainingReservations.size >= 256 ||
-              trackedTasks.size || datasetAdmissions.size || installedContextAdmissions.size || recoveryInFlight || recoveryUncertain)
+              directModelDownloads || trackedTasks.size || datasetAdmissions.size || installedContextAdmissions.size || recoveryInFlight || recoveryUncertain)
             return undefined;
-          assertHostAccepting();
           const original = {settled: false}; trainingReservations.set(requestId, original);
+          try {assertHostAccepting();} catch (error) {
+            original.settled = true; // No preparation/IO was issued by this reservation.
+            throw error;
+          }
           return () => {
             if (trainingReservations.get(requestId) !== original) throw new Error("Original training retirement is unavailable.");
             original.settled = true;

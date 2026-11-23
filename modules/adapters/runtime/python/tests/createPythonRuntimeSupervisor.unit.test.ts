@@ -9,6 +9,9 @@ import {
 } from "../../../../testing/node-test";
 import { createPythonRuntimeSupervisor } from "../supervisor/createPythonRuntimeSupervisor";
 import { OWNED_RUNTIME_READY_PREFIX } from "../supervisor/ownedPythonRuntimeProof";
+import path from "node:path";
+import {createWindowsOriginalWorkerLaunch, originalWorkerResourceDigest,
+  type WindowsOriginalWorkerResourceProfile} from "../supervisor/windowsOriginalWorkerLaunch";
 
 function createMockChildProcess() {
   const emitter = new EventEmitter() as EventEmitter & {
@@ -615,4 +618,128 @@ it("a timed-out close observation retains its original one-attempt claim", async
     const late = owner.retireOriginal(); await Promise.resolve(); h.close(child);
     assert.equal(await late, true); assert.equal(h.kills, 1);
   } finally {context.mock.timers.reset(); h.close(child);}
+});
+
+const inertResourceProfile: WindowsOriginalWorkerResourceProfile = {schema: "windows-original-worker-job-v1", profileId: "inert-no-native",
+  processMemoryBytes: 64 * 1024 * 1024, jobMemoryBytes: 128 * 1024 * 1024,
+  maximumActiveProcesses: 1, maximumDurationMs: 30_000, observationMs: 30};
+function nativeWireHarness() {
+  const child = new EventEmitter() as EventEmitter & {stdin: PassThrough; stdout: PassThrough; stderr: PassThrough; kill: () => boolean};
+  child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
+  child.kill = () => {throw Error("controller kill cannot prove worker retirement");};
+  let boot: any, starts = 0, resumes = 0, stops = 0, hostLive = true;
+  let resumeReply = true, stopReply = true, stopCloses = true, exitFirst = false;
+  const frame = (kind: string, fields: Record<string, unknown> = {}) => {
+    child.stdout.write(JSON.stringify({schema: "windows-original-worker-control-v1", nonce: boot.nonce,
+      profileDigest: boot.profileDigest, kind, ...fields}) + "\n");
+  };
+  const close = () => {child.stdout.end(); child.stderr.end(); child.emit("close", 0, null);};
+  child.stdin.on("data", data => {
+    const value = JSON.parse(data.toString());
+    if (value.schema === "windows-original-worker-launch-v1") {boot = value; queueMicrotask(() => frame("suspended")); return;}
+    assert.equal(value.nonce, boot.nonce); assert.equal(value.profileDigest, boot.profileDigest);
+    if (value.action === "resume") {resumes++; if (resumeReply) queueMicrotask(() => frame("running"));}
+    else {assert.equal(value.action, "stop"); stops++; queueMicrotask(() => {
+      if (exitFirst) child.emit("exit", 0, null);
+      if (stopReply) frame("retired");
+      if (stopCloses) close();
+    });}
+  });
+  const configuration = {command: process.execPath, cwd: path.resolve(__dirname, "../worker"),
+    nativePlatform: (): {platform: NodeJS.Platform; arch: string} => ({platform: "win32", arch: "x64"}),
+    environment: {PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: "43111", PYTHON_RUNTIME_STARTUP_PROOF: "a".repeat(64), PYTHON_RUNTIME_AUTH_TOKEN: "inert-".padEnd(40, "x")},
+    profile: inertResourceProfile, assertHostCurrent() {if (!hostLive) throw Error("host ended");},
+    spawnImplementation: ((_command: string, args: string[], options: any) => {
+      starts++; assert.equal(_command, process.execPath); assert.deepEqual(args.slice(0, 4), ["-I", "-S", "-B", "-u"]);
+      assert.equal(args.length, 5); assert.equal(path.basename(args[4]!), "windows_original_worker_launch.py"); assert.equal(options.windowsHide, true);
+      return child;
+    }) as never};
+  const packet = (...rows: {kind: string; lane?: string; data?: string}[]) => child.stdout.write(rows.map(row => JSON.stringify({
+    schema: "windows-original-worker-control-v1", nonce: boot.nonce, profileDigest: boot.profileDigest, ...row})).join("\n") + "\n");
+  return {configuration, child, frame, packet, close, create: () => createWindowsOriginalWorkerLaunch(configuration),
+    get starts() {return starts;}, get resumes() {return resumes;}, get stops() {return stops;},
+    set resumeReply(value: boolean) {resumeReply = value;}, set stopReply(value: boolean) {stopReply = value;},
+    set stopCloses(value: boolean) {stopCloses = value;}, set exitFirst(value: boolean) {exitFirst = value;}, endHost() {hostLive = false;}};
+}
+
+it("original controller requires native worker proof and controller close, not controller kill", async () => {
+  const h = nativeWireHarness(), owner = h.create();
+  assert.equal(h.starts, 0); await owner.prepare(); owner.assertCurrent(); await owner.resume();
+  assert.equal(h.starts, 1); assert.equal(h.resumes, 1);
+  assert.equal(await owner.retireOriginal(), true); assert.equal(await owner.retireOriginal(), true);
+  assert.equal(h.stops, 1); assert.throws(() => owner.assertCurrent());
+});
+
+it("original controller keeps native retirement pending until its own stdio closes", async () => {
+  const h = nativeWireHarness(); h.stopCloses = false; const owner = h.create();
+  await owner.prepare(); await owner.resume(); assert.equal(await owner.retireOriginal(), false);
+  h.close(); assert.equal(await owner.retireOriginal(), true); assert.equal(h.stops, 1);
+});
+
+it("original controller exit before final pipe data does not erase original native retirement", async () => {
+  const h = nativeWireHarness(); h.exitFirst = true; const owner = h.create();
+  await owner.prepare(); await owner.resume(); assert.equal(await owner.retireOriginal(), true); assert.equal(h.stops, 1);
+});
+
+it("original controller close without original Job proof cannot release ownership", async () => {
+  const h = nativeWireHarness(); h.stopReply = false; const owner = h.create();
+  await owner.prepare(); await owner.resume(); assert.equal(await owner.retireOriginal(), false);
+  assert.equal(await owner.retireOriginal(), false); assert.equal(h.stops, 1);
+});
+
+it("original controller late resume reply cannot renew admission but can finish one original stop", async () => {
+  const h = nativeWireHarness(); h.resumeReply = false; const owner = h.create();
+  await owner.prepare(); await assert.rejects(owner.resume()); assert.throws(() => owner.assertCurrent());
+  h.frame("running"); assert.throws(() => owner.assertCurrent());
+  assert.equal(await owner.retireOriginal(), true); assert.equal(h.resumes, 1); assert.equal(h.stops, 1);
+});
+
+it("original controller refuses wrong or duplicate frame facts and unsafe profiles", async () => {
+  for (const malformed of ["foreign", "duplicate"] as const) {
+    const h = nativeWireHarness(), owner = h.create(); await owner.prepare();
+    if (malformed === "foreign") h.frame("running", {nonce: "b".repeat(64)});
+    else h.frame("suspended");
+    assert.throws(() => owner.assertCurrent()); await assert.rejects(owner.resume()); h.close();
+  }
+  for (const mutate of [(p: any) => {p.processMemoryBytes = true;}, (p: any) => {p.maximumActiveProcesses = 0;},
+    (p: any) => {p.jobMemoryBytes = 1;}, (p: any) => {p.nativeReady = true;}]) {
+    const profile = {...inertResourceProfile}; mutate(profile);
+    assert.throws(() => originalWorkerResourceDigest(profile));
+  }
+});
+
+it("original controller drains a coalesced final packet after exit", async () => {
+  const h = nativeWireHarness(); h.stopReply = false; h.stopCloses = false; const owner = h.create();
+  await owner.prepare(); await owner.resume(); const closing = owner.retireOriginal();
+  await Promise.resolve(); h.child.emit("exit", 0, null);
+  h.packet({kind: "worker-output", lane: "stdout", data: Buffer.from("inert diagnostic").toString("base64")}, {kind: "retired"});
+  h.close(); assert.equal(await closing, true); assert.equal(h.stops, 1);
+});
+
+it("original controller rejects an unsupported platform before invoking its supplier", async () => {
+  const h = nativeWireHarness(); h.configuration.nativePlatform = () => ({platform: "linux", arch: "x64"});
+  try {await assert.rejects(async () => h.create().prepare()); assert.equal(h.starts, 0);}
+  finally {h.close();}
+});
+
+it("original controller retirement fences pending preflight with positive zero-construction closure", async () => {
+  const h = nativeWireHarness(), owner = h.create();
+  const preparing = owner.prepare(), stopping = owner.retireOriginal();
+  await assert.rejects(preparing); assert.equal(await stopping, true); assert.equal(h.starts, 0);
+  assert.equal(await owner.retireOriginal(), true); assert.equal(h.stops, 0);
+});
+
+for (const mode of ["unsupported-platform", "host-ended"] as const) it(`native prelaunch refusal reports failed without constructing a worker (${mode})`, async () => {
+  let starts = 0;
+  const supervisor = createPythonRuntimeSupervisor({command: process.execPath, args: ["main.py"],
+    cwd: path.resolve(__dirname, "../worker"), env: {PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: "43111",
+      PYTHON_RUNTIME_AUTH_TOKEN: "inert-".padEnd(40, "x")},
+    nativeWorkerResourceProfile: inertResourceProfile,
+    nativePlatform: () => ({platform: mode === "unsupported-platform" ? "linux" : "win32", arch: "x64"}),
+    assertHostCurrent() {if (mode === "host-ended") throw Error("private controlled host detail");},
+    verifyRuntimeEnvironment: async () => true,
+    runtimeClient: {getHealthStatus: async () => ({healthy: true, status: {status: "ready"}})} as never,
+    spawnImplementation: (() => {starts++; throw Error("No process permitted");}) as never});
+  await assert.rejects(supervisor.startWithoutInstalling!(), /^Error: The configured native Python worker is unavailable\.$/);
+  assert.equal(starts, 0); assert.equal(supervisor.getStatus(), "failed");
 });

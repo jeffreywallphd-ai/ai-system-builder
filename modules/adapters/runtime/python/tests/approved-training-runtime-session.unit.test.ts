@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {EventEmitter} from "node:events";
 import {PassThrough} from "node:stream";
+import path from "node:path";
 import {createOriginalTrainingPort, ORIGINAL_TRAINING_CAPABILITY, type OriginalTrainingOwnedChannel} from "../client/approvedTrainingTaskSession";
 import {createPythonRuntimeHttpClient} from "../client/createPythonRuntimeHttpClient";
 import {createPythonRuntimeAdapterFoundation} from "../createPythonRuntimePort";
@@ -242,19 +243,15 @@ test("HTTP capture retains original methods and receivers before health awaits",
 
 test("foundation reserves before installed startup and retains uncertainty through an actual worker-exit event", async () => {
   let installed = 0, prepared = 0, alive = false;
-  const child = new EventEmitter() as EventEmitter & {stdout: PassThrough; stderr: PassThrough; kill: () => boolean};
-  child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.kill = () => {throw Error("recovery must not stop original custody");};
-  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async url => {
+  const controller = inertNativeController(() => {alive = true;}), child = controller.child;
+  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url, init) => {
     const endpoint = new URL(String(url)).pathname;
     if (endpoint === "/health") return Response.json(alive ? {healthy: true, status: {...runtime, status: "ready"}} : {healthy: false, status: {...runtime, status: "stopped"}}, {status: alive ? 200 : 401});
     if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId, capabilities: [ORIGINAL_TRAINING_CAPABILITY]});
     throw Error("synthetic lost prepare acknowledgement");
-  }) as typeof fetch}, supervisor: {command: "inert-python", startupTimeoutMs: 100, healthCheckIntervalMs: 1,
+  }) as typeof fetch}, supervisor: {...controller.configuration, startupTimeoutMs: 200, healthCheckIntervalMs: 1,
     verifyRuntimeEnvironment: async () => {installed++; return true;}, prepareRuntimeEnvironment: async () => {prepared++;},
-    spawnImplementation: ((_command: unknown, _args: unknown, options: any) => {alive = true;
-      queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:" + options.env.PYTHON_RUNTIME_PORT + "\n"));
-      return child;
-    }) as never}});
+  }});
   foundation.bindHostAdmission(() => {});
   assert.equal(foundation.createApprovedTrainingPort().createSession(definition(), {isCurrent: () => true, stillAllowed: async () => true}), undefined);
   const port = foundation.createApprovedTrainingPort(profile);
@@ -267,35 +264,75 @@ test("foundation reserves before installed startup and retains uncertainty throu
   child.stdout.destroy(); child.stderr.destroy();
 });
 
+/** This controller is a transport fake; it supplies no native qualification. */
+function inertNativeController(resumed: () => void) {
+  const child = new EventEmitter() as EventEmitter & {stdin: PassThrough; stdout: PassThrough; stderr: PassThrough; kill: () => boolean};
+  child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
+  child.kill = () => {throw Error("ordinary controller kill is forbidden");};
+  let boot: any, stops = 0;
+  const frame = (kind: string, fields: Record<string, unknown> = {}) => child.stdout.write(JSON.stringify({
+    schema: "windows-original-worker-control-v1", nonce: boot.nonce, profileDigest: boot.profileDigest, kind, ...fields}) + "\n");
+  child.stdin.on("data", data => {
+    const value = JSON.parse(data.toString());
+    if (value.schema === "windows-original-worker-launch-v1") {boot = value; queueMicrotask(() => frame("suspended")); return;}
+    assert.equal(value.nonce, boot.nonce); assert.equal(value.profileDigest, boot.profileDigest);
+    if (value.action === "resume") queueMicrotask(() => {
+      resumed(); frame("running");
+      frame("worker-output", {lane: "stdout", data: Buffer.from(OWNED_RUNTIME_READY_PREFIX + boot.environment.PYTHON_RUNTIME_STARTUP_PROOF +
+        " 127.0.0.1:" + boot.environment.PYTHON_RUNTIME_PORT + "\n").toString("base64")});
+    });
+    else {assert.equal(value.action, "stop"); stops++;}
+  });
+  const configuration = {command: process.execPath, cwd: path.resolve(__dirname, "../worker"),
+    nativePlatform: () => ({platform: "win32" as const, arch: "x64"}),
+    nativeWorkerResourceProfile: {schema: "windows-original-worker-job-v1" as const, profileId: "inert-source-only",
+      processMemoryBytes: 64 * 1024 * 1024, jobMemoryBytes: 128 * 1024 * 1024,
+      maximumActiveProcesses: 1, maximumDurationMs: 30_000, observationMs: 30},
+    spawnImplementation: (() => child) as never};
+  return {child, configuration, get stops() {return stops;},
+    closeWithProof() {frame("retired"); child.stdout.end(); child.stderr.end(); child.emit("close", 0, null);}};
+}
+
+test("foundation denies private training without native configuration before any ordinary startup", () => {
+  let calls = 0;
+  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111",
+    fetchImplementation: (async () => {calls++; throw Error("no HTTP");}) as typeof fetch},
+    supervisor: {command: "inert", verifyRuntimeEnvironment: async () => {calls++; return true;},
+      spawnImplementation: (() => {calls++; throw Error("no ordinary fallback");}) as never}});
+  foundation.bindHostAdmission(() => {});
+  assert.equal(foundation.createApprovedTrainingPort(profile).createSession(definition(), {isCurrent: () => true, stillAllowed: async () => true}), undefined);
+  assert.equal(calls, 0);
+});
+
 function retirementFoundation() {
-  let alive = false, taskStatus = "running", preparePhase = "ready", kills = 0;
+  let alive = false, taskStatus = "running", preparePhase = "ready";
+  let hostLive = true, download: (() => Promise<void>) | undefined;
   const calls: string[] = [];
-  const child = new EventEmitter() as EventEmitter & {stdout: PassThrough; stderr: PassThrough; kill: () => boolean};
-  child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.kill = () => {kills++; return false;};
-  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async url => {
+  const controller = inertNativeController(() => {alive = true;}), child = controller.child;
+  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url, init) => {
     const endpoint = new URL(String(url)).pathname; calls.push(endpoint);
     if (endpoint === "/health") return Response.json({healthy: alive, status: {...runtime, status: alive ? "ready" : "stopped"}});
     if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId, capabilities: [ORIGINAL_TRAINING_CAPABILITY]});
+    if (endpoint === "/tasks/start" && JSON.parse(String(init?.body)).taskType === "ensure-model-download") {
+      await download?.(); throw Error("inert download response ended");
+    }
     const segments = endpoint.split("/"), action = segments[segments.length - 1];
     if (action === "prepare" || action === "seal") return Response.json({binding, phase: action === "prepare" ? preparePhase : "ready"});
     if (action === "start") return Response.json({binding, kind: "accepted", requestId: id, workspaceId: workspace, status: "running"});
     if (action === "read") return Response.json({binding, record: {requestId: id, taskType: "train-model", status: taskStatus, metadata: {workspaceId: workspace}}});
     if (action === "settle") return Response.json({binding, settled: true, retirement: "settled"});
     throw Error("unexpected synthetic endpoint");
-  }) as typeof fetch}, supervisor: {command: "inert-python", startupTimeoutMs: 200, healthCheckIntervalMs: 1,
+  }) as typeof fetch}, supervisor: {...controller.configuration, startupTimeoutMs: 200, healthCheckIntervalMs: 1,
     verifyRuntimeEnvironment: async () => true,
-    spawnImplementation: ((_command: unknown, _args: unknown, options: any) => {
-      alive = true;
-      queueMicrotask(() => child.stdout.write(OWNED_RUNTIME_READY_PREFIX + options.env.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:" + options.env.PYTHON_RUNTIME_PORT + "\n"));
-      return child;
-    }) as never}});
-  foundation.bindHostAdmission(() => {});
+  }});
+  foundation.bindHostAdmission(() => {if (!hostLive) throw Error("host stopped");});
   const port = foundation.createApprovedTrainingPort(profile);
   const create = (requestId = id) => port.createSession({...definition(), requestId}, {isCurrent: () => true, stillAllowed: async () => true});
-  return {foundation, child, calls, create, get kills() {return kills;},
+  return {foundation, child, calls, create, get kills() {return controller.stops;},
+    endHost() {hostLive = false;}, set download(value: (() => Promise<void>) | undefined) {download = value;},
     succeed() {taskStatus = "succeeded";}, unavailable() {preparePhase = "unavailable";},
     exit() {alive = false; child.emit("exit", 0, null);},
-    close() {alive = false; child.stdout.destroy(); child.stderr.destroy(); child.emit("close", 0, null);}};
+    close() {alive = false; controller.closeWithProof();}};
 }
 
 test("foundation composes both original acknowledgements and denies unloading through uncertainty", async () => {
@@ -308,7 +345,8 @@ test("foundation composes both original acknowledgements and denies unloading th
   const remoteClosed = [...f.calls]; await assert.rejects(() => f.foundation.runtimePort.unloadModels());
   assert.equal((await session.read()).status, "succeeded"); await session.cancel();
   assert.deepEqual(f.calls, remoteClosed); assert.equal(f.create(workspace), undefined);
-  f.exit(); await assert.rejects(() => f.foundation.supervisor.startWithoutInstalling!(), /closure/);
+  f.exit(); await assert.rejects(() => f.foundation.supervisor.startWithoutInstalling!(),
+    /^Error: The configured native Python worker is unavailable\.$/);
   assert.equal(f.create(workspace), undefined); f.close();
   assert.equal(await session.settle(), true); assert.equal(f.kills, 1); assert.deepEqual(f.calls, remoteClosed);
   const next = f.create(workspace); assert.ok(next); assert.equal(await next.settle(), true);
@@ -321,4 +359,29 @@ test("foundation no-effect preparation disarms the unused supervisor claim witho
   freshOwner.releaseUnused();
   const next = f.create(workspace); assert.ok(next); assert.equal(await next.settle(), true);
   assert.equal(f.kills, 0); f.close();
+});
+
+test("foundation keeps the native launch owner after unused disarm and Stop uses that Job owner", async () => {
+  const f = retirementFoundation(); f.unavailable(); assert.equal(await f.create()!.prepare(), "unavailable");
+  const stopping = f.foundation.supervisor.stop(); await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(f.kills, 1); f.close(); await stopping; assert.equal(f.kills, 1);
+});
+
+test("foundation rechecks original host lifetime after native suspension before resume", async () => {
+  const f = retirementFoundation();
+  f.child.stdin.on("data", data => {if (JSON.parse(data.toString()).schema === "windows-original-worker-launch-v1") f.endHost();});
+  assert.equal(await f.create()!.prepare(), "unconfirmed"); assert.equal(f.calls.length, 0);
+  const stopping = f.foundation.supervisor.stop(); await new Promise(resolve => setTimeout(resolve, 0));
+  f.close(); await stopping; assert.equal(f.kills, 1);
+});
+
+test("foundation refuses training while an original direct model download is in flight", async () => {
+  const f = retirementFoundation(); await f.foundation.supervisor.startWithoutInstalling!();
+  let release!: () => void, entered!: () => void;
+  const active = new Promise<void>(resolve => {entered = resolve;});
+  f.download = () => {entered(); return new Promise<void>(resolve => {release = resolve;});};
+  const pending = f.foundation.runtimePort.ensureModelDownloaded({provider: "transformers", modelId: "inert/model"});
+  try {await active; assert.equal(f.create(), undefined);} finally {release();}
+  await assert.rejects(pending, /invalid JSON|inert download/);
+  const session = f.create(); assert.ok(session); assert.equal(await session.settle(), true); f.close();
 });

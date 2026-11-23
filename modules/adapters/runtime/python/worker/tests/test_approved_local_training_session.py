@@ -5,9 +5,15 @@ from copy import deepcopy
 from threading import Event, Thread
 import unittest
 from unittest.mock import patch
+import ctypes
+import importlib.util
+import io
+import json
+from pathlib import Path
+from queue import Queue
 
 from modules.adapters.runtime.python.worker import app
-from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest, TrainModelTaskResult, StartPythonRuntimeTaskRequest
+from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest, TrainModelTaskResult, StartPythonRuntimeTaskRequest, EnsureModelDownloadRequest
 from modules.adapters.runtime.python.worker.tasks import approved_local_training_session as session
 
 TASK = "11111111-1111-4111-8111-111111111111"
@@ -62,6 +68,17 @@ class QueuedExecutor:
 
 
 class OriginalSessionTests(unittest.TestCase):
+    def test_only_positive_no_effect_capture_disarms_worker_exit_requirement(self):
+        producer = Producer(); producer.capture = lambda _: None
+        owner = session.OriginalTrainingSession(definition(), producer, lambda: True, lambda **_: True, lambda _: None)
+        self.assertEqual(owner.prepare(), "unavailable"); self.assertTrue(owner.settled)
+        self.assertFalse(owner.blocks_recovery)
+    def test_unknown_capture_keeps_the_original_worker_fenced(self):
+        producer = Producer()
+        def unknown(_): raise RuntimeError("inert binding outcome unknown")
+        producer.capture = unknown
+        owner = session.OriginalTrainingSession(definition(), producer, lambda: True, lambda **_: True, lambda _: None)
+        self.assertEqual(owner.prepare(), "unconfirmed"); self.assertTrue(owner.blocks_recovery)
     def owner(self, submit=None):
         self.resources = Resources(); self.producer = Producer(self.resources); self.executor = QueuedExecutor(); self.publications = []
         self.current = True
@@ -79,7 +96,7 @@ class OriginalSessionTests(unittest.TestCase):
             self.assertEqual(loader.call_args.kwargs["compare_validation_baseline"], False)
             self.assertEqual(self.resources.calls, ["prepare", "seal", "borrow", "settle"])
             self.assertEqual(self.publications[-1]["data"]["runId"], TASK)
-            self.assertFalse(owner.blocks_recovery); self.assertTrue(owner.retains_record)
+            self.assertTrue(owner.blocks_recovery); self.assertTrue(owner.retains_record)
     def test_malformed_future_is_unknown_and_never_reissued(self):
         owner = self.ready(lambda owner: None)
         self.assertEqual(owner.start()["kind"], "unconfirmed")
@@ -165,6 +182,52 @@ class OriginalRoutesTests(unittest.TestCase):
         self.reply = app._prepare_original_training({"identity": app._training_identity(), "definition": definition()})
         return self.reply
     def action(self, name, **extra): return app._operate_original_training(TASK, name, {"binding": self.reply["binding"], **extra})
+    def retire_training(self):
+        self.prepare(); self.action("cancel"); self.assertTrue(self.action("settle")["settled"])
+    def test_remote_retirement_keeps_worker_admission_fenced(self):
+        self.retire_training()
+        self.assertTrue(app.TASK_REGISTRY[TASK]["_originalTrainingOwner"].blocks_recovery)
+    def test_remote_retirement_cannot_admit_another_original_session(self):
+        self.retire_training(); other = definition(); other["requestId"] = WORKSPACE
+        with self.assertRaises(session.TrainingSessionError):
+            app._prepare_original_training({"identity": app._training_identity(), "definition": other})
+        self.assertEqual(self.producer.calls, 1)
+    def test_remote_retirement_cannot_admit_a_generic_task(self):
+        self.retire_training()
+        with self.assertRaises(RuntimeError):
+            app._start_async_task(StartPythonRuntimeTaskRequest(requestId=WORKSPACE, taskType="train-model", payload={}))
+        self.assertEqual(self.executor.calls, 0)
+    def test_remote_retirement_denies_model_unload(self):
+        self.retire_training()
+        with patch.object(app, "unload_generation_models", return_value=[]) as unload:
+            result = app.unload_models(); self.assertEqual(result.status_code, 409); unload.assert_not_called()
+    def test_remote_retirement_denies_model_download(self):
+        self.retire_training()
+        with patch.object(app, "_ensure_model_download_data", side_effect=RuntimeError("inert provider must not run")) as download:
+            result = app.ensure_model_download(EnsureModelDownloadRequest(provider="transformers", modelId="inert/model"))
+            self.assertEqual(result.status_code, 409); download.assert_not_called()
+    def test_positive_no_effect_capture_does_not_close_ordinary_worker_admission(self):
+        self.producer.capture = lambda _: None
+        self.assertEqual(self.prepare()["phase"], "unavailable")
+        self.assertEqual(app._active_task_count(), 0)
+        with patch.object(app, "unload_generation_models", return_value=[]) as unload:
+            self.assertEqual(app.unload_models().activeTaskCount, 0); unload.assert_called_once()
+    def test_existing_direct_download_reserves_admission_before_native_capture(self):
+        app.configure_original_training(self.producer)
+        entered, finish = Event(), Event(); results = []
+        def downloading(_):
+            entered.set(); finish.wait(3)
+            return {"provider": "transformers", "modelId": "inert/model", "downloaded": True, "fromCache": True}
+        with patch.object(app, "_ensure_model_download_data", side_effect=downloading):
+            thread = Thread(target=lambda: results.append(app.ensure_model_download(EnsureModelDownloadRequest(provider="transformers", modelId="inert/model"))))
+            thread.start()
+            try:
+                self.assertTrue(entered.wait(3))
+                with self.assertRaises(session.TrainingSessionError):
+                    app._prepare_original_training({"identity": app._training_identity(), "definition": definition()})
+                self.assertEqual(self.producer.calls, 0)
+            finally: finish.set(); thread.join(3)
+        self.assertFalse(thread.is_alive()); self.assertEqual(app.MODEL_DOWNLOAD_OPERATIONS, 0); self.assertEqual(len(results), 1)
     def test_default_configuration_denies_without_producer_io(self):
         with self.assertRaises(session.TrainingSessionError): app._prepare_original_training({"identity": {}, "definition": definition()})
         self.assertEqual(self.producer.calls, 0); self.assertFalse(app.TASK_REGISTRY)
@@ -198,7 +261,7 @@ class OriginalRoutesTests(unittest.TestCase):
         self.prepare()
         with self.assertRaises(session.TrainingSessionError): app._prepare_original_training({"identity": app._training_identity(), "definition": definition()})
         self.action("cancel"); self.assertTrue(self.action("settle")["settled"])
-        self.assertEqual(app._active_task_count(), 0)
+        self.assertEqual(app._active_task_count(), 1)
         with app.TASK_REGISTRY_LOCK: app._prune_terminal_tasks_locked()
         self.assertIn(TASK, app.TASK_REGISTRY); self.assertEqual(self.producer.calls, 1)
     def test_no_trusted_producer_is_available_via_json(self):
@@ -228,6 +291,234 @@ class OriginalRoutesTests(unittest.TestCase):
 def identity_dict(profile):
     return {"runtimeId": app.RUNTIME_ID, "workerStartedAt": app.WORKER_STARTED_AT,
             "profileId": profile.profile_id, "profileFingerprint": profile.fingerprint}
+
+
+_native_path = Path(__file__).resolve().parents[1] / "native" / "windows_original_worker_launch.py"
+_native_spec = importlib.util.spec_from_file_location("_aisb_inert_native_launch", _native_path)
+native_launch = importlib.util.module_from_spec(_native_spec)
+_native_spec.loader.exec_module(native_launch)  # ABI declarations only; no Native API construction.
+
+
+def native_boot():
+    profile = {"schema": "windows-original-worker-job-v1", "profileId": "inert-no-native", "processMemoryBytes": 64 * 1024**2,
+               "jobMemoryBytes": 128 * 1024**2, "maximumActiveProcesses": 1, "maximumDurationMs": 30000, "observationMs": 30}
+    return {"schema": "windows-original-worker-launch-v1", "nonce": "c" * 64, "profile": profile,
+            "profileDigest": native_launch.profile_digest(profile),
+            "environment": {"PYTHON_RUNTIME_HOST": "127.0.0.1", "PYTHON_RUNTIME_PORT": "43111",
+                            "PYTHON_RUNTIME_AUTH_TOKEN": "inert-".ljust(40, "x"), "PYTHON_RUNTIME_STARTUP_PROOF": "a" * 64}}
+
+
+class InertLaunchKernel:
+    """In-memory ABI outputs only. Never loads a DLL or starts a process."""
+    def __init__(self):
+        self.calls = []; self.next_handle = 101; self.limits = None; self.attributes = {}; self.active = 1
+        self.create_unknown = False; self.foreign_image = False; self.close_failure = None; self.closed = set(); self.after_wait = None; self.error_after_return = None
+    def handle(self):
+        value = self.next_handle; self.next_handle += 1; return value
+    def invoke(self, name, args, record):
+        value, error = self.result(name, args)
+        record.update(value=value, value_returned=True)
+        if self.error_after_return == name: raise RuntimeError("inert error-reader acknowledgement lost")
+        return value, error
+    def result(self, name, args):
+        self.calls.append((name, args))
+        if name in ("CreateJobObjectW", "CreateFileW"): return self.handle(), 0
+        if name == "GetHandleInformation": args[1]._obj.value = 0; return 1, 0
+        if name == "SetInformationJobObject": self.limits = ctypes.string_at(args[2], args[3]); return 1, 0
+        if name == "QueryInformationJobObject":
+            if args[1] == 9: ctypes.memmove(args[2], self.limits, len(self.limits))
+            else: args[2]._obj.active = self.active; args[2]._obj.total = 1
+            return 1, 0
+        if name == "CreatePipe": args[0]._obj.value = self.handle(); args[1]._obj.value = self.handle(); return 1, 0
+        if name == "SetHandleInformation": return 1, 0
+        if name == "InitializeProcThreadAttributeList":
+            if args[0] is None: args[3]._obj.value = 128; return 0, 122
+            return 1, 0
+        if name == "UpdateProcThreadAttribute": self.attributes[args[2]] = tuple(args[3]); return 1, 0
+        if name == "CreateProcessW":
+            info = args[9]._obj; info.process, info.thread, info.pid, info.tid = self.handle(), self.handle(), 4321, 5432
+            if self.create_unknown: raise RuntimeError("inert lost CreateProcess result")
+            return 1, 0
+        if name == "IsProcessInJob": args[2]._obj.value = 1; return 1, 0
+        if name == "GetCurrentProcess": return -1, 0
+        if name == "QueryFullProcessImageNameW":
+            text = "X:/inert/other.exe" if self.foreign_image and args[0] != -1 else "X:/inert/python.exe"
+            args[2].value = text; args[3]._obj.value = len(text); return 1, 0
+        if name == "GetProcessTimes": args[1]._obj.low = 1; return 1, 0
+        if name == "ResumeThread": return 1, 0
+        if name == "ReadFile": args[3]._obj.value = 0; return 0, 109
+        if name == "TerminateJobObject": self.active = 0; return 1, 0
+        if name == "WaitForSingleObject":
+            if self.after_wait: self.after_wait()
+            return (0 if self.active == 0 else 258), 0
+        if name == "DeleteProcThreadAttributeList": return None, 0
+        if name == "CloseHandle":
+            if args[0] == self.close_failure: return 0, 6
+            if args[0] in self.closed: raise AssertionError("duplicate native close")
+            self.closed.add(args[0]); return 1, 0
+        raise AssertionError("Unexpected Native function: " + name)
+
+
+class NativeLaunchSourceTests(unittest.TestCase):
+    def owner(self, kernel=None):
+        kernel = kernel or InertLaunchKernel()
+        return native_launch.OriginalWorker(native_boot(), kernel=kernel, executable="X:/inert/python.exe",
+                                            worker_root=Path(__file__).resolve().parents[1]), kernel
+    def test_creation_time_job_and_only_three_stdio_handles_precede_one_resume(self):
+        owner, kernel = self.owner(); self.assertEqual(kernel.calls, []); owner.prepare()
+        self.assertEqual(owner.phase, "suspended"); self.assertFalse(owner.resume_attempted)
+        self.assertEqual(kernel.attributes[native_launch.JOB_LIST], (owner.job.slot.value,))
+        self.assertEqual(len(kernel.attributes[native_launch.HANDLE_LIST]), 3)
+        self.assertNotIn(owner.job.slot.value, kernel.attributes[native_launch.HANDLE_LIST])
+        create = next(args for name, args in kernel.calls if name == "CreateProcessW")
+        self.assertEqual(create[5], native_launch.CREATE_FLAGS)
+        self.assertIn("main.py", create[1].value); self.assertIn("-I -B -u", create[1].value)
+        owner.resume(); self.assertEqual(owner.phase, "running")
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.resume()
+        self.assertEqual(sum(name == "ResumeThread" for name, _ in kernel.calls), 1)
+    def test_original_job_process_readers_and_handles_all_precede_retired(self):
+        owner, kernel = self.owner(); owner.prepare(); owner.start_readers(lambda *_: None); owner.resume()
+        self.assertFalse(owner.observe_retirement()); owner.request_stop(); owner.request_stop()
+        for reader in owner.readers: reader.join(1); self.assertFalse(reader.is_alive())
+        self.assertTrue(owner.observe_retirement()); self.assertTrue(owner.observe_retirement())
+        self.assertTrue(all(handle.closed for handle in owner.handles)); self.assertFalse(owner.pending)
+        self.assertEqual(sum(name == "TerminateJobObject" for name, _ in kernel.calls), 1)
+    def test_unknown_creation_retains_original_native_outputs_without_adoption_or_resume(self):
+        kernel = InertLaunchKernel(); kernel.create_unknown = True; owner, _ = self.owner(kernel)
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.prepare()
+        self.assertTrue(owner.create_attempted); self.assertTrue(owner.unknown)
+        self.assertFalse(owner.process.known); self.assertFalse(owner.primary_thread.known)
+        self.assertTrue(any(row["name"] == "CreateProcessW" for row in owner.pending))
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.prepare()
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.resume()
+        self.assertEqual(sum(name == "CreateProcessW" for name, _ in kernel.calls), 1)
+        self.assertFalse(owner.observe_retirement())
+    def test_foreign_image_never_resumes_the_suspended_worker(self):
+        kernel = InertLaunchKernel(); kernel.foreign_image = True; owner, _ = self.owner(kernel)
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.prepare()
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.resume()
+        self.assertFalse(any(name == "ResumeThread" for name, _ in kernel.calls))
+    def test_selected_venv_launcher_can_differ_from_controller_base_image(self):
+        class Kernel(InertLaunchKernel):
+            def result(self, name, args):
+                if name == "QueryFullProcessImageNameW":
+                    self.calls.append((name, args))
+                    text = "X:/inert/base/python.exe" if args[0] == -1 else "X:/inert/venv/Scripts/python.exe"
+                    args[2].value = text; args[3]._obj.value = len(text); return 1, 0
+                return super().result(name, args)
+        kernel = Kernel()
+        owner = native_launch.OriginalWorker(native_boot(), kernel=kernel, executable="X:/inert/venv/Scripts/python.exe",
+                                            worker_root=Path(__file__).resolve().parents[1])
+        owner.prepare(); self.assertEqual(owner.phase, "suspended"); owner.resume()
+        self.assertEqual(sum(name == "ResumeThread" for name, _ in kernel.calls), 1)
+    def test_unknown_close_is_retained_and_never_reissued(self):
+        owner, kernel = self.owner(); owner.prepare(); handle = owner.primary_thread; kernel.close_failure = handle.slot.value
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.close(handle)
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.close(handle)
+        self.assertTrue(handle.close_attempted); self.assertFalse(handle.closed)
+        self.assertEqual(sum(name == "CloseHandle" and args[0] == handle.slot.value for name, args in kernel.calls), 1)
+    def test_reader_failure_during_retirement_observation_cannot_be_cleared(self):
+        owner, kernel = self.owner(); owner.prepare(); owner.resume(); owner.request_stop()
+        kernel.after_wait = lambda: setattr(owner, "unknown", True)
+        self.assertFalse(owner.observe_retirement())
+        self.assertFalse(owner.job.closed)
+    def test_native_returned_handle_survives_a_lost_error_reader_acknowledgement(self):
+        kernel = InertLaunchKernel(); kernel.error_after_return = "CreateJobObjectW"; owner, _ = self.owner(kernel)
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.prepare()
+        row = owner.pending[0]; self.assertEqual(row["name"], "CreateJobObjectW")
+        self.assertTrue(row["value_returned"]); self.assertEqual(row["value"], 101)
+        self.assertFalse(owner.job.known); self.assertTrue(owner.unknown)
+    def test_resume_rechecks_admission_after_native_readbacks(self):
+        owner, kernel = self.owner(); owner.prepare(); admissions = iter((True, False))
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.resume(lambda: next(admissions))
+        self.assertFalse(owner.resume_attempted)
+        self.assertFalse(any(name == "ResumeThread" for name, _ in kernel.calls))
+    def test_resume_rechecks_deadline_after_native_readbacks(self):
+        owner, kernel = self.owner(); owner.prepare(); now = [owner.started_at]
+        owner.clock = lambda: now[0]
+        def expire(): now[0] += owner.profile["maximumDurationMs"] / 1000 + 1; return True
+        admissions = iter((lambda: True, expire))
+        with self.assertRaises(native_launch.LaunchUnavailable): owner.resume(lambda: next(admissions)())
+        self.assertFalse(owner.resume_attempted)
+        self.assertFalse(any(name == "ResumeThread" for name, _ in kernel.calls))
+    def test_closed_command_input_never_resumes_a_queued_resume(self):
+        boot = native_boot(); owner, kernel = self.owner()
+        command = {"schema": "windows-original-worker-command-v1", "nonce": boot["nonce"],
+                   "profileDigest": boot["profileDigest"], "action": "resume"}
+        source = io.BytesIO((json.dumps(boot) + "\n" + json.dumps(command) + "\n").encode())
+        sink = io.BytesIO()
+        self.assertEqual(native_launch.serve(source, sink, owner_factory=lambda _: owner), 0)
+        frames = [json.loads(line) for line in sink.getvalue().splitlines()]
+        self.assertEqual([frame["kind"] for frame in frames], ["suspended", "retired"])
+        self.assertFalse(any(name == "ResumeThread" for name, _ in kernel.calls))
+        self.assertTrue(all(handle.closed for handle in owner.handles))
+    def test_final_worker_output_is_encoded_and_drained_before_retired(self):
+        boot = native_boot(); lines = Queue(); lines.put((json.dumps(boot) + "\n").encode())
+        frames, owners = [], []
+        class Source:
+            def readline(self, maximum): return lines.get(timeout=2)
+        class Sink:
+            def write(self, data):
+                frame = json.loads(data); frames.append(frame)
+                action = "resume" if frame["kind"] == "suspended" else "stop" if frame["kind"] == "running" else None
+                if action:
+                    lines.put((json.dumps({"schema": "windows-original-worker-command-v1", "nonce": boot["nonce"],
+                                          "profileDigest": boot["profileDigest"], "action": action}) + "\n").encode())
+                if frame["kind"] == "retired": lines.put(b"")
+                return len(data)
+            def flush(self): pass
+        class Owner(native_launch.OriginalWorker):
+            final_output = False
+            def start_readers(self, publish):
+                self.publish = publish; super().start_readers(publish)
+            def observe_retirement(self):
+                if self.stop_attempted and not self.final_output:
+                    self.final_output = True
+                    self.publish("stdout", b'{"kind":"retired","nonce":"forged-worker-text"}\n')
+                return super().observe_retirement()
+        def factory(value):
+            owner = Owner(value, kernel=InertLaunchKernel(), executable="X:/inert/python.exe",
+                          worker_root=Path(__file__).resolve().parents[1]); owners.append(owner); return owner
+        self.assertEqual(native_launch.serve(Source(), Sink(), owner_factory=factory), 0)
+        self.assertEqual([frame["kind"] for frame in frames], ["suspended", "running", "worker-output", "retired"])
+        import base64
+        self.assertIn(b"forged-worker-text", base64.b64decode(frames[2]["data"]))
+        self.assertTrue(all(handle.closed for handle in owners[0].handles))
+    def test_received_stop_prevents_queued_resume_while_input_remains_open(self):
+        boot = native_boot(); queued, released = Event(), Event()
+        class Source:
+            def __init__(self):
+                self.lines = [(json.dumps(boot) + "\n").encode()] + [(json.dumps({
+                    "schema": "windows-original-worker-command-v1", "nonce": boot["nonce"],
+                    "profileDigest": boot["profileDigest"], "action": action}) + "\n").encode() for action in ("resume", "stop")]
+            def readline(self, maximum):
+                if self.lines: return self.lines.pop(0)
+                queued.set(); released.wait(2); return b""
+        class Owner:
+            def __init__(self):
+                from threading import Lock
+                self.lock = Lock(); self.profile = boot["profile"]; self.started_at = 0
+                self.stop_attempted = self.unknown = False; self.resumes = 0
+            def clock(self):
+                if not queued.wait(1): raise AssertionError("Reader did not queue both commands")
+                return 0
+            def prepare(self): pass
+            def start_readers(self, publish): pass
+            def worker_exited(self): return False
+            def request_stop(self): self.stop_attempted = True
+            def resume(self, admission): self.resumes += 1
+            def observe_retirement(self): return self.stop_attempted
+        owner = Owner()
+        try:
+            self.assertEqual(native_launch.serve(Source(), io.BytesIO(), owner_factory=lambda _: owner), 0)
+            self.assertEqual(owner.resumes, 0); self.assertFalse(released.is_set())
+        finally: released.set()
+    def test_profile_and_boot_reject_supplied_authority_before_api_construction(self):
+        for mutate in (lambda b: b["profile"].update(processMemoryBytes=True), lambda b: b["profile"].update(jobMemoryBytes=1),
+                       lambda b: b.update(nativeReady=True), lambda b: b["environment"].update(PYTHON_RUNTIME_HOST="0.0.0.0")):
+            value = native_boot(); mutate(value)
+            with self.assertRaises(native_launch.LaunchUnavailable): native_launch.OriginalWorker(value)
+        with self.assertRaises(native_launch.LaunchUnavailable): native_launch.parse_frame(b'{"nonce":"a","nonce":"b"}')
 
 
 if __name__ == "__main__": unittest.main()

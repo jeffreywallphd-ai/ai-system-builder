@@ -155,6 +155,7 @@ TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1)
 TASK_REGISTRY_LOCK = Lock()
 TASK_REGISTRY: dict[str, dict[str, Any]] = {}
 MODEL_UNLOAD_IN_PROGRESS = False
+MODEL_DOWNLOAD_OPERATIONS = 0
 TASK_WAIT_POLL_SECONDS = 1.0
 TASK_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
@@ -253,7 +254,8 @@ def _task_retains_custody(task) -> bool:
 
 def _task_execution_active(task) -> bool:
     training = task.get("_originalTrainingOwner")
-    # Retained candidate bytes/history do not retain a settled execution slot.
+    # Remote session settlement cannot reopen a resource-bearing original
+    # worker while its supervisor is still confirming process/Job retirement.
     return training.blocks_recovery if isinstance(training, OriginalTrainingSession) else _task_retains_custody(task)
 
 
@@ -874,7 +876,7 @@ def _prepare_original_training(body):
     incarnation = (RUNTIME_ID, WORKER_STARTED_AT)
     with TASK_REGISTRY_LOCK:
         # This explicit profile reserves the existing executor exclusively.
-        if (MODEL_UNLOAD_IN_PROGRESS or task_id in TASK_REGISTRY or
+        if (MODEL_UNLOAD_IN_PROGRESS or MODEL_DOWNLOAD_OPERATIONS or task_id in TASK_REGISTRY or
                 any(_task_retains_custody(row) and not (isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession)
                     and not row["_originalTrainingOwner"].blocks_recovery) for row in TASK_REGISTRY.values()) or
                 sum(isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession)
@@ -1197,10 +1199,20 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
 
 @app.post("/models/ensure-downloaded", response_model=EnsureModelDownloadResult, response_model_exclude_unset=True)
 def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDownloadResult | JSONResponse:
+    global MODEL_DOWNLOAD_OPERATIONS
     with TASK_REGISTRY_LOCK:
         if any(isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession) and
                row["_originalTrainingOwner"].blocks_recovery for row in TASK_REGISTRY.values()):
             return JSONResponse(status_code=409, content={"error": "original_training_custody_pending"})
+        MODEL_DOWNLOAD_OPERATIONS += 1
+    try:
+        return _ensure_model_download_reserved(request)
+    finally:
+        with TASK_REGISTRY_LOCK:
+            MODEL_DOWNLOAD_OPERATIONS -= 1
+
+
+def _ensure_model_download_reserved(request: EnsureModelDownloadRequest) -> EnsureModelDownloadResult | JSONResponse:
     if request.sourceTransfer is not None:
         return _model_source_error(409)
     started_at = time.monotonic()

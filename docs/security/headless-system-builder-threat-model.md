@@ -2225,3 +2225,55 @@ read/cancel/settle. Deny model unload while custody remains uncertain. Inert
 positive/denial tests establish software lifecycle behavior, not descendant Job
 closure, native file protection, resource enforcement, output accounting or host
 qualification. No production native producer or public capability is enabled.
+
+### Resource-bound original-worker launch
+
+Trusted boot configuration may select a fixed controller for the same original
+installed Python worker. No request supplies commands, flags, native handles,
+PIDs, callbacks or limits. Native API readback, original process/Job ownership and
+private pipe provenance supply the resource evidence. A profile string or wire
+ready flag supplies none. Use creation-time Job assignment, suspend before app
+execution, explicitly inherit only stdio and never inherit the owning Job handle.
+Do not allow breakaway or weaken enclosing Job limits.
+
+Suppress controller startup site hooks with `-I -S -B -u`; isolated mode alone
+still loads site packages and can execute `.pth`/customization code outside the
+worker Job. The separate app child keeps `-I -B -u`, preserving installed SDKs
+inside that Job. Do not propagate the controller's uppercase `-S` to the app.
+
+Keep the launch owner alive after an unused training claim is disarmed. Every
+managed Stop uses that original owner, not ordinary controller kill. Controller
+loss invalidates admission without claiming worker retirement. Continue draining
+valid authenticated final packets after exit; malformed/foreign/duplicate facts
+lose integrity. Fence pending preflight before a supplier call. Positive zero
+construction requires settled original reads and no launch attempt, or no boot
+dispatch plus actual original controller closure. Unknown effects remain retained.
+
+Both controller and native owners capture original functions/receivers before
+effects. Retain returned native values before error-reader callbacks, partial
+process outputs, in-flight buffers and every attempted close. Reader failures
+cannot be cleared by a concurrent retirement observation. Require original
+process/Job quiescence, returned reader calls and acknowledged native handles;
+never retry an unknown create, resume, termination or close.
+
+Match the native created image to the exact selected installed executable, not
+the controller's base image when a Windows venv redirector is involved. Keep the
+redirector and descendants in the original Job. Reject foreign images. Record
+Stop receipt monotonically before considering queued Resume, then recheck that
+fence and the deadline after native reads. Return a fixed startup failure for
+prelaunch refusal and never leave a settled refused launch labelled starting.
+Drain the stable final worker-output queue before publishing retirement.
+
+Recheck current host authority after waits and before resume. Reserve direct
+downloads before callbacks/provider IO. Keep worker admission monotonic after
+producer handoff and remote settlement; only a positive original no-effect
+capture can disarm it. Generic tasks, another training session, download and
+unload cannot borrow that worker while retirement is pending.
+
+Controller configuration and environment stay private. Bound frames, queued
+output, bytes, commands, observations and diagnostics. Worker bytes remain data;
+they cannot become control messages. Job commit limits do not prove total RAM,
+controller overhead, GPU, disk or retained-output limits. Native file custody,
+full producer, measured settings and actual enforcement/host qualification remain
+pending. No native test grants, qualification actors or model-quality results are
+reused or changed by this component.

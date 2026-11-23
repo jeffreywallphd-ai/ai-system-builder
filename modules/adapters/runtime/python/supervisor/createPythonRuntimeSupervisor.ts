@@ -3,6 +3,10 @@ import { platform } from "node:os";
 import { randomBytes } from "node:crypto";
 import { createOwnedPythonRuntimeProof } from "./ownedPythonRuntimeProof";
 import { terminateOwnedProcess } from "../../shared/terminateOwnedProcess";
+import path from "node:path";
+import {types} from "node:util";
+import {captureOriginalWorkerResourceProfile, createWindowsOriginalWorkerLaunch,
+  type ManagedOriginalPythonWorker, type WindowsOriginalWorkerResourceProfile} from "./windowsOriginalWorkerLaunch";
 
 import type { PythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
 import type { PythonStartupEvent } from "../pythonRuntimeStartupDiagnostics";
@@ -38,6 +42,8 @@ export interface PythonRuntimeSupervisor {
   startWithoutInstalling?(): Promise<void>;
   /** Private original-child capability. HTTP identity alone cannot supply it. */
   captureOriginalWorkerRetirement?(): OriginalPythonWorkerRetirement;
+  /** Strict resource-bound path. Never falls back to a plain child. */
+  captureOriginalTrainingWorkerRetirement?(): OriginalPythonWorkerRetirement;
   stop(): Promise<void>;
   restart(): Promise<void>;
   getStatus(): PythonRuntimeSupervisorStatus;
@@ -78,6 +84,12 @@ export interface CreatePythonRuntimeSupervisorOptions {
   startupTimeoutMs?: number;
   /** Managed foundations require current child bind proof; HTTP is not identity. */
   requireOwnedStartupProof?: boolean;
+  /** Trusted boot-only configuration; no production limits are inferred. */
+  nativeWorkerResourceProfile?: WindowsOriginalWorkerResourceProfile;
+  /** Adapter platform dependency; production uses the actual Node platform. */
+  nativePlatform?: () => {platform: NodeJS.Platform; arch: string};
+  /** Trusted owning-host lifetime, never request metadata or a readiness flag. */
+  assertHostCurrent?: () => void;
   healthCheckIntervalMs?: number;
   runtimeClient: Pick<PythonRuntimeHttpClient, "getHealthStatus"> &
     Partial<Pick<PythonRuntimeHttpClient, "getCapabilities">>;
@@ -97,7 +109,16 @@ export function createPythonRuntimeSupervisor(
   options: CreatePythonRuntimeSupervisorOptions,
 ): PythonRuntimeSupervisor {
   const startupTimeoutMs = options.startupTimeoutMs ?? 5_000;
-  const requireOwnedStartupProof = options.requireOwnedStartupProof === true;
+  const nativeSelection = options.nativeWorkerResourceProfile;
+  const nativeProfile = nativeSelection === undefined ? undefined : captureOriginalWorkerResourceProfile(nativeSelection);
+  const nativePlatform = options.nativePlatform ?? (() => ({platform: process.platform, arch: process.arch}));
+  const hostAdmission = options.assertHostCurrent;
+  const assertHostCurrent = () => {
+    const result: unknown = hostAdmission?.call(options);
+    if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+    if (result !== undefined) throw new Error("Python host admission is unavailable.");
+  };
+  const requireOwnedStartupProof = options.requireOwnedStartupProof === true || nativeProfile !== undefined;
   const healthCheckIntervalMs = options.healthCheckIntervalMs ?? 100;
   const spawnImplementation = options.spawnImplementation ?? spawn;
   const requiredCapabilities = [...(options.requiredCapabilities ?? [])];
@@ -118,6 +139,8 @@ export function createPythonRuntimeSupervisor(
 
   let childProcess: ChildProcess | undefined;
   let boundReadyProcess: ChildProcess | undefined;
+  let managedWorker: ManagedOriginalPythonWorker | undefined, boundReadyManaged: ManagedOriginalPythonWorker | undefined;
+  let managedStopping = false, managedClaim: OriginalPythonWorkerRetirement | undefined;
   type WorkerClose = {closed: boolean; observers: Set<() => void>; retirement?: OriginalPythonWorkerRetirement};
   const workerCloses = new WeakMap<ChildProcess, WorkerClose>();
   // Keep the original claim after exit clears childProcess. Exit is not close.
@@ -319,7 +342,7 @@ export function createPythonRuntimeSupervisor(
 
   const hasRuntimeExited = () => {
     return (
-      (!childProcess && !attachedToExistingRuntime) || status === "stopped"
+      (!childProcess && !managedWorker && !attachedToExistingRuntime) || status === "stopped"
     );
   };
 
@@ -406,16 +429,16 @@ export function createPythonRuntimeSupervisor(
     );
   };
 
-  const startHealthPolling = async (assertCurrent: () => void, owner: ChildProcess) => {
+  const startHealthPolling = async (assertCurrent: () => void, assertOriginal: () => void, isBound: () => boolean) => {
     const assertOwned = () => {
       assertCurrent();
-      if (childProcess !== owner || owner.exitCode != null || owner.signalCode != null) throw new Error("Python runtime exited before health check completed.");
+      assertOriginal();
       assertRuntimeStillStarting();
     };
     const startedAt = Date.now();
     while (Date.now() - startedAt < startupTimeoutMs) {
       assertOwned();
-      if (requireOwnedStartupProof && boundReadyProcess !== owner) {
+      if (requireOwnedStartupProof && !isBound()) {
         await delay(healthCheckIntervalMs);
         continue;
       }
@@ -476,7 +499,8 @@ export function createPythonRuntimeSupervisor(
   };
 
   const start = async (policy: "ordinary" | "installed-only") => {
-      if (policy === "installed-only" && !verifyRuntimeEnvironment)
+      const installedOnly = policy === "installed-only" || nativeProfile !== undefined;
+      if (installedOnly && !verifyRuntimeEnvironment)
         throw new Error("Installed Python runtime verification is unavailable.");
       if (stopFlight) throw new Error("Python runtime is stopping; retry after confirmed termination.");
       if (privateWorkerClaim && !privateWorkerClaim.close.closed &&
@@ -491,15 +515,15 @@ export function createPythonRuntimeSupervisor(
       let operationToken: object | undefined;
       const assertCurrent = () => { if (generation !== lifecycleGeneration) throw new Error("Python runtime startup was stopped."); };
       const operation = (async () => {
-      if (policy === "installed-only") {
+      if (installedOnly) {
         let verified = false;
         try { verified = await verifyRuntimeEnvironment!({command: resolveCommand(), args: Object.freeze(resolveArgs()),
           cwd: workingDirectory, env: { ...runtimeEnvironment }}); } catch { /* Closed refusal, without private probe output. */ }
         assertCurrent();
         if (verified !== true) throw new Error("Installed Python runtime verification is unavailable.");
       }
-      if (childProcess && status === "failed") throw new Error("Python runtime startup failed; stop the owned process before retrying.");
-      if (childProcess && status !== "stopped") {
+      if ((childProcess || managedWorker) && status === "failed") throw new Error("Python runtime startup failed; stop the owned process before retrying.");
+      if ((childProcess || managedWorker) && status !== "stopped") {
         emitEvent(
           "start-skipped",
           "Runtime start skipped because supervisor is already active.",
@@ -555,7 +579,7 @@ export function createPythonRuntimeSupervisor(
         );
       }
 
-      if (policy === "ordinary" && prepareRuntimeEnvironment) {
+      if (!installedOnly && prepareRuntimeEnvironment) {
         try {
           await prepareRuntimeEnvironment({
             command,
@@ -607,6 +631,51 @@ export function createPythonRuntimeSupervisor(
       }) : undefined;
       if (ownedNonce) launchEnvironment.PYTHON_RUNTIME_STARTUP_PROOF = ownedNonce;
       boundReadyProcess = undefined;
+      boundReadyManaged = undefined;
+      if (nativeProfile) {
+        const platformValue: unknown = nativePlatform.call(options);
+        if (types.isPromise(platformValue)) void Promise.prototype.then.call(platformValue, undefined, () => {});
+        const platformFacts = platformValue && typeof platformValue === "object" && !types.isProxy(platformValue) ?
+          Object.getOwnPropertyDescriptors(platformValue) : {};
+        if (Object.keys(platformFacts).length !== 2 || platformFacts.platform?.value !== "win32" || platformFacts.arch?.value !== "x64" || !workingDirectory ||
+            args.length !== 1 || path.resolve(workingDirectory, args[0]!) !== path.resolve(workingDirectory, "main.py"))
+          throw new Error("The configured native Python worker is unavailable.");
+        assertHostCurrent();
+        const owner = managedWorker = createWindowsOriginalWorkerLaunch({command, cwd: workingDirectory,
+          environment: launchEnvironment, profile: nativeProfile, spawnImplementation,
+          nativePlatform: () => ({platform: "win32", arch: "x64"}),
+          assertHostCurrent: () => {assertCurrent(); assertHostCurrent(); assertCurrent();}});
+        managedStopping = false; managedClaim = undefined;
+        owner.onUnavailable(() => {
+          if (managedWorker !== owner) return;
+          boundReadyManaged = undefined;
+          status = "failed";
+          if (!managedStopping) emitEvent("process-error", "Original managed Python worker readiness was lost.");
+        });
+        owner.onRetired(() => {
+          if (managedWorker !== owner) return;
+          managedWorker = undefined; boundReadyManaged = undefined; status = "stopped";
+          emitEvent("process-exit", "Original managed Python worker and Job retired.");
+        });
+        for (const source of ["stdout", "stderr"] as const) owner[source].on("data", (chunk: Buffer) => {
+          if (managedWorker !== owner) return;
+          if (source === "stdout" && status === "starting" && ownedProof?.push(chunk) && boundReadyManaged !== owner) {
+            try {owner.assertCurrent(); boundReadyManaged = owner; emitEvent("owned-ready", "The original managed Python worker confirmed its listening socket.");}
+            catch {status = "failed";}
+          }
+          const summary = appendRuntimeOutput(source, chunk.toString());
+          if (summary) emitEvent("stdio", summary, {source, truncated: chunk.length > 16 * 1024});
+        });
+        await owner.prepare(); assertCurrent();
+        await owner.resume(); assertCurrent();
+        emitEvent("spawned", "Original managed Python worker resumed under configured limits.");
+        observeStartup("health", operationToken);
+        await startHealthPolling(assertCurrent, () => {
+          if (managedWorker !== owner) throw new Error("Original managed Python worker is unavailable.");
+          owner.assertCurrent();
+        }, () => boundReadyManaged === owner);
+        assertCurrent(); observeStartup("ready", operationToken); return;
+      }
       try {
         attachedToExistingRuntime = false;
         childProcess = spawnImplementation(command, args, {
@@ -629,22 +698,70 @@ export function createPythonRuntimeSupervisor(
       emitEvent("spawned", "Python runtime process spawned.");
 
       observeStartup("health", operationToken);
-      await startHealthPolling(assertCurrent, childProcess);
+      const owner = childProcess;
+      await startHealthPolling(assertCurrent, () => {
+        if (childProcess !== owner || owner.exitCode != null || owner.signalCode != null)
+          throw new Error("Python runtime exited before health check completed.");
+      }, () => boundReadyProcess === owner);
       assertCurrent();
       observeStartup("ready", operationToken);
       })();
       startFlight = operation;
       startGeneration = generation;
       startPolicy = policy;
-      try { await operation; } catch (error) { if (operationToken) observeStartup("failed", operationToken); throw error; }
+      try { await operation; } catch (error) {
+        if (operationToken) observeStartup("failed", operationToken);
+        if (nativeProfile) {
+          if (generation === lifecycleGeneration && status === "starting") {
+            status = "failed";
+            lastStartupFailure = "The configured native Python worker is unavailable.";
+          }
+          throw new Error("The configured native Python worker is unavailable.");
+        }
+        throw error;
+      }
       finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; startPolicy = undefined; } }
+  };
+
+  const retireManaged = (owner: ManagedOriginalPythonWorker, retire: () => Promise<boolean>) => {
+    if (managedWorker === owner && !managedStopping) {
+      managedStopping = true; lifecycleGeneration++; boundReadyManaged = undefined; status = "failed";
+      observeStartup("retired"); emitEvent("stop-requested", "Stopping the original managed Python worker and Job.");
+    }
+    return retire();
+  };
+  const captureManagedRetirement = (): OriginalPythonWorkerRetirement => {
+    const owner = managedWorker;
+    if (!owner || managedStopping || boundReadyManaged !== owner || status !== "ready" || stopFlight || startFlight)
+      throw new Error("Original managed training worker ownership is unavailable.");
+    owner.assertCurrent();
+    if (managedClaim) {managedClaim.assertCurrent(); return managedClaim;}
+    const generation = lifecycleGeneration, originalCurrent = owner.assertCurrent.bind(owner), retire = owner.retireOriginal.bind(owner);
+    let active = true;
+    const current = () => {
+      if (!active || managedWorker !== owner || generation !== lifecycleGeneration || managedStopping ||
+          boundReadyManaged !== owner || status !== "ready") throw new Error("Original managed training worker ownership is unavailable.");
+      originalCurrent();
+    };
+    const claim: OriginalPythonWorkerRetirement = Object.freeze({assertCurrent: current,
+      releaseUnused() {
+        current(); active = false;
+        if (managedClaim === claim) managedClaim = undefined;
+        // This disarms only the training lease, never the launch/Job owner.
+      },
+      retireOriginal() {return active ? retireManaged(owner, retire) : Promise.resolve(false);},
+    });
+    managedClaim = claim; return claim;
   };
 
   return {
     start: () => start("ordinary"),
     startWithoutInstalling: () => start("installed-only"),
 
+    captureOriginalTrainingWorkerRetirement: captureManagedRetirement,
+
     captureOriginalWorkerRetirement() {
+      if (nativeProfile) return captureManagedRetirement();
       const owner = childProcess, close = owner && workerCloses.get(owner);
       const unavailable = () => new Error("Original training worker ownership is unavailable.");
       if (!requireOwnedStartupProof || !owner || !close || close.closed || status !== "ready" ||
@@ -702,6 +819,15 @@ export function createPythonRuntimeSupervisor(
 
     async stop() {
       if (stopFlight) return stopFlight;
+      if (managedWorker) {
+        const owner = managedWorker, retire = owner.retireOriginal.bind(owner);
+        const operation = Promise.resolve().then(async () => {
+          if (await retireManaged(owner, retire) !== true) throw new Error("Original managed worker and Job retirement is unconfirmed.");
+        });
+        stopFlight = operation;
+        try {await operation;} finally {if (stopFlight === operation) stopFlight = undefined;}
+        return;
+      }
       const original = childProcess ? workerCloses.get(childProcess)?.retirement :
         privateWorkerClaim && !privateWorkerClaim.close.closed ? privateWorkerClaim.capability : undefined;
       if (original) {
