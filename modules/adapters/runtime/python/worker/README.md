@@ -1713,3 +1713,28 @@ training module, then replaces only that test application's entry. Missing or
 changed support denies without an ordinary fallback. The legacy test profile and
 normal product entry remain unchanged. Inert binding tests prove no actual model
 effect; native/runtime/package witnesses and a fresh real journey are separate.
+
+### Original private training protocol
+
+`tasks/approved_local_training_session.py` binds one original registry row,
+existing executor Future, fixed local loader and native retirement owner.
+`configure_original_training` is trusted boot composition, once, before tasks.
+There is no environment flag, request boolean or default native producer.
+Without that producer, `train-model.original-session-v1` is not advertised and
+private preparation fails before source/native acquisition. The required named
+measured profile is not inferred from older test-runner limits.
+
+The authenticated `/training/original` protocol bounds request bodies before JSON
+parsing. Its closed binding includes worker incarnation, profile and original
+session. Generic task read/cancel/start cannot adopt a private ID. Original
+records survive pruning and unknown submit/cancel/close replies; no second effect
+is attempted. Cancellation is not retirement. Pending retirement may observe the
+same owner again; an unknown actual close cannot repeat. Native preparation,
+sealing, run and cancellation flights must return before permanent settlement.
+Settlement releases execution availability, not retained candidate accounting.
+
+The sole eventual loader is captured before producer callbacks and uses
+`train_model_from_local_files` with `compare_validation_baseline=False`. Inert
+tests supply controlled results and fake native owners. They run no model,
+quality score or native acquisition, and do not qualify the missing producer,
+production profile, public activation, Save or actual host behavior.

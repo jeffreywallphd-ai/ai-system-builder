@@ -641,3 +641,27 @@ This is startup ownership under a trusted worker and exclusive-bind assumption,
 not continuing cryptographic server authentication after an unobserved exit.
 No HTTP response or bearer-token echo establishes ownership. Uncertain process
 or task cleanup still prevents safe retry; port selection cannot clear it.
+
+### Private approved training sessions
+
+`createApprovedTrainingPort` is a private composition seam. No profile returns
+an unavailable port without startup or IO. An explicit profile reserves the
+original session before installed-only startup; generic task start and recovery
+cannot replace pending, live or uncertain training custody, including after an
+actual worker exit. The client captures its own training capability and original
+launch. It does not reuse download identity as training resource proof.
+
+The worker's default native producer is absent. A profile name/fingerprint and a
+wire reply only correlate the required trusted producer; they do not establish
+native identity, memory/disk limits or retirement. Concrete native production,
+measured host configuration, public Root activation and actual host qualification
+remain pending. The existing generic installed-only path still rejects training.
+
+Private prepare, seal, start, read, cancel and settle operations retain original
+task/worker/profile identity. Lost effect replies do not retry or adopt generic
+IDs. Start admission is rechecked after client waits and credential preparation,
+immediately before HTTP dispatch. It is not discarded after dispatch to erase an
+accepted task, and is not a synchronous native-dispatch callback across processes.
+Permanent settlement requires the original worker/native owner and all client
+flights to retire. Later reads serve cached metadata only. Retained output bytes
+remain charged for separate reviewed Save/discard work.

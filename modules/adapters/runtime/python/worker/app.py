@@ -15,6 +15,7 @@ from typing import Any, Callable, Literal
 import re
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -69,6 +70,11 @@ from .ocr.protocol import OcrContractError, OcrUnavailable
 from .ocr.task_sources import CAPABILITY as OCR_TASK_CAPABILITY, task_ocr_sources
 from .tasks.review_dataset import review_dataset
 from .tasks.train_model import TrainingCancellationRequested, train_model
+from .tasks.approved_local_training_session import (
+    CAPABILITY as ORIGINAL_TRAINING_CAPABILITY, MAX_BODY_BYTES as TRAINING_BODY_LIMIT,
+    MAX_SESSIONS as TRAINING_SESSION_LIMIT, NativeTrainingProducer, NativeTrainingProfile,
+    OriginalTrainingSession, TrainingSessionError, capture_definition,
+)
 from .tasks.model_source_task import (
     CAPABILITY as MODEL_SOURCE_TASK_CAPABILITY, SESSION_CAPABILITY as MODEL_SOURCE_SESSION_CAPABILITY,
     ModelSourceTaskError, ModelSourceTaskOwner,
@@ -239,7 +245,16 @@ def _now_iso() -> str:
 
 def _task_retains_custody(task) -> bool:
     owner = task.get("_modelSourceOwner")
-    return task.get("status") in {"queued", "running"} or isinstance(owner, ModelSourceTaskOwner) and owner.retains_record
+    training = task.get("_originalTrainingOwner")
+    return (task.get("status") in {"queued", "running"} or
+            isinstance(owner, ModelSourceTaskOwner) and owner.retains_record or
+            isinstance(training, OriginalTrainingSession) and training.retains_record)
+
+
+def _task_execution_active(task) -> bool:
+    training = task.get("_originalTrainingOwner")
+    # Retained candidate bytes/history do not retain a settled execution slot.
+    return training.blocks_recovery if isinstance(training, OriginalTrainingSession) else _task_retains_custody(task)
 
 
 def _source_record_current_locked(record, owner) -> bool:
@@ -259,7 +274,7 @@ def _publish_source_task(record, owner, **updates) -> bool:
 
 def _active_task_count() -> int:
     with TASK_REGISTRY_LOCK:
-        return sum(_task_retains_custody(task) for task in TASK_REGISTRY.values())
+        return sum(_task_execution_active(task) for task in TASK_REGISTRY.values())
 
 
 def _prune_terminal_tasks_locked() -> None:
@@ -314,7 +329,7 @@ def _update_task(request_id: str, **updates: Any) -> None:
         if task is None:
             return
         # Legacy ID-only continuations cannot write a private successor record.
-        if isinstance(task.get("_modelSourceOwner"), ModelSourceTaskOwner):
+        if isinstance(task.get("_modelSourceOwner"), ModelSourceTaskOwner) or isinstance(task.get("_originalTrainingOwner"), OriginalTrainingSession):
             return
         task.update(updates)
         task["updatedAt"] = _now_iso()
@@ -663,6 +678,9 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             payload=selection.model_dump(mode="json", exclude_none=True), metadata=_safe_task_metadata(request.metadata),
             timeoutMs=request.timeoutMs)
     with TASK_REGISTRY_LOCK:
+        if any(isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession) and
+               row["_originalTrainingOwner"].blocks_recovery for row in TASK_REGISTRY.values()):
+            raise RuntimeError("Original training custody must be settled before another task.")
         if MODEL_UNLOAD_IN_PROGRESS:
             raise RuntimeError("Generation model cleanup is in progress. Retry after completion.")
         if not TASK_REQUEST_ID_PATTERN.fullmatch(request.requestId):
@@ -674,7 +692,7 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
         active_count = sum(
             1
             for task in TASK_REGISTRY.values()
-            if _task_retains_custody(task)
+            if _task_execution_active(task)
         )
         if active_count >= TASK_MAX_ACTIVE:
             raise RuntimeError("Python runtime task queue is at capacity.")
@@ -805,6 +823,144 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
     return StartPythonRuntimeTaskResult(requestId=original_id, taskType=reply_record["taskType"], accepted=True, status=accepted_status, startedAt=reply_record["startedAt"], updatedAt=reply_record["updatedAt"], metadata=reply_record["metadata"])
 
 
+_ORIGINAL_TRAINING_PRODUCER = None
+_ORIGINAL_TRAINING_PROFILE = None
+
+
+def configure_original_training(producer: NativeTrainingProducer):
+    """Trusted boot composition only. No request/env flag can supply custody.
+
+    Actual host composition must provide the independently qualified native
+    producer/profile. This source mechanism deliberately supplies no producer.
+    """
+    global _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE
+    if not isinstance(producer, NativeTrainingProducer):
+        raise TrainingSessionError()
+    profile = producer.profile
+    if type(profile) is not NativeTrainingProfile:
+        raise TrainingSessionError()
+    with TASK_REGISTRY_LOCK:
+        if _ORIGINAL_TRAINING_PRODUCER is not None or TASK_REGISTRY:
+            raise TrainingSessionError()
+        _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE = producer, profile
+
+
+def _training_identity():
+    profile = _ORIGINAL_TRAINING_PROFILE
+    if profile is None or _ORIGINAL_TRAINING_PRODUCER is None:
+        raise TrainingSessionError()
+    return {"runtimeId": RUNTIME_ID, "workerStartedAt": WORKER_STARTED_AT,
+            "profileId": profile.profile_id, "profileFingerprint": profile.fingerprint}
+
+
+async def _training_body(request: Request):
+    # Stream bound before JSON parsing; errors never echo private input or paths.
+    content = bytearray()
+    async for chunk in request.stream():
+        if len(content) + len(chunk) > TRAINING_BODY_LIMIT:
+            raise TrainingSessionError()
+        content.extend(chunk)
+    body = json.loads(bytes(content))
+    if type(body) is not dict:
+        raise TrainingSessionError()
+    return body
+
+
+def _prepare_original_training(body):
+    if set(body) != {"identity", "definition"} or body["identity"] != _training_identity():
+        raise TrainingSessionError()
+    definition = capture_definition(body["definition"])
+    task_id = definition["requestId"]
+    incarnation = (RUNTIME_ID, WORKER_STARTED_AT)
+    with TASK_REGISTRY_LOCK:
+        # This explicit profile reserves the existing executor exclusively.
+        if (MODEL_UNLOAD_IN_PROGRESS or task_id in TASK_REGISTRY or
+                any(_task_retains_custody(row) and not (isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession)
+                    and not row["_originalTrainingOwner"].blocks_recovery) for row in TASK_REGISTRY.values()) or
+                sum(isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession)
+                    for row in TASK_REGISTRY.values()) >= TRAINING_SESSION_LIMIT):
+            raise TrainingSessionError()
+        record = _create_task_record(task_id, "train-model", {"workspaceId": definition["workspaceId"]})
+        binding = {**_training_identity(), "requestId": task_id, "workspaceId": definition["workspaceId"],
+                   "sessionId": secrets.token_hex(32)}
+        def current():
+            with TASK_REGISTRY_LOCK:
+                return (TASK_REGISTRY.get(task_id) is record and record.get("_originalTrainingOwner") is owner and
+                        record.get("_trainingIncarnation") == incarnation == (RUNTIME_ID, WORKER_STARTED_AT))
+        def publish(**updates):
+            with TASK_REGISTRY_LOCK:
+                if not (TASK_REGISTRY.get(task_id) is record and record.get("_originalTrainingOwner") is owner and
+                        incarnation == (RUNTIME_ID, WORKER_STARTED_AT)):
+                    return False
+                record.update(updates); record["updatedAt"] = _now_iso()
+                if record["status"] in {"succeeded", "failed", "cancelled"}:
+                    record["completedAt"] = _now_iso()
+                return True
+        # Capture this executor/method/receiver now, not after awaited preparation.
+        submit_original = TASK_EXECUTOR.submit
+        def submit(session):
+            if session is not owner or not current():
+                raise TrainingSessionError()
+            future = submit_original(owner.run)
+            publish(future=future)
+            return future
+        owner = OriginalTrainingSession(definition, _ORIGINAL_TRAINING_PRODUCER, current, publish, submit, _ORIGINAL_TRAINING_PROFILE)
+        record.update(_originalTrainingOwner=owner, _trainingBinding=binding, _trainingIncarnation=incarnation)
+        TASK_REGISTRY[task_id] = record  # Reserve original record BEFORE native IO.
+    phase = owner.prepare()
+    if phase == "unconfirmed" and owner.known_not_run and owner.settle():
+        phase = "unavailable"
+    return {"binding": binding, "phase": "ready" if phase == "prepared" else phase}
+
+
+def _operate_original_training(task_id, action, body):
+    if type(body) is not dict or set(body) != ({"binding", "input"} if action == "seal" else {"binding"}):
+        raise TrainingSessionError()
+    with TASK_REGISTRY_LOCK:
+        record = TASK_REGISTRY.get(task_id)
+        if record is None or not isinstance(record.get("_originalTrainingOwner"), OriginalTrainingSession):
+            raise TrainingSessionError()
+        owner = record["_originalTrainingOwner"]
+        if (body["binding"] != record["_trainingBinding"] or
+                record["_trainingIncarnation"] != (RUNTIME_ID, WORKER_STARTED_AT)):
+            raise TrainingSessionError()
+    if action == "seal":
+        result = {"phase": owner.seal(body["input"])}
+    elif action == "start":
+        result = owner.start()
+    elif action == "cancel":
+        result = {"cancelled": owner.cancel()}
+    elif action == "settle":
+        settled = owner.settle()
+        with owner.lock:
+            result = {"settled": settled, "retirement": "settled" if settled else "unconfirmed" if owner.close_attempted else "pending"}
+    elif action == "read":
+        with TASK_REGISTRY_LOCK:
+            # The same pointer must still own the original publication.
+            if TASK_REGISTRY.get(task_id) is not record:
+                raise TrainingSessionError()
+            result = {"record": _build_task_status_result(record).model_dump(mode="json", exclude_none=True)}
+    else:
+        raise TrainingSessionError()
+    return {"binding": record["_trainingBinding"], **result}
+
+
+@app.post("/training/original/prepare")
+async def prepare_original_training(request: Request):
+    try:
+        return await run_in_threadpool(_prepare_original_training, await _training_body(request))
+    except Exception:
+        return JSONResponse(status_code=409, content={"error": "original_training_unavailable"})
+
+
+@app.post("/training/original/{request_id}/{action}")
+async def operate_original_training(request_id: str, action: str, request: Request):
+    try:
+        return await run_in_threadpool(_operate_original_training, request_id, action, await _training_body(request))
+    except Exception:
+        return JSONResponse(status_code=409, content={"error": "original_training_unavailable"})
+
+
 @app.get("/health", response_model=PythonRuntimeHealthCheckResult)
 def health() -> PythonRuntimeHealthCheckResult:
     return PythonRuntimeHealthCheckResult(healthy=True, status=PythonRuntimeHealthStatus(runtimeId=RUNTIME_ID, status="ready", version=WORKER_VERSION, pythonVersion=PYTHON_VERSION, workerStartedAt=WORKER_STARTED_AT, lastHeartbeatAt=_now_iso()))
@@ -839,6 +995,8 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
     if platform.system() == "Windows":
         # Protocol support only; no engine/process/language probe at startup.
         supported.append(OCR_TASK_CAPABILITY)
+    if _ORIGINAL_TRAINING_PRODUCER is not None:
+        supported.append(ORIGINAL_TRAINING_CAPABILITY)
     return PythonRuntimeCapabilitiesResult(
         runtimeId=RUNTIME_ID, capabilities=supported,
         totalAcceleratorMemoryBytes=read_local_accelerator_memory_bytes() if decoder_available else None,
@@ -964,6 +1122,8 @@ def read_task_status(request_id: str) -> PythonRuntimeTaskStatusResult:
         record = TASK_REGISTRY.get(request_id)
     if not record:
         return PythonRuntimeTaskStatusResult(requestId=request_id, status="unknown", metadata={"runtimeId": RUNTIME_ID})
+    if isinstance(record.get("_originalTrainingOwner"), OriginalTrainingSession):
+        raise HTTPException(status_code=409, detail="original-training-session-required")
     return _build_task_status_result(record)
 
 
@@ -973,6 +1133,8 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
         record = TASK_REGISTRY.get(request_id)
     if not record:
         return CancelPythonRuntimeTaskResult(requestId=request_id, status="unknown", cancelled=False, message="Task not found.", metadata={"runtimeId": RUNTIME_ID})
+    if isinstance(record.get("_originalTrainingOwner"), OriginalTrainingSession):
+        raise HTTPException(status_code=409, detail="original-training-session-required")
     if isinstance(record.get("_modelSourceOwner"), ModelSourceTaskOwner):
         # An old generic request may arrive after this ID belongs to a source.
         # Only the exact bound source route can touch its queued Future.
@@ -1035,6 +1197,10 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
 
 @app.post("/models/ensure-downloaded", response_model=EnsureModelDownloadResult, response_model_exclude_unset=True)
 def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDownloadResult | JSONResponse:
+    with TASK_REGISTRY_LOCK:
+        if any(isinstance(row.get("_originalTrainingOwner"), OriginalTrainingSession) and
+               row["_originalTrainingOwner"].blocks_recovery for row in TASK_REGISTRY.values()):
+            return JSONResponse(status_code=409, content={"error": "original_training_custody_pending"})
     if request.sourceTransfer is not None:
         return _model_source_error(409)
     started_at = time.monotonic()
@@ -1112,7 +1278,7 @@ def unload_models() -> UnloadModelsResult | JSONResponse:
     global MODEL_UNLOAD_IN_PROGRESS
     from .tasks.local_model_offload import OffloadAdmissionError
     with TASK_REGISTRY_LOCK:
-        active_task_count = sum(_task_retains_custody(task) for task in TASK_REGISTRY.values())
+        active_task_count = sum(_task_execution_active(task) for task in TASK_REGISTRY.values())
         if active_task_count > 0 or MODEL_UNLOAD_IN_PROGRESS:
             return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_unload_blocked", message="Cannot unload generation model while a runtime task or cleanup is active.", details={"activeTaskCount": active_task_count}, retryable=True).model_dump(mode="json")})
         MODEL_UNLOAD_IN_PROGRESS = True

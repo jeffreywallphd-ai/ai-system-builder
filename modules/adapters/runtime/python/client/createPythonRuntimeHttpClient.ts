@@ -10,7 +10,7 @@ import type {
 } from "../../../../contracts/runtime";
 import type { CompletedModelDownload } from "../../../../application/ports/model";
 import {normalizeModelDownloadRevision} from "../../../../contracts/model";
-import {captureModelManifestPayload, captureManifestExpectation, readVerifiedManifestDigest, type RuntimeModelDownloadManifest} from "./modelDownloadManifest";
+import {captureModelManifestPayload, captureManifestExpectation, readVerifiedManifestDigest, capturePassiveModelData, type RuntimeModelDownloadManifest} from "./modelDownloadManifest";
 import { randomUUID } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -32,8 +32,11 @@ import {MODEL_SOURCE_IDENTITY_CAPABILITY, captureModelSourceProbeInput, captureM
   readModelSourceIdentityEnvelope, type ModelSourceIdentityProbe, type ModelSourceIdentityProbeInput} from "./modelSourceIdentity";
 import {types} from "node:util";
 import {MODEL_SOURCE_SESSION_CAPABILITY, createCapturedModelSourceTaskSession, type ModelSourceTaskSession} from "./modelSourceTaskSession";
+import {ORIGINAL_TRAINING_CAPABILITY, captureTrainingProfile, type OriginalTrainingChannel,
+  type OriginalTrainingProfile} from "./approvedTrainingTaskSession";
 
 export interface PythonRuntimeHttpClient {
+  captureOriginalTrainingChannel(profile: OriginalTrainingProfile): Promise<OriginalTrainingChannel>;
   /** Private read-only metadata session; requires an already captured owned launch. */
   captureModelSourceIdentityProbe(): Promise<ModelSourceIdentityProbe>;
   /** Private captured receiver transport; generic JSON Model requests cannot invoke it. */
@@ -82,6 +85,12 @@ export interface CreatePythonRuntimeHttpClientOptions {
   modelDownloadTimeoutMs?: number;
   modelDownloadPollIntervalMs?: number;
   environment?: NodeJS.ProcessEnv;
+}
+
+function captureManifestPayloadForTraining(raw: unknown): string {
+  const body = JSON.stringify(capturePassiveModelData(raw));
+  if (Buffer.byteLength(body, "utf8") > 128 * 1024) throw new Error("Original training request is too large.");
+  return body;
 }
 
 async function parseJsonResponseSafe(
@@ -352,6 +361,7 @@ export function createPythonRuntimeHttpClient(
     diagnosticEndpoint: string,
     init: RequestInit,
     requiredOwnership?: () => void,
+    beforeDispatch?: () => void,
   ): Promise<{ response: Response; payload: unknown; assertOwnedProcess: () => void }> => {
     const owned = captureOwnership?.() ?? (() => {});
     const assertOwnedProcess = () => {owned(); requiredOwnership?.();};
@@ -369,6 +379,9 @@ export function createPythonRuntimeHttpClient(
       transportRequestTimeoutMs,
     );
     try {
+      // The start fence runs after token/header preparation, immediately before
+      // physical dispatch. It is NOT re-applied to discard an accepted reply.
+      beforeDispatch?.();
       const response = await fetcher(`${baseUrl}${endpoint}`, {
         ...init,
         headers: {
@@ -412,6 +425,35 @@ export function createPythonRuntimeHttpClient(
   };
 
   return {
+    async captureOriginalTrainingChannel(rawProfile) {
+      const receiver = this, originalHealth = this.getHealthStatus, originalCapabilities = this.getCapabilities;
+      const profile = captureTrainingProfile(rawProfile);
+      if (!captureOwnership) throw new Error("Original training process ownership is unavailable.");
+      const original = captureOwnership();
+      if (typeof original !== "function") throw new Error("Original training process ownership is unavailable.");
+      const current = () => {
+        const result: unknown = original();
+        if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+        if (result !== undefined) throw new Error("Original training process ownership is unavailable.");
+      };
+      current(); const health = await originalHealth.call(receiver); current();
+      if (!health.healthy || health.status.status !== "ready") throw new Error("Original training runtime is unavailable.");
+      const runtime = captureModelSourceRuntime({runtimeId: health.status.runtimeId, workerStartedAt: health.status.workerStartedAt});
+      const capabilities = await originalCapabilities.call(receiver); current();
+      if (capabilities.runtimeId !== runtime.runtimeId || !capabilities.capabilities.includes(ORIGINAL_TRAINING_CAPABILITY))
+        throw new Error("Original training runtime is unavailable.");
+      const identity = Object.freeze({...runtime, ...profile});
+      return Object.freeze({identity, assertCurrent: current, async send(endpoint: string, body: unknown, dispatch?: () => void) {
+        if (!/^\/training\/original\/(?:prepare|[a-f0-9-]{36}\/(?:seal|start|read|cancel|settle))$/.test(endpoint))
+          throw new Error("Original training operation is unavailable.");
+        const captured = captureManifestPayloadForTraining(body);
+        current(); const result = await authenticatedFetch(endpoint, "/training/original/:operation",
+          {method: "POST", headers: {"content-type": "application/json"}, body: captured}, current, dispatch);
+        current(); result.assertOwnedProcess();
+        if (!result.response.ok) throw new Error("Original training operation could not be confirmed.");
+        return result.payload;
+      }});
+    },
     async captureModelSourceTaskSession() {
       const identityProbe = await this.captureModelSourceIdentityProbe(), current = identityProbe.assertCurrent;
       current(); const capabilities = await this.getCapabilities(); current();

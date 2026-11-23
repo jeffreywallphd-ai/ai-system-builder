@@ -1169,3 +1169,20 @@ cancel an accepted task. New-start authority stays in the separate synchronous
 admission fence and issued callback. The returned publication wrapper rechecks
 the original caller policy before the existing prepared publication fence;
 historical receipt disclosure does not renew business-write permission.
+
+The private training application port has an original installed-runtime session
+mechanism within the existing foundation, authenticated client and worker. It
+reserves recovery custody synchronously before startup or HTTP and retains it
+through unknown replies and worker exit. One original registry row, existing
+executor Future and fixed local-only loader are used. A trusted native producer
+and explicit named measured profile are mandatory; default composition supplies
+neither, advertises no private training capability and activates no public Root.
+
+Start authority is checked after waits and immediately before Node dispatch.
+This check does not become a serialized native/resource permission. The eventual
+native producer must verify its own final handoff and full source/input/output,
+exclusive resource/accounting and permanent IO-retirement proof. Generic task
+lookup, status, PID absence or process restart cannot supply it. Settlement is
+permanent, unknown effects are not repeated, and retained output accounting stays
+with separate reviewed Save/discard ownership. Inert protocol tests establish
+software behavior only; native production and real host qualification remain.

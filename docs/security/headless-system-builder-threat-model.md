@@ -2098,3 +2098,22 @@ in the separate admission/issue callbacks. Wrap the returned publication method
 with the captured caller policy and existing prepared approval fence. Current
 query authority permits historical references after business-write withdrawal;
 it does not permit another task start or private task action.
+
+The private training runtime seam protects original actor/task/worker identity,
+source bytes, exclusive resource custody and retained candidate accounting.
+Threats include generic-ID adoption, startup/recovery replacing uncertain IO,
+enqueue-then-throw/lost replies, callback replacement and cancellation reported as
+retirement. The foundation reserves before any await; private bindings include
+original worker incarnation/profile/session; generic routes refuse private IDs.
+Capture original loader/method receivers before callbacks. Preserve the original
+record/Future, count all effect flights, never repeat unknown effects, and serve
+only cached metadata after permanent retirement. Requests and replies are bounded;
+errors do not echo input paths or prompts.
+
+No caller flag or wire profile establishes native safety. The native producer is
+absent by default, so private capability and preparation are unavailable. Concrete
+source/input/output protection, resource/accounting reservation, final native
+dispatch and IO retirement still require a qualified producer and measured Root
+configuration. Inert denial/race/protocol checks do not grant actual execution,
+Save, external publication or host/parent qualification. Model-quality tests stay
+outside this increment's workflow evidence.

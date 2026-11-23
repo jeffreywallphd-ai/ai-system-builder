@@ -3149,3 +3149,15 @@ unknown, missing/nonregular or explicit generic requests cannot borrow the new
 coverage. The routing harness executes both fixed commands, checks real assertion
 counts/family titles and rejects every failed, skipped, cancelled or todo case.
 These are software component receipts, not public route, physical or parent passes.
+
+Private training runtime changes use `headless-training-runtime-unit`, its strict
+`headless-training-runtime-types` companion and the inert Python
+`headless-training-runtime-worker-unit`. The Node profile executes the actual
+new session fixture plus existing foundation/download-session compatibility.
+The Python profile executes the actual owner and authenticated in-process HTTP
+fixture with fake native resources. No model, native producer or app is started.
+The exact new fixtures and required sources must be regular files; incomplete
+profiles retain generic impact selection. Source-only shared runtime changes
+cannot silently borrow this scoped profile. The routing harness checks command
+selection, missing-fixture fallback and executes the registered Node commands.
+These checks do not close real training, output, native or host qualification.

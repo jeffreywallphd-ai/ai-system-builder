@@ -2429,3 +2429,17 @@ switched after that Promise returns. The distinct start/issue fences still deny
 new admission after caller loss. Historical receipt publication rechecks current
 caller policy and the original prepared fence without acquiring a new business
 write grant or resolving another owner.
+
+Private approved training now has a captured original installed-runtime session
+seam. The foundation reserves custody before its first await, uses only installed
+startup and captures one owned authenticated worker channel. No profile means no
+startup; the worker defaults to no trusted native producer. A configured profile
+is correlation, not a replacement for native source/resource/retirement proof.
+
+The fixed private protocol uses one original registry record and existing executor
+Future. Generic task read/cancel/start cannot adopt private IDs. Unknown submit or
+effect replies retain the same owner without another issue or replacement worker.
+Permanent retirement includes preparation, sealing, worker execution and client
+flights; later reads use cached metadata. Execution availability and retained
+candidate-byte accounting are separate. This mechanism does not yet supply the
+native producer, measured Root profile, public activation or real-host evidence.

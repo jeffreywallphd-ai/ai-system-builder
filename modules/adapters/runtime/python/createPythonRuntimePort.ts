@@ -4,6 +4,8 @@ import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
+import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile} from "./client/approvedTrainingTaskSession";
+import type {ApprovedLocalModelTrainingPort} from "../../../application/ports/model";
 import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
 import type {GeneratedModelStoragePort} from "../../../application/ports/model";
 import type {CreatePythonRuntimeTaskRegistryAdapterOptions} from "./createPythonRuntimeTaskRegistryAdapter";
@@ -39,6 +41,8 @@ export interface CreatePythonRuntimePortOptions {
 }
 
 export interface PythonRuntimeAdapterFoundation {
+  /** Private trusted composition; no profile means no availability or startup. */
+  createApprovedTrainingPort(profile?: OriginalTrainingProfile): ApprovedLocalModelTrainingPort;
   runtimePort: PythonRuntimePort;
   supervisor: PythonRuntimeSupervisor;
   /** Trusted host composition, once only. It can add a guard, never replace it. */
@@ -108,6 +112,10 @@ export function createPythonRuntimeAdapterFoundation(
     string,
     { taskType: string; deadline: number; sourceReceiver?: ModelSourceRecipient }
   >();
+  // Original reservations survive worker exit, failed startup, and lost replies.
+  // Their release is owned exclusively by permanent original session retirement.
+  const trainingReservations = new Map<string, {settled: boolean}>();
+  const trainingCustodyLive = () => [...trainingReservations.values()].some(value => !value.settled);
   // A disconnected POST can already have started non-cancellable Dataset work.
   // Retain only identity/lifecycle facts, never request payloads, until proven done.
   const datasetAdmissions = new Map<string, {
@@ -240,7 +248,7 @@ export function createPythonRuntimeAdapterFoundation(
     targetRequestId: string | undefined,
     targetStatus: "cancelled" | "failed",
   ) => {
-    if (datasetAdmissions.size || [...trackedTasks.values()].some(value => value.sourceReceiver)) return false;
+    if (trainingCustodyLive() || datasetAdmissions.size || [...trackedTasks.values()].some(value => value.sourceReceiver)) return false;
     if (recoveryInFlight) return recoveryInFlight;
     if (recoveryUncertain) throw new Error("Python runtime recovery has not been confirmed.");
     const recoveringTasks = [...trackedTasks];
@@ -294,7 +302,7 @@ export function createPythonRuntimeAdapterFoundation(
     finally { if (recoveryInFlight === operation) recoveryInFlight = undefined; }
   };
   const assertAdmissionAvailable = () => {
-    if (recoveryInFlight || recoveryUncertain) {
+    if (trainingCustodyLive() || recoveryInFlight || recoveryUncertain) {
       throw new Error("Python runtime recovery is not complete. Retry after the runtime is ready.");
     }
   };
@@ -529,6 +537,32 @@ export function createPythonRuntimeAdapterFoundation(
     runtimePort,
     supervisor,
     bindHostAdmission,
+    createApprovedTrainingPort(rawProfile) {
+      if (rawProfile === undefined) return Object.freeze({createSession: () => undefined});
+      const profile = captureTrainingProfile(rawProfile);
+      const startInstalled = supervisor.startWithoutInstalling?.bind(supervisor);
+      const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
+      return createOriginalTrainingPort({
+        reserve(requestId) {
+          if (!hostAdmission || trainingCustodyLive() || trainingReservations.has(requestId) || trainingReservations.size >= 256 ||
+              trackedTasks.size || datasetAdmissions.size || installedContextAdmissions.size || recoveryInFlight || recoveryUncertain)
+            return undefined;
+          assertHostAccepting();
+          const original = {settled: false}; trainingReservations.set(requestId, original);
+          return () => {
+            if (trainingReservations.get(requestId) !== original) throw new Error("Original training retirement is unavailable.");
+            original.settled = true;
+          };
+        },
+        async captureChannel() {
+          assertHostAccepting();
+          if (!startInstalled) throw new Error("Installed-only training startup is unavailable.");
+          await startInstalled(); assertHostAccepting();
+          const original = await captureOriginal(profile); assertHostAccepting(); original.assertCurrent();
+          return original;
+        },
+      });
+    },
     createModelSourceDownloadConfiguration(createStorage) {
       if (typeof createStorage !== "function") throw new TypeError("Model source storage composition is unavailable.");
       const storage = createStorage(modelSourceCacheRoot);

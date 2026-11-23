@@ -186,6 +186,60 @@ TRAINING_LOCAL_MODEL_CODE = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-runtime-unit": {
+        "automatic_sources": ("modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+            "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
+            "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+            "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+            "modules/adapters/runtime/python/README.md",
+        ),
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
+            "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts"),
+    },
+    "headless-training-runtime-types": {
+        "companion_to": "headless-training-runtime-unit",
+        "sources": (
+            "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+            "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+        ),
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+            "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts"),
+    },
+    "headless-training-runtime-worker-unit": {
+        "interpreter": "python",
+        "automatic_sources": ("modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/app.py",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/app.py",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/README.md",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py"),
+    },
     "headless-training-local-files-unit": {
         "automatic_sources": tuple(path for path in TRAINING_LOCAL_MODEL_CODE if not path.endswith("/index.ts")) + (
             "modules/application/use-cases/model/tests/headless-model-training-local-files.unit.test.ts",
