@@ -1,5 +1,15 @@
 # Desktop host composition
 
+The private `readTrainingCompletion` entry reuses the original task book's
+settled-cache review. Use the same captured read lifetime and fresh original
+grant checks as progress reads, then recheck policy before returning data.
+Keep exact actor/client/host/workspace/task lineage. A missing completion method
+has no progress/runtime lookup fallback. Reads resolve no new factories, files,
+models or providers and grant no Save authority. Incomplete configuration leaves
+this entry absent. Its historical private DTO adds no public selector, response
+codec or Root activation; native/output/Save and actual-host qualification remain
+pending. Progress and Stop keep their existing return types and permissions.
+
 Private saved-training proposal and approval components have explicit, default-off
 configuration. They prepare recorded Model and authorized Dataset metadata outside
 the proposal transaction, then rebuild the same metadata from its actual owning

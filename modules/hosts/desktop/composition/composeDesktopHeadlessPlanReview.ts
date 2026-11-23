@@ -2,7 +2,7 @@ import {prepareHeadlessModelTrainingReviews, type GetHeadlessModelTrainingInputs
 import {captureHeadlessTrainingMethod, copyHeadlessTrainingPlanInput, composeOwnedHeadlessTrainingMetadata,
   verifyHeadlessTrainingReviewInputs, verifyStoredHeadlessTrainingReviewInputs, compileHeadlessTrainingStepMetadata,
   composeOwnedHeadlessTrainingBusinessPolicy, authorizeOwnedHeadlessTrainingWorkspace} from "../../shared/composition/headlessTrainingPlanInputs";
-import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions} from "../../shared/composition/headlessModelTrainingTasks";
+import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions, type OriginalTrainingCompletionQueryResult} from "../../shared/composition/headlessModelTrainingTasks";
 import {readStructuredHeadlessTrainingPlanPermission, type BindModelTrainingReviews} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {compileHeadlessContextQueryInputs, runPreparedHeadlessContextQuery, composeOwnedHeadlessContextQueryPolicy,
   type HeadlessContextQueryOwner} from "../../shared/composition/headlessContextQueryExecution";
@@ -54,6 +54,7 @@ type CancelModelDownload = (request: unknown, initial: DesktopHeadlessAuthoringW
   currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessModelTaskCancellationResult>;
 type TrainingTaskControl = (request: unknown, initial: DesktopHeadlessAuthoringWireGrant,
   currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessTrainingTaskResult>;
+type TrainingCompletionControl = (...args: Parameters<TrainingTaskControl>) => Promise<OriginalTrainingCompletionQueryResult>;
 
 export function composeDesktopHeadlessPlanReview(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -85,7 +86,8 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly peekContextResults?: () => HeadlessContextResultOwner | undefined;
   readonly audit?: DesktopHeadlessAudit;
 }): LoopbackPlanReview & {readonly cancelModelDownload?: CancelModelDownload;
-  readonly readTrainingTask?: TrainingTaskControl; readonly cancelTrainingTask?: TrainingTaskControl} {
+  readonly readTrainingTask?: TrainingTaskControl; readonly cancelTrainingTask?: TrainingTaskControl;
+  readonly readTrainingCompletion?: TrainingCompletionControl} {
   const { hostIncarnationId, identity: configuredIdentity, platform, rootDirectory, workspaces, authorization, isOpen: configuredIsOpen, systems, getIngestionTasks, getModelSourcePreview, getModelDownloadStart, peekModelDownloadTasks } = options;
   const getModelTrainingInputs = captureHeadlessTrainingMethod<GetHeadlessModelTrainingInputs>(options, "getModelTrainingInputs");
   const identity = getModelTrainingInputs ? Object.freeze(copyHeadlessTrainingPlanInput(configuredIdentity)) : configuredIdentity;
@@ -385,17 +387,21 @@ export function composeDesktopHeadlessPlanReview(options: {
     } catch {return current() ? unavailable : forbidden;}
   } : undefined;
 
-  const controlTraining = async (incoming: unknown, initial: DesktopHeadlessAuthoringWireGrant,
-    currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult> => {
+  function controlTraining(incoming: unknown, initial: DesktopHeadlessAuthoringWireGrant,
+    currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
+  function controlTraining(incoming: unknown, initial: DesktopHeadlessAuthoringWireGrant,
+    currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
+  async function controlTraining(incoming: unknown, initial: DesktopHeadlessAuthoringWireGrant,
+    currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>, action: "read" | "cancel" | "review"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult> {
     let effectPossible = false;
     try {
       if (!trainingTasks) return forbidden;
       const parsed = readHeadlessTrainingTaskRequest(copyHeadlessTrainingPlanInput(incoming), hostIncarnationId);
       if (!parsed.ok) return parsed;
-      if (parsed.request.operation !== (action === "read" ? "models.training-task" : "models.cancel-training")) return forbidden;
+      if (parsed.request.operation !== (action === "cancel" ? "models.cancel-training" : "models.training-task")) return forbidden;
       const {workspaceId} = parsed.request.input, {registeredClientId} = initial;
       const originalCurrent = captureHeadlessTrainingMethod<() => boolean>(initial, "isCurrent");
-      const lifetimeName = action === "read" ? "isReadCurrent" : "isOperationCurrent";
+      const lifetimeName = action === "cancel" ? "isOperationCurrent" : "isReadCurrent";
       const lifetime = captureHeadlessTrainingMethod<() => boolean>(initial, lifetimeName);
       const freshGrants = trainingGrantFence(registeredClientId, workspaceId, lifetimeName);
       const current = () => isHeadlessReadCurrent(isOpen) && isHeadlessReadCurrent(lifetime) &&
@@ -413,17 +419,18 @@ export function composeDesktopHeadlessPlanReview(options: {
         authorize: async (owner: StructuredDocumentStore) => current() && await authorizeOwnedHeadlessTrainingWorkspace(owner, rootDirectory,
           createTenantPlacementConfig({mode: "dedicated", organizationId: scope.organizationId}), scope, current) && current()};
       effectPossible = action === "cancel";
-      const result = await (action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
+      const result = await (action === "review" ? trainingTasks.reviewCompletion(query) : action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
       if (!await canUse()) return effectPossible ? unconfirmed : forbidden;
       return result;
     } catch {return effectPossible ? unconfirmed : unavailable;}
-  };
+  }
 
   return {
     hostIncarnationId,
     cancelModelDownload,
     readTrainingTask: trainingTasks ? (request, grant, fresh) => controlTraining(request, grant, fresh, "read") : undefined,
     cancelTrainingTask: trainingTasks ? (request, grant, fresh) => controlTraining(request, grant, fresh, "cancel") : undefined,
+    readTrainingCompletion: trainingTasks ? (request, grant, fresh) => controlTraining(request, grant, fresh, "review") : undefined,
     ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
     ...(getIngestionTasks ? { allowProviderFileSave: true as const } : {}),
     ...(options.getDatasetStart ? {allowLocalDatasetPreparation: true as const} : {}),

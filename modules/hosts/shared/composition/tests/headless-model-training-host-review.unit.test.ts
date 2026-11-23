@@ -25,7 +25,7 @@ import {ReadDatasetVersionUseCase} from "../../../../application/use-cases/datas
 import {ReadHeadlessModelTrainingModelUseCase} from "../../../../application/use-cases/model/headless-model-training-model.use-case";
 import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/use-cases/model/headless-model-training-dataset.use-case";
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
-import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl, ApprovedLocalTrainingCompletionReview} from "../../../../application/ports/model";
 import type {ModelTrainingResult} from "../../../../contracts/model";
 import {composeHeadlessModelMetadata} from "../headlessModelMetadata";
 import type {OriginalTrainingRunOptions} from "../headlessModelTrainingTasks";
@@ -180,6 +180,7 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
       platform: stable ? managedPlatform : platform, rootDirectory: directory, contexts, placement, allowModelTrainingReview: enabled});
   }
   const execution = {starts: 0, reads: 0, cancels: 0, resolutions: 0, readerFactories: 0,
+    completionEnabled: false, completionReads: 0, onCompletion: undefined as (() => Promise<void>) | undefined,
     currentState: "running" as ModelTrainingResult["status"], onStart: undefined as (() => Promise<void>) | undefined,
     onRead: undefined as (() => Promise<void>) | undefined, onCancel: undefined as (() => Promise<void>) | undefined,
     business: undefined as ApprovedLocalTrainingControl | undefined, admission: undefined as ApprovedLocalTrainingAdmission | undefined};
@@ -205,10 +206,26 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
       await execution.onStart?.();
       const summary = (): ModelTrainingResult => ({runId: admission.requestId, status: execution.currentState,
         progress: {epoch: 1, totalEpochs: 2, batch: 2, totalBatches: 4}});
+      // Inert original capability: this tests host routing/policy, not runtime
+      // settlement or physical files, which the App-owner fixtures test separately.
+      const completion: ApprovedLocalTrainingCompletionReview = {kind: "ready", requestId: admission.requestId, workspaceId,
+        provenance: {modelRecordId: _request.baseModel.modelRecordId!, modelUpdatedAt: admission.modelUpdatedAt,
+          datasetId: admission.datasetId, versionId: admission.versionId, versionDigest: admission.versionDigest,
+          recipeDigest: admission.recipe.digest, proposalDigest: admission.proposalDigest, trainingTask: _request.trainingTask, method: _request.method,
+          trainingInputCount: admission.inputs.filter(row => row.role === "train").length,
+          validationInputCount: admission.inputs.filter(row => row.role === "validation").length,
+          inputBytes: admission.inputs.reduce((sum, row) => sum + row.content.byteLength, 0), recipeBytes: admission.recipe.content.byteLength},
+        candidate: {requestedName: _request.output.outputModelName, artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: null},
+        comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked", runtimeReadiness: "not-checked",
+          hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"};
       return {kind: "accepted", value: {runId: admission.requestId, status: "running"},
         task: {requestId: admission.requestId, workspaceId,
           async read(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.reads++; await execution.onRead?.(); return summary();},
-          async cancel(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.cancels++; await execution.onCancel?.(); execution.currentState = "cancelled"; return summary();}}};
+          async cancel(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.cancels++; await execution.onCancel?.(); execution.currentState = "cancelled"; return summary();},
+          ...(execution.completionEnabled ? {async reviewCompletion(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCompletionReview> {
+            assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.completionReads++;
+            await execution.onCompletion?.(); return execution.currentState === "succeeded" ? clone(completion) : {kind: "not-ready"};
+          }} : {})}};
     };
   };
   const executionOptions = {systems: {composeHeadlessAuthoring() {assert.fail("Training must not dispatch ordinary authoring.");}},
@@ -544,7 +561,57 @@ async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite"
     if (desktop) return (action === "read" ? desktop.owner.readTrainingTask! : desktop.owner.cancelTrainingTask!)(query(action, selection), f.grant, async () => f.grant);
     return (action === "read" ? managed!.owner.readTrainingTask! : managed!.owner.cancelTrainingTask!)(query(action, selection), f.registration, current);
   };
-  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control};
+  const completion = (selection?: Parameters<typeof query>[1]) => desktop
+    ? desktop.owner.readTrainingCompletion!(query("read", selection), f.grant, async () => f.grant)
+    : managed!.owner.readTrainingCompletion!(query("read", selection), f.registration, current);
+  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion};
+}
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: private host completion uses original history and read policy without new dependencies`, async t => {
+    const f = await executableTrainingHost(t, storage, host); f.execution.completionEnabled = true;
+    assert.ok((await f.run()).result.ok); const before = {...f.execution}, retrieved = [...f.retrieved];
+    assert.deepEqual(await f.completion(), {ok: true, value: {kind: "not-ready"}});
+    f.execution.currentState = "succeeded"; const result = await f.completion();
+    assert.ok(result.ok, JSON.stringify(result)); assert.equal(result.value.kind, "ready");
+    if (result.value.kind !== "ready") throw Error("Missing completion.");
+    assert.equal(result.value.requestId, f.execution.admission!.requestId); assert.equal(result.value.workspaceId, f.scope.workspaceId);
+    assert.equal(result.value.provenance.modelRecordId, f.model.modelRecordId);
+    assert.equal(result.value.provenance.versionDigest, f.version.versionDigest);
+    assert.equal(result.value.verification.outputQuality, "not-evaluated");
+    assert.equal(result.value.verification.retainedFiles, "not-checked");
+    assert.equal(result.value.registration, "requires-separate-approval");
+    assert.ok((await f.completion({kind: "task", taskId: f.execution.admission!.requestId})).ok);
+    for (const key of ["starts", "reads", "cancels", "resolutions", "readerFactories"] as const) assert.equal(f.execution[key], before[key], key);
+    assert.deepEqual(f.retrieved, retrieved); assert.doesNotMatch(JSON.stringify(result), /localPath|outputDirectory|logs|Synthetic answer/);
+    assert.equal((await f.completion({kind: "task", taskId: randomUUID()})).ok, false);
+    const count = f.execution.completionReads;
+    const baseQuery = f.query("read");
+    const invoke = (request: unknown) => f.desktopHost
+      ? f.desktopHost.owner.readTrainingCompletion!(request, f.grant, async () => f.grant)
+      : f.managedHost!.owner.readTrainingCompletion!(request, f.registration, () => f.state.current);
+    assert.equal((await invoke({...baseQuery, input: {...baseQuery.input, hostIncarnationId: randomUUID()}})).ok, false);
+    assert.equal((await invoke({...baseQuery, input: {...baseQuery.input, workspaceId: createWorkspaceId("workspace.other")}})).ok, false);
+    const otherClient = randomUUID();
+    const foreign = f.desktopHost
+      ? await f.desktopHost.owner.readTrainingCompletion!(baseQuery, {...f.grant, registeredClientId: otherClient},
+          async () => ({...f.grant, registeredClientId: otherClient}))
+      : await f.managedHost!.owner.readTrainingCompletion!(baseQuery, {...f.registration, registeredClientId: otherClient}, () => f.state.current);
+    assert.equal(foreign.ok, false); assert.equal(f.execution.completionReads, count);
+    await inspectServiceScopes(["model:read"], async () => {assert.equal((await f.completion()).ok, false);});
+    assert.equal(f.execution.completionReads, count);
+  });
+
+  test(`${storage}/${host}: private host completion has no fallback and denies late read-lifetime loss`, async t => {
+    const legacy = await executableTrainingHost(t, storage, host); assert.ok((await legacy.run()).result.ok);
+    const before = {...legacy.execution};
+    assert.deepEqual(await legacy.completion(), {ok: false, code: "headless.unavailable"});
+    assert.equal(legacy.execution.reads, before.reads); assert.equal(legacy.execution.resolutions, before.resolutions);
+    const f = await executableTrainingHost(t, storage, host); f.execution.completionEnabled = true;
+    assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+    f.execution.onCompletion = async () => {if (host === "Desktop") f.state.readCurrent = false; else f.state.hostOpen = false;};
+    assert.equal((await f.completion()).ok, false); assert.equal(f.execution.reads, 0); assert.equal(f.execution.starts, 1);
+  });
 }
 
 for (const storage of ["Core", "SQLite"] as const) {
@@ -662,6 +729,8 @@ for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop"
     const f = await executableTrainingHost(t, storage, host);
     for (const missing of ["getModelTrainingInputs", "getModelTrainingStart", "getModelTrainingReaders"] as const) {
       const options = {...f.executionOptions, [missing]: undefined};
+      assert.equal(host === "Desktop" ? f.desktop(true, options).owner.readTrainingCompletion
+        : f.managed(true, true, options).owner.readTrainingCompletion, undefined);
       const result = host === "Desktop" ? await f.desktop(true, options).owner.runStep!(f.step, f.grant, async () => f.grant)
         : await f.managed(true, true, options).owner.runStep!(f.step, f.registration, () => f.state.current);
       assert.equal(result.result.ok, false, missing);
@@ -671,6 +740,7 @@ for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop"
       : await f.managed(true, true, options).owner.runStep!(f.step, f.registration, () => f.state.current);
     assert.equal(unavailable.result.ok, false); assert.equal(f.execution.starts, 0); assert.deepEqual(f.retrieved, []);
     assert.equal(f.desktop().owner.readTrainingTask, undefined); assert.equal(f.managed().owner.readTrainingTask, undefined);
+    assert.equal(f.desktop().owner.readTrainingCompletion, undefined); assert.equal(f.managed().owner.readTrainingCompletion, undefined);
   });
 
   test(`${storage}/${host}: changed saved metadata or current permission denies training before task or byte IO`, async t => {

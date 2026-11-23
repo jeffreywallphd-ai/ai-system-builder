@@ -2326,3 +2326,19 @@ Controlled semantic tests grant no Native/model/quality/public/parent authority.
   proof or a quality pass. Hardware is explicitly unrecorded. Complete producer,
   protected output/accounting, separate Save, public integration, real hosts and
   parent qualification remain pending. Earlier failed evidence stays preserved.
+### Private host access to cached training completion
+
+- **Boundary and assets:** original cached training history moves from the
+  original task book through the existing private Desktop/Managed composition.
+  Public transports, runtime/files/providers and registry mutation stay absent.
+- **Authority and controls:** the same read policy and original accepted task,
+  actor/client/tenant/workspace/host lineage as progress. Desktop uses captured
+  `isReadCurrent` and fresh-grant fences; Managed captures original registration
+  and host/document lifetime. Recheck current authority after the book returns.
+- **Denials and evidence:** Core/SQLite fixtures cover ready/not-ready metadata,
+  missing original capability without fallback, lost read lifetime, wrong
+  task/client/workspace/host, missing ModelRead and default-off configuration.
+  Existing progress/Stop checks remain part of the relevant feature groups.
+- **Limits:** internal historical DTO only. No public codec/Root, Native producer,
+  protected output/accounting, Save or real-host/quality proof is granted. There
+  are no model calls, scoring runs or changed resource/retention policies.

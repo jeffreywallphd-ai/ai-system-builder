@@ -1,5 +1,15 @@
 # Server host composition
 
+The private `readTrainingCompletion` entry calls only the original task book's
+cached review. Capture the original registration, host/document lifetime and
+current read policy exactly as for progress, and recheck them before disclosure.
+Original actor/client/tenant/workspace/task lineage remains mandatory. Missing
+completion capability has no runtime or factory fallback. Incomplete private
+configuration leaves the entry absent. No public selector/codec, Root, model or
+provider call, file setup or Save authority is added. Core/SQLite fixtures qualify
+this private policy composition only; Native/output/Save and real-host evidence
+remain pending. Existing progress and Stop behavior stays compatible.
+
 Private saved-training proposal and browser-approval components require explicit
 default-off configuration and stable owned reads. Capture the original context,
 actor, request and callback receivers before waits. Prepare recorded Model and

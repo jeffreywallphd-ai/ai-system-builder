@@ -1326,3 +1326,19 @@ Current file/native/resource proof, hardware history, output retention/accountin
 Save, public codecs/Root activation and actual-host qualification remain pending.
 This implements the accepted private read boundary and chooses no new provider,
 execution actor, budget, retention/deletion policy or approval family.
+### Cached completion in private Desktop and Managed factories
+
+Both existing private plan-review factories can route `readTrainingCompletion`
+to the original task book. Reuse the current training-task selection internally;
+this does not create a public operation or response codec. Desktop uses its
+captured read lifetime and retained fresh-grant fence. Managed uses its captured
+registration and independent host/document lifetime. Both retain current exact
+actor/client/tenant/workspace authority and accepted-task lineage, and recheck
+policy before disclosure. An unknown or absent capability has no runtime/read
+fallback and cannot resolve new factories. Default incomplete configuration
+remains off. Progress and Stop preserve their old types and permissions.
+
+Controlled Core/SQLite host fixtures establish this composition. They do not
+qualify actual execution, native file/resource ownership, protected output,
+separate Save, public activation, real hosts or model quality. No new architecture,
+approval family, supplier, resource budget or retention policy is selected.

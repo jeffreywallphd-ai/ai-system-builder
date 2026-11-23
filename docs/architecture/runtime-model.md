@@ -2569,3 +2569,13 @@ running a model. Mark hardware as unrecorded and current file/resource/readiness
 checks as unchecked. Complete native production, retained output/accounting,
 separately approved Save, public integration and actual-host qualification remain
 separate obligations. Cached metadata grants none of those authorities.
+Private Desktop and Managed plan-review factories expose the cached completion
+read through their existing original task book. It uses the internal training-task
+selector with read policy, not the starting-operation lifetime. Desktop retains
+the original read-grant fence; Managed retains original registration plus its
+independent host/document lifetime. Both recheck current policy before disclosure.
+No original method means unavailable, never a generic progress/runtime lookup.
+The read resolves no dependency factory, file, model or provider. Missing private
+configuration leaves it absent. This private composition adds no public response
+codec/Root or Save capability. Core/SQLite fixtures check policy/lineage and old
+progress/Stop compatibility; actual Native/output/host qualification stays separate.
