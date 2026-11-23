@@ -1,5 +1,14 @@
 # Implementation roadmap workflow
 
+Publication retains the complete JSON state under the existing one-MiB reader
+limit. Small records use indentation; larger records use canonical compact JSON
+with LF/CRLF headroom. The actual complete recovery journal must also fit before
+it is written. Apply and its dry-run use the same admission. Render and recovery
+check the state they actually publish, without inventing another journal.
+Refusal preserves existing managed files and any original recovery journal.
+Formatting supplies no approval, evidence or completion authority. Never remove
+history or expand the read limit to conceal a publication failure.
+
 When publishing user descriptions, compare the complete technical meaning first,
 then bind the reviewed copy to current source hashes and qualification types.
 Cover inspectable historical criteria as history; preserve their results and

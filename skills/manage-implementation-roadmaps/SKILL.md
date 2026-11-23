@@ -375,6 +375,14 @@ For every approved increment, repeat this loop:
 
 ## Use the state engine
 
+State and recovery journals must fit the same one-MiB read limit. The engine keeps
+small state files indented and uses complete compact JSON for larger records,
+including LF/CRLF byte accounting. Parsed history and approval fingerprints stay
+unchanged. Dry-run checks the publication it would perform; an oversized state or
+whole recovery envelope is refused before persistent publication. Do not raise
+the cap, trim history or manually adopt an oversized record to bypass refusal.
+Preserve the failed output and use a separately reviewed bounded recovery.
+
 The standard-library Python engine does not execute commands. It validates workflow
 events and renders deterministic repository artifacts.
 

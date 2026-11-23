@@ -110,6 +110,31 @@ def read_json(path: Path, label: str) -> dict[str, Any]:
         raise RoadmapError(f"{label} must be valid UTF-8 JSON: {error}") from error
 
 
+def state_publication_content(state: dict[str, Any]) -> str:
+    """Keep complete state readable, including a Windows CRLF checkout.
+
+    Formatting is not state authority: both representations retain the same
+    object, approval fingerprints and history. Never raise the reader limit or
+    discard records to make publication fit.
+    """
+    pretty = json.dumps(state, indent=2, ensure_ascii=True, sort_keys=True) + "\n"
+    if len(pretty.encode("utf-8")) + pretty.count("\n") <= MAX_JSON_BYTES:
+        return pretty
+    compact = canonical_json(state) + "\n"
+    if len(compact.encode("utf-8")) + compact.count("\n") <= MAX_JSON_BYTES:
+        return compact
+    raise RoadmapError("State publication exceeds the bounded JSON read limit; no records were discarded.")
+
+
+def publication_journal_content(before: str, successor: dict[str, Any], previous_report: str | None) -> str:
+    """Admit both managed state and the entire actual recovery envelope."""
+    state_publication_content(successor)
+    content = canonical_json({"before": before, "successor": successor, "previousReport": previous_report})
+    if len(content.encode("utf-8")) > MAX_JSON_BYTES:
+        raise RoadmapError("Publication journal exceeds the bounded JSON read limit; no journal was published.")
+    return content
+
+
 def safe_relative_path(repo: Path, value: Any, label: str) -> str:
     raw = require_string(value, label, maximum=500)
     candidate = (repo / raw).resolve()
@@ -3121,9 +3146,7 @@ def write_project_files(
     *,
     previous_report_path: str | None = None,
 ) -> None:
-    state_content = (
-        json.dumps(state, indent=2, ensure_ascii=True, sort_keys=True) + "\n"
-    )
+    state_content = state_publication_content(state)
     atomic_write(repo / state["paths"]["state"], state_content)
     for relative, content in document_contents(state).items():
         atomic_write(repo / relative, content)
@@ -3262,7 +3285,8 @@ def command_init(args: argparse.Namespace) -> dict[str, Any]:
     with publication_lock(repo, state_path) as journal:
         recover_publication(repo, journal, state_path)
         state = initial_state(repo, config)
-        atomic_write(journal, canonical_json({"before": fingerprint(None), "successor": state, "previousReport": None}))
+        content = publication_journal_content(fingerprint(None), state, None)
+        atomic_write(journal, content)
         write_project_files(repo, state)
         journal.unlink()
     return result_payload(repo, state)
@@ -3292,10 +3316,11 @@ def command_apply(args: argparse.Namespace) -> dict[str, Any]:
             require_control_completion(repo, state, overall=True)
         updated = apply_event(state, event)
         validate_state_shape(repo, updated)
+        content = publication_journal_content(before, updated, state["paths"]["report"])
         if not args.dry_run:
             if fingerprint(read_json(repo / state_path, "state")) != before:
                 raise RoadmapError("State revision changed before publication; reconcile first.")
-            atomic_write(journal, canonical_json({"before": before, "successor": updated, "previousReport": state["paths"]["report"]}))
+            atomic_write(journal, content)
             write_project_files(repo, updated, previous_report_path=state["paths"]["report"])
             journal.unlink()
     result = result_payload(repo, updated)
@@ -3320,6 +3345,7 @@ def command_render(args: argparse.Namespace) -> dict[str, Any]:
         if not args.dry_run:
             recover_publication(repo, journal, state_path)
         _, state = load_state(repo, args.state)
+        state_publication_content(state)
         if not args.dry_run:
             write_project_files(repo, state)
     result = result_payload(repo, state)

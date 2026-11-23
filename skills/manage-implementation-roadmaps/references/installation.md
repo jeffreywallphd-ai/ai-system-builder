@@ -1,5 +1,12 @@
 # Installing the implementation-roadmap skill
 
+Install the bounded publication encoder with its read limit and publication
+tests. It retains complete state and fingerprints while choosing indented or
+compact JSON, checks LF/CRLF byte size and admits the whole recovery envelope
+before writes. No dependency or approval-policy change is required. Keep the
+publication sidecar, direct-runner import and nonzero-collection regression with
+the engine; copying only the script or an older test runner loses this coverage.
+
 Install the engine, tests and references together. The explicit
 `legacy-acceptance-scope-revised` event archives mixed legacy human acceptance
 without qualifying technical work; it cannot substitute for the governed event.

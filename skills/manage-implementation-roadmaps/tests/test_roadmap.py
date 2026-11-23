@@ -2590,6 +2590,16 @@ class HeadlessWorkflowRestrictionTest(unittest.TestCase):
 
 
 class WorkChunkCollectionTest(unittest.TestCase):
+    def test_registered_direct_runner_collects_a_publication_boundary_case(self):
+        selected = "PublicationSizeTests.test_cli_compacts_large_state_without_losing_history"
+        result = subprocess.run([sys.executable, "-B", str(Path(__file__)), "-k", selected, "-v"],
+                                capture_output=True, timeout=30)
+        self.assertLess(len(result.stdout) + len(result.stderr), 128 * 1024)
+        self.assertEqual(result.returncode, 0, "The fixed runner must execute publication boundary tests.")
+        self.assertIn(selected.split(".", 1)[1].encode(), result.stderr)
+        self.assertIn(b"Ran 1 test", result.stderr)
+        self.assertNotIn(b"skipped", result.stderr)
+
     def test_registered_direct_runner_collects_a_real_refinement_case(self):
         # This test stays in the fixed runner, so removing the sidecar bridge
         # cannot also silently remove the test that detects the missing bridge.
@@ -2609,4 +2619,5 @@ if __name__ == "__main__":
     # collects the sidecar separately and does not enter this block.
     sys.modules.setdefault("test_roadmap", sys.modules[__name__])
     from test_work_chunk_refinement import WorkChunkRefinementTests
+    from test_state_publication_bounds import PublicationSizeTests
     unittest.main()

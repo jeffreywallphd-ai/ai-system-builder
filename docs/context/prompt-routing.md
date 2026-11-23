@@ -156,6 +156,11 @@ and policy digest. It supplies no pass, removes no criterion/security control an
 retains genuine resource/runtime/native qualification. Existing explicit narrow
 authority can supply reapproval without another question; fresh checks/review remain.
 
+Roadmap publication failures stay on the roadmap skill route. Preserve the
+complete state, journal and history. The engine uses bounded indented/compact
+JSON without changing approvals or evidence. Do not expand its read cap or
+discard records to bypass refusal.
+
 Requests to prepare, implement, continue, resume, or review an implementation
 roadmap route to `skills/manage-implementation-roadmaps/SKILL.md`. Drafting or
 review alone does not authorize code changes. Once implementation is explicitly
