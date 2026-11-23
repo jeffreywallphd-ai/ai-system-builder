@@ -682,3 +682,82 @@ test("book candidate availability never exposes private candidate metadata or me
   assert.equal(observed.value.runtimeReadiness, "not-checked"); assert.equal(observed.value.registration, "requires-separate-approval");
   assert.equal(JSON.stringify(observed).includes("PRIVATE"), false); assert.equal(JSON.stringify(observed).includes("loss"), false);
 });
+
+function completionQuery(f: Awaited<ReturnType<typeof fixture>>, selection = {kind: "task" as const, taskId: f.definition!.requestId}) {
+  return {...taskQuery(f), request: {version: HEADLESS_CONTRACT_VERSION, operation: "models.review-training",
+    input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, selection}}};
+}
+for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + ": completion broker seam correlates original cached history without observing or starting runtime work", async t => {
+    const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+    assert.ok((await book.runPrepared(options)).result.ok);
+    const before = {...f.state};
+    assert.deepEqual(await book.readCompletion(completionQuery(f)), {ok: false, code: "headless.source-not-ready"});
+    assert.deepEqual(await book.reviewCompletion(taskQuery(f)), {ok: true, value: {kind: "not-ready"}}, "Private API unchanged.");
+    assert.equal(f.state.reads, before.reads, "Cache absence must not settle or poll the task.");
+    f.state.status = "succeeded"; assert.ok((await book.read(taskQuery(f))).ok);
+    const settled = {...f.state}, value = await book.readCompletion(completionQuery(f));
+    assert.ok(value.ok, JSON.stringify(value)); assert.equal(value.operation, "models.review-training");
+    assert.equal(value.value.taskId, f.definition!.requestId); assert.equal(value.value.workspaceId, f.scope.workspaceId);
+    assert.deepEqual(value.value.plan, {fingerprint: options.request.input.fingerprint, step: options.request.input.step});
+    assert.equal(value.value.provenance.proposalDigest, f.binding.proposalDigest);
+    assert.equal(value.value.provenance.versionDigest, f.version.versionDigest);
+    assert.equal(value.value.verification.hardware, "not-recorded"); assert.equal(value.value.verification.outputQuality, "not-evaluated");
+    const byPlan = {...completionQuery(f), request: {version: HEADLESS_CONTRACT_VERSION, operation: "models.review-training",
+      input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId,
+        selection: {kind: "plan-step", fingerprint: options.request.input.fingerprint, step: options.request.input.step}}}};
+    assert.deepEqual(await book.readCompletion(byPlan), value);
+    assert.equal((await book.readCompletion({...byPlan, request: {...byPlan.request, input: {...byPlan.request.input,
+      selection: {...byPlan.request.input.selection, step: 2}}}})).ok, false);
+    for (const key of ["reads", "starts", "cancels", "modelReads", "datasetReads", "gets", "resolves"] as const)
+      assert.equal(f.state[key], settled[key], key + " must not run in cached broker reads.");
+    assert.doesNotMatch(JSON.stringify(value), /PRIVATE|localPath|outputDirectory|rawRecipe|logs|requestId/);
+    assert.equal((await book.readCompletion(taskQuery(f))).ok, false, "Never reinterpret progress requests.");
+    assert.equal((await book.reviewCompletion(completionQuery(f))).ok, false, "Never broaden the private API.");
+    assert.equal((await book.readCompletion({...completionQuery(f), authorize: async () => false})).ok, false);
+    assert.equal((await book.readCompletion({...completionQuery(f), scope: {...f.scope, principalId: "principal.foreign"}})).ok, false);
+    let checks = 0;
+    assert.equal((await book.readCompletion({...completionQuery(f), authorize: async () => ++checks < 4})).ok, false);
+    f.state.host = false; assert.equal((await book.readCompletion(completionQuery(f))).ok, false);
+    assert.equal(f.state.reads, settled.reads); assert.equal(f.state.starts, 1);
+  });
+}
+
+test("completion broker seam captures the original callback and reply before asynchronous policy checks", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+  const original = await options.resolveStart(); assert.ok(original);
+  let owner: any, reply: any, calls = 0;
+  assert.ok((await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const result = await original(...args); if (result.kind !== "accepted") return result;
+    const task = result.task;
+    owner = {requestId: task.requestId, workspaceId: task.workspaceId, read: task.read, cancel: task.cancel,
+      async reviewCompletion(control: ApprovedLocalTrainingControl) {
+        assert.equal(this, owner); calls++; reply = await task.reviewCompletion!(control); return reply;
+      }};
+    return {...result, task: owner};
+  }})).result.ok);
+  f.state.status = "succeeded"; assert.ok((await book.read(taskQuery(f))).ok);
+  owner.reviewCompletion = async () => assert.fail("Never use a replaced callback.");
+  const source = completionQuery(f), expected = f.definition!.requestId;
+  const result = await book.readCompletion({...source, authorize: async () => {
+    source.request.input.selection.taskId = randomUUID();
+    if (reply?.kind === "ready") {reply.provenance.modelRecordId = "model.changed"; reply.candidate.requestedName = "Changed after return";}
+    return true;
+  }});
+  assert.ok(result.ok, JSON.stringify(result)); assert.equal(result.value.taskId, expected);
+  assert.equal(result.value.provenance.modelRecordId, f.request.input.model.modelRecordId); assert.equal(calls, 1);
+  assert.notEqual(result.value.candidate.requestedName, "Changed after return");
+});
+
+test("completion broker seam has no fallback when the original cache callback is absent", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+  const original = await options.resolveStart(); assert.ok(original);
+  assert.ok((await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const result = await original(...args); if (result.kind !== "accepted") return result;
+    const {reviewCompletion: _absent, ...task} = result.task; return {...result, task};
+  }})).result.ok);
+  const before = {...f.state};
+  assert.deepEqual(await book.readCompletion(completionQuery(f)), {ok: false, code: "headless.unavailable"});
+  for (const key of ["reads", "starts", "cancels", "modelReads", "datasetReads", "gets", "resolves"] as const)
+    assert.equal(f.state[key], before[key], key);
+});

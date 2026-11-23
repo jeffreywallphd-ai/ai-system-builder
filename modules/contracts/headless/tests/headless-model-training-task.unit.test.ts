@@ -3,7 +3,8 @@ import test from "node:test";
 import {createWorkspaceId} from "../../workspace";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, readHeadlessModelTaskRequest,
   readHeadlessTrainingTaskRequest, readHeadlessTrainingTaskValue} from "../index";
-import {parseHeadlessReadRequest, readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult} from "../index";
+import {parseHeadlessReadRequest, readHeadlessTrainingTaskReadRequest, readHeadlessTrainingTaskReadResult, readHeadlessTrainingCompletionRequest,
+  readHeadlessTrainingCompletionResult, readHeadlessTrainingCompletionValue} from "../index";
 
 const host = "11111111-1111-4111-8111-111111111111", task = "22222222-2222-4222-8222-222222222222";
 assert.ok(isHeadlessHostIncarnationId(host));
@@ -88,4 +89,79 @@ test("training progress broker copies a closed summary and rejects private, acti
   assert.equal(getters, 0);
   for (const code of ["headless.forbidden", "headless.unavailable", "headless.unsupported-operation"])
     assert.deepEqual(readHeadlessTrainingTaskReadResult({ok: false, code}, request().input), {ok: false, code});
+});
+
+const completionRequest = () => ({...request(), operation: "models.review-training" as const});
+const completionValue = () => ({workspaceId: workspace, taskId: task, plan: {fingerprint: "a".repeat(64), step: 1},
+  provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-21T00:00:00.000Z", datasetId: "dataset.synthetic",
+    versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64), recipeDigest: "sha256:" + "b".repeat(64),
+    proposalDigest: "sha256:" + "c".repeat(64), trainingTask: "llm-instruction", method: "lora", trainingInputCount: 1,
+    validationInputCount: 1, inputBytes: 128, recipeBytes: 64},
+  candidate: {requestedName: "Small trial", artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: 256},
+  comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
+    runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"});
+
+test("cached training completion codecs preserve copied historical data and do not enable public reads", () => {
+  const source = completionRequest(), parsed = readHeadlessTrainingCompletionRequest(source, host); assert.ok(parsed.ok);
+  source.input.selection.taskId = host;
+  assert.equal(parsed.request.input.selection.kind === "task" && parsed.request.input.selection.taskId, task);
+  assert.ok(Object.isFrozen(parsed.request) && Object.isFrozen(parsed.request.input) && Object.isFrozen(parsed.request.input.selection));
+  assert.equal(parseHeadlessReadRequest(completionRequest(), host).ok, false, "Transport activation is separate work.");
+  assert.equal(readHeadlessTrainingTaskReadRequest(completionRequest(), host).ok, false);
+  const reply = {ok: true, operation: "models.review-training", value: completionValue()};
+  assert.deepEqual(readHeadlessTrainingCompletionResult(reply, completionRequest().input), reply);
+  const copied = readHeadlessTrainingCompletionResult(reply, completionRequest().input); assert.ok(copied.ok);
+  reply.value.provenance.trainingInputCount = 2; reply.value.candidate.requestedName = "Changed later";
+  assert.equal(copied.value.provenance.trainingInputCount, 1); assert.equal(copied.value.candidate.requestedName, "Small trial");
+  const byPlan = {...completionRequest().input, selection: {kind: "plan-step" as const, ...completionValue().plan}};
+  assert.deepEqual(readHeadlessTrainingCompletionResult(reply, byPlan), reply);
+  for (const input of [{...byPlan, selection: {...byPlan.selection, step: 2}},
+    {...byPlan, selection: {...byPlan.selection, fingerprint: "d".repeat(64)}},
+    {...completionRequest().input, workspaceId: createWorkspaceId("workspace.foreign")},
+    {...completionRequest().input, selection: {kind: "task" as const, taskId: host}}])
+    assert.deepEqual(readHeadlessTrainingCompletionResult(reply, input), {ok: false, code: "headless.unavailable"});
+});
+test("cached completion request refuses changed hosts, extras and active values without executing getters", () => {
+  assert.deepEqual(readHeadlessTrainingCompletionRequest({...completionRequest(), input: {...completionRequest().input, hostIncarnationId: task}}, host),
+    {ok: false, code: "headless.host-changed"});
+  for (const raw of [{...completionRequest(), extra: true}, {...completionRequest(), version: "wrong"}, request(),
+    {...completionRequest(), input: {...completionRequest().input, path: "PRIVATE"}},
+    {...completionRequest(), input: {...completionRequest().input, selection: {kind: "task", taskId: task, approve: true}}}])
+    assert.equal(readHeadlessTrainingCompletionRequest(raw, host).ok, false);
+  let reads = 0;
+  const source = Object.defineProperty(completionRequest(), "input", {enumerable: true, get() {reads++; throw Error("PRIVATE");}});
+  assert.equal(readHeadlessTrainingCompletionRequest(source, host).ok, false); assert.equal(reads, 0);
+});
+test("cached comparison accepts only an existing bounded measurement, never a quality or readiness pass", () => {
+  const report = {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32, sampleCount: 2,
+    baselineLoss: 2, trainedLoss: 1.5, lossDelta: -0.5, interpretation: "measurement-only"};
+  const value = {...completionValue(), comparison: {state: "recorded", report}};
+  assert.ok(readHeadlessTrainingCompletionValue(value));
+  for (const change of [{sampleCount: 0}, {sampleCount: 33}, {sampleCount: 1.5}, {baselineLoss: Infinity}, {trainedLoss: -1},
+    {lossDelta: 0}, {interpretation: "passed"}, {protocol: "arbitrary"}, {maximumRows: 64}, {accuracy: 1}])
+    assert.equal(readHeadlessTrainingCompletionValue({...value, comparison: {state: "recorded", report: {...report, ...change}}}), undefined);
+  for (const change of [{runtimeReadiness: "ready"}, {hardware: "qualified"}, {outputQuality: "passed"},
+    {retainedFiles: "verified"}, {inputs: "verified"}])
+    assert.equal(readHeadlessTrainingCompletionValue({...value, verification: {...value.verification, ...change}}), undefined);
+});
+test("cached completion rejects malformed, private, huge or credential-bearing metadata and detached failure details", () => {
+  const value = completionValue(), reply = {ok: true, operation: "models.review-training", value};
+  for (const change of [{registration: "saved"}, {logs: ["PRIVATE"]}, {localPath: "PRIVATE"},
+    {provenance: {...value.provenance, trainingInputCount: 17}}, {provenance: {...value.provenance, method: "arbitrary"}},
+    {provenance: {...value.provenance, inputBytes: 256 * 1024 ** 2}}, {provenance: {...value.provenance, recipeBytes: 0}},
+    {provenance: {...value.provenance, versionDigest: "wrong"}}, {provenance: {...value.provenance, proposalDigest: "wrong"}},
+    {provenance: {...value.provenance, modelUpdatedAt: "yesterday"}},
+    {candidate: {...value.candidate, requestedName: "hf_" + "A".repeat(24)}},
+    {candidate: {...value.candidate, requestedName: "C:\\private\\candidate"}},
+    {candidate: {...value.candidate, requestedName: "x".repeat(201)}},
+    {candidate: {...value.candidate, recordedSizeBytes: NaN}}, {comparison: {state: "not-recorded", report: {}}}])
+    assert.deepEqual(readHeadlessTrainingCompletionResult({...reply, value: {...value, ...change}}, completionRequest().input),
+      {ok: false, code: "headless.unavailable"});
+  for (const raw of [{...reply, operation: "models.training-task"}, {...reply, extra: true},
+    {ok: false, code: "PRIVATE"}, {ok: false, code: "headless.forbidden", detail: "PRIVATE"}, {ok: true, operation: "models.review-training", value: {kind: "not-ready"}}])
+    assert.deepEqual(readHeadlessTrainingCompletionResult(raw, completionRequest().input), {ok: false, code: "headless.unavailable"});
+  for (const code of ["headless.source-not-ready", "headless.forbidden", "headless.unavailable"])
+    assert.deepEqual(readHeadlessTrainingCompletionResult({ok: false, code}, completionRequest().input), {ok: false, code});
+  let reads = 0; const active = Object.defineProperty({...value.candidate}, "requestedName", {enumerable: true, get() {reads++; throw Error("PRIVATE");}});
+  assert.equal(readHeadlessTrainingCompletionValue({...value, candidate: active}), undefined); assert.equal(reads, 0);
 });

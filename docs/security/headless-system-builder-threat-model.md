@@ -2383,3 +2383,20 @@ loss and quality claims. Cancellation stays private. Missing support cannot
 resolve another runtime or task. The original reader's existing observation and
 owned retirement/cleanup remain under accepted business control; caller read
 permission supplies no new acquisition/start/Save/native or Root authority.
+
+### Correlated cached training completion seam
+
+The original task book can map its existing private cached completion to a
+closed training-review DTO. Preserve original actor/client/workspace/host and
+accepted ledger task/plan/proposal lineage. Capture the optional original
+callback and receiver, detach its bounded passive reply before later policy
+waits, and recheck read authority before disclosure. Missing cache or capability
+must not invoke progress, runtime, file reads, task discovery or Save.
+
+The contract independently copies and validates exact task or plan selection,
+workspace, bounded provenance and candidate fields, and finite historical
+measurement-only comparison. Reject unknown/private fields, executable getters,
+credential-like identifiers and unsafe candidate text. Keep readiness, file,
+hardware and quality sentinels explicitly unqualified; no measurement implies
+quality acceptance or permission to register. This codec/book seam enables no
+public operation, Root wiring, native/model effect, new grant or parent pass.

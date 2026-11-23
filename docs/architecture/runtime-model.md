@@ -2608,3 +2608,21 @@ correlated by the Desktop/Managed transport and SDK. The original task reader
 can observe its running worker and perform original terminal retirement/cleanup
 under business authority. There is no new setup/start/discovery or Root opt-in;
 native custody, retained output, saving and real-host qualification stay separate.
+
+### Cached training completion broker contract
+
+The existing training contract family includes a closed `models.review-training`
+request/result codec. The original training task book can produce this DTO with
+its accepted task, workspace and ledger plan identity. It uses only the captured
+optional cached-completion callback and the same current read/lineage admission
+as its private review. A missing cache returns `headless.source-not-ready`; a
+missing original callback has no progress, runtime, file or discovery fallback.
+The private `reviewCompletion` API is unchanged.
+
+The DTO records approved Model/Dataset/recipe references and candidate metadata.
+Any existing fixed comparison is a finite historical measurement only. Inputs
+are not rechecked, retained files and runtime readiness are not checked, hardware
+is not recorded, and output quality is not evaluated. Registration requires its
+own approval. This source seam does not add the operation to public read
+advertisements, transports, tools or production roots. Those integrations and
+actual native execution/host qualification remain separate pending work.

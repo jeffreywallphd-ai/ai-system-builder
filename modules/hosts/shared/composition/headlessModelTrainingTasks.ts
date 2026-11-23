@@ -7,6 +7,7 @@ import type {HeadlessOperationScope} from "../../../application/ports/system-bui
 import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask, ApprovedLocalTrainingCompletionReview} from "../../../application/ports/model";
 import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessTrainingTaskRequest,
   readHeadlessTrainingTaskValue, isHeadlessModelRecordId, isHeadlessModelTimestamp,
+  readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult, type HeadlessTrainingCompletionResult,
   type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue, type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {isOrganizationId} from "../../../contracts/organization";
@@ -228,16 +229,18 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
   }
 
   function control(raw: OriginalTrainingTaskQuery, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
+  function control(raw: OriginalTrainingTaskQuery, action: "read-completion"): Promise<HeadlessTrainingCompletionResult>;
   function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
-  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult> {
+  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review" | "read-completion"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | HeadlessTrainingCompletionResult> {
     let effectPossible = false;
     try {
       const fields = record(raw, ["documents", "hostIncarnationId", "scope", "request", "isCurrent", "authorize"]);
       const originalScope = scope(fields.scope), host = fields.hostIncarnationId;
       if (!isHeadlessHostIncarnationId(host)) return forbidden;
-      const parsed = readHeadlessTrainingTaskRequest(fields.request, host);
+      const parsed = action === "read-completion" ? readHeadlessTrainingCompletionRequest(fields.request, host)
+        : readHeadlessTrainingTaskRequest(fields.request, host);
       if (!parsed.ok) return parsed;
-      if (parsed.request.input.workspaceId !== originalScope.workspaceId || parsed.request.operation !== (action === "cancel" ? "models.cancel-training" : "models.training-task")) return forbidden;
+      if (parsed.request.input.workspaceId !== originalScope.workspaceId || parsed.request.operation !== (action === "cancel" ? "models.cancel-training" : action === "read-completion" ? "models.review-training" : "models.training-task")) return forbidden;
       const documents = fields.documents as StructuredDocumentStore;
       const currentMethod = capture<OriginalTrainingTaskQuery["isCurrent"]>(raw, "isCurrent");
       const authorize = capture<OriginalTrainingTaskQuery["authorize"]>(raw, "authorize");
@@ -265,13 +268,19 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const same = () => current() && slots.get(originalKey) === slot && slot.task === task;
       const fresh = async () => {const value = await admit(); return !!value && same() && isDeepStrictEqual(value, admitted);};
       const caller: ApprovedLocalTrainingControl = Object.freeze({isCurrent: same, stillAllowed: fresh});
-      if (action === "review") {
+      if (action === "review" || action === "read-completion") {
         if (!task.reviewCompletion) return unavailable; // No ordinary read or runtime fallback.
         const owned = copyHeadlessModelPlanData(await task.reviewCompletion(caller)); // Reject proxies; own reply BEFORE policy waits.
         if (!await fresh() || !same()) return forbidden;
         const value = completion(owned, task.requestId, originalScope.workspaceId, admitted.proposalDigest);
         if (!await fresh() || !same()) return forbidden;
-        return {ok: true, value};
+        if (action === "review") return {ok: true, value};
+        if (value.kind === "not-ready") return {ok: false, code: "headless.source-not-ready"};
+        const {kind: _kind, requestId: _requestId, ...history} = value;
+        // The accepted ledger supplies plan/task identity. Never use caller data
+        // to fill a missing cache or poll/settle the original runtime here.
+        return readHeadlessTrainingCompletionResult({ok: true, operation: "models.review-training",
+          value: {...history, taskId: task.requestId, plan: admitted.plan}}, parsed.request.input);
       }
       let result: unknown;
       if (action === "cancel") {
@@ -289,5 +298,6 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
   }
   return Object.freeze({runPrepared, read: (query: OriginalTrainingTaskQuery) => control(query, "read"),
     cancel: (query: OriginalTrainingTaskQuery) => control(query, "cancel"),
+    readCompletion: (query: OriginalTrainingTaskQuery) => control(query, "read-completion"),
     reviewCompletion: (query: OriginalTrainingTaskQuery) => control(query, "review")});
 }
