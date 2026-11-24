@@ -9,7 +9,7 @@ import {TaskType, type RuntimeTaskRecord, type CancelRuntimeTaskResult} from "..
 import type {ModelTrainingRequest} from "../../../../contracts/model";
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, ApprovedLocalTrainingDefinition,
   ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingStartAck,
-  ApprovedLocalTrainingControl, ApprovedLocalTrainingStart} from "../../../ports/model";
+  ApprovedLocalTrainingControl, ApprovedLocalTrainingStart, ApprovedLocalTrainingModelReader} from "../../../ports/model";
 import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
 import {TrainModelUseCase} from "../train-model.use-case";
 
@@ -55,6 +55,7 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
     recipe: {digest: digest(recipe), content: recipe}, control: {isCurrent: () => state.host, stillAllowed: async () => state.allowed},
     isAdmissionCurrent: () => state.admission, acknowledgeIssued: async () => {state.issues++; return true;}};
   let definition: ApprovedLocalTrainingDefinition | undefined, staged: ApprovedLocalTrainingStagedInput | undefined, nativeControl: ApprovedLocalTrainingControl | undefined;
+  let modelSource: ApprovedLocalTrainingModelReader | undefined;
   let ack: ApprovedLocalTrainingStartAck | undefined, record: RuntimeTaskRecord | undefined, cancellation: CancelRuntimeTaskResult | undefined;
   let startAdmission: (() => boolean) | undefined;
   const session: ApprovedLocalTrainingSession = {requestId, workspaceId,
@@ -65,7 +66,7 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
         outputDirectory: staged!.outputDirectory, generatedModelCandidate: {displayName: "Synthetic candidate", artifactForm: "adapter", localPath: staged!.outputDirectory}}} : {})};},
     async cancel() {state.cancels++; state.status = "cancelled"; return cancellation ?? {requestId, status: "cancelled", cancelled: true};},
     async settle() {state.settles++; await state.onSettle?.(); return state.settled;}};
-  const port: ApprovedLocalModelTrainingPort = {createSession(value, control) {state.creates++; definition = value; nativeControl = control; return session;}};
+  const port: ApprovedLocalModelTrainingPort = {createSession(value, control, source) {state.creates++; definition = value; nativeControl = control; modelSource = source; return session;}};
   const owner = new TrainModelUseCase({...(options.port === false ? {} : {approvedLocalTraining: port}),
     ...(options.reconciler === false ? {} : {taskReconciler: reconciler}),
     runtimeTaskRegistry: {async startTask() {assert.fail("No ordinary runtime start.");}, async startTaskWithoutInstalling() {assert.fail("No generic installed-only fallback.");},
@@ -84,6 +85,7 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
   const accepted = async () => {const value = await start(); assert.ok(value.kind === "accepted"); result = value; return value;};
   return {root, owner, request, admission, state, session, port, reconciler, input, recipe, workspaceId, requestId, readControl, start, accepted,
     get definition() {return definition;}, get staged() {return staged;}, get nativeControl() {return nativeControl;},
+    get modelSource() {return modelSource;},
     get startAdmission() {return startAdmission;},
     setAck(value: ApprovedLocalTrainingStartAck) {ack = value;}, setRecord(value: RuntimeTaskRecord) {record = value;},
     setCancellation(value: CancelRuntimeTaskResult) {cancellation = value;},
@@ -106,6 +108,46 @@ test("Approved local training owner stages exact copied data and a private outpu
   assert.equal(await f.owner.startApprovedLocal(f.request, f.admission).then(value => value.kind), "unavailable");
   assert.equal(f.state.starts, 1); assert.equal(f.state.issues, 1);
   const running = await f.read(); assert.equal(running.status, "running"); assert.equal(running.runId, f.requestId);
+});
+
+test("preparation Model reader captures its original receiver and reply before later policy callbacks", async t => {
+  const f = await fixture(t); let calls = 0, replacements = 0, returned = false;
+  const selected = {modelRecordId: f.request.baseModel.modelRecordId!, modelUpdatedAt: f.admission.modelUpdatedAt,
+    localModelReference: f.request.baseModel.localPath!};
+  const reader: ApprovedLocalTrainingModelReader = {async read() {assert.equal(this, reader); calls++; returned = true; return selected;}};
+  (f.admission as {modelSource?: ApprovedLocalTrainingModelReader}).modelSource = reader;
+  (f.admission as {control: ApprovedLocalTrainingControl}).control = {isCurrent: () => true, stillAllowed: async () => {
+    if (returned) selected.localModelReference = join(f.root, "changed-after-read"); return true;
+  }};
+  f.state.onPrepare = async () => {
+    reader.read = async () => {replacements++; throw Error("replacement must not run");};
+    const value = await f.modelSource!.read(); assert.equal(value!.localModelReference, f.request.baseModel.localPath);
+  };
+  await f.accepted(); assert.equal(calls, 1); assert.equal(replacements, 0);
+  assert.equal(await f.modelSource!.read(), undefined); assert.equal(calls, 1);
+  assert.equal(await f.nativeControl!.stillAllowed(), true); assert.equal((await f.read()).status, "running");
+});
+
+for (const kind of ["getter", "undefined", "extra"] as const)
+  test(`invalid preparation Model reader (${kind}) cannot reserve a runtime or execute getters`, async t => {
+    const f = await fixture(t); let getters = 0;
+    const source = kind === "undefined" ? undefined : kind === "extra" ? {async read() {return undefined;}, extra: true}
+      : {get read() {getters++; return async () => undefined;}};
+    (f.admission as {modelSource?: ApprovedLocalTrainingModelReader}).modelSource = source as ApprovedLocalTrainingModelReader | undefined;
+    assert.equal((await f.start()).kind, "unavailable"); assert.equal(f.state.creates, 0); assert.equal(f.state.prepares, 0); assert.equal(getters, 0);
+  });
+
+test("a late preparation Model reply cannot disclose after startup while business controls remain usable", async t => {
+  const f = await fixture(t), gate = f.gate(); let entered!: () => void;
+  const started = new Promise<void>(resolve => {entered = resolve;});
+  let pending: Promise<unknown> | undefined;
+  (f.admission as {modelSource?: ApprovedLocalTrainingModelReader}).modelSource = {async read() {
+    entered(); await gate.wait; return {modelRecordId: f.request.baseModel.modelRecordId!, modelUpdatedAt: f.admission.modelUpdatedAt,
+      localModelReference: f.request.baseModel.localPath!};
+  }};
+  f.state.onPrepare = async () => {pending = f.modelSource!.read(); await started;};
+  await f.accepted(); gate.release(); assert.equal(await pending, undefined);
+  assert.equal(await f.nativeControl!.stillAllowed(), true); assert.equal((await f.read()).status, "running");
 });
 
 test("actual approved training producer matches the shared Python sealing fixture", async t => {

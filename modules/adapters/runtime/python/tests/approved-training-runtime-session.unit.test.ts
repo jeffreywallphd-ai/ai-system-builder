@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, {type TestContext} from "node:test";
+import {lstat, mkdir, mkdtemp, realpath, rm, writeFile} from "node:fs/promises";
+import {tmpdir} from "node:os";
 import {EventEmitter} from "node:events";
 import {PassThrough} from "node:stream";
 import path from "node:path";
@@ -337,6 +339,65 @@ function inertNativeController(resumed: () => void) {
   return {child, configuration, get starts() {return starts;}, get resumes() {return resumes;}, get stops() {return stops;},
     closeWithProof() {frame("retired"); child.stdout.end(); child.stderr.end(); child.emit("close", 0, null);}};
 }
+
+async function observationFoundation(t: TestContext) {
+  const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(path.join(boundary, "training-source-foundation-")));
+  const before = await lstat(directory, {bigint: true}), model = path.join(directory, "model"); await mkdir(model);
+  for (const name of ["config.json", "tokenizer.json", "model.safetensors"]) await writeFile(path.join(model, name), "synthetic source, never loaded");
+  let alive = false, modelReads = 0; const calls: string[] = [];
+  const controller = inertNativeController(() => {alive = true;});
+  const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async url => {
+    const endpoint = new URL(String(url)).pathname; calls.push(endpoint);
+    if (endpoint === "/health") return Response.json({healthy: alive, status: {...runtime, status: "ready"}});
+    if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId, capabilities: [ORIGINAL_TRAINING_CAPABILITY]});
+    assert.equal(endpoint, "/training/original/prepare"); return Response.json({binding, phase: "unavailable"});
+  }) as typeof fetch}, supervisor: {...controller.configuration, verifyRuntimeEnvironment: async () => true,
+    startupTimeoutMs: 200, healthCheckIntervalMs: 1}});
+  foundation.bindHostAdmission(() => {});
+  const port = foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [directory], maximumTotalBytes: 1024,
+    maximumDurationMs: 5_000, bufferBytes: 8});
+  const selected = definition(); (selected.request.baseModel as any).localPath = model;
+  const reader = {async read() {assert.equal(this, reader); assert.equal(controller.starts, 0); modelReads++;
+    return {modelRecordId: selected.request.baseModel.modelRecordId!, modelUpdatedAt: selected.modelUpdatedAt, localModelReference: model};}};
+  t.after(async () => {
+    if (controller.starts) {
+      const stopped = foundation.supervisor.stop(); await new Promise(resolve => setImmediate(resolve)); controller.closeWithProof(); await stopped;
+    }
+    const current = await lstat(directory, {bigint: true}); assert.ok(current.isDirectory() && !current.isSymbolicLink());
+    assert.equal(current.dev, before.dev); assert.equal(current.ino, before.ino); assert.equal(await realpath(directory), directory);
+    assert.equal(path.dirname(directory), boundary); await rm(directory, {recursive: true});
+  });
+  return {model, calls, controller, foundation, port, selected, reader, get modelReads() {return modelReads;}};
+}
+
+test("configured foundation observes the original selected Model before installed worker startup", async t => {
+  const f = await observationFoundation(t);
+  const session = f.port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader)!;
+  assert.equal(f.controller.starts, 0); assert.equal(f.modelReads, 0);
+  assert.equal(await session.prepare(), "unavailable"); assert.equal(f.modelReads, 3);
+  assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1);
+  assert.equal(f.calls.filter(endpoint => endpoint === "/training/original/prepare").length, 1);
+  // Positive no-producer response joins already closed observation IO and the
+  // existing unused worker claim; it supplies no source-copy/native pass.
+  const next = f.port.createSession({...f.selected, requestId: workspace}, {isCurrent: () => true, stillAllowed: async () => true}, f.reader);
+  assert.ok(next); assert.equal(await next.settle(), true);
+});
+
+test("configured foundation refuses a missing Model reader before reserving or starting", async t => {
+  const f = await observationFoundation(t);
+  assert.equal(f.port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}), undefined);
+  const next = f.port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader);
+  assert.ok(next); assert.equal(await next.settle(), true);
+  assert.equal(f.controller.starts, 0); assert.equal(f.modelReads, 0); assert.deepEqual(f.calls, []);
+});
+
+test("failed source observation retains original foundation reservation without controller fallback", async t => {
+  const f = await observationFoundation(t); await writeFile(path.join(f.model, "unexpected.txt"), "synthetic");
+  const session = f.port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader)!;
+  assert.equal(await session.prepare(), "unconfirmed"); assert.equal(f.controller.starts, 0); assert.deepEqual(f.calls, []);
+  assert.equal(await session.settle(), false);
+  assert.equal(f.port.createSession({...f.selected, requestId: workspace}, {isCurrent: () => true, stillAllowed: async () => true}, f.reader), undefined);
+});
 
 for (const loss of ["permission", "currentness"] as const) test(`foundation originating ${loss} loss during installed verification prevents controller startup`, async () => {
   let permission = true, current = true, probes = 0, http = 0, installers = 0;

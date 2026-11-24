@@ -1,6 +1,7 @@
 /** Private original installed-runtime channel. No native producer is supplied here. */
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingControl, ApprovedLocalTrainingDefinition,
-  ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput} from "../../../../application/ports/model";
+  ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingModelReader,
+  ApprovedLocalTrainingModelSelection} from "../../../../application/ports/model";
 import type {RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {TaskType} from "../../../../contracts/runtime";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
@@ -28,6 +29,29 @@ export interface OriginalTrainingCapture {
   assertCurrent(): void;
   assertAllowed(): Promise<void>;
 }
+type CaptureSource = {reserved: boolean; stage: "bound" | "preparing" | "closed";
+  reader?: () => Promise<ApprovedLocalTrainingModelSelection>; lost: boolean};
+const originalSources = new WeakMap<OriginalTrainingCapture, CaptureSource>();
+
+/** Internal binding only. A same-shaped object or serialized request cannot
+ * supply this reader. Calling it requires the original reserved prepare phase. */
+export function captureOriginalTrainingModelReader(original: OriginalTrainingCapture) {
+  const source = originalSources.get(original);
+  if (!source) throw unavailable();
+  if (!source.reader) return undefined;
+  const current = original.assertCurrent.bind(original), allowed = original.assertAllowed.bind(original), read = source.reader;
+  const assertCurrent = () => {
+    need(originalSources.get(original) === source && source.reserved && source.stage === "preparing" && !source.lost);
+    current();
+  };
+  return Object.freeze({definition: original.definition, assertCurrent, async assertAllowed() {
+    assertCurrent(); await allowed(); assertCurrent();
+  }, async readModelSelection() {
+    assertCurrent();
+    try {const result = await read(); assertCurrent(); return result;}
+    catch {source.lost = true; throw unavailable();}
+  }});
+}
 const unavailable = () => new Error("The original private training session is unavailable.");
 const need = (value: unknown): void => {if (value !== true) throw unavailable();};
 const copy = <T>(value: T): T => capturePassiveModelData(value) as T;
@@ -49,8 +73,16 @@ export function createOriginalTrainingPort(options: {
   reserve: (original: OriginalTrainingCapture) => (() => void) | undefined;
 }): ApprovedLocalModelTrainingPort {
   const capture = options.captureChannel, reserve = options.reserve;
-  return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl) {
+  return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl,
+    rawSource?: ApprovedLocalTrainingModelReader) {
     const definition = copy(raw), isCurrent = rawControl.isCurrent, allowed = rawControl.stillAllowed;
+    let sourceRead: ApprovedLocalTrainingModelReader["read"] | undefined;
+    if (rawSource !== undefined) {
+      need(!types.isProxy(rawSource));
+      const source = readStrictPassiveRecord(rawSource, ["read"]);
+      need(Object.keys(source).length === 1 && typeof source.read === "function" && !types.isProxy(source.read));
+      sourceRead = source.read as ApprovedLocalTrainingModelReader["read"];
+    }
     need(typeof isCurrent === "function" && typeof allowed === "function");
     let admissionLost = false;
     const current = () => {
@@ -67,10 +99,30 @@ export function createOriginalTrainingPort(options: {
       catch {admissionLost = true; throw unavailable();}
     };
     const originalCapture: OriginalTrainingCapture = Object.freeze({definition, assertCurrent: current, assertAllowed: permission});
+    const source: CaptureSource = {reserved: false, stage: "bound", lost: false};
+    if (sourceRead) {
+      const read = sourceRead, receiver = rawSource!;
+      source.reader = async () => {
+        need(source.reserved && source.stage === "preparing" && !source.lost);
+        await permission();
+        const observed = copy(await Reflect.apply(read, receiver, []));
+        await permission();
+        const row = exact(observed, ["modelRecordId", "modelUpdatedAt", "localModelReference"]);
+        need(row.modelRecordId === definition.request.baseModel.modelRecordId && row.modelUpdatedAt === definition.modelUpdatedAt &&
+          typeof row.localModelReference === "string" && row.localModelReference === definition.request.baseModel.localPath);
+        return Object.freeze(row) as unknown as ApprovedLocalTrainingModelSelection;
+      };
+    }
+    originalSources.set(originalCapture, source);
     current();
-    const release = reserve.call(options, originalCapture);
-    if (!release) return undefined;
-    need(typeof release === "function");
+    const originalRelease = reserve.call(options, originalCapture);
+    if (!originalRelease) {source.stage = "closed"; return undefined;}
+    need(typeof originalRelease === "function"); source.reserved = true;
+    const release = () => {
+      const result: unknown = originalRelease();
+      if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+      need(result === undefined); source.reserved = false; source.stage = "closed";
+    };
     let phase: "bound" | "preparing" | "ready" | "issuing" | "accepted" | "unconfirmed" | "settled" = "bound";
     let channel: OriginalTrainingChannel | undefined, binding: Record<string, unknown> | undefined;
     let operations = 0, cancelAttempted = false, closeAttempted = false, closing = false;
@@ -88,7 +140,7 @@ export function createOriginalTrainingPort(options: {
     };
     const session: ApprovedLocalTrainingSession = Object.freeze({requestId: definition.requestId, workspaceId: definition.workspaceId,
       async prepare() {
-        need(phase === "bound"); phase = "preparing"; operations++;
+        need(phase === "bound"); phase = "preparing"; source.stage = "preparing"; operations++;
         try {
           await permission(); const original = await capture.call(options, originalCapture); current();
           const identity = copy(original.identity), assertCurrent = original.assertCurrent, sendOriginal = original.send;
@@ -117,7 +169,7 @@ export function createOriginalTrainingPort(options: {
           }
           need(reply.phase === "ready"); phase = "ready"; return "ready" as const;
         } catch {phase = "unconfirmed"; return "unconfirmed" as const;}
-        finally {operations--;}
+        finally {source.stage = "closed"; operations--;}
       },
       async start(input: ApprovedLocalTrainingStagedInput, admission: () => boolean) {
         need(phase === "ready" && !closing); phase = "issuing"; operations++;

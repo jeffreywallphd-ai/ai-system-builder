@@ -15,7 +15,8 @@ import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/u
 import {ReadHeadlessModelMetadataUseCase} from "../../../../application/use-cases/model/headless-model-metadata.use-case";
 import {TrainModelUseCase} from "../../../../application/use-cases/model/train-model.use-case";
 import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
-import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingControl} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingControl,
+  ApprovedLocalTrainingModelReader} from "../../../../application/ports/model";
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
@@ -42,7 +43,7 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
   process.env.TEMP = directory; process.env.TMP = directory; process.env.TMPDIR = directory;
   const database = engine === "SQLite" ? await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: directory})}) : undefined;
   const base = database?.documents ?? createInMemoryStructuredDocumentStore();
-  const state = {current: true, host: true, allowed: true, business: true, now: 1000, gets: 0, resolves: 0,
+  const state = {current: true, host: true, allowed: true, business: true, modelRead: true, now: 1000, gets: 0, resolves: 0,
     modelReads: 0, datasetReads: 0, starts: 0, creates: 0, prepares: 0, retained: 0, reads: 0, cancels: 0,
     status: "queued" as RuntimeTaskRecord["status"], issued: 0, retain: true, compiles: 0,
     onPolicy: undefined as (() => Promise<void>) | undefined,
@@ -147,9 +148,10 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
   };
   let definition: ApprovedLocalTrainingDefinition | undefined, staged: ApprovedLocalTrainingStagedInput | undefined;
   let control: ApprovedLocalTrainingControl | undefined;
+  let modelSource: ApprovedLocalTrainingModelReader | undefined;
   const train = new TrainModelUseCase({taskReconciler: reconciler,
-    ...(options.port === false ? {} : {approvedLocalTraining: {createSession(value, originalControl) {
-      state.creates++; definition = value; control = originalControl;
+    ...(options.port === false ? {} : {approvedLocalTraining: {createSession(value, originalControl, source) {
+      state.creates++; definition = value; control = originalControl; modelSource = source;
       return {requestId: value.requestId, workspaceId: value.workspaceId,
         async prepare() {state.prepares++; await state.onPrepare?.(); return "ready" as const;},
         async start(input, isCurrent) {assert.equal(isCurrent(), true); state.starts++; staged = input; await state.onStart?.();
@@ -170,7 +172,10 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
     taskPowerLifecycle: {async startTask() {await state.onPowerStart?.();}, async completeTask() {}}, runtimeCapabilityGuard: {async requireCapabilityReady() {assert.fail("No installation.");}}});
   let retained: RetainedHeadlessTrainingTask | undefined;
   const modelReader = {async execute(...args: Parameters<ReadHeadlessModelTrainingModelUseCase["execute"]>) {
-    assert.equal(this, modelReader); state.modelReads++; const reply = await modelOwner.execute(...args);
+    assert.equal(this, modelReader); state.modelReads++;
+    const authority = args[1], policy = authority.stillAllowed;
+    const reply = await modelOwner.execute(args[0], {...authority,
+      stillAllowed: async () => state.modelRead && await policy.call(authority) && state.modelRead});
     return (state.transformModel ? state.transformModel(reply) : reply) as typeof reply;
   }};
   const datasetReader = {async execute(...args: Parameters<ReadHeadlessModelTrainingDatasetUseCase["execute"]>) {
@@ -190,10 +195,39 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
     releases.push(open); return {started, release: open, async wait() {entered(); await waiting;}};};
   return {state, scope, context, host, root, request, binding, inputs, version, content, retrieved, modelRecord, modelReader, datasetReader,
     train, prepare, makeOptions, run, gate, track: tracked, get retained() {return retained;}, get definition() {return definition;}, get staged() {return staged;},
-    get control() {return control;}, rows: () => root.forOrganization(scope.organizationId).listDocuments<{phase: string}>("headless/models/training-plan-tasks")};
+    get control() {return control;}, get modelSource() {return modelSource;},
+    rows: () => root.forOrganization(scope.organizationId).listDocuments<{phase: string}>("headless/models/training-plan-tasks")};
 }
 
 for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + ": preparation Model source reuses the actual original reader and closes before accepted task controls", async t => {
+    const f = await fixture(t, engine); let replacements = 0;
+    f.state.onPrepare = async () => {
+      f.modelReader.execute = async () => {replacements++; throw Error("replacement must not run");};
+      const observed = await f.modelSource!.read();
+      assert.deepEqual(observed, {modelRecordId: f.modelRecord.modelRecordId, modelUpdatedAt: f.modelRecord.updatedAt,
+        localModelReference: f.modelRecord.localPath});
+    };
+    const result = await f.run(); assert.ok(result.result.ok); assert.equal(f.state.modelReads, 3); assert.equal(replacements, 0);
+    f.state.modelRead = false; const before = f.state.modelReads;
+    assert.equal(await f.modelSource!.read(), undefined); assert.equal(f.state.modelReads, before);
+    assert.equal(await f.control!.stillAllowed(), true);
+    assert.equal((await f.retained!.task.read({isCurrent: () => true, stillAllowed: async () => true})).status, "queued");
+  });
+
+  for (const cause of ["ModelRead", "same-revision selection drift"] as const)
+    test(engine + `: preparation source ${cause} prevents the original training dispatch`, async t => {
+      const f = await fixture(t, engine);
+      f.state.onPrepare = async () => {
+        if (cause === "ModelRead") f.state.modelRead = false;
+        else f.modelRecord.modelId = "fixture/changed-source-with-unchanged-timestamp";
+        await f.modelSource!.read();
+      };
+      assert.deepEqual((await f.run()).result, {ok: false, code: "headless.operation-unconfirmed"});
+      assert.equal(f.state.starts, 0); assert.equal(f.state.business, true); assert.equal(f.state.modelReads, 3);
+      const reads = f.state.modelReads; assert.equal(await f.modelSource!.read(), undefined); assert.equal(f.state.modelReads, reads);
+    });
+
   test(engine + ": approved training bridge composes real readers, original ledger and private application task once", async t => {
     const f = await fixture(t, engine), result = await f.run(); assert.ok(result.result.ok);
     assert.equal(result.result.value.kind, "started"); assert.equal(result.result.value.operation, "models.train");

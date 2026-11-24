@@ -769,3 +769,31 @@ owner. This change grants no release, retry or cleanup authority.
 These are startup-authorization software controls. The protected Model source
 handoff, worker bootstrap/live view, complete native input/output producer and
 actual host qualification remain pending. Tests use simulated suppliers only.
+
+### Optional original Model observation
+
+The private training factory accepts a separate optional observation policy.
+It has explicit roots, graph byte limit, duration and buffer size; there are no
+production defaults. The original authorized Model reader travels separately
+through preparation. Missing configured readers refuse before reservation or
+IO. The foundation binds the actual observation owner to its original capture
+and retains it before reads, then observes before installed worker startup.
+Absent configuration preserves the existing behavior.
+
+The observer requires a complete flat native-compatible safe-file inventory.
+It streams each file twice with SHA256 and EOF checks, rechecks original roots,
+handles and paths, and rereads the authorized saved Model. Its final full-binding
+Model read follows both hash passes and all original file close replies. No
+source-file IO follows that final read. The byte limit bounds
+the selected graph; total data read is at most twice that limit. One bounded
+buffer is reused. No weights are loaded into a model engine or held as a whole.
+The result is immutable private metadata associated with the original capture.
+
+The Model callback closes when preparation ends. It does not govern accepted
+task lifetime. Observation closes its own IO before success. Timeout returns a
+fixed failure but retains pending original IO; uncertain closes never retry or
+become settled. IO retirement alone cannot release global training custody.
+Stat and repeated hashes are observations, not simultaneous immutable native
+custody. Original controller copying, measured resource reservation, inherited
+bootstrap/live borrowing, complete native production and actual hosts remain
+separate pending work. No production Root is enabled by this preflight.

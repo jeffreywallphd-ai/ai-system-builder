@@ -1,5 +1,16 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Private approved training can carry a separate preparation-only Model reader.
+Shared composition reuses the original authorized saved-Model owner and compares
+the complete selected binding. The application captures its method and receiver,
+detaches returned data before later policy waits, and passes it separately from
+business control to the original runtime session. The callback closes when
+preparation ends, including late replies and failure. Accepted task status,
+Stop and retirement keep their independent business lifetime. ModelWrite alone
+cannot supply this ModelRead selection; no generic registry/discovery fallback
+is added. Runtime observation remains private and supplies no native custody,
+capacity, model execution, Save or public activation authority.
+
 Workspace Asset Library membership includes exact published Studio and derived
 references from private owning repositories alongside existing authoring/reuse
 and trusted packs. List/detail reads require matching published catalog versions;

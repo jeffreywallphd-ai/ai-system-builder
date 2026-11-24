@@ -7,6 +7,15 @@ export interface ApprovedLocalTrainingControl {
   readonly isCurrent: () => boolean;
   readonly stillAllowed: () => Promise<boolean>;
 }
+/** Preparation-only current ModelRead owner; not a byte/native/readiness proof. */
+export interface ApprovedLocalTrainingModelSelection {
+  readonly modelRecordId: string;
+  readonly modelUpdatedAt: string;
+  readonly localModelReference: string;
+}
+export interface ApprovedLocalTrainingModelReader {
+  read(): Promise<ApprovedLocalTrainingModelSelection | undefined>;
+}
 export interface ApprovedLocalTrainingBytes {
   /** Private runtime alias, not an Artifact Registry lookup or authority. */
   readonly artifactId: string;
@@ -29,6 +38,8 @@ export interface ApprovedLocalTrainingAdmission {
   readonly inputs: readonly ApprovedLocalTrainingBytes[];
   readonly recipe: {readonly digest: string; readonly content: Uint8Array};
   readonly control: ApprovedLocalTrainingControl;
+  /** Captured separately; outward startup admission must not govern accepted work. */
+  readonly modelSource?: ApprovedLocalTrainingModelReader;
   readonly isAdmissionCurrent: () => boolean;
   readonly acknowledgeIssued: () => Promise<boolean>;
 }
@@ -80,7 +91,8 @@ export interface ApprovedLocalTrainingSession {
 export interface ApprovedLocalModelTrainingPort {
   /** Synchronous binding only: no IO, acquisition or task start. Undefined
    * proves no preparation occurred. Capture the returned retirement owner first. */
-  createSession(definition: ApprovedLocalTrainingDefinition, control: ApprovedLocalTrainingControl): ApprovedLocalTrainingSession | undefined;
+  createSession(definition: ApprovedLocalTrainingDefinition, control: ApprovedLocalTrainingControl,
+    modelSource?: ApprovedLocalTrainingModelReader): ApprovedLocalTrainingSession | undefined;
 }
 /** Host-private capability to the accepted original task. Read/cancel need fresh
  * caller policy AFTER original lineage lookup. This object has no Save method. */

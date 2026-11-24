@@ -5,6 +5,8 @@ import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
 import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile, type OriginalTrainingCapture} from "./client/approvedTrainingTaskSession";
+import {createOriginalTrainingModelSourceFactory, type OriginalTrainingModelObservationPolicy,
+  type OriginalTrainingModelObservation, type ObservedOriginalTrainingModelSource} from "./client/originalTrainingModelSource";
 import {captureOriginalWorkerResourceProfile} from "./supervisor/windowsOriginalWorkerLaunch";
 import type {ApprovedLocalModelTrainingPort} from "../../../application/ports/model";
 import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
@@ -43,7 +45,7 @@ export interface CreatePythonRuntimePortOptions {
 
 export interface PythonRuntimeAdapterFoundation {
   /** Private trusted composition; no profile means no availability or startup. */
-  createApprovedTrainingPort(profile?: OriginalTrainingProfile): ApprovedLocalModelTrainingPort;
+  createApprovedTrainingPort(profile?: OriginalTrainingProfile, observation?: OriginalTrainingModelObservationPolicy): ApprovedLocalModelTrainingPort;
   runtimePort: PythonRuntimePort;
   supervisor: PythonRuntimeSupervisor;
   /** Trusted host composition, once only. It can add a guard, never replace it. */
@@ -115,7 +117,8 @@ export function createPythonRuntimeAdapterFoundation(
   >();
   // Original reservations survive worker exit, failed startup, and lost replies.
   // Their release is owned exclusively by permanent original session retirement.
-  const trainingReservations = new Map<string, {settled: boolean; capture: OriginalTrainingCapture}>();
+  const trainingReservations = new Map<string, {settled: boolean; capture: OriginalTrainingCapture;
+    source?: OriginalTrainingModelObservation; observed?: ObservedOriginalTrainingModelSource}>();
   let directModelDownloads = 0;
   const trainingCustodyLive = () => [...trainingReservations.values()].some(value => !value.settled);
   // A disconnected POST can already have started non-cancellable Dataset work.
@@ -544,9 +547,10 @@ export function createPythonRuntimeAdapterFoundation(
     runtimePort,
     supervisor,
     bindHostAdmission,
-    createApprovedTrainingPort(rawProfile) {
+    createApprovedTrainingPort(rawProfile, rawObservation) {
       if (rawProfile === undefined || !hasNativeTrainingConfiguration) return Object.freeze({createSession: () => undefined});
       const profile = captureTrainingProfile(rawProfile);
+      const sourceFactory = rawObservation === undefined ? undefined : createOriginalTrainingModelSourceFactory(rawObservation);
       const startInstalled = supervisor.startWithoutInstalling?.bind(supervisor);
       const captureRetirement = supervisor.captureOriginalTrainingWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
@@ -556,13 +560,20 @@ export function createPythonRuntimeAdapterFoundation(
           if (!hostAdmission || trainingCustodyLive() || trainingReservations.has(requestId) || trainingReservations.size >= 256 ||
               directModelDownloads || trackedTasks.size || datasetAdmissions.size || installedContextAdmissions.size || recoveryInFlight || recoveryUncertain)
             return undefined;
-          const original = {settled: false, capture}; trainingReservations.set(requestId, original);
+          // Binding has no IO. A configured missing reader refuses before the
+          // original slot is reserved, with no presence/discovery fallback.
+          const source = sourceFactory?.bind(capture);
+          if (sourceFactory && !source) return undefined;
+          const original = {settled: false, capture, source} as {
+            settled: boolean; capture: OriginalTrainingCapture; source?: OriginalTrainingModelObservation; observed?: ObservedOriginalTrainingModelSource};
+          trainingReservations.set(requestId, original);
           try {assertHostAccepting();} catch (error) {
             original.settled = true; // No preparation/IO was issued by this reservation.
             throw error;
           }
           return () => {
             if (trainingReservations.get(requestId) !== original) throw new Error("Original training retirement is unavailable.");
+            if (original.source && !original.source.isSettled()) throw new Error("Original training source IO is still retained.");
             original.settled = true;
           };
         },
@@ -577,6 +588,13 @@ export function createPythonRuntimeAdapterFoundation(
           const allowedCapture = async () => {currentCapture(); await requestAllowed(); currentCapture();};
           currentCapture();
           if (!startInstalled || !captureRetirement) throw new Error("Installed-only training startup is unavailable.");
+          if (reservation!.source) {
+            // The actual observation owner is retained in the original slot
+            // before this first IO await. An unknown reply cannot release it.
+            reservation!.observed = await reservation!.source.observe();
+            currentCapture();
+            if (!reservation!.source.isSettled()) throw new Error("Original training source IO is still retained.");
+          }
           const admission = Object.freeze({assertCurrent: currentCapture, assertAllowed: allowedCapture});
           await startInstalled(admission); currentCapture();
           const worker = captureRetirement(), workerCurrent = worker.assertCurrent.bind(worker);

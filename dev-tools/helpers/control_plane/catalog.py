@@ -276,10 +276,14 @@ PUBLISHED_FORM_CHECKS = {
     "headless-training-runtime-unit": {
         "automatic_sources": (
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+            "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
+            "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/supervisor/windowsOriginalWorkerLaunch.ts",
         ),
         "automatic_required_files": (
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
+            "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
             "modules/adapters/runtime/python/createPythonRuntimePort.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
@@ -290,6 +294,8 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
+            "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
             "modules/adapters/runtime/python/createPythonRuntimePort.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
@@ -299,12 +305,15 @@ PUBLISHED_FORM_CHECKS = {
         "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
             "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
-            "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts"),
+            "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts",
+            "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts"),
     },
     "headless-training-runtime-types": {
         "companion_to": "headless-training-runtime-unit",
         "sources": (
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+            "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
+            "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
             "modules/adapters/runtime/python/createPythonRuntimePort.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
@@ -316,6 +325,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
             "modules/adapters/runtime/python/createPythonRuntimePort.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+            "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts"),
     },
     "headless-training-runtime-worker-unit": {
@@ -605,6 +615,7 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/application/ports/model/approved-local-model-training.port.ts",
             "modules/application/ports/model/index.ts",
+            "modules/application/README.md",
             "modules/application/use-cases/README.md",
             "modules/application/use-cases/model/train-model.use-case.ts",
             "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",

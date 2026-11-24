@@ -236,6 +236,15 @@ export async function runPreparedHeadlessModelTraining(options: {
             // returns. This retained control is business-only from entry;
             // separate fences below own every new-start admission.
             control: {isCurrent: hostCurrent, stillAllowed: business},
+            // This reader belongs to preparation only. It retains the original
+            // ModelRead owner/authority and cannot become accepted-task control.
+            modelSource: Object.freeze({async read() {
+              if (!await admit() || !await business() || !startCurrent()) return;
+              const latest = modelSelection(await model.execute(original, readAuthority), original, binding);
+              if (!isDeepStrictEqual(latest, selected) || !await admit() || !await business() || !startCurrent()) return;
+              return Object.freeze({modelRecordId: latest.model.modelRecordId, modelUpdatedAt: latest.model.updatedAt,
+                localModelReference: latest.localModelReference});
+            }}),
             isAdmissionCurrent: () => hostCurrent() && current() && startCurrent(),
             acknowledgeIssued: async () => {
               if (!await admit() || !await business() || !startCurrent()) return false;

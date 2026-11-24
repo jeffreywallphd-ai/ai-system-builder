@@ -2664,3 +2664,36 @@ Denied or uncertain preparation retains original custody. It cannot prove zero
 source effects, release storage or authorize another attempt. These inert
 component checks do not implement the protected source protocol/bootstrap,
 complete native producer, public Roots or actual host qualification.
+
+### Original Model observed-byte preparation
+
+An optional private source observation composes with the existing authorized
+saved-Model reader. Shared execution retains its original request, ModelRead
+authority and complete selection comparison. The application captures this
+reader separately from accepted-task business control, copies replies before
+later policy waits, and closes its preparation lifetime on every exit. Runtime
+source access requires the genuine module-owned reserved training capture.
+A copied record or matching ID cannot replace that association.
+
+The foundation creates the actual IO owner synchronously with its reservation
+and retains it before observation. A configured missing reader refuses before
+reservation/IO. The policy explicitly bounds roots, selected graph bytes, time
+and buffer size. No limits or resource reservations are inferred. The observer
+enumerates the entire initial native-compatible flat safe graph and refuses
+unknown entries, directories, links, hardlinks and case aliases. Two bounded
+streaming SHA256/EOF passes, root/file identity and complete inventory checks
+produce immutable private observed facts. Data read is at most twice the graph
+byte limit. Recheck the original current saved Model after both hash passes and
+all original file closes, before publication. No source-file IO follows this
+final authorized full-binding read; changes during read/close waits are refused.
+
+Publish no observation until its own IO has returned and closed. A deadline
+failure retains the still-running original operation and its objects. Unknown
+closes cannot retry, release global custody or admit a replacement. No source
+or file fallback runs. Absent policy keeps ordinary and existing private paths.
+These cooperative observations cannot prove a simultaneous immutable graph,
+physical Windows protection, format validity, resource admission or readiness.
+The original controller must still reopen, copy and rehash under actual native
+custody and its measured reservation, then establish the inherited borrower.
+Full native production, output/Save, Root and actual-host qualification remain
+pending; no model quality test or parent pass follows from this component.

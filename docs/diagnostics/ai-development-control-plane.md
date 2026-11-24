@@ -3263,3 +3263,23 @@ normalization; Python checks before/after native semantics with an explicitly
 stubbed loader. Missing fixtures and unknown neighbors retain generic fallback.
 Routing tests execute the real fixed commands and require nonzero passing tests.
 No new runner, Native/model execution, output-quality score or parent pass follows.
+
+The existing original-training runtime unit and strict profiles also require the
+private original Model source observer and its actual synthetic-file fixture.
+The unit command retains its prior session/foundation/download tests and adds
+complete flat inventory, two-pass streamed SHA256, exact original Model/capture,
+permission/identity drift, EOF, bounded IO, deadline and uncertain-close cases.
+The strict command compiles the new fixture and its real source consumers.
+Routing tests execute both registered commands with nonzero passing assertions
+and no skipped, failed, cancelled or todo cases. Missing observer/fixture,
+unknown sources and explicit generic requests preserve conservative fallback.
+
+The actual saved-Model owner remains the policy source; application and Core/
+SQLite bridge fixtures cover preparation-only reader propagation, complete
+selection drift and late response closure independently of accepted business
+control. No Root or full native producer is enabled. The real hardlink fixture
+uses only its verified disposable synthetic directory; the Windows filesystem
+sandbox can refuse link creation with EPERM. Preserve that failure and run the
+same focused check in the permitted test environment rather than skipping the
+case or changing source guards. These checks load no model or Native controller
+and supply no resource reservation, native custody or parent qualification.

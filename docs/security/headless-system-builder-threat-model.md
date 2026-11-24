@@ -2443,3 +2443,35 @@ output settlement. No new cleanup, retry, physical grant or capacity credit is
 provided. Protected source/bootstrap, full native resources and actual host
 qualification remain separate. Causal tests use inert process/API suppliers and
 do not execute a model or score output quality.
+
+### Preparation-only observed Model graph
+
+Retain the actual original ModelRead owner and complete selected binding through
+the private application/runtime path. Capture methods and receivers before
+waits. ModelWrite or serialized metadata cannot grant this read. Close the
+source callback when preparation ends; late replies cannot revive it or change
+accepted-task business lifetime. Bind actual IO to the exact module-owned
+capture and original reservation before any file await.
+
+Use explicit finite roots/graph bytes/time/buffer policy, without defaults or
+capacity credit. Inventory every flat entry; reject unknown names, directories,
+links, hardlinks, case aliases and unsupported formats. Check original opened
+objects, root/path facts, complete inventory and EOF. Hash in two bounded
+passes, with at most twice the graph byte limit read. This catches tested
+same-size content changes when filesystem timestamps do not reveal them.
+Keep approved logical Model fields unchanged. Reread the current saved Model
+after both hash passes and every original file close. Reject revision, selected
+path or ModelRead loss during those waits. No source-file IO follows the final
+authorized full-binding Model read.
+Paths, objects and raw errors stay private.
+
+Retain opening/read/directory/close flights and returned objects before further
+callbacks. Timeout is a failed observation, not completed IO. Close uncertainty
+keeps its original owner and never authorizes another close, global release,
+worker fallback or retry. Require own IO retirement before observation success.
+Repeated stat/hash checks still do not establish simultaneous immutable native
+custody against adversarial writers. The subsequent original controller must
+acquire/copy/rehash under actual protection and measured reservation, then bind
+the real inherited worker borrower. Full producer, output accounting, Save,
+public Roots and actual hosts remain pending. Synthetic-file tests establish
+software behavior only; no actual model, Native controller or quality run occurs.
