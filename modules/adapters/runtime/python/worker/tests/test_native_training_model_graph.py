@@ -11,6 +11,7 @@ from queue import Queue
 import struct
 import sys
 from threading import Event, Thread, get_ident
+from types import ModuleType
 import unittest
 from unittest.mock import patch
 
@@ -1281,6 +1282,347 @@ class TrainingTensorStreamTests(unittest.TestCase):
             self.assertEqual(header["adapter.weight"],{"dtype":"F32","shape":[2],"data_offsets":[0,8]})
             self.assertEqual(struct.unpack("<ff",body),(1.5,-2.0)); self.assertEqual(tensor.phase,"complete")
             self.assertEqual(graph.phase,"sealed"); self.assertEqual(control.charges,[128*1024]); self.assertEqual(control.retained,[])
+
+
+class DenseTensorByteAdapterTests(unittest.TestCase):
+    def fixture(self):
+        case=TrainingOutputCustodyTests(); self.addCleanup(case.doCleanups)
+        facts=case.fixture(); actual,source,lease,inputs,request,input_control,kernel,config,contents,files,control=facts
+        sdk=ModuleType("torch"); sdk.Size=tuple; sdk.strided=object()
+        widths={"bool":1,"uint8":1,"int8":1,"int16":2,"int32":4,"int64":8,"float16":2,"bfloat16":2,"float32":4,"float64":8}
+        for name in widths: setattr(sdk,name,object())
+        width_of={getattr(sdk,name):width for name,width in widths.items()}
+        class Device:
+            def __init__(self,kind,index=None): self.type,self.index=kind,index
+        class Tensor:
+            after=None; copies=[]; bad_copy=None
+            def __init__(self,raw,shape,dtype=None,device=None,*,storage=None,offset=0,counter=None,tag="weight"):
+                self._storage=bytearray(raw) if storage is None else storage
+                self._shape=tuple(shape); self._dtype=sdk.float32 if dtype is None else dtype
+                self._device=Device("cpu") if device is None else device; self._offset=offset
+                self._counter=[0] if counter is None else counter; self.tag=tag
+                self.contiguous=True; self.quantized=False; self.layout_value=sdk.strided; self.negative=False
+            @property
+            def dtype(self): return self._dtype
+            @property
+            def shape(self): return self._shape
+            @property
+            def device(self): return self._device
+            @property
+            def layout(self): return self.layout_value
+            @property
+            def _version(self): return self._counter[0]
+            @property
+            def is_quantized(self): return self.quantized
+            def done(self,name,value):
+                if Tensor.after: Tensor.after(name,self)
+                return value
+            def size(self): return self.done("size",self._shape)
+            def stride(self):
+                if hasattr(self,"reported_stride"): return self.done("stride",self.reported_stride)
+                values=[]; unit=1
+                for size in reversed(self._shape): values.insert(0,unit); unit*=max(size,1)
+                return self.done("stride",tuple(values))
+            def storage_offset(self): return self.done("storage_offset",self._offset//width_of[self._dtype])
+            def data_ptr(self): return self.done("data_ptr",id(self._storage)+self._offset)
+            def element_size(self): return self.done("element_size",width_of[self._dtype])
+            def is_contiguous(self): return self.done("is_contiguous",self.contiguous)
+            def is_conj(self): return False
+            def is_neg(self): return self.negative
+            def detach(self): return self.done("detach",self)
+            def view(self,shape):
+                size=1
+                for value in self._shape: size*=value
+                dtype=sdk.uint8 if shape is sdk.uint8 else self._dtype
+                if shape is sdk.uint8: size*=width_of[self._dtype]
+                else: assert shape == -1
+                return self.done("view",Tensor(b"",(size,),dtype,self._device,storage=self._storage,
+                    offset=self._offset,counter=self._counter,tag=self.tag))
+            def narrow(self,dimension,start,length):
+                assert dimension==0 and len(self._shape)==1
+                return self.done("narrow",Tensor(b"",(length,),self._dtype,self._device,storage=self._storage,
+                    offset=self._offset+start*width_of[self._dtype],counter=self._counter,tag=self.tag))
+            def to(self,*,device,copy,non_blocking):
+                assert device=="cpu" and copy is True and non_blocking is False
+                size=self._shape[0]*width_of[self._dtype]; Tensor.copies.append((size,copy,non_blocking,self._device.type))
+                value=Tensor(self._storage[self._offset:self._offset+size],self._shape,self._dtype,tag=self.tag)
+                if Tensor.bad_copy=="alias": value=self
+                elif Tensor.bad_copy=="wide": value._shape=(self._shape[0]+1,)
+                elif Tensor.bad_copy=="dtype": value._dtype=sdk.uint8
+                return self.done("to",value)
+            def numpy(self):
+                assert self._dtype is sdk.uint8
+                return self.done("numpy",memoryview(self._storage)[self._offset:self._offset+self._shape[0]])
+        sdk.Tensor,sdk.device=Tensor,Device
+        patcher=patch.dict(sys.modules,{"torch":sdk}); patcher.start(); self.addCleanup(patcher.stop)
+        return facts,sdk,Tensor,Device
+
+    def tensor(self,Tensor,sdk,Device,*,device="cpu",count=4,tag="weight"):
+        raw=struct.pack("<"+"f"*count,*[float(i) for i in range(count)])
+        return Tensor(raw,(count,),sdk.float32,Device(device,0 if device=="cuda" else None),tag=tag),raw
+
+    def test_cpu_and_cuda_sources_use_only_bounded_blocking_copies_and_exact_values(self):
+        for device in ("cpu","cuda"):
+            with self.subTest(device=device):
+                facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+                tensor,raw=self.tensor(Tensor,sdk,Device,device=device,count=2500)
+                with lease.borrow(request) as view:
+                    selected={"layer.weight":tensor}
+                    stream=actual.OriginalTrainingDenseTensorStream(view,request,selected,maximum_bytes=65536,chunk_bytes=4096)
+                    self.assertEqual(Tensor.copies,[]); selected.clear()
+                    result=b"".join(stream); header,body=TrainingTensorStreamTests().decode(result)
+                    self.assertEqual(body,raw); self.assertEqual(header["layer.weight"]["shape"],[2500])
+                    self.assertEqual(len(result),stream.size_bytes); self.assertEqual(stream.phase,"complete")
+                    self.assertIsNone(stream._sdk_flight)
+                    self.assertEqual(sum(row[0] for row in Tensor.copies),len(raw))
+                    self.assertTrue(all(size<=4096 and copy and not nonblocking and kind==device
+                        for size,copy,nonblocking,kind in Tensor.copies))
+                    with self.assertRaises(actual.LaunchUnavailable): iter(stream)
+
+    def test_bfloat16_and_empty_tensor_bytes_need_no_dtype_conversion_or_full_copy(self):
+        facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+        tensor=Tensor(b"\x80\x3f\x00\xc0",(2,),sdk.bfloat16)
+        empty=Tensor(b"",(2048,0,2048),sdk.float32)
+        with lease.borrow(request) as view:
+            stream=actual.OriginalTrainingDenseTensorStream(view,request,{"bf16":tensor,"empty":empty},maximum_bytes=65536,chunk_bytes=4096)
+            raw=b"".join(stream); header,body=TrainingTensorStreamTests().decode(raw)
+            self.assertEqual(body,b"\x80\x3f\x00\xc0"); self.assertEqual(header["bf16"]["dtype"],"BF16")
+            self.assertEqual(header["empty"]["data_offsets"],[4,4]); self.assertEqual(Tensor.copies,[(4,True,False,"cpu")])
+
+    def test_unsupported_tensor_or_missing_sdk_denies_before_any_cpu_transfer(self):
+        for mode in ("subclass","noncontiguous","quantized","layout","dtype","device","negative","budget","missing-sdk","bad-size"):
+            with self.subTest(mode=mode):
+                facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+                tensor,_=self.tensor(Tensor,sdk,Device)
+                if mode=="subclass":
+                    class Foreign(Tensor): pass
+                    tensor=Foreign(b"1234",(1,))
+                elif mode=="noncontiguous": tensor.contiguous=False
+                elif mode=="quantized": tensor.quantized=True
+                elif mode=="layout": tensor.layout_value=object()
+                elif mode=="dtype": tensor._dtype=object()
+                elif mode=="device": tensor._device=Device("mps")
+                elif mode=="negative": tensor.negative=True
+                elif mode=="missing-sdk": sys.modules.pop("torch")
+                elif mode=="bad-size": tensor._shape=object()
+                with lease.borrow(request) as view:
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=4 if mode=="budget" else 65536,chunk_bytes=4096)
+                    self.assertEqual(Tensor.copies,[])
+
+    def test_missing_wrong_and_expired_joint_views_refuse_sdk_data(self):
+        facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+        tensor,_=self.tensor(Tensor,sdk,Device)
+        with self.assertRaises(actual.LaunchUnavailable):
+            actual.OriginalTrainingDenseTensorStream(object(),request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+        with lease.borrow(request) as view:
+            changed=copy.deepcopy(request); changed["commonParameters"]["maxSteps"]=999
+            with self.assertRaises(actual.LaunchUnavailable):
+                actual.OriginalTrainingDenseTensorStream(view,changed,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+            stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+        with self.assertRaises(actual.LaunchUnavailable): b"".join(stream)
+        self.assertEqual(Tensor.copies,[])
+
+    def test_lost_authority_during_sdk_handoff_prevents_later_transfers_and_native_writes(self):
+        for boundary in ("narrow","to","numpy"):
+            with self.subTest(boundary=boundary):
+                facts,sdk,Tensor,Device=self.fixture()
+                actual,_,lease,_,request,input_control,kernel,config,contents,files,control=facts
+                tensor,_=self.tensor(Tensor,sdk,Device); lost=[False]; after_loss=[]; invoke=kernel.invoke
+                def observed(name,args,row):
+                    if lost[0] and name=="WriteFile": after_loss.append(name)
+                    return invoke(name,args,row)
+                kernel.invoke=observed
+                def after(name,value):
+                    if name==boundary: input_control.current=False; lost[0]=True
+                with lease.borrow(request) as view:
+                    stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+                    for row in files:
+                        if row["name"]=="adapter_model.safetensors": row["sizeBytes"]=stream.size_bytes
+                    streams={name:(raw,) for name,raw in contents.items()}; streams["adapter_model.safetensors"]=stream
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    Tensor.after=after
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare(streams)
+                    self.assertTrue(lost[0]); self.assertEqual(after_loss,[])
+                    self.assertEqual(len(Tensor.copies),0 if boundary=="narrow" else 1)
+                    self.assertEqual(stream.phase,"failed"); self.assertEqual(graph.phase,"failed"); self.assertEqual(control.retained,[])
+                    self.assertEqual(stream._sdk_flight["operation"],boundary)
+                    self.assertTrue(stream._sdk_flight["entered"]); self.assertTrue(stream._sdk_flight["returned"])
+                    if boundary=="to": self.assertIs(type(stream._sdk_flight["result"]),Tensor)
+
+    def test_mutation_of_an_earlier_tensor_is_rechecked_before_native_output_seals(self):
+        facts,sdk,Tensor,Device=self.fixture()
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=facts
+        first,_=self.tensor(Tensor,sdk,Device,tag="first"); second,_=self.tensor(Tensor,sdk,Device,tag="second")
+        with lease.borrow(request) as view:
+            stream=actual.OriginalTrainingDenseTensorStream(view,request,{"first":first,"second":second},maximum_bytes=65536,chunk_bytes=4096)
+            for row in files:
+                if row["name"]=="adapter_model.safetensors": row["sizeBytes"]=stream.size_bytes
+            streams={name:(raw,) for name,raw in contents.items()}; streams["adapter_model.safetensors"]=stream
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            def changed(name,tensor):
+                if name=="numpy" and tensor.tag=="second": first._counter[0]+=1
+            Tensor.after=changed
+            with self.assertRaises(actual.LaunchUnavailable): graph.prepare(streams)
+            self.assertEqual(stream.phase,"failed"); self.assertEqual(graph.phase,"failed")
+            self.assertTrue(any(not handle.closed for handle in graph.owned_handles)); self.assertEqual(control.retained,[])
+
+    def test_captured_class_methods_survive_instance_and_module_replacement(self):
+        facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+        tensor,expected=self.tensor(Tensor,sdk,Device)
+        with lease.borrow(request) as view:
+            stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+            def forbidden(*args,**kwargs): raise AssertionError("A replaced SDK method must not be selected")
+            tensor.to=forbidden; sdk.Tensor=object
+            with patch.object(Tensor,"to",forbidden):
+                raw=b"".join(stream)
+            _,body=TrainingTensorStreamTests().decode(raw); self.assertEqual(body,expected)
+
+    def test_malformed_cpu_copy_replies_and_reentry_never_complete(self):
+        for mode in ("alias","wide","dtype","reentry"):
+            with self.subTest(mode=mode):
+                facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+                tensor,_=self.tensor(Tensor,sdk,Device)
+                with lease.borrow(request) as view:
+                    stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+                    if mode=="reentry":
+                        def reenter(name,value):
+                            if name=="narrow":
+                                with self.assertRaises(actual.LaunchUnavailable): iter(stream)
+                        Tensor.after=reenter
+                    else: Tensor.bad_copy=mode
+                    with self.assertRaises(actual.LaunchUnavailable): b"".join(stream)
+                    self.assertEqual(stream.phase,"failed")
+
+    def test_lost_sdk_return_and_foreign_thread_keep_original_flight_without_retry(self):
+        for mode in ("lost-return","thread"):
+            with self.subTest(mode=mode):
+                facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+                tensor,_=self.tensor(Tensor,sdk,Device)
+                with lease.borrow(request) as view:
+                    stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+                    iterator=iter(stream)
+                    if mode=="lost-return":
+                        def lost(name,value):
+                            if name=="to": raise RuntimeError("private lost SDK return")
+                        Tensor.after=lost
+                        with self.assertRaises(actual.LaunchUnavailable) as caught: b"".join(iterator)
+                        self.assertNotIn("private",str(caught.exception))
+                        flight=stream._sdk_flight; self.assertEqual(flight["operation"],"to")
+                        self.assertTrue(flight["entered"]); self.assertFalse(flight["returned"])
+                        self.assertIs(type(flight["tensor"]),Tensor); self.assertEqual(len(Tensor.copies),1)
+                    else:
+                        result=[]
+                        def foreign():
+                            try: next(iterator)
+                            except actual.LaunchUnavailable: result.append("denied")
+                        thread=Thread(target=foreign); thread.start(); thread.join(2)
+                        self.assertFalse(thread.is_alive()); self.assertEqual(result,["denied"]); self.assertEqual(Tensor.copies,[])
+                    self.assertEqual(stream.phase,"failed"); copies=len(Tensor.copies)
+                    with self.assertRaises(actual.LaunchUnavailable): next(iterator)
+                    self.assertEqual(len(Tensor.copies),copies)
+
+    def test_caught_currentness_reentry_cannot_emit_or_write_a_failed_stream(self):
+        for native in (False,True):
+            with self.subTest(native=native):
+                facts,sdk,Tensor,Device=self.fixture()
+                actual,_,lease,_,request,input_control,kernel,config,contents,files,control=facts
+                tensor,body=self.tensor(Tensor,sdk,Device); armed=[False]; caught=[]; writes=[]
+                with lease.borrow(request) as view:
+                    stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+                    original=stream._framed
+                    class ForwardedPlan:
+                        size_bytes=original.size_bytes
+                        def __iter__(self):
+                            inner=iter(original)
+                            class ForwardedIterator:
+                                def __iter__(self): return self
+                                def __next__(self):
+                                    raw=next(inner)
+                                    if raw==body: armed[0]=True
+                                    return raw
+                            return ForwardedIterator()
+                    stream._framed=ForwardedPlan()
+                    def current_value(obj):
+                        if obj is input_control and armed[0] and not caught:
+                            try: iter(stream)
+                            except actual.LaunchUnavailable: caught.append("denied")
+                        return obj.__dict__["current"]
+                    prop=property(current_value,lambda obj,value:obj.__dict__.__setitem__("current",value))
+                    invoke=kernel.invoke
+                    def observed(name,args,row):
+                        if name=="WriteFile" and caught: writes.append(name)
+                        return invoke(name,args,row)
+                    kernel.invoke=observed
+                    with patch.object(type(input_control),"current",prop,create=True):
+                        if native:
+                            for row in files:
+                                if row["name"]=="adapter_model.safetensors": row["sizeBytes"]=stream.size_bytes
+                            streams={name:(raw,) for name,raw in contents.items()}; streams["adapter_model.safetensors"]=stream
+                            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                            with self.assertRaises(actual.LaunchUnavailable): graph.prepare(streams)
+                            self.assertEqual(writes,[]); self.assertEqual(graph.phase,"failed"); self.assertEqual(control.retained,[])
+                        else:
+                            iterator=iter(stream); next(iterator); next(iterator)
+                            with self.assertRaises(actual.LaunchUnavailable): next(iterator)
+                    self.assertEqual(caught,["denied"]); self.assertEqual(stream.phase,"failed")
+
+    def test_returned_flat_and_slice_metadata_are_checked_before_cpu_copy(self):
+        for mode in ("flat-dtype","flat-shape","part-size","part-offset","part-dtype","part-device","part-version","part-stride"):
+            with self.subTest(mode=mode):
+                facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,*_=facts
+                tensor,_=self.tensor(Tensor,sdk,Device,count=2500)
+                original_view,original_narrow=Tensor.view,Tensor.narrow
+                def view(receiver,shape):
+                    result=original_view(receiver,shape)
+                    if shape==-1:
+                        if mode=="flat-dtype": result._dtype=sdk.float64
+                        if mode=="flat-shape": result._shape=(2500,1)
+                    return result
+                def narrow(receiver,dimension,start,length):
+                    result=original_narrow(receiver,dimension,start,length)
+                    if mode=="part-size": result._shape=(2500,)
+                    elif mode=="part-offset": result._offset+=4
+                    elif mode=="part-dtype": result._dtype=sdk.float64
+                    elif mode=="part-device": result._device=Device("mps")
+                    elif mode=="part-version": result._counter=[1]
+                    elif mode=="part-stride": result.reported_stride=(2,)
+                    return result
+                with patch.object(Tensor,"view",view),patch.object(Tensor,"narrow",narrow):
+                    with lease.borrow(request) as live:
+                        stream=actual.OriginalTrainingDenseTensorStream(live,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+                        with self.assertRaises(actual.LaunchUnavailable): b"".join(stream)
+                        self.assertEqual(Tensor.copies,[]); self.assertEqual(stream.phase,"failed")
+
+    def test_visible_metadata_and_late_currentness_mutation_deny_before_cpu_copy(self):
+        for mode in ("metadata","late-currentness"):
+            with self.subTest(mode=mode):
+                facts,sdk,Tensor,Device=self.fixture(); actual,_,lease,_,request,input_control,*_=facts
+                tensor,_=self.tensor(Tensor,sdk,Device,count=2500); changed=[]; armed=[]
+                original_size=Tensor.size
+                def size(receiver):
+                    result=original_size(receiver)
+                    if (mode=="metadata" and receiver._storage is tensor._storage
+                            and receiver._shape==(1024,) and not changed):
+                        receiver._shape=(2500,); receiver._counter[0]+=1; changed.append(True)
+                    return result
+                with patch.object(Tensor,"size",size):
+                    with lease.borrow(request) as view:
+                        stream=actual.OriginalTrainingDenseTensorStream(view,request,{"weight":tensor},maximum_bytes=65536,chunk_bytes=4096)
+                        original_sdk=stream._sdk
+                        def sdk_call(name,receiver,*args,**kwargs):
+                            if mode=="late-currentness" and name=="to" and not armed: armed.append(receiver)
+                            return original_sdk(name,receiver,*args,**kwargs)
+                        stream._sdk=sdk_call
+                        def current(obj):
+                            if obj is input_control and armed and not changed:
+                                armed[0]._shape=(2500,); armed[0]._counter[0]+=1; changed.append(True)
+                            return obj.__dict__["current"]
+                        prop=property(current,lambda obj,value:obj.__dict__.__setitem__("current",value))
+                        with patch.object(type(input_control),"current",prop,create=True):
+                            with self.assertRaises(actual.LaunchUnavailable): b"".join(stream)
+                        self.assertEqual(changed,[True]); self.assertEqual(Tensor.copies,[])
+                        self.assertEqual(stream.phase,"failed")
 
 
 class InheritedModelViewTests(unittest.TestCase):

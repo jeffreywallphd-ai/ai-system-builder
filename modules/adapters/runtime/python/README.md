@@ -952,5 +952,19 @@ declares the exact file size before allocation, and emits header/body chunks
 without collecting weights. Its byte suppliers are single-use and thread-bound;
 invalid, short, extra or reentrant streams fail permanently. Synthetic tensor
 bytes are reconstructed independently and passed through the actual writer.
-Fixed SDK tensor extraction and installed-reader compatibility remain pending;
+Fixed model/PEFT tensor selection and installed-reader compatibility remain pending;
 this codec grants no model, custody, Save, full-producer or host readiness.
+
+The separate `OriginalTrainingDenseTensorStream` adapts already-selected exact
+dense Torch tensors to that codec under a genuine live joint view. It captures
+loaded SDK class methods, metadata and tensor references, then copies only
+bounded blocking CPU slices and views their bytes. Check currentness and tensor
+identity/version around owned SDK calls and at completion. Unknown/lost calls
+retain the original flight; normal calls clear it without accumulating weights.
+Controlled CPU/CUDA and BF16 fixtures qualify this software only. Model/PEFT
+state selection, configuration export, installed SDK/reader compatibility, full
+producer, durable quotas, Save and real hardware/hosts remain pending.
+
+Metadata checks use one before/after consistency check, not a retry loop. Repeat
+the fixed shape/dtype/device/version check after the last original-view callback
+and before CPU copy. Changed slices cannot enlarge the dispatched transfer.

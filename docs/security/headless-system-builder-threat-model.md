@@ -2595,3 +2595,37 @@ tensors. Otherwise a zero can hide consumer-stride overflow in an apparently
 empty, bounded file. Keep that arithmetic check separate from the actual stored
 byte budget; valid empty shapes remain supported. The original red/green
 reproduction and independent checked-arithmetic probe remain inspectable.
+
+The dense tensor byte adapter binds the genuine live joint view and exact
+request before touching already-selected SDK tensors. Capture fixed loaded
+class operations and exact tensor references; refuse unknown types, dtype,
+layout, device, negative/conjugate/noncontiguous views or unbounded metadata.
+No arbitrary reader, guard, imported engine or path supplies authority. Check
+the finite byte plan before transfer and use only bounded blocking CPU copies
+and byte views. Recheck original currentness and tensor identity/version around
+owned SDK calls and final completion. This is cooperative checking, not atomic
+freezing of all tensors or instant cancellation inside a supplier.
+
+Retain one SDK call slot before entry and any returned object before post-call
+checks. Unknown/lost replies and observed mutation/lifetime loss cannot retry,
+seal output or release custody. Successful calls clear the slot rather than
+retaining a model-sized sequence of copied buffers. The Native output owner
+independently checks every effect. Inert SDK/Native tests qualify no installed
+binary, real CPU/GPU, model/PEFT selection, configuration export, full producer,
+durable quota, Save, SDK/worker retirement or actual-host/parent outcome.
+
+Recheck the stream's own failure latch and thread after original-view callbacks.
+A caught reentry cannot yield bytes or reach a Native write. Validate actual
+returned flatten/slice dtype, device, length, stride, width, offset, pointer and version
+before CPU transfer; a requested bounded slice is not proof of a bounded reply.
+The causal regressions retain failed after-latch emission and oversized-copy
+evidence alongside corrected zero-effect denials and unchanged positive cases.
+
+A previously read version is not a coherent snapshot. Reread fixed readonly
+metadata after SDK calls and final original-view observers; reject any visible
+shape, dtype, device, layout, quantization or version change. Bind CPU dispatch
+to a private registered-source/start/length record and recheck fixed readonly
+shape/dtype/device/version after the last observer. The record is data, not a
+caller-selected guard or permission. No retry/stabilization loop or atomic
+freeze is claimed. Preserve the visible-mutation oversized-copy reproduction
+and corrected zero-copy evidence; real SDK/resource/host proof stays pending.

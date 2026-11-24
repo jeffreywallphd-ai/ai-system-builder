@@ -1992,5 +1992,24 @@ aligned header, then emit bounded chunks once on the original consumer thread.
 Reject malformed metadata, unsupported dtype/name/shape, short/extra/nonbyte
 chunks, failed suppliers and reentry. Keep supplier references after failure;
 the codec does not close a supplier or establish reader retirement. It imports
-no model SDK. Fixed SDK tensor extraction, installed-reader compatibility and
+no model SDK. Fixed model/PEFT tensor selection, installed-reader compatibility and
 the complete producer are still pending; ordinary SDK serialization is unchanged.
+
+`OriginalTrainingDenseTensorStream` reads an already-selected dense tensor map
+through fixed methods captured from the loaded Torch class. A genuine original
+joint view and exact request remain required; this adapter imports or installs
+nothing. Refuse unsupported dtype/layout/device, noncontiguous/negative views,
+foreign Tensor types, changed metadata and expired/thread/reentrant use before
+continuing. Blocking `copy=True` CPU slices stay within the configured buffer;
+byte views preserve BF16 representation without numeric conversion. Recheck
+versions at owned boundaries and completion. Retain one uncertain SDK call slot,
+including any returned object before post-call checks; do not retry or infer
+SDK-reader retirement. Inert SDK/Native fixtures are not installed-runtime or
+hardware evidence. Fixed model/PEFT selection, configuration export, full
+producer, durable quota, Save and actual hosts stay pending.
+
+After metadata SDK calls and original-view observers, reread fixed readonly
+shape/type/device/version fields and reject a changed snapshot. For CPU copy,
+check a closed private slice record again after the last observer, before
+dispatch. It contains only the registered source and exact start/length, not
+a selectable callback or public grant. No stabilization or automatic retry runs.

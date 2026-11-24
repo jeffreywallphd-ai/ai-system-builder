@@ -2872,3 +2872,43 @@ does not suppress stride-overflow validation. Apply the separate file budget to
 actual stored bytes, so valid empty shapes do not fail merely because a partial
 dimension product exceeds that byte budget. Preserve the causal failures and
 valid-empty regression; no installed-reader compatibility is inferred.
+
+`OriginalTrainingDenseTensorStream` supplies the byte-source adapter for an
+already-selected dense tensor map. Bind only a genuine live original joint view
+and exact sealed request. Capture already-loaded Torch types, dtype identities,
+fixed class operations and original tensor references before SDK callbacks;
+perform no SDK import, installation or ordinary-path fallback. The finite
+little-endian profile supports exact dense contiguous CPU/CUDA tensors, refuses
+quantized/negative/conjugate or foreign types, and validates the codec's byte
+plan before CPU transfers. Model/PEFT state selection remains a separate owner.
+
+Use [blocking, explicit copies](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.to.html)
+of bounded flattened slices, then a uint8 view and bounded buffer extraction.
+Do not clone complete trained weights. Retain metadata, storage identity and
+version checks around owned SDK callbacks and at completion. Capture each SDK
+flight before entry and its returned object before post-call proof; a lost
+result/currentness check retains that slot without retry. Normal calls clear
+their slot, so streamed weights are not accumulated. These are cooperative
+software boundaries, not atomic tensor freezing or SDK-reader/worker retirement.
+Controlled SDK/Native fixtures score no model and supply no real CPU/GPU,
+installed-reader or host pass. Fixed model/PEFT selection and configuration
+export, full producer, durable quotas, Save and actual qualification stay pending.
+
+Repeat the stream's own phase/thread check after the fixed original-view proof,
+which can call business observers. Caught reentry must not emit bytes from a
+latched failed stream. Before any CPU copy, inspect the returned flattened view
+and slice: require exact dtype/device, one-dimensional length/stride, width, storage
+offset, pointer and version derived from the captured tensor. Requested slice
+arguments alone cannot establish a memory bound. Preserve both causal failures
+and corrected zero-emission/zero-copy checks; no model quality is evaluated.
+
+Make each metadata snapshot self-consistent: after its SDK calls and final
+original-view observers, reread captured readonly shape, dtype, device, layout,
+quantization and version fields. Require them to match the observed metadata.
+For CPU transfer, bind a closed private slice record to the actual registered
+byte source and exact start/length. After `_sdk`'s last original-view callback,
+check fixed readonly shape/dtype/device/version fields again before `.to`.
+This prevents an observed metadata or later observer change from enlarging the
+copy. The record accepts no arbitrary predicate, provider, path or permission.
+The check is bounded and runs once; it does not freeze tensors atomically,
+stabilize by retrying or replace real SDK/resource qualification.

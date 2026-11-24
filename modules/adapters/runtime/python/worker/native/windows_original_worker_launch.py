@@ -18,6 +18,7 @@ import ntpath
 import os
 from pathlib import Path
 from contextlib import contextmanager
+from collections import OrderedDict
 import platform
 from queue import Empty, Full, Queue
 import re
@@ -1709,6 +1710,230 @@ class OriginalTrainingTensorStream:
                 need(type(chunk) is bytes and 0 < len(chunk) <= self.chunk_bytes and copied+len(chunk) <= size)
                 copied += len(chunk); yield chunk
             need(copied == size)
+
+
+class OriginalTrainingDenseTensorStream:
+    """Fixed already-loaded Torch byte adapter for selected original tensors.
+
+    Selection of a model/PEFT state and export of its configuration are separate.
+    This object grants no Native output or retirement authority.
+    """
+    def __init__(self, view, sealed_request, tensors, *, maximum_bytes, chunk_bytes):
+        self.phase = "capturing"
+        try: self._capture(view,sealed_request,tensors,maximum_bytes=maximum_bytes,chunk_bytes=chunk_bytes)
+        except BaseException:
+            self.phase = "failed"
+            raise LaunchUnavailable() from None
+
+    def _capture(self, view, sealed_request, tensors, *, maximum_bytes, chunk_bytes):
+        self.phase = "capturing"; self._view = view; self._request = _copy_model_json(sealed_request)
+        self._sdk_flight = None
+        self._resolve = resolve_original_training_references
+        self._lock, self._thread = Lock(), get_ident()
+        self._current()
+        module = sys.modules.get("torch")
+        need(type(module) is ModuleType and sys.byteorder == "little")
+        namespace = vars(module); tensor_type, device_type = namespace.get("Tensor"), namespace.get("device")
+        need(isinstance(tensor_type, type) and isinstance(device_type, type))
+        self._tensor_type, self._device_type = tensor_type, device_type
+        self._size_type = namespace.get("Size"); need(isinstance(self._size_type,type))
+        self._ops = {name: getattr(tensor_type,name) for name in
+            ("size","stride","storage_offset","data_ptr","element_size","is_contiguous","is_conj","is_neg",
+             "detach","view","narrow","to","numpy")}
+        need(all(callable(fn) for fn in self._ops.values()))
+        self._properties = {name: getattr(tensor_type,name).__get__ for name in
+            ("dtype","device","layout","_version","is_quantized","shape")}
+        names = {"BOOL":"bool","U8":"uint8","I8":"int8","I16":"int16","I32":"int32","I64":"int64",
+            "F16":"float16","BF16":"bfloat16","F32":"float32","F64":"float64"}
+        self._dtypes = tuple((code, namespace.get(name)) for code,name in names.items())
+        need(all(value is not None for _,value in self._dtypes) and namespace.get("strided") is not None)
+        self._strided, self._uint8 = namespace["strided"], namespace["uint8"]
+        self.chunk_bytes = integer(chunk_bytes,4096,1024**2)
+        need(type(tensors) in (dict, OrderedDict) and 1 <= len(tensors) <= 4096
+             and all(type(name) is str for name in tensors))
+        self._tensors = tuple(tensors.items()); self._snapshots = []
+        rows, streams = [], {}
+        for name,tensor in self._tensors:
+            captured = self._snapshot(tensor)
+            self._snapshots.append(captured)
+            rows.append({"name":name,"dtype":captured["dtype"],"shape":list(captured["shape"])})
+            streams[name] = _OriginalDenseTensorBytes(self,tensor,captured)
+        self._framed = OriginalTrainingTensorStream(rows,streams,maximum_bytes=maximum_bytes,chunk_bytes=chunk_bytes)
+        self._all_current(); self.phase = "bound"
+
+    @property
+    def size_bytes(self): return self._framed.size_bytes
+
+    def _current(self):
+        need(self.phase in ("capturing","bound","active") and self._thread == get_ident())
+        _, inputs = self._resolve(self._view,self._request); need(inputs is not None)
+        # The original proof calls captured business observers. Caught reentry
+        # can latch this stream failed without withdrawing the original view.
+        need(self.phase in ("capturing","bound","active") and self._thread == get_ident())
+
+    def _sdk(self, name, tensor, *args, _slice=None, **kwargs):
+        if self._sdk_flight is not None:
+            self.phase = "failed"
+            raise LaunchUnavailable()
+        flight = {"operation":name,"tensor":tensor,"args":args,"kwargs":kwargs,"slice":_slice,
+            "entered":False,"returned":False,"result":None}
+        self._sdk_flight = flight
+        try:
+            self._current()
+            if name == "to": self._check_copy_slice(tensor,_slice)
+            else: need(_slice is None)
+            flight["entered"] = True
+            result = self._ops[name](tensor,*args,**kwargs)
+            flight["result"], flight["returned"] = result, True
+            self._current(); need(self._sdk_flight is flight)
+            self._sdk_flight = None
+            return result
+        except BaseException:
+            self.phase = "failed"
+            raise LaunchUnavailable() from None
+
+    def _closed_properties(self, tensor):
+        need(type(tensor) is self._tensor_type)
+        values = {name:get(tensor,self._tensor_type) for name,get in self._properties.items()}
+        shape = values["shape"]
+        need(type(shape) in (tuple,self._size_type) and len(shape) <= 32
+             and all(type(size) is int and 0 <= size <= 2**53-1 for size in shape)
+             and type(values["device"]) is self._device_type
+             and type(values["_version"]) is int and values["_version"] >= 0)
+        device = values["device"]
+        values["shape"], values["device_key"] = tuple(shape), (device.type,device.index)
+        return values
+
+    def _check_copy_slice(self, tensor, context):
+        # Closed private data, never a supplied predicate or public capability.
+        need(type(context) is tuple and len(context) == 3)
+        source,start,length = context
+        need(type(source) is _OriginalDenseTensorBytes and source.owner is self
+             and any(t is source.tensor and row is source.captured
+                     for (_,t),row in zip(self._tensors,self._snapshots)))
+        expected = source.captured; count = 1
+        for size in expected["shape"]: count *= size
+        need(type(start) is int and type(length) is int and 0 <= start < count
+             and 1 <= length <= min(count-start,self.chunk_bytes//expected["width"]))
+        # No business observer follows these fixed readonly properties before
+        # dispatch. Recheck after _sdk's LAST original-view callback, not merely
+        # after the earlier returned-slice inspection.
+        values = self._closed_properties(tensor)
+        dtype = next(dtype for code,dtype in self._dtypes if code == expected["dtype"])
+        need(values["shape"] == (length,) and values["dtype"] is dtype
+             and values["device_key"] == expected["device"] and values["_version"] == expected["version"]
+             and values["layout"] is self._strided and values["is_quantized"] is False
+             and self.phase == "active" and self._thread == get_ident())
+
+    def _snapshot(self, tensor):
+        self._current(); need(type(tensor) is self._tensor_type)
+        values = self._closed_properties(tensor)
+        self._current()
+        need(values["layout"] is self._strided and values["is_quantized"] is False
+             and type(values["_version"]) is int and values["_version"] >= 0
+             and type(values["device"]) is self._device_type)
+        code = next((code for code,dtype in self._dtypes if values["dtype"] is dtype), None); need(code is not None)
+        device = values["device"]; device = (device.type,device.index)
+        need(device == ("cpu",None) or device[0] == "cuda" and type(device[1]) is int and 0 <= device[1] <= 65535)
+        shape, stride = self._sdk("size",tensor), self._sdk("stride",tensor)
+        need(type(shape) in (tuple,self._size_type) and len(shape) <= 32)
+        shape = tuple(shape)
+        need(all(type(size) is int and 0 <= size <= 2**53-1 for size in shape)
+             and type(stride) is tuple and len(stride) == len(shape)
+             and all(type(size) is int and 0 <= size <= 2**63-1 for size in stride)
+             and self._sdk("is_contiguous",tensor) is True and self._sdk("is_conj",tensor) is False
+             and self._sdk("is_neg",tensor) is False)
+        offset, pointer, width = (self._sdk(name,tensor) for name in ("storage_offset","data_ptr","element_size"))
+        need(type(offset) is int and 0 <= offset <= 2**63-1 and type(pointer) is int and 0 <= pointer <= 2**64-1
+             and type(width) is int and width == _TENSOR_BYTE_WIDTHS[code])
+        self._current()
+        after = self._closed_properties(tensor)
+        need(after["shape"] == values["shape"] == shape and after["_version"] == values["_version"]
+             and after["dtype"] is values["dtype"] and after["device_key"] == device
+             and after["layout"] is self._strided and after["is_quantized"] is False)
+        return {"dtype":code,"device":device,"shape":shape,"stride":stride,"offset":offset,
+            "pointer":pointer,"version":values["_version"],"width":width}
+
+    def _all_current(self):
+        self._current()
+        for (_,tensor),captured in zip(self._tensors,self._snapshots): need(self._snapshot(tensor) == captured)
+        self._current()
+
+    def __iter__(self):
+        if not self._lock.acquire(blocking=False): self.phase = "failed"; raise LaunchUnavailable()
+        try:
+            self._current(); need(self.phase == "bound")
+            self.phase = "active"
+            return _OriginalDenseTensorIterator(self,iter(self._framed))
+        except BaseException:
+            self.phase = "failed"
+            raise LaunchUnavailable() from None
+        finally: self._lock.release()
+
+
+class _OriginalDenseTensorBytes:
+    def __init__(self, owner, tensor, captured): self.owner,self.tensor,self.captured = owner,tensor,captured
+    def _check_view(self, view, start, length):
+        expected = self.captured; observed = self.owner._snapshot(view)
+        need(observed["dtype"] == expected["dtype"] and observed["device"] == expected["device"]
+             and observed["shape"] == (length,) and observed["width"] == expected["width"]
+             and (length <= 1 or observed["stride"] == (1,))
+             and observed["offset"] == expected["offset"]+start
+             and observed["pointer"] == expected["pointer"]+start*expected["width"]
+             and observed["version"] == expected["version"])
+
+    def __iter__(self):
+        owner,tensor,captured = self.owner,self.tensor,self.captured
+        need(owner._snapshot(tensor) == captured)
+        count = 1
+        for size in captured["shape"]: count *= size
+        if count == 0: return
+        flat = owner._sdk("view",owner._sdk("detach",tensor),-1)
+        self._check_view(flat,0,count)
+        capacity = owner.chunk_bytes // captured["width"]
+        for at in range(0,count,capacity):
+            need(owner._snapshot(tensor) == captured)
+            length = min(capacity,count-at)
+            part = owner._sdk("narrow",flat,0,at,length)
+            # Validate the returned slice BEFORE any allocation/transfer. SDK
+            # call arguments alone do not prove a bounded returned object.
+            self._check_view(part,at,length)
+            cpu = owner._sdk("to",part,device="cpu",copy=True,non_blocking=False,_slice=(self,at,length))
+            copied = owner._snapshot(cpu)
+            need(copied["dtype"] == captured["dtype"] and copied["device"] == ("cpu",None)
+                 and copied["shape"] == (length,) and copied["offset"] == 0 and copied["pointer"] != captured["pointer"])
+            byte_view = owner._sdk("view",cpu,owner._uint8)
+            array = owner._sdk("numpy",byte_view)
+            buffer = memoryview(array)
+            try:
+                need(buffer.c_contiguous and buffer.format == "B" and buffer.ndim == 1
+                     and buffer.nbytes == length*captured["width"] <= owner.chunk_bytes)
+                raw = buffer.tobytes()
+            finally: buffer.release()
+            owner._current(); need(owner._snapshot(tensor) == captured)
+            yield raw
+        need(owner._snapshot(tensor) == captured)
+
+
+class _OriginalDenseTensorIterator:
+    def __init__(self, owner, framed): self.owner,self.framed = owner,framed
+    def __iter__(self): return self
+    def __next__(self):
+        owner = self.owner
+        if not owner._lock.acquire(blocking=False): owner.phase = "failed"; raise LaunchUnavailable()
+        try:
+            if owner.phase == "complete": raise StopIteration
+            owner._current()
+            try: raw = next(self.framed)
+            except StopIteration:
+                owner._all_current(); owner.phase = "complete"
+                raise
+            owner._current(); return raw
+        except StopIteration: raise
+        except BaseException:
+            owner.phase = "failed"
+            raise LaunchUnavailable() from None
+        finally: owner._lock.release()
 
 
 class _OriginalTensorIterator:
