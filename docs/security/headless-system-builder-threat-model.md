@@ -2419,3 +2419,27 @@ quality or Save claims. Missing cache is a closed source-not-ready failure.
 Only an existing fixed comparison can be reported, marked measurement-only;
 this read performs no scoring. No Native/model effects, Root activation,
 resource grant, candidate Save or real-host/parent qualification is granted.
+
+### Original training startup admission
+
+An approved task can lose permission while installed-runtime or filesystem
+checks await. Host admission alone cannot authorize the next construction or
+resume. Bind the private original request/control capture to its exact foundation
+reservation. Recheck captured business permission after relevant waits, including
+the low-level Node filesystem preflight, then apply a synchronous currentness
+fence before dispatch. Do not serialize a callback, ready flag or request ID as
+that authority. Keep async permission outside void currentness callbacks.
+
+Publish original flight identity before callbacks run. Reject foreign/unguarded
+coalescing, getters, replaced methods and asynchronous currentness. Preserve each
+observed denial on its original capture. Revoke ready startup state if the final
+admission check fails. A successful handoff ends the startup-specific check; it
+does not replace continuing task policy or the host's worker ownership. Original
+Stop/retirement stays available without renewing task permission.
+
+Lost or denied preparation retains original reservation and worker uncertainty.
+Neither worker close alone nor a missing app/task can establish source/input/
+output settlement. No new cleanup, retry, physical grant or capacity credit is
+provided. Protected source/bootstrap, full native resources and actual host
+qualification remain separate. Causal tests use inert process/API suppliers and
+do not execute a model or score output quality.

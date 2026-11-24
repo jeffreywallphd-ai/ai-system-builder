@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
-import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile} from "./client/approvedTrainingTaskSession";
+import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile, type OriginalTrainingCapture} from "./client/approvedTrainingTaskSession";
 import {captureOriginalWorkerResourceProfile} from "./supervisor/windowsOriginalWorkerLaunch";
 import type {ApprovedLocalModelTrainingPort} from "../../../application/ports/model";
 import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
@@ -115,7 +115,7 @@ export function createPythonRuntimeAdapterFoundation(
   >();
   // Original reservations survive worker exit, failed startup, and lost replies.
   // Their release is owned exclusively by permanent original session retirement.
-  const trainingReservations = new Map<string, {settled: boolean}>();
+  const trainingReservations = new Map<string, {settled: boolean; capture: OriginalTrainingCapture}>();
   let directModelDownloads = 0;
   const trainingCustodyLive = () => [...trainingReservations.values()].some(value => !value.settled);
   // A disconnected POST can already have started non-cancellable Dataset work.
@@ -551,11 +551,12 @@ export function createPythonRuntimeAdapterFoundation(
       const captureRetirement = supervisor.captureOriginalTrainingWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
       return createOriginalTrainingPort({
-        reserve(requestId) {
+        reserve(capture) {
+          const requestId = capture.definition.requestId;
           if (!hostAdmission || trainingCustodyLive() || trainingReservations.has(requestId) || trainingReservations.size >= 256 ||
               directModelDownloads || trackedTasks.size || datasetAdmissions.size || installedContextAdmissions.size || recoveryInFlight || recoveryUncertain)
             return undefined;
-          const original = {settled: false}; trainingReservations.set(requestId, original);
+          const original = {settled: false, capture}; trainingReservations.set(requestId, original);
           try {assertHostAccepting();} catch (error) {
             original.settled = true; // No preparation/IO was issued by this reservation.
             throw error;
@@ -565,17 +566,27 @@ export function createPythonRuntimeAdapterFoundation(
             original.settled = true;
           };
         },
-        async captureChannel() {
-          assertHostAccepting();
+        async captureChannel(capture) {
+          const requestId = capture.definition.requestId, reservation = trainingReservations.get(requestId);
+          const requestCurrent = capture.assertCurrent.bind(capture), requestAllowed = capture.assertAllowed.bind(capture);
+          const currentCapture = () => {
+            if (!reservation || reservation.settled || reservation.capture !== capture || trainingReservations.get(requestId) !== reservation)
+              throw new Error("Original training reservation is unavailable.");
+            requestCurrent(); assertHostAccepting(); requestCurrent();
+          };
+          const allowedCapture = async () => {currentCapture(); await requestAllowed(); currentCapture();};
+          currentCapture();
           if (!startInstalled || !captureRetirement) throw new Error("Installed-only training startup is unavailable.");
-          await startInstalled(); assertHostAccepting();
+          const admission = Object.freeze({assertCurrent: currentCapture, assertAllowed: allowedCapture});
+          await startInstalled(admission); currentCapture();
           const worker = captureRetirement(), workerCurrent = worker.assertCurrent.bind(worker);
           const retire = worker.retireOriginal.bind(worker), unused = worker.releaseUnused.bind(worker);
           workerCurrent();
+          await allowedCapture();
           const original = await captureOriginal(profile);
           const channelCurrent = original.assertCurrent.bind(original), sendOriginal = original.send.bind(original);
           const current = () => {workerCurrent(); channelCurrent();};
-          assertHostAccepting(); current();
+          await allowedCapture(); current();
           return Object.freeze({identity: original.identity, assertCurrent: current,
             retireOriginalWorker: retire, releaseUnusedWorker: unused,
             async send(endpoint: string, body: unknown, dispatch?: () => void) {

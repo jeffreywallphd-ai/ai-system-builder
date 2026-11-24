@@ -52,12 +52,18 @@ export function originalWorkerResourceDigest(profile: WindowsOriginalWorkerResou
 export function createWindowsOriginalWorkerLaunch(options: {
   readonly command: string; readonly cwd: string; readonly environment: NodeJS.ProcessEnv;
   readonly profile: WindowsOriginalWorkerResourceProfile; readonly assertHostCurrent: () => void;
+  /** Separate async permission check after preflight, before controller creation. */
+  readonly assertStartupAllowed?: () => Promise<void>;
   readonly nativePlatform?: () => {platform: NodeJS.Platform; arch: string};
   readonly spawnImplementation?: typeof spawn;
 }): ManagedOriginalPythonWorker {
   const profile = captureOriginalWorkerResourceProfile(options.profile), digest = originalWorkerResourceDigest(profile);
   const command = options.command, cwd = options.cwd, environment = {...options.environment};
   const hostCurrent = options.assertHostCurrent, launch = options.spawnImplementation ?? spawn;
+  const allowedProperty = Object.getOwnPropertyDescriptor(options, "assertStartupAllowed");
+  need(allowedProperty !== undefined || !("assertStartupAllowed" in options));
+  need(allowedProperty === undefined || "value" in allowedProperty && typeof allowedProperty.value === "function");
+  const startupAllowed = allowedProperty?.value as (() => Promise<void>) | undefined;
   need(typeof command === "string" && path.isAbsolute(command) && typeof cwd === "string" && path.isAbsolute(cwd) && typeof hostCurrent === "function");
   need(!/^(?:\\\\|\/\/)/.test(command) && !/^(?:\\\\|\/\/)/.test(cwd) && !command.includes("\0") && !cwd.includes("\0"));
   const inspectPlatform = options.nativePlatform ?? (() => ({platform: process.platform, arch: process.arch}));
@@ -175,7 +181,7 @@ export function createWindowsOriginalWorkerLaunch(options: {
     assertCurrent() {currentHost(); need(!uncertain && !controllerExited && !controllerClosed && !nativeRetired && !stopAttempted && (phase === "suspended" || phase === "resuming" || phase === "running"));},
     async prepare() {
       need(phase === "bound" && !prepareFlight); phase = "preparing";
-      const operation = (async () => {
+      const operation = Promise.resolve().then(async () => {
         currentHost(); need(!stopAttempted);
         const helper = path.join(cwd, "native", "windows_original_worker_launch.py"), entry = path.join(cwd, "main.py");
         const reads = await Promise.allSettled([
@@ -190,6 +196,7 @@ export function createWindowsOriginalWorkerLaunch(options: {
         const env = Object.fromEntries(Object.entries(environment).filter((row): row is [string, string] => row[1] !== undefined));
         const boot = JSON.stringify({schema: "windows-original-worker-launch-v1", nonce, profile, profileDigest: digest, environment: env}) + "\n";
         need(Buffer.byteLength(boot) <= 65_536);
+        if (startupAllowed) need(await Reflect.apply(startupAllowed, options, []) === undefined);
         currentHost(); need(!stopAttempted); launchAttempted = true;
         // The controller must remain stdlib-only before the app Job exists.
         // The app has its separate launch without -S, preserving installed SDKs.
@@ -210,18 +217,18 @@ export function createWindowsOriginalWorkerLaunch(options: {
         if (stopAttempted) {stdin.end(); throw unavailable();}
         bootAttempted = true; sendOriginal(boot);
         need(await wait(() => suspendedAcknowledged, profile.observationMs)); currentHost(); owner.assertCurrent();
-      })();
+      });
       prepareFlight = operation;
       try {await operation;} catch {notifyUnavailable(); throw unavailable();}
       finally {preparationReturned = true; acknowledgeNoConstruction(); notify();}
     },
     async resume() {
-      need(phase === "suspended" && !resumeAttempted && !resumeFlight); owner.assertCurrent();
+      need(preparationReturned && phase === "suspended" && !resumeAttempted && !resumeFlight);
       resumeAttempted = true; phase = "resuming";
-      const operation = (async () => {
-        currentHost(); send("resume");
+      const operation = Promise.resolve().then(async () => {
+        owner.assertCurrent(); currentHost(); send("resume");
         need(await wait(() => phase === "running", profile.observationMs)); owner.assertCurrent();
-      })();
+      });
       resumeFlight = operation;
       try {await operation;} catch {notifyUnavailable(); throw unavailable();}
     },

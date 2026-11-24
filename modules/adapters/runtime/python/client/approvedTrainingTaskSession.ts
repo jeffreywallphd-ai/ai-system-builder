@@ -22,6 +22,12 @@ export interface OriginalTrainingOwnedChannel extends OriginalTrainingChannel {
   /** Must acknowledge synchronously with undefined, not an async void Promise. */
   releaseUnusedWorker(): void;
 }
+/** Original in-process reservation identity, never a wire authorization record. */
+export interface OriginalTrainingCapture {
+  readonly definition: ApprovedLocalTrainingDefinition;
+  assertCurrent(): void;
+  assertAllowed(): Promise<void>;
+}
 const unavailable = () => new Error("The original private training session is unavailable.");
 const need = (value: unknown): void => {if (value !== true) throw unavailable();};
 const copy = <T>(value: T): T => capturePassiveModelData(value) as T;
@@ -39,22 +45,37 @@ export function captureTrainingProfile(raw: OriginalTrainingProfile): OriginalTr
 /** Capture before ANY startup/capture/HTTP await. The reservation is released
  * only by permanent original retirement; unknown outcomes retain it. */
 export function createOriginalTrainingPort(options: {
-  captureChannel: () => Promise<OriginalTrainingOwnedChannel>;
-  reserve: (requestId: string) => (() => void) | undefined;
+  captureChannel: (original: OriginalTrainingCapture) => Promise<OriginalTrainingOwnedChannel>;
+  reserve: (original: OriginalTrainingCapture) => (() => void) | undefined;
 }): ApprovedLocalModelTrainingPort {
   const capture = options.captureChannel, reserve = options.reserve;
   return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl) {
     const definition = copy(raw), isCurrent = rawControl.isCurrent, allowed = rawControl.stillAllowed;
-    const current = () => {need(isCurrent.call(rawControl) === true);};
+    need(typeof isCurrent === "function" && typeof allowed === "function");
+    let admissionLost = false;
+    const current = () => {
+      need(!admissionLost);
+      try {
+        const result: unknown = isCurrent.call(rawControl);
+        if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+        need(result === true);
+      } catch {admissionLost = true; throw unavailable();}
+    };
+    const permission = async () => {
+      current();
+      try {need(await allowed.call(rawControl) === true); current();}
+      catch {admissionLost = true; throw unavailable();}
+    };
+    const originalCapture: OriginalTrainingCapture = Object.freeze({definition, assertCurrent: current, assertAllowed: permission});
     current();
-    const release = reserve(definition.requestId);
+    const release = reserve.call(options, originalCapture);
     if (!release) return undefined;
+    need(typeof release === "function");
     let phase: "bound" | "preparing" | "ready" | "issuing" | "accepted" | "unconfirmed" | "settled" = "bound";
     let channel: OriginalTrainingChannel | undefined, binding: Record<string, unknown> | undefined;
     let operations = 0, cancelAttempted = false, closeAttempted = false, closing = false;
     let remoteRetired = false, retireWorker: (() => Promise<boolean>) | undefined, releaseUnusedWorker: (() => void) | undefined;
     let cached: RuntimeTaskRecord | undefined, cancellation: boolean | undefined;
-    const permission = async () => {current(); need(await allowed.call(rawControl) === true); current();};
     const send = async (action: string, input?: unknown, dispatch?: () => void) => {
       need(!!channel && !!binding && phase !== "settled");
       const reply = exact(await channel!.send("/training/original/" + definition.requestId + "/" + action,
@@ -69,7 +90,7 @@ export function createOriginalTrainingPort(options: {
       async prepare() {
         need(phase === "bound"); phase = "preparing"; operations++;
         try {
-          await permission(); const original = await capture(); current();
+          await permission(); const original = await capture.call(options, originalCapture); current();
           const identity = copy(original.identity), assertCurrent = original.assertCurrent, sendOriginal = original.send;
           const retireOriginalWorker = original.retireOriginalWorker, releaseOriginalUnused = original.releaseUnusedWorker;
           need(typeof retireOriginalWorker === "function" && typeof releaseOriginalUnused === "function");

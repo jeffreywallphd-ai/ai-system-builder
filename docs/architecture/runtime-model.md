@@ -2644,3 +2644,23 @@ Missing cache returns `headless.source-not-ready` without polling the original
 task. Historical fixed comparisons stay measurement-only, not recomputed or
 quality-qualified. Native producer/output/Save and real-host qualification
 remain separate from these synthetic protocol and composition checks.
+
+### Training request binding during worker startup
+
+Private training startup carries one frozen original definition/control capture.
+The foundation reserves this object before any wait and matches its exact local
+identity before capture. The installed-only supervisor retains the originating
+currentness and permission methods/receiver through verification, launch
+preparation, native construction, suspension and resume. The Node native launcher
+performs a separate async permission check after filesystem preflight and a
+synchronous currentness fence immediately before controller construction.
+
+Publish each startup/prepare/resume flight before callbacks can reenter. An
+active startup accepts only its original admission object; ordinary or foreign
+requests cannot join it. Captured methods and observed denial remain attached to
+that admission. Successful startup ends only the startup-specific grant; worker
+host ownership, task business policy and original retirement remain independent.
+Denied or uncertain preparation retains original custody. It cannot prove zero
+source effects, release storage or authorize another attempt. These inert
+component checks do not implement the protected source protocol/bootstrap,
+complete native producer, public Roots or actual host qualification.

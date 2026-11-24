@@ -39,7 +39,7 @@ export interface PythonRuntimeSupervisorEvent {
 export interface PythonRuntimeSupervisor {
   start(): Promise<void>;
   /** Host-only restrictive path. Absence is not permission to call start(). */
-  startWithoutInstalling?(): Promise<void>;
+  startWithoutInstalling?(admission?: InstalledPythonRuntimeStartupAdmission): Promise<void>;
   /** Private original-child capability. HTTP identity alone cannot supply it. */
   captureOriginalWorkerRetirement?(): OriginalPythonWorkerRetirement;
   /** Strict resource-bound path. Never falls back to a plain child. */
@@ -47,6 +47,38 @@ export interface PythonRuntimeSupervisor {
   stop(): Promise<void>;
   restart(): Promise<void>;
   getStatus(): PythonRuntimeSupervisorStatus;
+}
+
+/** Private originating request guard, distinct from the worker's host lifetime. */
+export interface InstalledPythonRuntimeStartupAdmission {
+  assertCurrent(): void;
+  assertAllowed(): Promise<void>;
+}
+
+function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmission | undefined) {
+  if (original === undefined) return undefined;
+  const unavailable = () => new Error("Original Python startup admission is unavailable.");
+  // Read passive own methods once; do not run getters, proxies or replacements.
+  if (!original || typeof original !== "object" || types.isProxy(original)) throw unavailable();
+  const properties = Object.getOwnPropertyDescriptors(original);
+  const current = properties.assertCurrent?.value, allowed = properties.assertAllowed?.value;
+  if (typeof current !== "function" || typeof allowed !== "function") throw unavailable();
+  let lost = false;
+  const assertCurrent = () => {
+    if (lost) throw unavailable();
+    try {
+      const result: unknown = Reflect.apply(current, original, []);
+      if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+      if (result !== undefined) throw unavailable();
+    } catch {lost = true; throw unavailable();}
+  };
+  return Object.freeze({assertCurrent, async assertAllowed() {
+    assertCurrent();
+    try {
+      if (await Reflect.apply(allowed, original, []) !== undefined) throw unavailable();
+      assertCurrent();
+    } catch {lost = true; throw unavailable();}
+  }});
 }
 
 export interface OriginalPythonWorkerRetirement {
@@ -108,6 +140,7 @@ function delay(milliseconds: number): Promise<void> {
 export function createPythonRuntimeSupervisor(
   options: CreatePythonRuntimeSupervisorOptions,
 ): PythonRuntimeSupervisor {
+  const startupAdmissions = new WeakMap<InstalledPythonRuntimeStartupAdmission, NonNullable<ReturnType<typeof captureStartupAdmission>>>();
   const startupTimeoutMs = options.startupTimeoutMs ?? 5_000;
   const nativeSelection = options.nativeWorkerResourceProfile;
   const nativeProfile = nativeSelection === undefined ? undefined : captureOriginalWorkerResourceProfile(nativeSelection);
@@ -154,6 +187,7 @@ export function createPythonRuntimeSupervisor(
   let startFlight: Promise<void> | undefined;
   let startGeneration: number | undefined;
   let startPolicy: "ordinary" | "installed-only" | undefined;
+  let startAdmission: InstalledPythonRuntimeStartupAdmission | undefined;
   let stopFlight: Promise<void> | undefined;
   let lifecycleGeneration = 0;
   let status: PythonRuntimeSupervisorStatus = "stopped";
@@ -498,7 +532,7 @@ export function createPythonRuntimeSupervisor(
     );
   };
 
-  const start = async (policy: "ordinary" | "installed-only") => {
+  const start = async (policy: "ordinary" | "installed-only", admission?: InstalledPythonRuntimeStartupAdmission) => {
       const installedOnly = policy === "installed-only" || nativeProfile !== undefined;
       if (installedOnly && !verifyRuntimeEnvironment)
         throw new Error("Installed Python runtime verification is unavailable.");
@@ -508,18 +542,31 @@ export function createPythonRuntimeSupervisor(
         throw new Error("Original training worker closure is still unconfirmed.");
       if (startFlight) {
         if (startGeneration !== lifecycleGeneration) throw new Error("Previous Python runtime startup is still stopping.");
-        if (startPolicy !== policy) throw new Error("Python runtime startup authority differs from the active attempt.");
+        if (startPolicy !== policy || startAdmission !== admission) throw new Error("Python runtime startup authority differs from the active attempt.");
         return startFlight;
+      }
+      let originalAdmission = admission === undefined ? undefined : startupAdmissions.get(admission);
+      if (admission !== undefined && !originalAdmission) {
+        originalAdmission = captureStartupAdmission(admission)!;
+        startupAdmissions.set(admission, originalAdmission);
       }
       const generation = lifecycleGeneration;
       let operationToken: object | undefined;
-      const assertCurrent = () => { if (generation !== lifecycleGeneration) throw new Error("Python runtime startup was stopped."); };
-      const operation = (async () => {
+      let handedOff = false;
+      let ownsStartupAttempt = false;
+      const assertCurrent = () => {
+        if (generation !== lifecycleGeneration) throw new Error("Python runtime startup was stopped.");
+        if (!handedOff) originalAdmission?.assertCurrent();
+      };
+      const allowed = async () => {assertCurrent(); await originalAdmission?.assertAllowed(); assertCurrent();};
+      // Publish the flight and its original grant before any callback can reenter.
+      const operation = Promise.resolve().then(async () => {
+      await allowed();
       if (installedOnly) {
         let verified = false;
         try { verified = await verifyRuntimeEnvironment!({command: resolveCommand(), args: Object.freeze(resolveArgs()),
           cwd: workingDirectory, env: { ...runtimeEnvironment }}); } catch { /* Closed refusal, without private probe output. */ }
-        assertCurrent();
+        await allowed();
         if (verified !== true) throw new Error("Installed Python runtime verification is unavailable.");
       }
       if ((childProcess || managedWorker) && status === "failed") throw new Error("Python runtime startup failed; stop the owned process before retrying.");
@@ -565,7 +612,7 @@ export function createPythonRuntimeSupervisor(
       });
       maybeWarnOnWindowsCommand(command);
 
-      status = "starting";
+      status = "starting"; ownsStartupAttempt = true;
       observeStartup("health", operationToken);
       if (!requireOwnedStartupProof && await tryAttachToExistingRuntime(assertCurrent)) {
         assertCurrent();
@@ -605,12 +652,14 @@ export function createPythonRuntimeSupervisor(
       observeStartup("launch", operationToken);
       if (prepareLaunchEnvironment) {
         try {
+          await allowed();
           await prepareLaunchEnvironment({
             command,
             args,
             cwd: workingDirectory,
             env: launchEnvironment,
           });
+          await allowed();
         } catch (error) {
           assertCurrent();
           lastStartupFailure = "Python runtime launch preparation failed.";
@@ -644,6 +693,7 @@ export function createPythonRuntimeSupervisor(
         const owner = managedWorker = createWindowsOriginalWorkerLaunch({command, cwd: workingDirectory,
           environment: launchEnvironment, profile: nativeProfile, spawnImplementation,
           nativePlatform: () => ({platform: "win32", arch: "x64"}),
+          assertStartupAllowed: allowed,
           assertHostCurrent: () => {assertCurrent(); assertHostCurrent(); assertCurrent();}});
         managedStopping = false; managedClaim = undefined;
         owner.onUnavailable(() => {
@@ -666,16 +716,17 @@ export function createPythonRuntimeSupervisor(
           const summary = appendRuntimeOutput(source, chunk.toString());
           if (summary) emitEvent("stdio", summary, {source, truncated: chunk.length > 16 * 1024});
         });
-        await owner.prepare(); assertCurrent();
-        await owner.resume(); assertCurrent();
+        await owner.prepare(); await allowed();
+        await owner.resume(); await allowed();
         emitEvent("spawned", "Original managed Python worker resumed under configured limits.");
         observeStartup("health", operationToken);
         await startHealthPolling(assertCurrent, () => {
           if (managedWorker !== owner) throw new Error("Original managed Python worker is unavailable.");
           owner.assertCurrent();
         }, () => boundReadyManaged === owner);
-        assertCurrent(); observeStartup("ready", operationToken); return;
+        await allowed(); observeStartup("ready", operationToken); return;
       }
+      await allowed();
       try {
         attachedToExistingRuntime = false;
         childProcess = spawnImplementation(command, args, {
@@ -703,14 +754,19 @@ export function createPythonRuntimeSupervisor(
         if (childProcess !== owner || owner.exitCode != null || owner.signalCode != null)
           throw new Error("Python runtime exited before health check completed.");
       }, () => boundReadyProcess === owner);
-      assertCurrent();
+      await allowed();
       observeStartup("ready", operationToken);
-      })();
+      });
       startFlight = operation;
       startGeneration = generation;
       startPolicy = policy;
-      try { await operation; } catch (error) {
+      startAdmission = admission;
+      try { await operation; handedOff = true; } catch (error) {
         if (operationToken) observeStartup("failed", operationToken);
+        if (originalAdmission && ownsStartupAttempt && generation === lifecycleGeneration && status === "ready") {
+          status = "failed"; boundReadyManaged = undefined; boundReadyProcess = undefined;
+          emitEvent("process-error", "Original Python startup admission was lost.");
+        }
         if (nativeProfile) {
           if (generation === lifecycleGeneration && status === "starting") {
             status = "failed";
@@ -720,7 +776,7 @@ export function createPythonRuntimeSupervisor(
         }
         throw error;
       }
-      finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; startPolicy = undefined; } }
+      finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; startPolicy = undefined; startAdmission = undefined; } }
   };
 
   const retireManaged = (owner: ManagedOriginalPythonWorker, retire: () => Promise<boolean>) => {
@@ -756,7 +812,7 @@ export function createPythonRuntimeSupervisor(
 
   return {
     start: () => start("ordinary"),
-    startWithoutInstalling: () => start("installed-only"),
+    startWithoutInstalling: admission => start("installed-only", admission),
 
     captureOriginalTrainingWorkerRetirement: captureManagedRetirement,
 

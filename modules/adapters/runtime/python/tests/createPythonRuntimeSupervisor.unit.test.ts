@@ -33,13 +33,13 @@ function createMockChildProcess() {
 }
 
 describe("installed-only Python runtime admission", () => {
-  function harness(verify?: () => Promise<boolean>, prepare?: () => Promise<void>) {
+  function harness(verify?: () => Promise<boolean>, prepare?: () => Promise<void>, launchPrepare?: () => Promise<void>) {
     const child = createMockChildProcess(); let spawned = 0, installs = 0, launchPreparations = 0;
     const options = {
       command: "python", args: ["main.py"], env: {PRIVATE_SYNTHETIC: "original"},
       verifyRuntimeEnvironment: verify,
       async prepareRuntimeEnvironment() {installs++; await prepare?.();},
-      async prepareLaunchEnvironment() {launchPreparations++;},
+      async prepareLaunchEnvironment() {launchPreparations++; await launchPrepare?.();},
       runtimeClient: {async getHealthStatus() {
         if (!spawned) throw new Error("unavailable");
         return {healthy: true, status: {runtimeId: "python-sidecar", status: "ready" as const}};
@@ -98,6 +98,52 @@ describe("installed-only Python runtime admission", () => {
     expect(h.supervisor.getStatus()).toBe("stopped");
     await h.supervisor.startWithoutInstalling!();
     expect(h.counts().spawned).toBe(1); await h.supervisor.stop();
+  });
+
+  for (const boundary of ["verification", "launch preparation"] as const) it(`rechecks originating permission after ${boundary} with currentness still true`, async () => {
+    let permitted = true, checks = 0;
+    const admission = {assertCurrent() {}, async assertAllowed() {checks++; if (!permitted) throw Error("synthetic withdrawal");}};
+    const h = harness(async () => {if (boundary === "verification") permitted = false; return true;}, undefined,
+      async () => {if (boundary === "launch preparation") permitted = false;});
+    await assert.rejects(h.supervisor.startWithoutInstalling!(admission));
+    assert.equal(h.counts().spawned, 0); assert.equal(h.counts().installs, 0); assert.ok(checks >= 2);
+    permitted = true; await assert.rejects(h.supervisor.startWithoutInstalling!(admission));
+    assert.equal(h.counts().spawned, 0); // Observed loss stays attached to this original grant.
+  });
+
+  it("coalesces only the same original admission and captures its methods before waits", async () => {
+    let release!: () => void, entered!: () => void, originalCalls = 0, replacements = 0;
+    const gate = new Promise<void>(resolve => {release = resolve;}), observed = new Promise<void>(resolve => {entered = resolve;});
+    const h = harness(async () => {entered(); await gate; return true;});
+    const admission = {assertCurrent() {assert.equal(this, admission); originalCalls++;},
+      async assertAllowed() {assert.equal(this, admission); originalCalls++;}};
+    const one = h.supervisor.startWithoutInstalling!(admission); await observed;
+    admission.assertCurrent = () => {replacements++; throw Error("replacement");};
+    admission.assertAllowed = async () => {replacements++; throw Error("replacement");};
+    const same = h.supervisor.startWithoutInstalling!(admission);
+    await assert.rejects(h.supervisor.startWithoutInstalling!(), /authority differs/);
+    await assert.rejects(h.supervisor.startWithoutInstalling!({assertCurrent() {}, async assertAllowed() {}}), /authority differs/);
+    release(); await Promise.all([one, same]); assert.equal(h.counts().spawned, 1);
+    assert.ok(originalCalls > 2); assert.equal(replacements, 0); await h.supervisor.stop();
+  });
+
+  it("publishes the startup flight before an admission callback can request an unguarded launch", async () => {
+    const h = harness(async () => true); let foreign: Promise<void> | undefined;
+    const admission = {assertCurrent() {}, async assertAllowed() {
+      foreign ??= assert.rejects(h.supervisor.startWithoutInstalling!(), /authority differs/);
+    }};
+    await h.supervisor.startWithoutInstalling!(admission); await foreign;
+    assert.equal(h.counts().spawned, 1); await h.supervisor.stop();
+  });
+
+  it("does not run active admission getters or accept asynchronous currentness", async () => {
+    let getters = 0;
+    const active = {get assertCurrent() {getters++; return () => {};}, async assertAllowed() {}};
+    const h = harness(async () => true);
+    await assert.rejects(h.supervisor.startWithoutInstalling!(active)); assert.equal(getters, 0);
+    await assert.rejects(h.supervisor.startWithoutInstalling!({assertCurrent: (async () => {throw Error("private rejection");}) as never,
+      async assertAllowed() {}}));
+    await new Promise(resolve => setImmediate(resolve)); assert.equal(h.counts().spawned, 0);
   });
 });
 
@@ -727,6 +773,52 @@ it("original controller retirement fences pending preflight with positive zero-c
   const preparing = owner.prepare(), stopping = owner.retireOriginal();
   await assert.rejects(preparing); assert.equal(await stopping, true); assert.equal(h.starts, 0);
   assert.equal(await owner.retireOriginal(), true); assert.equal(h.stops, 0);
+});
+
+it("original controller checks captured async permission after file preflight and before supplier", async () => {
+  const h = nativeWireHarness(); let checks = 0, replacement = 0, release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => {release = resolve;}), observed = new Promise<void>(resolve => {entered = resolve;});
+  const configuration = {...h.configuration, async assertStartupAllowed(): Promise<void> {
+    assert.equal(this, configuration); checks++; entered(); await gate; throw Error("synthetic withdrawn permission");
+  }};
+  const owner = createWindowsOriginalWorkerLaunch(configuration), preparing = owner.prepare();
+  await observed; configuration.assertStartupAllowed = async () => {replacement++;};
+  const rejected = assert.rejects(preparing); release(); await rejected;
+  assert.equal(checks, 1); assert.equal(replacement, 0); assert.equal(h.starts, 0); assert.equal(h.resumes, 0);
+  assert.equal(await owner.retireOriginal(), true); // Existing actual no-construction proof, no source mode.
+  assert.equal(h.stops, 0); h.close();
+});
+
+it("Stop during the final async construction check prevents controller creation", async () => {
+  const h = nativeWireHarness(); let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => {release = resolve;}), observed = new Promise<void>(resolve => {entered = resolve;});
+  const owner = createWindowsOriginalWorkerLaunch({...h.configuration, async assertStartupAllowed() {entered(); await gate;}});
+  const preparing = owner.prepare(); await observed;
+  const stopping = owner.retireOriginal(); release(); await assert.rejects(preparing);
+  assert.equal(await stopping, true); assert.equal(h.starts, 0); assert.equal(h.stops, 0); h.close();
+});
+
+it("async construction checks cannot reenter prepare and native current callbacks cannot reenter resume", async () => {
+  const h = nativeWireHarness(); let owner!: ReturnType<typeof createWindowsOriginalWorkerLaunch>, reentered = false;
+  const rejected: Promise<void>[] = [];
+  const configuration = {...h.configuration,
+    async assertStartupAllowed() {rejected.push(assert.rejects(owner.prepare()));},
+    assertHostCurrent() {
+      h.configuration.assertHostCurrent();
+      if (!reentered && h.starts) {reentered = true; rejected.push(assert.rejects(owner.resume()));}
+    }};
+  owner = createWindowsOriginalWorkerLaunch(configuration);
+  // Reentry after launch but during prepare cannot issue Resume in preparing phase.
+  await owner.prepare(); await Promise.all(rejected); rejected.length = 0; reentered = false;
+  await owner.resume(); await Promise.all(rejected);
+  assert.equal(h.starts, 1); assert.equal(h.resumes, 1); assert.equal(await owner.retireOriginal(), true);
+});
+
+it("an active final construction hook is refused without executing its getter", () => {
+  const h = nativeWireHarness(); let getters = 0;
+  assert.throws(() => createWindowsOriginalWorkerLaunch({...h.configuration,
+    get assertStartupAllowed() {getters++; return async () => {};}}));
+  assert.equal(getters, 0); assert.equal(h.starts, 0); h.close();
 });
 
 for (const mode of ["unsupported-platform", "host-ended"] as const) it(`native prelaunch refusal reports failed without constructing a worker (${mode})`, async () => {

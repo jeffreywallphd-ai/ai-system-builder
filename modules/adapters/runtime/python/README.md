@@ -746,3 +746,26 @@ Late original retirement observations cannot repeat create/resume/stop effects.
 All new component tests use inert processes and APIs. No Root or full native
 training producer is configured; file custody, measured resource settings, Save,
 actual enforcement and host/parent qualification remain pending.
+
+### Original request admission during training startup
+
+The private session freezes its approved definition and captures its original
+control methods before reserving startup. The foundation retains that exact
+in-process capture object with the reservation. A matching ID or copied record
+cannot replace it. Installed-only startup checks the captured request's current
+permission across verification and launch preparation. The native Node launcher
+checks permission after its filesystem preflight, immediately before creating
+the controller. Startup checks again after suspension and before resume.
+
+Publish the startup flight before invoking admission callbacks. Only the same
+original admission can join an active flight. Observed permission/currentness
+loss stays lost; callback replacement cannot restore it. Keep asynchronous
+permission separate from synchronous currentness. After successful startup, the
+worker's host lifetime governs its continued ownership; task actions still check
+their own business permission. Worker retirement does not require renewed request
+permission. Failed or uncertain preparation retains the original reservation and
+owner. This change grants no release, retry or cleanup authority.
+
+These are startup-authorization software controls. The protected Model source
+handoff, worker bootstrap/live view, complete native input/output producer and
+actual host qualification remain pending. Tests use simulated suppliers only.
