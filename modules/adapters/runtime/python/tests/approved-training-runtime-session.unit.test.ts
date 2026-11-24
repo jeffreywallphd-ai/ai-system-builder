@@ -322,8 +322,10 @@ function inertNativeController(resumed: () => void) {
   const sourcePhases: string[] = [];
   const frame = (kind: string, fields: Record<string, unknown> = {}) => child.stdout.write(JSON.stringify({
     schema: "windows-original-worker-control-v1", nonce: boot.nonce, profileDigest: boot.profileDigest, kind, ...fields}) + "\n");
-  const sourceRequest = (phase: string) => queueMicrotask(() => {sourcePhases.push(phase); frame("source-request", {
-    sequence: ++sourceSequence, phase, definitionDigest: boot.modelSource.definitionDigest, amount: boot.modelSource.maximumCopyBytes});});
+  const definitionParts: Buffer[] = [];
+  const sourceRequest = (phase: string, index?: number) => queueMicrotask(() => {sourcePhases.push(phase); frame("source-request", {
+    sequence: ++sourceSequence, phase, definitionDigest: boot.modelSource.definitionDigest, amount: boot.modelSource.maximumCopyBytes,
+    ...(phase === "definition" ? {index} : {})});});
   const finishResume = () => {
     resumed(); frame("running");
     frame("worker-output", {lane: "stdout", data: Buffer.from(OWNED_RUNTIME_READY_PREFIX + boot.environment.PYTHON_RUNTIME_STARTUP_PROOF +
@@ -334,7 +336,15 @@ function inertNativeController(resumed: () => void) {
     const value = JSON.parse(data.toString());
     if (value.schema === "windows-original-worker-launch-v1") {boot = value; queueMicrotask(() => frame("suspended")); return;}
     if (value.schema === "windows-original-worker-launch-v2") {boot = value; sourceRequest("charge"); return;}
+    if (value.schema === "windows-original-worker-launch-v3") {boot = value; sourceRequest("definition", 0); return;}
     assert.equal(value.nonce, boot.nonce); assert.equal(value.profileDigest, boot.profileDigest);
+    if (value.schema === "windows-original-model-definition-v1") {
+      assert.equal(value.sequence, sourceSequence); assert.equal(value.index, definitionParts.length);
+      assert.equal(value.totalBytes, boot.definitionByteCount); definitionParts.push(Buffer.from(value.data, "base64"));
+      if (value.final) {assert.equal(Buffer.concat(definitionParts).length, boot.definitionByteCount); sourceRequest("charge");}
+      else sourceRequest("definition", definitionParts.length);
+      return;
+    }
     if (value.schema === "windows-original-model-ack-v1") {
       assert.equal(value.sequence, sourceSequence); assert.equal(value.definitionDigest, boot.modelSource.definitionDigest);
       if (value.phase === "charge") sourceRequest("allocate");
@@ -443,7 +453,7 @@ test("foundation source launch carries actual observation and retains charged co
   const before = JSON.stringify(f.selected), session = port.createSession(f.selected, {isCurrent: () => caller, stillAllowed: async () => caller}, f.reader)!;
   // The full producer remains absent: source copying cannot claim training ready.
   assert.equal(await session.prepare(), "unavailable"); assert.deepEqual(calls, ["charge"]);
-  assert.equal(f.controller.boot.schema, "windows-original-worker-launch-v2");
+  assert.equal(f.controller.boot.schema, "windows-original-worker-launch-v3");
   assert.equal(f.controller.boot.modelSource.logicalPath, f.model); assert.equal(f.controller.boot.modelSource.modelId, "base");
   assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1);
   assert.equal(JSON.stringify(f.selected), before);
@@ -451,7 +461,7 @@ test("foundation source launch carries actual observation and retains charged co
   const stopping = f.foundation.supervisor.stop(); await new Promise(resolve => setImmediate(resolve));
   f.controller.closeWithProof(); await stopping;
   assert.deepEqual(calls, ["charge", "retain"]);
-  assert.deepEqual(f.controller.sourcePhases, ["charge", "allocate", "copy", "copy", "copy", "seal", "create", "dispatch", "retain"]);
+  assert.deepEqual(f.controller.sourcePhases, ["definition", "charge", "allocate", "copy", "copy", "copy", "seal", "create", "dispatch", "retain"]);
   assert.equal(f.controller.stops, 1);
 });
 

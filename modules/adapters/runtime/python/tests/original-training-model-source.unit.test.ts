@@ -95,6 +95,29 @@ async function launchFixture(t: TestContext, loseCharge = false) {
   return {...f, calls, hooks, reservation, token, loseReservation() {live = false;}};
 }
 
+test("source bootstrap transfers exact original definition bytes before any charged effect", async t => {
+  const f = await launchFixture(t), source = captureOriginalTrainingSourceLaunch(f.token, true);
+  const parts: Buffer[] = [];
+  for (let index = 0; index < Math.ceil(source.definitionByteCount / 16_384); index++) {
+    const result = await source.readDefinition(index); assert.equal(result.index, index);
+    assert.equal(result.totalBytes, source.definitionByteCount); parts.push(Buffer.from(result.data, "base64"));
+    assert.equal(result.final, index + 1 === Math.ceil(source.definitionByteCount / 16_384));
+  }
+  const raw = Buffer.concat(parts); assert.equal(raw.toString("utf8"), JSON.stringify(f.original!.definition));
+  assert.equal("sha256:" + digest(raw), source.descriptor.definitionDigest); assert.deepEqual(f.calls, []);
+  await source.acknowledge("charge", 65_536); assert.deepEqual(f.calls, ["charge"]);
+  await assert.rejects(() => source.readDefinition(0));
+});
+
+test("source bootstrap refuses premature charge and cannot repeat a definition chunk", async t => {
+  const first = await launchFixture(t), premature = captureOriginalTrainingSourceLaunch(first.token, true);
+  await assert.rejects(() => premature.acknowledge("charge", 65_536)); assert.deepEqual(first.calls, []);
+  await assert.rejects(() => premature.readDefinition(0));
+  const second = await launchFixture(t), source = captureOriginalTrainingSourceLaunch(second.token, true);
+  await source.readDefinition(0); await assert.rejects(() => source.readDefinition(0));
+  await assert.rejects(() => source.acknowledge("charge", 65_536)); assert.deepEqual(second.calls, []);
+});
+
 test("source launch redeems original observation once, captures reservation receivers, and retains after caller withdrawal", async t => {
   const f = await launchFixture(t), launch = captureOriginalTrainingSourceLaunch(f.token);
   assert.throws(() => captureOriginalTrainingSourceLaunch(f.token));

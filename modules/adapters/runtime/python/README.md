@@ -766,9 +766,9 @@ their own business permission. Worker retirement does not require renewed reques
 permission. Failed or uncertain preparation retains the original reservation and
 owner. This change grants no release, retry or cleanup authority.
 
-These are startup-authorization software controls. The protected Model source
-handoff, worker bootstrap/live view, complete native input/output producer and
-actual host qualification remain pending. Tests use simulated suppliers only.
+These are startup-authorization software controls. The later protected-source
+sections describe the current handoff. Complete native input/output production
+and actual host qualification remain pending. Tests use simulated suppliers only.
 
 ### Optional original Model observation
 
@@ -811,7 +811,7 @@ Only the observer's original module-associated result can bind one source launch
 A copied record or matching identifier cannot redeem it. Carry that private
 one-use object through the same supervisor. Source-bound startup cannot reuse an
 already running or attached worker. The original controller receives a closed
-v2 descriptor on its owned stdio. V1 remains source-free and compatible.
+v3 descriptor on its owned stdio. V1 remains source-free and compatible.
 
 The original Node owner acknowledges bounded, ordered stages: charge, allocate,
 each file copy, root seal, creation, dispatch and retained accounting. It actually
@@ -830,10 +830,26 @@ handles before asking the original reservation to retain the charged bytes.
 Retained accounting remains possible after requester withdrawal; it grants no
 new copy, deletion, Save or disk credit. Controller exit alone is not retirement.
 
-This component connects source launch only. The reservation implementation's
-protected durable accounting, inherited worker bootstrap/live view, fixed-loader
-consumption, complete input/output producer, physical resource enforcement and
-actual host qualification remain separate. No full Native producer is configured;
-the source-only path cannot advertise private training readiness. Tests exercise
-Node state machines and the real Native ABI code with in-memory replies, without
-loading DLLs, models or running model-quality tests.
+The v3 owner sends the exact captured definition bytes in ordered bounded
+chunks before source charging. The controller checks their digest and Model
+binding. It creates a separate inherited read-only bootstrap pipe with a
+parent-only writer. An owned bounded thread writes only after the worker resumes;
+its pending writes and handles remain part of original retirement. Unknown IO
+retains custody. A failed writer cannot grant a replacement launch or disk credit.
+
+The fixed worker validates the bootstrap's exact definition, read-only handles,
+complete file graph, byte hashes, identities, private ACL and root name through
+the same Native inspection code. Handle numbers, environment markers and wire
+records alone do not grant authority. An actual verified receiver can issue one
+private live Model view. The original session validates that view against the
+unchanged sealed request and passes it to the fixed local-only loader. The loader
+uses the protected physical reference without rewriting approved logical fields.
+Expired, forged or foreign views fail before path resolution or model loading.
+Ordinary source-free launch and standalone local loading remain compatible.
+
+This connects source launch and consumption. The reservation implementation's
+protected durable accounting, complete input/output producer, physical resource
+enforcement and actual host qualification remain separate. No full Native
+producer is configured; the source-only path cannot advertise private training
+readiness. Tests exercise Node state machines and the real Native ABI code with
+in-memory replies, without loading DLLs, models or running model-quality tests.

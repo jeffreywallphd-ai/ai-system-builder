@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
+from ..native.windows_original_worker_launch import resolve_original_model_view
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -34,6 +35,7 @@ DIFFUSION_TRAINING_TASKS = {"diffusion-lora"}
 VISION_TRAINING_TASKS = {"vision-classification", "vision-detection", "vision-segmentation"}
 DEFAULT_SEQUENCE_LENGTH = 512
 MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
+_NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_python
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
     "llm-instruction": ("instruction", "output"),
@@ -776,6 +778,7 @@ def train_model_from_local_files(
     *,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     compare_validation_baseline: bool = False,
+    _model_view: object | None = None,
 ) -> TrainModelTaskResult:
     """Private load policy, not task admission or Model integrity/ownership proof.
 
@@ -788,7 +791,13 @@ def train_model_from_local_files(
     if _resolve_training_task(payload) not in TEXT_CAUSAL_TRAINING_TASKS:
         raise ValueError("This private training task is unavailable.")
     # Capture the original local locator before progress/supplier callbacks.
-    local_model_ref = _local_training_model_reference(payload.baseModel.localPath)
+    if _model_view is not None:
+        if type(payload) is not TrainModelTaskRequest:
+            raise ValueError("The private protected Model request is unavailable.")
+        protected_reference = resolve_original_model_view(_model_view, _NATIVE_REQUEST_SERIALIZER(payload, mode="json"))
+        local_model_ref = _local_training_model_reference(protected_reference)
+    else:
+        local_model_ref = _local_training_model_reference(payload.baseModel.localPath)
     return _train_model(payload, on_progress=on_progress, local_model_ref=local_model_ref,
                         compare_validation_baseline=compare_validation_baseline)
 

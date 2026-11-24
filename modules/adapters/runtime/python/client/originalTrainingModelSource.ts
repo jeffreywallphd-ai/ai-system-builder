@@ -100,7 +100,9 @@ export type OriginalTrainingSourceReservationFactory = (original: OriginalTraini
   observed: ObservedOriginalTrainingModelSource) => OriginalTrainingSourceReservation;
 export type OriginalTrainingSourcePhase = "charge" | "allocate" | "copy" | "seal" | "create" | "dispatch" | "retain";
 const sourceLaunches = new WeakMap<OriginalTrainingSourceLaunch, {descriptor: Readonly<Record<string, unknown>>;
-  claimed: boolean; acknowledge(phase: OriginalTrainingSourcePhase, amount: number): Promise<void>}>();
+  definitionByteCount: number; bootstrapRequired: boolean; claimed: boolean;
+  readDefinition(index: number): Promise<{index: number; totalBytes: number; final: boolean; data: string}>;
+  acknowledge(phase: OriginalTrainingSourcePhase, amount: number): Promise<void>}>();
 const boundSourceLaunches = new WeakSet<OriginalTrainingCapture>();
 
 /** Bind only an actual completed observation to its original owner. All methods
@@ -140,12 +142,26 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
   };
   // Preserve the exact JS definition serialization when correlating the native
   // graph. Re-serialization in another runtime is not the digest authority.
-  const definitionDigest = "sha256:" + createHash("sha256").update(JSON.stringify(definition)).digest("hex");
+  const definitionBytes = Buffer.from(JSON.stringify(definition), "utf8"); need(definitionBytes.length <= 128 * 1024);
+  const definitionDigest = "sha256:" + createHash("sha256").update(definitionBytes).digest("hex");
   const descriptor = Object.freeze({schema: "windows-original-model-graph-v1", definitionDigest, modelId: observed.modelRecordId,
     modelUpdatedAt: observed.modelUpdatedAt, logicalPath: observed.logicalPath, sourcePath: observed.logicalPath,
     ...config, files: Object.freeze(observed.files.map(row => Object.freeze({...row})))});
   let state: "bound" | "charging" | "charged" | "allocated" | "sealed" | "created" | "dispatched" | "retaining" | "retained" | "lost" = "bound", copies = 0, busy = false;
-  const owner = {descriptor, claimed: false, async acknowledge(phase: OriginalTrainingSourcePhase, amount: number) {
+  let definitionIndex = 0, definitionComplete = false;
+  const owner = {descriptor, claimed: false, bootstrapRequired: false, definitionByteCount: definitionBytes.length,
+    async readDefinition(index: number) {
+      need(!busy && state !== "lost"); busy = true;
+      try {
+        need(owner.bootstrapRequired && state === "bound" && !definitionComplete && Number.isSafeInteger(index) && index === definitionIndex);
+        await permit();
+        const offset = index * 16_384, end = Math.min(definitionBytes.length, offset + 16_384);
+        need(offset < end); definitionIndex++; definitionComplete = end === definitionBytes.length;
+        return Object.freeze({index, totalBytes: definitionBytes.length, final: definitionComplete,
+          data: definitionBytes.subarray(offset, end).toString("base64")});
+      } catch {state = "lost"; throw unavailable();}
+      finally {busy = false;}
+    }, async acknowledge(phase: OriginalTrainingSourcePhase, amount: number) {
     need(!busy && state !== "lost");
     busy = true;
     try {
@@ -159,7 +175,7 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
       }
       await permit();
       if (phase === "charge") {
-        need(state === "bound"); state = "charging";
+        need(state === "bound" && (!owner.bootstrapRequired || definitionComplete)); state = "charging";
         const result = charge(maximum); need(types.isPromise(result)); need(await result === undefined);
         await permit(); state = "charged";
       } else if (phase === "allocate") {need(state === "charged"); state = "allocated";}
@@ -174,9 +190,12 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
 }
 
 /** Redeem once by the original native launcher, never from a wire descriptor. */
-export function captureOriginalTrainingSourceLaunch(token: OriginalTrainingSourceLaunch) {
+export function captureOriginalTrainingSourceLaunch(token: OriginalTrainingSourceLaunch, bootstrapRequired = false) {
+  need(typeof bootstrapRequired === "boolean");
   const owner = sourceLaunches.get(token); need(!!owner && !owner.claimed); owner.claimed = true;
-  return Object.freeze({descriptor: owner.descriptor, acknowledge: owner.acknowledge.bind(owner)});
+  owner.bootstrapRequired = bootstrapRequired;
+  return Object.freeze({descriptor: owner.descriptor, definitionByteCount: owner.definitionByteCount,
+    readDefinition: owner.readDefinition.bind(owner), acknowledge: owner.acknowledge.bind(owner)});
 }
 
 /** A private association, not a grant to copy/load/retain these mutable files. */

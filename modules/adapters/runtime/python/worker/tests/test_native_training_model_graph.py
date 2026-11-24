@@ -1,5 +1,6 @@
 """Actual source-copy ABI code with in-memory Win32 replies; no Native effects."""
 import copy
+from contextlib import contextmanager
 import ctypes as C
 import hashlib
 import importlib.util
@@ -52,6 +53,9 @@ class Kernel:
         self.fail = self.after = self.error_after_return = None; self.short_write = False
         self.identity_counter = 1; self.after_write = None
         self.active = 1; self.attributes = {}; self.limits = None
+        self.pipe_writes = []; self.pipe_write_facts = []; self.pipe_before_write = None
+        self.pipe_closed_failure = False
+        self.child_snapshot = None; self.stdin_handle = None; self.child_tables = []
         self.duplicate_access = None
         self.creator_access = None; self.after_create = None
         for name in ("X:\\", "X:\\models", "X:\\models\\selected", "X:\\private", "X:\\private\\training"):
@@ -184,23 +188,41 @@ class Kernel:
             self.obj(a[0])["node"]["acl"] = C.string_at(sd.dacl, size); return 0, 0
         if name == "ReadFile":
             h = self.obj(a[0])
+            if "pipe" in h and a[0] == self.stdin_handle:
+                raw=h["pipe"]["data"][h["offset"]:h["offset"]+a[2]]
+                C.memmove(a[1],bytes(raw),len(raw)); a[3]._obj.value=len(raw); h["offset"]+=len(raw); return 1,0
             if h["node"] is None: a[3]._obj.value = 0; return 0, 109
             raw = h["node"]["data"][h["offset"]:h["offset"] + a[2]]
             C.memmove(a[1], bytes(raw), len(raw)); a[3]._obj.value = len(raw); h["offset"] += len(raw); return 1, 0
         if name == "WriteFile":
             h = self.obj(a[0]); size = a[2] - 1 if self.short_write else a[2]
+            if "pipe" in h:
+                if self.pipe_before_write: self.pipe_before_write(h)
+                if self.pipe_closed_failure: a[3]._obj.value = 0; return 0, 109
+                self.pipe_write_facts.append((self.handles[h["pipe"]["read"]]["closed"],
+                    any(name == "ResumeThread" for name, _ in self.calls), h["inherit"]))
+                raw = C.string_at(a[1], size); h["pipe"]["data"].extend(raw); self.pipe_writes.append(raw)
+                a[3]._obj.value = size; return 1, 0
             raw = C.string_at(a[1], size); h["node"]["data"].extend(raw); a[3]._obj.value = size
             if self.after_write: self.after_write(h["node"])
             return 1, 0
         if name == "FlushFileBuffers": return 1, 0
         if name == "DuplicateHandle":
             h = self.obj(a[1]); value = self.handle(h["node"], a[4] if self.duplicate_access is None else self.duplicate_access, bool(a[5])); self.handles[value]["share"] = h["share"]
+            self.handles[value]["offset"] = h["offset"]
             a[3]._obj.value = value; return 1, 0
         if name == "NtQueryObject": a[2]._obj[1] = self.obj(a[0])["access"]; a[4]._obj.value = C.sizeof(a[2]._obj); return 0, 0
         if name == "GetHandleInformation": a[1]._obj.value = int(self.obj(a[0])["inherit"]); return 1, 0
-        if name == "CloseHandle": self.obj(a[0])["closed"] = True; return 1, 0
+        if name == "CloseHandle":
+            h=self.obj(a[0]); h["closed"]=True
+            if "pipe" in h and a[0]==h["pipe"]["write"]: h["pipe"]["writer_open"]=False
+            return 1,0
         if name in ("CreateJobObjectW", "CreateFileW"): return self.handle(inherit=name == "CreateFileW"), 0
-        if name == "CreatePipe": a[0]._obj.value = self.handle(inherit=True); a[1]._obj.value = self.handle(inherit=True); return 1, 0
+        if name == "CreatePipe":
+            read, write = self.handle(access=0x120089, inherit=True), self.handle(access=0x120116, inherit=True)
+            pipe = {"data": bytearray(), "read": read, "write": write, "writer_open": True}
+            self.handles[read]["pipe"] = self.handles[write]["pipe"] = pipe
+            a[0]._obj.value, a[1]._obj.value = read, write; return 1, 0
         if name == "SetHandleInformation": self.obj(a[0])["inherit"] = bool(a[2]); return 1, 0
         if name == "SetInformationJobObject": self.limits = C.string_at(a[2], a[3]); return 1, 0
         if name == "QueryInformationJobObject":
@@ -212,21 +234,118 @@ class Kernel:
             return 1, 0
         if name == "UpdateProcThreadAttribute": self.attributes[a[2]] = tuple(a[3]); return 1, 0
         if name == "CreateProcessW":
+            self.child_snapshot={number:dict(self.obj(number)) for number in self.attributes[n.HANDLE_LIST]}
             a[9]._obj.process, a[9]._obj.thread = self.handle(), self.handle()
             a[9]._obj.pid, a[9]._obj.tid = 123, 456; return 1, 0
         if name == "IsProcessInJob": a[2]._obj.value = 1; return 1, 0
         if name == "QueryFullProcessImageNameW": a[2].value = "X:/inert/python.exe"; a[3]._obj.value = len(a[2].value); return 1, 0
         if name == "GetProcessTimes": a[1]._obj.low = 1; return 1, 0
         if name == "ResumeThread": return 1, 0
-        if name == "TerminateJobObject": self.active = 0; return 1, 0
+        if name == "TerminateJobObject":
+            self.active=0
+            for table in self.child_tables:
+                for handle in table.values(): handle["closed"]=True
+            return 1,0
         if name == "WaitForSingleObject": return (0 if self.active == 0 else 258), 0
         if name == "DeleteProcThreadAttributeList": return None, 0
+        if name == "GetStdHandle": return self.stdin_handle,0
+        if name == "GetFileType": return (3 if "pipe" in self.obj(a[0]) else 1),0
+        if name == "GetNamedPipeInfo":
+            assert "pipe" in self.obj(a[0]); a[1]._obj.value=1; a[2]._obj.value=0; a[3]._obj.value=4096; a[4]._obj.value=1; return 1,0
+        if name == "PeekNamedPipe":
+            h=self.obj(a[0]); pipe=h["pipe"]
+            if not pipe["writer_open"]: return 0,109
+            a[4]._obj.value=len(pipe["data"])-h["offset"]; return 1,0
+        if name == "SetFilePointerEx": self.obj(a[0])["offset"]=a[1]; a[2]._obj.value=a[1]; return 1,0
+        if name == "GetFinalPathNameByHandleW":
+            value="\\\\?\\"+self.obj(a[0])["node"]["path"]; a[1].value=value; return len(value),0
         raise AssertionError("Unexpected native operation: " + name)
+
+    def inherited_child(self):
+        assert self.child_snapshot is not None
+        child=Kernel(); child.nodes=self.nodes; child.handles={number:dict(row) for number,row in self.child_snapshot.items()}
+        child.next=10000; child.stdin_handle=self.attributes[n.HANDLE_LIST][0]; self.child_tables.append(child.handles)
+        return child
 
 
 class SourceLaunchExchangeTests(unittest.TestCase):
-    def journey(self, refuse=None):
+    def bound_bootstrap(self, definition=None, native_module=n):
+        value = boot(); value.update(schema="windows-original-worker-launch-v3", modelSource=descriptor())
+        if definition is None: definition={"modelUpdatedAt": value["modelSource"]["modelUpdatedAt"], "request": {"baseModel": {
+            "modelRecordId": value["modelSource"]["modelId"], "localPath": value["modelSource"]["logicalPath"]}}}
+        value["modelSource"].update(modelId=definition["request"]["baseModel"]["modelRecordId"],
+            logicalPath=definition["request"]["baseModel"]["localPath"],modelUpdatedAt=definition["modelUpdatedAt"])
+        raw=json.dumps(definition,separators=(",",":"),ensure_ascii=True).encode("ascii")
+        value["definitionByteCount"] = len(raw); value["modelSource"]["definitionDigest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+        kernel, control = Kernel(), Control()
+        owner = native_module.OriginalWorker(value, kernel=kernel, executable="X:/inert/python.exe", worker_root=_root)
+        owner.definition_bytes = raw; owner.bind_model_graph(value["modelSource"], control, control)
+        owner.prepare(lambda: True); owner.start_readers(lambda *_: None)
+        return owner, kernel, control
+
+    def test_held_bootstrap_write_blocks_retirement_until_actual_original_io_returns(self):
+        owner, kernel, control = self.bound_bootstrap(); entered, finish = Event(), Event()
+        def hold(_): entered.set(); finish.wait(2)
+        kernel.pipe_before_write = hold
+        try:
+            self.assertEqual(kernel.pipe_writes, []); self.assertFalse(owner.model_bootstrap.attempted)
+            owner.resume(); self.assertTrue(entered.wait(1)); owner.request_stop()
+            self.assertFalse(owner.observe_retirement()); self.assertEqual(control.retained, [])
+            self.assertTrue(any(row["name"] == "WriteFile" for row in owner.pending))
+        finally:
+            finish.set()
+            for thread in owner.readers: thread.join(1)
+        self.assertFalse(any(thread.is_alive() for thread in owner.readers))
+        self.assertEqual(owner.model_bootstrap.outcome, "cancelled"); self.assertEqual(len(kernel.pipe_writes), 1)
+        self.assertTrue(owner.observe_retirement()); self.assertEqual(control.retained, [descriptor()["maximumCopyBytes"]])
+
+    def test_unknown_bootstrap_write_keeps_native_return_slots_and_never_repeats_or_retires(self):
+        owner, kernel, control = self.bound_bootstrap(); kernel.error_after_return = "WriteFile"
+        owner.resume()
+        for thread in owner.readers: thread.join(1)
+        self.assertEqual(owner.model_bootstrap.outcome, "unknown"); self.assertTrue(owner.unknown)
+        self.assertEqual(len(kernel.pipe_writes), 1)
+        pending = [row for row in owner.pending if row["name"] == "WriteFile"]
+        self.assertEqual(len(pending), 1); self.assertTrue(pending[0]["value_returned"])
+        self.assertGreater(pending[0]["keep"][-1].value, 0)
+        owner.request_stop(); self.assertFalse(owner.observe_retirement()); self.assertFalse(owner.observe_retirement())
+        self.assertEqual(len(kernel.pipe_writes), 1); self.assertEqual(control.retained, [])
+
+    def test_known_closed_bootstrap_peer_stops_io_and_keeps_original_disk_charge(self):
+        owner, kernel, control = self.bound_bootstrap(); kernel.pipe_closed_failure = True
+        owner.resume()
+        for thread in owner.readers: thread.join(1)
+        self.assertEqual(owner.model_bootstrap.outcome, "failed"); self.assertFalse(owner.unknown)
+        self.assertEqual(kernel.pipe_writes, []); owner.request_stop(); self.assertTrue(owner.observe_retirement())
+        self.assertEqual(control.retained, [descriptor()["maximumCopyBytes"]])
+
+    def test_successful_bootstrap_write_ignores_stale_last_error(self):
+        owner, kernel, control = self.bound_bootstrap(); original = owner.invoke
+        def stale_success(name, args, record):
+            value, error = original(name, args, record)
+            return (value, 123) if name == "WriteFile" and value == 1 else (value, error)
+        owner.invoke = stale_success
+        try:
+            owner.resume()
+            for thread in owner.readers: thread.join(1)
+            self.assertEqual(owner.model_bootstrap.outcome, "written")
+            self.assertFalse(owner.unknown); self.assertFalse(owner.pending)
+            self.assertEqual(b"".join(kernel.pipe_writes), b"".join(owner.model_bootstrap.segments))
+        finally:
+            owner.request_stop()
+            for thread in owner.readers: thread.join(1)
+        self.assertTrue(owner.observe_retirement())
+        self.assertEqual(control.retained, [descriptor()["maximumCopyBytes"]])
+
+    def journey(self, refuse=None, bootstrap=False, corrupt_definition=False):
         value = boot(); value["schema"] = "windows-original-worker-launch-v2"; value["modelSource"] = descriptor()
+        definition = {"modelUpdatedAt": value["modelSource"]["modelUpdatedAt"], "request": {"baseModel": {
+            "modelRecordId": value["modelSource"]["modelId"], "localPath": value["modelSource"]["logicalPath"]}},
+            "synthetic": "é" * 9000, "number": 0.0000001}
+        definition_raw = json.dumps(definition, ensure_ascii=False, separators=(",", ":")).encode("utf8")
+        if bootstrap:
+            value["schema"] = "windows-original-worker-launch-v3"; value["definitionByteCount"] = len(definition_raw)
+            value["modelSource"]["definitionDigest"] = "sha256:" + hashlib.sha256(definition_raw).hexdigest()
         value["profile"]["observationMs"] = 200; value["profileDigest"] = n.profile_digest(value["profile"])
         lines, frames, owners, inherited_rights = Queue(), [], [], []
         lines.put((json.dumps(value) + "\n").encode())
@@ -242,6 +361,16 @@ class SourceLaunchExchangeTests(unittest.TestCase):
                         inherited_rights.extend(kernel.obj(number)["access"] for number in kernel.attributes[n.HANDLE_LIST][3:])
                     if frame["phase"] == refuse:
                         lines.put(b""); return len(raw)
+                    if frame["phase"] == "definition":
+                        offset = frame["index"] * n.DEFINITION_CHUNK_BYTES
+                        part = definition_raw[offset:offset+n.DEFINITION_CHUNK_BYTES]
+                        if corrupt_definition: part = bytes([part[0] ^ 1]) + part[1:]
+                        lines.put((json.dumps({"schema": "windows-original-model-definition-v1", "nonce": value["nonce"],
+                            "profileDigest": value["profileDigest"], "definitionDigest": frame["definitionDigest"],
+                            "sequence": frame["sequence"], "phase": "definition", "index": frame["index"],
+                            "totalBytes": len(definition_raw), "final": offset + len(part) == len(definition_raw),
+                            "data": n.base64.b64encode(part).decode("ascii")}) + "\n").encode())
+                        return len(raw)
                     if frame["phase"] == "retain":
                         self.assertTrue(all(h.closed for h in owners[0].model_graph.owned_handles))
                         self.assertEqual(kernel.active, 0)
@@ -266,11 +395,35 @@ class SourceLaunchExchangeTests(unittest.TestCase):
             # Bound serve's retained-uncertainty loop, including unexpected
             # positive-path defects. No retirement or retry is fabricated.
             with patch.object(n.time, "sleep", side_effect=wait):
-                if refuse:
+                if refuse or corrupt_definition:
                     with self.assertRaises(EndObservation): n.serve(Source(), Sink(), owner_factory=factory)
                 else: self.assertEqual(n.serve(Source(), Sink(), owner_factory=factory), 0)
         finally: lines.put(b"")
         return frames, owners[0], kernel, inherited_rights
+
+    def test_bootstrap_collects_exact_multichunk_utf8_definition_before_any_native_effect(self):
+        frames, owner, kernel, _ = self.journey(bootstrap=True)
+        self.assertEqual([f["phase"] for f in frames[:2]], ["definition", "definition"])
+        self.assertEqual([f["index"] for f in frames[:2]], [0, 1])
+        self.assertEqual("sha256:" + hashlib.sha256(owner.definition_bytes).hexdigest(), owner.boot["modelSource"]["definitionDigest"])
+        self.assertEqual(json.loads(owner.definition_bytes)["synthetic"], "é" * 9000)
+        self.assertEqual(frames[-1]["kind"], "retired"); self.assertTrue(owner.model_graph.retired)
+        self.assertEqual(sum(name == "CreateProcessW" for name, _ in kernel.calls), 1)
+        self.assertTrue(kernel.pipe_writes); self.assertTrue(all(len(part) <= n.CHUNK_BYTES for part in kernel.pipe_writes))
+        self.assertTrue(all(fact == (True, True, False) for fact in kernel.pipe_write_facts))
+        data = b"".join(kernel.pipe_writes); header_size = struct.unpack_from("<I", data)[0]
+        header = json.loads(data[4:4+header_size]); length = struct.unpack_from("<I", data, 4+header_size)[0]
+        self.assertEqual(length, len(owner.definition_bytes)); self.assertEqual(data[8+header_size:], owner.definition_bytes)
+        self.assertEqual(header["nonce"], owner.boot["nonce"]); self.assertEqual(len(header["files"]), 3)
+        self.assertEqual(header["root"]["handle"], kernel.attributes[n.HANDLE_LIST][-1])
+        self.assertNotIn(owner.model_bootstrap.handle.slot.value, kernel.attributes[n.HANDLE_LIST])
+        self.assertEqual(owner.model_bootstrap.outcome, "written")
+        self.assertFalse(owner.model_bootstrap.thread.is_alive())
+
+    def test_changed_bootstrap_definition_never_reaches_native_acquisition_or_dispatch(self):
+        frames, owner, kernel, _ = self.journey(bootstrap=True, corrupt_definition=True)
+        self.assertTrue(owner.unknown); self.assertEqual(kernel.calls, []); self.assertIsNone(owner.definition_bytes)
+        self.assertFalse(owner.model_graph.charged); self.assertNotIn("retired", [f["kind"] for f in frames])
 
     def test_owned_stdio_binds_actual_copy_seal_inheritance_and_retained_accounting(self):
         frames, owner, kernel, inherited_rights = self.journey()
@@ -317,6 +470,95 @@ class SourceLaunchExchangeTests(unittest.TestCase):
             exchange = n.OriginalSourceExchange(owner, frame, replies, ended, overflow, stopped)
             with self.subTest(mode=mode), self.assertRaises(n.LaunchUnavailable): exchange.charge_source_copy(16384)
             self.assertEqual(owner.kernel.calls, [])
+
+
+@contextmanager
+def borrowed_model_view(definition,sealed_request,native_module=n):
+    """Actual source/receiver/view code, exclusively in-memory Native replies."""
+    owner,kernel,control=SourceLaunchExchangeTests().bound_bootstrap(definition,native_module)
+    try:
+        owner.resume()
+        for thread in owner.readers: thread.join(1)
+        if owner.model_bootstrap.outcome!="written": raise AssertionError("Inert original bootstrap writer did not finish")
+        child=kernel.inherited_child()
+        receiver=native_module.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+        lease=receiver.bind(definition)
+        with lease.borrow(sealed_request) as view: yield view,owner.model_graph.physical_path
+    finally:
+        owner.request_stop()
+        for thread in owner.readers: thread.join(1)
+        if not owner.observe_retirement() or control.retained!=[descriptor()["maximumCopyBytes"]]:
+            raise AssertionError("Inert original Model custody did not retire with retained charge")
+
+
+class InheritedModelViewTests(unittest.TestCase):
+    def fixture(self):
+        owner,kernel,control=SourceLaunchExchangeTests().bound_bootstrap()
+        owner.resume()
+        for thread in owner.readers: thread.join(1)
+        self.assertEqual(owner.model_bootstrap.outcome,"written")
+        child=kernel.inherited_child()
+        def finish():
+            owner.request_stop()
+            for thread in owner.readers: thread.join(1)
+            self.assertTrue(owner.observe_retirement())
+            self.assertEqual(control.retained,[descriptor()["maximumCopyBytes"]])
+        self.addCleanup(finish)
+        return owner,kernel,child
+
+    def test_actual_readonly_bootstrap_mints_one_live_view_and_keeps_the_logical_request(self):
+        owner,kernel,child=self.fixture()
+        source=n.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+        expected=json.loads(owner.definition_bytes); request=copy.deepcopy(expected["request"])
+        request.update(parameters={"zero":0,"false":False,"fraction":0.1})
+        original=copy.deepcopy(request); lease=source.bind(expected)
+        with self.assertRaises(n.LaunchUnavailable): source.bind(expected)
+        with self.assertRaises(n.LaunchUnavailable): n.OriginalInheritedModelLease(source)
+        with lease.borrow(request) as view:
+            self.assertEqual(n.resolve_original_model_view(view,request),owner.model_graph.physical_path)
+            changed=copy.deepcopy(request); changed["parameters"]["false"]=0
+            with self.assertRaises(n.LaunchUnavailable): n.resolve_original_model_view(view,changed)
+            with self.assertRaises(n.LaunchUnavailable): n.resolve_original_model_view(object(),request)
+            outcomes=[]
+            def foreign_thread():
+                try: n.resolve_original_model_view(view,request); outcomes.append("unexpected")
+                except n.LaunchUnavailable: outcomes.append("denied")
+            thread=n.Thread(target=foreign_thread); thread.start(); thread.join(1); self.assertEqual(outcomes,["denied"])
+        self.assertEqual(request,original); self.assertEqual(source.phase,"spent")
+        self.assertTrue(all(not handle.closed for handle in source.guards))
+        with self.assertRaises(n.LaunchUnavailable): n.resolve_original_model_view(view,request)
+        with self.assertRaises(n.LaunchUnavailable):
+            with lease.borrow(request): pass
+        self.assertFalse(any(name in ("NtCreateFile","WriteFile","NtSetSecurityObject","CreateProcessW","CreateJobObjectW") for name,_ in child.calls))
+        self.assertEqual(sum(name=="SetFilePointerEx" for name,_ in child.calls),3)
+
+    def test_forged_receiver_or_view_cannot_supply_a_loader_path(self):
+        with self.assertRaises(n.LaunchUnavailable): n.OriginalInheritedModelLease(object())
+        forged=n.OriginalModelBootstrapReceiver.__new__(n.OriginalModelBootstrapReceiver)
+        forged.phase="bound"
+        with self.assertRaises(n.LaunchUnavailable): n.OriginalInheritedModelLease(forged)
+        with self.assertRaises(n.LaunchUnavailable): n.resolve_original_model_view(n._OriginalModelView(),{})
+
+    def test_wrong_nonce_or_inherited_access_does_not_close_unverified_foreign_handles(self):
+        for mode in ("nonce","access"):
+            with self.subTest(mode=mode):
+                owner,kernel,child=self.fixture()
+                if mode=="access": child.handles[kernel.attributes[n.HANDLE_LIST][3]]["access"]|=2
+                with self.assertRaises(n.LaunchUnavailable):
+                    n.OriginalModelBootstrapReceiver("e"*64 if mode=="nonce" else owner.boot["nonce"],kernel=child)
+                inherited=set(kernel.attributes[n.HANDLE_LIST])
+                self.assertFalse(any(name=="CloseHandle" and args[0] in inherited for name,args in child.calls))
+
+    def test_changed_bytes_extra_files_or_protection_deny_before_any_model_view(self):
+        for mode in ("bytes","extra","acl","root-name"):
+            with self.subTest(mode=mode):
+                owner,kernel,child=self.fixture(); root=owner.model_graph.physical_path
+                if mode=="bytes": kernel.nodes[root+"\\config.json"]["data"][:]=b"[]"
+                if mode=="extra": kernel.node(root+"\\extra.json",False,b"{}")
+                if mode=="acl": kernel.nodes[root]["acl"]=n.model_acl(kernel.sid,sealed=False)
+                if mode=="root-name": kernel.nodes[root]["path"]+="-changed"
+                with self.assertRaises(n.LaunchUnavailable): n.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+                self.assertFalse(any(name in ("NtCreateFile","WriteFile","NtSetSecurityObject") for name,_ in child.calls))
 
 
 class ModelGraphTests(unittest.TestCase):
