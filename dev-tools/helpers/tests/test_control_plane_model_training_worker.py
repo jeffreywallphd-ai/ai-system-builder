@@ -21,7 +21,7 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
     unit = "model-training-worker-unit"
     other_source = "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py"
     minimum_cases = 45
-    command_timeout = 180
+    command_timeout = 240
 
     def selected(self, paths, required=("architecture",), root=None):
         return {row["id"]: row for row in catalog.plan(root or self.root, paths, list(required), "a" * 64)["selected"]}

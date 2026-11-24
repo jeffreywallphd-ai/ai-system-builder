@@ -1060,7 +1060,7 @@ Keep the original model, tokenizer, arguments, step and output family. Each fres
 sibling must seal before its save is recorded; a missing or failed save cannot
 report successful training. Ordinary unbound behavior and the default-off Root
 remain unchanged. Actual installed-SDK/model/native execution, complete producer/
-quota, final candidate composition, retirement, Save and hosts remain pending.
+quota, final result reader/custody integration, retirement, Save and hosts remain pending.
 Argument setup resolves the original Native owner even if its local record is
 lost. Failures across imports, device checks and construction freeze only that
 owned family. A genuine duplicate completed setup remains a no-effect refusal.
@@ -1074,3 +1074,14 @@ usual default. Positive evaluation intervals select step evaluation and require
 a validation split. Malformed values fail before output/model setup. Private
 loading still rechecks the exact seed and original authority before and after
 seeding. No loading flags, resource guards, real model scores or Root change.
+
+After the original private training driver and all required snapshots complete,
+the task seals one final result in the reserved last sibling. It uses the same
+bounded safe-format writer and original permission/resource lifetime. The final
+run record includes the completed numeric history and exact sealed checkpoint
+file sizes/hashes. Sealing proves these recorded files were written; it does not
+prove model-reader validation, model accuracy or permission to Save. A lost
+parent/child binding, changed history, revocation or failed write freezes the
+owned family and retains its files/capacity. No ordinary path save or retry is
+enabled. Complete producer/data-cache orchestration, durable quota, reader/custody,
+retirement, Save and actual-host qualification remain pending.

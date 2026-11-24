@@ -2200,8 +2200,41 @@ step. A caught writer failure, replaced dispatch, missing save, wrong step/model
 reentry or lost authority cannot produce successful private training. Preserve
 the separate final candidate slot. Tests drive controlled training callbacks
 through the actual serializer and a fake Native ABI, with distinct weight bytes.
-They qualify this component only. Full producer, measured/durable quota, final
-candidate composition, native custody/retirement, Save and real hosts remain.
+They qualify this component only. Full producer, measured/durable quota,
+final result reader/custody integration, retirement, Save and real hosts remain.
+
+### Final private trained result
+
+The original wrapper seals the last reserved sibling only after its driver and
+every scheduled snapshot complete. Retain a single final attempt before tensor,
+tokenizer or config suppliers. Register an immutable export proof that binds the
+original completed history, model/tokenizer, request/view and exact family.
+Recheck passive bindings after the final Native callback and before each write.
+An early, duplicate-completed, foreign or wrong-thread call grants no effect on
+the original owner. Caught reentry during an owned attempt fails that attempt.
+Lost proof/history, permission withdrawal and write/seal failures retain files
+and charges without path fallback, deletion, refund or retry.
+
+The final run file reports completed training with bounded numeric history and
+the exact Native-sealed checkpoint file names, byte sizes and SHA-256 hashes.
+Freeze those facts before final suppliers; later changes invalidate the result.
+The writer captures immutable facts before another task callback and checks the
+same state through original sealed readback and the last passive comparison.
+Checkpoint dispatch retains those originals before returning to SDK callbacks.
+Its internal completion handoff carries that immutable evidence before any
+post-driver observer; the public metric/history return remains unchanged.
+Capture and check the original finalizer before entering the SDK. A replacement
+must not fabricate completion or bypass final sealing.
+The original Use captures all three completion helpers from the module's fixed
+tuple before any SDK loading. Fixed request snapshots check their identities;
+an earlier callback cannot choose a false seal reader for a fresh export or
+standalone writer. This is a task-owned handoff fence, not an SDK code sandbox.
+`checkpointFilesVerified` describes seal/hash evidence only. Reader validation
+and candidate validation remain unknown/pending, respectively. Controlled tensor
+and fake-ABI tests qualify this composition, not real model scores or hardware.
+The public Root remains disabled. Complete data/cache and producer orchestration,
+durable quota, protected reader/custody, worker retirement, Save and actual host
+journeys retain their separate requirements.
 
 ### Honoring selected text-training settings
 

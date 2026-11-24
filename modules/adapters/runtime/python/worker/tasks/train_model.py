@@ -366,10 +366,10 @@ class _ProtectedTrainingUse:
     __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
         "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
-        "_run_identity","_training_driver","_training_slot","_thread",
+        "_run_identity","_training_driver","_training_slot","_thread","_completion_helpers",
         "_output_family_type","_output_family_snapshot","_output_family_fail",
         "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
-        "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","__weakref__")
+        "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","_final_result_slot","__weakref__")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -381,11 +381,13 @@ class _ProtectedTrainingUse:
         self._embedding_model = None
         self._embedding_tokenizer, self._metadata_slot = None, None
         self._output_graph_type, self._output_slot = _ProtectedTrainingOutputGraph, None
+        self._completion_helpers = _PROTECTED_COMPLETION_HELPERS
         self._output_family_type = _NATIVE_OUTPUT_FAMILY_TYPE
         self._output_family_snapshot, self._output_family_fail = _NATIVE_OUTPUT_FAMILY_SNAPSHOT, _NATIVE_OUTPUT_FAMILY_FAIL
         self._checkpoint_slot = None
         self._checkpoint_export_guard = None
         self._checkpoint_export_binding = None
+        self._final_result_slot = None
         self._checkpoint_family_resolve, self._checkpoint_family_claim = _NATIVE_CHECKPOINT_FAMILY_RESOLVE, _NATIVE_CHECKPOINT_FAMILY_CLAIM
         self._checkpoint_family_guard = _NATIVE_CHECKPOINT_FAMILY_GUARD
         self._checkpoint_family_owner = _NATIVE_CHECKPOINT_FAMILY_OWNER
@@ -405,6 +407,10 @@ class _ProtectedTrainingUse:
         """Fixed typed request comparison; no Native or business observer call."""
         if type(self) is not _ProtectedTrainingUse or type(self.payload) is not TrainModelTaskRequest:
             raise ValueError("The private protected training request is unavailable.")
+        if (getattr(self,"_completion_helpers",None) is not _PROTECTED_COMPLETION_HELPERS
+                or any(original is not current for original,current in zip(self._completion_helpers,
+                    (_protected_output_seal_facts,_sealed_training_checkpoint_facts,_finalize_protected_training_result)))):
+            raise ValueError("The private training completion helpers changed.")
         try:
             request = self._serialize(self.payload,mode="json")
             stamp = json.dumps(request,sort_keys=True,allow_nan=False,separators=(",",":"))
@@ -990,15 +996,37 @@ class _ProtectedTrainingOutputGraph(OriginalTrainingOutputGraph):
         finally: self._sdk_guard_active = False
 
 
+def _protected_output_seal_facts(graph):
+    """Read bounded passive facts; callers must retain their original seal proof."""
+    if type(graph) is not _ProtectedTrainingOutputGraph:
+        raise ValueError("The private checkpoint graph is unavailable.")
+    fields = _sdk_passive_fields(graph)
+    files = fields.get("records")
+    if fields.get("phase") != "sealed" or type(files) is not list or not 1 <= len(files) <= 32:
+        raise ValueError("The private checkpoint files are unavailable.")
+    captured = []
+    for file in files:
+        if (type(file) is not dict or type(file.get("name")) is not str
+                or re.fullmatch(r"[A-Za-z0-9_.-]{1,128}",file["name"]) is None
+                or type(file.get("sizeBytes")) is not int or file["sizeBytes"] <= 0
+                or type(file.get("sha256")) is not str or re.fullmatch(r"[a-f0-9]{64}",file["sha256"]) is None):
+            raise ValueError("The private checkpoint files are unavailable.")
+        captured.append((file["name"],file["sizeBytes"],file["sha256"]))
+    if len({file[0] for file in captured}) != len(captured):
+        raise ValueError("The private checkpoint files are unavailable.")
+    return tuple(captured)
+
+
 def _write_protected_training_output(use, *, configuration, reservation, admission, _family=None):
     """Seal the captured single-file candidate; no training, Save or Root grant."""
     if type(use) is not _ProtectedTrainingUse or use._output_slot is not None:
         raise ValueError("The private trained output is unavailable.")
     slot = {"stage":"planning","selection":None,"metadata":None,"graph":None,
-        "files":None,"entered":False,"returned":False,"current":None,"family":_family}
+        "files":None,"entered":False,"returned":False,"current":None,"family":_family,"seal_facts":None}
     use._output_slot = slot
     family_type, family_snapshot, family_fail = _NATIVE_OUTPUT_FAMILY_TYPE, _NATIVE_OUTPUT_FAMILY_SNAPSHOT, _NATIVE_OUTPUT_FAMILY_FAIL
-    owned_family = None
+    owned_family = seal_facts = None
+    read_seal_facts = use._completion_helpers[0]
     try:
         if _family is not None:
             if type(_family) is not family_type:
@@ -1038,8 +1066,11 @@ def _write_protected_training_output(use, *, configuration, reservation, admissi
                     or metadata.get("files") is not captured_files or slot["stage"] == "failed"):
                 raise ValueError("The private output inputs changed.")
             if (slot["family"] is not _family or use._output_family_type is not family_type
-                    or use._output_family_snapshot is not family_snapshot or use._output_family_fail is not family_fail):
+                    or use._output_family_snapshot is not family_snapshot or use._output_family_fail is not family_fail
+                    or _protected_output_seal_facts is not read_seal_facts or slot["seal_facts"] is not seal_facts):
                 raise ValueError("The private output family binding changed.")
+            if seal_facts is not None and read_seal_facts(slot["graph"]) != seal_facts:
+                raise ValueError("The private output seal facts changed.")
             if _family is not None:
                 record = family_snapshot(_family)  # Fixed passive Native-owned map checks only.
                 if (record["view"] is not use.view or
@@ -1095,6 +1126,12 @@ def _write_protected_training_output(use, *, configuration, reservation, admissi
         current()
         slot["stage"] = "writing"
         _NATIVE_OUTPUT_PREPARE(graph,streams)
+        # Capture before another task/SDK observer. The original readback below
+        # must verify this same state; passive checks also fence its last callback.
+        seal_facts = read_seal_facts(graph)
+        if tuple((name,size) for name,size,_ in seal_facts) != slot["files"]:
+            raise ValueError("The private output seal inventory changed.")
+        slot["seal_facts"] = seal_facts
         current()
         _NATIVE_OUTPUT_ASSERT_SEALED(graph)
         current()
@@ -1815,7 +1852,8 @@ def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
     training_snapshot,binding_snapshot = training["snapshot"],slot["snapshot"]
     execution = {"stage":"constructing","trainer":None,"active":None,"saved":(),"exports":[]}
     training["checkpoint_execution"] = execution  # One attempt before SDK callbacks.
-    retained = []
+    retained, retained_seals = [], []
+    read_seal_facts = use._completion_helpers[0]
     expected_methods = {}
     export_type = _ProtectedTrainingUse
     select = _capture_protected_training_tensor_stream
@@ -1841,6 +1879,11 @@ def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
                 or _capture_protected_training_metadata is not metadata or _write_protected_training_output is not write
                 or execution["saved"] != tuple(retained)):
             raise ValueError("The private checkpoint execution changed.")
+        for child,output,graph,facts in retained_seals:
+            if (child._output_slot is not output or output.get("stage") != "sealed"
+                    or output.get("graph") is not graph or output.get("seal_facts") is not facts
+                    or read_seal_facts(graph) != facts):
+                raise ValueError("The private checkpoint seal facts changed.")
         _checkpoint_snapshot(use)
         training_snapshot()
         receiver = execution["trainer"]
@@ -1917,6 +1960,11 @@ def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
             metadata(model,tokenizer,child,maximum_bytes=min(configuration["maximumCopyBytes"],64*1024**2))
             export_guard()
             graph = write(child,configuration=configuration,reservation=reservation,admission=admission,_family=family)
+            output = child._output_slot
+            facts = output.get("seal_facts") if type(output) is dict else None
+            if type(facts) is not tuple or read_seal_facts(graph) != facts:
+                raise ValueError("The private checkpoint seal evidence is unavailable.")
+            retained_seals.append((child,output,graph,facts))
             export_guard()
             member_record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
             if (len(member_record["members"]) != index+1 or member_record["members"][-1]["graph"] is not graph
@@ -1962,9 +2010,141 @@ def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
                 raise ValueError("The private checkpoint schedule is incomplete.")
             execution["stage"] = "complete"
             check()
+            return tuple((step,name,facts) for (step,name,_),(_,_,_,facts) in zip(retained,retained_seals))
         except BaseException:
             fail(); raise ValueError("The private checkpoint schedule is incomplete.") from None
     return SnapshotTrainer,attach,check,finish
+
+
+def _sealed_training_checkpoint_facts(use):
+    """Read fixed Native-owned seal facts only; no SDK or business callback."""
+    _checkpoint_snapshot(use)
+    checkpoint,training = use._checkpoint_slot,use._training_slot
+    if type(checkpoint) is not dict or type(training) is not dict:
+        raise ValueError("The private checkpoint evidence is unavailable.")
+    execution = training.get("checkpoint_execution")
+    if type(execution) is not dict or execution.get("stage") != "complete":
+        raise ValueError("The private checkpoint evidence is unavailable.")
+    schedule,saved = checkpoint["steps"],execution.get("saved")
+    record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(checkpoint["family"])
+    members = record["members"]
+    if (type(saved) is not tuple or len(saved) != len(schedule)
+            or len(record["outputs"]) != len(schedule)+1
+            or not len(schedule) <= len(members) <= len(schedule)+1):
+        raise ValueError("The private checkpoint evidence changed.")
+    result = []
+    for index,step in enumerate(schedule):
+        row,member = saved[index],members[index]
+        if (type(row) is not tuple or len(row) != 3 or type(row[0]) is not int or row[0] != step
+                or row[1] != record["outputs"][index]["freshName"] or member["graph"] is not row[2]
+                or member["stage"] != "sealed" or type(row[2]) is not _ProtectedTrainingOutputGraph):
+            raise ValueError("The private checkpoint evidence changed.")
+        result.append((step,row[1],use._completion_helpers[0](row[2])))
+    return tuple(result)
+
+
+def _finalize_protected_training_result(use):
+    """Seal the final original result; no reader-validation, Save or Root grant."""
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private final training result is unavailable.")
+    if use._final_result_slot is not None:
+        previous = use._final_result_slot
+        if type(previous) is dict and previous.get("stage") in ("planning","capturing","writing"):
+            retained = _NATIVE_CHECKPOINT_FAMILY_OWNER(previous.get("family"))
+            if (previous.get("owner") is use and type(retained) is tuple and len(retained) == 3
+                    and retained[0] is use and retained[1] is previous.get("checkpoint")):
+                previous["stage"] = "failed"
+                _fail_checkpoint_arguments(use,retained[1])
+        raise ValueError("The private final result attempt is unavailable.")
+    checkpoint,history = use._checkpoint_slot,use._training_slot
+    if (type(checkpoint) is not dict or type(history) is not dict or history.get("stage") != "complete"
+            or type(history.get("snapshot")) is not FunctionType):
+        raise ValueError("The private completed training result is unavailable.")
+    family = checkpoint.get("family")
+    proof = _NATIVE_CHECKPOINT_FAMILY_OWNER(family)
+    if type(proof) is not tuple or len(proof) != 3 or proof[0] is not use or proof[1] is not checkpoint:
+        raise ValueError("The private final result owner is unavailable.")
+    _checkpoint_snapshot(use)
+    record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+    if len(record["members"]) != len(checkpoint["steps"]):
+        raise ValueError("The private final result inventory is unavailable.")
+    slot = {"stage":"planning","owner":use,"checkpoint":checkpoint,"family":family,"export":None,"graph":None}
+    use._final_result_slot = slot  # Retain one owned attempt before SDK suppliers.
+    model,tokenizer,view,identity = use._embedding_model,use._embedding_tokenizer,use.view,use._run_identity
+    history_snapshot,history_files = history["snapshot"],history["files"]
+    configuration = dict(record["outputs"][-1])
+    reservation,admission = record["reservation"],record["admission"]
+    export_type,select,metadata,write = (_ProtectedTrainingUse,_capture_protected_training_tensor_stream,
+        _capture_protected_training_metadata,_write_protected_training_output)
+    child = export_proof = None
+
+    def passive():
+        if (use._final_result_slot is not slot or slot["family"] is not family
+                or slot["owner"] is not use or slot["checkpoint"] is not checkpoint
+                or slot["stage"] not in ("planning","capturing","writing","sealed")
+                or use.view is not view or use._run_identity is not identity
+                or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
+                or use._training_slot is not history or history.get("stage") != "complete"
+                or history.get("snapshot") is not history_snapshot or history.get("files") is not history_files
+                or use._checkpoint_slot is not checkpoint or use._serialize is not _NATIVE_REQUEST_SERIALIZER
+                or use._resolve is not _NATIVE_REFERENCE_RESOLVER or _ProtectedTrainingUse is not export_type
+                or _capture_protected_training_tensor_stream is not select
+                or _capture_protected_training_metadata is not metadata or _write_protected_training_output is not write):
+            raise ValueError("The private final result binding changed.")
+        _checkpoint_snapshot(use)
+        history_snapshot()
+        current_record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+        if configuration != current_record["outputs"][-1]:
+            raise ValueError("The private final result configuration changed.")
+        if child is not None:
+            if (slot["export"] is not child or _checkpoint_export_proof(child) is not export_proof
+                    or child.view is not view or child.payload is not use.payload or child._run_identity is not identity
+                    or child._embedding_model is not model or child._embedding_tokenizer is not tokenizer
+                    or child._training_slot is not history or child._checkpoint_slot is not None
+                    or child.model_reference != use.model_reference or child.dataset_references != use.dataset_references
+                    or child._serialize is not _NATIVE_REQUEST_SERIALIZER or child._resolve is not _NATIVE_REFERENCE_RESOLVER
+                    or child._embedding_status != use._embedding_status or child._embedding_observation_lost):
+                raise ValueError("The private final result export changed.")
+            _ProtectedTrainingUse.assert_snapshot(child)
+
+    def current():
+        _check_protected_use(use)
+        passive()
+
+    try:
+        current()
+        child = export_type(use.payload,view)
+        child._run_identity = identity
+        child._embedding_model,child._embedding_tokenizer = model,tokenizer
+        child._embedding_status = use._embedding_status
+        child._embedding_observation_lost = use._embedding_observation_lost
+        child._training_slot = history
+        export_proof = _CheckpointExport(current,passive)
+        child._checkpoint_export_guard,child._checkpoint_export_binding = current,export_proof
+        _CHECKPOINT_EXPORTS[child] = ref(export_proof)
+        slot.update(export=child,stage="capturing")
+        current()
+        select(model,child,maximum_bytes=configuration["maximumCopyBytes"],chunk_bytes=configuration["bufferBytes"])
+        current()
+        metadata(model,tokenizer,child,maximum_bytes=min(configuration["maximumCopyBytes"],64*1024**2))
+        current()
+        slot["stage"] = "writing"
+        graph = write(child,configuration=configuration,reservation=reservation,admission=admission,_family=family)
+        current()
+        members = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)["members"]
+        if len(members) != len(checkpoint["steps"])+1 or members[-1]["graph"] is not graph or members[-1]["stage"] != "sealed":
+            raise ValueError("The private final result sealing is unavailable.")
+        slot.update(graph=graph,stage="sealed")
+        passive()
+        return graph
+    except BaseException:
+        slot["stage"] = "failed"
+        _fail_checkpoint_arguments(use,checkpoint)
+        raise ValueError("The private final training result is unavailable.") from None
+
+
+_PROTECTED_COMPLETION_HELPERS = (_protected_output_seal_facts,
+    _sealed_training_checkpoint_facts,_finalize_protected_training_result)
 
 
 def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=None,
@@ -2000,25 +2180,34 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
         "driver":driver, "identity":identity, "metrics":None, "history":None, "files":None,
         "entered":False, "returned":False}
     use._training_slot = slot  # One original attempt, retained before SDK calls.
-    captured = None
+    captured = checkpoint_facts = None
+    checkpoint_reader, finalize = use._completion_helpers[1:]
     def snapshot():
         _ProtectedTrainingUse.assert_snapshot(use)
         if (use._training_slot is not slot or slot["stage"] != ("running" if captured is None else "complete")
                 or use._run_identity is not identity or use._training_driver is not driver
                 or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
                 or slot["model"] is not model or slot["tokenizer"] is not tokenizer or slot["args"] is not args
-                or slot["driver"] is not driver or slot["identity"] is not identity):
+                or slot["driver"] is not driver or slot["identity"] is not identity
+                or _finalize_protected_training_result is not finalize):
             raise ValueError("The private training binding changed.")
         if captured is not None and (slot["files"] is not captured[0] or slot["metrics"] is not captured[1]
                 or slot["history"] is not captured[2] or not slot["entered"] or not slot["returned"]):
             raise ValueError("The private completed training history changed.")
+        if checkpoint_facts is not None and checkpoint_reader(use) != checkpoint_facts:
+            raise ValueError("The private completed checkpoint evidence changed.")
     slot["snapshot"] = snapshot
     try:
         _check_protected_use(use); snapshot()
         slot["entered"] = True
-        metrics, checkpoints = driver(model, tokenizer, dataset, eval_dataset, args,
+        result = driver(model, tokenizer, dataset, eval_dataset, args,
             on_progress=on_progress, compare_validation_baseline=compare_validation_baseline,
             on_validation_progress=on_validation_progress, _protected_use=use)
+        if checkpoint_family is not None:
+            metrics, checkpoints, checkpoint_facts = result
+            if type(checkpoint_facts) is not tuple or not checkpoint_facts:
+                raise ValueError("The private completed checkpoint evidence is unavailable.")
+        else: metrics, checkpoints = result
         slot["returned"] = True
         _check_protected_use(use); snapshot()
         frozen_metrics = _freeze_training_metrics(metrics)
@@ -2036,8 +2225,12 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
             "trainingTask":_resolve_training_task(use.payload), "baseModel":request["baseModel"],
             "datasets":request["datasets"], "status":"training-complete", "metrics":dict(frozen_metrics),
             "history":[{"step":step,"loss":loss} for step,loss in frozen_history],
-            "checkpointFilesVerified":False, "candidateValidation":"pending",
+            "checkpointFilesVerified":checkpoint_facts is not None, "candidateValidation":"pending",
             "serializationManifestPath":"serialization_manifest.json"}
+        if checkpoint_facts is not None:
+            run["checkpointSnapshots"] = [{"step":step,"name":name,"files":[
+                {"name":file,"sizeBytes":size,"sha256":sha} for file,size,sha in files]}
+                for step,name,files in checkpoint_facts]
         manifest = {"runId":identity[0], "method":request["method"], "trainingTask":run["trainingTask"],
             "serialization":serialization, "validation":validation}
         files = []
@@ -2054,6 +2247,8 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
         slot.update(metrics=frozen_metrics,history=frozen_history,files=files)
         captured = (files, frozen_metrics, frozen_history)
         slot["stage"] = "complete"; snapshot()
+        if checkpoint_family is not None: finalize(use)
+        snapshot()
         return metrics, checkpoints
     except BaseException as error:
         slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
@@ -2074,7 +2269,7 @@ def _run_trainer_impl(
     compare_validation_baseline: bool = False,
     on_validation_progress: Callable[[str], None] | None = None,
     _protected_use=None,
-) -> tuple[dict[str, float], list[dict[str, Any]]]:
+) -> tuple[dict[str, float], list[dict[str, Any]]] | tuple[dict[str, float], list[dict[str, Any]], tuple[Any, ...]]:
     if type(compare_validation_baseline) is not bool:
         raise ValueError("The private validation comparison option is unavailable.")
     sample_count = 0
@@ -2188,7 +2383,7 @@ def _run_trainer_impl(
     train_result = trainer.train() if captured_train is None else captured_train()
     if _protected_use is not None: _protected_use._training_slot["train_result"] = train_result
     current()
-    if checkpoint_finish is not None: checkpoint_finish()
+    checkpoint_facts = checkpoint_finish() if checkpoint_finish is not None else None
     metrics: dict[str, float] = (dict(_freeze_training_metrics(train_result.metrics)) if _protected_use is not None else
         {k: float(v) for k, v in train_result.metrics.items() if isinstance(v, (int, float))})
     if compare_validation_baseline:
@@ -2215,7 +2410,7 @@ def _run_trainer_impl(
             if "loss" in state and "step" in state:
                 checkpoints.append({"path": str(args.output_dir), "step": int(state["step"]), "metric": "loss", "value": float(state["loss"])})
     current()
-    return metrics, checkpoints
+    return (metrics, checkpoints, checkpoint_facts) if checkpoint_finish is not None else (metrics, checkpoints)
 
 
 def _write_run_metadata(output_path: Path, metadata: dict[str, Any]) -> str:

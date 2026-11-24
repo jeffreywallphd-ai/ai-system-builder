@@ -2841,6 +2841,31 @@ callback and before the next write, with no intervening observer. Preserve the
 causal late-write failure and corrected zero-write denial. Registry values remain
 weak so the proof lookup cannot keep an otherwise retired run alive.
 
+The final trained result may consume the reserved last sibling only after the
+original driver and all required snapshots complete. Freeze original Native seal
+facts and bounded run history before suppliers; bind the final attempt and child
+proof to their exact identities. Never adopt mutable facts first encountered
+after SDK metrics callbacks.
+The fixed writer captures facts before another callback and validates that same
+state through original seal readback and final passive checks. Checkpoint saving
+retains immutable originals before returning to SDK code; the fixed internal
+driver hands them back before any post-driver observer. Capture and check the
+original finalizer before SDK execution so replacement cannot skip final sealing.
+Capture all three completion helpers from one fixed module tuple when the original
+Use is created, before any SDK loading. Request snapshots must check both tuple
+and function identities. An earlier callback must not select a forged seal reader
+for a fresh child or standalone writer; Native readback alone cannot attest facts
+invented by a substituted display reader.
+Reject early, foreign and wrong-thread callers
+without failing another owner. A completed duplicate grants no further effects;
+caught reentry during an active owned export invalidates that attempt. Recheck
+parent/child/history and checkpoint facts passively after the last Native callback
+and before every write. Preserve failed files and capacity without fallback,
+deletion, refund or retry. Hash/size facts describe written checkpoint bytes and
+must not be presented as reader validation, quality, custody or Save authority.
+Keep actual producer/data-cache, durable quota, protected reader/custody, owned
+retirement, Save and real-host qualification pending; no public Root is enabled.
+
 ### Approved text-training settings and SDK seed boundary
 
 Do not silently drop selected seed, scheduler or evaluation cadence. Reject

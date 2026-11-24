@@ -263,12 +263,32 @@ MODEL_TRAINING_BOUND_SCOPE = (
     "dev-tools/helpers/README.md",
     "docs/diagnostics/ai-development-control-plane.md",
 )
+MODEL_TRAINING_ROUTING_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_focused.py",
+    "dev-tools/helpers/README.md",
+    "docs/diagnostics/ai-development-control-plane.md",
+)
+MODEL_TRAINING_OWNER_SCOPE = (
+    "modules/adapters/runtime/python/worker/tasks/train_model.py",
+    "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+    "modules/adapters/runtime/python/README.md",
+    "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md",
+    "docs/security/headless-system-builder-threat-model.md",
+)
 MODEL_TRAINING_BOUND_REQUIRED = MODEL_TRAINING_BOUND_SCOPE + (
     "dev-tools/helpers/run_focused_checks.py",
     "modules/adapters/runtime/python/worker/tasks/train_model.py",
     "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
     "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py",
     "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py",
+    "modules/adapters/runtime/python/README.md",
+    "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md",
+    "docs/security/headless-system-builder-threat-model.md",
+    "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+    "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
 )
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
@@ -722,9 +742,9 @@ PUBLISHED_FORM_CHECKS = {
     },
     "model-training-worker-unit": {
         "interpreter": "python",
-        # Full inert training regression grew beyond120s; retain every case.
+        # Expanded inert training regression grew beyond180s; retain every case.
         # This developer-check ceiling does not change model/runtime limits.
-        "timeout": 180,
+        "timeout": 240,
         "automatic_sources": (
             "modules/adapters/runtime/python/worker/tasks/train_model.py",
             "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
@@ -3704,13 +3724,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   "-k", "test_control_plane_deterministic_support.",
                                   "-k", "test_control_plane_focused."]
-    if (set(paths) == set(MODEL_TRAINING_BOUND_SCOPE) and "focused-tests" not in explicit_required and
+    if (set(MODEL_TRAINING_ROUTING_SCOPE) <= set(paths) <= set(MODEL_TRAINING_BOUND_SCOPE + MODEL_TRAINING_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
             _automatic_files_available(root, {"automatic_required_files": MODEL_TRAINING_BOUND_REQUIRED})):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None:
             # Both existing modules run, including their actual complete text/
             # image commands and environment/negative routing cases. This does
             # not trim the model regression file or relax another check limit.
+            # Known owner edits remain covered by their independent automatic/
+            # required checks; unknown mixed work keeps the broad fallback.
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   "-k", "test_control_plane_model_training_worker.",

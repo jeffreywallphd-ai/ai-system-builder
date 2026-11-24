@@ -45,7 +45,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         selected=checks['model-training-worker-unit']
         self.assertEqual(selected['argv'],[sys.executable,'-B','dev-tools/helpers/run_focused_checks.py',
             '--regression-test','modules/adapters/runtime/python/worker/tests/test_train_model_task.py'])
-        self.assertEqual(selected['timeout'],180)
+        self.assertEqual(selected['timeout'],240)
         # No shorter selector or new runtime/model authorization follows from
         # allowing the complete inert feature batch to finish.
         self.assertNotIn('-k',selected['argv'])
@@ -61,20 +61,33 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         self.assertIn('test_control_plane_model_training_worker.',selected['argv'])
         self.assertIn('test_control_plane_focused.',selected['argv'])
         self.assertEqual(selected['timeout'],600)
-        # Shared-only, mixed, unknown, incomplete and explicitly generic work
-        # cannot borrow this closed calibration scope.
+        core=list(catalog.MODEL_TRAINING_ROUTING_SCOPE)
+        owners=list(catalog.MODEL_TRAINING_OWNER_SCOPE)
+        for paths in [core,core+owners,scope+owners,*[core+[name] for name in owners]]:
+            with self.subTest(known_scope=paths):
+                chosen=controller(paths)
+                self.assertIn('test_control_plane_model_training_worker.',chosen['argv'])
+                self.assertIn('test_control_plane_focused.',chosen['argv'])
+                self.assertEqual(chosen['timeout'],600)
+        automatic={row['id'] for row in catalog.plan(root,core+[owners[0]],['control-plane'],
+            'synthetic-training-owner')['selected']}
+        self.assertIn('model-training-worker-unit',automatic)
+        # Shared-only, unknown mixed, incomplete and explicitly generic work
+        # cannot borrow this closed known-source profile.
         for paths,required in [(scope+['docs/unrelated.md'],('control-plane',)),
                 (scope[:-1],('control-plane',)),([],('control-plane',)),
+                (core[:-1],('control-plane',)),([owners[0]],('control-plane',)),
+                (core+['modules/adapters/runtime/python/createPythonRuntimePort.ts'],('control-plane',)),
                 (scope,('control-plane','focused-tests'))]:
             self.assertNotIn('-k',controller(paths,required)['argv'])
         with patch.object(catalog,'_automatic_files_available',return_value=False):
             self.assertNotIn('-k',controller(scope)['argv'])
-        missing=catalog.MODEL_TRAINING_BOUND_REQUIRED[-1]
         original=catalog._automatic_files_available
-        def without_fixture(repo,check):
-            return False if missing in check.get('automatic_required_files',()) else original(repo,check)
-        with patch.object(catalog,'_automatic_files_available',side_effect=without_fixture):
-            self.assertNotIn('-k',controller(scope)['argv'])
+        for missing in catalog.MODEL_TRAINING_BOUND_REQUIRED:
+            def without_fixture(repo,check):
+                return False if missing in check.get('automatic_required_files',()) else original(repo,check)
+            with self.subTest(missing_support=missing),patch.object(catalog,'_automatic_files_available',side_effect=without_fixture):
+                self.assertNotIn('-k',controller(scope)['argv'])
 
     def test_invalid_source_is_not_guessed_or_executed(self):
         name = self.put('modules/adapters/example/test_invalid.py', 'def test_invalid(:\n')

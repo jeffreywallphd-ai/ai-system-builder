@@ -3153,6 +3153,22 @@ publication. Caught failure, reentry, foreign receiver, dispatch replacement or
 erased binding cannot authorize fallback, retry, deletion or credit. SDK internals
 remain trusted; this is a fixed call boundary, not an arbitrary-Python sandbox.
 
+After the driver and every requested snapshot finish, the same original wrapper
+freezes bounded checkpoint seal/hash facts alongside completed numeric history.
+One final export uses the last reserved sibling, the original model/tokenizer
+and the same view, controls and safe-format writer. Its immutable child proof
+binds the completed history and final-attempt identity. The final passive check
+runs after Native/resource observers and before each write. Caught reentry or
+binding/history/authority loss fails only the owned family and retains files and
+capacity; no ordinary path save, refund or retry is available.
+
+The final run record distinguishes completed training, verified checkpoint
+file names/sizes/hashes and still-pending candidate validation. Native seal/hash
+facts do not establish model-reader validation, accuracy, durable custody or Save
+authority. The component remains private/default-off. Complete producer/data-cache
+orchestration, measured/durable quota, protected reader/custody, worker retirement,
+Save and actual-host qualification are separate pending work.
+
 ### Text-training setting fidelity
 
 The text worker validates selected seed and scheduler/evaluation value shapes

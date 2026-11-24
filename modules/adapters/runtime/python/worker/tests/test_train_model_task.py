@@ -289,8 +289,7 @@ def test_checkpoint_handler_seals_each_updated_snapshot_without_sdk_path_io(monk
         assert result[0]=={"train_loss":0.25} and calls==["construct","train"] and disk==[]
         execution=use._training_slot["checkpoint_execution"]
         assert execution["stage"]=="complete" and [row[0] for row in execution["saved"]]==[2,3]
-        assert family.phase=="bound" and len(actual._output_family_snapshot(family)["members"])==2
-        assert family.next_configuration["freshName"]=="candidate-output"
+        assert family.phase=="sealed" and len(actual._output_family_snapshot(family)["members"])==3
         for step,name,graph in execution["saved"]:
             assert graph.phase=="sealed" and name==f"snapshot-{0 if step==2 else 1}"
             weight="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
@@ -301,10 +300,162 @@ def test_checkpoint_handler_seals_each_updated_snapshot_without_sdk_path_io(monk
             assert run["runId"]==use._run_identity[0] and run["checkpointStep"]==step
             assert run["status"]=="checkpoint-snapshot" and run["trainingStatus"]=="running"
             assert run["candidateValidation"]=="pending" and "metrics" not in run
-        assert control.charges==[128*1024]*2 and len(execution["exports"])==2
+        final=use._final_result_slot
+        assert final["stage"]=="sealed" and final["graph"].phase=="sealed"
+        weight="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
+        raw=bytes(kernel.nodes[final["graph"].physical_path+"\\"+weight]["data"])
+        header,body=TrainingTensorStreamTests().decode(raw)
+        assert body==struct.pack("<4f",*[3.0]*4)*len(header)
+        final_run=json.loads(bytes(kernel.nodes[final["graph"].physical_path+"\\training-run.json"]["data"]))
+        assert final_run["status"]=="training-complete" and final_run["candidateValidation"]=="pending"
+        assert final_run["checkpointFilesVerified"] is True
+        assert [row["step"] for row in final_run["checkpointSnapshots"]]==[2,3]
+        for row,(_,_,graph) in zip(final_run["checkpointSnapshots"],execution["saved"]):
+            for file in row["files"]:
+                raw=bytes(kernel.nodes[graph.physical_path+"\\"+file["name"]]["data"])
+                assert len(raw)==file["sizeBytes"] and hashlib.sha256(raw).hexdigest()==file["sha256"]
+        assert control.charges==[128*1024]*3 and len(execution["exports"])==2
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._finalize_protected_training_result(use)
+        assert len(kernel.calls)==before and family.phase=="sealed"
+        other=train_model_module._ProtectedTrainingUse(use.payload,use.view)
+        other._checkpoint_slot=use._checkpoint_slot;other._training_slot=use._training_slot
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._finalize_protected_training_result(other)
+        assert len(kernel.calls)==before and family.phase=="sealed" and other._final_result_slot is None
         before=len(kernel.calls)
         with pytest.raises(ValueError):objects[0]._save_checkpoint(model,None)
         assert len(kernel.calls)==before and family.phase=="failed" and disk==[]
+
+
+def test_final_training_result_requires_original_completed_history_and_thread(monkeypatch,tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,model,tokenizer,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._finalize_protected_training_result(use)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with pytest.raises(ValueError):
+                pool.submit(train_model_module._finalize_protected_training_result,use).result(timeout=5)
+        assert len(kernel.calls)==before and use._final_result_slot is None and family.phase=="bound"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("failure",["finalizer","checkpoint-hash","replaced-facts","seal-reader"])
+def test_training_completion_cannot_adopt_post_sdk_replacements(monkeypatch,tmp_path,failure):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+        _install_checkpoint_trainer(monkeypatch,(1,));Trainer=sys.modules["transformers"].Trainer
+        original=Trainer.train;changed=[];replacement_calls=[]
+        class Report:
+            @property
+            def metrics(self):
+                execution=use._training_slot["checkpoint_execution"]
+                assert execution["stage"]=="complete"
+                changed.append(True)
+                if failure=="finalizer":
+                    monkeypatch.setattr(train_model_module,"_finalize_protected_training_result",
+                        lambda owner:replacement_calls.append(owner))
+                elif failure=="seal-reader":
+                    original_reader=train_model_module._protected_output_seal_facts
+                    def replaced(graph):
+                        replacement_calls.append(True)
+                        return tuple((name,size,"0"*64) for name,size,_ in original_reader(graph))
+                    monkeypatch.setattr(train_model_module,"_protected_output_seal_facts",replaced)
+                else:
+                    graph=execution["saved"][0][2]
+                    graph.records[0]["sha256"]="0"*64
+                    if failure=="replaced-facts":
+                        # Replacing both exposed mutable state and its displayed
+                        # tuple cannot replace the closure-owned original proof.
+                        child=execution["exports"][0]
+                        child._output_slot["seal_facts"]=train_model_module._protected_output_seal_facts(graph)
+                return {"train_loss":0.25}
+        def train(self):original(self);return Report()
+        monkeypatch.setattr(Trainer,"train",train)
+        with pytest.raises((ValueError,actual.LaunchUnavailable)):
+            train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert changed==[True] and replacement_calls==[]
+        assert use._training_slot["stage"]=="failed" and use._final_result_slot is None and family.phase=="failed"
+        assert control.charges==[128*1024]
+
+
+@pytest.mark.parametrize("failure",["permission","history","checkpoint","final-slot","model","helper",
+    "child-proof","reentry","write-error","checkpoint-hash"])
+def test_final_training_result_refuses_drift_and_retains_failed_attempt(monkeypatch,tmp_path,failure):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+        _install_checkpoint_trainer(monkeypatch,(1,));changed=[]
+        def after_state():
+            slot=use._final_result_slot
+            if slot is None or changed:return
+            changed.append((slot,use._training_slot,len(kernel.calls)))
+            if failure=="permission":control.current=False
+            elif failure=="history":use._training_slot["files"]=None
+            elif failure=="checkpoint":use._checkpoint_slot=None
+            elif failure=="final-slot":use._final_result_slot=None
+            elif failure=="model":use._embedding_model=object()
+            elif failure=="helper":
+                monkeypatch.setattr(train_model_module,"_capture_protected_training_metadata",
+                    lambda *a,**k:pytest.fail("Replacement metadata supplier ran"))
+            elif failure=="child-proof":slot["export"]._checkpoint_export_binding=None
+            elif failure=="reentry":
+                with pytest.raises(ValueError):train_model_module._finalize_protected_training_result(use)
+            elif failure=="write-error":kernel.fail="WriteFile"
+            else:use._training_slot["checkpoint_execution"]["saved"][0][2].records[0]["sha256"]="0"*64
+        model.after_state=after_state
+        with pytest.raises((ValueError,actual.LaunchUnavailable)):
+            train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert len(changed)==1 and changed[0][0]["stage"]=="failed" and changed[0][1]["stage"]=="failed"
+        assert family.phase=="failed"
+        assert control.charges==[128*1024]*(2 if failure=="write-error" else 1)
+        # Failed families deliberately expose no usable output inventory.
+        with pytest.raises(actual.LaunchUnavailable):actual._output_family_snapshot(family)
+        first=changed[0][1]["checkpoint_execution"]["saved"][0][2]
+        assert first.physical_path+"\\training-run.json" in kernel.nodes
+        if failure!="write-error":
+            assert not any(name=="WriteFile" for name,_ in kernel.calls[changed[0][2]:])
+        before=len(kernel.calls);charges=list(control.charges)
+        with pytest.raises(ValueError):train_model_module._finalize_protected_training_result(use)
+        assert len(kernel.calls)==before and control.charges==charges
+
+
+def test_final_training_result_rechecks_after_last_native_proof_before_write(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+        _install_checkpoint_trainer(monkeypatch,(1,));changed=[]
+        def after(name):
+            slot=use._final_result_slot
+            if changed or type(slot) is not dict or slot["stage"]!="writing":return
+            child=slot["export"];output=child._output_slot
+            graph=output.get("graph") if type(output) is dict else None
+            if graph is None or output["stage"]!="writing":return
+            native=flat=chunk=False;frame=sys._getframe(1)
+            while frame:
+                if frame.f_locals.get("self") is graph:
+                    native|=frame.f_code is actual.OriginalTrainingOutputGraph.guard.__code__
+                    flat|=frame.f_code is actual._OriginalProtectedFlatCopy.guard.__code__
+                    if frame.f_code is actual.OriginalTrainingOutputGraph.prepare.__code__:
+                        chunk|=type(frame.f_locals.get("chunk")) is bytes and frame.f_locals.get("copied")==0
+                frame=frame.f_back
+            if native and not flat and chunk:
+                changed.append((slot,use._training_slot,len(kernel.calls)))
+                use._checkpoint_slot=None
+        kernel.after=after
+        with pytest.raises((ValueError,actual.LaunchUnavailable)):
+            train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert len(changed)==1 and not any(name=="WriteFile" for name,_ in kernel.calls[changed[0][2]:])
+        assert family.phase=="failed" and changed[0][0]["stage"]=="failed" and changed[0][1]["stage"]=="failed"
+        assert control.charges==[128*1024]*2
 
 
 @pytest.mark.parametrize("failure",["missing-save","out-of-order","duplicate","wrong-model","foreign-receiver",
@@ -838,6 +989,37 @@ def _protected_training_metadata_fixture(monkeypatch,method="lora",output=None,o
         stream=(train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
             if capture_weights else None)
         yield facts,tokenizer,metadata_calls,stream
+
+
+@pytest.mark.parametrize("helper",["_protected_output_seal_facts","_sealed_training_checkpoint_facts",
+    "_finalize_protected_training_result"])
+def test_original_training_use_pins_completion_helpers_before_sdk_suppliers(monkeypatch,helper):
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        _,use,model,_,_,control,Tensor,_=facts
+        kernel=model.test_output[0];called=[]
+        def replaced(*args,**kwargs):called.append(True);return ()
+        model.after_state=lambda:monkeypatch.setattr(train_model_module,helper,replaced)
+        before=len(kernel.calls);charges=list(control.charges);copies=list(Tensor.copies)
+        with pytest.raises(ValueError):
+            train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert called==[] and control.charges==charges and Tensor.copies==copies
+        assert not any(name in ("NtCreateFile","WriteFile") for name,_ in kernel.calls[before:])
+
+
+def test_completion_helper_guard_never_calls_virtual_equality(monkeypatch,tmp_path):
+    use=object.__new__(train_model_module._ProtectedTrainingUse)
+    use.payload=_request(tmp_path)
+    use._completion_helpers=train_model_module._PROTECTED_COMPLETION_HELPERS
+    use._serialize=train_model_module._NATIVE_REQUEST_SERIALIZER
+    use._request_stamp=json.dumps(use._serialize(use.payload,mode="json"),sort_keys=True,allow_nan=False,separators=(",",":"))
+    callbacks=[]
+    class Replacement:
+        def __eq__(self,other):callbacks.append("equality");return True
+        def __call__(self,*args):callbacks.append("call");return ()
+    monkeypatch.setattr(train_model_module,"_sealed_training_checkpoint_facts",Replacement())
+    with pytest.raises(ValueError,match="completion helpers"):
+        train_model_module._ProtectedTrainingUse.assert_snapshot(use)
+    assert callbacks==[]
 
 
 @pytest.mark.parametrize("method",["full-finetune","lora","qlora"])

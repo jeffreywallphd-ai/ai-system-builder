@@ -53,13 +53,17 @@ They use only the Python standard library.
 Copy `helpers.example.json` into an ignored local directory and pass it with
 `--config`. Command-line values override matching configuration values.
 The fixed `model-training-worker-unit` check retains the complete inert training
-test file with a 180-second outer ceiling. Its measured 374-case batch exceeded
-the old 120 seconds. This changes no test selector, model/runtime resource limit,
+test file with a 240-second outer ceiling. The 386-case batch took 179.34 seconds;
+the expanded batch exceeded 180 seconds. Keep all 394 cases. This changes no test selector, model/runtime resource limit,
 Native execution permission or controlled qualification allowance.
-For the exact complete five-file bound-calibration scope, run the existing
-training-worker and focused-controller modules. They execute the full text and
-image commands plus routing/environment denials. Missing/nonregular support,
-mixed/unknown/incomplete scopes and explicit generic checks keep broad coverage.
+For the complete four-file training-routing core, run the existing training-worker
+and focused-controller modules. The original forwarding test and only the six
+registered training-owner files may accompany that core. All 16 support files
+must be regular and available. These modules execute the full text/image commands
+and routing/environment denials; owner changes retain automatic and required
+checks. Missing/nonregular support, unknown mixed or incomplete scopes, and
+explicit generic checks keep broad coverage. This avoids a broad helper-suite
+timeout merely because a reviewed training correction accompanies its test tools.
 Repository paths must resolve within the selected repository.
 Verification paths must also remain positional after normalization: option-like,
 absolute and drive-relative selections are refused during planning. Focused
