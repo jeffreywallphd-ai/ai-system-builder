@@ -16,7 +16,9 @@ from threading import get_ident
 from typing import Any, Callable
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
-from ..native.windows_original_worker_launch import LaunchUnavailable, OriginalTrainingDenseTensorStream, OriginalTrainingOutputGraph, resolve_original_training_references
+from ..native.windows_original_worker_launch import (LaunchUnavailable, OriginalTrainingDenseTensorStream,
+    OriginalTrainingOutputFamily, OriginalTrainingOutputGraph, _fail_output_family, _output_family_snapshot,
+    resolve_original_training_references)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -47,6 +49,9 @@ _NATIVE_OUTPUT_INIT = OriginalTrainingOutputGraph.__init__
 _NATIVE_OUTPUT_GUARD = OriginalTrainingOutputGraph.guard
 _NATIVE_OUTPUT_PREPARE = OriginalTrainingOutputGraph.prepare
 _NATIVE_OUTPUT_ASSERT_SEALED = OriginalTrainingOutputGraph.assert_sealed
+_NATIVE_OUTPUT_FAMILY_TYPE = OriginalTrainingOutputFamily
+_NATIVE_OUTPUT_FAMILY_SNAPSHOT = _output_family_snapshot
+_NATIVE_OUTPUT_FAMILY_FAIL = _fail_output_family
 _SDK_ATTRIBUTE_MISSING = object()
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
@@ -307,7 +312,8 @@ class _ProtectedTrainingUse:
     __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
         "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
-        "_run_identity","_training_driver","_training_slot","_thread")
+        "_run_identity","_training_driver","_training_slot","_thread",
+        "_output_family_type","_output_family_snapshot","_output_family_fail")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -319,6 +325,8 @@ class _ProtectedTrainingUse:
         self._embedding_model = None
         self._embedding_tokenizer, self._metadata_slot = None, None
         self._output_graph_type, self._output_slot = _ProtectedTrainingOutputGraph, None
+        self._output_family_type = _NATIVE_OUTPUT_FAMILY_TYPE
+        self._output_family_snapshot, self._output_family_fail = _NATIVE_OUTPUT_FAMILY_SNAPSHOT, _NATIVE_OUTPUT_FAMILY_FAIL
         started = datetime.now(timezone.utc)
         self._run_identity = (f"train-{started.strftime('%Y%m%d%H%M%S')}", started.isoformat())
         self._training_driver, self._training_slot = _run_trainer_impl, None
@@ -761,7 +769,7 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
 
 class _ProtectedTrainingOutputGraph(OriginalTrainingOutputGraph):
     """The original Native graph with the fixed SDK binding check added last."""
-    def __init__(self, use, request, configuration, files, reservation, admission):
+    def __init__(self, use, request, configuration, files, reservation, admission, *, _family=None):
         if type(use) is not _ProtectedTrainingUse or type(self) is not use._output_graph_type:
             raise LaunchUnavailable()
         slot = use._output_slot
@@ -769,7 +777,8 @@ class _ProtectedTrainingOutputGraph(OriginalTrainingOutputGraph):
                 or type(slot.get("snapshot")) is not FunctionType):
             raise LaunchUnavailable()
         self._sdk_current, self._sdk_snapshot, self._sdk_guard_active = slot["current"], slot["snapshot"], False
-        _NATIVE_OUTPUT_INIT(self,use.view,request,configuration,files,reservation,admission)
+        _NATIVE_OUTPUT_INIT(self,use.view,request,configuration,files,reservation,admission,
+            **({"_family":_family} if _family is not None else {}))
 
     def guard(self):
         if self._sdk_guard_active:
@@ -790,14 +799,30 @@ class _ProtectedTrainingOutputGraph(OriginalTrainingOutputGraph):
         finally: self._sdk_guard_active = False
 
 
-def _write_protected_training_output(use, *, configuration, reservation, admission):
+def _write_protected_training_output(use, *, configuration, reservation, admission, _family=None):
     """Seal the captured single-file candidate; no training, Save or Root grant."""
     if type(use) is not _ProtectedTrainingUse or use._output_slot is not None:
         raise ValueError("The private trained output is unavailable.")
     slot = {"stage":"planning","selection":None,"metadata":None,"graph":None,
-        "files":None,"entered":False,"returned":False,"current":None}
+        "files":None,"entered":False,"returned":False,"current":None,"family":_family}
     use._output_slot = slot
+    family_type, family_snapshot, family_fail = _NATIVE_OUTPUT_FAMILY_TYPE, _NATIVE_OUTPUT_FAMILY_SNAPSHOT, _NATIVE_OUTPUT_FAMILY_FAIL
+    owned_family = None
     try:
+        if _family is not None:
+            if type(_family) is not family_type:
+                raise ValueError("The private output family is unavailable.")
+            original = family_snapshot(_family)
+            if (original["view"] is not use.view or
+                    json.dumps(original["request"],sort_keys=True,allow_nan=False,separators=(",",":")) != use._request_stamp):
+                raise ValueError("The private output family binding is unavailable.")
+            owned_family = _family  # Failure authority belongs only to this original view/request.
+        if (use._output_family_type is not family_type or use._output_family_snapshot is not family_snapshot
+                or use._output_family_fail is not family_fail):
+            raise ValueError("The private output family helpers changed.")
+        if _family is not None and (type(_family) is not family_type or type(family_snapshot) is not FunctionType
+                or type(family_fail) is not FunctionType):
+            raise ValueError("The private output family is unavailable.")
         _check_protected_use(use)
         selection, metadata = use._tensor_selection_slot, use._metadata_slot
         if (type(selection) is not dict or selection.get("stage") != "captured"
@@ -821,6 +846,14 @@ def _write_protected_training_output(use, *, configuration, reservation, admissi
                     or metadata.get("stage") != "captured" or selection.get("stream") is not stream
                     or metadata.get("files") is not captured_files or slot["stage"] == "failed"):
                 raise ValueError("The private output inputs changed.")
+            if (slot["family"] is not _family or use._output_family_type is not family_type
+                    or use._output_family_snapshot is not family_snapshot or use._output_family_fail is not family_fail):
+                raise ValueError("The private output family binding changed.")
+            if _family is not None:
+                record = family_snapshot(_family)  # Fixed passive Native-owned map checks only.
+                if (record["view"] is not use.view or
+                        json.dumps(record["request"],sort_keys=True,allow_nan=False,separators=(",",":")) != use._request_stamp):
+                    raise ValueError("The private output family binding changed.")
         def current():
             if use._output_slot is not slot:
                 raise ValueError("The private output attempt changed.")
@@ -865,7 +898,8 @@ def _write_protected_training_output(use, *, configuration, reservation, admissi
         slot["files"] = tuple((r["name"],r["sizeBytes"]) for r in rows)
         request = use._serialize(use.payload,mode="json"); current()
         slot.update(stage="constructing",entered=True,returned=False)
-        graph = use._output_graph_type(use,request,configuration,rows,reservation,admission)
+        graph = use._output_graph_type(use,request,configuration,rows,reservation,admission,
+            **({"_family":_family} if _family is not None else {}))
         slot.update(graph=graph,returned=True)
         current()
         slot["stage"] = "writing"
@@ -877,6 +911,9 @@ def _write_protected_training_output(use, *, configuration, reservation, admissi
         return graph
     except BaseException:
         slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
+        if owned_family is not None:
+            try: family_fail(owned_family)
+            except BaseException: pass  # A forged/unregistered family supplies no effect or recovery authority.
         raise ValueError("The private trained output is unavailable.") from None
 
 

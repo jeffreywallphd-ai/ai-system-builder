@@ -3066,3 +3066,24 @@ without refund, deletion, ownership transfer, retry or family revival. The finit
 local ledger is not a measured or durable exclusive reservation implementation.
 This private component enables no Root and does not supply SDK checkpoint policy,
 full training/controller integration, retirement, Save or actual host evidence.
+
+### Fixed serializer within the original output family
+
+The fixed private serializer can consume an original output family for its exact
+borrowed view and sealed request. The original use captures repository-owned
+family helpers before SDK callbacks; no request or SDK-selected provider chooses
+them. A retained writer attempt binds the same family, next configuration and
+original controls to the genuine Native member constructor. Its final family
+comparison is passive and adds no observer after Native/resource proof.
+
+The selected weight stream and immutable metadata remain one-use. Failed
+preflight, Native write or postflight freezes that real family and preserves
+custody and attempted charges; no fallback, retry, cleanup or credit is granted.
+A forged family grants no membership or authority over another family. Default
+standalone writing stays intact. Actual checkpoint SDK wiring/settings, complete
+producer, durable quota, reader/retirement, separate Save and real hosts remain
+pending. The composition tests use inert SDK data and in-memory ABI only.
+
+Failure authority binds only after the fixed Native snapshot proves the family
+belongs to this original view/request. A different genuine family cannot be
+frozen by a mismatched serializer invocation.

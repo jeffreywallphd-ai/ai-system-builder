@@ -2107,3 +2107,22 @@ In-memory ABI tests establish software behavior only. SDK checkpoint callbacks,
 checkpoint settings/optimizer semantics, the complete producer, durable quotas,
 SDK/worker retirement, separate Save and physical/host qualification remain
 pending. No new wire schema, Root, real model or quality test is introduced.
+
+The fixed protected serializer accepts the internal `_family` only from trusted
+composition. The original use captures the fixed family type, passive snapshot
+and failure helper before SDK callbacks; request JSON cannot choose a callable.
+Require the same original view/request, next copied configuration and captured
+controls. The fixed task-owned graph passes this family to actual Native member
+admission, retaining the original byte and ownership guards. Passive family checks
+run after callback-bearing proof without appending a new supplier callback.
+
+Any failed preflight, write or postflight freezes the genuine original family.
+Keep its graph, data and charges; no fallback, retry, deletion, adoption, refund
+or Save is implied. A forged family cannot choose a real family's failure state.
+Successful one-use standalone output is unchanged. Controlled full-model/LoRA/
+QLoRA composition is source evidence, not actual SDK checkpoint execution or a
+complete producer, durable quota, installed reader, retirement, Save or host pass.
+
+Failure authority binds only after the fixed Native snapshot proves the family
+belongs to this original view/request. A different genuine family cannot be
+frozen by a mismatched serializer invocation.

@@ -1026,3 +1026,15 @@ capacity are fixed before suppliers; another member needs the prior real seal.
 Failure retains the family and charges. Accounting acknowledgement survives
 business withdrawal but never refunds storage or reopens work. This is not SDK
 checkpoint wiring, a durable quota or a qualified producer/Save/host profile.
+
+The fixed serializer can now target a genuine original output family. Bind the
+same live view/request, exact configured next namespace and original controls;
+use the original Native writer for the selected model bytes and metadata. Passive
+family checks add no supplier callback after final Native/resource proof. A failed
+serializer freezes further family admission and retains bytes/charges without
+fallback or cleanup. Standalone output remains compatible; actual SDK checkpoint
+execution, complete producer/accounting, retirement, Save and hosts stay pending.
+
+Failure authority binds only after the fixed Native snapshot proves the family
+belongs to this original view/request. A different genuine family cannot be
+frozen by a mismatched serializer invocation.

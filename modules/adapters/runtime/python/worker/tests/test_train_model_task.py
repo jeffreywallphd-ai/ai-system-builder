@@ -79,6 +79,9 @@ def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_pr
             native._sealed_training_inputs.pop(inputs,None)
             native._model_leases.pop(original_lease,None)
             native._verified_model_receivers.pop(source,None)
+            for family,record in list(native._training_output_families.items()):
+                if record["lease"] is original_lease:
+                    native._training_output_families.pop(family,None)  # This inert fixture only; no real custody is released.
         gc.collect()
 
 
@@ -474,6 +477,89 @@ def test_actual_private_trainer_history_is_in_exact_protected_candidate(monkeypa
         assert use.payload.model_dump(mode="json")==before and control.charges==[128*1024]
         with pytest.raises(ValueError):train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
         assert calls==["construct","train"] and use._training_slot["stage"]=="complete"
+
+
+@pytest.mark.parametrize("method",["lora","qlora","full-finetune"])
+def test_fixed_serializer_consumes_original_family_after_a_sealed_checkpoint(monkeypatch,method):
+    with _protected_training_metadata_fixture(monkeypatch,method) as (facts,tokenizer,_,stream):
+        actual,use,model,_,_,_,_,oracle=facts
+        metadata=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        kernel,configuration,_,_,control=model.test_output; request=use.payload.model_dump(mode="json")
+        family=actual.OriginalTrainingOutputFamily(use.view,request,{"maximumCopyBytes":256*1024,
+            "outputs":[{**configuration,"freshName":"checkpoint-1"},configuration]},control,control)
+        # Inert valid container for the already-qualified Native checkpoint slot;
+        # actual SDK checkpoint capture/execution is a separate pending workflow.
+        weight="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
+        header=json.dumps({"fixture.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}).encode();header+=b" "*(-len(header)%8)
+        checkpoint={**dict(metadata),weight:len(header).to_bytes(8,"little")+header+b"\0"*4}
+        first=actual.OriginalTrainingOutputGraph(use.view,request,family.next_configuration,
+            [{"name":name,"sizeBytes":len(raw)} for name,raw in checkpoint.items()],control,control,_family=family)
+        first.prepare({name:iter((raw,)) for name,raw in checkpoint.items()})
+        graph=train_model_module._write_protected_training_output(use,configuration=family.next_configuration,
+            reservation=control,admission=control,_family=family)
+        assert family.phase=="sealed" and graph.phase=="sealed" and stream.phase=="complete"
+        assert use._output_slot["family"] is family and graph is not first and graph.physical_path != first.physical_path
+        assert control.charges==[128*1024]*2 and control.retained==[]
+        raw=bytes(kernel.nodes[graph.physical_path+"\\"+weight]["data"]); _,body=oracle.decode(raw)
+        assert len(body)==stream.tensor_bytes
+        for row in graph.records:
+            data=bytes(kernel.nodes[graph.physical_path+"\\"+row["name"]]["data"])
+            assert row["sha256"]==hashlib.sha256(data).hexdigest() and row["sizeBytes"]==len(data)
+        with pytest.raises(ValueError):train_model_module._write_protected_training_output(use,configuration=configuration,
+            reservation=control,admission=control,_family=family)
+        assert family.phase=="sealed" and control.charges==[128*1024]*2
+
+
+@pytest.mark.parametrize("failure",["forged","wrong-namespace","wrong-controls","missing-metadata","native-write","helper-changed","late-helper"])
+def test_fixed_family_serializer_failure_keeps_ownership_and_freezes_new_outputs(monkeypatch,failure):
+    with _protected_training_metadata_fixture(monkeypatch) as (facts,tokenizer,_,stream):
+        actual,use,model,_,_,_,Tensor,_=facts
+        if failure!="missing-metadata":train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        kernel,configuration,_,_,control=model.test_output
+        family=actual.OriginalTrainingOutputFamily(use.view,use.payload.model_dump(mode="json"),
+            {"maximumCopyBytes":256*1024,"outputs":[configuration,{**configuration,"freshName":"later"}]},control,control)
+        selected=family; supplied=dict(configuration); reservation=control
+        if failure=="forged":selected=object.__new__(actual.OriginalTrainingOutputFamily)
+        elif failure=="wrong-namespace":supplied["freshName"]="unplanned"
+        elif failure=="wrong-controls":reservation=type(control)()
+        elif failure=="native-write":kernel.fail="WriteFile"
+        elif failure=="helper-changed":use._output_family_fail=lambda _:pytest.fail("Caller-selected invalidator")
+        elif failure=="late-helper":
+            changed=[]
+            def during(obj):
+                if obj is control and use._output_slot is not None and not changed:
+                    changed.append(True);use._output_family_snapshot=lambda _:pytest.fail("Caller-selected family reader")
+                return obj.__dict__["current"]
+            monkeypatch.setattr(type(control),"current",property(during,lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises(ValueError):train_model_module._write_protected_training_output(use,
+            configuration=supplied,reservation=reservation,admission=control,_family=selected)
+        assert use._output_slot["stage"]=="failed"
+        if failure=="late-helper":assert changed==[True]
+        if failure!="forged":
+            assert family.phase=="failed"
+            with pytest.raises(actual.LaunchUnavailable):unused=family.next_configuration
+        else:assert family.phase=="bound"  # A forged value cannot choose a real family's failure state.
+        charges=list(control.charges); before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._write_protected_training_output(use,
+            configuration=configuration,reservation=control,admission=control,_family=family)
+        assert control.charges==charges and len(kernel.calls)==before
+        if failure=="native-write":assert charges==[128*1024]
+        else:assert charges==[] and Tensor.copies==[]
+
+
+def test_fixed_serializer_cannot_freeze_a_different_genuine_family(monkeypatch):
+    with _protected_training_metadata_fixture(monkeypatch) as (outer,tokenizer,_,_):
+        actual,use,model,_,_,_,Tensor,_=outer
+        train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        with pytest.MonkeyPatch.context() as inner_patch:
+            with _protected_training_metadata_fixture(inner_patch) as (inner,_,_,_):
+                _,foreign_use,foreign_model,*_=inner
+                _,configuration,_,_,control=foreign_model.test_output
+                family=actual.OriginalTrainingOutputFamily(foreign_use.view,foreign_use.payload.model_dump(mode="json"),
+                    {"maximumCopyBytes":128*1024,"outputs":[configuration]},control,control)
+                with pytest.raises(ValueError):train_model_module._write_protected_training_output(use,
+                    configuration=configuration,reservation=control,admission=control,_family=family)
+                assert use._output_slot["stage"]=="failed" and family.phase=="bound" and control.charges==[] and Tensor.copies==[]
 
 
 @pytest.mark.parametrize("failure",["sdk-error","nonfinite-metric","boolean-metric","non-numeric-metric","bad-key","too-many-metrics",

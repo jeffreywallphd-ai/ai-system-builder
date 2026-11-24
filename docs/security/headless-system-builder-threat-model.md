@@ -2754,3 +2754,23 @@ or transfer ownership. External measured exclusive capacity and durable accounti
 still require their own implementation and evidence. Inert ABI tests grant no
 physical effects, SDK checkpoint/optimizer behavior, complete producer, retirement,
 Save, host or parent qualification.
+
+### Fixed serializer and finite family composition
+
+Pin the Native family type and passive snapshot/failure helpers before SDK
+callbacks. Bind one serializer attempt to the genuine original family, same view
+and request, exact declared next namespace and original controls. The fixed
+repository-owned graph constructor still performs actual Native member admission
+and all existing file/resource guards. Passive family map checks add no supplier
+callback after final resource proof. Reject changed helper/binding references.
+
+On any serializer preflight, write or postflight failure, freeze the original
+family using the fixed Native invalidator. Retain its bytes, graph and attempted
+charges without retry, fallback, deletion, adoption, refund or Save. An unregistered
+forged object cannot select a real family's state. Source-only composition proves
+no physical effects, actual SDK checkpoint policy, complete producer/quota,
+installed reader, retirement, Save, host or parent qualification.
+
+Failure authority binds only after the fixed Native snapshot proves the family
+belongs to this original view/request. A different genuine family cannot be
+frozen by a mismatched serializer invocation.
