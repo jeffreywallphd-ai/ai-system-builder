@@ -136,7 +136,7 @@ class EvaluationTests(Fixture):
     def test_feedback_requires_failure_durable_regression_review_and_fresh_pass(self):
         self.repository(start=False)
         self.put("dev-tools/helpers/run_focused_checks.py", (HELPERS / "run_focused_checks.py").read_text())
-        for name in ("__init__.py", "candidate.py", "common.py", "storage.py", "contracts.py"):
+        for name in ("__init__.py", "candidate.py", "roadmap_state.py", "common.py", "storage.py", "contracts.py"):
             self.put("dev-tools/helpers/control_plane/" + name, (HELPERS / "control_plane" / name).read_text())
         path = "dev-tools/scripts/example/recovery.test.mjs"
         behavior_test = 'import assert from "node:assert/strict"; import fs from "node:fs"; import test from "node:test"; test("completed journey", () => assert.match(fs.readFileSync("docs/result.md", "utf8"), /^completed/));'

@@ -1304,6 +1304,7 @@
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
         "dev-tools/scripts/qualification/functionality-qualification-core.mjs",
+        "dev-tools/scripts/qualification/roadmap-record-storage.mjs",
         "dev-tools/scripts/qualification/run_installed_generation_qualification.py",
         "dev-tools/scripts/qualification/installed_generation_holdout.json",
         "dev-tools/scripts/qualification/tests/test_installed_generation_qualification.py",
