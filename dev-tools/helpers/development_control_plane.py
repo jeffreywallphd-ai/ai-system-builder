@@ -59,6 +59,14 @@ def parser():
     close.add_argument("feedback_id")
     compare = sub.add_parser("compare-trials")
     compare.add_argument("trial_ids", nargs="+")
+    usage = sub.add_parser("usage", help="Optional bounded numeric usage import and UTC trends; never gates Work")
+    usage.add_argument("operation", choices=("enable", "import", "summary"))
+    usage.add_argument("--from", dest="input")
+    usage.add_argument("--period", choices=("daily", "weekly", "quarterly"))
+    usage.add_argument("--limit", type=int, default=8)
+    usage.add_argument("--daily-days", type=int, default=400)
+    usage.add_argument("--weekly-weeks", type=int, default=156)
+    usage.add_argument("--quarterly-quarters", type=int, default=40)
     return p
 
 
@@ -69,7 +77,7 @@ def main(argv=None):
         work = Work(root)
         if args.command == "status":
             data = review_content(root, compact_work_items=True, paginated=True)
-            result = {"state_revision": data["local_revision"], "work_items": expanded_review_work_items(data), "recovery_required": work.records.journal.exists(), "roadmaps": [{"id": r["id"], "status": r["status"], "current_increment": r["current_increment"]} for r in data["roadmaps"]]}
+            result = {"state_revision": data["local_revision"], "work_items": expanded_review_work_items(data), "recovery_required": work.records.journal.exists(), "roadmaps": [{"id": r["id"], "status": r["status"], "current_increment": r["current_increment"]} for r in data["roadmaps"]], "token_usage": data.get("token_usage", {"status": "unavailable", "coverage": "unavailable", "warnings": []})}
         elif args.command == "review-data":
             if not args.view and args.page != 1:
                 raise ValueError("A view is required for paging.")
@@ -78,6 +86,16 @@ def main(argv=None):
         elif args.command == "support":
             from control_plane.deterministic_support import run_from
             result = run_from(root, args.operation, args.input)
+        elif args.command == "usage":
+            from control_plane import usage
+            if args.operation == "enable":
+                result = usage.enable(root, {"daily": args.daily_days, "weekly": args.weekly_weeks, "quarterly": args.quarterly_quarters})
+            elif args.operation == "summary":
+                result = usage.summary(root, period=args.period, limit=args.limit)
+            else:
+                if not args.input or not args.input.startswith(".local-codex/"):
+                    raise ControlError("usage.private-input", "Select an explicit ignored numeric usage manifest.", {}, [])
+                result = usage.import_observations(root, read_json(confined_path(root, relative(args.input)), maximum=usage.MAX_INPUT_BYTES))
         elif args.command == "recover":
             result = {"recovered": work.records.recover()}
         elif args.command == "start":

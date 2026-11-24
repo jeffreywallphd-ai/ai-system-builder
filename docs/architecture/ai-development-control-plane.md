@@ -199,6 +199,17 @@ and unsupported custom paths fail before creation.
 
 ## Evaluation and feedback
 
+Optional contributor token accounting uses a separate versioned numeric sidecar,
+not Work qualification or trial run admission. Its normalized host import has no
+provider connection, transcript reader or background poller. Atomic publication
+owns sequence deduplication and epoch baselines with recent detail and UTC
+day/ISO-week/calendar-quarter aggregates. Rotation retains lifetime totals,
+older-quarter rollups and bounded permanent replay cursors; capacity refusal
+preserves prior totals rather than silently dropping imports. Own usage stays
+separate from inclusive/unknown scope; numeric status, source assurance, coarse
+purpose and missing coverage remain explicit. Optional projection failure does
+not affect Work. See the [schema and retention rules](../diagnostics/token-usage-tracking.md).
+
 The functionality qualification assessor reads a versioned requirements crosswalk
 and canonical owner JSON without changing either. It binds its ignored report to
 all bounded Git-listed files in the product/tooling roots, including UI assets,

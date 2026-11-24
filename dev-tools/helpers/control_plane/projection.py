@@ -13,6 +13,7 @@ from .roadmap_state import read_roadmap_state
 from .contracts import ControlError
 from .records import Records
 from .metrics import delivery
+from .usage import summary as usage_summary
 from .storage import confined_path
 from .supporting_work import enrich
 from .criterion_presentation import apply_presentations, canonical_blocker_source, apply_blocker_presentations
@@ -475,7 +476,7 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
     if not paginated:
         feedback_records = feedback_records[:200]
     feedback = [{"id": safe_text(f["id"], 80), "work_id": safe_text(f["work_id"], 80), "summary": safe_text(f["summary"]), "status": f["status"], "regression": safe_text(f.get("regression", "unlinked"), 160)} for f in feedback_records]
-    content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"], "inventory": {"execution_records_total": execution_total, "execution_records_shown": 0, "execution_records_truncated": False}}
+    content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"], "token_usage": usage_summary(root), "inventory": {"execution_records_total": execution_total, "execution_records_shown": 0, "execution_records_truncated": False}}
     if compact_work_items:
         content["work_item_format"] = CHUNK_REFERENCE_FORMAT
     # Keep the existing 2 MiB server bound. Canonical roadmap detail is stored

@@ -21,6 +21,11 @@
 
 ## Core Guidance
 
+- Contributor token tracking is optional numeric telemetry with bounded day/week/
+  quarter trends. Use the control-plane guide's authorized import seam when a host
+  supplies counters; unavailable usage never gates Work. Do not scan transcripts,
+  invent measurements or add a mandatory stage. See `docs/diagnostics/token-usage-tracking.md`.
+
 - User-owned offline human acceptance uses the roadmap skill's explicit handoff;
   close only solely human-blocked legacy increments and preserve technical qualification.
   Started governed roadmaps use `acceptance-scope-revised`, which never closes or

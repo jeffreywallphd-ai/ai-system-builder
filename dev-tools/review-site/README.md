@@ -2,6 +2,13 @@
 
 # Dynamic Development Review
 
+Work items includes an optional **Contributor token usage** disclosure. It shows
+repository-local measured/estimated own subtotals, partial coverage, coarse
+purpose and bounded daily/weekly/quarterly trends. Agent aliases distinguish own
+usage from parent relationships; inclusive/unknown counters never join the own
+subtotal. Invalid or missing telemetry leaves review usable. See the
+[opt-in import and retention guide](../../docs/diagnostics/token-usage-tracking.md).
+
 The browser requests server pages from `/api/review?view=roadmaps&page=1`.
 Roadmaps use three records per page; Work items, Evaluations and Feedback use
 25. Previous/Next controls show the current page, page count and exact matching

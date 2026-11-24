@@ -242,6 +242,27 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
+Optional token imports add a local telemetry/retention boundary. Protect prompts,
+responses, tool payloads, paths, credentials and private identifiers: accept only
+strict bounded numeric fields, enum purpose/status and hashed identity/model
+labels. No raw events, transcripts or account logs are read. Manifests are
+operator-supplied evidence, not authenticated host or billing authority. Validate
+integer/subset bounds, ordered intervals, sequence conflicts/gaps/resets and
+acyclic immutable parentage. Sum own counters separately from inclusive/unknown
+scope; unavailable data never becomes zero. The 4 MiB atomic state, 128-row recent
+window, bounded trend windows and 4,096 permanent replay cursors prevent growth
+or eviction-based recounting. Quotas/overflow refuse the whole import while
+preserving totals. Unknown coverage/baselines remain visible. One
+active epoch per producer/run/agent/scope prevents retired counter resumption,
+including equal-time resets; old replay cursors remain intact. A missing index
+with multiple historical epochs refuses rather than guessing currentness. One
+short cooperative writer lock and exclusive temporary publication prevent partial batches; retained
+crash temporaries pause imports instead of accumulating. Reject storage links and
+reparse points. Fixed redacted projection failure never blocks Work; usage grants
+no review/parent authority. Tests cover replay, capacity, compaction, private and
+malformed fields and publication failure. Actual host semantics and hostile
+same-user native filesystem races remain separate qualification limits.
+
 Review paging adds only bounded read selectors on the existing loopback route.
 Use fixed page sizes and allowlisted views with canonical positive integers and
 bounded exact parent identifiers; reject unknown/duplicate/encoded/incompatible

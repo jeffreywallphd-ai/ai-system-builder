@@ -58,6 +58,64 @@ function incrementDelivery(increment) {
 function chunkDelivery() {
   return el("p", "Delivery time: Not recorded · Execution records do not identify individual chunks.", "small delivery-time");
 }
+function tokenUsagePanel(value) {
+  const panel = el("details", undefined, "token-usage");
+  const unavailable = () => {
+    panel.replaceChildren(el("summary", "Contributor token usage · unavailable"),
+      el("p", "No authorized counter feed is available. Contributor work continues; missing usage is unknown.", "small"));
+    return panel;
+  };
+  if (value?.status !== "enabled") return unavailable();
+  try {
+    const count = n => {
+      if (n === null) return "unknown";
+      if (!Number.isSafeInteger(n) || n < 0) throw new Error("usage count");
+      return n.toLocaleString();
+    };
+    const pair = usage => `${count(usage.input_tokens)} / ${count(usage.output_tokens)}`;
+    const own = value.known_own_subtotal;
+    panel.append(el("summary", `Contributor token usage · reported input / output ${pair(own.measured)} · partial coverage`),
+      el("p", `Known own usage: measured ${pair(own.measured)}; estimated ${pair(own.estimated)}. Cache and reasoning are subsets. Cost is unavailable.`, "small"),
+      el("p", `${count(value.agents_observed)} agents reported. Coverage of unreported agents and intervals is unknown. Inclusive and unknown-scope observations stay outside the own subtotal. Purpose attribution is coarse.`, "small"));
+    const copy = {
+      "reported-parent-counters-missing": "Some reported parents have no counters.",
+      "usage-capacity-near-limit-imports-may-be-refused": "Usage storage is near capacity; refused imports preserve existing totals.",
+      "unpublished-usage-file-preserved-imports-paused": "An unpublished usage file was preserved; imports need recovery. Work continues.",
+    };
+    for (const warning of value.warnings || []) if (copy[warning]) panel.append(el("p", copy[warning], "small"));
+    for (const [period, title] of [["daily", "Daily"], ["weekly", "Weekly"], ["quarterly", "Quarterly"]]) {
+      const rows = value.trends?.[period] || [];
+      if (!Array.isArray(rows) || rows.length > 8) throw new Error("usage rows");
+      const section = el("section"); section.append(el("h3", `${title} reported trends`));
+      const list = el("ul");
+      for (const row of rows) {
+        if (typeof row.period !== "string" || !/^(?:\d{4}-\d{2}-\d{2}|\d{4}-Q[1-4])$/.test(row.period)) throw new Error("usage period");
+        list.append(el("li", `${row.period}: measured input / output ${pair(row.usage.measured)}; estimated ${pair(row.usage.estimated)}; ${count(row.usage.coarse_intervals)} coarse intervals.`));
+      }
+      if (!rows.length) list.append(el("li", "No reported intervals."));
+      section.append(list); panel.append(section);
+    }
+    const purposes = Object.entries(value.purpose || {});
+    if (purposes.length > 8) throw new Error("usage purposes");
+    if (purposes.length) {
+      const list = el("ul");
+      for (const [purpose, usage] of purposes) {
+        if (!["planning", "research", "implementation", "tests", "review", "bookkeeping", "mixed", "unclassified"].includes(purpose)) throw new Error("usage purpose");
+        list.append(el("li", `${readable(purpose)}: measured ${pair(usage.measured)}; estimated ${pair(usage.estimated)}.`));
+      }
+      panel.append(el("h3", "Coarse purpose groups"), list);
+    }
+    if (!Array.isArray(value.agents) || value.agents.length > 16) throw new Error("usage agents");
+    const agents = el("ul");
+    for (const agent of value.agents) {
+      if (!/^agent-[a-f0-9]{12}$/.test(agent.alias) || agent.parent_alias !== null && !/^agent-[a-f0-9]{12}$/.test(agent.parent_alias)) throw new Error("usage alias");
+      agents.append(el("li", `${agent.alias}${agent.parent_alias ? ` (parent ${agent.parent_alias})` : ""}: own measured ${pair(agent.own_usage.measured)}; estimated ${pair(agent.own_usage.estimated)}.`));
+    }
+    panel.append(el("h3", `Agents (${count(value.agents_shown)} shown)`), agents,
+      el("p", "UTC trends attribute intervals to their report end. Sparse or multi-day reports are coarse. Totals cover reported data only; retired detail retains aggregate totals.", "small"));
+    return panel;
+  } catch { return unavailable(); }
+}
 function selectView(next, query = "", increment = null, work = null) {
   view = next;
   if (work !== null && !data?.pagination) query = work;
@@ -412,6 +470,7 @@ function render() {
   const query = document.querySelector("#search").value.toLowerCase();
   const selected = all.filter(i => JSON.stringify([i.title, i.id, i.objective, i.outcome, i.roadmap_title, i.increment_title, i.criteria_ids, i.merged_history]).toLowerCase().includes(query));
   const items = document.querySelector("#items"); items.replaceChildren();
+  if (view === "work_items") items.append(tokenUsagePanel(data.token_usage));
   if (data.pagination) items.append(pageControls());
   if (view === "roadmaps") items.append(roadmapStatusLegend());
   const sections = view === "roadmaps" ? roadmapSections(items, selected, query) : null;
