@@ -8,6 +8,7 @@ import unittest
 from unittest import mock
 
 from test_roadmap import roadmap, security_impact
+import test_work_chunk_refinement as refinement
 
 
 class PublicationSizeTests(unittest.TestCase):
@@ -142,6 +143,130 @@ class PublicationSizeTests(unittest.TestCase):
             roadmap.command_render(self.args)
         self.assertEqual(journal.read_bytes(), old_journal)
         self.assertEqual(self.snapshot(), before)
+
+
+class EncodedPublicationTests(unittest.TestCase):
+    def setUp(self):
+        fixture = refinement.WorkChunkRefinementTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        self.engine = fixture.engine
+        self.repo = self.engine.repo
+        self.state = copy.deepcopy(self.engine.state)
+        # Repeated full plans, not discarded history, are the real growth case.
+        plan = copy.deepcopy(self.state["increments"][0]["plan"])
+        for chunk in plan["chunks"]:
+            chunk["outcome"] = "A measured outcome. " * 150
+        plan = {k: v for k, v in plan.items() if k not in {"fingerprint", "recordedAt"}}
+        event = fixture.event()
+        event["plan"] = plan
+        self.state = roadmap.apply_event(self.state, event)
+        roadmap.write_project_files(self.repo, self.state)
+        self.event = fixture.event()
+        self.event["expectedPlanDigest"] = roadmap.fingerprint(self.state["increments"][0]["plan"])
+        self.event["plan"] = copy.deepcopy(plan)
+        self.event["plan"]["chunks"].append({**copy.deepcopy(plan["chunks"][-1]), "id": "additional-outcome"})
+        self.event_file = self.repo / "refinement.json"
+        self.event_file.write_text(json.dumps(self.event), encoding="utf8")
+        clock = mock.patch.object(roadmap, "now_utc", return_value="2026-11-24T00:00:00Z")
+        clock.start(); self.addCleanup(clock.stop)
+        self.updated = roadmap.apply_event(copy.deepcopy(self.state), copy.deepcopy(self.event))
+        roadmap.validate_state_shape(self.repo, self.updated)
+        envelope = {"before": roadmap.fingerprint(self.state), "successor": self.updated,
+                    "previousReport": self.state["paths"]["report"]}
+        codec = roadmap.storage_codec()
+        self.cap = max(len((self.repo / self.state["paths"]["state"]).read_bytes()),
+                       self.event_file.stat().st_size,
+                       len(codec.encode_record(envelope).encode("ascii"))) + 32
+        self.assertLess(self.cap, len(roadmap.canonical_json(self.updated)))
+        self.args = argparse.Namespace(repo=str(self.repo), state=self.state["paths"]["state"],
+                                       event_file=str(self.event_file), dry_run=False)
+
+    def snapshot(self):
+        return {name: (self.repo / name).read_bytes() for name in self.state["paths"].values()}
+
+    def journal(self):
+        with roadmap.publication_lock(self.repo, self.args.state) as path:
+            return path
+
+    def interrupt(self):
+        original = roadmap.atomic_write
+        def write(path, content):
+            if path == self.repo / self.args.state:
+                raise OSError("synthetic interrupted encoded publication")
+            original(path, content)
+        with mock.patch.object(roadmap, "atomic_write", side_effect=write), self.assertRaises(OSError):
+            roadmap.command_apply(self.args)
+        return self.journal()
+
+    def test_actual_refinement_dry_run_and_encoded_publication_preserve_authority(self):
+        before = self.snapshot()
+        with mock.patch.object(roadmap, "MAX_JSON_BYTES", self.cap):
+            dry = copy.copy(self.args); dry.dry_run = True
+            roadmap.command_apply(dry)
+            self.assertEqual(before, self.snapshot())
+            self.assertFalse(self.journal().exists())
+            roadmap.command_apply(self.args)
+            raw = (self.repo / self.args.state).read_bytes()
+            self.assertEqual(json.loads(raw)["storageVersion"], "roadmap-record-tree-v1")
+            actual = roadmap.load_state(self.repo, self.args.state)[1]
+            self.assertEqual(actual, self.updated)
+            self.assertEqual(actual["roadmapApproval"], self.state["roadmapApproval"])
+            self.assertTrue(roadmap.approval_is_current(actual))
+            self.assertEqual(roadmap.fingerprint(actual), roadmap.fingerprint(self.updated))
+            roadmap.ensure_documents_match(self.repo, actual)
+
+    def test_whole_encoded_journal_recovers_exact_successor(self):
+        with mock.patch.object(roadmap, "MAX_JSON_BYTES", self.cap):
+            journal = self.interrupt()
+            self.assertEqual(json.loads(journal.read_bytes())["storageVersion"], "roadmap-record-tree-v1")
+            self.assertLessEqual(journal.stat().st_size, self.cap)
+            roadmap.command_render(self.args)
+            self.assertEqual(roadmap.load_state(self.repo, self.args.state)[1], self.updated)
+            roadmap.ensure_documents_match(self.repo, self.updated)
+            self.assertFalse(journal.exists())
+
+    def test_corrupt_encoded_recovery_retains_original_managed_and_journal_bytes(self):
+        with mock.patch.object(roadmap, "MAX_JSON_BYTES", self.cap):
+            journal = self.interrupt()
+            value = json.loads(journal.read_bytes()); value["contentSha256"] = "0" * 64
+            raw = (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
+            journal.write_bytes(raw); before = self.snapshot()
+            with self.assertRaises(roadmap.RoadmapError):
+                roadmap.command_render(self.args)
+            self.assertEqual(journal.read_bytes(), raw)
+            self.assertEqual(self.snapshot(), before)
+
+    def test_encoded_recovery_does_not_overwrite_a_changed_predecessor(self):
+        with mock.patch.object(roadmap, "MAX_JSON_BYTES", self.cap):
+            journal = self.interrupt(); retained = journal.read_bytes()
+            changed = copy.deepcopy(self.state); changed["name"] = "Externally changed predecessor"
+            (self.repo / self.args.state).write_text(roadmap.state_publication_content(changed), encoding="ascii")
+            before = self.snapshot()
+            with self.assertRaises(roadmap.RoadmapError): roadmap.command_render(self.args)
+            self.assertEqual(journal.read_bytes(), retained)
+            self.assertEqual(self.snapshot(), before)
+
+    def test_oversize_encoded_journal_is_retained_without_partial_recovery(self):
+        with mock.patch.object(roadmap, "MAX_JSON_BYTES", self.cap):
+            journal = self.interrupt(); retained = journal.read_bytes(); before = self.snapshot()
+            with mock.patch.object(roadmap, "MAX_JSON_BYTES", len(retained) - 1), self.assertRaises(roadmap.RoadmapError):
+                roadmap.command_render(self.args)
+            self.assertEqual(journal.read_bytes(), retained)
+            self.assertEqual(self.snapshot(), before)
+
+    def test_missing_codec_keeps_plain_reads_but_never_adopts_encoded_record(self):
+        plain = self.repo / "plain.json"; plain.write_text('{"value":1}', encoding="utf8")
+        encoded = self.repo / "encoded.json"
+        raw = roadmap.storage_codec().encode_record({"value": 1}).encode("ascii")
+        encoded.write_bytes(raw)
+        with mock.patch.object(roadmap, "storage_codec", side_effect=roadmap.RoadmapError("codec unavailable")):
+            self.assertEqual(roadmap.read_json(plain, "plain", stored=True), {"value": 1})
+            with self.assertRaises(roadmap.RoadmapError):
+                roadmap.read_json(encoded, "encoded", stored=True)
+            # Config and event inputs are never implicitly expanded.
+            self.assertIn("storageVersion", roadmap.read_json(encoded, "event"))
+        self.assertEqual(encoded.read_bytes(), raw)
 
 
 if __name__ == "__main__": unittest.main()

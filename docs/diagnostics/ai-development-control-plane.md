@@ -1120,6 +1120,15 @@ refused. Pending controlled criteria remain pending and block final closure.
 Source edits after qualification
 require fresh overall evidence before final closure.
 
+Canonical roadmap records can use lossless `roadmap-record-tree-v1` JSON when
+plain JSON exceeds the existing one-MiB publication bound. Use
+`control_plane.roadmap_state.read_roadmap_state` (or the portable engine's
+`load_state`) for values. The review site, authority checks, completion guards,
+consolidation and qualification readers use this shared format. A bad hash,
+missing codec or excessive expansion refuses the record and preserves its bytes;
+it never supplies a pass. Config and event files stay plain JSON. This adds no
+mandatory agent step. See [storage rules](../architecture/ai-development-control-plane.md#roadmap-record-storage).
+
 Run focused tests while work remains. After all approved increments are
 implemented, run the existing combined suite once, using `test:all` for AI-related
 work, and applicable repository gates. Preserve the final temporary report until

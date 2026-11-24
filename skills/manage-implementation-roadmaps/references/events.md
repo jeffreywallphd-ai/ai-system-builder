@@ -20,6 +20,11 @@ do not bypass that guard. Old state remains readable and explicitly legacy.
 Command publication is serialized and predecessor-checked. An interrupted apply
 or init has a confined recovery journal; the next apply or render finishes it
 before accepting another mutation. Status and validate remain read-only.
+State and whole journals may use the lossless `roadmap-record-tree-v1` storage
+envelope when plain JSON cannot fit. Events and configs never use that envelope.
+Storage hashes protect encoded bytes; the existing logical fingerprints still
+govern approval, predecessor checks and event references. No event, history record,
+approval or acceptance result changes merely because the representation changes.
 
 The event schema stores a structured security impact in discovery, then uses
 acceptance criteria, risks, plans, and evidence without duplicating repository

@@ -7,6 +7,7 @@ from .common import digest, fields, identifier, read_json, safe_text, text
 from .contracts import ControlError
 from .storage import confined_path
 from .work import validate_receipt
+from .roadmap_state import read_roadmap_state
 
 REFERENCE = 'docs/operations/roadmap-supporting-work.json'
 CONSOLIDATION = 'docs/security/security-roadmap-consolidation.json'
@@ -51,8 +52,8 @@ def _consolidation(root, successor):
         or value['target_roadmap_id'] != successor['successor_roadmap_id']):
         raise ValueError('consolidation identity mismatch')
     identifier(value['authority_ref']); text(value['summary'], limit=1500)
-    source = read_json(confined_path(root, f".implementation-roadmaps/{identifier(value['source_roadmap_id'])}/state.json"))
-    target = read_json(confined_path(root, f".implementation-roadmaps/{identifier(value['target_roadmap_id'])}/state.json"))
+    source = read_roadmap_state(root, f".implementation-roadmaps/{identifier(value['source_roadmap_id'])}/state.json")
+    target = read_roadmap_state(root, f".implementation-roadmaps/{identifier(value['target_roadmap_id'])}/state.json")
     if (digest(source) != value['source_digest'] or digest(criterion_definitions(target)) != value['target_criteria_digest']
         or source.get('evidencePolicy') is not None
         or (not retirement and target.get('evidencePolicy') != 'control-plane-v1')

@@ -67,6 +67,22 @@ formatting does not grant qualification or remove old work. Capacity and
 interrupted-recovery regressions are in
 `tests/test_control_plane_journal_capacity.py`.
 
+Roadmap state is separate from that local store. Its unchanged one-MiB physical
+limit can use `roadmap-record-tree-v1` JSON for repeated full plans. Read it through
+`control_plane.roadmap_state.read_roadmap_state`, not raw `json.loads`. The portable
+codec belongs beside the roadmap engine. Node qualification uses the matching
+`dev-tools/scripts/qualification/roadmap-record-storage.mjs` reader and shared test
+vectors. Storage never changes logical authority, results or history. The exact
+`roadmap-storage-node` catalog check runs model-free cross-language regression
+cases; missing files and unrelated paths retain generic coverage. See
+[storage rules](../../docs/architecture/ai-development-control-plane.md#roadmap-record-storage).
+For an exact storage-only scope, the controller check runs the fixed related
+authority, Work, snapshots, read/projection/site, publication and fallback suites.
+It records the actual command in the plan and receipt. Mixed, unknown or empty
+scope and missing/nonregular support retain the full controller command. This
+avoids running unrelated product-route tests on a storage change; it does not
+extend time limits, skip a failed case or grant technical acceptance.
+
 ## Maintenance
 
 Improve these loops when a secure action becomes repetitive or a portability

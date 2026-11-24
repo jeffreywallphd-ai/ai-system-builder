@@ -102,6 +102,51 @@ mutation. Existing architecture and security decision gates still apply.
 
 ## Boundaries
 
+### Roadmap record storage
+
+The portable engine preserves small indented and larger compact plain JSON. When
+those encodings cannot fit, its fixed sibling codec can use
+`roadmap-record-tree-v1` for the entire state or recovery journal. This is storage
+compatibility, not a new authority, workflow or approval. Configs and event inputs
+remain plain JSON. Existing roadmap approval and predecessor fingerprints still
+hash the exact logical Python value, including integer/float distinctions.
+
+The closed envelope contains `storageVersion`, `contentSha256`, `root` and `nodes`.
+Each unique object or array is a postorder node. Object entries use sorted Unicode
+codepoint keys and arrays retain order. Atoms are strings, booleans, null, backward
+references, canonical decimal integer strings or finite binary64 hexadecimal
+float strings. Numbers are tagged to preserve negative zero, integer precision and
+Python numeric types across storage. The content hash covers canonical ASCII JSON
+of `nodes` and `root`; it is not a roadmap authority fingerprint. Encoded physical
+bytes must be canonical, with at most one LF or CRLF suffix. Duplicate keys,
+forward references, unused/duplicate nodes, unknown fields and invalid numbers
+are refused before reconstruction.
+
+State and the whole recovery journal keep the existing one-MiB physical bound.
+Before expanding a graph, the decoder checks an occurrence-weighted eight-MiB
+JSON allocation charge, at most 65,536 pool nodes, 262,144 expanded containers and
+depth 64. The charge conservatively budgets each float as 32 bytes. It is not a
+process memory limit. The logical JSON is emitted and parsed once so repeated
+historical records do not share mutable containers. No record is trimmed and no
+limit is raised to fit a new event. Dry-run, apply, render and interrupted recovery
+use the same actual publication admission.
+
+Python authority, completion guards, review projection, user descriptions,
+support/consolidation and model-qualification metadata use the canonical reader.
+Node qualification decodes with the same bounded format and preserves legacy
+`JSON.parse` numeric behavior. A Node reader retains raw file digests where that
+consumer already binds physical input; it never substitutes JavaScript
+reserialization for Python approval authority. Both runtimes test shared typed,
+Unicode and malformed-input vectors. The Node catalog check is exact and retains
+generic coverage for unknown impact or missing required files.
+
+Missing or unsafe codecs still permit legacy plain records, but encoded input
+fails closed with original bytes retained. Reverting to a reader that lacks the
+codec can make encoded history unreadable. Restore a compatible reader before
+mutation; do not manually adopt an unpacked record that exceeds the old cap.
+Installation includes the engine, sibling codec and fixtures. Storage tests cover
+current approval, whole-journal recovery, corruption and independent aliases.
+
 - The portable roadmap engine owns approved intent, increment sequencing,
   declarative evidence and generated documents. Its publication uses a
   roadmap-specific OS-released lock, predecessor fingerprint and recovery journal.

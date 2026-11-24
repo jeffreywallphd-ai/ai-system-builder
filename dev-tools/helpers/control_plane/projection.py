@@ -9,6 +9,7 @@ import math
 import re
 
 from .common import digest, now, read_json, safe_text
+from .roadmap_state import read_roadmap_state
 from .contracts import ControlError
 from .records import Records
 from .metrics import delivery
@@ -361,7 +362,7 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
         for path in sorted(base.glob("*/state.json"))[:200]:
             try:
                 relative_path = path.relative_to(root).as_posix()
-                s = read_json(confined_path(root, relative_path), maximum=2 * 1024 * 1024)
+                s = read_roadmap_state(root, relative_path)
                 if s.get("schemaVersion") != 1 or not isinstance(s.get("increments"), list):
                     raise ValueError("schema")
                 blocker_sources[s["slug"]] = canonical_blocker_source(s)

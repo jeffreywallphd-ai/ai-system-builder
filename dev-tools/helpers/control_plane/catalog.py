@@ -207,7 +207,72 @@ TRAINING_HOST_REVIEW_SOURCES = TRAINING_HOST_REVIEW_CODE + TRAINING_HOST_REVIEW_
     "modules/adapters/persistence/system-builder/README.md",
 )
 
+ROADMAP_STORAGE_SCOPE = (
+    "skills/manage-implementation-roadmaps/SKILL.md",
+    "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+    "skills/manage-implementation-roadmaps/scripts/roadmap_storage.py",
+    "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
+    "skills/manage-implementation-roadmaps/tests/test_roadmap_storage.py",
+    "skills/manage-implementation-roadmaps/tests/test_state_publication_bounds.py",
+    "skills/manage-implementation-roadmaps/tests/fixtures/roadmap-storage-vectors.json",
+    "skills/manage-implementation-roadmaps/references/workflow.md",
+    "skills/manage-implementation-roadmaps/references/events.md",
+    "skills/manage-implementation-roadmaps/references/installation.md",
+    "docs/diagnostics/implementation-roadmap-skill.md",
+    "docs/architecture/ai-development-control-plane.md",
+    "docs/diagnostics/ai-development-control-plane.md",
+    "dev-tools/helpers/README.md",
+    "dev-tools/helpers/control_plane/roadmap_state.py",
+    "dev-tools/helpers/control_plane/candidate.py",
+    "dev-tools/helpers/control_plane/work.py",
+    "dev-tools/helpers/control_plane/projection.py",
+    "dev-tools/helpers/control_plane/user_presentation.py",
+    "dev-tools/helpers/control_plane/supporting_work.py",
+    "dev-tools/helpers/tests/test_control_plane_roadmap_storage.py",
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/scripts/qualification/run_model_blocker_tests.py",
+    "dev-tools/scripts/qualification/functionality-qualification-core.mjs",
+    "dev-tools/scripts/qualification/roadmap-record-storage.mjs",
+    "dev-tools/scripts/qualification/tests/roadmap-record-storage.unit.test.mjs",
+    "dev-tools/scripts/qualification/tests/test_model_blocker_tests.py",
+)
+# Actual changed authority/Work/read/projection boundaries. Product-specific
+# training, UI and Native routing profiles are not storage tests.
+ROADMAP_STORAGE_CONTROLLER_TESTS = tuple("dev-tools/helpers/tests/" + name for name in (
+    "test_control_plane.py", "test_control_plane_roadmap_storage.py",
+    "test_control_plane_roadmap.py", "test_control_plane_support.py",
+    "test_control_plane_snapshots.py", "test_control_plane_supporting_work.py",
+    "test_control_plane_user_presentation.py", "test_control_plane_criterion_presentation.py",
+    "test_control_plane_site.py", "test_control_plane_pagination.py",
+    "test_control_plane_review_wire.py", "test_control_plane_focused.py",
+    "test_control_plane_published_form_feature_checks.py",
+    "test_control_plane_journal_capacity.py", "test_control_plane_delivery.py",
+))
+
 PUBLISHED_FORM_CHECKS = {
+    "roadmap-storage-node": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/roadmap-record-storage.mjs",
+            "dev-tools/scripts/qualification/functionality-qualification-core.mjs",
+            "dev-tools/scripts/qualification/tests/roadmap-record-storage.unit.test.mjs",
+        ),
+        "automatic_required_files": (
+            "skills/manage-implementation-roadmaps/scripts/roadmap_storage.py",
+            "skills/manage-implementation-roadmaps/tests/fixtures/roadmap-storage-vectors.json",
+            "dev-tools/scripts/qualification/roadmap-record-storage.mjs",
+            "dev-tools/scripts/qualification/functionality-qualification-core.mjs",
+            "dev-tools/scripts/qualification/tests/roadmap-record-storage.unit.test.mjs",
+        ),
+        "sources": (
+            "skills/manage-implementation-roadmaps/scripts/roadmap_storage.py",
+            "skills/manage-implementation-roadmaps/tests/fixtures/roadmap-storage-vectors.json",
+            "dev-tools/scripts/qualification/roadmap-record-storage.mjs",
+            "dev-tools/scripts/qualification/functionality-qualification-core.mjs",
+            "dev-tools/scripts/qualification/tests/roadmap-record-storage.unit.test.mjs",
+        ),
+        "command": ("--test", "--test-reporter=tap", "--",
+            "dev-tools/scripts/qualification/tests/roadmap-record-storage.unit.test.mjs"),
+    },
     "headless-training-host-review-unit": {
         "automatic_sources": (TRAINING_HOST_REVIEW_TEST,),
         "automatic_required_files": TRAINING_HOST_REVIEW_CODE + TRAINING_HOST_REVIEW_TESTS,
@@ -3540,6 +3605,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     focused = [p for p, matches in covered.items() if "focused-tests" in matches]
     if "focused-tests" not in required and all(p in declared_sources for p in focused):
         selected = [c for c in selected if c["id"] != "focused-tests"]
+    # Only a complete known storage scope can use the related framework suites.
+    # Empty/mixed/unknown scope or missing/nonregular support retains the ordinary
+    # complete controller command. The actual argv is bound to plan and receipt.
+    storage_files = ROADMAP_STORAGE_SCOPE + ROADMAP_STORAGE_CONTROLLER_TESTS
+    if (set(paths) == set(ROADMAP_STORAGE_SCOPE) and
+            all(_automatic_files_available(root, {"automatic_required_files": storage_files[index:index+16]})
+                for index in range(0, len(storage_files), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "dev-tools/helpers/tests/test_control_plane_roadmap_storage.py", "--related"]
     value = {"schema_version": "check-plan-v1", "candidate": candidate, "catalog_digest": policy_digest(root, checks), "changed_paths": paths, "coverage": covered, "selected": selected, "deferred": [c["id"] for c in checks if c not in selected]}
     value["plan_digest"] = digest(value)
     return value

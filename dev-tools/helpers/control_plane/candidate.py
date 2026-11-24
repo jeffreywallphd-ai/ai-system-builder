@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .common import digest, read_json, refuse, relative
 from .storage import confined_path
+from .roadmap_state import read_roadmap_state
 
 MAX_FILES = 20000
 MAX_SOURCE_BYTES = 512 * 1024 * 1024
@@ -85,7 +86,7 @@ def roadmap_authority(root: Path, binding: dict | None) -> str | None:
     path = relative(binding["state_path"])
     if not path.startswith(".implementation-roadmaps/") or not path.endswith("/state.json"):
         refuse("authority.binding", "Use the canonical roadmap state path.")
-    state = read_json(confined_path(root, path))
+    state = read_roadmap_state(root, path)
     # Load the existing planning authority, without launching commands or recording approval.
     import importlib.util
     import sys

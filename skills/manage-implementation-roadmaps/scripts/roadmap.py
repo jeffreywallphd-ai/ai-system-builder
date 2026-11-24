@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -97,7 +98,25 @@ def reject_unknown(value: dict[str, Any], allowed: set[str], label: str) -> None
         raise RoadmapError(f"{label} contains unsupported field(s): {', '.join(unknown)}.")
 
 
-def read_json(path: Path, label: str) -> dict[str, Any]:
+def storage_codec():
+    """Load the portable fixed sibling only when its representation is needed."""
+    path = Path(__file__).with_name("roadmap_storage.py")
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 128 * 1024:
+            raise ValueError("missing or unsafe codec")
+        spec = importlib.util.spec_from_file_location("_portable_roadmap_storage", path)
+        if spec is None or spec.loader is None:
+            raise ValueError("missing codec loader")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if not callable(getattr(module, "encode_record", None)) or not callable(getattr(module, "read_record_bytes", None)):
+            raise ValueError("unsupported codec")
+        return module
+    except (OSError, ValueError, ImportError, SyntaxError):
+        raise RoadmapError("The portable roadmap storage codec is unavailable.") from None
+
+
+def read_json(path: Path, label: str, *, stored: bool = False) -> dict[str, Any]:
     try:
         raw = path.read_bytes()
     except OSError as error:
@@ -105,7 +124,13 @@ def read_json(path: Path, label: str) -> dict[str, Any]:
     if len(raw) > MAX_JSON_BYTES:
         raise RoadmapError(f"{label} exceeds the {MAX_JSON_BYTES}-byte limit.")
     try:
-        return require_object(json.loads(raw.decode("utf-8")), label)
+        value = require_object(json.loads(raw.decode("utf-8")), label)
+        if stored and "storageVersion" in value:
+            try:
+                return storage_codec().read_record_bytes(raw, maximum=MAX_JSON_BYTES)
+            except ValueError:
+                raise RoadmapError(f"{label} has invalid bounded roadmap storage; original bytes were preserved.") from None
+        return value
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RoadmapError(f"{label} must be valid UTF-8 JSON: {error}") from error
 
@@ -123,16 +148,22 @@ def state_publication_content(state: dict[str, Any]) -> str:
     compact = canonical_json(state) + "\n"
     if len(compact.encode("utf-8")) + compact.count("\n") <= MAX_JSON_BYTES:
         return compact
-    raise RoadmapError("State publication exceeds the bounded JSON read limit; no records were discarded.")
+    try:
+        return storage_codec().encode_record(state, maximum=MAX_JSON_BYTES)
+    except ValueError:
+        raise RoadmapError("State publication exceeds the supported bounded JSON storage; no records were discarded.") from None
 
 
 def publication_journal_content(before: str, successor: dict[str, Any], previous_report: str | None) -> str:
     """Admit both managed state and the entire actual recovery envelope."""
     state_publication_content(successor)
     content = canonical_json({"before": before, "successor": successor, "previousReport": previous_report})
-    if len(content.encode("utf-8")) > MAX_JSON_BYTES:
-        raise RoadmapError("Publication journal exceeds the bounded JSON read limit; no journal was published.")
-    return content
+    if len(content.encode("utf-8")) <= MAX_JSON_BYTES:
+        return content
+    try:
+        return storage_codec().encode_record({"before": before, "successor": successor, "previousReport": previous_report}, maximum=MAX_JSON_BYTES)
+    except ValueError:
+        raise RoadmapError("Publication journal exceeds the supported bounded JSON storage; no journal was published.") from None
 
 
 def safe_relative_path(repo: Path, value: Any, label: str) -> str:
@@ -400,7 +431,7 @@ def publication_lock(repo: Path, state_path: str):
 def recover_publication(repo: Path, journal: Path, state_path: str) -> None:
     if not journal.exists():
         return
-    value = read_json(journal, "publication journal")
+    value = read_json(journal, "publication journal", stored=True)
     reject_unknown(value, {"before", "successor", "previousReport"}, "journal")
     successor = value["successor"]
     validate_state_shape(repo, successor)
@@ -411,7 +442,7 @@ def recover_publication(repo: Path, journal: Path, state_path: str) -> None:
         safe_relative_path(repo, previous_report, "previous report")
         if not previous_report.startswith("docs/") or not previous_report.endswith(".md"):
             raise RoadmapError("Publication recovery has an invalid previous report.")
-    current = read_json(repo / state_path, "state") if (repo / state_path).exists() else None
+    current = read_json(repo / state_path, "state", stored=True) if (repo / state_path).exists() else None
     if fingerprint(current) not in {value["before"], fingerprint(successor)}:
         raise RoadmapError("Publication recovery conflicts with an external state change.")
     # Only the successor's validated generated outputs are written, never arbitrary journal paths.
@@ -3252,7 +3283,7 @@ def resolve_repo(value: str) -> Path:
 def load_state(repo: Path, value: str) -> tuple[Path, dict[str, Any]]:
     relative = safe_relative_path(repo, value, "--state")
     path = repo / relative
-    state = read_json(path, "state")
+    state = read_json(path, "state", stored=True)
     validate_state_shape(repo, state)
     if state["paths"]["state"] != relative:
         raise RoadmapError("--state does not match state.paths.state.")
@@ -3318,7 +3349,7 @@ def command_apply(args: argparse.Namespace) -> dict[str, Any]:
         validate_state_shape(repo, updated)
         content = publication_journal_content(before, updated, state["paths"]["report"])
         if not args.dry_run:
-            if fingerprint(read_json(repo / state_path, "state")) != before:
+            if fingerprint(read_json(repo / state_path, "state", stored=True)) != before:
                 raise RoadmapError("State revision changed before publication; reconcile first.")
             atomic_write(journal, content)
             write_project_files(repo, updated, previous_report_path=state["paths"]["report"])

@@ -13,6 +13,7 @@ from .execution import execute
 from .contracts import ControlError
 from .records import Records
 from .storage import confined_path
+from .roadmap_state import read_roadmap_state
 
 
 def validate_spec(spec: dict) -> dict:
@@ -118,8 +119,7 @@ class Work:
         required = {c for a in spec["acceptance"] for c in a["check_ids"]}
         overall = (spec.get("roadmap") or {}).get("increment_id") == "overall"
         if spec.get("roadmap") and not overall:
-            from .common import read_json
-            state = read_json(confined_path(self.root, spec["roadmap"]["state_path"]))
+            state = read_roadmap_state(self.root, spec["roadmap"]["state_path"])
             target = next((i for i in state["increments"] if i["id"] == spec["roadmap"]["increment_id"]), None)
             if target and target["status"] == "implemented-pending-qualification" and (
                 len(spec["acceptance"]) != len(target["acceptanceCriteria"]) or
@@ -129,8 +129,7 @@ class Work:
         if any(c.startswith("completion-") for c in required) and not overall:
             refuse("verification.aggregate-too-early", "Aggregate qualification runs only after every roadmap increment is implemented.")
         if overall:
-            from .common import read_json
-            s = read_json(confined_path(self.root, spec["roadmap"]["state_path"]))
+            s = read_roadmap_state(self.root, spec["roadmap"]["state_path"])
             expected = "completion-" + s.get("completionSuite", "standardande2e")
             if expected not in required or any(c.startswith("completion-") and c != expected for c in required):
                 refuse("verification.completion-suite", "Overall qualification must execute the roadmap's configured completion suite.")
