@@ -8,6 +8,7 @@ import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingModelSelectio
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import {createOriginalTrainingPort, type OriginalTrainingCapture, type OriginalTrainingOwnedChannel} from "../client/approvedTrainingTaskSession";
 import {createOriginalTrainingModelSourceFactory, assertOriginalTrainingModelObservation,
+  bindOriginalTrainingSourceLaunch, captureOriginalTrainingSourceLaunch, type OriginalTrainingSourceReservation,
   type OriginalTrainingModelObservation, type ObservedOriginalTrainingModelSource,
   type OriginalTrainingModelObservationPolicy} from "../client/originalTrainingModelSource";
 
@@ -16,7 +17,7 @@ const realIO: IO = {lstat, open, opendir, realpath};
 const digest = (value: Uint8Array | string) => createHash("sha256").update(value).digest("hex");
 const at = "2026-11-23T00:00:00.000Z", hash = "sha256:" + "a".repeat(64);
 async function fixture(t: TestContext, options: {reader?: false; io?: (base: IO) => IO;
-  policy?: Partial<OriginalTrainingModelObservationPolicy>} = {}) {
+  policy?: Partial<OriginalTrainingModelObservationPolicy>; onObserved?: () => Promise<void>} = {}) {
   const boundary = await realpath(tmpdir()), root = await realpath(await mkdtemp(path.join(boundary, "model-observation-")));
   const identity = await lstat(root, {bigint: true}), model = path.join(root, "model"); await mkdir(model);
   const contents = {"config.json": '{"synthetic":true}', "tokenizer.json": '{"synthetic":"tokenizer"}', "model.safetensors": "synthetic bytes, never loaded"};
@@ -54,7 +55,7 @@ async function fixture(t: TestContext, options: {reader?: false; io?: (base: IO)
   const port = createOriginalTrainingPort({reserve(capture) {
     original = capture; owner = factory.bind(capture); if (!owner) return undefined;
     state.reservations++; return () => {assert.ok(owner!.isSettled()); state.releases++;};
-  }, async captureChannel(capture) {assert.equal(capture, original); observed = await owner!.observe(); return channel;}});
+  }, async captureChannel(capture) {assert.equal(capture, original); observed = await owner!.observe(); await options.onObserved?.(); return channel;}});
   const session = port.createSession(definition, {isCurrent: () => state.current, stillAllowed: async () => {await state.onPermission?.(); return state.allowed;}},
     options.reader === false ? undefined : reader);
   return {root, model, contents, policy, definition, state, factory, reader, session, gates,
@@ -72,6 +73,86 @@ test("original reserved training source observes complete actual SHA256 bytes wi
   assert.equal("nativeCustody" in f.observed!, false); assert.equal("ready" in f.observed!, false);
   assert.equal(await readFile(path.join(f.model, "model.safetensors"), "utf8"), f.contents["model.safetensors"]);
 });
+
+async function launchFixture(t: TestContext, loseCharge = false) {
+  let signal!: () => void, finish!: () => void;
+  const observed = new Promise<void>(resolve => {signal = resolve;}), held = new Promise<void>(resolve => {finish = resolve;});
+  let preparing: Promise<unknown> | undefined;
+  t.after(async () => {finish(); await preparing;});
+  const f = await fixture(t, {onObserved: async () => {signal(); await held;}});
+  preparing = f.session!.prepare();
+  await Promise.race([observed, preparing.then(() => {throw Error("Original preparation ended before source binding");})]);
+  const calls: string[] = []; let live = true;
+  const hooks: {charge?: () => Promise<void>} = {};
+  const reservation: OriginalTrainingSourceReservation = {configuration: {freshParent: f.root, freshName: "source-copy",
+    maximumCopyBytes: 65_536, bufferBytes: 4096, preparationMs: 5000},
+    assertCurrent() {assert.equal(this, reservation); assert.ok(live);},
+    async chargeSourceCopy(bytes) {assert.equal(this, reservation); assert.equal(bytes, 65_536); calls.push("charge");
+      await hooks.charge?.();
+      if (loseCharge) throw Error("unknown original charge");},
+    async retainSourceCopy(bytes) {assert.equal(this, reservation); assert.equal(bytes, 65_536); calls.push("retain");}};
+  const token = bindOriginalTrainingSourceLaunch(f.original!, f.observed!, reservation);
+  return {...f, calls, hooks, reservation, token, loseReservation() {live = false;}};
+}
+
+test("source launch redeems original observation once, captures reservation receivers, and retains after caller withdrawal", async t => {
+  const f = await launchFixture(t), launch = captureOriginalTrainingSourceLaunch(f.token);
+  assert.throws(() => captureOriginalTrainingSourceLaunch(f.token));
+  assert.throws(() => captureOriginalTrainingSourceLaunch({} as never));
+  assert.throws(() => bindOriginalTrainingSourceLaunch(f.original!, f.observed!, f.reservation));
+  assert.throws(() => bindOriginalTrainingSourceLaunch({...f.original!}, f.observed!, f.reservation));
+  assert.throws(() => bindOriginalTrainingSourceLaunch(f.original!, JSON.parse(JSON.stringify(f.observed)), f.reservation));
+  f.reservation.chargeSourceCopy = async () => {throw Error("replaced charge");};
+  f.reservation.retainSourceCopy = async () => {throw Error("replaced retain");};
+  assert.equal(launch.descriptor.logicalPath, f.model); assert.equal(launch.descriptor.sourcePath, f.model);
+  assert.equal(launch.descriptor.definitionDigest, "sha256:" + digest(JSON.stringify(f.original!.definition)));
+  await launch.acknowledge("charge", 65_536);
+  await launch.acknowledge("allocate", 65_536);
+  for (const _ of f.observed!.files) await launch.acknowledge("copy", 65_536);
+  await launch.acknowledge("seal", 65_536); await launch.acknowledge("create", 65_536); await launch.acknowledge("dispatch", 65_536);
+  const modelReads = f.state.reads; f.state.current = false; f.state.allowed = false; f.state.modelRead = false;
+  await launch.acknowledge("retain", 65_536); assert.deepEqual(f.calls, ["charge", "retain"]);
+  assert.equal(f.state.reads, modelReads);
+  await assert.rejects(() => launch.acknowledge("retain", 65_536)); assert.deepEqual(f.calls, ["charge", "retain"]);
+});
+
+for (const failure of ["order", "amount", "permission", "reservation", "lost-charge", "parallel"] as const)
+  test(`source launch refuses ${failure} without repeated reservation effects`, async t => {
+    const f = await launchFixture(t, failure === "lost-charge");
+    const launch = captureOriginalTrainingSourceLaunch(f.token);
+    if (failure === "permission") f.state.allowed = false;
+    if (failure === "reservation") f.loseReservation();
+    if (failure === "parallel") {
+      const pending = launch.acknowledge("charge", 65_536);
+      await assert.rejects(() => launch.acknowledge("charge", 65_536)); await pending;
+      assert.deepEqual(f.calls, ["charge"]); return;
+    }
+    await assert.rejects(() => launch.acknowledge(failure === "order" ? "copy" : "charge", failure === "amount" ? 1 : 65_536));
+    await assert.rejects(() => launch.acknowledge("charge", 65_536));
+    assert.equal(f.calls.length, failure === "lost-charge" ? 1 : 0);
+  });
+
+for (const change of ["revision-before-charge", "revision-before-dispatch", "path-before-dispatch", "during-charge", "during-permission"] as const)
+  test(`source launch rejects stale saved Model ${change}`, async t => {
+    const f = await launchFixture(t), launch = captureOriginalTrainingSourceLaunch(f.token);
+    const changeModel = () => {f.state.selection = {...f.state.selection,
+      ...(change === "path-before-dispatch" ? {localModelReference: path.join(f.root, "other")} : {modelUpdatedAt: "2030-01-01T00:00:00.000Z"})};};
+    if (change === "revision-before-charge") changeModel();
+    if (change === "during-permission") f.state.onPermission = changeModel;
+    if (change === "during-charge") {
+      f.hooks.charge = async () => {await new Promise(resolve => setImmediate(resolve)); changeModel();};
+    }
+    if (change.endsWith("before-dispatch")) {
+      for (const phase of ["charge", "allocate", "copy", "copy", "copy", "seal", "create"] as const)
+        await launch.acknowledge(phase, 65_536);
+      changeModel(); await assert.rejects(() => launch.acknowledge("dispatch", 65_536));
+      assert.deepEqual(f.calls, ["charge"]);
+    } else {
+      await assert.rejects(() => launch.acknowledge("charge", 65_536));
+      assert.equal(f.calls.length, change === "during-charge" ? 1 : 0);
+    }
+    await assert.rejects(() => launch.acknowledge("dispatch", 65_536));
+  });
 
 test("configured missing Model reader refuses before a reservation, filesystem IO or worker dispatch", async t => {
   let io = 0;

@@ -200,6 +200,13 @@ deeper input. Source checks cannot replace the skipped physical qualification.
 
 # Contributor Control Plane
 
+Use the [optional deterministic support commands](deterministic-contributor-support.md)
+to capture selected evidence, prepare a checkpoint, replay progress events or
+produce a compact handoff. They make one bounded pass and execute no checks,
+Git actions or roadmap events. They supply no review or approval. Normal Work
+remains available without support packets; missing descriptive input is guidance,
+not another workflow gate. Use these helpers where they reduce repeated work.
+
 The existing `native-host-policy` check now also executes the tracked training
 operator renderer and inert definition/refusal tests. Its exact source paths keep
 all prior native policy fixtures and unknown-path coverage; explicit generic

@@ -85,6 +85,100 @@ type Owned = {raw: unknown; close?: () => Promise<unknown>; read?: (...args: any
 const observationContext = new AsyncLocalStorage<object>();
 const observedOwners = new WeakMap<ObservedOriginalTrainingModelSource, {original: OriginalTrainingCapture; owner: OriginalTrainingModelObservation}>();
 
+/** Trusted host configuration and an ALREADY measured exclusive reservation.
+ * This interface does not manufacture a budget or qualify its implementation. */
+export interface OriginalTrainingSourceReservation {
+  readonly configuration: {readonly freshParent: string; readonly freshName: string; readonly maximumCopyBytes: number;
+    readonly bufferBytes: number; readonly preparationMs: number};
+  assertCurrent(): void;
+  chargeSourceCopy(bytes: number): Promise<void>;
+  retainSourceCopy(bytes: number): Promise<void>;
+}
+declare const sourceLaunchBrand: unique symbol;
+export interface OriginalTrainingSourceLaunch {readonly [sourceLaunchBrand]: true}
+export type OriginalTrainingSourceReservationFactory = (original: OriginalTrainingCapture,
+  observed: ObservedOriginalTrainingModelSource) => OriginalTrainingSourceReservation;
+export type OriginalTrainingSourcePhase = "charge" | "allocate" | "copy" | "seal" | "create" | "dispatch" | "retain";
+const sourceLaunches = new WeakMap<OriginalTrainingSourceLaunch, {descriptor: Readonly<Record<string, unknown>>;
+  claimed: boolean; acknowledge(phase: OriginalTrainingSourcePhase, amount: number): Promise<void>}>();
+const boundSourceLaunches = new WeakSet<OriginalTrainingCapture>();
+
+/** Bind only an actual completed observation to its original owner. All methods
+ * are captured now. JSON, copied IDs or an observation-shaped record cannot bind. */
+export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCapture, observed: ObservedOriginalTrainingModelSource,
+  reservation: OriginalTrainingSourceReservation): OriginalTrainingSourceLaunch {
+  assertOriginalTrainingModelObservation(original, observed);
+  need(!boundSourceLaunches.has(original)); boundSourceLaunches.add(original);
+  const definition = original.definition, current = original.assertCurrent.bind(original), allowed = original.assertAllowed.bind(original);
+  const reader = captureOriginalTrainingModelReader(original); need(!!reader); reader.assertCurrent();
+  const readModel = reader.readModelSelection.bind(reader);
+  need(definition.request.baseModel.modelRecordId === observed.modelRecordId && definition.modelUpdatedAt === observed.modelUpdatedAt &&
+    definition.request.baseModel.localPath === observed.logicalPath);
+  need(!!reservation && typeof reservation === "object" && !types.isProxy(reservation));
+  const property = Object.getOwnPropertyDescriptor(reservation, "configuration"); need(!!property && "value" in property);
+  const config = data(property.value, ["freshParent", "freshName", "maximumCopyBytes", "bufferBytes", "preparationMs"]);
+  need(local(config.freshParent) && typeof config.freshName === "string" && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}$/.test(config.freshName) &&
+    !/[.]$/.test(config.freshName) && !/^(?:CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)/i.test(config.freshName));
+  for (const [key, low, high] of [["maximumCopyBytes", 1, Number.MAX_SAFE_INTEGER], ["bufferBytes", 4096, 1_048_576],
+      ["preparationMs", 1, 86_400_000]] as const) need(Number.isSafeInteger(config[key]) && (config[key] as number) >= low && (config[key] as number) <= high);
+  const maximum = config.maximumCopyBytes as number;
+  need(observed.files.reduce((sum, row) => sum + row.sizeBytes, 0) <= maximum);
+  const assertReservation = method(reservation, "assertCurrent"), charge = method(reservation, "chargeSourceCopy"), retain = method(reservation, "retainSourceCopy");
+  const reservationCurrent = () => {
+    const value = assertReservation();
+    if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
+    need(value === undefined);
+  };
+  const permit = async () => {
+    current(); reservationCurrent(); await allowed(); current(); reservationCurrent();
+    // Policy permission alone cannot authorize a later revision or locator.
+    // Use the original authorized metadata reader AFTER our awaited work, not
+    // a new reader, reopened file path or caller-supplied record.
+    const selected = await readModel(); current(); reservationCurrent();
+    need(selected.modelRecordId === observed.modelRecordId && selected.modelUpdatedAt === observed.modelUpdatedAt &&
+      selected.localModelReference === observed.logicalPath);
+  };
+  // Preserve the exact JS definition serialization when correlating the native
+  // graph. Re-serialization in another runtime is not the digest authority.
+  const definitionDigest = "sha256:" + createHash("sha256").update(JSON.stringify(definition)).digest("hex");
+  const descriptor = Object.freeze({schema: "windows-original-model-graph-v1", definitionDigest, modelId: observed.modelRecordId,
+    modelUpdatedAt: observed.modelUpdatedAt, logicalPath: observed.logicalPath, sourcePath: observed.logicalPath,
+    ...config, files: Object.freeze(observed.files.map(row => Object.freeze({...row})))});
+  let state: "bound" | "charging" | "charged" | "allocated" | "sealed" | "created" | "dispatched" | "retaining" | "retained" | "lost" = "bound", copies = 0, busy = false;
+  const owner = {descriptor, claimed: false, async acknowledge(phase: OriginalTrainingSourcePhase, amount: number) {
+    need(!busy && state !== "lost");
+    busy = true;
+    try {
+      need(Number.isSafeInteger(amount) && amount === maximum);
+      if (phase === "retain") {
+        // Accounting survives requester withdrawal. It grants no new copy,
+        // dispatch, deletion or disk credit. Unknown acknowledgement never retries.
+        need(state === "charged" || state === "allocated" || state === "sealed" || state === "created" || state === "dispatched"); state = "retaining";
+        reservationCurrent(); const result = retain(maximum); need(types.isPromise(result));
+        need(await result === undefined); reservationCurrent(); state = "retained"; return;
+      }
+      await permit();
+      if (phase === "charge") {
+        need(state === "bound"); state = "charging";
+        const result = charge(maximum); need(types.isPromise(result)); need(await result === undefined);
+        await permit(); state = "charged";
+      } else if (phase === "allocate") {need(state === "charged"); state = "allocated";}
+      else if (phase === "copy") {need(state === "allocated" && copies < observed.files.length); copies++;}
+      else if (phase === "seal") {need(state === "allocated" && copies === observed.files.length); state = "sealed";}
+      else if (phase === "create") {need(state === "sealed"); state = "created";}
+      else {need(phase === "dispatch" && state === "created"); state = "dispatched";}
+    } catch {state = "lost"; throw unavailable();}
+    finally {busy = false;}
+  }};
+  const token = Object.freeze({}) as OriginalTrainingSourceLaunch; sourceLaunches.set(token, owner); return token;
+}
+
+/** Redeem once by the original native launcher, never from a wire descriptor. */
+export function captureOriginalTrainingSourceLaunch(token: OriginalTrainingSourceLaunch) {
+  const owner = sourceLaunches.get(token); need(!!owner && !owner.claimed); owner.claimed = true;
+  return Object.freeze({descriptor: owner.descriptor, acknowledge: owner.acknowledge.bind(owner)});
+}
+
 /** A private association, not a grant to copy/load/retain these mutable files. */
 export function assertOriginalTrainingModelObservation(original: OriginalTrainingCapture, observed: ObservedOriginalTrainingModelSource): void {
   const binding = observedOwners.get(observed);

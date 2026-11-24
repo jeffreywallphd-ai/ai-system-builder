@@ -26,6 +26,9 @@ They use only the Python standard library.
   ownership, bounded verification receipts, separate-invocation review, local
   recovery and the dynamic JSON review site. Start with
   `docs/diagnostics/ai-development-control-plane.md`.
+  Its optional [deterministic support commands](../../docs/diagnostics/deterministic-contributor-support.md)
+  prepare bounded evidence, progress replay, checkpoints and handoffs. They add
+  no mandatory stage, retry loop, approval or execution authority.
 - `run_repository_checks.py` runs an allowlist of formatting, focused Node
   tests, pinned Electron provisioning, docs, architecture, deployment, and full
   non-browser test gates, including the agent-support gate when instructions or

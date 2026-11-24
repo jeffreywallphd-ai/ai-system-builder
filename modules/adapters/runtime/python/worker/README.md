@@ -1837,3 +1837,29 @@ output name is never their barrier against accidental ML execution. These checks
 prove request correlation, not file bytes, native custody or output accounting.
 The production producer, public Roots, Save and physical qualification remain
 pending; no model-quality or loss-scoring test is part of this boundary.
+
+### Source-aware original launch channel
+
+The fixed controller also accepts the closed source-aware v2 launch from its
+original Node stdio owner. V1 remains source-free. V2 binds the actual existing
+`OriginalModelGraph` before preparation. It obtains ordered bounded original
+reservation acknowledgements for charge, allocation, each file copy, sealing,
+process creation, dispatch and retained accounting. Permission checks belong to
+the Node owner of the original observation and measured reservation. Each stage
+also requires the current saved Model revision and local reference through
+the original authorized reader after awaited policy/reservation work. Retained
+accounting needs no new requester or Model-read permission. A wire
+descriptor, nonce or ACK is not an independent permission grant.
+
+Stop/EOF, wrong or preloaded responses, lost ACKs and phase changes deny further
+copy/dispatch and retain uncertain custody. The controller uses the original
+graph's real copy/hash/ACL/read-only inheritance code. After the worker/Job and
+readers stop and its graph handles close, it must acknowledge retained disk
+accounting before reporting original retirement. Requester withdrawal does not
+prevent this accounting. Closure never means deletion or released disk credit.
+
+The inherited worker bootstrap, live Model view, fixed-loader use, full native
+input/output producer and physical qualification remain pending. Default app
+composition still configures no producer. In-memory API/stdio tests are source
+evidence only; they do not load DLLs or a model, authorize physical effects or
+qualify the parent roadmap.

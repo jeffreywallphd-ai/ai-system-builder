@@ -10,6 +10,7 @@ import {captureOriginalWorkerResourceProfile, createWindowsOriginalWorkerLaunch,
 
 import type { PythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
 import type { PythonStartupEvent } from "../pythonRuntimeStartupDiagnostics";
+import type {OriginalTrainingSourceLaunch} from "../client/originalTrainingModelSource";
 
 export type PythonRuntimeSupervisorStatus =
   "stopped" | "starting" | "ready" | "failed";
@@ -53,6 +54,7 @@ export interface PythonRuntimeSupervisor {
 export interface InstalledPythonRuntimeStartupAdmission {
   assertCurrent(): void;
   assertAllowed(): Promise<void>;
+  readonly originalModelSource?: OriginalTrainingSourceLaunch;
 }
 
 function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmission | undefined) {
@@ -63,6 +65,10 @@ function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmissio
   const properties = Object.getOwnPropertyDescriptors(original);
   const current = properties.assertCurrent?.value, allowed = properties.assertAllowed?.value;
   if (typeof current !== "function" || typeof allowed !== "function") throw unavailable();
+  const sourceProperty = properties.originalModelSource;
+  if (sourceProperty && (!("value" in sourceProperty) || sourceProperty.value === undefined)) throw unavailable();
+  if (!sourceProperty && "originalModelSource" in original) throw unavailable();
+  const originalModelSource = sourceProperty?.value as OriginalTrainingSourceLaunch | undefined;
   let lost = false;
   const assertCurrent = () => {
     if (lost) throw unavailable();
@@ -72,7 +78,7 @@ function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmissio
       if (result !== undefined) throw unavailable();
     } catch {lost = true; throw unavailable();}
   };
-  return Object.freeze({assertCurrent, async assertAllowed() {
+  return Object.freeze({assertCurrent, originalModelSource, async assertAllowed() {
     assertCurrent();
     try {
       if (await Reflect.apply(allowed, original, []) !== undefined) throw unavailable();
@@ -550,6 +556,8 @@ export function createPythonRuntimeSupervisor(
         originalAdmission = captureStartupAdmission(admission)!;
         startupAdmissions.set(admission, originalAdmission);
       }
+      if (originalAdmission?.originalModelSource && !nativeProfile)
+        throw new Error("Original Model source requires the configured native worker owner.");
       const generation = lifecycleGeneration;
       let operationToken: object | undefined;
       let handedOff = false;
@@ -571,6 +579,9 @@ export function createPythonRuntimeSupervisor(
       }
       if ((childProcess || managedWorker) && status === "failed") throw new Error("Python runtime startup failed; stop the owned process before retrying.");
       if ((childProcess || managedWorker) && status !== "stopped") {
+        // Source copying belongs to one exact launch. An existing worker,
+        // including the same live process, cannot adopt a fresh source request.
+        if (originalAdmission?.originalModelSource) throw new Error("Original Model source requires its own unused worker launch.");
         emitEvent(
           "start-skipped",
           "Runtime start skipped because supervisor is already active.",
@@ -578,6 +589,7 @@ export function createPythonRuntimeSupervisor(
         return;
       }
       if (attachedToExistingRuntime) {
+        if (originalAdmission?.originalModelSource) throw new Error("An attached worker cannot receive an original Model source.");
         if (await tryAttachToExistingRuntime(assertCurrent)) {
           assertCurrent();
           emitEvent(
@@ -692,6 +704,7 @@ export function createPythonRuntimeSupervisor(
         assertHostCurrent();
         const owner = managedWorker = createWindowsOriginalWorkerLaunch({command, cwd: workingDirectory,
           environment: launchEnvironment, profile: nativeProfile, spawnImplementation,
+          originalModelSource: originalAdmission?.originalModelSource,
           nativePlatform: () => ({platform: "win32", arch: "x64"}),
           assertStartupAllowed: allowed,
           assertHostCurrent: () => {assertCurrent(); assertHostCurrent(); assertCurrent();}});

@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+from queue import Queue
 import struct
 import sys
 from threading import Event
@@ -221,6 +222,101 @@ class Kernel:
         if name == "WaitForSingleObject": return (0 if self.active == 0 else 258), 0
         if name == "DeleteProcThreadAttributeList": return None, 0
         raise AssertionError("Unexpected native operation: " + name)
+
+
+class SourceLaunchExchangeTests(unittest.TestCase):
+    def journey(self, refuse=None):
+        value = boot(); value["schema"] = "windows-original-worker-launch-v2"; value["modelSource"] = descriptor()
+        value["profile"]["observationMs"] = 200; value["profileDigest"] = n.profile_digest(value["profile"])
+        lines, frames, owners, inherited_rights = Queue(), [], [], []
+        lines.put((json.dumps(value) + "\n").encode())
+        kernel = Kernel()
+        class EndObservation(BaseException): pass
+        class Source:
+            def readline(self, maximum): return lines.get(timeout=2)
+        class Sink:
+            def write(sink, raw):
+                frame = json.loads(raw); frames.append(frame)
+                if frame["kind"] == "source-request":
+                    if frame["phase"] == "create":
+                        inherited_rights.extend(kernel.obj(number)["access"] for number in kernel.attributes[n.HANDLE_LIST][3:])
+                    if frame["phase"] == refuse:
+                        lines.put(b""); return len(raw)
+                    if frame["phase"] == "retain":
+                        self.assertTrue(all(h.closed for h in owners[0].model_graph.owned_handles))
+                        self.assertEqual(kernel.active, 0)
+                        self.assertFalse(any(thread.is_alive() for thread in owners[0].readers))
+                    lines.put((json.dumps({"schema": "windows-original-model-ack-v1", "nonce": value["nonce"],
+                        "profileDigest": value["profileDigest"], "definitionDigest": frame["definitionDigest"],
+                        "sequence": frame["sequence"], "phase": frame["phase"]}) + "\n").encode())
+                action = "resume" if frame["kind"] == "suspended" else "stop" if frame["kind"] == "running" else None
+                if action: lines.put((json.dumps({"schema": "windows-original-worker-command-v1", "nonce": value["nonce"],
+                    "profileDigest": value["profileDigest"], "action": action}) + "\n").encode())
+                if frame["kind"] == "retired": lines.put(b"")
+                return len(raw)
+            def flush(self): pass
+        def factory(raw):
+            owner = n.OriginalWorker(raw, kernel=kernel, executable="X:/inert/python.exe", worker_root=_root)
+            owners.append(owner); return owner
+        actual_sleep = n.time.sleep
+        def wait(seconds):
+            if any(f["kind"] == "uncertain" for f in frames): raise EndObservation()
+            actual_sleep(seconds)
+        try:
+            # Bound serve's retained-uncertainty loop, including unexpected
+            # positive-path defects. No retirement or retry is fabricated.
+            with patch.object(n.time, "sleep", side_effect=wait):
+                if refuse:
+                    with self.assertRaises(EndObservation): n.serve(Source(), Sink(), owner_factory=factory)
+                else: self.assertEqual(n.serve(Source(), Sink(), owner_factory=factory), 0)
+        finally: lines.put(b"")
+        return frames, owners[0], kernel, inherited_rights
+
+    def test_owned_stdio_binds_actual_copy_seal_inheritance_and_retained_accounting(self):
+        frames, owner, kernel, inherited_rights = self.journey()
+        phases = [f["phase"] for f in frames if f["kind"] == "source-request"]
+        self.assertEqual(phases, ["charge", "allocate", "copy", "copy", "copy", "seal", "create", "dispatch", "retain"])
+        self.assertEqual([f["sequence"] for f in frames if f["kind"] == "source-request"], list(range(1, 10)))
+        self.assertEqual(frames[-1]["kind"], "retired"); self.assertTrue(owner.model_graph.retired)
+        self.assertTrue(all(h.closed for h in owner.handles))
+        self.assertIn(owner.model_graph.physical_path, kernel.nodes)
+        self.assertEqual(inherited_rights, [0x120089, 0x120089, 0x120089, 0x1200a1])
+        self.assertTrue(all(not access & n.MODEL_WRITE_DENIAL for access in inherited_rights))
+        for row in descriptor()["files"]:
+            copied = kernel.nodes[owner.model_graph.physical_path + "\\" + row["name"]]
+            self.assertEqual(hashlib.sha256(copied["data"]).hexdigest(), row["sha256"])
+            self.assertEqual(copied["acl"], n.model_acl(kernel.sid, sealed=True))
+        self.assertEqual(sum(name == "CreateProcessW" for name, _ in kernel.calls), 1)
+        self.assertEqual(sum(name == "ResumeThread" for name, _ in kernel.calls), 1)
+
+    def test_lost_stage_ack_keeps_source_custody_and_never_claims_zero_effect_or_retirement(self):
+        for phase in ("charge", "allocate", "copy", "create", "dispatch", "retain"):
+            with self.subTest(phase=phase):
+                frames, owner, kernel, _ = self.journey(phase)
+                self.assertNotIn("retired", [f["kind"] for f in frames]); self.assertTrue(owner.unknown)
+                self.assertFalse(owner.model_graph.retired)
+                self.assertEqual(sum(f.get("phase") == phase for f in frames), 1)
+                if phase == "charge": self.assertEqual(kernel.calls, [])
+                if phase in ("charge", "allocate", "copy", "create"):
+                    self.assertFalse(any(name == "CreateProcessW" for name, _ in kernel.calls))
+                if phase == "dispatch": self.assertFalse(any(name == "ResumeThread" for name, _ in kernel.calls))
+                if phase == "retain": self.assertTrue(all(h.closed for h in owner.model_graph.owned_handles))
+
+    def test_foreign_preloaded_or_changed_ack_cannot_authorize_an_original_source_stage(self):
+        for mode in ("preloaded", "sequence", "phase", "definition", "missing"):
+            owner = n.OriginalWorker({**boot(), "schema": "windows-original-worker-launch-v2", "modelSource": descriptor()}, kernel=Kernel())
+            replies, ended, overflow, stopped = Queue(maxsize=1), Event(), Event(), Event()
+            expected = {"sequence": 1, "phase": "charge", "definitionDigest": descriptor()["definitionDigest"]}
+            if mode == "preloaded": replies.put(expected)
+            def frame(kind, **fields):
+                row = dict(expected)
+                if mode == "sequence": row["sequence"] = 2
+                if mode == "phase": row["phase"] = "retain"
+                if mode == "definition": row["definitionDigest"] = "sha256:" + "f" * 64
+                if mode not in ("preloaded", "missing"): replies.put(row)
+            exchange = n.OriginalSourceExchange(owner, frame, replies, ended, overflow, stopped)
+            with self.subTest(mode=mode), self.assertRaises(n.LaunchUnavailable): exchange.charge_source_copy(16384)
+            self.assertEqual(owner.kernel.calls, [])
 
 
 class ModelGraphTests(unittest.TestCase):

@@ -2,7 +2,8 @@
 
 The controller launches only its shipped sibling worker/main.py with its own
 installed interpreter. Private composition may bind a fresh protected source-copy
-owner; v1 BOOT never selects it. This is not a model executor or a qualifier.
+owner. Source-aware v2 binds that owner through the original Node reservation
+exchange; v1 remains source-free. This is not a model executor or a qualifier.
 ABI declarations reuse the repository's existing Win32 launch patterns; no
 qualification actor, effect grant or budget is imported or widened here.
 """
@@ -73,8 +74,11 @@ def profile_digest(profile):
 
 
 def capture_boot(raw):
-    value = exact(raw, ("schema", "nonce", "profile", "profileDigest", "environment"))
-    need(value["schema"] == "windows-original-worker-launch-v1")
+    need(type(raw) is dict)
+    source_mode = raw.get("schema") == "windows-original-worker-launch-v2"
+    value = exact(raw, ("schema", "nonce", "profile", "profileDigest", "environment", "modelSource") if source_mode
+                  else ("schema", "nonce", "profile", "profileDigest", "environment"))
+    need(value["schema"] in ("windows-original-worker-launch-v1", "windows-original-worker-launch-v2"))
     need(type(value["nonce"]) is str and re.fullmatch(r"[a-f0-9]{64}", value["nonce"]) is not None)
     profile = capture_profile(value["profile"])
     need(value["profileDigest"] == profile_digest(profile))
@@ -91,7 +95,9 @@ def capture_boot(raw):
          and 1024 <= int(copied["PYTHON_RUNTIME_PORT"]) <= 65535)
     need(re.fullmatch(r"[a-f0-9]{64}", copied.get("PYTHON_RUNTIME_STARTUP_PROOF", "")) is not None
          and len(copied.get("PYTHON_RUNTIME_AUTH_TOKEN", "")) >= 32)
-    return {**value, "profile": profile, "environment": copied}
+    source = capture_model_graph(value["modelSource"]) if source_mode else None
+    return {**value, "profile": profile, "environment": copied,
+            **({"modelSource": {**source, "files": [dict(row) for row in source["files"]]}} if source_mode else {})}
 
 
 def parse_frame(data):
@@ -337,6 +343,8 @@ class OriginalModelGraph:
         self.charge = reservation.charge_source_copy
         self.retain = reservation.retain_source_copy
         self.current = admission.assert_current
+        self.stage_check = getattr(admission, "checkpoint", None)
+        need(self.stage_check is None or callable(self.stage_check))
         need(all(callable(f) for f in (self.assert_reservation, self.charge, self.retain, self.current)))
         self.phase = "bound"; self.attempted = self.charged = self.retired = False
         self.charge_attempted = False; self.lifetime_current = None; self.dispatched = False
@@ -366,6 +374,12 @@ class OriginalModelGraph:
 
     def call(self, name, *args, **kwargs):
         return self.owner.call(name, *args, **kwargs)[0]
+
+    def checkpoint(self, phase):
+        self.guard()
+        if self.stage_check is not None:
+            need(self.stage_check(phase) is True)
+        self.guard()
 
     def open(self, parent, name, access, *, directory, fresh=False, security=None, share=1, allocation_bytes=None):
         self.guard()
@@ -591,12 +605,12 @@ class OriginalModelGraph:
                 self.source_handles.append(handle); identity, size, _ = self.facts(handle)
                 need(size == row["sizeBytes"]); source_records.append({**row, "identity": identity, "handle": handle})
             self.graph_matches(source, source_records)
-            self.guard(); security = self.descriptor_for(sealed=False)
+            self.checkpoint("allocate"); security = self.descriptor_for(sealed=False)
             self.fresh = self.open(parent, self.descriptor["freshName"], 0x1701ff, directory=True, fresh=True, security=security, share=0)
             need(self.permissions(self.fresh) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
             allocated, copied = 0, 0
             for original, requested_allocation in zip(source_records, allocation_plan):
-                self.guard(); writer = self.open(self.fresh, original["name"], 0x1701ff, directory=False, fresh=True,
+                self.checkpoint("copy"); writer = self.open(self.fresh, original["name"], 0x1701ff, directory=False, fresh=True,
                                                 security=security, share=0, allocation_bytes=requested_allocation)
                 need(self.permissions(writer) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
                 _, initial_size, initial_allocation = self.facts(writer)
@@ -635,7 +649,7 @@ class OriginalModelGraph:
                 self.verify_bytes(read, original)
                 self.records.append({**{k: original[k] for k in ("name", "sizeBytes", "sha256")}, "identity": identity})
             self.graph_matches(source, source_records); self.graph_matches(self.fresh, self.records)
-            self.guard(); root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
+            self.checkpoint("seal"); root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
             root = self.open(parent, self.descriptor["freshName"], 0x200a1, directory=True)
             need(self.identity(root) == root_identity); self.guards.append(root)
             for handle in self.guards:
@@ -846,7 +860,8 @@ class OriginalWorker:
         env = C.create_unicode_buffer("\0".join(k + "=" + v for k, v in sorted(self.boot["environment"].items(), key=lambda item: item[0].casefold())) + "\0\0")
         self.buffers.extend((startup, info, command, env))
         self.process, self.primary_thread = self.handle("process"), self.handle("thread")
-        if self.model_graph is not None: self.model_graph.assert_sealed()
+        if self.model_graph is not None:
+            self.model_graph.assert_sealed(); self.model_graph.checkpoint("create")
         self.create_attempted = True
         self.call("CreateProcessW", self.executable, command, None, None, 1, CREATE_FLAGS, env, str(root), C.byref(startup), C.byref(info),
                   keep=(info, startup, command, env, self.process, self.primary_thread))
@@ -871,6 +886,7 @@ class OriginalWorker:
         self.limits(); need(self.accounting().active == 1)
         need(current() is True and not self.unknown)
         if self.model_graph is not None: self.model_graph.assert_sealed()
+        if self.model_graph is not None: self.model_graph.checkpoint("dispatch")
         need((self.clock() - self.started_at) * 1000 < self.profile["maximumDurationMs"])
         self.resume_attempted = True
         self.call("ResumeThread", self.number(self.primary_thread), valid=lambda v: type(v) is int and v == 1, keep=(self.primary_thread,))
@@ -927,12 +943,53 @@ class OriginalWorker:
             self.readers.append(thread); thread.start()
 
 
+class OriginalSourceExchange:
+    """Controller half of the original Node-owned reservation channel.
+
+    Descriptors/ACKs are correlation data. Only serve's original stdin/stdout
+    and Node's retained observation/reservation owner compose this capability.
+    No HTTP task, env field or supplied boolean can create that owner.
+    """
+    def __init__(self, owner, frame, replies, ended, overflow, stopped):
+        self.owner, self.frame, self.replies = owner, frame, replies
+        self.ended, self.overflow, self.stopped = ended, overflow, stopped
+        self.sequence, self.lost = 0, False
+        self.descriptor = owner.boot["modelSource"]
+
+    def assert_current(self):
+        return not self.lost and not self.ended.is_set() and not self.overflow.is_set() and not self.stopped.is_set()
+
+    def request(self, phase, amount):
+        need(not self.lost and not self.ended.is_set() and not self.overflow.is_set()
+             and (phase == "retain" or not self.stopped.is_set()) and self.replies.empty())
+        self.sequence += 1; need(self.sequence <= 40)
+        try:
+            self.frame("source-request", sequence=self.sequence, phase=phase,
+                       definitionDigest=self.descriptor["definitionDigest"], amount=amount)
+            deadline = self.owner.clock() + self.owner.profile["observationMs"] / 1000
+            while True:
+                need(not self.ended.is_set() and not self.overflow.is_set()
+                     and (phase == "retain" or not self.stopped.is_set()) and self.owner.clock() < deadline)
+                try: reply = self.replies.get(timeout=min(0.025, max(0.001, deadline - self.owner.clock())))
+                except Empty: continue
+                need(reply["sequence"] == self.sequence and reply["phase"] == phase
+                     and reply["definitionDigest"] == self.descriptor["definitionDigest"])
+                return True
+        except BaseException:
+            self.lost = True; self.owner.unknown = True
+            raise LaunchUnavailable() from None
+
+    def charge_source_copy(self, amount): return self.request("charge", amount)
+    def retain_source_copy(self, amount): return self.request("retain", amount)
+    def checkpoint(self, phase): return self.request(phase, self.descriptor["maximumCopyBytes"])
+
+
 def serve(stdin, stdout, *, owner_factory=OriginalWorker):
     """Closed private protocol. Worker bytes never become controller commands."""
     boot = capture_boot(parse_frame(stdin.readline(FRAME_BYTES + 1)))
     nonce, digest = boot["nonce"], boot["profileDigest"]
     owner = owner_factory(boot)
-    commands, output = Queue(maxsize=8), Queue(maxsize=8)
+    commands, output, source_replies = Queue(maxsize=8), Queue(maxsize=8), Queue(maxsize=1)
     overflow, input_ended, stop_received = Event(), Event(), Event()
     output_total = 0
     def frame(kind, **fields):
@@ -942,10 +999,19 @@ def serve(stdin, stdout, *, owner_factory=OriginalWorker):
         stdout.write(payload.encode("utf8") + b"\n"); stdout.flush()
     def read_commands():
         try:
-            for _ in range(4):  # resume and stop, with bounded malformed attempts
+            for _ in range(48 if "modelSource" in boot else 4):
                 data = stdin.readline(FRAME_BYTES + 1)
                 if not data: return
-                value = exact(parse_frame(data), ("schema", "nonce", "profileDigest", "action"))
+                value = parse_frame(data)
+                if "modelSource" in boot and type(value) is dict and value.get("schema") == "windows-original-model-ack-v1":
+                    exact(value, ("schema", "nonce", "profileDigest", "definitionDigest", "sequence", "phase"))
+                    need(value["nonce"] == nonce and value["profileDigest"] == digest
+                         and value["definitionDigest"] == boot["modelSource"]["definitionDigest"]
+                         and type(value["sequence"]) is int and 1 <= value["sequence"] <= 40
+                         and value["phase"] in ("charge", "allocate", "copy", "seal", "create", "dispatch", "retain"))
+                    source_replies.put_nowait(value)
+                    continue
+                value = exact(value, ("schema", "nonce", "profileDigest", "action"))
                 need(value["schema"] == "windows-original-worker-command-v1" and value["nonce"] == nonce
                      and value["profileDigest"] == digest and value["action"] in ("resume", "stop"))
                 if value["action"] == "stop": stop_received.set()
@@ -970,6 +1036,9 @@ def serve(stdin, stdout, *, owner_factory=OriginalWorker):
         except Empty:
             pass
     try:
+        if "modelSource" in boot:
+            exchange = OriginalSourceExchange(owner, frame, source_replies, input_ended, overflow, stop_received)
+            owner.bind_model_graph(boot["modelSource"], exchange, exchange)
         source_mode = getattr(owner, "model_graph", None) is not None
         if source_mode:
             # Arm cancellation BEFORE any source copy, ACL or process effect.

@@ -6,6 +6,8 @@ import path from "node:path";
 import {PassThrough} from "node:stream";
 import {types} from "node:util";
 import {copyBoundedPassiveData, readStrictPassiveRecord} from "../../../../contracts/shared";
+import {captureOriginalTrainingSourceLaunch, type OriginalTrainingSourceLaunch,
+  type OriginalTrainingSourcePhase} from "../client/originalTrainingModelSource";
 
 export interface WindowsOriginalWorkerResourceProfile {
   readonly schema: "windows-original-worker-job-v1";
@@ -54,6 +56,7 @@ export function createWindowsOriginalWorkerLaunch(options: {
   readonly profile: WindowsOriginalWorkerResourceProfile; readonly assertHostCurrent: () => void;
   /** Separate async permission check after preflight, before controller creation. */
   readonly assertStartupAllowed?: () => Promise<void>;
+  readonly originalModelSource?: OriginalTrainingSourceLaunch;
   readonly nativePlatform?: () => {platform: NodeJS.Platform; arch: string};
   readonly spawnImplementation?: typeof spawn;
 }): ManagedOriginalPythonWorker {
@@ -64,6 +67,10 @@ export function createWindowsOriginalWorkerLaunch(options: {
   need(allowedProperty !== undefined || !("assertStartupAllowed" in options));
   need(allowedProperty === undefined || "value" in allowedProperty && typeof allowedProperty.value === "function");
   const startupAllowed = allowedProperty?.value as (() => Promise<void>) | undefined;
+  const sourceProperty = Object.getOwnPropertyDescriptor(options, "originalModelSource");
+  need(sourceProperty !== undefined || !("originalModelSource" in options));
+  need(sourceProperty === undefined || "value" in sourceProperty);
+  const source = sourceProperty?.value === undefined ? undefined : captureOriginalTrainingSourceLaunch(sourceProperty.value);
   need(typeof command === "string" && path.isAbsolute(command) && typeof cwd === "string" && path.isAbsolute(cwd) && typeof hostCurrent === "function");
   need(!/^(?:\\\\|\/\/)/.test(command) && !/^(?:\\\\|\/\/)/.test(cwd) && !command.includes("\0") && !cwd.includes("\0"));
   const inspectPlatform = options.nativePlatform ?? (() => ({platform: process.platform, arch: process.arch}));
@@ -86,6 +93,10 @@ export function createWindowsOriginalWorkerLaunch(options: {
   let resumeAttempted = false, stopAttempted = false, wireBytes = 0, workerBytes = 0, buffer = Buffer.alloc(0);
   let prepareFlight: Promise<void> | undefined, resumeFlight: Promise<void> | undefined, retirementFlight: Promise<boolean> | undefined;
   let sendOriginal: ((value: string) => void) | undefined;
+  let sourceSequence = 0, sourcePending = false, sourceRetained = false;
+  // Retain every issued operation, including a pending/lost callback, with the
+  // original launch. No controller exit or missing ACK supplies disk credit.
+  const sourceOperations = new Set<Promise<void>>();
   const waiters = new Set<() => void>();
   const notify = () => {for (const listener of [...waiters]) listener();};
   const notifyUnavailable = (lostIntegrity = false) => {
@@ -99,7 +110,7 @@ export function createWindowsOriginalWorkerLaunch(options: {
   output.on("error", () => notifyUnavailable(true));
   errorOutput.on("error", () => notifyUnavailable(true));
   const final = () => {
-    if ((noConstruction || nativeRetired && controllerClosed) && !integrityLost) {
+    if ((noConstruction || nativeRetired && controllerClosed && (!source || sourceRetained && !sourcePending)) && !integrityLost) {
       phase = "retired";
       for (const listener of retiredListeners) {try {listener();} catch { /* Passive diagnostics. */ }}
       retiredListeners.clear(); notify();
@@ -134,8 +145,34 @@ export function createWindowsOriginalWorkerLaunch(options: {
       // The fixed controller emits canonical ASCII JSON. This also refuses
       // duplicate keys, alternate escapes and invalid UTF-8 before interpretation.
       need(JSON.stringify(parsed) === text && Buffer.from(text).equals(line));
-      value = readStrictPassiveRecord(parsed, ["schema", "nonce", "profileDigest", "kind", "lane", "data"]);
+      value = readStrictPassiveRecord(parsed, ["schema", "nonce", "profileDigest", "kind", "lane", "data", "sequence", "phase", "definitionDigest", "amount"]);
       need(value.schema === "windows-original-worker-control-v1" && value.nonce === nonce && value.profileDigest === digest);
+      if (value.kind === "source-request") {
+        need(!!source && Object.keys(value).length === 8 && !sourcePending && !nativeRetired && !controllerClosed &&
+          Number.isSafeInteger(value.sequence) && value.sequence === sourceSequence + 1 && (value.sequence as number) <= 40 &&
+          value.definitionDigest === source.descriptor.definitionDigest && value.amount === source.descriptor.maximumCopyBytes &&
+          ["charge", "allocate", "copy", "seal", "create", "dispatch", "retain"].includes(value.phase as string));
+        const sourcePhase = value.phase as OriginalTrainingSourcePhase, sequence = value.sequence as number;
+        need(sourcePhase === "retain" || !uncertain && !stopAttempted && !controllerExited &&
+          (sourcePhase === "dispatch" ? resumeAttempted && phase === "resuming" : phase === "preparing"));
+        sourcePending = true; sourceSequence = sequence;
+        const operation = Promise.resolve().then(async () => {
+          if (sourcePhase !== "retain") {currentHost(); need(!stopAttempted && !uncertain && !controllerClosed);}
+          await source.acknowledge(sourcePhase, value.amount as number);
+          need(!integrityLost && !controllerClosed);
+          if (sourcePhase !== "retain") {currentHost(); need(!stopAttempted && !uncertain);}
+          // Complete the one actual owner callback before acknowledging its
+          // original request. Delivery uncertainty can never repeat it.
+          need(!!sendOriginal); sourcePending = false;
+          sendOriginal!(JSON.stringify({schema: "windows-original-model-ack-v1", nonce,
+            profileDigest: digest, definitionDigest: source.descriptor.definitionDigest, sequence, phase: sourcePhase}) + "\n");
+          if (sourcePhase === "retain") sourceRetained = true;
+        });
+        sourceOperations.add(operation);
+        void operation.then(() => {sourceOperations.delete(operation); final(); notify();},
+          () => {notifyUnavailable(true);});
+        return;
+      }
       if (value.kind === "worker-output") {
         need(Object.keys(value).length === 6 && (value.lane === "stdout" || value.lane === "stderr") &&
           typeof value.data === "string" && value.data.length <= 10_924 && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.data));
@@ -194,7 +231,8 @@ export function createWindowsOriginalWorkerLaunch(options: {
           && entryFacts.isFile() && !entryFacts.isSymbolicLink() && path.relative(rootReal, helperReal) === path.join("native", "windows_original_worker_launch.py")
           && path.relative(rootReal, entryReal) === "main.py");
         const env = Object.fromEntries(Object.entries(environment).filter((row): row is [string, string] => row[1] !== undefined));
-        const boot = JSON.stringify({schema: "windows-original-worker-launch-v1", nonce, profile, profileDigest: digest, environment: env}) + "\n";
+        const boot = JSON.stringify({schema: source ? "windows-original-worker-launch-v2" : "windows-original-worker-launch-v1",
+          nonce, profile, profileDigest: digest, environment: env, ...(source ? {modelSource: source.descriptor} : {})}) + "\n";
         need(Buffer.byteLength(boot) <= 65_536);
         if (startupAllowed) need(await Reflect.apply(startupAllowed, options, []) === undefined);
         currentHost(); need(!stopAttempted); launchAttempted = true;

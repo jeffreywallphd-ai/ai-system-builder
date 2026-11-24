@@ -2697,3 +2697,31 @@ The original controller must still reopen, copy and rehash under actual native
 custody and its measured reservation, then establish the inherited borrower.
 Full native production, output/Save, Root and actual-host qualification remain
 pending; no model quality test or parent pass follows from this component.
+
+### Original source-aware worker launch
+
+The private foundation can bind the actual observed Model to an explicitly
+supplied measured source-copy reservation owner. The binding performs no IO and
+is module-associated, immutable and redeemed once. Capture original reservation
+methods and retain their receiver before waits. Carry the binding through the
+same supervisor; source-bound requests cannot adopt an active or attached worker
+or fall back to an ordinary launch without the Native owner.
+
+Only the original controller stdio owner can acknowledge the bounded stage
+sequence against that captured observation/reservation. It rereads the current
+saved Model through its original authorized metadata reader
+after awaited admission/accounting work; a changed revision or locator denies.
+Source-aware v2 binds the existing concrete Native graph before preparation, copies/hashes/seals it
+and places checked read-only duplicates in creation-time inheritance. Preserve
+source-free v1. Repeated, foreign, lost or malformed messages cannot repeat
+accounting or effects. Per-stage permission checks do not promise instantaneous
+cross-process revocation.
+
+Native source/worker/Job/readers and uncertain callbacks retain their original
+owner. After graph handles close, disk charge must remain acknowledged through
+the original reservation independently of requester permission. Controller exit
+alone is not retirement. No deletion, Save or disk-credit release is inferred.
+The reservation implementation's durable protection/accounting, inherited worker
+bootstrap/live Model view, full input/output producer, production activation and
+physical/host qualification remain separate. Source tests use controlled Node
+channels and actual Native ABI code with in-memory replies, never model quality.

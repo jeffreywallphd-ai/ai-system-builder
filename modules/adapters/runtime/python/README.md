@@ -797,3 +797,43 @@ Stat and repeated hashes are observations, not simultaneous immutable native
 custody. Original controller copying, measured resource reservation, inherited
 bootstrap/live borrowing, complete native production and actual hosts remain
 separate pending work. No production Root is enabled by this preflight.
+
+### Original protected source launch
+
+The private factory can additionally bind an explicit trusted source-copy
+reservation factory. Binding is synchronous and performs no IO. This owner is
+separate from concurrency and the observer's byte estimate. Capture its exact
+configuration and methods before startup; retain its returned object before any
+owner-property callback. No default budget, reservation implementation or Root
+activation is supplied. Missing Native configuration cannot use ordinary startup.
+
+Only the observer's original module-associated result can bind one source launch.
+A copied record or matching identifier cannot redeem it. Carry that private
+one-use object through the same supervisor. Source-bound startup cannot reuse an
+already running or attached worker. The original controller receives a closed
+v2 descriptor on its owned stdio. V1 remains source-free and compatible.
+
+The original Node owner acknowledges bounded, ordered stages: charge, allocate,
+each file copy, root seal, creation, dispatch and retained accounting. It actually
+calls the captured permission/reservation methods before acknowledging. Each
+stage also rereads the saved Model through the original authorized reader after
+its awaited policy and reservation work. A changed revision or local reference
+denies acquisition/dispatch. Retained accounting needs no saved-Model reread.
+A wire descriptor, nonce, phase or boolean supplies none of that authority. Lost,
+replayed, overlapping or foreign replies fail closed without repeating effects.
+Per-stage checks do not claim instantaneous cross-process permission revocation.
+
+The concrete controller binds its existing Native graph before preparation,
+copies and seals the bounded inventory, and inherits only its checked read-only
+duplicates at process creation. It joins worker/Job/readers and owned graph
+handles before asking the original reservation to retain the charged bytes.
+Retained accounting remains possible after requester withdrawal; it grants no
+new copy, deletion, Save or disk credit. Controller exit alone is not retirement.
+
+This component connects source launch only. The reservation implementation's
+protected durable accounting, inherited worker bootstrap/live view, fixed-loader
+consumption, complete input/output producer, physical resource enforcement and
+actual host qualification remain separate. No full Native producer is configured;
+the source-only path cannot advertise private training readiness. Tests exercise
+Node state machines and the real Native ABI code with in-memory replies, without
+loading DLLs, models or running model-quality tests.

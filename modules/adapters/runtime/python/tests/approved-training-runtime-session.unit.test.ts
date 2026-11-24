@@ -12,6 +12,7 @@ import {OWNED_RUNTIME_READY_PREFIX} from "../supervisor/ownedPythonRuntimeProof"
 import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput} from "../../../../application/ports/model";
 import {TaskType} from "../../../../contracts/runtime";
 import type {WorkspaceId} from "../../../../contracts/workspace";
+import type {OriginalTrainingSourceReservationFactory, OriginalTrainingSourceReservation} from "../client/originalTrainingModelSource";
 
 const id = "11111111-1111-4111-8111-111111111111", workspace = "22222222-2222-4222-8222-222222222222" as WorkspaceId;
 const profile = {profileId: "inert-only", profileFingerprint: "sha256:" + "a".repeat(64)};
@@ -317,16 +318,37 @@ function inertNativeController(resumed: () => void) {
   child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
   child.kill = () => {throw Error("ordinary controller kill is forbidden");};
   let boot: any, stops = 0, starts = 0, resumes = 0;
+  let sourceSequence = 0, closed = false, closePending = false;
+  const sourcePhases: string[] = [];
   const frame = (kind: string, fields: Record<string, unknown> = {}) => child.stdout.write(JSON.stringify({
     schema: "windows-original-worker-control-v1", nonce: boot.nonce, profileDigest: boot.profileDigest, kind, ...fields}) + "\n");
+  const sourceRequest = (phase: string) => queueMicrotask(() => {sourcePhases.push(phase); frame("source-request", {
+    sequence: ++sourceSequence, phase, definitionDigest: boot.modelSource.definitionDigest, amount: boot.modelSource.maximumCopyBytes});});
+  const finishResume = () => {
+    resumed(); frame("running");
+    frame("worker-output", {lane: "stdout", data: Buffer.from(OWNED_RUNTIME_READY_PREFIX + boot.environment.PYTHON_RUNTIME_STARTUP_PROOF +
+      " 127.0.0.1:" + boot.environment.PYTHON_RUNTIME_PORT + "\n").toString("base64")});
+  };
+  const close = () => {if (closed) return; closed = true; frame("retired"); child.stdout.end(); child.stderr.end(); child.emit("close", 0, null);};
   child.stdin.on("data", data => {
     const value = JSON.parse(data.toString());
     if (value.schema === "windows-original-worker-launch-v1") {boot = value; queueMicrotask(() => frame("suspended")); return;}
+    if (value.schema === "windows-original-worker-launch-v2") {boot = value; sourceRequest("charge"); return;}
     assert.equal(value.nonce, boot.nonce); assert.equal(value.profileDigest, boot.profileDigest);
+    if (value.schema === "windows-original-model-ack-v1") {
+      assert.equal(value.sequence, sourceSequence); assert.equal(value.definitionDigest, boot.modelSource.definitionDigest);
+      if (value.phase === "charge") sourceRequest("allocate");
+      else if (value.phase === "allocate" || value.phase === "copy" && sourcePhases.filter(p => p === "copy").length < boot.modelSource.files.length)
+        sourceRequest("copy");
+      else if (value.phase === "copy") sourceRequest("seal");
+      else if (value.phase === "seal") sourceRequest("create");
+      else if (value.phase === "create") queueMicrotask(() => frame("suspended"));
+      else if (value.phase === "dispatch") queueMicrotask(finishResume);
+      else {assert.equal(value.phase, "retain"); if (closePending) queueMicrotask(close);}
+      return;
+    }
     if (value.action === "resume") {resumes++; queueMicrotask(() => {
-      resumed(); frame("running");
-      frame("worker-output", {lane: "stdout", data: Buffer.from(OWNED_RUNTIME_READY_PREFIX + boot.environment.PYTHON_RUNTIME_STARTUP_PROOF +
-        " 127.0.0.1:" + boot.environment.PYTHON_RUNTIME_PORT + "\n").toString("base64")});
+      if (boot.modelSource) sourceRequest("dispatch"); else finishResume();
     });}
     else {assert.equal(value.action, "stop"); stops++;}
   });
@@ -337,10 +359,12 @@ function inertNativeController(resumed: () => void) {
       maximumActiveProcesses: 1, maximumDurationMs: 30_000, observationMs: 30},
     spawnImplementation: (() => {starts++; return child;}) as never};
   return {child, configuration, get starts() {return starts;}, get resumes() {return resumes;}, get stops() {return stops;},
-    closeWithProof() {frame("retired"); child.stdout.end(); child.stderr.end(); child.emit("close", 0, null);}};
+    get boot() {return boot;}, sourcePhases, frame,
+    closeWithoutProof() {if (closed) return; closed = true; child.stdout.end(); child.stderr.end(); child.emit("close", 0, null);},
+    closeWithProof() {if (closed) return; if (boot.modelSource) {closePending = true; sourceRequest("retain");} else close();}};
 }
 
-async function observationFoundation(t: TestContext) {
+async function observationFoundation(t: TestContext, expectedIntegrityLoss = false) {
   const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(path.join(boundary, "training-source-foundation-")));
   const before = await lstat(directory, {bigint: true}), model = path.join(directory, "model"); await mkdir(model);
   for (const name of ["config.json", "tokenizer.json", "model.safetensors"]) await writeFile(path.join(model, name), "synthetic source, never loaded");
@@ -357,11 +381,15 @@ async function observationFoundation(t: TestContext) {
   const port = foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [directory], maximumTotalBytes: 1024,
     maximumDurationMs: 5_000, bufferBytes: 8});
   const selected = definition(); (selected.request.baseModel as any).localPath = model;
-  const reader = {async read() {assert.equal(this, reader); assert.equal(controller.starts, 0); modelReads++;
+  const reader = {async read() {assert.equal(this, reader); if (modelReads < 3) assert.equal(controller.starts, 0); modelReads++;
     return {modelRecordId: selected.request.baseModel.modelRecordId!, modelUpdatedAt: selected.modelUpdatedAt, localModelReference: model};}};
   t.after(async () => {
     if (controller.starts) {
-      const stopped = foundation.supervisor.stop(); await new Promise(resolve => setImmediate(resolve)); controller.closeWithProof(); await stopped;
+      const stopped = foundation.supervisor.stop();
+      const observed = expectedIntegrityLoss ? assert.rejects(stopped) : stopped;
+      await new Promise(resolve => setImmediate(resolve));
+      if (expectedIntegrityLoss) controller.closeWithoutProof(); else controller.closeWithProof();
+      await observed;
     }
     const current = await lstat(directory, {bigint: true}); assert.ok(current.isDirectory() && !current.isSymbolicLink());
     assert.equal(current.dev, before.dev); assert.equal(current.ino, before.ino); assert.equal(await realpath(directory), directory);
@@ -397,6 +425,63 @@ test("failed source observation retains original foundation reservation without 
   assert.equal(await session.prepare(), "unconfirmed"); assert.equal(f.controller.starts, 0); assert.deepEqual(f.calls, []);
   assert.equal(await session.settle(), false);
   assert.equal(f.port.createSession({...f.selected, requestId: workspace}, {isCurrent: () => true, stillAllowed: async () => true}, f.reader), undefined);
+});
+
+test("foundation source launch carries actual observation and retains charged copy after requester withdrawal", async t => {
+  const f = await observationFoundation(t), calls: string[] = []; let caller = true;
+  const factory: OriginalTrainingSourceReservationFactory = (original, observed) => {
+    assert.equal(original.definition.request.baseModel.localPath, f.model); assert.equal(observed.logicalPath, f.model);
+    assert.equal(observed.files.length, 3); assert.equal(f.controller.starts, 0);
+    const owner: OriginalTrainingSourceReservation = {configuration: {freshParent: path.dirname(f.model), freshName: "protected-copy",
+      maximumCopyBytes: 65_536, bufferBytes: 4096, preparationMs: 5000},
+      assertCurrent() {assert.equal(this, owner);}, async chargeSourceCopy(bytes) {assert.equal(this, owner); assert.equal(bytes, 65_536); calls.push("charge");},
+      async retainSourceCopy(bytes) {assert.equal(this, owner); assert.equal(bytes, 65_536); calls.push("retain");}};
+    return owner;
+  };
+  const port = f.foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024,
+    maximumDurationMs: 5000, bufferBytes: 8}, factory);
+  const before = JSON.stringify(f.selected), session = port.createSession(f.selected, {isCurrent: () => caller, stillAllowed: async () => caller}, f.reader)!;
+  // The full producer remains absent: source copying cannot claim training ready.
+  assert.equal(await session.prepare(), "unavailable"); assert.deepEqual(calls, ["charge"]);
+  assert.equal(f.controller.boot.schema, "windows-original-worker-launch-v2");
+  assert.equal(f.controller.boot.modelSource.logicalPath, f.model); assert.equal(f.controller.boot.modelSource.modelId, "base");
+  assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1);
+  assert.equal(JSON.stringify(f.selected), before);
+  caller = false;
+  const stopping = f.foundation.supervisor.stop(); await new Promise(resolve => setImmediate(resolve));
+  f.controller.closeWithProof(); await stopping;
+  assert.deepEqual(calls, ["charge", "retain"]);
+  assert.deepEqual(f.controller.sourcePhases, ["charge", "allocate", "copy", "copy", "copy", "seal", "create", "dispatch", "retain"]);
+  assert.equal(f.controller.stops, 1);
+});
+
+test("source-bound startup cannot adopt an existing source-free worker", async t => {
+  const f = await observationFoundation(t);
+  assert.equal(await f.port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader)!.prepare(), "unavailable");
+  let factories = 0, charges = 0;
+  const port = f.foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024,
+    maximumDurationMs: 5000, bufferBytes: 8}, () => {factories++; return {configuration: {freshParent: path.dirname(f.model), freshName: "fresh",
+      maximumCopyBytes: 65_536, bufferBytes: 4096, preparationMs: 5000}, assertCurrent() {}, async chargeSourceCopy() {charges++;}, async retainSourceCopy() {}};});
+  const selected = {...f.selected, requestId: workspace};
+  const reader = {async read() {return {modelRecordId: "base", modelUpdatedAt: selected.modelUpdatedAt, localModelReference: f.model};}};
+  const session = port.createSession(selected, {isCurrent: () => true, stillAllowed: async () => true}, reader)!;
+  assert.equal(await session.prepare(), "unconfirmed"); assert.equal(factories, 1); assert.equal(charges, 0);
+  assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1); assert.equal(await session.settle(), false);
+});
+
+test("original controller rejects replayed source requests before another charge and does not invent retirement", async t => {
+  const f = await observationFoundation(t, true); let charges = 0, retained = 0;
+  const port = f.foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024,
+    maximumDurationMs: 5000, bufferBytes: 8}, () => ({configuration: {freshParent: path.dirname(f.model), freshName: "one-copy",
+      maximumCopyBytes: 65_536, bufferBytes: 4096, preparationMs: 5000}, assertCurrent() {},
+      async chargeSourceCopy() {charges++;}, async retainSourceCopy() {retained++;}}));
+  const session = port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader)!;
+  assert.equal(await session.prepare(), "unavailable"); assert.equal(charges, 1);
+  const source = f.controller.boot.modelSource;
+  f.controller.frame("source-request", {sequence: 1, phase: "charge", definitionDigest: source.definitionDigest, amount: source.maximumCopyBytes});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.foundation.supervisor.getStatus(), "failed"); assert.equal(charges, 1); assert.equal(retained, 0);
+  assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1);
 });
 
 for (const loss of ["permission", "currentness"] as const) test(`foundation originating ${loss} loss during installed verification prevents controller startup`, async () => {
