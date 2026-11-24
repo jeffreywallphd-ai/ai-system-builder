@@ -464,6 +464,11 @@ def _summary(root, period=None, limit=8):
     trends = {key: [{"period": stamp, "usage": _rollup(groups)} for stamp, groups in sorted(state[key].items())[-(limit if period else (7 if key == "daily" else 8)):]]
               for key in ([period] if period else DEFAULT_RETENTION)}
     rows = sorted(agents.items(), key=lambda pair: (pair[1]["ended_at"], pair[0]), reverse=True)
+    reported_parents = {row["parent"] for row in agents.values() if row["parent"]}
+    def observed_role(key, row):
+        if key in reported_parents:
+            return "parent-and-child" if row["parent"] else "parent"
+        return "child" if row["parent"] else "unclassified"
     return {"status": "enabled", "coverage": "partial-or-unavailable", "revision": state["revision"],
             "last_updated": state["last_updated"], "warnings": warnings, "known_own_subtotal": _rollup(state["totals"]),
             "unaggregated_scopes": {scope: _rollup(state["totals"], scope=scope) for scope in sorted(SCOPES - {"own"})},
@@ -471,6 +476,7 @@ def _summary(root, period=None, limit=8):
                         if _rollup(state["totals"], purpose=purpose)["intervals"]},
             "agents_observed": len(agents), "missing_reported_parents": missing_parents, "agents_shown": min(16, len(rows)),
             "agents": [{"alias": "agent-" + key[:12], "parent_alias": "agent-" + row["parent"][:12] if row["parent"] else None,
+                        "role": observed_role(key, row), "role_basis": "reported-parent-links",
                         "own_usage": _rollup(row["totals"]), "last_updated": row["ended_at"]} for key, row in rows[:16]],
             "trends": trends, "older_quarters": _rollup(state["older_quarters"]),
             "storage": {"bytes": used, "maximum_bytes": MAX_BYTES, "stream_cursors": len(state["streams"]),

@@ -177,6 +177,36 @@ class IncrementActivityTests(unittest.TestCase):
 
 
 class SiteTests(unittest.TestCase):
+    def test_dashboard_summary_uses_existing_readonly_page_with_private_fields_suppressed(self):
+        from control_plane import usage
+        self.server.projection = server_module.user_project
+        self.server.compact_projection = server_module.compact_user_project
+        usage.enable(self.root)
+        stamp = "2026-11-24T00:00:00Z"
+        event = {'producer':'synthetic-private-source','run_id':'synthetic-private-run','agent_id':'synthetic-private-agent',
+                 'parent_agent_id':None,'counter_epoch':'one','sequence':0,'counter_mode':'delta','from_zero':False,
+                 'started_at':stamp,'ended_at':stamp,'scope':'own','purpose':'research','purpose_basis':'declared',
+                 'provenance':'host-reported','model':'synthetic-private-model','outcome':'succeeded',
+                 'counts':{key:{'value':value,'status':'measured'} for key,value in zip(usage.METRICS,(100,20,10,5))}}
+        usage.import_observations(self.root,{'schema_version':usage.IMPORT_SCHEMA,'events':[event]})
+        state_path=self.root/usage.BASE/'state.json'; before=state_path.read_bytes()
+        path='/api/review?view=work_items&page=1'
+        code,headers,body=self.request(path,headers={'X-Review-Work-Items':'roadmap-chunk-refs-v1'})
+        self.assertEqual(code,200)
+        value=json.loads(body); self.assertEqual(value['token_usage']['known_own_subtotal']['measured']['input_tokens'],100)
+        self.assertEqual(value['token_usage']['agents'][0]['role'],'unclassified')
+        self.assertEqual(value['token_usage']['agents'][0]['role_basis'],'reported-parent-links')
+        self.assertNotIn(b'synthetic-private',body)
+        self.assertEqual(self.request(path,method='HEAD')[2],b'')
+        self.assertEqual(self.request('/api/review?view=token_usage&page=1')[0],404)
+        self.assertEqual(self.request(path,method='POST')[0],405)
+        self.assertEqual(self.request(path,headers={'Origin':'https://foreign.invalid'})[0],403)
+        self.assertEqual(state_path.read_bytes(),before)
+        state_path.write_text('{"raw":"synthetic-private-payload"}')
+        code,_,body=self.request(path)
+        self.assertEqual(code,200); self.assertEqual(json.loads(body)['token_usage']['status'],'unavailable')
+        self.assertNotIn(b'synthetic-private',body)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="cp-")
         self.root = Path(self.temp.name)

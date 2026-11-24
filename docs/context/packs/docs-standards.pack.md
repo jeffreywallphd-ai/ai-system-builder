@@ -25,6 +25,8 @@
   quarter trends. Use the control-plane guide's authorized import seam when a host
   supplies counters; unavailable usage never gates Work. Do not scan transcripts,
   invent measurements or add a mandatory stage. See `docs/diagnostics/token-usage-tracking.md`.
+  The Token usage dashboard is a read-only view of the same bounded summary;
+  observed parent links are not job-role or complete-coverage evidence.
 
 - User-owned offline human acceptance uses the roadmap skill's explicit handoff;
   close only solely human-blocked legacy increments and preserve technical qualification.

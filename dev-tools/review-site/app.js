@@ -116,8 +116,154 @@ function tokenUsagePanel(value) {
     return panel;
   } catch { return unavailable(); }
 }
+const usageFields = ["input_tokens", "output_tokens", "cached_input_tokens", "reasoning_output_tokens"];
+const usageFieldNames = ["Input", "Output", "Cached input (subset)", "Reasoning output (subset)"];
+const usageRoles = { parent: "Has reported children", child: "Reported child", "parent-and-child": "Child with reported children", unclassified: "Relationship not recorded" };
+function usageNumber(value) {
+  if (value === null) return "Unavailable";
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error("usage number");
+  return value.toLocaleString();
+}
+function usageRollup(value) {
+  for (const status of ["measured", "estimated"]) for (const field of usageFields) usageNumber(value[status][field]);
+  for (const field of usageFields) {
+    if (value.unavailable_fields[field] === null) throw new Error("usage coverage");
+    usageNumber(value.unavailable_fields[field]);
+  }
+  for (const key of ["intervals", "coarse_intervals"]) {
+    if (value[key] === null) throw new Error("usage intervals");
+    usageNumber(value[key]);
+  }
+  for (const key of ["declared", "inferred", "unavailable"]) {
+    if (value.purpose_attribution[key] === null) throw new Error("usage purpose basis");
+    usageNumber(value.purpose_attribution[key]);
+  }
+  if (!Array.isArray(value.provenance) || value.provenance.length > 3 ||
+      value.provenance.some(v => !["host-reported", "operator-declared", "unavailable"].includes(v))) throw new Error("usage provenance");
+  return value;
+}
+function usageDashboardData(value) {
+  if (value?.status !== "enabled") return { status: value?.status === "disabled" ? "disabled" : "unavailable" };
+  try {
+    usageRollup(value.known_own_subtotal);
+    for (const scope of ["includes-descendants", "unknown"]) usageRollup(value.unaggregated_scopes[scope]);
+    for (const name of ["agents_observed", "agents_shown", "missing_reported_parents"]) {
+      if (!Number.isSafeInteger(value[name]) || value[name] < 0 || value[name] > 4096) throw new Error("usage agents");
+    }
+    if (!Array.isArray(value.agents) || value.agents.length > 16 || value.agents.length !== value.agents_shown || value.agents_shown > value.agents_observed) throw new Error("usage agents");
+    const seen = new Set();
+    for (const agent of value.agents) {
+      if (!/^agent-[a-f0-9]{12}$/.test(agent.alias) || seen.has(agent.alias) ||
+          agent.parent_alias !== null && !/^agent-[a-f0-9]{12}$/.test(agent.parent_alias) ||
+          agent.role !== undefined && !Object.hasOwn(usageRoles, agent.role) ||
+          agent.role_basis !== undefined && agent.role_basis !== "reported-parent-links") throw new Error("usage relationship");
+      seen.add(agent.alias); usageRollup(agent.own_usage);
+    }
+    const purposes = Object.entries(value.purpose);
+    if (purposes.length > 8 || purposes.some(([key]) => !["planning", "research", "implementation", "tests", "review", "bookkeeping", "mixed", "unclassified"].includes(key))) throw new Error("usage purposes");
+    for (const [, row] of purposes) usageRollup(row);
+    for (const [period, maximum] of [["daily", 7], ["weekly", 8], ["quarterly", 8]]) {
+      const rows = value.trends[period];
+      if (!Array.isArray(rows) || rows.length > maximum) throw new Error("usage trends");
+      let previous = "";
+      for (const row of rows) {
+        if (typeof row.period !== "string" || row.period <= previous) throw new Error("usage periods");
+        if (period === "quarterly") {
+          if (!/^(?:20\d\d|21\d\d|2200)-Q[1-4]$/.test(row.period)) throw new Error("usage quarter");
+        } else {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(row.period)) throw new Error("usage date");
+          const date = new Date(`${row.period}T00:00:00Z`);
+          if (date.toISOString().slice(0, 10) !== row.period || period === "weekly" && date.getUTCDay() !== 1) throw new Error("usage date");
+        }
+        previous = row.period; usageRollup(row.usage);
+      }
+    }
+    if (value.last_updated !== null && (typeof value.last_updated !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value.last_updated) ||
+        new Date(value.last_updated).toISOString() !== value.last_updated.replace("Z", ".000Z"))) throw new Error("usage updated");
+    for (const key of ["bytes", "maximum_bytes", "stream_cursors", "maximum_stream_cursors", "recent_detail", "recent_detail_compacted"]) {
+      if (value.storage[key] === null) throw new Error("usage storage");
+      usageNumber(value.storage[key]);
+    }
+    return value;
+  } catch { return { status: "unavailable" }; }
+}
+function usageTable(caption, columns, rows) {
+  const wrap = el("div", undefined, "usage-table-wrap");
+  wrap.setAttribute("role", "region"); wrap.setAttribute("aria-label", caption); wrap.tabIndex = 0;
+  const table = el("table", undefined, "usage-table"); table.append(el("caption", caption));
+  const head = el("thead"), headings = el("tr");
+  for (const text of columns) { const th = el("th", text); th.scope = "col"; headings.append(th); }
+  head.append(headings); table.append(head);
+  const body = el("tbody");
+  for (const row of rows) {
+    const tr = el("tr");
+    row.forEach((text, index) => { const cell = el(index ? "td" : "th", text); if (!index) cell.scope = "row"; tr.append(cell); });
+    body.append(tr);
+  }
+  if (!rows.length) { const tr = el("tr"), cell = el("td", "No reported intervals or records. Missing data is not zero."); cell.colSpan = columns.length; tr.append(cell); body.append(tr); }
+  table.append(body); wrap.append(table); return wrap;
+}
+function usageSection(title, description) {
+  const section = el("section", undefined, "card usage-section");
+  section.append(el("h2", title), el("p", description, "usage-description")); return section;
+}
+function tokenUsageDashboard(input) {
+  const value = usageDashboardData(input), enabled = value.status === "enabled";
+  const body = el("div", undefined, "usage-dashboard");
+  const empty = { measured: { input_tokens: null, output_tokens: null }, estimated: { input_tokens: null, output_tokens: null } };
+  const own = enabled ? value.known_own_subtotal : empty;
+  const metrics = [metric(usageNumber(own.measured.input_tokens), "Reported measured input"), metric(usageNumber(own.measured.output_tokens), "Reported measured output"),
+    metric(usageNumber(own.estimated.input_tokens), "Estimated input"), metric(usageNumber(own.estimated.output_tokens), "Estimated output")];
+  const known = enabled && usageFields.some(field => own.measured[field] !== null);
+  const coverage = usageSection(known ? "Partial reported usage" : "Own measurements unavailable",
+    "No automatic capture runs here. Only explicitly imported numeric observations appear. Measured means source-reported; declarations are not independently verified.");
+  coverage.append(el("p", enabled ? `Last imported observation: ${value.last_updated || "Not recorded"}. ${usageNumber(value.agents_observed)} agents reported; ${usageNumber(value.agents_shown)} shown. Coverage of unreported agents and intervals is unknown.` :
+    value.status === "disabled" ? "Optional local retention is not enabled. No measurements have been filled in." : "Usage data is missing or could not be validated. Other review pages remain usable; no measurements have been filled in.", "usage-note"));
+  if (enabled) {
+    coverage.append(el("p", `${usageNumber(value.missing_reported_parents)} reported parents have no counters. Only own usage joins the subtotal; inclusive and unknown scopes remain separate.`, "usage-description"));
+    const warnings = {
+      "usage-capacity-near-limit-imports-may-be-refused": "Storage is near its bound. Refused imports preserve existing totals and are not counted.",
+      "unpublished-usage-file-preserved-imports-paused": "An unpublished usage file was preserved. Imports need recovery; contributor work continues.",
+    };
+    for (const key of Array.isArray(value.warnings) ? value.warnings.slice(0, 12) : []) if (warnings[key]) coverage.append(el("p", warnings[key], "usage-note"));
+    coverage.append(el("p", `Local storage: ${usageNumber(value.storage.bytes)} of ${usageNumber(value.storage.maximum_bytes)} bytes; ${usageNumber(value.storage.recent_detail_compacted)} recent detail rows compacted. Aggregate totals remain retained.`, "usage-description"));
+  }
+  body.append(coverage);
+  const breakdown = usageSection("Input and output breakdown", "Cached input is part of input. Reasoning output is part of output. Subsets are never added again; unavailable is different from measured zero.");
+  breakdown.append(usageTable("Reported own token counts", ["Count", "Reported measured", "Estimated", "Unavailable field observations"], usageFields.map((field, index) =>
+    [usageFieldNames[index], usageNumber(enabled ? own.measured[field] : null), usageNumber(enabled ? own.estimated[field] : null), enabled ? usageNumber(own.unavailable_fields[field]) : "Unavailable"])));
+  body.append(breakdown);
+  const trends = el("div", undefined, "usage-trends");
+  for (const [period, title, maximum] of [["daily", "Daily", 7], ["weekly", "Weekly", 8], ["quarterly", "Quarterly", 8]]) {
+    const section = usageSection(`${title} trends`, `Latest ${maximum} reported UTC periods. Sparse reports are attributed to the interval end; multi-day intervals remain coarse.`);
+    const rows = enabled ? value.trends[period] : [];
+    section.append(usageTable(`${title} input and output`, ["Period", "Measured input", "Measured output", "Estimated input", "Estimated output", "Coarse intervals"], rows.map(row =>
+      [row.period, usageNumber(row.usage.measured.input_tokens), usageNumber(row.usage.measured.output_tokens), usageNumber(row.usage.estimated.input_tokens), usageNumber(row.usage.estimated.output_tokens), usageNumber(row.usage.coarse_intervals)])));
+    trends.append(section);
+  }
+  body.append(trends);
+  const purposes = usageSection("Coarse purpose groups", "Purpose comes from declared or inferred task labels. It is separate from measurement status; no per-call category is required.");
+  purposes.append(usageTable("Own usage by purpose", ["Purpose", "Measured input / output", "Estimated input / output", "Declared / inferred / unavailable labels"], enabled ? Object.entries(value.purpose).map(([name, row]) =>
+    [readable(name), `${usageNumber(row.measured.input_tokens)} / ${usageNumber(row.measured.output_tokens)}`, `${usageNumber(row.estimated.input_tokens)} / ${usageNumber(row.estimated.output_tokens)}`,
+      ["declared", "inferred", "unavailable"].map(key => usageNumber(row.purpose_attribution[key])).join(" / ")]) : []));
+  body.append(purposes);
+  const agents = usageSection("Observed agent relationships", "Relationships use reported parent links only. They do not identify job roles or prove that every child is represented. Aliases hide original agent identifiers.");
+  agents.append(usageTable("Own usage by reported agent", ["Agent alias", "Observed relationship", "Reported parent", "Measured input / output", "Estimated input / output"], enabled ? value.agents.map(agent =>
+    [agent.alias, usageRoles[agent.role] || usageRoles.unclassified, agent.parent_alias || "Not recorded", `${usageNumber(agent.own_usage.measured.input_tokens)} / ${usageNumber(agent.own_usage.measured.output_tokens)}`,
+      `${usageNumber(agent.own_usage.estimated.input_tokens)} / ${usageNumber(agent.own_usage.estimated.output_tokens)}`]) : []));
+  body.append(agents);
+  const excluded = usageSection("Separately reported scopes", "These counts are excluded from the own subtotal. Parent rollups plus children are not added together.");
+  excluded.append(usageTable("Scopes outside the own subtotal", ["Scope", "Measured input / output", "Estimated input / output"], enabled ? ["includes-descendants", "unknown"].map(scope => {
+    const row = value.unaggregated_scopes[scope]; return [readable(scope), `${usageNumber(row.measured.input_tokens)} / ${usageNumber(row.measured.output_tokens)}`, `${usageNumber(row.estimated.input_tokens)} / ${usageNumber(row.estimated.output_tokens)}`];
+  }) : [])); body.append(excluded);
+  const guidance = usageSection("Supplying measurements", "An authorized host must supply real counters with explicit scope and provenance. Account quotas, billing assumptions and transcript scans cannot substitute. Missing telemetry never blocks work.");
+  guidance.append(el("pre", "python dev-tools/helpers/development_control_plane.py usage enable\npython dev-tools/helpers/development_control_plane.py usage import --from .local-codex/usage-export.json\npython dev-tools/helpers/development_control_plane.py usage summary --period quarterly --limit 40", "usage-commands"));
+  body.append(guidance); return { metrics, body };
+}
 function selectView(next, query = "", increment = null, work = null) {
+  if (view !== next) lastDigest = "";
   view = next;
+  if (next === "token_usage") { linkedIncrement = null; render(); refresh(); return; }
   if (work !== null && !data?.pagination) query = work;
   if (data?.pagination) {
     const parts = query.split("/");
@@ -437,8 +583,32 @@ function roadmapSections(parent, records, query) {
   return sections;
 }
 function render() {
-  if (!data) return;
+  if (view === "token_usage") {
+    for (const key of Object.keys(names)) document.querySelector(`#count-${key}`).textContent = data?.totals?.[key] ?? data?.[key]?.length ?? 0;
+    document.querySelectorAll(".nav").forEach(b => { b.classList.toggle("active", b.dataset.view === view); b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false"); });
+    document.querySelector("#heading").textContent = "Token usage";
+    document.querySelector("#subtitle").textContent = "Reported usage, trends and coverage. Unavailable counters stay unknown.";
+    document.querySelector(".toolbar").hidden = true;
+    const dashboard = tokenUsageDashboard(data?.token_usage), summary = document.querySelector("#summary");
+    summary.classList.add("usage-overview"); summary.replaceChildren(...dashboard.metrics);
+    document.querySelector("#items").replaceChildren(dashboard.body);
+    document.querySelector("#fingerprint").textContent = data ? `Source ${data.source_digest.slice(0, 12)}` : "Usage data not available";
+    return;
+  }
+  if (!data) {
+    document.querySelector("#heading").textContent = names[view];
+    document.querySelector("#subtitle").textContent = "From intended outcomes to verified software.";
+    document.querySelector(".toolbar").hidden = false;
+    const summary = document.querySelector("#summary"); summary.classList.remove("usage-overview"); summary.replaceChildren();
+    const empty = el("div", undefined, "empty"); empty.append(el("h2", "Review data unavailable"), el("p", "Retry the JSON connection to view saved work."));
+    document.querySelector("#items").replaceChildren(empty);
+    document.querySelector("#fingerprint").textContent = "Review data not available";
+    return;
+  }
   if (data.pagination && data.pagination.view !== view) return;
+  document.querySelector(".toolbar").hidden = false;
+  document.querySelector("#summary").classList.remove("usage-overview");
+  document.querySelector("#subtitle").textContent = "From intended outcomes to verified software.";
   if (disclosureRepository !== (data.repository_id || "")) {
     incrementChoices.clear();
     disclosureRepository = data.repository_id || "";
@@ -580,6 +750,7 @@ function pageControls() {
   return controls;
 }
 function pageUrl() {
+  if (view === "token_usage") return "/api/review?view=work_items&page=1";
   const request = pageRequests[view];
   return `/api/review?view=${view}&page=${request.page}${request.roadmap ? `&roadmap=${encodeURIComponent(request.roadmap)}` : ""}${request.increment ? `&increment=${encodeURIComponent(request.increment)}` : ""}${request.work ? `&work=${encodeURIComponent(request.work)}` : ""}`;
 }
@@ -667,7 +838,8 @@ function expandedReviewWorkItems(value) {
 }
 async function refresh() {
   if (fetching) { refreshQueued = true; return; } fetching = true;
-  const requestedView = view, requested = { ...pageRequests[view] }, url = pageUrl();
+  const requestedView = view === "token_usage" ? "work_items" : view;
+  const requested = view === "token_usage" ? { page: 1, roadmap: "", increment: "", work: "" } : { ...pageRequests[view] }, url = pageUrl();
   try {
     const response = await fetch(url, { cache: "no-store", credentials: "omit",
       headers: { "X-Review-Work-Items": "roadmap-chunk-refs-v1" } });
@@ -679,7 +851,7 @@ async function refresh() {
     observeDisclosureIdentity(next);
     if (url !== pageUrl()) { refreshQueued = true; return; }
     data = { ...next, work_items: workItems };
-    if (next.pagination) pageRequests[view].page = next.pagination.page;
+    if (next.pagination && view !== "token_usage") pageRequests[view].page = next.pagination.page;
     if (lastDigest !== data.source_digest) { lastDigest = data.source_digest; render(); }
     document.querySelector("#connection").textContent = "Live · JSON connected";
     document.querySelector("#updated").textContent = `Checked ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;

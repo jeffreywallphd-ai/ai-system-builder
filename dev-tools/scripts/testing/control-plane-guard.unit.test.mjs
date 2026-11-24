@@ -18,6 +18,116 @@ test("contributor control plane passes focused behavioral qualification", () => 
 });
 
 const pause = () => new Promise(resolve => setImmediate(resolve));
+const dashboardRollup = (measured = {}, estimated = {}) => ({
+  measured: { input_tokens: null, output_tokens: null, cached_input_tokens: null, reasoning_output_tokens: null, ...measured },
+  estimated: { input_tokens: null, output_tokens: null, cached_input_tokens: null, reasoning_output_tokens: null, ...estimated },
+  intervals: 1, coarse_intervals: 0, unavailable_fields: { input_tokens: 0, output_tokens: 0, cached_input_tokens: 0, reasoning_output_tokens: 0 },
+  purpose_attribution: { declared: 1, inferred: 0, unavailable: 0 }, provenance: ["host-reported"],
+});
+function dashboardFixture() {
+  const parent = dashboardRollup({ input_tokens: 100, output_tokens: 20, cached_input_tokens: 30, reasoning_output_tokens: 5 }, { output_tokens: 0 });
+  const child = dashboardRollup(); child.purpose_attribution = { declared: 0, inferred: 1, unavailable: 0 };
+  const own = structuredClone(parent); own.intervals = 3; own.purpose_attribution = { declared: 2, inferred: 1, unavailable: 0 };
+  own.unavailable_fields = { input_tokens: 2, output_tokens: 1, cached_input_tokens: 2, reasoning_output_tokens: 2 };
+  return { status: "enabled", coverage: "partial-or-unavailable", last_updated: "2026-11-24T12:00:00Z", known_own_subtotal: own,
+    agents_observed: 2, agents_shown: 2, missing_reported_parents: 0, warnings: ["coverage-of-unreported-agents-and-intervals-unknown"],
+    agents: [{ alias: "agent-0123456789ab", parent_alias: null, role: "parent", role_basis: "reported-parent-links", own_usage: parent },
+      { alias: "agent-abcdef012345", parent_alias: "agent-0123456789ab", role: "child", role_basis: "reported-parent-links", own_usage: child }],
+    purpose: { implementation: parent, review: child }, unaggregated_scopes: { "includes-descendants": dashboardRollup(), unknown: dashboardRollup() },
+    storage: { bytes: 3456, maximum_bytes: 4194304, stream_cursors: 2, maximum_stream_cursors: 4096, recent_detail: 3, recent_detail_compacted: 0 },
+    trends: { daily: [{ period: "2026-11-24", usage: own }], weekly: [{ period: "2026-11-23", usage: own }], quarterly: [{ period: "2026-Q4", usage: own }] } };
+}
+test("token dashboard navigates existing bounded pages and keeps statuses subsets roles and themes honest", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom; const urls = []; let timers = 0;
+  const usage = dashboardFixture();
+  window.fetch = async url => {
+    urls.push(url); const requested = new URL(url, window.location.href).searchParams.get('view');
+    const size = requested === "roadmaps" ? 3 : 25, work = requested === "work_items";
+    return { ok: true, json: async () => ({ schema_version: "development-review-v1", repository_id: "dashboard-fixture", source_digest: url,
+      disclosure_digest: 'a'.repeat(64), roadmaps: [], work_items: work ? [{ id: "existing", title: "Existing work", source: "execution", status: "active", outcome: {} }] : [],
+      evaluations: [], feedback: [], diagnostics: [], token_usage: structuredClone(usage),
+      totals: { roadmaps: 0, work_items: 1, evaluations: 0, feedback: 0 }, work_item_roadmaps: [],
+      pagination: { view: requested, page: 1, page_size: size, total_records: work ? 1 : 0, total_pages: 1, roadmap: "", increment: "", work: "" } }) };
+  };
+  window.setInterval = () => { timers++; return 1; };
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    window.document.querySelector('[data-view="token_usage"]').click(); await pause();
+    assert.equal(window.document.querySelector('#heading').textContent, 'Token usage');
+    assert.equal(window.document.querySelector('[data-view="token_usage"]').getAttribute('aria-current'), 'page');
+    assert.equal(window.document.querySelector('.toolbar').hidden, true);
+    assert.deepEqual([...window.document.querySelectorAll('#summary strong')].map(n => n.textContent), ['100', '20', 'Unavailable', '0']);
+    const body = window.document.querySelector('.usage-dashboard').textContent;
+    for (const label of ['No automatic capture', 'Cached input (subset)', 'Reasoning output (subset)', 'Daily trends', 'Weekly trends', 'Quarterly trends', '2026-Q4', 'Has reported children', 'Reported child', 'Supplying measurements']) assert.ok(body.includes(label), label);
+    const rows = [...window.document.querySelectorAll('.usage-table')][0].querySelectorAll('tbody tr');
+    assert.deepEqual([...rows[2].children].map(n => n.textContent), ['Cached input (subset)', '30', 'Unavailable', '2']);
+    assert.deepEqual([...rows[3].children].map(n => n.textContent), ['Reasoning output (subset)', '5', 'Unavailable', '2']);
+    for (const table of window.document.querySelectorAll('.usage-table')) {
+      assert.ok(table.caption.textContent); assert.equal(table.parentElement.tabIndex, 0);
+      assert.equal(table.parentElement.getAttribute('role'), 'region');
+      assert.ok([...table.querySelectorAll('thead th')].every(n => n.scope === 'col'));
+    }
+    window.document.querySelector('#theme-toggle').click(); assert.equal(window.document.documentElement.dataset.theme, 'light');
+    assert.equal(window.document.querySelector('#heading').textContent, 'Token usage');
+    window.document.querySelector('[data-view="work_items"]').click(); await pause();
+    assert.equal(window.document.querySelector('#heading').textContent, 'Work items');
+    assert.equal(window.document.querySelector('.toolbar').hidden, false);
+    assert.match(window.document.querySelector('#items').textContent, /Existing work/);
+    assert.ok(window.document.querySelector('.token-usage')); assert.equal(window.document.querySelector('.usage-dashboard'), null);
+    window.document.querySelector('[data-view="token_usage"]').click(); await pause();
+    assert.equal(window.document.querySelector('#heading').textContent, 'Token usage');
+    assert.ok(urls.every(url => url.startsWith('/api/review?view=')));
+    assert.ok(urls.includes('/api/review?view=work_items&page=1')); assert.ok(urls.every(url => !url.includes('view=token_usage')));
+    assert.equal(timers, 1);
+    const css = readFileSync('dev-tools/review-site/style.css', 'utf8');
+    assert.match(css, /\.usage-table-wrap\{[^}]*overflow-x:auto/);
+    assert.match(css, /\.usage-table-wrap:focus-visible\{[^}]*var\(--focus\)/);
+    assert.match(css, /\.toolbar\[hidden\]\{display:none\}/);
+  } finally { window.close(); }
+});
+test("token dashboard stays useful offline and rejects malformed numeric dates roles and excess rows inertly", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  window.fetch = async () => { throw new Error('synthetic unavailable'); }; window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync('dev-tools/review-site/app.js', 'utf8')); await pause();
+    window.document.querySelector('[data-view="token_usage"]').click(); await pause();
+    assert.equal(window.document.querySelector('#heading').textContent, 'Token usage');
+    assert.match(window.document.querySelector('#items').textContent, /Usage data is missing or could not be validated/);
+    assert.deepEqual([...window.document.querySelectorAll('#summary strong')].map(n => n.textContent), Array(4).fill('Unavailable'));
+    window.document.querySelector('[data-view="roadmaps"]').click();
+    assert.equal(window.document.querySelector('#heading').textContent, 'Roadmaps');
+    assert.match(window.document.querySelector('#items').textContent, /Review data unavailable/);
+    const response = { schema_version: 'development-review-v1', repository_id: 'fixture', source_digest: 'first', roadmaps: [], work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+    window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+    window.document.querySelector('[data-view="token_usage"]').click(); await pause();
+    const corruptions = [undefined, { status: 'disabled' }, { status: 'unavailable' }];
+    const change = mutate => { const value = dashboardFixture(); mutate(value); corruptions.push(value); };
+    change(v => { v.known_own_subtotal.measured.input_tokens = Infinity; });
+    change(v => { v.known_own_subtotal.measured.cached_input_tokens = '<img src=x>'; });
+    change(v => { v.trends.quarterly = Array(9).fill(v.trends.quarterly[0]); });
+    change(v => { v.trends.daily[0].period = '2026-02-30'; });
+    change(v => { v.trends.weekly[0].period = '2026-11-24'; });
+    change(v => { v.trends.quarterly[0].period = '<img src=x>'; });
+    change(v => { v.agents[0].role = 'synthetic-private-role'; });
+    change(v => { v.agents[0].alias = 'synthetic-private-identifier'; });
+    change(v => { v.purpose = Object.fromEntries([['__proto__', v.known_own_subtotal]]); });
+    change(v => { v.last_updated = 'synthetic-private-path'; });
+    change(v => { v.agents = Array(17).fill(v.agents[0]); v.agents_shown = 17; });
+    for (const value of corruptions) {
+      response.token_usage = value; response.source_digest += 'x';
+      window.document.querySelector('#refresh').click(); await pause();
+      assert.deepEqual([...window.document.querySelectorAll('#summary strong')].map(n => n.textContent), Array(4).fill('Unavailable'));
+      assert.match(window.document.querySelector('#items').textContent, /Supplying measurements/);
+      assert.doesNotMatch(window.document.querySelector('#items').textContent, /synthetic-private/);
+      assert.equal(window.document.querySelectorAll('img').length, 0);
+      assert.match(window.document.querySelector('#connection').textContent, /Live/);
+    }
+    window.document.querySelector('[data-view="work_items"]').click();
+    assert.equal(window.document.querySelector('#heading').textContent, 'Work items');
+  } finally { window.close(); }
+});
 test("optional token usage shows bounded trends and preserves work when telemetry is absent or malformed", async () => {
   const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
   const { window } = dom;
