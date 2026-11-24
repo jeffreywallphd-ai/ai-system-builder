@@ -487,5 +487,31 @@ class FocusedPythonCollectionTests(unittest.TestCase):
 
 
 
+class TokenUsageRoutingTests(unittest.TestCase):
+    def test_exact_usage_scope_executes_owned_and_related_cases_without_whole_controller(self):
+        root = Path(__file__).resolve().parents[3]
+        value = catalog.plan(root, list(catalog.TOKEN_USAGE_SCOPE), ['control-plane', 'review-site', 'documentation', 'agent-support'], 'synthetic-candidate')
+        selected = {row['id']: row for row in value['selected']}
+        command = selected['control-plane']['argv']
+        for name in catalog.TOKEN_USAGE_TEST_MODULES:
+            self.assertIn('test_control_plane_' + name + '.', command)
+        self.assertNotIn('focused-tests', selected)
+        self.assertIn('--test-skip-pattern=^contributor control plane passes focused behavioral qualification$', selected['review-site']['argv'])
+        self.assertIn('dev-tools/scripts/testing/control-plane-guard.unit.test.mjs', selected['review-site']['argv'])
+
+    def test_unknown_mixed_missing_and_explicit_generic_scope_preserve_fallback(self):
+        root = Path(__file__).resolve().parents[3]
+        cases = [(list(catalog.TOKEN_USAGE_SCOPE)+['docs/unrelated.md'], ['control-plane', 'review-site']),
+                 (list(catalog.TOKEN_USAGE_SCOPE), ['control-plane', 'review-site', 'focused-tests']),
+                 ([], ['control-plane', 'review-site'])]
+        for paths, required in cases:
+            selected = {row['id']: row for row in catalog.plan(root, paths, required, 'synthetic-candidate')['selected']}
+            self.assertNotIn('-k', selected['control-plane']['argv'])
+            self.assertIn('--profile', selected['review-site']['argv'])
+        with patch.object(catalog, '_automatic_files_available', return_value=False):
+            selected = {row['id']: row for row in catalog.plan(root, list(catalog.TOKEN_USAGE_SCOPE), ['control-plane', 'review-site'], 'synthetic-candidate')['selected']}
+        self.assertNotIn('-k', selected['control-plane']['argv'])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -200,6 +200,12 @@ deeper input. Source checks cannot replace the skipped physical qualification.
 
 # Contributor Control Plane
 
+Optional [contributor token tracking](token-usage-tracking.md) imports authorized
+numeric host exports and shows bounded daily, weekly and quarterly trends. It
+adds no mandatory stage or model call; unavailable telemetry never blocks Work.
+Enable local retention explicitly and import only at useful existing boundaries.
+Trial declarations remain separate from ongoing contributor accounting.
+
 Use the [optional deterministic support commands](deterministic-contributor-support.md)
 to capture selected evidence, prepare a checkpoint, replay progress events or
 produce a compact handoff. They make one bounded pass and execute no checks,

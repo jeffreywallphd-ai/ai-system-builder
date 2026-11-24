@@ -18,6 +18,39 @@ test("contributor control plane passes focused behavioral qualification", () => 
 });
 
 const pause = () => new Promise(resolve => setImmediate(resolve));
+test("optional token usage shows bounded trends and preserves work when telemetry is absent or malformed", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const counts = { input_tokens: 100, output_tokens: 20 };
+  const usage = { measured: counts, estimated: { input_tokens: null, output_tokens: 0 }, coarse_intervals: 1 };
+  const response = { schema_version: "development-review-v1", repository_id: "fixture", source_digest: "first", roadmaps: [],
+    work_items: [], evaluations: [], feedback: [], diagnostics: [], token_usage: { status: "enabled", known_own_subtotal: usage,
+      agents_observed: 2, agents_shown: 1, warnings: ["reported-parent-counters-missing"], purpose: { review: usage },
+      agents: [{ alias: "agent-0123456789ab", parent_alias: "agent-abcdef012345", own_usage: usage }],
+      trends: { daily: [{ period: "2026-11-24", usage }], weekly: [{ period: "2026-11-23", usage }], quarterly: [{ period: "2026-Q4", usage }] } } };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    window.document.querySelector('[data-view="work_items"]').click();
+    const panel = () => window.document.querySelector('.token-usage');
+    assert.match(panel().textContent, /reported input \/ output 100 \/ 20/);
+    assert.match(panel().textContent, /Quarterly reported trends/);
+    assert.match(panel().textContent, /2026-Q4/);
+    assert.match(panel().textContent, /estimated unknown \/ 0/);
+    assert.match(panel().textContent, /Some reported parents have no counters/);
+    assert.match(panel().textContent, /parent agent-abcdef012345/);
+    for (const corrupt of [{ status: "disabled" }, { status: "unavailable" }, { ...response.token_usage, agents_observed: Infinity },
+      { ...response.token_usage, agents: [{ alias: '<img src=x>', own_usage: usage }] },
+      { ...response.token_usage, trends: { quarterly: Array(9).fill({ period: "2026-Q4", usage }) } }]) {
+      response.token_usage = corrupt; response.source_digest += "x";
+      window.document.querySelector('#refresh').click(); await pause();
+      assert.match(panel().textContent, /usage · unavailable/);
+      assert.match(window.document.querySelector('#connection').textContent, /Live/);
+      assert.equal(window.document.querySelectorAll('img').length, 0);
+    }
+  } finally { window.close(); }
+});
 const humanIssue = (needed, prevents, action) => ({
   action_owner: "human", summary: "Internal technical summary stays off the page.", prevents, required_action: action,
   plain_language: { needed, prevents, action, responsible_role: "Repository owner", user_action: action,

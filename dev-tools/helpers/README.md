@@ -2,6 +2,11 @@
 
 # Contributor helpers
 
+Optional [token tracking](../../docs/diagnostics/token-usage-tracking.md) uses
+`usage enable`, `usage import --from` and `usage summary` through the control
+plane. Authorized numeric exports retain bounded day/week/quarter/lifetime
+aggregates; missing counters never block delivery. No provider connection is added.
+
 The existing `security-runtime` profile includes model-free dependency-preparation
 observer, Context/Worker, shared-helper, host-composition and private journal
 regressions. Select it explicitly for that boundary; it adds no automatic broad
