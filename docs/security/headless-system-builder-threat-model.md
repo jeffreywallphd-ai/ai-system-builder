@@ -2475,3 +2475,38 @@ acquire/copy/rehash under actual protection and measured reservation, then bind
 the real inherited worker borrower. Full producer, output accounting, Save,
 public Roots and actual hosts remain pending. Synthetic-file tests establish
 software behavior only; no actual model, Native controller or quality run occurs.
+
+### Protected original worker training inputs
+
+The actual original bootstrap validates the protected Model graph before issuing
+its private lease. An input copy binds only that registered lease, the exact
+original definition and correlated staged payload. A copied record, arbitrary
+path or ready field cannot substitute. Retain the input owner before supplier
+callbacks and deny another binding after possible acquisition. This source path
+still supplies no default complete producer or public activation.
+
+The finite input manifest preserves all approved settings and exact roles,
+formats, digests and byte counts. Accept only the existing supported media,
+16 datasets plus their approved recipe, one complete flat directory and existing
+dataset/recipe byte caps. Recheck actual Model custody and captured business
+admission; denial stays sticky. Explicit capacity/reservation configuration is
+mandatory. Reuse the actual Model copy protections: allocation before writes,
+parent-relative local Native handles, complete inventory/hash/readback, denied
+links/reparse/alternate streams, exact identities/access and private sealed
+ACL/OWNER_RIGHTS. Neither directory sharing nor a successful status alone proves
+protection.
+
+Every Native call retains its original slots, buffers and handles. Unknown
+returns or closes remain owned and cannot repeat. Copy-IO closure retains the
+disk charge; it does not authorize deletion, capacity release, reader/worker
+settlement or output Save. Full producer/input consumption, output protection,
+concrete durable reservation, crash recovery and actual-host qualification remain
+pending. In-memory API tests do not grant physical effects or score model quality.
+
+Serialize input operations and original Model inspection through the genuine
+lease lock. Transfer only the exact known idle Native ledger to a request thread;
+retain its original thread/flight on any unknown return. Recheck lease identity,
+pre-borrow state and currentness after callbacks. Refuse held/unknown or reentrant
+operations without waiting or new effects. A bound input owner fences Model-only
+borrowing, including after its copy-IO closure. Combined input/loader borrowing
+requires its own implementation and qualification; the copy cannot bypass it.

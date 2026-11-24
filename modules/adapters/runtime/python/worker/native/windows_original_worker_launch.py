@@ -14,6 +14,7 @@ import ctypes as C
 import base64
 import hashlib
 import json
+import ntpath
 import os
 from pathlib import Path
 from contextlib import contextmanager
@@ -474,18 +475,15 @@ class NativeModelInspection:
         need(count.value == 0 and digest.hexdigest() == row["sha256"])
 
 
-class OriginalModelGraph(NativeModelInspection):
-    """Fresh source materialization owned by the ORIGINAL controller.
+class _OriginalProtectedFlatCopy(NativeModelInspection):
+    """Concrete copy mechanics, shared only by the two fixed private owners.
 
-    The reservation and admission objects are private trusted composition, not
-    BOOT fields or public request callbacks. No default provider constructs this
-    class. Retirement deliberately retains the protected bytes and their charge;
-    it never deletes a selected Model, historical stage or candidate output.
+    Each finite owner validates and binds its own authority before calling this
+    initializer. This base does not parse a wire family or construct a worker.
     """
-    def __init__(self, owner, descriptor, reservation, admission):
-        need(type(owner) is OriginalWorker)
+    def _bind_copy(self, owner, descriptor, reservation, admission):
         self.owner = owner
-        self.descriptor = capture_model_graph(descriptor)
+        self.descriptor = descriptor
         self.reservation, self.admission = reservation, admission
         # Bound methods retain their original receivers even if attributes change.
         self.assert_reservation = reservation.assert_current
@@ -705,6 +703,12 @@ class OriginalModelGraph(NativeModelInspection):
         root = self.guards[-1]
         need(self.permissions(root) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
         self.graph_matches(root, self.records); self.guard()
+
+class OriginalModelGraph(_OriginalProtectedFlatCopy):
+    """Fresh Model copy retained by the actual original controller/Job owner."""
+    def __init__(self, owner, descriptor, reservation, admission):
+        need(type(owner) is OriginalWorker)
+        self._bind_copy(owner, capture_model_graph(descriptor), reservation, admission)
 
     def inherited_handles(self):
         """Actual read-only duplicate handles, prepared BEFORE CreateProcessW."""
@@ -1077,14 +1081,15 @@ def _same_model_json(left, right):
 
 
 class InheritedModelNativeCalls:
-    """Own read-only observations without constructing/adopting a worker.
+    """Own finite Native calls without constructing/adopting a worker.
 
     Inherited numbers remain unverified until the WHOLE original bootstrap and
     actual graph pass. Querying them grants no CloseHandle authority. Returned
     tokens/buffers use the original finite call ledger and unknown-call rules.
     """
-    def __init__(self, kernel):
+    def __init__(self, kernel, *, clock=time.monotonic):
         self.kernel, self.invoke = kernel, kernel.invoke
+        self.clock = clock
         self.handles, self.buffers, self.pending = [], [], []
         self.lock = Lock(); self.unknown = False; self.phase = "verifying"; self.thread = get_ident()
     call = OriginalWorker.call
@@ -1119,16 +1124,23 @@ class OriginalInheritedModelLease:
         need(record is not None and record["bound"] and not record["lease_issued"] and source.phase == "bound")
         record["lease_issued"] = True
         _model_leases[self] = {"source": source, "entered": False, "lock": source.lock,
-            "guard": record["guard"], "model_guard": record["model_guard"], "physical_path": record["physical_path"]}
+            "guard": record["guard"], "model_guard": record["model_guard"], "physical_path": record["physical_path"],
+            "native_owner": record["native_owner"]}
 
     @contextmanager
     def borrow(self, sealed_request):
         state = _model_leases.get(self); need(type(self) is OriginalInheritedModelLease and state is not None)
         source = state["source"]
         request = _copy_model_json(sealed_request)
+        # Fast refusal also avoids waiting behind a held input Native operation.
+        # A combined input/loader borrow is a separate, still-pending component.
+        need("input_copy_owner" not in state and state.get("input_source_read_active") is None)
         with state["lock"]:
-            need(not state["entered"] and source.phase == "bound")
-            state["entered"] = True; source.phase = "borrowed"; source.owner.thread = get_ident()
+            owner = state["native_owner"]
+            need(not state["entered"] and source.phase == "bound" and "input_copy_owner" not in state
+                 and source.owner is owner and not owner.unknown and not owner.pending
+                 and state.get("input_source_read_active") is None)
+            state["entered"] = True; source.phase = "borrowed"; owner.thread = get_ident()
             view = _OriginalModelView()
             try:
                 state["model_guard"](request)
@@ -1167,7 +1179,7 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
     """
     def __init__(self, nonce, *, kernel=None, clock=time.monotonic):
         need(type(nonce) is str and re.fullmatch(r"[a-f0-9]{64}", nonce) is not None)
-        self.owner = InheritedModelNativeCalls(kernel if kernel is not None else WindowsKernel())
+        self.owner = InheritedModelNativeCalls(kernel if kernel is not None else WindowsKernel(),clock=clock)
         self.clock, self.started_at, self.lock = clock, clock(), RLock()
         self.phase = "verifying"; self.owned_handles = []; self.guards = []; self.records = []
         self.maximum_ms = None  # Parent Job owns the initial header-read deadline.
@@ -1213,7 +1225,9 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
         self.assert_graph()
         for handle in (self.pipe,*self.guards): handle.verified = True
         self.phase = "available"
-        _verified_model_receivers[self] = {"definition": _copy_model_json(self.definition), "physical_path": self.physical_path,
+        _verified_model_receivers[self] = {"definition": _copy_model_json(self.definition),
+            "definition_digest": self.descriptor["definitionDigest"], "physical_path": self.physical_path,
+            "native_owner": self.owner,
             "guard": OriginalModelBootstrapReceiver.assert_graph.__get__(self),
             "model_guard": OriginalModelBootstrapReceiver.assert_request_model.__get__(self), "bound": False, "lease_issued": False}
 
@@ -1223,7 +1237,7 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
         return bytes.fromhex(value)
 
     def guard(self):
-        need(not self.owner.unknown and self.phase in ("verifying","borrowed") and get_ident() == self.owner.thread
+        need(not self.owner.unknown and self.phase in ("verifying","bound","borrowed") and get_ident() == self.owner.thread
              and (self.maximum_ms is None or (self.clock()-self.started_at)*1000 < self.maximum_ms))
 
     def read_exact(self, size):
@@ -1282,6 +1296,207 @@ def capture_original_model_bootstrap(nonce):
     _original_model_bootstrap = receiver
     OriginalModelBootstrapReceiver.__init__(receiver,nonce)
     return receiver
+
+
+_TRAINING_INPUT_MEDIA = {"application/x-ndjson":"jsonl", "application/jsonl":"jsonl",
+    "application/json":"json", "text/json":"json", "text/csv":"csv", "application/csv":"csv",
+    "application/x-parquet":"parquet", "application/vnd.apache.parquet":"parquet"}
+
+
+def _input_copy_directory(value):
+    need(type(value) is str and 3 < len(value) <= 4096
+         and re.fullmatch(r"[A-Za-z]:\\[^:\x00-\x1f]*", value) is not None)
+    parts = value[3:].split("\\"); need(1 <= len(parts) <= 64)
+    for part in parts: model_directory_component(part)
+    return value
+
+
+def _input_copy_file(value):
+    need(type(value) is str)
+    parent, name = ntpath.split(value)
+    _input_copy_directory(parent); model_leaf(name)
+    need(value == parent + "\\" + name)
+    return parent, name
+
+
+def _capture_training_input_copy(definition, staged, configuration, definition_digest):
+    """Pure manifest correlation; paths/JSON grant neither IO nor custody."""
+    approved = _copy_model_json(definition)
+    supplied = exact(_copy_model_json(staged), ("payload","recipe","outputDirectory"))
+    config = exact(_copy_model_json(configuration),
+        ("freshParent","freshName","maximumCopyBytes","bufferBytes","preparationMs"))
+    _input_copy_directory(config["freshParent"]); model_leaf(config["freshName"])
+    maximum = integer(config["maximumCopyBytes"], 1, 2**53-1)
+    integer(config["bufferBytes"], 4096, 1024**2); integer(config["preparationMs"], 1, 86400000)
+    need(type(approved) is dict and type(approved.get("request")) is dict
+         and type(approved.get("inputs")) is list and type(approved.get("dataset")) is dict)
+    expected = _copy_model_json(approved["request"])
+    original_rows, staged_rows = expected.get("datasets"), supplied["payload"].get("datasets") if type(supplied["payload"]) is dict else None
+    need(type(original_rows) is list and type(staged_rows) is list
+         and 1 <= len(original_rows) == len(staged_rows) == len(approved["inputs"]) <= 16)
+    need(type(expected.get("output")) is dict)
+    _input_copy_directory(supplied["outputDirectory"])
+    expected["output"]["outputDirectory"] = supplied["outputDirectory"]
+    files, seen, source, total, train = [], set(), None, 0, False
+    def entry(path, digest, size):
+        nonlocal source, total
+        parent, name = _input_copy_file(path)
+        need(source is None or ntpath.normcase(parent) == ntpath.normcase(source))
+        source = parent if source is None else source
+        need(name.casefold() not in seen and type(digest) is str and re.fullmatch(r"sha256:[a-f0-9]{64}",digest) is not None)
+        seen.add(name.casefold()); total += size
+        need(total <= 256*1024**2 and total <= maximum)
+        files.append({"name":name,"sizeBytes":size,"sha256":digest[7:]})
+        return name
+    for index, (original, staged_row, metadata) in enumerate(zip(original_rows,staged_rows,approved["inputs"])):
+        exact(metadata,("artifactId","role","mediaType","digest","sizeBytes"))
+        need(type(original) is dict and set(original) <= {"artifactId","splitRole","format"}
+             and type(staged_row) is dict and original.get("artifactId") == metadata["artifactId"] == "input-"+str(index)
+             and original.get("splitRole") == metadata["role"] and metadata["role"] in ("train","validation"))
+        need(type(metadata["mediaType"]) is str)
+        fmt = _TRAINING_INPUT_MEDIA.get(metadata["mediaType"]); need(fmt is not None)
+        need("format" not in original or original["format"] == fmt)
+        size = integer(metadata["sizeBytes"],1,64*1024**2)
+        name = entry(staged_row.get("path"),metadata["digest"],size)
+        need(name.lower().endswith("."+fmt) and name.casefold() != "approved-recipe.json")
+        original.update(format=fmt,path=staged_row["path"])
+        train = train or metadata["role"] == "train"
+    need(train and _same_model_json(expected,supplied["payload"]))
+    recipe = exact(supplied["recipe"],("path","digest","sizeBytes"))
+    size = integer(approved.get("recipeSizeBytes"),1,512*1024)
+    need(type(recipe["sizeBytes"]) is int and recipe["sizeBytes"] == size
+         and recipe["digest"] == approved["dataset"].get("recipeDigest"))
+    need(entry(recipe["path"],recipe["digest"],size) == "approved-recipe.json")
+    return {"schema":"windows-original-training-input-graph-v1","definitionDigest":definition_digest,
+        "sourcePath":source,**config,"files":tuple(files)}
+
+
+class _OriginalInputAdmission:
+    """Compose actual registered Model custody with captured business admission."""
+    def __init__(self, lease, state, record, admission, input_owner):
+        self.lease, self.state, self.record = lease, state, record
+        self.native_owner, self.input_owner = record["native_owner"], input_owner
+        self.current = admission.assert_current
+        need(callable(self.current)); self.lost = False
+
+    def _bound(self):
+        need(not self.lost and _model_leases.get(self.lease) is self.state
+             and _verified_model_receivers.get(self.state["source"]) is self.record
+             and self.state.get("input_copy_owner") is self.input_owner
+             and self.state.get("input_copy_io_active") is self.input_owner
+             and not self.state["entered"] and self.state["source"].phase == "bound"
+             and self.state["source"].owner is self.native_owner)
+
+    def assert_current(self):
+        lock = self.state["lock"]; need(lock.acquire(blocking=False))
+        entered, previous = False, None
+        try:
+            self._bound()
+            need(self.state.get("input_source_read_active") is None
+                 and not self.native_owner.unknown and not self.native_owner.pending)
+            previous = self.native_owner.thread
+            self.state["input_source_read_active"] = self
+            self.native_owner.thread = get_ident(); entered = True
+            self.record["guard"]()
+            need(self.current() is True)
+            self._bound(); need(self.state.get("input_source_read_active") is self)
+            self.record["guard"]()
+            self._bound()
+            return True
+        except BaseException:
+            self.lost = True
+            raise LaunchUnavailable() from None
+        finally:
+            # A lost native result retains the original thread, flight and slots.
+            # Never transfer a still-running or uncertain call to another thread.
+            if entered and not self.native_owner.unknown and not self.native_owner.pending:
+                self.native_owner.thread = previous
+                self.state.pop("input_source_read_active",None)
+            lock.release()
+
+
+class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
+    """Concrete input copy in the original worker; never full training readiness.
+
+    Binding performs no IO. The genuine lease retains this owner before any
+    supplier property is read. Preparation uses the same actual Native copy,
+    allocation, protection and readback mechanics as the Model controller.
+    Output custody, loader consumption and durable reservation stay separate.
+    """
+    def __init__(self, lease, staged, configuration, reservation, admission):
+        need(type(lease) is OriginalInheritedModelLease)
+        state = _model_leases.get(lease)
+        need(state is not None)
+        lock = state["lock"]; need(lock.acquire(blocking=False))
+        try:
+            source = state["source"]; record = _verified_model_receivers.get(source)
+            need(record is not None and record["bound"] and record["lease_issued"]
+                 and not state["entered"] and source.phase == "bound" and "input_copy_owner" not in state
+                 and source.owner is record["native_owner"] and not record["native_owner"].unknown
+                 and not record["native_owner"].pending and state.get("input_source_read_active") is None)
+            descriptor = _capture_training_input_copy(record["definition"],staged,configuration,record["definition_digest"])
+            state["input_copy_owner"] = self  # Retain atomically BEFORE suppliers.
+            self.lease, self._lease_state, self._lease_record = lease, state, record
+        finally: lock.release()
+        owner = InheritedModelNativeCalls(record["native_owner"].kernel,clock=record["native_owner"].clock)
+        self.owner = owner
+        authority = _OriginalInputAdmission(lease,state,record,admission,self)
+        self._bind_copy(owner,descriptor,reservation,authority)
+
+    @contextmanager
+    def _copy_call(self):
+        state = self._lease_state; lock = state["lock"]
+        need(lock.acquire(blocking=False)); entered, previous = False, None
+        try:
+            native_model = self._lease_record["native_owner"]
+            need(_model_leases.get(self.lease) is state and state.get("input_copy_owner") is self
+                 and not state["entered"] and state.get("input_copy_io_active") is None
+                 and state.get("input_source_read_active") is None
+                 and not native_model.unknown and not native_model.pending
+                 and not self.owner.unknown and not self.owner.pending)
+            previous = self.owner.thread; self.owner.thread = get_ident()
+            state["input_copy_io_active"] = self; entered = True
+            yield
+        finally:
+            if entered and not self.owner.unknown and not self.owner.pending:
+                self.owner.thread = previous
+                state.pop("input_copy_io_active",None)
+            lock.release()
+
+    def guard(self):
+        need(self._lease_state.get("input_copy_io_active") is self)
+        return _OriginalProtectedFlatCopy.guard(self)
+
+    def prepare(self):
+        with self._copy_call(): return _OriginalProtectedFlatCopy.prepare(self)
+
+    def assert_sealed(self):
+        with self._copy_call(): return _OriginalProtectedFlatCopy.assert_sealed(self)
+
+    def retire_copy_io(self):
+        """Close this copy's own IO; retain bytes, not worker/global settlement.
+
+        No borrower or SDK reader is admitted by this component. A future full
+        producer must also own those readers, outputs and original worker exit.
+        This result cannot implement NativeTrainingResources.settle by itself.
+        """
+        if self.retired: return True
+        try:
+            with self._copy_call(): return self._retire_copy_io()
+        except LaunchUnavailable: return False
+
+    def _retire_copy_io(self):
+        self.owner._main()
+        if (self.owner.unknown or self.owner.pending or self.borrowers or self.retirement_attempted
+                or self.phase == "preparing" or self.charge_attempted and not self.charged): return False
+        self.retirement_attempted = True
+        try:
+            for handle in reversed(self.owned_handles):
+                if not handle.closed: self.owner.close(handle)
+            if self.charged: need(self.retain(self.descriptor["maximumCopyBytes"]) is True)
+            self.retired = True; self.phase = "retired"; return True
+        except BaseException:
+            self.phase = "failed"; return False
 
 
 class OriginalSourceExchange:

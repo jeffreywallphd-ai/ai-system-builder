@@ -10,7 +10,7 @@ from pathlib import Path
 from queue import Queue
 import struct
 import sys
-from threading import Event
+from threading import Event, Thread, get_ident
 import unittest
 from unittest.mock import patch
 
@@ -489,6 +489,289 @@ def borrowed_model_view(definition,sealed_request,native_module=n):
         for thread in owner.readers: thread.join(1)
         if not owner.observe_retirement() or control.retained!=[descriptor()["maximumCopyBytes"]]:
             raise AssertionError("Inert original Model custody did not retire with retained charge")
+
+
+class TrainingInputCopyTests(unittest.TestCase):
+    def fixture(self, media="application/x-ndjson", count=1):
+        value = json.loads((Path(__file__).parent/"fixtures/approved_training_staged_input.json").read_text())
+        request = value["approvedRequest"]; request["baseModel"]["localPath"] = descriptor()["logicalPath"]
+        fmt = n._TRAINING_INPUT_MEDIA[media]
+        content, recipe = b'{"instruction":"Say yes","output":"yes"}\n', b'{"synthetic":true}'
+        digest = lambda raw: "sha256:"+hashlib.sha256(raw).hexdigest()
+        request["datasets"] = [{"artifactId":"input-"+str(i),"splitRole":"train" if i==0 else "validation","format":fmt} for i in range(count)]
+        definition = {"requestId":"11111111-1111-4111-8111-111111111111","workspaceId":request["workspaceId"],
+            "request":request,"modelUpdatedAt":descriptor()["modelUpdatedAt"],
+            "inputs":[{"artifactId":row["artifactId"],"role":row["splitRole"],"mediaType":media,"digest":digest(content),"sizeBytes":len(content)} for row in request["datasets"]],
+            "dataset":{"datasetId":"synthetic-data","versionId":"synthetic-version","versionDigest":"sha256:"+"d"*64,"recipeDigest":digest(recipe)},
+            "recipeSizeBytes":len(recipe)}
+        owner,parent,model_control=SourceLaunchExchangeTests().bound_bootstrap(definition)
+        owner.resume()
+        for thread in owner.readers: thread.join(1)
+        self.assertEqual(owner.model_bootstrap.outcome,"written")
+        child=parent.inherited_child(); source=n.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+        lease=source.bind(definition)
+        for path in ("X:\\inputs","X:\\inputs\\batch","X:\\private\\inputs"):
+            child.node(path,True)
+        staged={"payload":copy.deepcopy(request),"recipe":{"path":"X:\\inputs\\batch\\approved-recipe.json","digest":digest(recipe),"sizeBytes":len(recipe)},
+            "outputDirectory":"X:\\outputs\\candidate"}
+        staged["payload"]["output"]["outputDirectory"]=staged["outputDirectory"]
+        for index,row in enumerate(staged["payload"]["datasets"]):
+            row["path"]="X:\\inputs\\batch\\"+str(index+1).zfill(4)+"-input-"+str(index)+"."+fmt
+            child.node(row["path"],False,content)
+        child.node(staged["recipe"]["path"],False,recipe)
+        config={"freshParent":"X:\\private\\inputs","freshName":"original-input-copy", "maximumCopyBytes":128*1024,
+            "bufferBytes":4096,"preparationMs":30000}
+        control=Control()
+        def finish_model_only():
+            owner.request_stop()
+            for thread in owner.readers: thread.join(1)
+            self.assertTrue(owner.observe_retirement())
+            self.assertEqual(model_control.retained,[descriptor()["maximumCopyBytes"]])
+        self.addCleanup(finish_model_only)
+        return source,lease,staged,config,control,child,content,recipe
+
+    def test_actual_input_copy_is_complete_hashed_readonly_and_keeps_original_accounting(self):
+        source,lease,staged,config,control,kernel,content,recipe=self.fixture()
+        before=copy.deepcopy(staged); calls=len(kernel.calls)
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        self.assertEqual(len(kernel.calls),calls); self.assertEqual(control.charges,[])
+        graph.prepare(); graph.assert_sealed()
+        self.assertEqual(staged,before); self.assertEqual(graph.descriptor["definitionDigest"],source.descriptor["definitionDigest"])
+        self.assertEqual([r["name"] for r in graph.records],["0001-input-0.jsonl","approved-recipe.json"])
+        self.assertEqual(control.charges,[config["maximumCopyBytes"]]); self.assertEqual(control.retained,[])
+        for row,raw,handle in zip(graph.records,(content,recipe),graph.guards):
+            node=kernel.nodes[graph.physical_path+"\\"+row["name"]]
+            self.assertEqual(bytes(node["data"]),raw); self.assertEqual(node["acl"],n.model_acl(kernel.sid,sealed=True))
+            self.assertEqual(kernel.obj(graph.owner.number(handle))["access"],0x120089)
+        self.assertEqual(kernel.obj(graph.owner.number(graph.guards[-1]))["access"],0x1200a1)
+        self.assertTrue(graph.retire_copy_io()); self.assertTrue(graph.retire_copy_io())
+        self.assertTrue(all(h.closed for h in graph.owned_handles)); self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+        self.assertIn(graph.physical_path,kernel.nodes)  # Neither deletion nor disk credit.
+        self.assertEqual(source.phase,"bound"); self.assertFalse(hasattr(graph,"settle"))
+        with self.assertRaises(n.LaunchUnavailable): n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+
+    def test_actual_request_thread_can_copy_and_a_later_thread_can_close_copy_io(self):
+        source,lease,staged,config,control,kernel,_,_=self.fixture()
+        original_thread=source.owner.thread; outcomes=[]; graphs=[]
+        def copy_inputs():
+            try:
+                graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control); graphs.append(graph)
+                graph.prepare(); graph.assert_sealed(); outcomes.append("sealed")
+            except BaseException as error: outcomes.append(type(error).__name__)
+        worker=Thread(target=copy_inputs); worker.start(); worker.join(3)
+        self.assertFalse(worker.is_alive()); self.assertEqual(outcomes,["sealed"])
+        self.assertEqual(source.owner.thread,original_thread); self.assertFalse(source.owner.pending)
+        def close_inputs():
+            try: outcomes.append(graphs[0].retire_copy_io())
+            except BaseException as error: outcomes.append(type(error).__name__)
+        closer=Thread(target=close_inputs); closer.start(); closer.join(3)
+        self.assertFalse(closer.is_alive()); self.assertEqual(outcomes,["sealed",True])
+        self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+
+    def test_business_callback_cannot_borrow_the_model_during_input_admission(self):
+        source,lease,staged,config,control,kernel,_,_=self.fixture()
+        holder={"attempted":False,"entered":False}
+        class Admission:
+            def assert_current(self):
+                if not holder["attempted"]:
+                    holder["attempted"]=True; holder["context"]=lease.borrow(source.definition["request"])
+                    try: holder["view"]=holder["context"].__enter__(); holder["entered"]=True
+                    except n.LaunchUnavailable: pass
+                return True
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,Admission())
+        try:
+            try: graph.prepare()
+            except n.LaunchUnavailable: pass
+            self.assertFalse(holder["entered"] and bool(control.charges))
+            self.assertFalse(holder["entered"])
+        finally:
+            if holder["entered"]: holder["context"].__exit__(None,None,None)
+            graph.retire_copy_io()
+
+    def test_model_only_borrow_remains_unavailable_after_an_input_owner_is_bound(self):
+        source,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        for phase in ("bound","io-closed"):
+            with self.subTest(phase=phase):
+                with self.assertRaises(n.LaunchUnavailable):
+                    with lease.borrow(source.definition["request"]): self.fail("No combined input/loader view is implemented yet")
+            if phase=="bound": self.assertTrue(graph.retire_copy_io())
+
+    def test_held_source_read_refuses_borrow_and_copy_close_without_waiting_or_effects(self):
+        source,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        entered,finish,borrow_done=Event(),Event(),Event(); outcomes=[]; held=[False]
+        def hold(name):
+            if name=="PeekNamedPipe" and not held[0]:
+                held[0]=True; entered.set(); finish.wait(3)
+        kernel.after=hold
+        def prepare():
+            try: graph.prepare(); outcomes.append("sealed")
+            except BaseException as error: outcomes.append(type(error).__name__)
+        def borrow():
+            try:
+                with lease.borrow(source.definition["request"]): outcomes.append("unexpected-borrow")
+            except n.LaunchUnavailable: outcomes.append("borrow-denied")
+            finally: borrow_done.set()
+        copier=Thread(target=prepare); borrower=Thread(target=borrow)
+        try:
+            copier.start(); self.assertTrue(entered.wait(1)); before=len(kernel.calls)
+            self.assertTrue(source.owner.pending)
+            borrower.start(); self.assertTrue(borrow_done.wait(1))
+            self.assertFalse(graph.retire_copy_io()); self.assertEqual(len(kernel.calls),before)
+        finally:
+            finish.set(); copier.join(3)
+            if borrower.ident is not None: borrower.join(3)
+        self.assertFalse(copier.is_alive()); self.assertFalse(borrower.is_alive())
+        self.assertCountEqual(outcomes,["sealed","borrow-denied"])
+        self.assertFalse(source.owner.pending); self.assertFalse(graph.owner.pending)
+        self.assertIsNone(n._model_leases[lease].get("input_source_read_active"))
+        self.assertIsNone(n._model_leases[lease].get("input_copy_io_active"))
+        self.assertTrue(graph.retire_copy_io())
+
+    def test_unknown_source_read_keeps_original_thread_flight_and_return_slots(self):
+        source,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        kernel.error_after_return="PeekNamedPipe"; outcomes=[]
+        def prepare():
+            try: graph.prepare(); outcomes.append("unexpected-seal")
+            except n.LaunchUnavailable: outcomes.append("denied")
+        worker=Thread(target=prepare); worker.start(); worker.join(3)
+        self.assertFalse(worker.is_alive()); self.assertEqual(outcomes,["denied"])
+        self.assertTrue(source.owner.unknown); self.assertTrue(source.owner.pending)
+        self.assertEqual(source.owner.thread,worker.ident)
+        self.assertIsNotNone(n._model_leases[lease].get("input_source_read_active"))
+        self.assertTrue(source.owner.pending[-1]["value_returned"])
+        self.assertEqual(control.charges,[]); before=len(kernel.calls)
+        self.assertFalse(graph.retire_copy_io()); self.assertFalse(graph.retire_copy_io())
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        with self.assertRaises(n.LaunchUnavailable):
+            with lease.borrow(source.definition["request"]): self.fail("Unknown original read cannot be borrowed")
+        self.assertEqual(len(kernel.calls),before)
+        kernel.error_after_return=None
+
+    def test_all_supported_media_and_maximum_input_count_use_the_same_real_copy(self):
+        for media in n._TRAINING_INPUT_MEDIA:
+            with self.subTest(media=media):
+                _,lease,staged,config,control,kernel,_,_=self.fixture(media,16)
+                graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control); graph.prepare(); graph.assert_sealed()
+                self.assertEqual(len(graph.records),17); self.assertTrue(graph.retire_copy_io())
+                self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+
+    def test_foreign_lease_or_changed_closed_metadata_denies_before_any_io_or_charge(self):
+        for kind in ("foreign","method","role","format","recipe","recipe-size","extra","directory","extension","alias","output","capacity","boolean","media-shape"):
+            with self.subTest(kind=kind):
+                _,lease,staged,config,control,kernel,_,_=self.fixture()
+                if kind=="foreign": lease=object()
+                elif kind=="method": staged["payload"]["method"]="full"
+                elif kind=="role": staged["payload"]["datasets"][0]["splitRole"]="validation"
+                elif kind=="format": staged["payload"]["datasets"][0]["format"]="csv"
+                elif kind=="recipe": staged["recipe"]["digest"]="sha256:"+"a"*64
+                elif kind=="recipe-size": staged["recipe"]["sizeBytes"]=True
+                elif kind=="extra": staged["nativeReady"]=True
+                elif kind=="directory": staged["payload"]["datasets"][0]["path"]="X:\\other\\row.jsonl"
+                elif kind=="extension": staged["payload"]["datasets"][0]["path"]="X:\\inputs\\batch\\row.py"
+                elif kind=="alias": config["freshName"]="CON.txt"
+                elif kind=="output": staged["outputDirectory"]="X:\\outputs\\other"
+                elif kind=="capacity": config["maximumCopyBytes"]=1
+                elif kind=="boolean": config["bufferBytes"]=True
+                elif kind=="media-shape": staged["payload"]["datasets"][0]["format"]={}
+                calls=len(kernel.calls)
+                with self.assertRaises(n.LaunchUnavailable): n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+                self.assertEqual(len(kernel.calls),calls); self.assertEqual(control.charges,[])
+
+    def test_extra_source_entry_changed_bytes_links_and_reparse_points_never_seal(self):
+        for kind in ("extra","bytes","link","reparse"):
+            with self.subTest(kind=kind):
+                _,lease,staged,config,control,kernel,_,_=self.fixture()
+                row=kernel.nodes[staged["payload"]["datasets"][0]["path"]]
+                if kind=="extra": kernel.node("X:\\inputs\\batch\\extra.py",False,b"untrusted")
+                elif kind=="bytes": row["data"][0]=ord("!")
+                elif kind=="link": row["links"]=2
+                else: row["attributes"]|=0x400
+                graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+                with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+                self.assertNotEqual(graph.phase,"sealed"); self.assertTrue(graph.retire_copy_io())
+                self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+
+    def test_allocated_copy_limit_is_checked_before_destination_creation(self):
+        _,lease,staged,config,control,kernel,_,_=self.fixture(); config["maximumCopyBytes"]=8000
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control); offset=len(kernel.calls)
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        self.assertNotIn(graph.physical_path,kernel.nodes)
+        self.assertFalse(any(name=="WriteFile" for name,_ in kernel.calls[offset:]))
+        self.assertTrue(graph.retire_copy_io()); self.assertEqual(control.retained,[8000])
+
+    def test_destination_readback_detects_same_size_tampering(self):
+        _,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        kernel.after_write=lambda node: node["data"].__setitem__(0,ord("!"))
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        self.assertEqual(graph.phase,"failed"); self.assertTrue(graph.retire_copy_io())
+        self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+
+    def test_lost_charge_acknowledgement_does_not_release_or_retry_reservation(self):
+        _,lease,staged,config,control,kernel,_,_=self.fixture()
+        def charge(amount):
+            control.charges.append(amount)
+            raise RuntimeError("Synthetic lost reservation acknowledgement")
+        control.charge_source_copy=charge
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        self.assertTrue(graph.charge_attempted); self.assertFalse(graph.charged)
+        self.assertFalse(graph.retire_copy_io()); self.assertFalse(graph.retire_copy_io())
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        self.assertEqual(control.charges,[config["maximumCopyBytes"]]); self.assertEqual(control.retained,[])
+        self.assertNotIn(graph.physical_path,kernel.nodes)
+
+    def test_input_manifest_cannot_select_the_model_or_launch_protocol(self):
+        _,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        before=len(kernel.calls)
+        value={**boot(),"schema":"windows-original-worker-launch-v2","modelSource":graph.descriptor}
+        with self.assertRaises(n.LaunchUnavailable): n.capture_boot(value)
+        original=n.OriginalWorker(boot(),kernel=kernel)
+        with self.assertRaises(n.LaunchUnavailable): n.OriginalModelGraph(original,graph.descriptor,control,control)
+        self.assertEqual(len(kernel.calls),before); self.assertEqual(control.charges,[])
+
+    def test_admission_loss_is_sticky_and_accounting_survives_withdrawal(self):
+        _,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        kernel.after=lambda name: setattr(control,"current",False) if name=="WriteFile" else None
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        writes=sum(name=="WriteFile" for name,_ in kernel.calls)
+        control.current=True
+        with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+        self.assertEqual(sum(name=="WriteFile" for name,_ in kernel.calls),writes)
+        control.current=False
+        self.assertTrue(graph.retire_copy_io()); self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+
+    def test_unknown_original_api_or_close_retains_slots_without_repeating_effects(self):
+        for kind in ("NtCreateFile","CloseHandle"):
+            with self.subTest(kind=kind):
+                _,lease,staged,config,control,kernel,_,_=self.fixture()
+                graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+                if kind=="CloseHandle": graph.prepare()
+                kernel.error_after_return=kind
+                if kind=="NtCreateFile":
+                    with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+                else: self.assertFalse(graph.retire_copy_io())
+                self.assertTrue(graph.owner.unknown); self.assertTrue(graph.owner.pending)
+                count=len(kernel.calls)
+                self.assertFalse(graph.retire_copy_io()); self.assertFalse(graph.retire_copy_io())
+                self.assertEqual(len(kernel.calls),count); self.assertEqual(control.retained,[])
+                kernel.error_after_return=None
+
+    def test_model_custody_or_business_permission_loss_denies_before_input_charge(self):
+        for kind in ("peer","permission","entered"):
+            with self.subTest(kind=kind):
+                source,lease,staged,config,control,kernel,_,_=self.fixture()
+                graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+                if kind=="peer": kernel.obj(source.owner.number(source.pipe))["pipe"]["writer_open"]=False
+                elif kind=="permission": control.current=False
+                else: n._model_leases[lease]["entered"]=True
+                with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+                self.assertEqual(control.charges,[]); self.assertNotIn(graph.physical_path,kernel.nodes)
 
 
 class InheritedModelViewTests(unittest.TestCase):

@@ -2742,3 +2742,45 @@ producer, production activation and physical/host qualification remain separate.
 Source tests use controlled Node channels and actual Native ABI code with
 in-memory replies, never model quality. Ordinary standalone local loading remains
 compatible; the source-only path does not advertise complete training readiness.
+
+### Original training input materialization
+
+The fixed worker input-copy owner binds the actual registered Model lease before
+borrow, plus the original complete definition, correlated staged request,
+explicit copy configuration and separate reservation. It retains its owner
+before supplier callbacks. One lease can bind at most one such copy. Raw handle,
+path, profile, digest and ready records remain data rather than authority.
+
+Derive a finite dataset/recipe manifest without changing approved settings.
+Reconstruct only the existing staged dataset path/format and output aliases,
+then compare the complete request with exact scalar kinds and ordered roles.
+Require the supported eight media strings, one source directory, at most 16
+datasets plus the approved recipe, exact digests/bytes and existing byte bounds.
+No caller can select executable auxiliary files or another copy family through
+the launch protocol.
+
+Both finite owners reuse the concrete flat-copy code: Native parent-relative
+opens, allocation checks before effects, complete inventory, streaming hashes
+and sealed readback, identity/access/stream/link/reparse checks, private ACL and
+OWNER_RIGHTS protection, and checked read-only handles. Model validation still
+requires the actual original controller. The input ledger does not construct or
+adopt another worker/Job. Its admission composes actual registered Model graph
+checks with captured business currentness; observed loss remains lost.
+
+Closing only the copy's own IO retains bytes and the original reservation charge.
+Unknown API/close/accounting outcomes stay owned and cannot repeat effects. This
+does not settle an SDK reader, output, worker, Job or global reservation. The
+complete NativeTrainingProducer, input-loader use, protected output namespace,
+durable reservation implementation, Root activation and actual-host qualification
+remain pending. Synthetic ABI checks are source evidence, never physical, model
+quality or parent qualification.
+
+Input operations and Model read proofs serialize on the original lease lock,
+including actual request-thread changes. A thread handoff requires the exact
+original ledger, no active flight and no pending or unknown Native call. Restore
+the former thread only after known completion; uncertainty retains that thread
+and flight. Reentrant admission cannot enter Model borrowing or authorize a
+changed lease state. Refuse a competing operation without waiting behind held
+Native IO. The bound input owner fences the Model-only borrow even after its
+copy IO closes. The combined input/loader lifetime is still pending and cannot
+be inferred from a sealed graph or successful copy-IO closure.

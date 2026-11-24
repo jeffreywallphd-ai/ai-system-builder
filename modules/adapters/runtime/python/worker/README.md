@@ -1885,3 +1885,41 @@ The full native input/output producer, durable reservation implementation and
 physical qualification remain pending. Default app composition still configures
 no producer. In-memory API/stdio tests are source evidence only; they do not load
 DLLs or a model, authorize physical effects or qualify the parent roadmap.
+
+### Original protected dataset and recipe copy
+
+`OriginalTrainingInputGraph` is a private concrete copy owner, not a configured
+`NativeTrainingProducer`. Bind only an actual registered Model lease before it
+is borrowed. Retain the new owner on that lease before supplier callbacks.
+Derive its complete manifest from the original definition and exact staged
+payload. Preserve all logical settings, role/order, data digests and sizes; only
+the existing path/format/output aliases may differ. Require one source directory,
+the supported JSON/CSV/Parquet formats, the exact approved recipe, at most 16
+dataset files, and the existing 64-MiB file, 512-KiB recipe and 256-MiB total caps.
+
+The finite Model and input owners share actual Native copy mechanics, not a
+wire-selectable generic copy API. The Model constructor retains its original
+closed manifest and original controller/Job requirement. Inputs use their own
+Native call ledger and original reservation, while checking the actual Model
+graph and captured business admission before effects. Missing custody, permission,
+configuration or capacity fails closed. Allocation bounds precede destination
+creation/writes; hashes, complete inventories, identity/access/stream/link checks
+and private ACL/OWNER_RIGHTS sealing precede publication of the copied graph.
+
+`retire_copy_io` joins only this copy's own synchronous IO and acknowledged
+handles, then retains its disk charge. Unknown results or closes cannot retry.
+It is not worker retirement, SDK-reader proof, output custody, deletion, quota
+credit or `NativeTrainingResources.settle`. The live Model lease remains owned.
+Input-loader consumption, the complete producer, protected outputs, durable
+reservation implementation and physical host qualification are still pending.
+Ordinary Model bootstrap/launch and local training remain unchanged. Component
+tests use actual Native code with in-memory replies; they run no DLLs or models.
+
+FastAPI can prepare and settle work on different request threads. Serialize the
+exact input operation and original Model read flight under the genuine lease
+lock. A known idle Native ledger may transfer to that operation's thread; pending
+or unknown calls keep their original thread, flight, slots and buffers. Recheck
+the original lease and pre-borrow state after admission callbacks. Refuse active
+operations without waiting. Once the input owner is bound, a Model-only borrow
+is unavailable, even after input-copy IO closes. A future combined loader view
+must qualify input borrowing separately; this fence grants no training readiness.

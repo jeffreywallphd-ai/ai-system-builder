@@ -853,3 +853,37 @@ enforcement and actual host qualification remain separate. No full Native
 producer is configured; the source-only path cannot advertise private training
 readiness. Tests exercise Node state machines and the real Native ABI code with
 in-memory replies, without loading DLLs, models or running model-quality tests.
+
+### Protected training input copy
+
+The private worker also has a fixed input-copy owner. It requires the actual
+registered, bound Model lease and derives the dataset/recipe inventory from
+that lease's original definition plus the exact correlated staged request.
+Construction performs no IO. It retains the owner before reading supplier
+methods; the same lease cannot create a replacement input copy. A path, copied
+descriptor or ready flag cannot supply that binding.
+
+The input owner reuses the concrete Model copy mechanics. Its finite profile
+accepts the eight existing JSON/CSV/Parquet media strings, at most 16 dataset
+files plus the exact approved recipe, and the existing dataset/recipe byte
+bounds. Files must share one source directory and match the complete inventory.
+Keep all approved fields unchanged; only the existing staged path/format/output
+aliases are correlated. Explicit copy capacity, buffer and duration configuration
+and a separate original reservation remain required.
+
+Preparation checks actual Model custody and captured business admission, then
+copies, hashes, reads back and seals every input with the same Native allocation,
+identity, stream, link/reparse, ACL/OWNER_RIGHTS and read-only handle checks.
+Unknown calls keep their return slots and handles. Closing this copy's own IO
+retains its byte charge and never deletes files, releases disk credit, settles
+the training worker or supplies full producer readiness. Loader input consumption,
+output protection, concrete durable reservations, production activation and real
+host qualification remain pending. Tests use synthetic in-memory Native replies.
+
+The original lease lock serializes input operations and the Model read proof
+across actual request threads. Transfer a ledger's thread only for its exact
+known, idle operation; restore it only after all Native returns are known. A held
+or unknown call refuses another operation without waiting or repeating effects.
+Admission callbacks cannot enter a Model borrow during copying. A bound input
+owner also fences the Model-only borrow after copy IO closes. A combined input
+and loader borrow remains separate pending work; no readiness is inferred.
