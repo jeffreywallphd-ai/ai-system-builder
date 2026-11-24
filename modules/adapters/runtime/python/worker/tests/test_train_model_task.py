@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import hashlib
+import gc
 import json
 import sys
 from contextlib import contextmanager
@@ -18,12 +19,14 @@ multimodal_module = importlib.import_module("modules.adapters.runtime.python.wor
 
 
 @contextmanager
-def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_proj",)):
-    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingTensorStreamTests
+def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_proj",),output=None):
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingTensorStreamTests,Control
     sdk_case=DenseTensorByteAdapterTests(); facts,sdk,Tensor,Device=sdk_case.fixture(); extra=None
+    owned=[facts[:4]]
     actual,_,lease,_,request,control,*_=facts
-    if method != "lora":
-        extra=CombinedTrainingInputViewTests(); actual,_,lease,_,request,_,control,_=extra.fixture(method=method)
+    if method != "lora" or output is not None:
+        extra=CombinedTrainingInputViewTests(); actual,source,lease,inputs,request,_,control,extra_kernel=extra.fixture(method=method,output=output)
+        owned.append((actual,source,lease,inputs))
     payload=TrainModelTaskRequest.model_validate(request); calls=[]
     class PeftType(Enum): LORA="LORA"
     class LoraConfig:
@@ -45,7 +48,11 @@ def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_pr
         def get_input_embeddings(self): return SimpleNamespace(num_embeddings=self.vocab)
         def resize_token_embeddings(self,size): calls.append(("resize",size)); self.vocab=size
     model=Model(); module=ModuleType("peft")
-    if method=="lora": model.test_output=facts[6:]
+    if extra is None: model.test_output=facts[6:]
+    else:
+        extra_kernel.node("X:\\private\\outputs",True)
+        model.test_output=(extra_kernel,{"freshParent":"X:\\private\\outputs","freshName":"candidate-output",
+            "maximumCopyBytes":128*1024,"bufferBytes":4096,"preparationMs":30000},None,None,Control())
     def get_peft_model_state_dict(original,*,state_dict,adapter_name,unwrap_compiled,save_embedding_layers):
         assert original is model and adapter_name=="default" and unwrap_compiled is False
         assert type(save_embedding_layers) is bool  # Never the SDK's provider-discovering 'auto'.
@@ -63,6 +70,16 @@ def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_pr
     finally:
         if extra is not None: extra.doCleanups()
         sdk_case.doCleanups()
+        # Only these in-memory fixture owners are released, after all ordinary
+        # retirement assertions. Production deliberately retains unknown custody
+        # until its worker exits; a shared pytest process must not accumulate the
+        # fake registries' self-referencing guards and large ABI argument buffers.
+        for native,source,original_lease,inputs in owned:
+            assert not any(type(binding) is tuple and binding[0] is original_lease for binding in native._model_views.values())
+            native._sealed_training_inputs.pop(inputs,None)
+            native._model_leases.pop(original_lease,None)
+            native._verified_model_receivers.pop(source,None)
+        gc.collect()
 
 
 @pytest.mark.parametrize("method,resized,targeted",[("full-finetune",False,False),("lora",False,False),
@@ -265,8 +282,8 @@ def test_protected_selection_cannot_borrow_another_model_or_method_receiver(monk
 
 
 @contextmanager
-def _protected_training_metadata_fixture(monkeypatch,method="lora"):
-    with _protected_tensor_selection_fixture(monkeypatch,method) as facts:
+def _protected_training_metadata_fixture(monkeypatch,method="lora",output=None,only_one_weight=False):
+    with _protected_tensor_selection_fixture(monkeypatch,method,output=output) as facts:
         actual,use,model,peft,calls,control,Tensor,oracle=facts
         module=ModuleType("tokenizers"); metadata_calls=[]
         class AddedToken:
@@ -310,6 +327,7 @@ def _protected_training_metadata_fixture(monkeypatch,method="lora"):
             def to_dict(obj): return {**vars(obj),"base_model_name_or_path":"X:\\private\\stage","inference_mode":False}
             monkeypatch.setattr(type(configuration),"to_dict",to_dict,raising=False)
         train_model_module._synchronize_model_token_embeddings(model,tokenizer,_protected_use=use)
+        if only_one_weight: model.state={"base.weight":model.state["base.weight"]}
         stream=train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
         yield facts,tokenizer,metadata_calls,stream
 
@@ -367,6 +385,192 @@ def test_protected_training_metadata_and_weights_feed_actual_guarded_output_writ
             else: assert raw==dict(metadata)[row["name"]]
         assert output_control.retained==[] and output_control.charges==[128*1024]
         assert use.payload.model_dump(mode="json")==request
+
+
+@pytest.mark.parametrize("method,shard_size,only_one_weight",[("lora",None,False),("qlora",None,False),
+    ("full-finetune",None,False),("full-finetune","0.048KB",False),("full-finetune","0.001KB",True)])
+def test_protected_training_output_driver_seals_exact_original_candidate(monkeypatch,method,shard_size,only_one_weight):
+    output={"maxShardSize":shard_size} if shard_size is not None else None
+    with _protected_training_metadata_fixture(monkeypatch,method,output,only_one_weight) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,control,Tensor,oracle=facts
+        metadata=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        kernel,configuration,_,_,output_control=model.test_output; request=use.payload.model_dump(mode="json")
+        graph=train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
+        assert type(graph) is use._output_graph_type and graph.phase=="sealed" and stream.phase=="complete"
+        assert use._output_slot["stage"]=="sealed" and use._output_slot["graph"] is graph
+        weight_name="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
+        expected={name:raw for name,raw in metadata}
+        assert set(row["name"] for row in graph.records)==set(expected)|{weight_name}
+        for row in graph.records:
+            raw=bytes(kernel.nodes[graph.physical_path+"\\"+row["name"]]["data"])
+            assert row["sha256"]==hashlib.sha256(raw).hexdigest() and row["sizeBytes"]==len(raw)
+            if row["name"]==weight_name:
+                header,body=oracle.decode(raw)
+                assert len(body)==stream.tensor_bytes and sum(size for _,size in stream.tensor_sizes)==len(body)
+                if only_one_weight: assert set(header)=={"base.weight"} and len(body)>1
+            else: assert raw==expected[row["name"]]
+        assert use.payload.model_dump(mode="json")==request and output_control.charges==[128*1024]
+        assert output_control.retained==[]  # No release/refund/discard is invented.
+        before=len(kernel.calls)
+        with pytest.raises(ValueError): train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
+        assert len(kernel.calls)==before
+
+
+@pytest.mark.parametrize("failure",["missing-metadata","missing-selection","consumed-stream","unsupported-shards","invalid-shards",
+    "buffer-limit","chunk-mismatch","late-backend","callback-reentry","native-write","changed-settings","changed-metadata"])
+def test_protected_training_output_driver_retains_denial_without_retry_or_fallback(monkeypatch,failure):
+    output={"maxShardSize":"0.001KB" if failure=="unsupported-shards" else "invalid"} if failure in ("unsupported-shards","invalid-shards") else None
+    method="full-finetune" if output is not None else "lora"
+    with _protected_training_metadata_fixture(monkeypatch,method,output) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,control,Tensor,oracle=facts
+        metadata=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        kernel,configuration,_,_,output_control=model.test_output; changed=[]
+        if failure=="missing-metadata": use._metadata_slot=None
+        elif failure=="missing-selection": use._tensor_selection_slot=None
+        elif failure=="consumed-stream": b"".join(stream)
+        elif failure=="buffer-limit": configuration["bufferBytes"]=2048
+        elif failure=="chunk-mismatch": stream.chunk_bytes=8192
+        elif failure=="changed-settings": use.payload.commonParameters["maxSteps"]=99
+        elif failure=="changed-metadata": use._metadata_slot["files"]=(metadata[0],)
+        elif failure=="native-write": kernel.fail="WriteFile"
+        elif failure in ("late-backend","callback-reentry"):
+            def current(obj):
+                slot=use._output_slot
+                if obj is output_control and not changed and slot is not None and slot["graph"] is not None and slot["stage"]=="writing":
+                    changed.append(True)
+                    if failure=="late-backend": tokenizer.backend_tokenizer=type(tokenizer.backend_tokenizer)()
+                    else:
+                        with pytest.raises(actual.LaunchUnavailable): slot["graph"].guard()
+                return obj.__dict__["current"]
+            monkeypatch.setattr(type(output_control),"current",property(current,lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        writes=sum(name=="WriteFile" for name,_ in kernel.calls)
+        with pytest.raises(ValueError,match="private trained output"):
+            train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
+        slot=use._output_slot
+        assert slot["stage"]=="failed" and output_control.retained==[]
+        if failure!="native-write": assert sum(name=="WriteFile" for name,_ in kernel.calls)==writes
+        if failure in ("late-backend","callback-reentry"): assert changed==[True] and slot["graph"].phase=="failed"
+        if failure=="native-write": assert slot["graph"] is not None and output_control.charges==[128*1024]
+        before=len(kernel.calls); charges=list(output_control.charges)
+        with pytest.raises(ValueError): train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
+        assert len(kernel.calls)==before and output_control.charges==charges
+
+
+def test_protected_training_output_driver_checks_resources_after_callback_bearing_sdk_proof(monkeypatch):
+    with _protected_training_metadata_fixture(monkeypatch) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,input_control,Tensor,oracle=facts
+        train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        kernel,configuration,_,_,output_control=model.test_output; changed=[]; late_writes=[]; invoke=kernel.invoke
+        def observed(name,args,row):
+            if changed and name=="WriteFile": late_writes.append(name)
+            return invoke(name,args,row)
+        kernel.invoke=observed
+        def current(obj):
+            slot=use._output_slot
+            if obj is input_control and not changed and slot is not None and slot["graph"] is not None:
+                graph=slot["graph"]; frame=sys._getframe(1); sdk=False; ready=False
+                while frame:
+                    if frame.f_code.co_name=="current" and frame.f_locals.get("slot") is slot: sdk=True
+                    if frame.f_code.co_name=="prepare" and frame.f_locals.get("self") is graph and isinstance(frame.f_locals.get("chunk"),bytes): ready=True
+                    frame=frame.f_back
+                if sdk and ready and graph._sdk_guard_active:
+                    changed.append(True); output_control.current=False
+            return obj.__dict__["current"]
+        monkeypatch.setattr(type(input_control),"current",property(current,lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises(ValueError):
+            train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
+        assert changed==[True] and late_writes==[] and use._output_slot["graph"].phase=="failed"
+
+
+def test_synthetic_training_fixture_releases_only_its_own_registry_entries(monkeypatch):
+    with _protected_tensor_selection_fixture(monkeypatch) as outer:
+        native,use,*_=outer; outer_lease=native._model_views[use.view][0]
+        with monkeypatch.context() as inner_patch:
+            with _protected_tensor_selection_fixture(inner_patch) as inner:
+                inner_native,inner_use,*_=inner; inner_lease=inner_native._model_views[inner_use.view][0]
+                assert inner_lease in inner_native._model_leases and outer_lease in native._model_leases
+            assert inner_lease not in inner_native._model_leases
+        assert outer_lease in native._model_leases
+    assert outer_lease not in native._model_leases
+
+
+@pytest.mark.parametrize("profile",["direct","fast-tokenizer","peft-config"])
+def test_passive_sdk_binding_uses_fixed_fields_without_property_callbacks(monkeypatch,profile):
+    expected=object(); calls=[]
+    if profile=="direct":
+        class Owner: pass
+        owner=Owner();owner.config=expected;name="config"
+    elif profile=="fast-tokenizer":
+        class Owner:
+            @property
+            def backend_tokenizer(self): calls.append("getter");return self._tokenizer
+        owner=Owner();owner._tokenizer=expected;name="backend_tokenizer"
+        module=ModuleType("transformers.tokenization_utils_fast");module.PreTrainedTokenizerFast=Owner
+        monkeypatch.setitem(sys.modules,module.__name__,module)
+    else:
+        class Base: pass
+        base=Base();base.peft_config=expected
+        class Owner:
+            @property
+            def peft_config(self): calls.append("getter");return self._modules["base_model"].peft_config
+        owner=Owner();owner._is_prompt_learning=False;owner._modules={"base_model":base};name="peft_config"
+        module=ModuleType("peft.peft_model");module.PeftModel=Owner;monkeypatch.setitem(sys.modules,module.__name__,module)
+    reader=train_model_module._capture_passive_sdk_attribute(owner,name,expected)
+    assert reader() is expected and calls==[]
+    if profile=="direct": owner.config=object()
+    elif profile=="fast-tokenizer": owner._tokenizer=object()
+    else: owner._modules["base_model"]=Base()
+    with pytest.raises(ValueError): reader()
+    assert calls==[]
+
+
+def test_passive_peft_configuration_binds_the_fixed_nonprompt_branch(monkeypatch):
+    configuration={"default":object()};calls=[]
+    class Base: pass
+    base=Base();base.peft_config=configuration
+    class PeftModel:
+        @property
+        def peft_config(self):
+            calls.append("getter")
+            return self._peft_config if self._is_prompt_learning else self._modules["base_model"].peft_config
+    model=PeftModel();model._modules={"base_model":base};model._is_prompt_learning=False;model._peft_config=None
+    module=ModuleType("peft.peft_model");module.PeftModel=PeftModel;monkeypatch.setitem(sys.modules,module.__name__,module)
+    reader=train_model_module._capture_passive_sdk_attribute(model,"peft_config",configuration)
+    assert reader() is configuration and calls==[]
+    model._is_prompt_learning=True
+    with pytest.raises(ValueError): reader()
+    with pytest.raises(ValueError): train_model_module._capture_passive_sdk_attribute(model,"peft_config",configuration)
+    assert calls==[]
+
+
+def test_protected_output_final_snapshot_refuses_new_sdk_property_without_executing_it(monkeypatch):
+    with _protected_training_metadata_fixture(monkeypatch) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,input_control,Tensor,oracle=facts
+        train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        kernel,configuration,_,_,output_control=model.test_output; changed=[]; getter_calls=[]; late_writes=[];invoke=kernel.invoke
+        backend=tokenizer.backend_tokenizer
+        def getter(obj):
+            getter_calls.append(True);output_control.current=False
+            return backend
+        def observed(name,args,row):
+            if changed and name=="WriteFile": late_writes.append(name)
+            return invoke(name,args,row)
+        kernel.invoke=observed
+        def current(obj):
+            slot=use._output_slot
+            if obj is output_control and not changed and slot is not None and slot["graph"] is not None:
+                graph=slot["graph"];frame=sys._getframe(1);ready=False
+                while frame:
+                    if frame.f_code.co_name=="prepare" and frame.f_locals.get("self") is graph and isinstance(frame.f_locals.get("chunk"),bytes): ready=True
+                    frame=frame.f_back
+                if ready and graph._output_guard_active:
+                    changed.append(True)
+                    monkeypatch.setattr(type(tokenizer),"backend_tokenizer",property(getter),raising=False)
+            return obj.__dict__["current"]
+        monkeypatch.setattr(type(output_control),"current",property(current,lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises(ValueError):
+            train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
+        assert changed==[True] and getter_calls==[] and late_writes==[]
 
 
 @pytest.mark.parametrize("method,boundary",[("lora","backend"),("full-finetune","backend"),

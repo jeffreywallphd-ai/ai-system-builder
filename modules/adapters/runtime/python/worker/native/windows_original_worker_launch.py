@@ -1673,12 +1673,19 @@ class OriginalTrainingTensorStream:
         raw = json.dumps(header, ensure_ascii=True, allow_nan=False, separators=(",", ":")).encode("ascii")
         need(len(raw) <= 1024**2)
         self._header = raw + b" " * (-len(raw) % 8)
+        self._tensor_bytes = offset
         self._size = 8 + len(self._header) + offset; need(self._size <= maximum)
         self._rows = tuple(rows); self._streams = {name: streams[name] for name, _ in rows}
         self.phase = "bound"; self._thread = None; self._lock = Lock()
 
     @property
     def size_bytes(self): return self._size
+
+    @property
+    def tensor_bytes(self): return self._tensor_bytes
+
+    @property
+    def tensor_sizes(self): return self._rows
 
     def __iter__(self):
         if not self._lock.acquire(blocking=False):
@@ -1763,6 +1770,12 @@ class OriginalTrainingDenseTensorStream:
 
     @property
     def size_bytes(self): return self._framed.size_bytes
+
+    @property
+    def tensor_bytes(self): return self._framed.tensor_bytes
+
+    @property
+    def tensor_sizes(self): return self._framed.tensor_sizes
 
     def _current(self):
         need(self.phase in ("capturing","bound","active") and self._thread == get_ident())

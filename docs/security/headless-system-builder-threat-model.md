@@ -2675,3 +2675,35 @@ approved logical ID. Produce immutable bytes, never invoke SDK path writers or
 provider/config discovery. The Native output owner still enforces its own guards.
 Controlled fixtures do not qualify atomic SDK state, installed readers, physical
 effects, durable quota, complete producer, Save, retirement or actual hosts.
+
+### Private protected output driver
+
+Bind one output attempt to the genuine original use, its actual selected stream
+and immutable metadata package. Retained closure identities refuse replacement
+streams or packages, including before writer construction. Keep constructor and
+graph state on failure; neither an error nor a lost reply authorizes retry,
+deletion, credit release, fallback, Save or public activation.
+
+The fixed task-owned graph specialization preserves the original Native guards.
+Run SDK observer callbacks first, then the complete original Native/resource
+proof, then only passive typed-request and SDK-binding comparisons. Never append
+another callback-bearing proof after the original resource check. Preserve the
+independent post-withdrawal write failure and failed receipt with corrected evidence.
+Final SDK readers use captured built-in field descriptors and static-definition
+witnesses, not virtual property getters. Only direct fields and the fixed loaded
+fast-tokenizer/PEFT layouts are supported; changed definitions or field paths deny
+without executing the new getter. Real SDK qualification remains separate.
+The PEFT profile binds `_is_prompt_learning` to literal false and rechecks its
+static definition. A prompt branch, unknown branch or altered dispatch field
+cannot reuse the nonprompt base-configuration witness.
+Latch reentry failure even if a callback catches it. Exact captured files, bounded
+chunks and tensor-size-based shard admission precede output effects. Unsupported
+multi-shard output is refused; ordinary serialization is unchanged. Captured
+types and fixed functions cannot be selected by request JSON. The reservation
+interface is not a durable quota implementation or a measured hardware budget.
+
+Controlled SDK/in-memory ABI cases verify software composition and denials only.
+Actual training/checkpoint integration, full Native producer, durable accounting,
+installed SDK/reader, retirement, separate Save and physical/host acceptance remain.
+Test teardown removes only explicitly owned in-memory fixture registry roots after
+retirement assertions. It releases no real file, resource credit or retained stage.

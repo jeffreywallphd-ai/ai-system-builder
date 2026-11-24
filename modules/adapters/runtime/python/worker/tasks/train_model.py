@@ -6,15 +6,16 @@ import stat
 import sys
 import tempfile
 from collections import OrderedDict
-from types import BuiltinMethodType, FunctionType, MethodType, ModuleType
+from types import BuiltinMethodType, FunctionType, GetSetDescriptorType, MethodType, ModuleType
 from shutil import rmtree
 from datetime import datetime, timezone
+from decimal import Decimal
 from math import ceil, isfinite
 from pathlib import Path
 from typing import Any, Callable
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
-from ..native.windows_original_worker_launch import OriginalTrainingDenseTensorStream, resolve_original_training_references
+from ..native.windows_original_worker_launch import LaunchUnavailable, OriginalTrainingDenseTensorStream, OriginalTrainingOutputGraph, resolve_original_training_references
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -41,6 +42,11 @@ MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
 _NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_python
 _NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
 _NATIVE_TENSOR_STREAM = OriginalTrainingDenseTensorStream
+_NATIVE_OUTPUT_INIT = OriginalTrainingOutputGraph.__init__
+_NATIVE_OUTPUT_GUARD = OriginalTrainingOutputGraph.guard
+_NATIVE_OUTPUT_PREPARE = OriginalTrainingOutputGraph.prepare
+_NATIVE_OUTPUT_ASSERT_SEALED = OriginalTrainingOutputGraph.assert_sealed
+_SDK_ATTRIBUTE_MISSING = object()
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
     "llm-instruction": ("instruction", "output"),
@@ -221,11 +227,85 @@ def _resolve_training_purpose_paths(
     return available[0]
 
 
+def _sdk_static_attribute(cls, name):
+    bases = type.__getattribute__(cls,"__mro__")
+    if len(bases) > 64: raise ValueError("The private SDK class is unavailable.")
+    for base in bases:
+        namespace = type.__getattribute__(base,"__dict__")
+        if name in namespace: return namespace[name]
+    return _SDK_ATTRIBUTE_MISSING
+
+
+def _sdk_passive_fields(obj):
+    cls = type(obj); descriptor = _sdk_static_attribute(cls,"__dict__")
+    if type(descriptor) is not GetSetDescriptorType:
+        raise ValueError("The private SDK fields are unavailable.")
+    fields = descriptor.__get__(obj,cls)
+    if type(fields) is not dict: raise ValueError("The private SDK fields are unavailable.")
+    return fields
+
+
+def _capture_passive_sdk_attribute(obj, name, expected):
+    """Capture fixed field paths; final reads never invoke SDK properties."""
+    witnesses = []
+    def fields(owner, member):
+        cls=type(owner); original=_sdk_passive_fields(owner)
+        definitions=tuple((key,_sdk_static_attribute(cls,key)) for key in
+            ("__dict__","__getattribute__","__getattr__",member))
+        witnesses.append((owner,cls,original,definitions))
+        return original
+    root=fields(obj,name); descriptor=_sdk_static_attribute(type(obj),name)
+    direct = descriptor is _SDK_ATTRIBUTE_MISSING or descriptor is None
+    if direct and root.get(name,None) is expected:
+        path=((root,name,expected),)
+    else:
+        module_name, class_name = (("transformers.tokenization_utils_fast","PreTrainedTokenizerFast")
+            if name=="backend_tokenizer" else ("peft.peft_model","PeftModel"))
+        module=sys.modules.get(module_name)
+        cls=vars(module).get(class_name) if isinstance(module,ModuleType) else None
+        canonical=_sdk_static_attribute(cls,name) if isinstance(cls,type) else None
+        if type(descriptor) is not property or descriptor is not canonical:
+            raise ValueError("The private SDK attribute profile is unavailable.")
+        if name=="backend_tokenizer" and root.get("_tokenizer") is expected:
+            if _sdk_static_attribute(type(obj),"_tokenizer") is not _SDK_ATTRIBUTE_MISSING:
+                raise ValueError("The private tokenizer field profile is unavailable.")
+            fields(obj,"_tokenizer")
+            path=((root,"_tokenizer",expected),)
+        elif name=="peft_config":
+            # Pinned PEFT's property selects _peft_config for prompt learning.
+            # The fixed LoRA writer supports only its explicit nonprompt branch.
+            if (root.get("_is_prompt_learning") is not False
+                    or _sdk_static_attribute(type(obj),"_is_prompt_learning") is not _SDK_ATTRIBUTE_MISSING
+                    or _sdk_static_attribute(type(obj),"base_model") is not _SDK_ATTRIBUTE_MISSING):
+                raise ValueError("The private SDK configuration branch is unavailable.")
+            fields(obj,"_is_prompt_learning"); fields(obj,"base_model")
+            modules=root.get("_modules")
+            if type(modules) is not dict: raise ValueError("The private SDK module fields are unavailable.")
+            base=modules.get("base_model"); base_fields=fields(base,"peft_config")
+            if (_sdk_static_attribute(type(base),"peft_config") not in (_SDK_ATTRIBUTE_MISSING,None)
+                    or base_fields.get("peft_config") is not expected):
+                raise ValueError("The private SDK configuration profile is unavailable.")
+            path=((root,"_is_prompt_learning",False),(root,"_modules",modules),
+                (modules,"base_model",base),(base_fields,"peft_config",expected))
+        else: raise ValueError("The private SDK attribute profile is unavailable.")
+    def read():
+        for owner,cls,original,definitions in witnesses:
+            if type(owner) is not cls or _sdk_passive_fields(owner) is not original:
+                raise ValueError("The private SDK field binding changed.")
+            if any(_sdk_static_attribute(cls,key) is not value for key,value in definitions):
+                raise ValueError("The private SDK attribute definition changed.")
+        if any(container.get(key,None) is not original for container,key,original in path):
+            raise ValueError("The private SDK attribute changed.")
+        return expected
+    read()
+    return read
+
+
 class _ProtectedTrainingUse:
     """Fixed private view use, not a caller-selected guard or public capability."""
     __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
-        "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot")
+        "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -236,17 +316,31 @@ class _ProtectedTrainingUse:
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
         self._embedding_tokenizer, self._metadata_slot = None, None
+        self._output_graph_type, self._output_slot = _ProtectedTrainingOutputGraph, None
         self._embedding_observation_lost = False
-        try: request = self._serialize(payload,mode="json")
+        try:
+            request = self._serialize(payload,mode="json")
+            self._request_stamp = json.dumps(request,sort_keys=True,allow_nan=False,separators=(",",":"))
         except Exception: raise ValueError("The private protected training request is unavailable.") from None
         model,inputs = self._resolve(view,request)
         self.model_reference, self.dataset_references = model, inputs
 
-    def assert_current(self):
+    def assert_snapshot(self):
+        """Fixed typed request comparison; no Native or business observer call."""
         if type(self) is not _ProtectedTrainingUse or type(self.payload) is not TrainModelTaskRequest:
             raise ValueError("The private protected training request is unavailable.")
-        try: request = self._serialize(self.payload,mode="json")
+        try:
+            request = self._serialize(self.payload,mode="json")
+            stamp = json.dumps(request,sort_keys=True,allow_nan=False,separators=(",",":"))
         except Exception: raise ValueError("The private protected training request is unavailable.") from None
+        if stamp != self._request_stamp:
+            # Keep the established original-view refusal type without invoking
+            # a Native observer in the passive post-resource comparison.
+            raise LaunchUnavailable()
+        return request
+
+    def assert_current(self):
+        request = _ProtectedTrainingUse.assert_snapshot(self)
         if self._resolve(self.view,request) != (self.model_reference,self.dataset_references):
             raise ValueError("The private protected training references are unavailable.")
 
@@ -282,11 +376,17 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
                 or type(chunk_bytes) is not int or not 4096 <= chunk_bytes <= 1024**2):
             raise ValueError("The private tensor limits are unavailable.")
         embedding_status = use._embedding_status
-        def current():
-            _check_protected_use(use)
+        stream = None
+        def binding():
+            _ProtectedTrainingUse.assert_snapshot(use)
             if (use._embedding_model is not model or use._embedding_status != embedding_status
                     or use._embedding_observation_lost):
                 raise ValueError("The private trained model binding changed.")
+            if stream is not None and slot["stream"] is not stream:
+                raise ValueError("The private selected stream changed.")
+        def current():
+            _check_protected_use(use)
+            binding()
         if use._embedding_model is not model or use._embedding_observation_lost:
             raise ValueError("The private trained model binding is unavailable.")
         method = use.payload.method
@@ -315,7 +415,7 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
             configuration = configurations["default"]
             if type(configuration) is not config_type: raise ValueError("The private adapter configuration is unavailable.")
             current()
-            configuration_fields = object.__getattribute__(configuration,"__dict__")
+            configuration_fields = _sdk_passive_fields(configuration)
             if type(configuration_fields) is not dict:
                 raise ValueError("The private adapter configuration is unavailable.")
             targets = configuration_fields.get("target_modules")
@@ -323,6 +423,7 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
                     or any(type(name) is not str or not 1 <= len(name) <= 512 for name in targets)):
                 raise ValueError("The private adapter targets are unavailable.")
             targets = frozenset(targets)
+            configuration_reader = _capture_passive_sdk_attribute(model,"peft_config",configurations)
             def fixed_policy(fields):
                 # These selector branches are fixed by _apply_lora. In particular,
                 # another bias/PEFT/DoRA policy can silently change saved tensors.
@@ -336,14 +437,13 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
             # targets too. True preserves embeddings without provider discovery.
             save_embeddings = use._embedding_status == "resized" or any(
                 name.rsplit(".",1)[-1] in ("embed_tokens","lm_head") for name in targets)
-            def adapter_current():
-                observed_configurations = model.peft_config
-                current()
-                observed_configurations = model.peft_config
+            def adapter_snapshot():
+                binding()
+                observed_configurations = configuration_reader()
                 # Read fixed dataclass fields after the final live-view callback;
                 # no SDK/property callback may change them between proof and use.
-                fields = object.__getattribute__(configuration,"__dict__")
-                if type(fields) is not dict: raise ValueError("The private adapter configuration changed.")
+                fields = _sdk_passive_fields(configuration)
+                if fields is not configuration_fields: raise ValueError("The private adapter configuration changed.")
                 observed_targets = fields.get("target_modules")
                 if (observed_configurations is not configurations or set(configurations) != {"default"}
                         or configurations.get("default") is not configuration
@@ -351,9 +451,14 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
                         or any(type(name) is not str for name in observed_targets) or frozenset(observed_targets) != targets):
                     raise ValueError("The private adapter configuration changed.")
                 fixed_policy(fields)
+            def adapter_current():
+                observed_configurations = model.peft_config
+                current()
+                adapter_snapshot()
         elif method != "full-finetune":
             raise ValueError("The private training method is unavailable.")
         slot["selection_current"] = adapter_current if adapter else current
+        slot["selection_snapshot"] = adapter_snapshot if adapter else binding
         slot["configuration"] = configuration if adapter else None
         state_method = model.state_dict
         slot["state_method"] = state_method
@@ -414,22 +519,32 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
                 or type(selection.get("selection_current")) is not FunctionType):
             raise ValueError("The private selected model is unavailable.")
         selection_current = selection["selection_current"]
+        selection_snapshot = selection.get("selection_snapshot")
+        if type(selection_snapshot) is not FunctionType:
+            raise ValueError("The private selected model snapshot is unavailable.")
         bindings = slot["bindings"] = []
-        def current():
-            _check_protected_use(use)
-            selection_current()
+        package = None
+        def snapshot():
+            _ProtectedTrainingUse.assert_snapshot(use)
+            selection_snapshot()
             if (use._metadata_slot is not slot or use._tensor_selection_slot is not selection or selection.get("stage") != "captured"
                     or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
                     or use._embedding_observation_lost):
                 raise ValueError("The private metadata binding changed.")
             # Read actual SDK references AFTER all original-view callbacks. A
             # matching earlier snapshot is not proof of the current receiver.
-            for obj,name,original in bindings:
-                if getattr(obj,name,None) is not original:
-                    raise ValueError("The private metadata receiver changed.")
+            for reader in bindings: reader()
             if (use._metadata_slot is not slot or use._embedding_model is not model
                     or use._embedding_tokenizer is not tokenizer or use._embedding_observation_lost):
                 raise ValueError("The private metadata binding changed.")
+            if package is not None and slot["files"] is not package:
+                raise ValueError("The private metadata package changed.")
+        def current():
+            _check_protected_use(use)
+            selection_current()
+            snapshot()
+        slot["metadata_current"] = current
+        slot["metadata_snapshot"] = snapshot
         current()
         def operation(label, supplier, *args, **kwargs):
             current()
@@ -458,13 +573,13 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
         backend = read(tokenizer,"backend_tokenizer")
         if type(backend) is not backend_type:
             raise ValueError("The private fast tokenizer is unavailable.")
-        bindings.append((tokenizer,"backend_tokenizer",backend))
+        bindings.append(_capture_passive_sdk_attribute(tokenizer,"backend_tokenizer",backend))
         backend_export = bound(backend,"to_str")
         configuration = selection["configuration"] if use.payload.method in ("lora","qlora") else read(model,"config")
-        if use.payload.method == "full-finetune": bindings.append((model,"config",configuration))
+        if use.payload.method == "full-finetune": bindings.append(_capture_passive_sdk_attribute(model,"config",configuration))
         config_export = bound(configuration,"to_dict")
         generation = read(model,"generation_config",None) if use.payload.method == "full-finetune" else None
-        if use.payload.method == "full-finetune": bindings.append((model,"generation_config",generation))
+        if use.payload.method == "full-finetune": bindings.append(_capture_passive_sdk_attribute(model,"generation_config",generation))
         generation_export = bound(generation,"to_dict") if generation is not None else None
         peft = sys.modules.get("peft")
         enums = tuple(value for name in ("PeftType","TaskType")
@@ -611,11 +726,134 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
         second = capture()  # One bounded consistency comparison, never a retry.
         current()
         if first != second: raise ValueError("The private metadata changed during capture.")
+        package = first
+        current()
         slot["stage"] = "captured"
         return first
     except BaseException:
         slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
         raise ValueError("The private trained metadata export is unavailable.") from None
+
+
+class _ProtectedTrainingOutputGraph(OriginalTrainingOutputGraph):
+    """The original Native graph with the fixed SDK binding check added last."""
+    def __init__(self, use, request, configuration, files, reservation, admission):
+        if type(use) is not _ProtectedTrainingUse or type(self) is not use._output_graph_type:
+            raise LaunchUnavailable()
+        slot = use._output_slot
+        if (type(slot) is not dict or type(slot.get("current")) is not FunctionType
+                or type(slot.get("snapshot")) is not FunctionType):
+            raise LaunchUnavailable()
+        self._sdk_current, self._sdk_snapshot, self._sdk_guard_active = slot["current"], slot["snapshot"], False
+        _NATIVE_OUTPUT_INIT(self,use.view,request,configuration,files,reservation,admission)
+
+    def guard(self):
+        if self._sdk_guard_active:
+            self.phase = "failed"
+            raise LaunchUnavailable()
+        self._sdk_guard_active = True
+        try:
+            self._sdk_current()
+            _NATIVE_OUTPUT_GUARD(self)
+            # No added Native/business callback may follow the original final
+            # resource proof. Only fixed local identity/settings reads remain.
+            self._sdk_snapshot()
+            if self.phase in ("failed","retired") or self.owner.unknown or self.owner.pending:
+                raise LaunchUnavailable()
+        except BaseException:
+            self.phase = "failed"
+            raise LaunchUnavailable() from None
+        finally: self._sdk_guard_active = False
+
+
+def _write_protected_training_output(use, *, configuration, reservation, admission):
+    """Seal the captured single-file candidate; no training, Save or Root grant."""
+    if type(use) is not _ProtectedTrainingUse or use._output_slot is not None:
+        raise ValueError("The private trained output is unavailable.")
+    slot = {"stage":"planning","selection":None,"metadata":None,"graph":None,
+        "files":None,"entered":False,"returned":False,"current":None}
+    use._output_slot = slot
+    try:
+        _check_protected_use(use)
+        selection, metadata = use._tensor_selection_slot, use._metadata_slot
+        if (type(selection) is not dict or selection.get("stage") != "captured"
+                or type(metadata) is not dict or metadata.get("stage") != "captured"
+                or type(selection.get("selection_current")) is not FunctionType
+                or type(selection.get("selection_snapshot")) is not FunctionType
+                or type(metadata.get("metadata_current")) is not FunctionType
+                or type(metadata.get("metadata_snapshot")) is not FunctionType):
+            raise ValueError("The private output inputs are unavailable.")
+        stream, captured_files = selection.get("stream"), metadata.get("files")
+        if type(stream) is not use._tensor_stream_type or stream.phase != "bound" or type(captured_files) is not tuple:
+            raise ValueError("The private output inputs are unavailable.")
+        slot.update(selection=selection,metadata=metadata,stream=stream)
+        selection_current, metadata_current = selection["selection_current"], metadata["metadata_current"]
+        selection_snapshot, metadata_snapshot = selection["selection_snapshot"], metadata["metadata_snapshot"]
+        def snapshot():
+            _ProtectedTrainingUse.assert_snapshot(use)
+            selection_snapshot(); metadata_snapshot()
+            if (use._output_slot is not slot or use._tensor_selection_slot is not selection
+                    or use._metadata_slot is not metadata or selection.get("stage") != "captured"
+                    or metadata.get("stage") != "captured" or selection.get("stream") is not stream
+                    or metadata.get("files") is not captured_files or slot["stage"] == "failed"):
+                raise ValueError("The private output inputs changed.")
+        def current():
+            if use._output_slot is not slot:
+                raise ValueError("The private output attempt changed.")
+            _check_protected_use(use)
+            selection_current(); metadata_current()
+            snapshot()
+        slot["current"] = current
+        slot["snapshot"] = snapshot
+        current()
+        if use.payload.method == "full-finetune":
+            # The supported flat profile must not silently discard a requested
+            # split. Match decimal SDK units and its single oversized-tensor rule;
+            # safetensors header bytes do not count as tensor storage.
+            size = _parse_max_shard_size(use.payload)
+            match = re.fullmatch(r"(0|[1-9][0-9]{0,14})(\.[0-9]{1,9})?\s*(KB|MB|GB|TB)",size,re.IGNORECASE)
+            if match is None: raise ValueError("The private shard profile is unavailable.")
+            limit = int(Decimal(match[1]+(match[2] or ""))*{"KB":10**3,"MB":10**6,"GB":10**9,"TB":10**12}[match[3].upper()])
+            if limit < 1 or stream.tensor_bytes > limit and len(stream.tensor_sizes) != 1:
+                raise ValueError("The private single-file shard profile is unavailable.")
+            weight_name = "model.safetensors"
+        elif use.payload.method in ("lora","qlora"): weight_name = "adapter_model.safetensors"
+        else: raise ValueError("The private output profile is unavailable.")
+        rows, streams, names = [], {}, set()
+        if type(configuration) is not dict or type(configuration.get("bufferBytes")) is not int:
+            raise ValueError("The private output configuration is unavailable.")
+        chunk_bytes = configuration["bufferBytes"]
+        if not 4096 <= chunk_bytes <= 1024**2 or stream.chunk_bytes > chunk_bytes:
+            raise ValueError("The private output chunks are unavailable.")
+        def chunks(raw):
+            for offset in range(0,len(raw),chunk_bytes):
+                current()
+                yield raw[offset:offset+chunk_bytes]
+                current()
+        for row in captured_files:
+            if (type(row) is not tuple or len(row) != 2 or type(row[0]) is not str
+                    or type(row[1]) is not bytes or not row[1] or row[0] in names):
+                raise ValueError("The private metadata files are unavailable.")
+            name,raw = row; names.add(name)
+            rows.append({"name":name,"sizeBytes":len(raw)}); streams[name] = chunks(raw)
+        if weight_name in names: raise ValueError("The private output files are unavailable.")
+        rows.append({"name":weight_name,"sizeBytes":stream.size_bytes}); streams[weight_name] = stream
+        slot["files"] = tuple((r["name"],r["sizeBytes"]) for r in rows)
+        request = use._serialize(use.payload,mode="json"); current()
+        slot.update(stage="constructing",entered=True,returned=False)
+        graph = use._output_graph_type(use,request,configuration,rows,reservation,admission)
+        slot.update(graph=graph,returned=True)
+        current()
+        slot["stage"] = "writing"
+        _NATIVE_OUTPUT_PREPARE(graph,streams)
+        current()
+        _NATIVE_OUTPUT_ASSERT_SEALED(graph)
+        current()
+        slot["stage"] = "sealed"
+        return graph
+    except BaseException:
+        slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
+        raise ValueError("The private trained output is unavailable.") from None
 
 
 def _capture_local_dataset_references(payload, references):

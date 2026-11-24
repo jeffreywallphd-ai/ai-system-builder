@@ -493,10 +493,11 @@ def borrowed_model_view(definition,sealed_request,native_module=n):
 
 
 class TrainingInputCopyTests(unittest.TestCase):
-    def fixture(self, media="application/x-ndjson", count=1, native_module=n, method="lora"):
+    def fixture(self, media="application/x-ndjson", count=1, native_module=n, method="lora", output=None):
         value = json.loads((Path(__file__).parent/"fixtures/approved_training_staged_input.json").read_text())
         request = value["approvedRequest"]; request["baseModel"]["localPath"] = descriptor()["logicalPath"]
         request["method"] = method
+        if output is not None: request["output"].update(copy.deepcopy(output))
         fmt = n._TRAINING_INPUT_MEDIA[media]
         content, recipe = b'{"instruction":"Say yes","output":"yes"}\n', b'{"synthetic":true}'
         digest = lambda raw: "sha256:"+hashlib.sha256(raw).hexdigest()
@@ -780,11 +781,11 @@ class TrainingInputCopyTests(unittest.TestCase):
 
 
 class CombinedTrainingInputViewTests(unittest.TestCase):
-    def fixture(self, prepare=True, method="lora"):
+    def fixture(self, prepare=True, method="lora", output=None):
         from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest
         from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as actual
         case=TrainingInputCopyTests()
-        source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=actual,method=method)
+        source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=actual,method=method,output=output)
         self.addCleanup(case.doCleanups)
         graph=actual.OriginalTrainingInputGraph(lease,staged,config,control,control)
         if prepare: graph.prepare()
@@ -1147,6 +1148,8 @@ class TrainingTensorStreamTests(unittest.TestCase):
             {"name":"scalar","dtype":"I64","shape":[]},{"name":"empty","dtype":"BF16","shape":[0,4]}]
         streams={"layer.weight":(struct.pack("<f",1.5),struct.pack("<f",-2.0)),"scalar":(struct.pack("<q",17),),"empty":()}
         plan=self.plan(rows,streams); expected_size=plan.size_bytes
+        self.assertEqual(plan.tensor_bytes,16)
+        self.assertEqual(plan.tensor_sizes,(("layer.weight",8),("scalar",8),("empty",0)))
         rows[0]["shape"][0]=999; streams["scalar"]=(b"changed",)
         raw=b"".join(plan); self.assertEqual(len(raw),expected_size)
         header,body=self.decode(raw)
@@ -1369,6 +1372,7 @@ class DenseTensorByteAdapterTests(unittest.TestCase):
                 with lease.borrow(request) as view:
                     selected={"layer.weight":tensor}
                     stream=actual.OriginalTrainingDenseTensorStream(view,request,selected,maximum_bytes=65536,chunk_bytes=4096)
+                    self.assertEqual(stream.tensor_bytes,len(raw)); self.assertEqual(stream.tensor_sizes,(("layer.weight",len(raw)),))
                     self.assertEqual(Tensor.copies,[]); selected.clear()
                     result=b"".join(stream); header,body=TrainingTensorStreamTests().decode(result)
                     self.assertEqual(body,raw); self.assertEqual(header["layer.weight"]["shape"],[2500])

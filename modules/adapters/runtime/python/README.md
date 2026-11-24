@@ -991,3 +991,16 @@ or discover providers. Unknown, changed, custom-code or oversized exports deny;
 known private input locators are removed and adapter base association stays
 logical. Ordinary serialization is unchanged. Installed-reader, complete output
 driver/producer, durable quota, Save, retirement and real-host proof stay pending.
+
+The private output driver now joins the original selected weight stream and
+metadata package to the captured Native writer. A fixed specialization runs SDK
+observer checks before Native/resource proof, then passive binding comparisons,
+and latches reentry. No added observer follows the final resource proof.
+Passive readers verify captured direct fields or fixed fast-tokenizer/PEFT field
+paths without calling virtual getters. Unknown or changed profiles deny.
+Exact file sizes, explicit chunk limits and full-model shard settings are checked
+before writing; multi-shard requests outside this flat profile deny honestly.
+Unknown ownership remains retained without retry, cleanup, refund or Save.
+Ordinary SDK serialization remains intact. Actual training/checkpoint wiring,
+full producer, durable quota, installed-reader, retirement and host proof remain
+pending; no default Root or model-quality test is added.

@@ -2976,6 +2976,50 @@ node count and supported plain types. Reject cycles, nonfinite numbers,
 duplicate JSON keys, unknown values and oversized files/packages. Compare two
 bounded captures once; a mismatch is a failure, never a retry. This is software
 metadata capture, not an atomic SDK or physical filesystem qualification.
-Installed-reader compatibility, complete serializer/output composition, durable
+Installed-reader compatibility, training-flow/checkpoint integration, durable
 reservations, full producer, retirement, separate Save and actual hosts remain
 pending. Inert SDK fixtures load no model and score no model quality.
+
+### Fixed protected training output driver
+
+The private writer composes the actual captured dense weight stream and immutable
+metadata package from one original training use. Retained closure checks bind the
+original stream/package, not replacement objects with matching types. Capture
+the fixed writer type before SDK calls. Latch one output attempt before planning,
+retain constructor/graph state before preparation and keep unknown failures.
+There is no ordinary writer fallback, retry, deletion, charge refund or Save grant.
+
+Use a fixed task-owned specialization of the original Native output graph. It
+retains every original view, reservation, admission, allocation, ACL, identity,
+hash, inventory and readback guard. Run callback-bearing SDK checks before the
+original Native proof. Only passive request and SDK-identity comparisons follow
+that proof; an added observer cannot withdraw an already-checked reservation.
+Capture built-in field descriptors and static class-definition witnesses for
+those final comparisons. Read direct model metadata fields or the known pinned
+fast-tokenizer/PEFT field paths without invoking SDK properties. Changed or
+unsupported attribute profiles deny; an ordinary getter is not a passive proof.
+The PEFT field path requires and retains its literal nonprompt branch; changing
+that branch or its class definitions cannot certify the old base configuration.
+Caught guard reentry stays failed and cannot reach a Native write. File names and
+sizes come from the original captured package/stream; chunk sizes stay within the
+explicit trusted output configuration. No request JSON chooses a graph or guard.
+
+This profile writes one safetensors weight file. For full models, honor the
+requested decimal KB/MB/GB/TB shard setting using actual tensor storage bytes,
+excluding container headers. Preserve the SDK rule for one oversized tensor in
+its own file. Refuse multi-shard requirements before output charging or creation;
+do not silently increase the setting. Ordinary SDK sharded serialization remains
+unchanged. The framer exposes bounded immutable tensor-size metadata for this
+decision without reading weights.
+
+In-memory ABI fixtures verify full-model, LoRA and QLoRA file composition,
+settings, late SDK replacement, reentry, uncertain writes and one-use behavior.
+They are no physical Native or installed-reader qualification. Wiring the driver
+into actual training/checkpoint/run-history handling, full producer, durable
+reservation/accounting, SDK/worker retirement, separate Save, supported host
+journeys and parent qualification remain pending. No default Root is enabled.
+Synthetic fixture teardown releases only its own in-memory registry entries after
+the existing retirement assertions, preventing fake ABI buffers from accumulating
+across one pytest process. This changes no production retention or memory guard.
+The passive request comparison preserves the existing original-view refusal
+exception, so established private runtime failure handling remains compatible.

@@ -2046,3 +2046,17 @@ Legacy tokenizer export is unsupported on this private profile; ordinary SDK
 serialization remains intact. These inert software checks do not qualify atomic
 SDK state, installed readers, full serializer/producer, durable quota, physical
 resources, retirement, separate Save or hosts. No model-quality test runs.
+
+`_write_protected_training_output` consumes only this same-use captured package
+and original weight stream. It latches one attempt and retains graph ownership
+before preparing files. The fixed specialization runs SDK observer checks before
+the original Native guards and only passive binding checks afterward; caught
+reentry remains failed.
+Passive checks read captured field layouts and static definitions, never SDK
+property getters; unsupported or changed layouts deny. Exact file/chunk
+sizes and tensor-byte-based full-model shard admission precede output effects.
+The initial profile supports one weight file, including the SDK's single
+oversized-tensor case; a needed split is refused without changing the request.
+No path writer fallback, retry, deletion, quota refund or Save follows failure.
+These fake-ABI checks enable no Root and qualify no actual training/checkpoint
+wiring, full producer, durable quota, installed reader, retirement or host.
