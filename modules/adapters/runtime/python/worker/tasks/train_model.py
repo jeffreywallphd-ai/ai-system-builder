@@ -21,7 +21,8 @@ from ..native.windows_original_worker_launch import (LaunchUnavailable, Original
     OriginalTrainingOutputFamily, OriginalTrainingOutputGraph, _fail_output_family, _output_family_snapshot,
     _resolve_output_family_for_training, _claim_output_family_training, _guard_output_family_training,
     _output_family_training_binding,
-    resolve_original_training_references, resolve_original_training_task_id)
+    resolve_original_training_references, resolve_original_training_task_id,
+    read_original_training_input_bytes)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -48,6 +49,7 @@ MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
 _NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_python
 _NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
 _NATIVE_TASK_ID_RESOLVER = resolve_original_training_task_id
+_NATIVE_TRAINING_INPUT_READER = read_original_training_input_bytes
 _NATIVE_TENSOR_STREAM = OriginalTrainingDenseTensorStream
 _NATIVE_OUTPUT_INIT = OriginalTrainingOutputGraph.__init__
 _NATIVE_OUTPUT_GUARD = OriginalTrainingOutputGraph.guard
@@ -368,6 +370,7 @@ class _ProtectedTrainingUse:
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
         "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
         "_run_identity","_training_driver","_training_slot","_thread","_completion_helpers",
+        "_dataset_reader","_dataset_loader","_dataset_parquet_reader","_dataset_slot",
         "_output_family_type","_output_family_snapshot","_output_family_fail",
         "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
         "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","_final_result_slot","__weakref__")
@@ -378,6 +381,9 @@ class _ProtectedTrainingUse:
         self.payload, self.view = payload, view
         self._resolve, self._serialize = _NATIVE_REFERENCE_RESOLVER, _NATIVE_REQUEST_SERIALIZER
         self._resolve_task_id = _NATIVE_TASK_ID_RESOLVER
+        self._dataset_reader, self._dataset_loader = _NATIVE_TRAINING_INPUT_READER, _load_protected_dataset
+        self._dataset_parquet_reader = _read_protected_parquet_tables
+        self._dataset_slot = None
         self._tensor_stream_type = _NATIVE_TENSOR_STREAM
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
@@ -419,6 +425,8 @@ class _ProtectedTrainingUse:
                     (_protected_output_seal_facts,_sealed_training_checkpoint_facts,_finalize_protected_training_result)))):
             raise ValueError("The private training completion helpers changed.")
         if (self._resolve_task_id is not _NATIVE_TASK_ID_RESOLVER or self._resolve is not _NATIVE_REFERENCE_RESOLVER
+                or self._dataset_reader is not _NATIVE_TRAINING_INPUT_READER or self._dataset_loader is not _load_protected_dataset
+                or self._dataset_parquet_reader is not _read_protected_parquet_tables
                 or self._serialize is not _NATIVE_REQUEST_SERIALIZER or type(self._run_identity) is not tuple
                 or len(self._run_identity) != 2 or any(type(value) is not str for value in self._run_identity)):
             raise ValueError("The private original training identity changed.")
@@ -1177,7 +1185,195 @@ def _capture_local_dataset_references(payload, references):
     return references
 
 
+def _read_protected_parquet_tables(raw, check):
+    """Self-contained memory buffers only; inspect metadata before data/schema."""
+    import pyarrow as pa
+    check()
+    import pyarrow.parquet as pq
+    check()
+    from base64 import b64decode
+    check()
+    from pyarrow._parquet import _reconstruct_filemetadata
+    check()
+    # The pinned public read_metadata opens an Arrow data reader and may run
+    # registered extension decoders. This fixed metadata-only SDK function
+    # consumes the bounded Compact-Thrift footer directly; never use pickle.
+    if pa.__version__ != "25.0.0" or len(raw) < 12 or raw[:4] != b"PAR1" or raw[-4:] != b"PAR1":
+        raise ValueError("The private Parquet metadata profile is unavailable.")
+    footer_length = int.from_bytes(raw[-8:-4], "little")
+    if not 0 < footer_length <= len(raw) - 12:
+        raise ValueError("The private Parquet footer is unavailable.")
+    footer = raw[-8-footer_length:-8]
+    metadata = _reconstruct_filemetadata(pa.py_buffer(footer))
+    check()
+    encoded_schema = (metadata.metadata or {}).get(b"ARROW:schema")
+    # Dictionary conversion collapses duplicate keys. Refuse ambiguous raw
+    # occurrences too, including reserved text in unrelated footer metadata.
+    if footer.count(b"ARROW:schema") != (0 if encoded_schema is None else 1):
+        raise ValueError("The private Parquet schema metadata is ambiguous.")
+    if encoded_schema is not None:
+        schema_bytes = b64decode(encoded_schema, validate=True)
+        if b"ARROW:extension:name" in schema_bytes:
+            raise ValueError("The private Parquet extension profile is unavailable.")
+        schema_stream = pa.BufferReader(schema_bytes)
+        message = pa.ipc.read_message(schema_stream)  # Envelope only, never read_schema.
+        if message.type != "schema" or schema_stream.tell() != len(schema_bytes):
+            raise ValueError("The private Parquet schema envelope is unavailable.")
+    for group_index in range(metadata.num_row_groups):
+        check()
+        group = metadata.row_group(group_index)
+        for column_index in range(group.num_columns):
+            if group.column(column_index).file_path:
+                raise ValueError("The private Parquet file must be self-contained.")
+    check()
+    with pq.ParquetFile(pa.BufferReader(raw), metadata=metadata,
+            memory_map=False, pre_buffer=False, arrow_extensions_enabled=False) as source:
+        check()
+        for batch in source.iter_batches(batch_size=10_000, use_threads=False):
+            check()
+            yield pa.Table.from_batches([batch]).replace_schema_metadata(None)
+            check()
+
+
+def _load_protected_dataset(payload, references, use):
+    """One original-byte load; no path, Dataset builder, cache or partial split."""
+    if (type(use) is not _ProtectedTrainingUse or get_ident() != use._thread
+            or use.payload is not payload):
+        raise ValueError("The private protected training inputs are unavailable.")
+    request = _ProtectedTrainingUse.assert_snapshot(use)
+    if references is not use.dataset_references:
+        raise ValueError("The private protected training inputs are unavailable.")
+    previous = use._dataset_slot
+    if previous is not None:
+        if type(previous) is dict and previous.get("stage") in ("loading", "parsing"):
+            previous["stage"] = "failed"  # Caught owned reentry invalidates the first load.
+        raise ValueError("The private dataset load is unavailable.")
+    slot = {"stage": "loading"}
+    use._dataset_slot = slot
+    view, reader, parquet_reader = use.view, use._dataset_reader, use._dataset_parquet_reader
+    identity, stamp = use._run_identity, use._request_stamp
+
+    def snapshot():
+        _ProtectedTrainingUse.assert_snapshot(use)
+        if (use._dataset_slot is not slot or type(slot.get("stage")) is not str
+                or slot["stage"] not in ("loading", "parsing") or use.view is not view
+                or use._dataset_reader is not reader or use._run_identity is not identity
+                or use._dataset_parquet_reader is not parquet_reader
+                or use._request_stamp != stamp or use.dataset_references is not references):
+            raise ValueError("The private dataset load changed.")
+
+    def check():
+        snapshot()
+        _check_protected_use(use, payload)
+        snapshot()
+
+    try:
+        check()
+        selections = request["datasets"]
+        formats = {row.get("format") for row in selections}
+        if (not 1 <= len(selections) <= 16 or len(formats) != 1
+                or next(iter(formats)) not in ("json", "jsonl", "csv", "parquet")
+                or any(row.get("splitRole") not in ("train", "validation") for row in selections)
+                or not any(row["splitRole"] == "train" for row in selections)):
+            raise ValueError("The private training dataset selection is unavailable.")
+        fmt = next(iter(formats))
+        # Imports are observers too. Do not read bytes after an import withdraws
+        # permission, and never fall back to the ordinary path-based builder.
+        from datasets import Dataset, DatasetDict
+        check()
+        import pyarrow as pa
+        check()
+        from io import BytesIO, StringIO
+        check()
+        fixed_dataset, fixed_dict, fixed_concat = Dataset, DatasetDict, pa.concat_tables
+        raw_files = reader(view, request)
+        check()
+        if (type(raw_files) is not tuple or len(raw_files) != len(selections)
+                or any(type(raw) is not bytes or not raw for raw in raw_files)):
+            raise ValueError("The private dataset bytes are unavailable.")
+        slot["stage"] = "parsing"
+        splits = {"train": [], "validation": []}
+        for selected, raw in zip(selections, raw_files):
+            check()
+            tables = []
+            if fmt == "csv":
+                from datasets.packaged_modules.csv.csv import CsvConfig
+                check()
+                from pandas import read_csv
+                check()
+                # Configuration only, never DatasetBuilder (which creates a
+                # cache directory). Preserve the installed reader's defaults.
+                options = CsvConfig().pd_read_csv_kwargs
+                check()
+                with read_csv(BytesIO(raw), iterator=True, **options) as chunks:
+                    check()
+                    for frame in chunks:
+                        check()
+                        tables.append(pa.Table.from_pandas(frame, preserve_index=False))
+                        check()
+            elif fmt in ("json", "jsonl"):
+                from pyarrow.json import read_json, ReadOptions
+                check()
+                try:
+                    table = read_json(pa.BufferReader(raw), read_options=ReadOptions(use_threads=False))
+                except pa.ArrowInvalid:
+                    check()
+                    from datasets.packaged_modules.json.json import pandas_read_json
+                    check()
+                    frame = pandas_read_json(StringIO(raw.decode("utf-8-sig")))
+                    check()
+                    if frame.columns.tolist() == [0]:
+                        frame.columns = ["text"]
+                    table = pa.Table.from_pandas(frame, preserve_index=False)
+                check()
+                tables.append(table)
+            else:
+                # Parquet's embedded Arrow schema can activate extension
+                # decoders during opening. The memory-only reader below must
+                # reject that metadata before constructing its data reader.
+                tables.extend(parquet_reader(raw, check))
+            check()
+            if not tables:
+                raise ValueError("The private training dataset is empty.")
+            for table in tables:
+                check()
+                if type(table) is not pa.Table:
+                    raise ValueError("The private training dataset table is unavailable.")
+                splits[selected["splitRole"]].append(table.replace_schema_metadata(None))
+                check()
+        result = fixed_dict()
+        for name, tables in splits.items():
+            if not tables:
+                continue
+            check()
+            table = fixed_concat(tables, promote_options="default").replace_schema_metadata(None)
+            check()
+            if len(table) == 0:
+                raise ValueError("The private training dataset is empty.")
+            result[name] = fixed_dataset(table,
+                fingerprint=identity[0].replace("-", "") + "_" + name + "_loaded_v1")
+            check()
+        check()
+        validation = dict.get(result, "validation")
+        slot["stage"] = "complete"
+        return result, validation
+    except BaseException as error:
+        slot["stage"] = "failed"
+        if isinstance(error, (LaunchUnavailable, TrainingCancellationRequested, KeyboardInterrupt, SystemExit)):
+            raise
+        # SDK parser exceptions can quote rows, paths or remote references.
+        raise ValueError("The private training dataset could not be loaded.") from None
+
+
 def _load_dataset(payload: TrainModelTaskRequest, *, local_dataset_refs=None, _protected_use=None) -> tuple[Any, Any]:
+    if _protected_use is not None:
+        if (type(_protected_use) is not _ProtectedTrainingUse or get_ident() != _protected_use._thread
+                or _protected_use.payload is not payload):
+            raise ValueError("The private protected training inputs are unavailable.")
+        _ProtectedTrainingUse.assert_snapshot(_protected_use)
+        # Dispatch the captured original only after fixed passive validation.
+        # A replaced module helper cannot receive a live Use before this check.
+        return _protected_use._dataset_loader(payload, local_dataset_refs, _protected_use)
     _check_protected_use(_protected_use,payload)
     if _protected_use is not None and local_dataset_refs != _protected_use.dataset_references:
         raise ValueError("The private protected training inputs are unavailable.")

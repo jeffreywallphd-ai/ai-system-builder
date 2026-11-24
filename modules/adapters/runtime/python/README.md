@@ -1110,3 +1110,20 @@ handle numbers, identity and charge state cannot be replaced by later callbacks.
 Failures publish no partial bytes; uncertain calls retain their buffers/handles
 and prohibit retry. Parsing, producer/resource ownership, retirement, Save and
 actual-host qualification remain separate. Ordinary loading is unchanged.
+
+### Parse protected datasets in memory
+
+The original private Use captures its byte reader and parser before callbacks.
+Refuse foreign threads before reserving a load. Dispatch only the validated,
+captured loader. One load consumes verified bytes into in-memory Datasets;
+JSON, JSONL, CSV and self-contained Parquet never reach path-based SDK builders.
+Preserve file order and reader defaults. Strip feature metadata before Dataset
+construction. Lost permission, changed helpers, reentry or malformed input fails
+without partial results, retry, cache files or input-bearing diagnostics.
+
+The pinned PyArrow 25.0.0 footer reader screens extension/schema metadata and
+external column paths before opening data. Reserved ambiguous schema text and
+extension types are unavailable on this private profile. Ordinary loading stays
+unchanged. Existing 64 MiB/file and 256 MiB encoded limits do not bound decoded
+RAM. Complete resource ownership, producer/custody, retirement, Save and actual
+host qualification remain pending; parser tests load no model or quality scorer.

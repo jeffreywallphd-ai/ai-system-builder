@@ -3229,3 +3229,24 @@ passive handle checks bypass replaceable instance methods.
 This private byte component does not supply a parser, full training producer,
 global memory/disk reservation, output custody, permanent worker/Job retirement,
 Save or actual-host qualification. Defaults and ordinary training stay unchanged.
+
+### Protected training dataset parsing
+
+The original private Use captures the byte reader and fixed parser before SDK
+callbacks. Reserve one load, consume only the verified byte tuple, and convert
+JSON/JSONL/CSV or self-contained Parquet memory buffers into plain in-memory
+train/validation Datasets. Preserve format defaults, split/file order and opaque
+task/split fingerprints. Refuse foreign threads before changing load state and
+validate the Use before captured-loader dispatch. Keep original permission/view/request/helper comparisons
+around imports, reads, parser batches and Dataset construction. Lost authority,
+owned reentry or any failed file yields no partial splits, retry, path fallback,
+cache or input-bearing diagnostic. Strip feature metadata before construction.
+
+The exact PyArrow 25.0.0 footer reconstructor reads bounded PAR1 footer bytes
+without pickle or extension/schema deserialization. Screen all reserved schema
+occurrences, strictly decoded schema envelopes/extension tags and external column
+references before the synchronous data reader. Ambiguous reserved text and custom
+extensions remain unavailable on this private profile. Ordinary paths are intact.
+Encoded input limits and parser batches do not bound decoded RAM; complete
+resource reservation, producer/custody, retirement, Save and actual host execution
+remain pending. Installed-SDK synthetic tests supply no model-quality result.

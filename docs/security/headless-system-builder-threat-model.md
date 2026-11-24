@@ -2927,3 +2927,27 @@ results, path fallback, refund or retry. Unknown Native outcomes retain call
 buffers, handles and the read marker; they do not authorize closing resources
 or proving worker/Job retirement. Synthetic ABI tests supply no physical Native,
 parser, complete resource/producer/custody, Save, model-quality or host pass.
+
+### Protected dataset parser inputs and decoder activation
+
+Only the captured original held-handle reader supplies private training bytes.
+Validate the original Use before captured-loader dispatch; a replaced module
+helper cannot bypass it. Reject foreign threads before changing the owner's load.
+Reserve one load before imports; guard original permission/view/request/helpers
+around observers and never use paths, Dataset builders, caches or remote readers.
+Do not publish partial splits or raw parser exceptions. Owned reentry, helper
+replacement and lost authority permanently refuse that attempt. Ordinary loaders
+are unchanged and are never a fallback. Remove feature metadata before Dataset
+construction so image/audio references remain literal data.
+
+Parquet's public metadata API can invoke registered extension deserializers even
+when Arrow extension conversion is disabled. Use the exact pinned 25.0.0 fixed
+footer reconstructor on validated PAR1 bytes, never pickle or `read_schema`.
+Reject ambiguous raw schema-key occurrences before relying on a collapsed metadata
+dictionary. Strictly decode and validate the IPC envelope, refuse extension tags
+before the data reader, and reject external column paths. Conservative reserved
+text refusal is explicit; no unsupported decoder or supplier fallback follows.
+Synchronous memory-buffer/chunked parsing preserves current encoded byte limits,
+but compressed/decoded expansion still needs the pending original resource owner.
+Synthetic installed-SDK denial tests grant no hard RAM/disk bound, complete
+producer/custody/retirement, Save, model accuracy, Native or host qualification.

@@ -1824,32 +1824,33 @@ def test_invalid_private_dataset_references_deny_before_output_or_dataset_work(m
 @pytest.mark.parametrize("withdraw",[False,True])
 def test_live_use_checked_after_dataset_import_before_reader_factory(monkeypatch,withdraw):
     import builtins
+    import datasets
     from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
     from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
     case=TrainingInputCopyTests()
     source,lease,staged,config,control,kernel,*_=case.fixture(native_module=native)
     graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control); calls=[]
-    class LocalPath(PureWindowsPath):
-        def exists(self): return True  # Only this inert SDK boundary; Native facts remain real fixture replies.
-    def read(builder,*,data_files): calls.append(data_files); return {"train":[{"text":"synthetic"}]}
     original_import=builtins.__import__
     def importing(name,*args,**options):
         if name=="datasets":
             if withdraw: control.current=False
-            return SimpleNamespace(load_dataset=read)
+            calls.append("import")
+            return datasets
         return original_import(name,*args,**options)
     try:
         graph.prepare(); payload=TrainModelTaskRequest.model_validate(staged["payload"])
         with lease.borrow(payload.model_dump(mode="json")) as view:
             use=train_model_module._ProtectedTrainingUse(payload,view)
-            monkeypatch.setattr(train_model_module,"Path",LocalPath)
+            monkeypatch.setattr(train_model_module,"Path",lambda *_: pytest.fail("Private loading reopened a path"))
             monkeypatch.setattr(builtins,"__import__",importing)
+            reads=lambda: sum(name=="ReadFile" for name,_ in kernel.calls)
+            before=reads()
             if withdraw:
                 with pytest.raises(native.LaunchUnavailable): train_model_module._load_dataset(payload,local_dataset_refs=use.dataset_references,_protected_use=use)
-                assert calls==[]
+                assert reads()==before and calls==["import"]
             else:
                 result,_=train_model_module._load_dataset(payload,local_dataset_refs=use.dataset_references,_protected_use=use)
-                assert result=={"train":[{"text":"synthetic"}]} and len(calls)==1
+                assert result["train"].to_list()==[{"instruction":"Say yes","output":"yes"}] and reads()>before
     finally: case.doCleanups()
 
 
@@ -1885,6 +1886,251 @@ def test_live_use_checked_after_tokenizer_before_model_factory(monkeypatch,withd
                 train_model_module._load_transformers_objects(use.model_reference,payload.method,{},local_files_only=True,_protected_use=use)
                 assert calls==["tokenizer","model"]
     finally: case.doCleanups()
+
+
+@contextmanager
+def _protected_dataset_loading_fixture(monkeypatch,fmt,contents):
+    """Real held-handle reader and Use; only the Native ABI is in memory."""
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import (
+        Kernel, SourceLaunchExchangeTests, TrainingInputCopyTests)
+    media={"jsonl":"application/x-ndjson","json":"application/json","csv":"text/csv","parquet":"application/vnd.apache.parquet"}[fmt]
+    bootstrap,node=SourceLaunchExchangeTests.bound_bootstrap,Kernel.node
+    def bind(self,definition=None,native_module=None):
+        for row,raw in zip(definition["inputs"],contents):
+            row.update(sizeBytes=len(raw),digest="sha256:"+hashlib.sha256(raw).hexdigest())
+        return bootstrap(self,definition,native_module)
+    def stage(self,path,directory,data=b"",acl=None):
+        for index,raw in enumerate(contents):
+            if path=="X:\\inputs\\batch\\"+str(index+1).zfill(4)+"-input-"+str(index)+"."+fmt:
+                data=raw
+        return node(self,path,directory,data,acl)
+    case=TrainingInputCopyTests()
+    try:
+        with monkeypatch.context() as setup:
+            setup.setattr(SourceLaunchExchangeTests,"bound_bootstrap",bind)
+            setup.setattr(Kernel,"node",stage)
+            source,lease,staged,config,control,kernel,*_=case.fixture(media=media,count=len(contents),native_module=native)
+        graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        graph.prepare(); payload=TrainModelTaskRequest.model_validate(staged["payload"])
+        with lease.borrow(payload.model_dump(mode="json")) as view:
+            use=train_model_module._ProtectedTrainingUse(payload,view)
+            yield use,control,kernel,graph
+    finally: case.doCleanups()
+
+
+def _memory_dataset_bytes(fmt,rows):
+    if fmt=="jsonl":return b"\n".join(json.dumps(row).encode() for row in rows)+b"\n"
+    if fmt=="json":return json.dumps(rows).encode()
+    if fmt=="csv":
+        import csv,io
+        stream=io.StringIO(newline=""); writer=csv.DictWriter(stream,fieldnames=list(rows[0]))
+        writer.writeheader();writer.writerows(rows);return stream.getvalue().encode()
+    import pyarrow as pa,pyarrow.parquet as pq
+    stream=pa.BufferOutputStream();pq.write_table(pa.Table.from_pylist(rows),stream)
+    return stream.getvalue().to_pybytes()
+
+
+@pytest.mark.parametrize("fmt",["jsonl","json","csv","parquet"])
+def test_private_dataset_loading_uses_installed_memory_parsers_and_original_bytes(monkeypatch,fmt):
+    from datasets import Dataset,DatasetDict
+    from datasets.table import InMemoryTable
+    rows=[{"instruction":"Say, yes","output":"yes","count":2,"enabled":True},
+          {"instruction":"Line\nTwo","output":"no","count":3,"enabled":False}]
+    raw=_memory_dataset_bytes(fmt,rows)
+    with _protected_dataset_loading_fixture(monkeypatch,fmt,(raw,raw)) as (use,control,kernel,graph):
+        before=use.payload.model_dump(mode="json")
+        opened=len(kernel.opened_names)
+        loaded,evaluation=train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert type(loaded) is DatasetDict and tuple(loaded)==("train","validation")
+        assert evaluation is loaded["validation"]
+        for name,split in loaded.items():
+            assert type(split) is Dataset and type(split.data) is InMemoryTable and not split.cache_files
+            assert split.to_list()==rows and split._fingerprint==use._run_identity[0].replace("-","")+"_"+name+"_loaded_v1"
+            assert split.features["count"].dtype=="int64" and split.features["enabled"].dtype=="bool"
+        assert use.payload.model_dump(mode="json")==before and len(kernel.opened_names)==opened
+        assert control.retained==[] and graph.phase=="sealed"
+        reads=sum(name=="ReadFile" for name,_ in kernel.calls)
+        with pytest.raises(ValueError):train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert sum(name=="ReadFile" for name,_ in kernel.calls)==reads and use._dataset_slot["stage"]=="complete"
+
+
+@pytest.mark.parametrize("fmt",["jsonl","json","csv","parquet"])
+def test_private_dataset_parser_failure_is_redacted_and_never_publishes_partial_splits(monkeypatch,fmt):
+    raw=_memory_dataset_bytes(fmt,[{"text":"approved"}])
+    broken=b"synthetic-private-row https://example.invalid/private X:\\private\\source"
+    if fmt=="csv":broken=b'text\n"synthetic-private-row'
+    with _protected_dataset_loading_fixture(monkeypatch,fmt,(raw,broken)) as (use,control,kernel,graph):
+        with pytest.raises(ValueError) as error:
+            train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert str(error.value)=="The private training dataset could not be loaded."
+        assert use._dataset_slot["stage"]=="failed" and control.retained==[]
+        reads=sum(name=="ReadFile" for name,_ in kernel.calls)
+        with pytest.raises(ValueError):train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert sum(name=="ReadFile" for name,_ in kernel.calls)==reads
+
+
+@pytest.mark.parametrize("fmt",["json","jsonl"])
+def test_private_json_string_arrays_keep_text_column(monkeypatch,fmt):
+    with _protected_dataset_loading_fixture(monkeypatch,fmt,(b'["one","two"]',)) as (use,*_):
+        loaded,_=train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert loaded["train"].to_list()==[{"text":"one"},{"text":"two"}]
+
+
+def test_private_parquet_never_deserializes_registered_extension_metadata(monkeypatch):
+    import pyarrow as pa,pyarrow.parquet as pq
+    armed=False;effects=[]
+    class SyntheticExtension(pa.ExtensionType):
+        def __init__(self):super().__init__(pa.int32(),"synthetic.private.training")
+        def __arrow_ext_serialize__(self):return b"synthetic"
+        @classmethod
+        def __arrow_ext_deserialize__(cls,storage_type,serialized):
+            if armed:effects.append("extension");raise RuntimeError("synthetic-private-extension")
+            return cls()
+    extension=SyntheticExtension();pa.register_extension_type(extension)
+    try:
+        array=pa.ExtensionArray.from_storage(extension,pa.array([1],type=pa.int32()))
+        sink=pa.BufferOutputStream();pq.write_table(pa.Table.from_arrays([array],names=["value"]),sink)
+        raw=sink.getvalue().to_pybytes()
+        with _protected_dataset_loading_fixture(monkeypatch,"parquet",(raw,)) as (use,*_):
+            armed=True
+            with pytest.raises(ValueError,match="could not be loaded"):
+                train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+            assert effects==[] and use._dataset_slot["stage"]=="failed"
+    finally:
+        armed=False;pa.unregister_extension_type(extension.extension_name)
+
+
+def test_private_parquet_feature_paths_remain_literal_data(monkeypatch):
+    import pyarrow as pa,pyarrow.parquet as pq
+    from datasets import Features,Image
+    raw_values=[{"image":{"bytes":None,"path":"https://example.invalid/private-image.png"}}]
+    table=pa.Table.from_pylist(raw_values).replace_schema_metadata({b"huggingface":
+        json.dumps({"info":{"features":Features({"image":Image()}).to_dict()}}).encode()})
+    sink=pa.BufferOutputStream();pq.write_table(table,sink);raw=sink.getvalue().to_pybytes()
+    with _protected_dataset_loading_fixture(monkeypatch,"parquet",(raw,)) as (use,*_):
+        loaded,_=train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert loaded["train"].to_list()==raw_values and not isinstance(loaded["train"].features["image"],Image)
+
+
+def test_private_parquet_external_column_paths_deny_before_data_reader(monkeypatch):
+    import io
+    import pyarrow as pa,pyarrow.parquet as pq
+    table=pa.table({"text":["safe"]});sink=pa.BufferOutputStream();collected=[]
+    pq.write_table(table,sink,metadata_collector=collected)
+    collected[0].set_file_path("https://example.invalid/unapproved.parquet")
+    external=io.BytesIO();pq.write_metadata(table.schema,external,metadata_collector=collected)
+    with _protected_dataset_loading_fixture(monkeypatch,"parquet",(external.getvalue(),)) as (use,*_):
+        with monkeypatch.context() as forbid:
+            forbid.setattr(pq,"ParquetFile",lambda *a,**k:pytest.fail("External column path reached data reader"))
+            with pytest.raises(ValueError,match="could not be loaded"):
+                train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+
+
+@pytest.mark.parametrize("fmt",["jsonl","json","csv","parquet"])
+def test_private_dataset_file_order_and_no_filesystem_network_or_builder(monkeypatch,fmt):
+    import builtins,io,socket,requests
+    import pyarrow as pa,pyarrow.parquet as pq,pyarrow.json
+    from datasets.builder import DatasetBuilder
+    from datasets.packaged_modules.csv.csv import CsvConfig
+    from datasets.packaged_modules.json.json import pandas_read_json
+    import pandas
+    chunks=tuple(_memory_dataset_bytes(fmt,[{"text":text}]) for text in ("train","validation first","validation second"))
+    with _protected_dataset_loading_fixture(monkeypatch,fmt,chunks) as (use,*_):
+        def forbidden(*a,**k):pytest.fail("Private dataset loading attempted filesystem/network/cache/builder work")
+        with monkeypatch.context() as sentinel:
+            sentinel.setattr(builtins,"open",forbidden);sentinel.setattr(io,"open",forbidden)
+            sentinel.setattr(Path,"open",forbidden);sentinel.setattr(Path,"exists",forbidden);sentinel.setattr(Path,"mkdir",forbidden)
+            sentinel.setattr(pa,"memory_map",forbidden);sentinel.setattr(socket,"create_connection",forbidden)
+            sentinel.setattr(requests.sessions.Session,"request",forbidden);sentinel.setattr(DatasetBuilder,"__init__",forbidden)
+            loaded,evaluation=train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+            assert loaded["train"].to_list()==[{"text":"train"}]
+            assert evaluation.to_list()==[{"text":"validation first"},{"text":"validation second"}]
+
+
+@pytest.mark.parametrize("change",["permission","reader","loader","reentry"])
+def test_private_parser_observers_cannot_change_authority_helpers_or_reenter(monkeypatch,change):
+    import pandas
+    original=pandas.read_csv;effects=[]
+    raw=_memory_dataset_bytes("csv",[{"text":"safe"}])
+    with _protected_dataset_loading_fixture(monkeypatch,"csv",(raw,)) as (use,control,kernel,_):
+        def observe(*a,**k):
+            chunks=original(*a,**k);effects.append("parser")
+            if change=="permission":control.current=False
+            elif change=="reader":use._dataset_reader=lambda *a:pytest.fail("Replaced input reader invoked")
+            elif change=="loader":use._dataset_loader=lambda *a:pytest.fail("Replaced loader invoked")
+            else:
+                with pytest.raises(ValueError):train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+            return chunks
+        monkeypatch.setattr(pandas,"read_csv",observe)
+        with pytest.raises((ValueError,train_model_module.LaunchUnavailable)):
+            train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert effects==["parser"] and use._dataset_slot["stage"]=="failed" and control.retained==[]
+
+
+@pytest.mark.parametrize("change",["reader","loader","parquet-reader"])
+def test_private_dataset_helper_replacement_denies_before_original_read(monkeypatch,change):
+    raw=b'{"text":"safe"}\n'
+    with _protected_dataset_loading_fixture(monkeypatch,"jsonl",(raw,)) as (use,_,kernel,_):
+        attribute={"reader":"_dataset_reader","loader":"_dataset_loader","parquet-reader":"_dataset_parquet_reader"}[change]
+        setattr(use,attribute,lambda *a:pytest.fail("Replacement helper invoked"))
+        reads=sum(name=="ReadFile" for name,_ in kernel.calls)
+        with pytest.raises(ValueError):train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert sum(name=="ReadFile" for name,_ in kernel.calls)==reads and use._dataset_slot is None
+
+
+@pytest.mark.parametrize("mode",["reserved-duplicate","extension-tag","trailing-envelope","wrong-version"])
+def test_private_parquet_ambiguous_metadata_and_unknown_reader_version_deny(monkeypatch,mode):
+    import base64
+    import pyarrow as pa,pyarrow.parquet as pq
+    table=pa.table({"text":["safe"]})
+    if mode=="reserved-duplicate":table=table.replace_schema_metadata({b"synthetic":b"ARROW:schema"})
+    elif mode=="extension-tag":table=table.rename_columns(["ARROW:extension:name"])
+    sink=pa.BufferOutputStream();pq.write_table(table,sink);raw=sink.getvalue().to_pybytes()
+    if mode=="trailing-envelope":
+        # Change only the synthetic footer's exact Compact-Thrift binary value
+        # and lengths. The installed writer drops caller ARROW:schema metadata.
+        encoded=pq.read_metadata(pa.BufferReader(raw)).metadata[b"ARROW:schema"]
+        replacement=base64.b64encode(base64.b64decode(encoded)+b"trailing")
+        def varint(value):
+            out=bytearray()
+            while value>=128:out.append((value&127)|128);value>>=7
+            out.append(value);return bytes(out)
+        size=int.from_bytes(raw[-8:-4],"little");footer=raw[-8-size:-8]
+        original=varint(len(encoded))+encoded
+        assert footer.count(original)==1
+        changed=footer.replace(original,varint(len(replacement))+replacement)
+        raw=raw[:-8-size]+changed+len(changed).to_bytes(4,"little")+b"PAR1"
+    with _protected_dataset_loading_fixture(monkeypatch,"parquet",(raw,)) as (use,*_):
+        if mode=="wrong-version":monkeypatch.setattr(pa,"__version__","unqualified")
+        with pytest.raises(ValueError,match="could not be loaded"):
+            train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+
+
+def test_private_dataset_module_loader_replacement_cannot_bypass_original_use(monkeypatch):
+    with _protected_dataset_loading_fixture(monkeypatch,"jsonl",(b'{"text":"safe"}\n',)) as (use,_,kernel,_):
+        effects=[];before=len(kernel.calls)
+        monkeypatch.setattr(train_model_module,"_load_protected_dataset",lambda *a:effects.append("replacement"))
+        with pytest.raises(ValueError):
+            train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert effects==[] and len(kernel.calls)==before and use._dataset_slot is None
+
+
+@pytest.mark.parametrize("entry",["dispatch","parser"])
+def test_foreign_thread_cannot_consume_or_poison_original_dataset_load(monkeypatch,entry):
+    from threading import Thread
+    with _protected_dataset_loading_fixture(monkeypatch,"jsonl",(b'{"text":"safe"}\n',)) as (use,_,kernel,_):
+        errors=[];before=len(kernel.calls)
+        def foreign():
+            try:
+                if entry=="dispatch":
+                    train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+                else:train_model_module._load_protected_dataset(use.payload,use.dataset_references,use)
+            except ValueError:errors.append("refused")
+        worker=Thread(target=foreign);worker.start();worker.join(5)
+        assert not worker.is_alive() and errors==["refused"] and len(kernel.calls)==before and use._dataset_slot is None
+        loaded,_=train_model_module._load_dataset(use.payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        assert loaded["train"].to_list()==[{"text":"safe"}]
 
 
 def _validation_comparison_fixture(monkeypatch, *, baseline=4.0, candidate=3.0, fail_at=None):

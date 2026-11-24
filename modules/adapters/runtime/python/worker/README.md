@@ -2298,3 +2298,32 @@ neither retry nor copy retirement follows. A completed byte read does not retire
 the original worker/Job or release retained accounting. Fake-ABI tests qualify
 only this component. Bounded parsing, complete producer/resource/custody, Save
 and actual-host qualification remain pending; accepted accuracy is not rerun.
+
+### Protected training dataset parsing
+
+Refuse foreign threads before modifying the load state. Validate the original
+Use before dispatching its captured loader. The private loader reserves one
+attempt before imports and consumes the original
+held-handle byte tuple. It parses JSON/JSONL with memory-buffer Arrow and pandas
+conversions, CSV with the installed configuration and 10,000-row chunks, and
+self-contained Parquet with synchronous 10,000-row batches. It creates plain
+in-memory Datasets with opaque original task/split fingerprints. Never call
+`load_dataset` or a Dataset builder on this path. Ordinary loading is unchanged.
+
+Capture reader/parser helpers before callbacks; recheck original permission,
+request, view and helpers around imports, reads, batches and Dataset construction.
+Reject reentry, empty/invalid inputs or second-file failure without publishing
+partial splits, reopening paths, retrying or reporting input-bearing exceptions.
+Remove feature schema metadata before constructing a Dataset, so image/audio
+references remain plain values.
+
+PyArrow's public metadata reader can run extension deserializers. The fixed
+25.0.0 private footer reconstructor instead reads the validated PAR1 footer
+directly, without pickle or Arrow schema deserialization. Reject ambiguous raw
+`ARROW:schema` occurrences, extension tags, invalid/trailing IPC envelopes and
+external column paths before opening data. Reserved schema text can conservatively
+refuse an otherwise harmless file. Update the pin and focused tests together if
+the SDK changes. Encoded 64 MiB/file and 256 MiB aggregate limits and parser
+chunks are not a decoded-memory guarantee. Full 2 GiB/process and 4 GiB total
+resource ownership, producer/custody, retirement, Save and host evidence remain
+separate. These synthetic tests never load a model or rerun accuracy.
