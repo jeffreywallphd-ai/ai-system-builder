@@ -173,6 +173,14 @@ By default the skill creates:
   summary and the next checkpoint;
 - `.implementation-roadmaps/<slug>/state.json` as deterministic render state.
 
+Large state and recovery journals can use the lossless `roadmap-record-tree-v1`
+JSON format. The engine selects it only after plain encodings do not fit the same
+one-MiB limit. Use the skill's `load_state` or the control plane's canonical reader
+to inspect values; raw JSON may be a storage envelope. All plans, evidence and
+approval fingerprints remain unchanged. Install the sibling storage codec with
+the skill. See [control-plane storage](../architecture/ai-development-control-plane.md#roadmap-record-storage)
+for bounds and recovery rules.
+
 The roadmap and state are durable repository artifacts. `docs/tmp/` is ignored;
 the report must not be committed or pushed. It summarizes status, increment
 progress, current/next work, recent chunks, unresolved feedback, and blockers;

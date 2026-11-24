@@ -70,7 +70,8 @@ def _sources(root, roadmaps):
     criteria, headings = {}, {}
     for roadmap in roadmaps:
         identity = identifier(roadmap['id'])
-        state = read_json(confined_path(root, f'.implementation-roadmaps/{identity}/state.json'), maximum=2*1024*1024)
+        from .roadmap_state import read_roadmap_state
+        state = read_roadmap_state(root, f'.implementation-roadmaps/{identity}/state.json')
         if state.get('slug') != identity or state.get('schemaVersion') != 1:
             raise ValueError('canonical source identity required')
         headings[('roadmap', identity)] = digest({'title': state['name'], 'objective': state['objective']})

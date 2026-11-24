@@ -27,9 +27,19 @@ def digest(value):
 
 
 def read(path, maximum=8*1024**2):
-    path = standard.original.checked_path(Path(path).relative_to(ROOT).as_posix())
+    relative = Path(path).relative_to(ROOT).as_posix()
+    path = standard.original.checked_path(relative)
+    roadmap_state = re.fullmatch(r'\.implementation-roadmaps/[a-z0-9]+(?:-[a-z0-9]+)*/state\.json', relative) is not None
+    if roadmap_state: maximum = min(maximum, 1024*1024)
     if not 0 < path.stat().st_size <= maximum: raise ValueError('Evidence/input byte bound exceeded.')
-    return json.loads(path.read_text(encoding='utf-8'))
+    with path.open('rb') as stream: raw = stream.read(maximum + 1)
+    if len(raw) > maximum: raise ValueError('Evidence/input byte bound exceeded.')
+    if roadmap_state:
+        helpers = str(ROOT / 'dev-tools/helpers')
+        if helpers not in sys.path: sys.path.insert(0, helpers)
+        from control_plane.roadmap_state import decode_roadmap_bytes
+        return decode_roadmap_bytes(ROOT, raw)
+    return json.loads(raw.decode('utf-8'))
 
 
 def save(folder, name, value): standard.diagnostics.save(folder, name, value)

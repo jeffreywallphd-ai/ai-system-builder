@@ -93,6 +93,15 @@ record its canonical source and version and add an automated parity check.
 
 ## Publishing checks
 
+Install `scripts/roadmap_storage.py` beside `scripts/roadmap.py`, plus the shared
+`tests/fixtures/roadmap-storage-vectors.json` and storage/publication tests. Legacy
+plain records need no codec, but encoded `roadmap-record-tree-v1` records refuse
+missing, unsafe or incompatible codecs. Integrations must decode canonical state
+before reading approval or displaying progress. Preserve raw file hashes where a
+consumer already binds physical bytes. The fixed direct test runner collects the
+codec and interrupted-publication cases; cross-language adapters must also run the
+shared vectors. Do not copy just the engine when encoded records are in use.
+
 The target repository's `AGENTS.md` may integrate this skill with a bounded
 contributor control plane. Preserve that routing, the JSON review-site startup
 requirement and receipt-backed completion tests. Installing the portable skill

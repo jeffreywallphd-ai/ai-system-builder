@@ -17,6 +17,31 @@ spec=importlib.util.spec_from_file_location('blocker_runner_subject',MODULE)
 runner=importlib.util.module_from_spec(spec); spec.loader.exec_module(runner)
 
 
+class CanonicalRoadmapReadTests(unittest.TestCase):
+    def test_encoded_roadmap_uses_shared_reader_but_evidence_is_plain_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            codec_name = 'skills/manage-implementation-roadmaps/scripts/roadmap_storage.py'
+            codec = root / codec_name; codec.parent.mkdir(parents=True)
+            codec.write_bytes((runner.ROOT / codec_name).read_bytes())
+            codec_spec = importlib.util.spec_from_file_location('blocker_storage_fixture', codec)
+            storage = importlib.util.module_from_spec(codec_spec); codec_spec.loader.exec_module(storage)
+            value = {'status':'executing', 'increments':[], 'blockers':[]}
+            path = root / '.implementation-roadmaps/example/state.json'
+            path.parent.mkdir(parents=True)
+            raw = storage.encode_record(value).encode('ascii'); path.write_bytes(raw)
+            with patch.object(runner, 'ROOT', root), \
+                    patch.object(runner.standard.original, 'checked_path', side_effect=lambda name: root / name):
+                self.assertEqual(runner.read(path), value)
+                other = root / 'evidence.json'; other.write_bytes(raw)
+                self.assertIn('storageVersion', runner.read(other))
+                damaged = json.loads(raw); damaged['contentSha256'] = '0' * 64
+                path.write_text(json.dumps(damaged), encoding='utf8')
+                with self.assertRaises(Exception) as error: runner.read(path)
+                self.assertEqual(type(error.exception).__name__, 'ControlError')
+                with self.assertRaises(ValueError): runner.read(path, maximum=10)
+
+
 class BlockerRunnerTests(unittest.TestCase):
     def test_remaining_diagnosis_distinguishes_memory_quality_and_pending_prerequisites(self):
         cohorts = [

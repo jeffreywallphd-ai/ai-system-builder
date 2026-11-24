@@ -9,6 +9,7 @@ import {
   readSync,
 } from "node:fs";
 import path from "node:path";
+import {decodeRoadmapRecordBytes} from "./roadmap-record-storage.mjs";
 
 const hex = /^[a-f0-9]{64}$/u;
 const identifier = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -73,7 +74,8 @@ export function repositoryFile(root, relative) {
 export function readQualificationJson(root, relative) {
   const target = repositoryFile(root, relative);
   const bytes = readBounded(target, 1024 * 1024);
-  return { value: JSON.parse(bytes.toString("utf8")), digest: sha256(bytes) };
+  return { value: /^\.implementation-roadmaps\/[a-z0-9]+(?:-[a-z0-9]+)*\/state\.json$/u.test(relative)
+    ? decodeRoadmapRecordBytes(bytes) : JSON.parse(bytes.toString("utf8")), digest: sha256(bytes) };
 }
 
 export function readFunctionalitySourceIdentity(root) {

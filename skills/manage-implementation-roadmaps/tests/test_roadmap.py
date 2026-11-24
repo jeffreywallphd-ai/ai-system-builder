@@ -2590,6 +2590,15 @@ class HeadlessWorkflowRestrictionTest(unittest.TestCase):
 
 
 class WorkChunkCollectionTest(unittest.TestCase):
+    def test_registered_runner_executes_actual_storage_protocol_cases(self):
+        selected = "StorageCodecTests.test_typed_values_and_protocol_vectors_roundtrip"
+        result = subprocess.run([sys.executable, "-B", str(Path(__file__)), "-k", selected, "-v"],
+                                capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+        self.assertIn(selected.split(".", 1)[1].encode(), result.stderr)
+        self.assertIn(b"Ran 1 test", result.stderr)
+        self.assertNotIn(b"skipped", result.stderr)
+
     def test_registered_direct_runner_collects_a_publication_boundary_case(self):
         selected = "PublicationSizeTests.test_cli_compacts_large_state_without_losing_history"
         result = subprocess.run([sys.executable, "-B", str(Path(__file__)), "-k", selected, "-v"],
@@ -2619,5 +2628,6 @@ if __name__ == "__main__":
     # collects the sidecar separately and does not enter this block.
     sys.modules.setdefault("test_roadmap", sys.modules[__name__])
     from test_work_chunk_refinement import WorkChunkRefinementTests
-    from test_state_publication_bounds import PublicationSizeTests
+    from test_state_publication_bounds import PublicationSizeTests, EncodedPublicationTests
+    from test_roadmap_storage import StorageCodecTests
     unittest.main()

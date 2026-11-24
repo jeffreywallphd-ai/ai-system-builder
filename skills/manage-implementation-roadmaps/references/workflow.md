@@ -3,11 +3,20 @@
 Publication retains the complete JSON state under the existing one-MiB reader
 limit. Small records use indentation; larger records use canonical compact JSON
 with LF/CRLF headroom. The actual complete recovery journal must also fit before
-it is written. Apply and its dry-run use the same admission. Render and recovery
+it is written. If repeated containers make compact JSON too large, the fixed
+`scripts/roadmap_storage.py` sibling can encode the complete state or whole journal
+as `roadmap-record-tree-v1`. It retains all values, numeric types and history;
+decoded containers are independent. The physical limit stays one MiB. Expansion
+has separate byte, container and depth limits, not a claim about process RAM.
+Apply and its dry-run use the same admission. Render and recovery
 check the state they actually publish, without inventing another journal.
 Refusal preserves existing managed files and any original recovery journal.
 Formatting supplies no approval, evidence or completion authority. Never remove
 history or expand the read limit to conceal a publication failure.
+Use the engine's `load_state` or the repository's canonical reader. A missing or
+corrupt codec refuses encoded records while legacy plain records remain readable.
+Keep compatible readers when reverting code; do not manually unpack a record that
+cannot fit the plain publication limit. Restore compatibility before mutation.
 
 When publishing user descriptions, compare the complete technical meaning first,
 then bind the reviewed copy to current source hashes and qualification types.

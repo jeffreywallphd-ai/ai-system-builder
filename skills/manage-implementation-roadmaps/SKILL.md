@@ -377,9 +377,14 @@ For every approved increment, repeat this loop:
 
 State and recovery journals must fit the same one-MiB read limit. The engine keeps
 small state files indented and uses complete compact JSON for larger records,
-including LF/CRLF byte accounting. Parsed history and approval fingerprints stay
-unchanged. Dry-run checks the publication it would perform; an oversized state or
-whole recovery envelope is refused before persistent publication. Do not raise
+including LF/CRLF byte accounting. When repeated full plans exceed that encoding,
+the fixed sibling `scripts/roadmap_storage.py` can store the same logical record
+as bounded `roadmap-record-tree-v1` JSON. Install that sibling with the engine.
+Use `load_state` or the adapter's canonical state reader, not raw JSON parsing,
+for state inspection. Configs and events remain ordinary JSON. Parsed history and
+approval fingerprints stay unchanged. Dry-run checks the publication it would
+perform; an oversized state or whole recovery envelope is refused before
+persistent publication. This format adds no workflow step or approval. Do not raise
 the cap, trim history or manually adopt an oversized record to bypass refusal.
 Preserve the failed output and use a separately reviewed bounded recovery.
 
