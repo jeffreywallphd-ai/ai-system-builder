@@ -2260,3 +2260,20 @@ fixed actionable messages. The pinned SDK still validates supported scheduler
 names. Tests use inert SDK call order and arguments, never real model scoring.
 Checkpoint/controller, producer/accounting, retirement, Save and actual hosts
 remain separately pending.
+
+### Protected in-memory dataset mapping
+
+With an original protected Use, `_tokenize_dataset` accepts only nonempty plain
+in-memory `Dataset` train/validation splits. Map each split through the captured
+SDK mapper with a task/split fingerprint, `keep_in_memory=True`, no cache file,
+no cache reuse and no multiprocessing. One-row batches bound temporary padding,
+not total RAM. Map fresh private views of the captured Arrow tables, retaining
+both wrapper and Arrow identity. Strip feature schema metadata from the private
+copy so image/audio paths remain data, not automatic file or URL reads. Original
+data and metadata remain unchanged. Recheck permission and source bindings before
+and after each row callback, not just each split;
+reject disk-backed/custom/held-out shapes, changed inputs and partial failures.
+Keep formatted text, token IDs, masks, labels and row counts. Ordinary mapping
+is unchanged. The feature tests require the installed Datasets SDK and use only
+synthetic data with write/network/fingerprint sentinels. They supply no model
+score, protected byte-reader, full producer/resource, cleanup, Save or host pass.

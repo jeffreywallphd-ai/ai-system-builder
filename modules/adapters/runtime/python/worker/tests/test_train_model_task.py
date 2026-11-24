@@ -2420,6 +2420,163 @@ def test_synchronize_model_token_embeddings_resizes_when_tokenizer_has_added_tok
     assert model.resized_to == 12
 
 
+def test_protected_tokenization_uses_installed_memory_sdk_without_cache_or_pickling(monkeypatch):
+    import builtins
+    import os
+    import socket
+    import tempfile
+    from datasets import Dataset, DatasetDict, fingerprint
+    from datasets.table import InMemoryTable
+    datasets = DatasetDict({
+        "train": Dataset.from_dict({"text": ["Payment failed", "Need receipt"], "label": ["billing", "records"]}),
+        "validation": Dataset.from_dict({"text": ["Payment accepted"], "label": ["billing"]}),
+    })
+    before = {name: split.to_dict() for name, split in datasets.items()}
+    original_hash = fingerprint.Hasher.hash.__func__
+    def no_capability_hash(cls, value):
+        if callable(value) and getattr(value, "__name__", None) == "tokenize":
+            pytest.fail("The SDK tried to fingerprint the protected tokenization closure")
+        return original_hash(cls, value)
+    seen=[]
+    class Tokenizer:
+        def __call__(self, texts, **options):
+            assert len(texts)==1 and options=={"truncation":True,"padding":"max_length","max_length":8}
+            seen.extend(texts)
+            return {"input_ids":[[len(texts[0]),2]], "attention_mask":[[1,1]]}
+        def __getstate__(self):
+            pytest.fail("The SDK tried to serialize the protected tokenizer")
+    def no_effect(*args, **kwargs): pytest.fail("In-memory tokenization attempted filesystem/network/process effects")
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        _,use,*_=facts
+        with monkeypatch.context() as effects:
+            effects.setattr(fingerprint.Hasher,"hash",classmethod(no_capability_hash))
+            effects.setattr(builtins,"open",no_effect)
+            effects.setattr(os,"open",no_effect)
+            effects.setattr(os,"makedirs",no_effect)
+            effects.setattr(tempfile,"NamedTemporaryFile",no_effect)
+            effects.setattr(socket,"create_connection",no_effect)
+            result=train_model_module._tokenize_dataset(datasets,Tokenizer(),8,_protected_use=use)
+        assert seen==["Text:\nPayment failed\nLabel:\nbilling","Text:\nNeed receipt\nLabel:\nrecords",
+                      "Text:\nPayment accepted\nLabel:\nbilling"]
+        assert type(result) is DatasetDict and list(result)==["train","validation"]
+        for name,split in result.items():
+            assert type(split._data) is InMemoryTable and split.cache_files==[]
+            assert len(split)==len(before[name]["text"])
+            rows=split.to_dict()
+            assert rows["input_ids"]==rows["labels"]
+            expected_texts=seen[:2] if name=="train" else seen[2:]
+            assert rows["input_ids"]==[[len(text),2] for text in expected_texts]
+            assert rows["attention_mask"]==[[1,1]]*len(split)
+            assert split._fingerprint==use._run_identity[0].replace("-","")+"_"+name+"_tokens_v1"
+        assert {name:split.to_dict() for name,split in datasets.items()}==before
+
+
+@pytest.mark.parametrize("mode",["plain-dict","foreign-split","held-out","missing-train","empty","disk-table","indices","custom-format"])
+def test_protected_tokenization_rejects_unowned_memory_shapes_before_mapping(monkeypatch,mode):
+    from datasets import Dataset, DatasetDict
+    source=Dataset.from_dict({"text":["Synthetic input"]})
+    datasets=DatasetDict({"train":source})
+    if mode=="plain-dict": datasets=dict(datasets)
+    elif mode=="foreign-split": datasets["train"]=SimpleNamespace(column_names=["text"])
+    elif mode=="held-out": datasets["test"]=source
+    elif mode=="missing-train": datasets=DatasetDict({"validation":source})
+    elif mode=="empty": datasets["train"]=Dataset.from_dict({"text":[]})
+    elif mode=="disk-table": source.__dict__["_data"]=object()
+    elif mode=="indices": source.__dict__["_indices"]=object()
+    elif mode=="custom-format": source.set_format("custom",transform=lambda value:pytest.fail("Custom formatting ran"))
+    def no_map(*args,**kwargs): pytest.fail("An invalid private dataset reached mapping")
+    monkeypatch.setattr(Dataset,"map",no_map)
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        _,use,*_=facts
+        with pytest.raises(ValueError,match="private.*dataset"):
+            train_model_module._tokenize_dataset(datasets,no_map,8,_protected_use=use)
+
+
+@pytest.mark.parametrize("mode",["permission-loss","split-replacement","map-failure"])
+def test_protected_tokenization_refuses_callback_loss_without_partial_result(monkeypatch,mode):
+    from datasets import Dataset, DatasetDict
+    datasets=DatasetDict({"train":Dataset.from_dict({"text":["Synthetic train"]}),
+                          "validation":Dataset.from_dict({"text":["Synthetic validation"]})})
+    replacement=Dataset.from_dict({"text":["Changed"]})
+    calls=[]
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,_,_,_,control,*_=facts
+        def tokenizer(texts,**options):
+            calls.extend(texts)
+            if mode=="permission-loss": control.current=False
+            elif mode=="split-replacement": datasets["validation"]=replacement
+            else: raise RuntimeError("Synthetic mapper failure")
+            return {"input_ids":[[1]],"attention_mask":[[1]]}
+        with pytest.raises((ValueError,RuntimeError,actual.LaunchUnavailable)):
+            train_model_module._tokenize_dataset(datasets,tokenizer,8,_protected_use=use)
+        assert calls==["Synthetic train"]
+
+
+def test_protected_tokenization_keeps_the_original_sdk_mapper_across_callbacks(monkeypatch):
+    from datasets import Dataset, DatasetDict
+    datasets=DatasetDict({"train":Dataset.from_dict({"text":["Train"]}),
+                          "validation":Dataset.from_dict({"text":["Validation"]})})
+    calls=[]
+    def replacement(*args,**kwargs): pytest.fail("A callback replaced the original SDK mapper")
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        _,use,*_=facts
+        def tokenizer(texts,**options):
+            calls.extend(texts)
+            monkeypatch.setattr(Dataset,"map",replacement)
+            return {"input_ids":[[1]],"attention_mask":[[1]]}
+        result=train_model_module._tokenize_dataset(datasets,tokenizer,8,_protected_use=use)
+        assert calls==["Train","Validation"]
+        assert result["train"].to_dict()=={"input_ids":[[1]],"attention_mask":[[1]],"labels":[[1]]}
+        assert result["validation"].to_dict()==result["train"].to_dict()
+
+
+@pytest.mark.parametrize("mode",["split-replacement","arrow-replacement","format-replacement"])
+def test_protected_tokenization_stops_source_drift_before_a_second_row(monkeypatch,mode):
+    from datasets import Dataset, DatasetDict
+    source=Dataset.from_dict({"text":["Original first","Original second"]})
+    replacement=Dataset.from_dict({"text":["Changed first","Changed second"]})
+    datasets=DatasetDict({"train":source})
+    wrapper=source._data
+    calls=[]
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        _,use,*_=facts
+        def tokenizer(texts,**options):
+            calls.extend(texts)
+            if mode=="split-replacement": datasets["train"]=replacement
+            elif mode=="arrow-replacement": wrapper.table=replacement._data.table
+            else: source.__dict__["_format_kwargs"]={"changed":True}
+            return {"input_ids":[[1]],"attention_mask":[[1]]}
+        with pytest.raises(ValueError,match="private.*(dataset|table)"):
+            train_model_module._tokenize_dataset(datasets,tokenizer,8,_protected_use=use)
+        assert calls==["Original first"]
+
+
+@pytest.mark.parametrize("nested",[False,True])
+def test_protected_tokenization_treats_sdk_feature_paths_as_data(monkeypatch,nested):
+    from datasets import Dataset, DatasetDict, Features, Image
+    from PIL import Image as PillowImage
+    image={"bytes":None,"path":"X:/unapproved/synthetic.png"}
+    value={"picture":image} if nested else image
+    feature={"picture":Image()} if nested else Image()
+    source=Dataset.from_dict({"text":[value]},features=Features({"text":feature}))
+    original_table=source._data.table
+    original_metadata=dict(original_table.schema.metadata)
+    calls=[]; path_reads=[]
+    def no_path_read(path,*args,**kwargs):
+        path_reads.append(path)
+        pytest.fail("SDK feature metadata selected a file or URL decoder")
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        _,use,*_=facts
+        monkeypatch.setattr(PillowImage,"open",no_path_read)
+        def tokenizer(texts,**options):
+            calls.extend(texts)
+            return {"input_ids":[[1]],"attention_mask":[[1]]}
+        result=train_model_module._tokenize_dataset(DatasetDict({"train":source}),tokenizer,8,_protected_use=use)
+        assert path_reads==[] and len(calls)==1 and json.loads(calls[0])==value
+        assert result["train"].to_dict()=={"input_ids":[[1]],"attention_mask":[[1]],"labels":[[1]]}
+        assert source._data.table is original_table and dict(source._data.table.schema.metadata)==original_metadata
+
+
 def test_tokenize_dataset_formats_classification_rows_for_causal_training() -> None:
     class _Split:
         column_names = ["text", "label"]

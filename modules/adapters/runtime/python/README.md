@@ -1091,3 +1091,12 @@ definition for run, checkpoint and final-result records. It captures that value
 before SDK loading and checks the same task around live source observations.
 Ordinary unbound training keeps its existing run naming. This metadata link is
 not approval, execution, output custody or host qualification.
+
+### Protected in-memory tokenization
+
+Private text tokenization uses plain in-memory Datasets splits, one row at a
+time, with no SDK file cache, automatic feature-path decoding or callback
+fingerprinting. Ordinary training keeps
+its existing mapper. Installed Datasets feature tests use synthetic text only.
+Input-handle reading, total resource ownership and complete host execution remain
+separate requirements; this component activates no private training producer.

@@ -3198,3 +3198,16 @@ See the pinned [seed helper](https://github.com/huggingface/transformers/blob/v4
 and [Trainer arguments](https://github.com/huggingface/transformers/blob/v4.51.3/src/transformers/training_args.py).
 Safe loading, memory/native guards, checkpoint ownership, complete producer,
 retirement, Save and host qualification retain their existing requirements.
+
+### Private training data tokenization
+
+The protected text mapper works on plain in-memory train/validation Datasets,
+using captured synchronous per-split mapping, explicit task/split fingerprints
+and no file-cache read/write or process pool. Fresh private Dataset views use
+captured Arrow values with feature schema metadata removed; SDK image/audio
+decoders must not select additional paths or URLs. Preserve original input
+metadata, wrapper/table identity and permission
+before and after every row callback. Ordinary training retains its existing path.
+Single-row mapping limits transient padding only. Approved-byte reading, total
+resource reservation, complete producer/custody, retirement, Save and actual-host
+qualification remain separate and pending; no public capability is activated.

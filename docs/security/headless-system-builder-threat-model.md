@@ -2893,3 +2893,18 @@ Preserve all local-only/safe-format flags, defaults and resource/actor controls.
 A seed supplies no hardware determinism, quality, admission or additional model
 execution authority. Focused inert settings/callback tests supply no actual model
 score, producer, native resource, checkpoint, retirement, Save or host pass.
+
+### Protected training data caches and callback serialization
+
+The general Datasets mapper can fingerprint a closure and write cache files.
+The private path instead requires exact plain in-memory train/validation splits
+and explicit opaque fingerprints. It captures the SDK mapper before callbacks,
+disables cache reuse/files and multiprocessing, and maps fresh private views of
+captured Arrow values after removing schema feature metadata from the private
+copy. Image/audio paths stay literal data and cannot activate SDK file/URL
+decoding. Keep original input metadata intact. Recheck permission and wrapper/Arrow identity on both
+sides of every row callback. Deny foreign, custom, disk-backed, empty or held-out shapes
+and callback loss without publishing a partial result or falling back to paths.
+Installed-SDK synthetic tests deny writes, network and capability fingerprinting.
+This is a data-preparation component, not proof of input byte custody, hard total
+RAM/disk enforcement, complete training, cleanup, Save, quality or host operation.

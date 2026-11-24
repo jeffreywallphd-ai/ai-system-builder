@@ -1436,7 +1436,72 @@ def _tokenize_dataset(
     _check_protected_use(_protected_use)
     block_size = _to_positive_int(max_sequence_length) or DEFAULT_SEQUENCE_LENGTH
 
-    column_names = list(dataset["train"].column_names)
+    private_splits = None
+    if _protected_use is not None:
+        # The general DatasetDict mapper fingerprints this closure and may use
+        # file caches. Neither behavior is appropriate for an original Use.
+        from datasets import Dataset, DatasetDict
+        from datasets.table import InMemoryTable
+        from pyarrow import Table as ArrowTable
+        fixed_map, fixed_dict, fixed_dataset = Dataset.map, DatasetDict, Dataset
+        run_id = _protected_use._run_identity[0]
+
+        def memory_binding(split):
+            if type(split) is not Dataset:
+                raise ValueError("The private in-memory training dataset is unavailable.")
+            data = object.__getattribute__(split, "__dict__")
+            table, indices = data.get("_data"), data.get("_indices")
+            format_kwargs, indexes = data.get("_format_kwargs"), data.get("_indexes")
+            if (type(table) is not InMemoryTable or indices is not None
+                    or data.get("_format_type") is not None or type(format_kwargs) is not dict or format_kwargs
+                    or data.get("_format_columns") is not None or type(indexes) is not dict or indexes):
+                raise ValueError("The private in-memory training dataset is unavailable.")
+            arrow = object.__getattribute__(table, "__dict__").get("table")
+            if type(arrow) is not ArrowTable:
+                raise ValueError("The private in-memory training table is unavailable.")
+            return table, arrow
+
+        if type(dataset) is not DatasetDict or set(dict.keys(dataset)) not in (
+                {"train"}, {"train", "validation"}):
+            raise ValueError("The private training dataset splits are unavailable.")
+        private_splits = tuple((name, split, memory_binding(split), len(split))
+            for name, split in dict.items(dataset))
+        if any(size <= 0 for _, _, _, size in private_splits):
+            raise ValueError("The private training dataset split is empty.")
+        _check_protected_use(_protected_use)
+
+        mapping_splits = []
+
+        def assert_memory_sources():
+            if tuple(dict.keys(dataset)) != tuple(row[0] for row in private_splits):
+                raise ValueError("The private training dataset splits changed.")
+            for name, split, binding, size in private_splits:
+                current = memory_binding(split)
+                if (dict.__getitem__(dataset, name) is not split
+                        or current[0] is not binding[0] or current[1] is not binding[1]
+                        or len(split) != size):
+                    raise ValueError("The private in-memory training dataset changed.")
+            for _, split, binding, size in mapping_splits:
+                current = memory_binding(split)
+                if current[0] is not binding[0] or current[1] is not binding[1] or len(split) != size:
+                    raise ValueError("The private training mapping source changed.")
+
+        assert_memory_sources()
+        for name, _, binding, size in private_splits:
+            _check_protected_use(_protected_use)
+            assert_memory_sources()
+            # Keep caller-visible derived indexes out of SDK reads. This new
+            # private view uses the captured Arrow values, without feature
+            # metadata that could activate image/audio path or URL decoders.
+            split = fixed_dataset(binding[1].replace_schema_metadata(None),
+                fingerprint=run_id.replace("-", "") + "_" + name + "_inputs_v1")
+            mapping_splits.append((name, split, memory_binding(split), size))
+            _check_protected_use(_protected_use)
+            assert_memory_sources()
+
+    train_split = (dataset["train"] if private_splits is None else
+        next(split for name, split, _, _ in mapping_splits if name == "train"))
+    column_names = list(train_split.column_names)
     if purpose_paths is not None and training_task in _TRAINING_TASK_REQUIRED_PURPOSES:
         missing_purposes = [
             purpose
@@ -1550,20 +1615,46 @@ def _tokenize_dataset(
 
         return " ".join(value(column) for column in column_names if value(column))
 
-    def tokenize(batch: dict[str, list[Any]]) -> dict[str, Any]:
+    def check_tokenization_current():
         _check_protected_use(_protected_use)
+        if private_splits is not None:
+            assert_memory_sources()
+
+    def tokenize(batch: dict[str, list[Any]]) -> dict[str, Any]:
+        check_tokenization_current()
         row_count = max((len(values) for values in batch.values() if isinstance(values, list)), default=0)
         texts = [format_row(batch, index) for index in range(row_count)]
-        _check_protected_use(_protected_use)
+        check_tokenization_current()
         encoded = tokenizer(texts, truncation=True, padding="max_length", max_length=block_size)
-        _check_protected_use(_protected_use)
+        check_tokenization_current()
         encoded["labels"] = list(encoded["input_ids"])
-        _check_protected_use(_protected_use)
+        check_tokenization_current()
         return encoded
 
-    columns = dataset["train"].column_names
+    columns = train_split.column_names
     _check_protected_use(_protected_use)
-    result = dataset.map(tokenize, batched=True, remove_columns=columns)
+    if private_splits is None:
+        result = dataset.map(tokenize, batched=True, remove_columns=columns)
+    else:
+        mapped = {}
+        for name, split, _, size in mapping_splits:
+            _check_protected_use(_protected_use)
+            assert_memory_sources()
+            # One synchronous row avoids a large transient padded batch. Total
+            # data/process memory still requires the original resource owner.
+            result_split = fixed_map(split, tokenize, batched=True, batch_size=1,
+                writer_batch_size=1, remove_columns=list(split.column_names),
+                keep_in_memory=True, load_from_cache_file=False, cache_file_name=None,
+                num_proc=None, new_fingerprint=run_id.replace("-", "") + "_" + name + "_tokens_v1")
+            _check_protected_use(_protected_use)
+            assert_memory_sources()
+            memory_binding(result_split)
+            if len(result_split) != size:
+                raise ValueError("The private tokenized dataset row count changed.")
+            mapped[name] = result_split
+        result = fixed_dict(mapped)
+        _check_protected_use(_protected_use)
+        assert_memory_sources()
     _check_protected_use(_protected_use)
     return result
 
