@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from math import ceil, isfinite
 from pathlib import Path
+from threading import get_ident
 from typing import Any, Callable
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
@@ -305,7 +306,8 @@ class _ProtectedTrainingUse:
     """Fixed private view use, not a caller-selected guard or public capability."""
     __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
-        "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp")
+        "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
+        "_run_identity","_training_driver","_training_slot","_thread")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -317,6 +319,10 @@ class _ProtectedTrainingUse:
         self._embedding_model = None
         self._embedding_tokenizer, self._metadata_slot = None, None
         self._output_graph_type, self._output_slot = _ProtectedTrainingOutputGraph, None
+        started = datetime.now(timezone.utc)
+        self._run_identity = (f"train-{started.strftime('%Y%m%d%H%M%S')}", started.isoformat())
+        self._training_driver, self._training_slot = _run_trainer_impl, None
+        self._thread = get_ident()
         self._embedding_observation_lost = False
         try:
             request = self._serialize(payload,mode="json")
@@ -351,6 +357,11 @@ def _check_protected_use(use, payload=None):
         raise ValueError("The private protected training inputs are unavailable.")
     # Call the fixed class operation; an instance cannot select another guard.
     _ProtectedTrainingUse.assert_current(use)
+    training = use._training_slot
+    if training is not None:
+        if type(training) is not dict or type(training.get("snapshot")) is not FunctionType:
+            raise ValueError("The private training binding is unavailable.")
+        training["snapshot"]()
 
 
 def _record_protected_embedding_status(use, status):
@@ -524,6 +535,13 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
             raise ValueError("The private selected model snapshot is unavailable.")
         bindings = slot["bindings"] = []
         package = None
+        history = use._training_slot
+        if history is not None:
+            if type(history) is not dict or history.get("stage") != "complete" or type(history.get("snapshot")) is not FunctionType:
+                raise ValueError("The private completed training history is unavailable.")
+            history_snapshot, history_files = history["snapshot"], history["files"]
+        else:
+            history_snapshot, history_files = None, ()
         def snapshot():
             _ProtectedTrainingUse.assert_snapshot(use)
             selection_snapshot()
@@ -539,6 +557,12 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
                 raise ValueError("The private metadata binding changed.")
             if package is not None and slot["files"] is not package:
                 raise ValueError("The private metadata package changed.")
+            if use._training_slot is not history:
+                raise ValueError("The private completed training history changed.")
+            if history_snapshot is not None:
+                history_snapshot()
+                if history.get("files") is not history_files:
+                    raise ValueError("The private completed training history changed.")
         def current():
             _check_protected_use(use)
             selection_current()
@@ -661,7 +685,7 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
             raw = operation("model-configuration",config_export)
             if type(raw) is not dict: raise ValueError("The private model configuration is unavailable.")
             config = plain(raw,strip_paths=True)
-            files = []
+            files = list(history_files)
             if use.payload.method in ("lora","qlora"):
                 config["base_model_name_or_path"] = use.payload.baseModel.modelId
                 config["inference_mode"] = True
@@ -1364,9 +1388,10 @@ def _validation_subset(dataset: Any) -> tuple[Any, int]:
         raise ValueError("The saved validation sample is unavailable.") from None
 
 
-def _measure_validation_loss(trainer: Any, subset: Any, prefix: str) -> float:
+def _measure_validation_loss(trainer: Any, subset: Any, prefix: str, *, _captured_evaluate=None) -> float:
     try:
-        measured = trainer.evaluate(eval_dataset=subset, metric_key_prefix=prefix)
+        evaluate = trainer.evaluate if _captured_evaluate is None else _captured_evaluate
+        measured = evaluate(eval_dataset=subset, metric_key_prefix=prefix)
     except TrainingCancellationRequested:
         raise
     except Exception as error:
@@ -1387,7 +1412,125 @@ def _validation_comparison_report(metrics: dict[str, float]) -> dict[str, Any]:
             "baselineLoss": baseline, "trainedLoss": trained, "lossDelta": float(delta), "interpretation": "measurement-only"}
 
 
-def _run_trainer(
+def _freeze_training_metrics(raw):
+    if type(raw) is not dict or len(raw) > 256:
+        raise ValueError("The private training metrics are unavailable.")
+    result = []
+    for key, value in raw.items():
+        if (type(key) is not str or re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,95}", key) is None
+                or type(value) not in (int, float)):
+            raise ValueError("The private training metrics are unavailable.")
+        number = float(value)
+        if not isfinite(number):
+            raise ValueError("The private training metrics are unavailable.")
+        result.append((key, number))
+    return tuple(sorted(result))
+
+
+def _freeze_training_history(raw, *, loss_key="loss"):
+    if type(raw) is not list or len(raw) > 4096:
+        raise ValueError("The private training history is unavailable.")
+    result = []
+    for row in raw:
+        if type(row) is not dict or len(row) > 256:
+            raise ValueError("The private training history is unavailable.")
+        if loss_key not in row or "step" not in row:
+            continue
+        step, loss = row["step"], row[loss_key]
+        if (type(step) is not int or not 0 <= step <= 2**53-1 or type(loss) not in (int, float)
+                or result and step < result[-1][0]):
+            raise ValueError("The private training history is unavailable.")
+        loss = float(loss)
+        if not isfinite(loss):
+            raise ValueError("The private training history is unavailable.")
+        result.append((step, loss))
+    return tuple(result)
+
+
+def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=None,
+        compare_validation_baseline=False, on_validation_progress=None, _protected_use=None):
+    if _protected_use is None:
+        return _run_trainer_impl(model, tokenizer, dataset, eval_dataset, args, on_progress=on_progress,
+            compare_validation_baseline=compare_validation_baseline, on_validation_progress=on_validation_progress)
+    use = _protected_use
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private training binding is unavailable.")
+    previous = use._training_slot
+    if previous is not None:
+        if type(previous) is dict and previous.get("stage") == "running": previous["stage"] = "failed"
+        raise ValueError("The private training attempt is unavailable.")
+    if (use._tensor_selection_slot is not None or use._metadata_slot is not None
+            or model is not use._embedding_model or tokenizer is not use._embedding_tokenizer
+            or use._training_driver is not _run_trainer_impl):
+        raise ValueError("The private training binding is unavailable.")
+    identity, driver = use._run_identity, use._training_driver
+    slot = {"stage":"running", "model":model, "tokenizer":tokenizer, "args":args,
+        "driver":driver, "identity":identity, "metrics":None, "history":None, "files":None,
+        "entered":False, "returned":False}
+    use._training_slot = slot  # One original attempt, retained before SDK calls.
+    captured = None
+    def snapshot():
+        _ProtectedTrainingUse.assert_snapshot(use)
+        if (use._training_slot is not slot or slot["stage"] != ("running" if captured is None else "complete")
+                or use._run_identity is not identity or use._training_driver is not driver
+                or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
+                or slot["model"] is not model or slot["tokenizer"] is not tokenizer or slot["args"] is not args
+                or slot["driver"] is not driver or slot["identity"] is not identity):
+            raise ValueError("The private training binding changed.")
+        if captured is not None and (slot["files"] is not captured[0] or slot["metrics"] is not captured[1]
+                or slot["history"] is not captured[2] or not slot["entered"] or not slot["returned"]):
+            raise ValueError("The private completed training history changed.")
+    slot["snapshot"] = snapshot
+    try:
+        _check_protected_use(use); snapshot()
+        slot["entered"] = True
+        metrics, checkpoints = driver(model, tokenizer, dataset, eval_dataset, args,
+            on_progress=on_progress, compare_validation_baseline=compare_validation_baseline,
+            on_validation_progress=on_validation_progress, _protected_use=use)
+        slot["returned"] = True
+        _check_protected_use(use); snapshot()
+        frozen_metrics = _freeze_training_metrics(metrics)
+        # The driver builds these records from its actual numeric log history.
+        # They are observations, never proof that a checkpoint file was written.
+        frozen_history = _freeze_training_history(checkpoints, loss_key="value")
+        request = _ProtectedTrainingUse.assert_snapshot(use)
+        artifact_form = "adapter" if request["method"] in ("lora", "qlora") else "full-model"
+        serialization = {"serializationFormat":"adapter-safetensors" if artifact_form == "adapter" else "safetensors",
+            "safetensorsFiles":["adapter_model.safetensors" if artifact_form == "adapter" else "model.safetensors"],
+            "indexFile":None, "maxShardSize":_parse_max_shard_size(use.payload)}
+        validation = {"status":"unknown", "warnings":["Protected output reader validation has not run."],
+            "errors":[], "validationReportPath":None}
+        run = {"runId":identity[0], "startedAt":identity[1], "method":request["method"],
+            "trainingTask":_resolve_training_task(use.payload), "baseModel":request["baseModel"],
+            "datasets":request["datasets"], "status":"training-complete", "metrics":dict(frozen_metrics),
+            "history":[{"step":step,"loss":loss} for step,loss in frozen_history],
+            "checkpointFilesVerified":False, "candidateValidation":"pending",
+            "serializationManifestPath":"serialization_manifest.json"}
+        manifest = {"runId":identity[0], "method":request["method"], "trainingTask":run["trainingTask"],
+            "serialization":serialization, "validation":validation}
+        files = []
+        for name, value in (("training-run.json",run),("serialization_manifest.json",manifest)):
+            encoded = bytearray()
+            for part in json.JSONEncoder(ensure_ascii=False,allow_nan=False,sort_keys=True,separators=(",",":")).iterencode(value):
+                raw = part.encode("utf8")
+                if len(encoded) + len(raw) > 128*1024:
+                    raise ValueError("The private training record is too large.")
+                encoded.extend(raw)
+            files.append((name, bytes(encoded)))
+        files = tuple(files)
+        _check_protected_use(use); snapshot()
+        slot.update(metrics=frozen_metrics,history=frozen_history,files=files)
+        captured = (files, frozen_metrics, frozen_history)
+        slot["stage"] = "complete"; snapshot()
+        return metrics, checkpoints
+    except BaseException as error:
+        slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
+        if isinstance(error, (TrainingCancellationRequested, LaunchUnavailable)):
+            raise
+        raise ValueError("The private training attempt is unavailable.") from None
+
+
+def _run_trainer_impl(
     model: Any,
     tokenizer: Any,
     dataset: Any,
@@ -1402,13 +1545,27 @@ def _run_trainer(
     if type(compare_validation_baseline) is not bool:
         raise ValueError("The private validation comparison option is unavailable.")
     sample_count = 0
-    if compare_validation_baseline:
+    if compare_validation_baseline and _protected_use is None:
         eval_dataset, sample_count = _validation_subset(eval_dataset)
     try:
         from transformers import DataCollatorForLanguageModeling, Trainer, TrainerCallback
     except Exception as error:  # pragma: no cover
         raise RuntimeError("transformers Trainer is required for training.") from error
+    # Capture the loaded SDK operations before collator, constructor, progress
+    # or subset callbacks can replace instance/class dispatch. SDK internals are
+    # still trusted; this binds the task-owned call boundary, not arbitrary code.
+    train_function = evaluate_function = None
+    if _protected_use is not None:
+        if type(Trainer) is not type:
+            raise ValueError("The private trainer class is unavailable.")
+        train_function = _sdk_static_attribute(Trainer,"train")
+        evaluate_function = _sdk_static_attribute(Trainer,"evaluate") if compare_validation_baseline else None
+        if type(train_function) is not FunctionType or compare_validation_baseline and type(evaluate_function) is not FunctionType:
+            raise ValueError("The private trainer operation is unavailable.")
     _check_protected_use(_protected_use)
+    if compare_validation_baseline and _protected_use is not None:
+        eval_dataset, sample_count = _validation_subset(eval_dataset)
+        _check_protected_use(_protected_use)
 
     def gradient_accumulation_steps() -> int:
         return max(int(getattr(args, "gradient_accumulation_steps", 1) or 1), 1)
@@ -1448,6 +1605,7 @@ def _run_trainer(
             self._report_completed_batch(_args, state)
 
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    if _protected_use is not None: _protected_use._training_slot["collator"] = collator
     training_data = dataset["train"]
     _check_protected_use(_protected_use)
     trainer = Trainer(
@@ -1459,6 +1617,13 @@ def _run_trainer(
         data_collator=collator,
         callbacks=[_TrainingProgressCallback()],
     )
+    captured_train = captured_evaluate = None
+    if _protected_use is not None:
+        if type(trainer) is not Trainer:
+            raise ValueError("The private trainer receiver is unavailable.")
+        captured_train = MethodType(train_function,trainer)
+        captured_evaluate = MethodType(evaluate_function,trainer) if evaluate_function is not None else None
+        _protected_use._training_slot.update(trainer=trainer,train_operation=captured_train,evaluate_operation=captured_evaluate)
     _check_protected_use(_protected_use)
     if on_progress is not None:
         total_epochs = int(ceil(float(getattr(args, "num_train_epochs", 1) or 1)))
@@ -1471,19 +1636,23 @@ def _run_trainer(
     if compare_validation_baseline and on_validation_progress is not None:
         on_validation_progress("baseline-validation")
     _check_protected_use(_protected_use)
-    baseline = _measure_validation_loss(trainer, eval_dataset, "baseline_validation") if compare_validation_baseline else None
+    baseline = _measure_validation_loss(trainer, eval_dataset, "baseline_validation",
+        **({"_captured_evaluate":captured_evaluate} if captured_evaluate is not None else {})) if compare_validation_baseline else None
     _check_protected_use(_protected_use)
     if compare_validation_baseline and on_validation_progress is not None:
         on_validation_progress("training")
     _check_protected_use(_protected_use)
-    train_result = trainer.train()
+    train_result = trainer.train() if captured_train is None else captured_train()
+    if _protected_use is not None: _protected_use._training_slot["train_result"] = train_result
     _check_protected_use(_protected_use)
-    metrics: dict[str, float] = {k: float(v) for k, v in train_result.metrics.items() if isinstance(v, (int, float))}
+    metrics: dict[str, float] = (dict(_freeze_training_metrics(train_result.metrics)) if _protected_use is not None else
+        {k: float(v) for k, v in train_result.metrics.items() if isinstance(v, (int, float))})
     if compare_validation_baseline:
         if on_validation_progress is not None:
             on_validation_progress("trained-validation")
         _check_protected_use(_protected_use)
-        trained = _measure_validation_loss(trainer, eval_dataset, "trained_validation")
+        trained = _measure_validation_loss(trainer, eval_dataset, "trained_validation",
+            **({"_captured_evaluate":captured_evaluate} if captured_evaluate is not None else {}))
         _check_protected_use(_protected_use)
         if on_validation_progress is not None:
             on_validation_progress("comparison-complete")
@@ -1492,9 +1661,16 @@ def _run_trainer(
                        validation_loss_delta=trained - baseline, validation_sample_count=float(sample_count))
 
     checkpoints = []
-    for state in trainer.state.log_history:
-        if "loss" in state and "step" in state:
-            checkpoints.append({"path": str(args.output_dir), "step": int(state["step"]), "metric": "loss", "value": float(state["loss"])})
+    if _protected_use is not None:
+        history = _freeze_training_history(trainer.state.log_history)
+        _check_protected_use(_protected_use)
+        output = str(Path(_protected_use.payload.output["outputDirectory"]) / "checkpoints")
+        checkpoints = [{"path":output, "step":step, "metric":"loss", "value":loss} for step,loss in history]
+    else:
+        for state in trainer.state.log_history:
+            if "loss" in state and "step" in state:
+                checkpoints.append({"path": str(args.output_dir), "step": int(state["step"]), "metric": "loss", "value": float(state["loss"])})
+    _check_protected_use(_protected_use)
     return metrics, checkpoints
 
 
@@ -1579,7 +1755,8 @@ def _train_model(
     if payload.method not in SUPPORTED_METHODS:
         raise ValueError(f"Training method '{payload.method}' is not supported. Supported methods: {', '.join(sorted(SUPPORTED_METHODS))}")
 
-    run_id = f"train-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    run_id = (_protected_use._run_identity[0] if _protected_use is not None else
+        f"train-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
     output_model_name = payload.output.get("outputModelName")
     configured_output_directory = payload.output.get("outputDirectory")
     _check_protected_use(_protected_use,payload)

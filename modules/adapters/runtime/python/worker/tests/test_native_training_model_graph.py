@@ -896,6 +896,19 @@ class TrainingOutputCustodyTests(unittest.TestCase):
         files=[{"name":name,"sizeBytes":len(raw)} for name,raw in contents.items()]
         return actual,source,lease,inputs,request,input_control,kernel,config,contents,files,Control()
 
+    def test_training_history_is_a_fixed_bounded_output_leaf_not_a_path_or_permission(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        contents["training-run.json"]=b'{"status":"training-complete","checkpointFilesVerified":false}'
+        files.append({"name":"training-run.json","sizeBytes":len(contents["training-run.json"])})
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            graph.prepare({name:iter((raw,)) for name,raw in contents.items()})
+            graph.assert_sealed()
+            self.assertEqual(bytes(kernel.nodes[graph.physical_path+"\\training-run.json"]["data"]),contents["training-run.json"])
+        for name in ("../training-run.json","checkpoints/training-run.json","training-run.json:alternate"):
+            with self.assertRaises(actual.LaunchUnavailable):
+                actual._capture_training_output(request,config,[*files[:-1],{"name":name,"sizeBytes":1}])
+
     def test_actual_native_stream_seals_all_finite_profiles_without_changing_logical_request(self):
         for method in ("lora","qlora","full-finetune"):
             with self.subTest(method=method):

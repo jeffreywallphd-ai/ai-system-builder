@@ -2707,3 +2707,28 @@ Actual training/checkpoint integration, full Native producer, durable accounting
 installed SDK/reader, retirement, separate Save and physical/host acceptance remain.
 Test teardown removes only explicitly owned in-memory fixture registry roots after
 retirement assertions. It releases no real file, resource credit or retained stage.
+
+### Original trainer history in the protected output
+
+Retain one original private trainer attempt before SDK operations. Capture the
+fixed driver and run identity before callbacks, recheck original view/settings
+and binding snapshots at owned boundaries, and latch caught reentry. Foreign
+threads cannot poison the original owner. Keep failed and cancelled attempts;
+never retry to replace uncertain effects. Retained trainer/collator/result
+references are not SDK or worker retirement proof.
+
+Accept only bounded plain finite numeric metrics and step/loss observations.
+Reject oversized, malformed, nonfinite and changed data; do not export raw SDK
+errors. Immutable record bytes cannot be rewritten through returned mutable
+containers. The original metadata package limit and exact Native inventory,
+allocation, ACL, hash/readback and live-resource checks still apply. The only new
+filename is the fixed flat `training-run.json`; path variants confer no authority.
+The manifest's unknown validation and false checkpoint-file verification prevent
+these records from granting model readiness, resumability, Save or parent passes.
+Controlled tests establish no real model score, physical producer/accounting,
+complete orchestration/checkpoint ownership, retirement or host qualification.
+
+Private trainer dispatch captures the loaded class operations before SDK and
+progress callbacks, then binds their original receiver. Later instance/class
+method replacement cannot fabricate completion. Ordinary no-view dispatch stays
+unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.

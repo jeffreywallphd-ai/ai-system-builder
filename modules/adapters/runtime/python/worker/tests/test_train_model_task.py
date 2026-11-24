@@ -282,7 +282,7 @@ def test_protected_selection_cannot_borrow_another_model_or_method_receiver(monk
 
 
 @contextmanager
-def _protected_training_metadata_fixture(monkeypatch,method="lora",output=None,only_one_weight=False):
+def _protected_training_metadata_fixture(monkeypatch,method="lora",output=None,only_one_weight=False,*,capture_weights=True):
     with _protected_tensor_selection_fixture(monkeypatch,method,output=output) as facts:
         actual,use,model,peft,calls,control,Tensor,oracle=facts
         module=ModuleType("tokenizers"); metadata_calls=[]
@@ -328,7 +328,8 @@ def _protected_training_metadata_fixture(monkeypatch,method="lora",output=None,o
             monkeypatch.setattr(type(configuration),"to_dict",to_dict,raising=False)
         train_model_module._synchronize_model_token_embeddings(model,tokenizer,_protected_use=use)
         if only_one_weight: model.state={"base.weight":model.state["base.weight"]}
-        stream=train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        stream=(train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+            if capture_weights else None)
         yield facts,tokenizer,metadata_calls,stream
 
 
@@ -414,6 +415,173 @@ def test_protected_training_output_driver_seals_exact_original_candidate(monkeyp
         before=len(kernel.calls)
         with pytest.raises(ValueError): train_model_module._write_protected_training_output(use,configuration=configuration,reservation=output_control,admission=output_control)
         assert len(kernel.calls)==before
+
+
+def _install_inert_history_trainer(monkeypatch, *, metrics=None, history=None, during_train=None, failure=None):
+    calls=[]; objects=[]
+    class Trainer:
+        def __init__(self,**options):
+            calls.append("construct"); objects.append(self)
+            self.options=options
+            self.state=SimpleNamespace(log_history=history if history is not None else [{"step":1,"loss":0.25,"ignored":"private fixture"}])
+        def train(self):
+            calls.append("train")
+            if during_train is not None: during_train()
+            if failure is not None: raise failure
+            return SimpleNamespace(metrics=metrics if metrics is not None else {"train_loss":0.25,"train_runtime":1.0})
+        def evaluate(self,*,eval_dataset,metric_key_prefix):
+            calls.append(metric_key_prefix)
+            return {metric_key_prefix+"_loss":2.0 if metric_key_prefix=="baseline_validation" else 1.25}
+    module=ModuleType("transformers"); module.Trainer=Trainer
+    module.TrainerCallback=type("TrainerCallback",(),{})
+    module.DataCollatorForLanguageModeling=lambda **options: SimpleNamespace(**options)
+    monkeypatch.setitem(sys.modules,"transformers",module)
+    return calls,objects
+
+
+@pytest.mark.parametrize("method",["lora","qlora","full-finetune"])
+def test_actual_private_trainer_history_is_in_exact_protected_candidate(monkeypatch,method):
+    with _protected_training_metadata_fixture(monkeypatch,method,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,_,_,_=facts
+        calls,objects=_install_inert_history_trainer(monkeypatch)
+        before=use.payload.model_dump(mode="json")
+        args=SimpleNamespace(output_dir="ignored-supplier-path")
+        metrics,checkpoints=train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        assert calls==["construct","train"] and use._training_slot["trainer"] is objects[0]
+        assert use._training_slot["args"] is args and use._training_slot["stage"]=="complete"
+        expected=json.loads(dict(use._training_slot["files"])["training-run.json"])
+        assert expected["metrics"]=={"train_loss":0.25,"train_runtime":1.0}
+        assert expected["history"]==[{"step":1,"loss":0.25}]
+        assert expected["checkpointFilesVerified"] is False and expected["candidateValidation"]=="pending"
+        assert expected["status"]=="training-complete" and expected["runId"]==use._run_identity[0]
+        assert expected["baseModel"]==before["baseModel"] and expected["datasets"]==before["datasets"]
+        # Caller-visible dictionaries cannot rewrite retained observed history.
+        metrics["train_loss"]=999; checkpoints[0]["value"]=999
+        stream=train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        package=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        manifest=json.loads(dict(package)["serialization_manifest.json"])
+        assert manifest["validation"]["status"]=="unknown" and manifest["validation"]["validationReportPath"] is None
+        assert manifest["serialization"]["serializationFormat"]==("safetensors" if method=="full-finetune" else "adapter-safetensors")
+        assert json.loads(dict(package)["training-run.json"])==expected
+        kernel,configuration,_,_,control=model.test_output
+        graph=train_model_module._write_protected_training_output(use,configuration=configuration,reservation=control,admission=control)
+        assert graph.phase=="sealed" and stream.phase=="complete"
+        for name in ("training-run.json","serialization_manifest.json"):
+            raw=bytes(kernel.nodes[graph.physical_path+"\\"+name]["data"])
+            assert raw==dict(package)[name]
+            record=next(r for r in graph.records if r["name"]==name)
+            assert record["sha256"]==hashlib.sha256(raw).hexdigest() and record["sizeBytes"]==len(raw)
+        assert use.payload.model_dump(mode="json")==before and control.charges==[128*1024]
+        with pytest.raises(ValueError):train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        assert calls==["construct","train"] and use._training_slot["stage"]=="complete"
+
+
+@pytest.mark.parametrize("failure",["sdk-error","nonfinite-metric","boolean-metric","non-numeric-metric","bad-key","too-many-metrics",
+    "boolean-step","nonfinite-loss","descending-steps","too-many-history","changed-settings","changed-binding","caught-reentry"])
+def test_private_training_history_denies_bad_or_uncertain_observations_without_retry(monkeypatch,failure):
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,control,Tensor,_=facts
+        metrics={"train_loss":0.25}; history=[{"step":1,"loss":0.25}]; during=None; error=None
+        args=SimpleNamespace(output_dir="ignored")
+        if failure=="sdk-error":error=RuntimeError("private supplier content X:\\private\\test")
+        elif failure=="nonfinite-metric":metrics["train_loss"]=float("nan")
+        elif failure=="boolean-metric":metrics["train_loss"]=True
+        elif failure=="non-numeric-metric":metrics["train_loss"]="private supplier content"
+        elif failure=="bad-key":metrics["X:\\private\\test"]=1
+        elif failure=="too-many-metrics":metrics={"metric"+str(i):1 for i in range(257)}
+        elif failure=="boolean-step":history[0]["step"]=True
+        elif failure=="nonfinite-loss":history[0]["loss"]=float("inf")
+        elif failure=="descending-steps":history=[{"step":2,"loss":1},{"step":1,"loss":1}]
+        elif failure=="too-many-history":history=[{}]*4097
+        elif failure=="changed-settings":during=lambda:use.payload.commonParameters.update(maxSteps=2)
+        elif failure=="changed-binding":during=lambda:setattr(use,"_embedding_tokenizer",object())
+        elif failure=="caught-reentry":
+            def during():
+                with pytest.raises(ValueError):train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        calls,objects=_install_inert_history_trainer(monkeypatch,metrics=metrics,history=history,during_train=during,failure=error)
+        with pytest.raises((ValueError,actual.LaunchUnavailable)) as raised:
+            train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        assert "private supplier content" not in str(raised.value) and "X:" not in str(raised.value)
+        assert calls==["construct","train"] and use._training_slot["stage"]=="failed"
+        assert use._training_slot["files"] is None and Tensor.copies==[]
+        with pytest.raises(ValueError):train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        assert calls==["construct","train"]
+
+
+def test_completed_training_history_cannot_be_replaced_during_metadata_export(monkeypatch):
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,_,Tensor,_=facts
+        _install_inert_history_trainer(monkeypatch)
+        train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,SimpleNamespace(output_dir="ignored"),_protected_use=use)
+        train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        original=use._training_slot["files"]
+        tokenizer.backend_tokenizer.after_export=lambda:use._training_slot.update(files=tuple((name,raw+b" ") for name,raw in original))
+        with pytest.raises(ValueError):train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        assert use._metadata_slot["stage"]=="failed" and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("cause",["cancelled","expired","identity-drift"])
+def test_private_training_history_retains_cancellation_or_lost_binding(monkeypatch,cause):
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,control,_,_=facts
+        args=SimpleNamespace(output_dir="ignored")
+        def during():
+            if cause=="cancelled":raise train_model_module.TrainingCancellationRequested()
+            if cause=="expired":control.current=False
+            if cause=="identity-drift":use._run_identity=tuple([*use._run_identity])
+        calls,_=_install_inert_history_trainer(monkeypatch,during_train=during)
+        expected=train_model_module.TrainingCancellationRequested if cause=="cancelled" else (ValueError,actual.LaunchUnavailable)
+        with pytest.raises(expected):train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        assert calls==["construct","train"] and use._training_slot["stage"]=="failed" and use._training_slot["files"] is None
+
+
+def test_private_training_history_wrong_thread_cannot_poison_original_attempt(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,_,_,_=facts
+        calls,_=_install_inert_history_trainer(monkeypatch)
+        args=SimpleNamespace(output_dir="ignored")
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future=pool.submit(train_model_module._run_trainer,model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+            with pytest.raises(ValueError):future.result(timeout=5)
+        assert calls==[] and use._training_slot is None
+        train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,args,_protected_use=use)
+        assert calls==["construct","train"] and use._training_slot["stage"]=="complete"
+
+
+@pytest.mark.parametrize("replacement",["instance","class"])
+def test_private_training_history_calls_original_train_after_progress_replaces_dispatch(monkeypatch,replacement):
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,_,_,_=facts
+        calls,objects=_install_inert_history_trainer(monkeypatch); synthetic=[]
+        def progress(_):
+            target=objects[0] if replacement=="instance" else type(objects[0])
+            def substituted(*args,**kwargs):
+                synthetic.append(True);return SimpleNamespace(metrics={"train_loss":123.0})
+            monkeypatch.setattr(target,"train",substituted)
+        metrics,_=train_model_module._run_trainer(model,tokenizer,{"train":[1]},None,
+            SimpleNamespace(output_dir="ignored"),on_progress=progress,_protected_use=use)
+        assert calls==["construct","train"] and synthetic==[] and metrics["train_loss"]==0.25
+        assert use._training_slot["train_operation"].__self__ is objects[0]
+        assert json.loads(dict(use._training_slot["files"])["training-run.json"])["metrics"]["train_loss"]==0.25
+
+
+def test_private_optional_evaluation_software_uses_original_operation_with_controlled_metrics(monkeypatch):
+    # Controlled arithmetic only; no model output or real quality measurement.
+    with _protected_training_metadata_fixture(monkeypatch,capture_weights=False) as (facts,tokenizer,_,_):
+        actual,use,model,_,_,_,_,_=facts
+        calls,objects=_install_inert_history_trainer(monkeypatch); synthetic=[]
+        class Rows:
+            def __len__(self):return 1
+            def select(self,indices):assert tuple(indices)==(0,);return self
+        def progress(_):
+            def substituted(**kwargs):synthetic.append(True);return {kwargs["metric_key_prefix"]+"_loss":99.0}
+            monkeypatch.setattr(objects[0],"evaluate",substituted)
+        metrics,_=train_model_module._run_trainer(model,tokenizer,{"train":[1]},Rows(),
+            SimpleNamespace(output_dir="ignored"),on_progress=progress,compare_validation_baseline=True,_protected_use=use)
+        assert calls==["construct","baseline_validation","train","trained_validation"] and synthetic==[]
+        assert metrics["baseline_validation_loss"]==2.0 and metrics["trained_validation_loss"]==1.25
+        assert metrics["validation_loss_delta"]==-0.75 and use._training_slot["stage"]=="complete"
 
 
 @pytest.mark.parametrize("failure",["missing-metadata","missing-selection","consumed-stream","unsupported-shards","invalid-shards",

@@ -3023,3 +3023,27 @@ the existing retirement assertions, preventing fake ABI buffers from accumulatin
 across one pytest process. This changes no production retention or memory guard.
 The passive request comparison preserves the existing original-view refusal
 exception, so established private runtime failure handling remains compatible.
+
+### Protected original training completion records
+
+The genuine private training use captures one fixed trainer driver and run
+identity before SDK callbacks. Retain its original attempt and actual completion
+observations. A completed run contributes immutable `training-run.json` and
+`serialization_manifest.json` to the same protected output graph; SDK path writers
+are not used for these records. Bind metadata export to that original completion
+and reject replacement. Caller-visible metric/history dictionaries cannot alter
+the retained bytes. Ordinary no-view training stays compatible.
+
+The finite profile accepts 256 simple numeric metrics and 4,096 step/loss entries;
+each record is at most 128 KiB within the metadata package's explicit total bound.
+Preserve failed/cancelled attempts, deny reentry and changed bindings, and keep
+wrong-thread denial nonpoisoning. Records say training completed, not that output
+reader validation or checkpoint-file custody passed. No accuracy or before/after
+quality measurement runs. Full protected checkpoint/orchestration, Native
+production, durable quota, SDK/worker retirement, separate Save and actual hosts
+remain pending; no default Root is enabled.
+
+Private trainer dispatch captures the loaded class operations before SDK and
+progress callbacks, then binds their original receiver. Later instance/class
+method replacement cannot fabricate completion. Ordinary no-view dispatch stays
+unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.

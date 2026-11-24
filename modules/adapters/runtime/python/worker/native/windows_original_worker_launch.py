@@ -1974,7 +1974,7 @@ class _OriginalTensorIterator:
 
 _TRAINING_OUTPUT_FILES = frozenset(("config.json", "generation_config.json", "tokenizer.json",
     "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt",
-    "model.safetensors", "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json"))
+    "model.safetensors", "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"))
 
 
 def _capture_training_output(request, configuration, files):

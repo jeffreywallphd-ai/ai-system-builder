@@ -1004,3 +1004,17 @@ Unknown ownership remains retained without retry, cleanup, refund or Save.
 Ordinary SDK serialization remains intact. Actual training/checkpoint wiring,
 full producer, durable quota, installed-reader, retirement and host proof remain
 pending; no default Root or model-quality test is added.
+
+The fixed private trainer now retains one original attempt and its actual returned
+numeric metrics and step/loss history. Capture a run identity before callbacks;
+failed, cancelled, reentered or changed bindings cannot export a completed run.
+Immutable `training-run.json` and `serialization_manifest.json` bytes join the
+same protected candidate inventory. They report pending reader validation and
+unverified checkpoint files. No model-quality result or safe checkpoint execution
+is inferred. Ordinary no-view training stays unchanged; complete protected
+orchestration, measured producer/accounting, retirement, Save and hosts remain.
+
+Private trainer dispatch captures the loaded class operations before SDK and
+progress callbacks, then binds their original receiver. Later instance/class
+method replacement cannot fabricate completion. Ordinary no-view dispatch stays
+unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.

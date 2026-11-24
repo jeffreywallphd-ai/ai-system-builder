@@ -2060,3 +2060,27 @@ oversized-tensor case; a needed split is refused without changing the request.
 No path writer fallback, retry, deletion, quota refund or Save follows failure.
 These fake-ABI checks enable no Root and qualify no actual training/checkpoint
 wiring, full producer, durable quota, installed reader, retirement or host.
+
+### Private trainer completion history
+
+The original use captures the fixed trainer driver and run identity before SDK
+callbacks. Retain one attempt, the trainer/collator/result references and its
+actual finite numeric observations. Refuse reentry, changed request/bindings,
+nonfinite or nonnumeric metrics and malformed history without retry. Foreign
+threads cannot consume or poison the original attempt. Cancellation remains
+cancellation; other supplier failures use fixed private error text.
+
+Bound metrics to 256 simple names, history to 4,096 entries, and each of the two
+JSON records to 128 KiB. Keep immutable bytes independent of caller-visible
+result dictionaries. The metadata package's original total limit also applies.
+The actual Native writer accepts `training-run.json` as one fixed flat leaf;
+both records retain the same exact sizes, charging, ACL, hash and readback checks.
+Training log history is not proof of checkpoint files or optimizer resumability.
+The manifest reports reader validation as unknown. Safe checkpoint production,
+complete orchestration/producer, quotas, retirement, Save and real hosts remain
+pending. Tests use inert SDK replies and in-memory ABI, never model scoring.
+
+Private trainer dispatch captures the loaded class operations before SDK and
+progress callbacks, then binds their original receiver. Later instance/class
+method replacement cannot fabricate completion. Ordinary no-view dispatch stays
+unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.
