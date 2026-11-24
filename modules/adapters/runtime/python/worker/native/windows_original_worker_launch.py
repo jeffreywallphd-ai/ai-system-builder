@@ -477,7 +477,7 @@ class NativeModelInspection:
 
 
 class _OriginalProtectedFlatCopy(NativeModelInspection):
-    """Concrete copy mechanics, shared only by the two fixed private owners.
+    """Concrete file mechanics, shared only by the fixed private owners.
 
     Each finite owner validates and binds its own authority before calling this
     initializer. This base does not parse a wire family or construct a worker.
@@ -1631,6 +1631,176 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
             self.retired = True; self.phase = "retired"; return True
         except BaseException:
             self.phase = "failed"; return False
+
+
+_TRAINING_OUTPUT_FILES = frozenset(("config.json", "generation_config.json", "tokenizer.json",
+    "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt",
+    "model.safetensors", "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json"))
+
+
+def _capture_training_output(request, configuration, files):
+    """Finite byte-container profile; filenames never attest model validity."""
+    config = exact(_copy_model_json(configuration),
+        ("freshParent", "freshName", "maximumCopyBytes", "bufferBytes", "preparationMs"))
+    _input_copy_directory(config["freshParent"]); model_leaf(config["freshName"])
+    maximum = integer(config["maximumCopyBytes"], 1, 2**53-1)
+    integer(config["bufferBytes"], 4096, 1024**2); integer(config["preparationMs"], 1, 86400000)
+    rows = _copy_model_json(files); need(type(rows) is list and 1 <= len(rows) <= len(_TRAINING_OUTPUT_FILES))
+    names, total = set(), 0
+    for row in rows:
+        exact(row, ("name", "sizeBytes")); name = row["name"]
+        need(type(name) is str and name in _TRAINING_OUTPUT_FILES and name not in names)
+        names.add(name); total += integer(row["sizeBytes"], 1, maximum)
+    need(total <= maximum and "tokenizer.json" in names)
+    if request.get("method") in ("lora", "qlora"):
+        need({"adapter_model.safetensors", "adapter_config.json"} <= names
+             and not names & {"model.safetensors", "config.json", "generation_config.json"})
+    else:
+        need(request.get("method") == "full-finetune" and {"model.safetensors", "config.json"} <= names
+             and not names & {"adapter_model.safetensors", "adapter_config.json"})
+    return {"schema": "windows-original-training-output-graph-v1", **config, "files": tuple(rows)}
+
+
+class _OriginalOutputAdmission:
+    def __init__(self, graph, admission):
+        self.graph, self.current = graph, admission.assert_current
+        need(callable(self.current))
+
+    def assert_bound(self):
+        graph = self.graph
+        need(_model_views.get(graph.view) is graph._view_binding
+             and _model_leases.get(graph.lease) is graph._lease_state
+             and graph._lease_state.get("output_copy_owner") is graph
+             and graph.owner is graph._native_owner and graph._operation_active)
+        _, inputs = resolve_original_training_references(graph.view, graph._request)
+        need(inputs is not None)
+
+    def assert_current(self):
+        self.assert_bound(); need(self.current() is True); self.assert_bound()
+        return True
+
+
+class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
+    """One streamed output graph in the original live training view.
+
+    The future fixed serializer supplies declared sizes and bounded byte chunks.
+    This implements custody, not serialization, model validity, Save, worker
+    retirement or durable reservation. No existing path is adopted or removed.
+    """
+    def __init__(self, view, sealed_request, configuration, files, reservation, admission):
+        need(type(view) is _OriginalModelView)
+        binding = _model_views.get(view); need(binding is not None)
+        lease, _, thread = binding; need(thread == get_ident())
+        _, inputs = resolve_original_training_references(view, sealed_request); need(inputs is not None)
+        state = _model_leases.get(lease); lock = state["lock"]; need(lock.acquire(blocking=False))
+        try:
+            need(_model_views.get(view) is binding and "output_copy_owner" not in state
+                 and not state["view_lost"] and state["source"].phase == "borrowed")
+            descriptor = _capture_training_output(sealed_request, configuration, files)
+            state["output_copy_owner"] = self  # Retain BEFORE reservation/admission suppliers.
+            self.view, self.lease, self._view_binding, self._lease_state = view, lease, binding, state
+            self._request = _copy_model_json(sealed_request)
+        finally: lock.release()
+        self._operation_lock, self._operation_active, self._output_guard_active = Lock(), False, False
+        owner = InheritedModelNativeCalls(state["native_owner"].kernel, clock=state["native_owner"].clock)
+        self.owner = self._native_owner = owner
+        self._output_admission = _OriginalOutputAdmission(self, admission)
+        self._bind_copy(owner, descriptor, reservation, self._output_admission)
+
+    def guard(self):
+        try:
+            need(not self._output_guard_active)
+            self._output_guard_active = True
+            _OriginalProtectedFlatCopy.guard(self)
+            # Reservation checks are callbacks too. They cannot be the last
+            # authority check before an effect: repeat the actual fixed joint
+            # proof after ALL captured business/reservation callbacks.
+            _OriginalOutputAdmission.assert_bound(self._output_admission)
+            need(not self.owner.unknown and not self.owner.pending and self.phase not in ("failed", "retired"))
+            if self.started is not None:
+                need((self.owner.clock() - self.started) * 1000 < self.descriptor["preparationMs"])
+        except BaseException:
+            self.phase = "failed"
+            raise LaunchUnavailable() from None
+        finally: self._output_guard_active = False
+
+    @contextmanager
+    def _output_call(self):
+        self.owner._main(); need(self._operation_lock.acquire(blocking=False))
+        try:
+            need(not self._operation_active and not self.owner.unknown and not self.owner.pending)
+            self._operation_active = True
+            yield
+        finally:
+            self._operation_active = False
+            self._operation_lock.release()
+
+    def prepare(self, contents):
+        with self._output_call():
+            need(self.phase == "bound"); self.phase = "preparing"; self.started = self.owner.clock()
+            try:
+                self.guard()
+                need(type(contents) is dict and set(contents) == {row["name"] for row in self.descriptor["files"]})
+                self.charge_attempted = True
+                need(self.charge(self.descriptor["maximumCopyBytes"]) is True); self.charged = True
+                self.guard(); self.principal = self.private_principal()
+                parent = self.path(self.descriptor["freshParent"])
+                allocation_plan = self.allocation_plan(parent)
+                self.checkpoint("allocate"); security = self.descriptor_for(sealed=False)
+                self.fresh = self.open(parent, self.descriptor["freshName"], 0x1701ff,
+                    directory=True, fresh=True, security=security, share=0)
+                need(self.permissions(self.fresh) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
+                allocated = 0
+                for row, requested_allocation in zip(self.descriptor["files"], allocation_plan):
+                    self.checkpoint("copy")
+                    writer = self.open(self.fresh, row["name"], 0x1701ff, directory=False, fresh=True,
+                        security=security, share=0, allocation_bytes=requested_allocation)
+                    need(self.permissions(writer) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
+                    identity, size, allocation = self.facts(writer)
+                    need(size == 0 and row["sizeBytes"] <= allocation <= requested_allocation
+                         and allocated + allocation <= self.descriptor["maximumCopyBytes"])
+                    self.guard(); stream = iter(contents[row["name"]]); self.guard()
+                    copied, digest = 0, hashlib.sha256()
+                    while True:
+                        self.guard()
+                        try: chunk = next(stream)
+                        except StopIteration: self.guard(); break
+                        self.guard()
+                        need(type(chunk) is bytes and 0 < len(chunk) <= self.descriptor["bufferBytes"]
+                             and copied + len(chunk) <= row["sizeBytes"] and copied + len(chunk) <= allocation)
+                        buffer, written = C.create_string_buffer(chunk), U32()
+                        self.call("WriteFile", self.owner.number(writer), buffer, len(chunk), C.byref(written), None,
+                            keep=(writer, buffer, written))
+                        self.guard(); need(written.value == len(chunk))
+                        digest.update(chunk); copied += len(chunk)
+                        need(self.facts(writer) == (identity, copied, allocation))
+                    need(copied == row["sizeBytes"])
+                    self.call("FlushFileBuffers", self.owner.number(writer), keep=(writer,))
+                    self.guard(); need(self.seal(writer) == identity)
+                    self.owner.close(writer)
+                    read = self.open(self.fresh, row["name"], 0x20089, directory=False)
+                    self.guards.append(read)
+                    record = {**row, "sha256": digest.hexdigest(), "identity": identity}
+                    need(self.facts(read) == (identity, copied, allocation))
+                    self.verify_bytes(read, record); self.guard()
+                    self.records.append(record); allocated += allocation
+                self.graph_matches(self.fresh, self.records); self.checkpoint("seal")
+                root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
+                root = self.open(parent, self.descriptor["freshName"], 0x200a1, directory=True)
+                need(self.identity(root) == root_identity); self.guards.append(root)
+                for handle in self.guards:
+                    need(self.permissions(handle) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
+                self.graph_matches(root, self.records); self.guard(); self.phase = "sealed"
+            except BaseException:
+                self.phase = "failed"
+                raise LaunchUnavailable() from None
+
+    def assert_sealed(self):
+        with self._output_call():
+            try: return _OriginalProtectedFlatCopy.assert_sealed(self)
+            except BaseException:
+                self.phase = "failed"
+                raise LaunchUnavailable() from None
 
 
 class OriginalSourceExchange:

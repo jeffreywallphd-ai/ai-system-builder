@@ -920,3 +920,28 @@ permanently invalidates the view; restoring facts cannot revive it. A wrong
 request or foreign-thread query fails without poisoning an otherwise valid view.
 These are cooperative checks at owned SDK boundaries, not instant revocation
 inside a running supplier or proof of protected output/cache/SDK retirement.
+
+### Original protected training output IO
+
+The original worker has a concrete finite output writer. Only a genuine live
+joint Model/input view and its exact sealed request can bind it. The lease keeps
+one owner before reservation or admission callbacks; a second owner cannot retry
+or replace it. This is private IO support, not a configured full producer.
+
+The writer accepts declared positive file sizes and bounded byte chunks from a
+future fixed serializer. Its flat profile permits safetensors, configuration and
+tokenizer files for full-finetune or LoRA/QLoRA, without pickle, executable files,
+shards or arbitrary paths. It requires explicit capacity, buffer and preparation
+limits and an existing exclusive reservation. It checks allocation rounding
+before exclusive creation and retains private DACL/OWNER_RIGHTS writers. Each
+file is streamed, hashed, flushed, sealed and read back. Complete inventory and
+read-only guards precede the sealed IO result. No existing file is adopted.
+
+Admission is rechecked after reservation and iterator callbacks and before each
+owned write. Invalid streams, changed protection, missing authority and unknown
+Native returns cannot seal, retry, delete bytes or release capacity. Closing the
+view retains every guard and charge. A sealed byte container does not prove a
+valid model, SDK serialization, candidate readiness or Save authority. Full
+producer/serializer wiring, protected durable reservation, SDK/cache retirement
+and actual host qualification remain pending. Tests use synthetic bytes and
+in-memory Native replies; they perform no Native effects or model-quality tests.

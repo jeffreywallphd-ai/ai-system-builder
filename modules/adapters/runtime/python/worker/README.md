@@ -1958,3 +1958,29 @@ is latched for the original view; restored ACLs or permission cannot revive it.
 Wrong-request and foreign-thread preconditions remain nonpoisoning denials.
 No-view loading stays compatible. Supplier internals are still trusted and
 cooperative; output/cache protection and SDK/worker retirement remain separate.
+
+### Finite protected training output writer
+
+`OriginalTrainingOutputGraph` reuses the original Native file mechanics for a
+fresh candidate namespace. Bind one owner to a genuine live joint view and exact
+request before supplier callbacks. Only the original borrower thread can write.
+Unknown or held operations refuse another call without waiting. A model-only,
+expired, forged or changed binding supplies no output authority.
+
+Declare a finite flat safetensors/configuration/tokenizer inventory and exact
+positive sizes. Require the full-finetune or adapter profile matching the sealed
+method and explicit capacity/buffer/duration settings. Charge the existing
+exclusive reservation before creation, check rounded allocation, create files
+with atomic private DACL/OWNER_RIGHTS and exclusive writers, bound every byte
+chunk, hash/flush/read back, seal and verify the complete final inventory.
+Captured configuration and inventory do not change with caller-owned objects.
+
+Iterator/reservation callbacks are cooperative owned boundaries; recheck live
+custody and currentness after each. Failed or unknown IO retains original slots,
+handles and charges. There is no path adoption, deletion, refund or retry. The
+output guards stay live after the borrow ends. This is not worker/SDK retirement
+or a model validity/readiness claim. A fixed serializer, full producer, durable
+reservation, separately approved Save and physical/host qualification still need
+their own implementation and evidence. Ordinary SDK path serialization is
+unchanged. Focused tests use actual Native code with in-memory replies and inert
+container bytes; no model or quality scoring runs.

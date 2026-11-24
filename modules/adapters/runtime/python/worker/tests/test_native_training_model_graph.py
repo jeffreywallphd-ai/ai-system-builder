@@ -492,9 +492,10 @@ def borrowed_model_view(definition,sealed_request,native_module=n):
 
 
 class TrainingInputCopyTests(unittest.TestCase):
-    def fixture(self, media="application/x-ndjson", count=1, native_module=n):
+    def fixture(self, media="application/x-ndjson", count=1, native_module=n, method="lora"):
         value = json.loads((Path(__file__).parent/"fixtures/approved_training_staged_input.json").read_text())
         request = value["approvedRequest"]; request["baseModel"]["localPath"] = descriptor()["logicalPath"]
+        request["method"] = method
         fmt = n._TRAINING_INPUT_MEDIA[media]
         content, recipe = b'{"instruction":"Say yes","output":"yes"}\n', b'{"synthetic":true}'
         digest = lambda raw: "sha256:"+hashlib.sha256(raw).hexdigest()
@@ -778,11 +779,11 @@ class TrainingInputCopyTests(unittest.TestCase):
 
 
 class CombinedTrainingInputViewTests(unittest.TestCase):
-    def fixture(self, prepare=True):
+    def fixture(self, prepare=True, method="lora"):
         from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest
         from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as actual
         case=TrainingInputCopyTests()
-        source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=actual)
+        source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=actual,method=method)
         self.addCleanup(case.doCleanups)
         graph=actual.OriginalTrainingInputGraph(lease,staged,config,control,control)
         if prepare: graph.prepare()
@@ -877,6 +878,255 @@ class CombinedTrainingInputViewTests(unittest.TestCase):
             with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
             self.assertEqual(len(kernel.calls),before)
             self.assertTrue(all(not handle.closed for handle in graph.guards)); self.assertEqual(control.retained,[])
+
+
+class TrainingOutputCustodyTests(unittest.TestCase):
+    def fixture(self, method="lora"):
+        case=CombinedTrainingInputViewTests()
+        actual,source,lease,inputs,request,staged,input_control,kernel=case.fixture(method=method)
+        self.addCleanup(case.doCleanups)
+        kernel.node("X:\\private\\outputs", True)
+        config={"freshParent":"X:\\private\\outputs","freshName":"candidate-output",
+            "maximumCopyBytes":128*1024,"bufferBytes":4096,"preparationMs":30000}
+        contents={"tokenizer.json":b'{"synthetic":true}'}
+        if method == "full-finetune": contents.update({"config.json":b'{}',"model.safetensors":b"synthetic-weight-container"})
+        else: contents.update({"adapter_config.json":b'{}',"adapter_model.safetensors":b"synthetic-adapter-container"})
+        files=[{"name":name,"sizeBytes":len(raw)} for name,raw in contents.items()]
+        return actual,source,lease,inputs,request,input_control,kernel,config,contents,files,Control()
+
+    def test_actual_native_stream_seals_all_finite_profiles_without_changing_logical_request(self):
+        for method in ("lora","qlora","full-finetune"):
+            with self.subTest(method=method):
+                actual,source,lease,inputs,request,_,kernel,config,contents,files,control=self.fixture(method)
+                expected=copy.deepcopy(request)
+                with lease.borrow(request) as view:
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    original_files=copy.deepcopy(files); files[0]["sizeBytes"]=999; config["maximumCopyBytes"]=1
+                    graph.prepare({name:(raw[:1],raw[1:]) for name,raw in contents.items()}); graph.assert_sealed()
+                    self.assertEqual(graph.phase,"sealed"); self.assertEqual(request,expected)
+                    self.assertEqual(control.charges,[128*1024]); self.assertEqual(control.retained,[])
+                    self.assertEqual(graph.descriptor["files"],tuple(original_files))
+                    for row,handle in zip(graph.records,graph.guards):
+                        raw=contents[row["name"]]; node=kernel.nodes[graph.physical_path+"\\"+row["name"]]
+                        self.assertEqual(bytes(node["data"]),raw); self.assertEqual(row["sha256"],hashlib.sha256(raw).hexdigest())
+                        self.assertEqual(node["acl"],actual.model_acl(kernel.sid,sealed=True)); self.assertFalse(handle.closed)
+                        self.assertFalse(kernel.foreign_open_allowed(node,2))
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        actual.OriginalTrainingOutputGraph(view,request,config,original_files,Control(),Control())
+                before=len(kernel.calls)
+                with self.assertRaises(actual.LaunchUnavailable): graph.assert_sealed()
+                self.assertEqual(len(kernel.calls),before); self.assertEqual(graph.phase,"failed")
+                self.assertTrue(all(not h.closed for h in graph.guards)); self.assertEqual(control.retained,[])
+
+    def test_forged_changed_expired_and_model_only_views_cannot_bind_output(self):
+        for mode in ("forged","changed","expired","model-only"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                if mode=="model-only":
+                    case=InheritedModelViewTests(); owner,parent,child=case.fixture(); self.addCleanup(case.doCleanups)
+                    # That independent fixture uses the same actual protocol but
+                    # no protected input graph, so the real joint-view test below
+                    # must refuse before any output charge.
+                    actual=n; source=n.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+                    definition=json.loads(owner.definition_bytes); lease=source.bind(definition)
+                    request=copy.deepcopy(definition["request"])
+                with lease.borrow(request) as view:
+                    if mode=="forged": candidate=object()
+                    else: candidate=view
+                    changed=copy.deepcopy(request)
+                    if mode=="changed": changed["commonParameters"]["maxSteps"]=999
+                    if mode=="expired": continue
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        actual.OriginalTrainingOutputGraph(candidate,changed,config,files,control,control)
+                    self.assertEqual(control.charges,[])
+                if mode=="expired":
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    self.assertEqual(control.charges,[])
+
+    def test_manifest_refuses_executable_paths_ambiguous_names_sizes_and_wrong_profile(self):
+        for mode in ("path","pickle","case","duplicate","bool","zero","oversize","missing","profile","extra-key"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                if mode=="path": files[0]["name"]="..\\tokenizer.json"
+                elif mode=="pickle": files.append({"name":"pytorch_model.bin","sizeBytes":1})
+                elif mode=="case": files[0]["name"]="Tokenizer.json"
+                elif mode=="duplicate": files.append(dict(files[0]))
+                elif mode=="bool": files[0]["sizeBytes"]=True
+                elif mode=="zero": files[0]["sizeBytes"]=0
+                elif mode=="oversize": files[0]["sizeBytes"]=config["maximumCopyBytes"]+1
+                elif mode=="missing": files=files[1:]
+                elif mode=="profile": files.append({"name":"model.safetensors","sizeBytes":1})
+                else: files[0]["path"]="X:\\foreign"
+                with lease.borrow(request) as view:
+                    with self.assertRaises(actual.LaunchUnavailable): actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    self.assertEqual(control.charges,[]); self.assertNotIn(config["freshParent"]+"\\"+config["freshName"],kernel.nodes)
+
+    def test_bad_streams_never_seal_retry_or_refund(self):
+        for mode in ("short","extra","empty","wrong-type","large","exception","missing-file"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    streams={name:(raw,) for name,raw in contents.items()}; first=files[0]["name"]; raw=contents[first]
+                    if mode=="short": streams[first]=(raw[:-1],)
+                    elif mode=="extra": streams[first]=(raw,b"!")
+                    elif mode=="empty": streams[first]=(b"",raw)
+                    elif mode=="wrong-type": streams[first]=(bytearray(raw),)
+                    elif mode=="large": streams[first]=(b"x"*4097,)
+                    elif mode=="missing-file": streams.pop(first)
+                    else:
+                        def broken(): yield raw; raise RuntimeError("synthetic stream failure")
+                        streams[first]=broken()
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare(streams)
+                    self.assertEqual(graph.phase,"failed"); before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare({name:(raw,) for name,raw in contents.items()})
+                    self.assertEqual(len(kernel.calls),before); self.assertEqual(control.retained,[])
+                    self.assertFalse(graph.retired)
+
+    def test_allocation_rounding_and_existing_destination_refuse_before_file_writes(self):
+        for mode in ("rounding","existing"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                if mode=="rounding": config["maximumCopyBytes"]=8192
+                else: kernel.node(config["freshParent"]+"\\"+config["freshName"],True)
+                with lease.borrow(request) as view:
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    before=sum(name=="WriteFile" for name,_ in kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare({name:(raw,) for name,raw in contents.items()})
+                    self.assertEqual(sum(name=="WriteFile" for name,_ in kernel.calls),before)
+                    self.assertEqual(control.charges,[config["maximumCopyBytes"]]); self.assertEqual(control.retained,[])
+
+    def test_currentness_rechecked_after_reservation_and_stream_callbacks(self):
+        for mode in ("reservation","iter","next","eof"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    if mode=="reservation":
+                        def charged(amount): control.charges.append(amount); control.current=False; return True
+                        control.charge_source_copy=charged
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    streams={name:(raw,) for name,raw in contents.items()}; first=files[0]["name"]; raw=contents[first]
+                    if mode!="reservation":
+                        class Stream:
+                            def __iter__(self):
+                                if mode=="iter": control.current=False
+                                self.returned=False; return self
+                            def __next__(self):
+                                if not self.returned:
+                                    self.returned=True
+                                    if mode=="next": control.current=False
+                                    return raw
+                                if mode=="eof": control.current=False
+                                raise StopIteration
+                        streams[first]=Stream()
+                    before=sum(name=="WriteFile" for name,_ in kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare(streams)
+                    writes=sum(name=="WriteFile" for name,_ in kernel.calls)-before
+                    self.assertEqual(writes,1 if mode=="eof" else 0); self.assertEqual(graph.phase,"failed")
+                    self.assertEqual(control.retained,[])
+
+    def test_native_unknown_write_preserves_original_slots_and_disallows_further_calls(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control); invoke=graph.owner.invoke
+            def lost(name,args,row):
+                result=invoke(name,args,row)
+                if name=="WriteFile": raise RuntimeError("synthetic lost write acknowledgement")
+                return result
+            graph.owner.invoke=lost
+            with self.assertRaises(actual.LaunchUnavailable): graph.prepare({name:(raw,) for name,raw in contents.items()})
+            self.assertTrue(graph.owner.unknown); self.assertTrue(graph.owner.pending)
+            self.assertTrue(graph.owner.pending[-1]["value_returned"]); before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): graph.assert_sealed()
+            self.assertEqual(len(kernel.calls),before); self.assertEqual(control.retained,[])
+            self.assertTrue(any(not h.closed for h in graph.owned_handles))
+
+    def test_reservation_callback_loss_is_fenced_before_charge_creation_write_and_seal(self):
+        for stage in ("charge","create","write","seal"):
+            with self.subTest(stage=stage):
+                actual,_,lease,_,request,input_control,kernel,config,contents,files,control=self.fixture()
+                armed=[stage=="charge"]; calls=[0]; lost=[False]; effects=[]
+                def reservation_current():
+                    if armed[0]:
+                        calls[0]+=1
+                        # checkpoint('seal') has two own guard boundaries.
+                        if stage!="seal" or calls[0]==2:
+                            input_control.current=False; lost[0]=True
+                    return True
+                class Admission:
+                    def assert_current(self): return True
+                control.assert_current=reservation_current
+                original_charge=control.charge_source_copy
+                def charge(amount):
+                    if lost[0]: effects.append("charge")
+                    return original_charge(amount)
+                control.charge_source_copy=charge
+                invoke=kernel.invoke
+                def observed(name,args,row):
+                    if lost[0] and (name=="WriteFile" or name=="NtSetSecurityObject"
+                            or name=="NtCreateFile" and args[7]==2): effects.append(name)
+                    return invoke(name,args,row)
+                kernel.invoke=observed
+                with lease.borrow(request) as view:
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,Admission())
+                    original_open,original_checkpoint=graph.open,graph.checkpoint
+                    def open_file(*args,**kwargs):
+                        if stage=="create" and kwargs.get("fresh") and kwargs.get("directory"): armed[0]=True
+                        return original_open(*args,**kwargs)
+                    def checkpoint(phase):
+                        if stage=="seal" and phase=="seal": armed[0]=True
+                        return original_checkpoint(phase)
+                    graph.open,graph.checkpoint=open_file,checkpoint
+                    streams={name:(raw,) for name,raw in contents.items()}
+                    first=files[0]["name"]; raw=contents[first]
+                    if stage=="write":
+                        def stream():
+                            armed[0]=True; yield raw
+                        streams[first]=stream()
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare(streams)
+                    self.assertTrue(lost[0]); self.assertEqual(effects,[])
+                    self.assertEqual(graph.phase,"failed"); self.assertEqual(control.retained,[])
+
+    def test_short_write_or_foreign_inventory_cannot_seal(self):
+        for mode in ("short-write","extra-file","changed-bytes","changed-link"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    if mode=="short-write": kernel.short_write=True
+                    elif mode=="extra-file": kernel.after_write=lambda node: kernel.node(graph.physical_path+"\\foreign.json",False,b"x")
+                    elif mode=="changed-bytes": kernel.after_write=lambda node: node["data"].__setitem__(0,ord("!"))
+                    else: kernel.after_write=lambda node: node.update(links=2)
+                    with self.assertRaises(actual.LaunchUnavailable): graph.prepare({name:(raw,) for name,raw in contents.items()})
+                    self.assertEqual(graph.phase,"failed"); self.assertEqual(control.retained,[])
+
+    def test_thread_and_reentrant_operations_are_refused_without_another_writer(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control); results=[]
+            def foreign():
+                try: graph.prepare({name:(raw,) for name,raw in contents.items()})
+                except actual.LaunchUnavailable: results.append("denied")
+            before=len(kernel.calls); thread=Thread(target=foreign); thread.start(); thread.join(2)
+            self.assertFalse(thread.is_alive()); self.assertEqual(results,["denied"]); self.assertEqual(len(kernel.calls),before)
+            class Stream:
+                def __iter__(self):
+                    with self_case.assertRaises(actual.LaunchUnavailable): graph.prepare({})
+                    return iter((contents[files[0]["name"]],))
+            self_case=self; streams={name:(raw,) for name,raw in contents.items()}; streams[files[0]["name"]]=Stream()
+            graph.prepare(streams); graph.assert_sealed(); self.assertEqual(control.charges,[128*1024])
+
+    def test_observed_output_protection_loss_is_permanent_even_after_restoration(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            graph.prepare({name:(raw,) for name,raw in contents.items()})
+            root=kernel.nodes[graph.physical_path]; acl=root["acl"]; root["acl"]=actual.model_acl(kernel.sid,sealed=False)
+            with self.assertRaises(actual.LaunchUnavailable): graph.assert_sealed()
+            root["acl"]=acl; before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): graph.assert_sealed()
+            self.assertEqual(len(kernel.calls),before); self.assertEqual(control.retained,[])
 
 
 class InheritedModelViewTests(unittest.TestCase):

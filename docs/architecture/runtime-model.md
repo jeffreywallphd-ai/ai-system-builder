@@ -2821,3 +2821,31 @@ while retaining all guards and charges. Caller request/thread mistakes deny
 without poisoning valid custody. These checks are cooperative SDK boundaries;
 they do not prove instantaneous supplier revocation, protected output/cache
 ownership or lazy-reader retirement. Ordinary no-view behavior is preserved.
+
+### Original training output file custody
+
+The original worker's `OriginalTrainingOutputGraph` supplies concrete protected
+output IO alongside the existing Model and input owners. Only a genuine live
+joint view, exact sealed request and original borrower thread can bind one
+output owner. Retain it on the lease before any reservation/admission supplier.
+No public task, copied record, ready flag, model-only view or logical output path
+can create that authority. The default Root still configures no full producer.
+
+The finite byte-container profile supports flat safetensors/configuration and
+tokenizer files for the existing full-finetune and LoRA/QLoRA methods. A future
+fixed serializer must declare exact positive sizes and provide bounded chunks.
+It cannot select arbitrary paths, executable or pickle files, shard layouts or
+a new engine. Reuse actual Native exclusive parent-relative creation, private
+DACL/OWNER_RIGHTS, allocation-aware bounds, digest/readback, complete enumeration
+and retained read-only guards. Charge an explicit existing exclusive reservation
+before creation; free-space observation never substitutes for that reservation.
+
+Recheck actual joint custody and business admission around reservation/iterator
+callbacks and owned writes. Wrong-thread/reentrant operations refuse without
+waiting. Failed or unknown effects retain original slots, handles and charges;
+no output deletion, adoption, retry or storage credit is implemented here.
+Borrow exit is not reader/worker retirement. A sealed graph attests file IO and
+the computed byte digests, not model validity or generated quality. SDK serializer
+integration, candidate validation/Save, protected durable accounting, full
+producer composition, cache/reader retirement and physical/actual-host
+qualification remain separate. In-memory ABI fixtures grant no parent pass.
