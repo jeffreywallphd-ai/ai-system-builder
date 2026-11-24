@@ -13,8 +13,21 @@ from types import ModuleType
 import uvicorn
 
 
+def _load_original_model_bootstrap(package_name):
+    nonce = getenv("PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP", "")
+    if not nonce:
+        return
+    if not re.fullmatch(r"[a-f0-9]{64}", nonce):
+        raise RuntimeError("The original Model bootstrap is unavailable.")
+    # Fixed package/entry only. The environment locates this mode; it is not
+    # Model custody. The consumer must validate actual inherited native objects.
+    module = importlib.import_module(package_name + ".native.windows_original_worker_launch")
+    module.capture_original_model_bootstrap(nonce)
+
+
 def _load_app():
     if __package__:
+        _load_original_model_bootstrap(__package__)
         from .app import app as package_app
 
         return package_app
@@ -58,6 +71,7 @@ def _load_app():
         spec.submodule_search_locations = [worker_directory]
         package = importlib.util.module_from_spec(spec)
         sys.modules[package_name] = package
+    _load_original_model_bootstrap(package_name)
     module = importlib.import_module(f"{package_name}.app")
     return module.app
 

@@ -14,6 +14,37 @@ train_model_module = importlib.import_module("modules.adapters.runtime.python.wo
 multimodal_module = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model_multimodal")
 
 
+def test_private_fixed_loader_consumes_actual_live_view_without_rewriting_logical_model(monkeypatch,tmp_path):
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import borrowed_model_view
+    payload=_request(tmp_path); payload.baseModel.localPath="X:\\models\\selected"; payload.baseModel.modelRecordId="model.synthetic"
+    request=payload.model_dump(mode="json")
+    # Native source-only fixture. Whole session validation is tested separately;
+    # no Transformers supplier, model, dataset, trainer or quality score runs.
+    definition={"modelUpdatedAt":"2026-11-23T00:00:00Z","request":request}
+    references=[]
+    monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value: references.append(value) or value)
+    calls=[]
+    def execute(actual,**options): calls.append((actual,options)); return "controlled-loader-result"
+    monkeypatch.setattr(train_model_module,"_train_model",execute)
+    with borrowed_model_view(definition,request,native) as (view,physical):
+        assert train_model_module.train_model_from_local_files(payload,_model_view=view)=="controlled-loader-result"
+        assert payload.model_dump(mode="json")==request
+        assert calls[0][1]["local_model_ref"]==physical and calls[0][1]["compare_validation_baseline"] is False
+        assert references==[physical]
+    with pytest.raises(native.LaunchUnavailable): train_model_module.train_model_from_local_files(payload,_model_view=view)
+    assert len(calls)==1 and references==[physical]
+
+
+def test_private_fixed_loader_refuses_forged_view_before_path_or_supplier(monkeypatch,tmp_path):
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    payload=_request(tmp_path); calls=[]
+    monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value: calls.append(value) or value)
+    monkeypatch.setattr(train_model_module,"_train_model",lambda *a,**kw: calls.append("unavailable"))
+    with pytest.raises(native.LaunchUnavailable): train_model_module.train_model_from_local_files(payload,_model_view=object())
+    assert calls==[]
+
+
 def _validation_comparison_fixture(monkeypatch, *, baseline=4.0, candidate=3.0, fail_at=None):
     calls = []
     class Dataset:

@@ -19,6 +19,7 @@ from typing import Callable
 from uuid import UUID
 
 from ..models import TrainModelTaskRequest, TrainModelBaseModelInput, TrainModelDatasetInput
+from ..native.windows_original_worker_launch import resolve_original_model_view
 from .train_model import TrainingCancellationRequested, train_model_from_local_files
 
 CAPABILITY = "train-model.original-session-v1"
@@ -236,6 +237,8 @@ class OriginalTrainingSession:
         # typed instance alone, or its replaceable dump method, is not a proof.
         self._request_validator = TrainModelTaskRequest.__pydantic_validator__.validate_python
         self._request_serializer = TrainModelTaskRequest.__pydantic_serializer__.to_python
+        self._request_copy = TrainModelTaskRequest.model_copy
+        self._model_view_resolver = resolve_original_model_view
         self._request_fields = frozenset(TrainModelTaskRequest.model_fields)
         self._model_fields = frozenset(TrainModelBaseModelInput.model_fields)
         self._dataset_fields = frozenset(TrainModelDatasetInput.model_fields)
@@ -382,12 +385,15 @@ class OriginalTrainingSession:
         try:
             progress({"stage": "starting"})
             self.publish(status="running")
-            with self.native_borrow():
+            with self.native_borrow() as model_view:
                 progress({"stage": "training"})
+                owned = _native_request_data(self.payload, self._request_fields, self._model_fields, self._dataset_fields)
+                payload = self._request_validator(owned)
+                self._model_view_resolver(model_view, _copy(self._request_serializer(payload, mode="json")))
                 # Fixed safe loader; a request cannot select a callable or score
                 # a real validation baseline through this workflow protocol.
-                result = self.loader(self.payload.model_copy(deep=True), on_progress=progress,
-                                                     compare_validation_baseline=False)
+                result = self.loader(self._request_copy(payload, deep=True), on_progress=progress,
+                    compare_validation_baseline=False, _model_view=model_view)
             data = result.model_dump(mode="json", exclude_none=True)
             data["runId"] = self.task_id
             _need(result.status in ("succeeded", "failed", "cancelled"))

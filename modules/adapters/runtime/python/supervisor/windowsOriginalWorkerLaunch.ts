@@ -70,7 +70,7 @@ export function createWindowsOriginalWorkerLaunch(options: {
   const sourceProperty = Object.getOwnPropertyDescriptor(options, "originalModelSource");
   need(sourceProperty !== undefined || !("originalModelSource" in options));
   need(sourceProperty === undefined || "value" in sourceProperty);
-  const source = sourceProperty?.value === undefined ? undefined : captureOriginalTrainingSourceLaunch(sourceProperty.value);
+  const source = sourceProperty?.value === undefined ? undefined : captureOriginalTrainingSourceLaunch(sourceProperty.value, true);
   need(typeof command === "string" && path.isAbsolute(command) && typeof cwd === "string" && path.isAbsolute(cwd) && typeof hostCurrent === "function");
   need(!/^(?:\\\\|\/\/)/.test(command) && !/^(?:\\\\|\/\/)/.test(cwd) && !command.includes("\0") && !cwd.includes("\0"));
   const inspectPlatform = options.nativePlatform ?? (() => ({platform: process.platform, arch: process.arch}));
@@ -145,27 +145,31 @@ export function createWindowsOriginalWorkerLaunch(options: {
       // The fixed controller emits canonical ASCII JSON. This also refuses
       // duplicate keys, alternate escapes and invalid UTF-8 before interpretation.
       need(JSON.stringify(parsed) === text && Buffer.from(text).equals(line));
-      value = readStrictPassiveRecord(parsed, ["schema", "nonce", "profileDigest", "kind", "lane", "data", "sequence", "phase", "definitionDigest", "amount"]);
+      value = readStrictPassiveRecord(parsed, ["schema", "nonce", "profileDigest", "kind", "lane", "data", "sequence", "phase", "definitionDigest", "amount", "index"]);
       need(value.schema === "windows-original-worker-control-v1" && value.nonce === nonce && value.profileDigest === digest);
       if (value.kind === "source-request") {
-        need(!!source && Object.keys(value).length === 8 && !sourcePending && !nativeRetired && !controllerClosed &&
-          Number.isSafeInteger(value.sequence) && value.sequence === sourceSequence + 1 && (value.sequence as number) <= 40 &&
+        const definitionRequest = value.phase === "definition";
+        need(!!source && Object.keys(value).length === (definitionRequest ? 9 : 8) && !sourcePending && !nativeRetired && !controllerClosed &&
+          Number.isSafeInteger(value.sequence) && value.sequence === sourceSequence + 1 && (value.sequence as number) <= 48 &&
           value.definitionDigest === source.descriptor.definitionDigest && value.amount === source.descriptor.maximumCopyBytes &&
-          ["charge", "allocate", "copy", "seal", "create", "dispatch", "retain"].includes(value.phase as string));
-        const sourcePhase = value.phase as OriginalTrainingSourcePhase, sequence = value.sequence as number;
+          (definitionRequest ? Number.isSafeInteger(value.index) && (value.index as number) >= 0 && (value.index as number) < 8 :
+            ["charge", "allocate", "copy", "seal", "create", "dispatch", "retain"].includes(value.phase as string)));
+        const sourcePhase = value.phase as OriginalTrainingSourcePhase | "definition", sequence = value.sequence as number;
         need(sourcePhase === "retain" || !uncertain && !stopAttempted && !controllerExited &&
           (sourcePhase === "dispatch" ? resumeAttempted && phase === "resuming" : phase === "preparing"));
         sourcePending = true; sourceSequence = sequence;
         const operation = Promise.resolve().then(async () => {
           if (sourcePhase !== "retain") {currentHost(); need(!stopAttempted && !uncertain && !controllerClosed);}
-          await source.acknowledge(sourcePhase, value.amount as number);
+          const definition = sourcePhase === "definition" ? await source.readDefinition(value.index as number) : undefined;
+          if (sourcePhase !== "definition") await source.acknowledge(sourcePhase, value.amount as number);
           need(!integrityLost && !controllerClosed);
           if (sourcePhase !== "retain") {currentHost(); need(!stopAttempted && !uncertain);}
           // Complete the one actual owner callback before acknowledging its
           // original request. Delivery uncertainty can never repeat it.
           need(!!sendOriginal); sourcePending = false;
-          sendOriginal!(JSON.stringify({schema: "windows-original-model-ack-v1", nonce,
-            profileDigest: digest, definitionDigest: source.descriptor.definitionDigest, sequence, phase: sourcePhase}) + "\n");
+          sendOriginal!(JSON.stringify({schema: definition ? "windows-original-model-definition-v1" : "windows-original-model-ack-v1", nonce,
+            profileDigest: digest, definitionDigest: source.descriptor.definitionDigest, sequence, phase: sourcePhase,
+            ...(definition ?? {})}) + "\n");
           if (sourcePhase === "retain") sourceRetained = true;
         });
         sourceOperations.add(operation);
@@ -231,8 +235,9 @@ export function createWindowsOriginalWorkerLaunch(options: {
           && entryFacts.isFile() && !entryFacts.isSymbolicLink() && path.relative(rootReal, helperReal) === path.join("native", "windows_original_worker_launch.py")
           && path.relative(rootReal, entryReal) === "main.py");
         const env = Object.fromEntries(Object.entries(environment).filter((row): row is [string, string] => row[1] !== undefined));
-        const boot = JSON.stringify({schema: source ? "windows-original-worker-launch-v2" : "windows-original-worker-launch-v1",
-          nonce, profile, profileDigest: digest, environment: env, ...(source ? {modelSource: source.descriptor} : {})}) + "\n";
+        const boot = JSON.stringify({schema: source ? "windows-original-worker-launch-v3" : "windows-original-worker-launch-v1",
+          nonce, profile, profileDigest: digest, environment: env,
+          ...(source ? {modelSource: source.descriptor, definitionByteCount: source.definitionByteCount} : {})}) + "\n";
         need(Buffer.byteLength(boot) <= 65_536);
         if (startupAllowed) need(await Reflect.apply(startupAllowed, options, []) === undefined);
         currentHost(); need(!stopAttempted); launchAttempted = true;

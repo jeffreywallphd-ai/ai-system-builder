@@ -1,6 +1,6 @@
 """Inert ownership/protocol tests. Never import a model or acquire native files."""
 from concurrent.futures import Future
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from threading import Event, Thread
 import unittest
@@ -10,12 +10,14 @@ import importlib.util
 import io
 import json
 import tempfile
+import sys
 from pathlib import Path
 from queue import Queue
 
 from modules.adapters.runtime.python.worker import app
 from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest, TrainModelTaskResult, StartPythonRuntimeTaskRequest, EnsureModelDownloadRequest
 from modules.adapters.runtime.python.worker.tasks import approved_local_training_session as session
+from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as model_native
 
 TASK = "11111111-1111-4111-8111-111111111111"
 WORKSPACE = "22222222-2222-4222-8222-222222222222"
@@ -88,6 +90,39 @@ class OriginalSessionTests(unittest.TestCase):
         # Every ordinary test loader is explicitly inert, including valid data.
         item = patch.object(session, "train_model_from_local_files", return_value=TrainModelTaskResult(runId="inert", status="succeeded"))
         self.loader_stub = item.start(); self.addCleanup(item.stop)
+        # These control-flow units isolate the Native neighbor. Separate ABI
+        # cases and the real-view composition below execute its actual proof.
+        native=patch.object(session,"resolve_original_model_view",return_value="inert-protected-model")
+        self.native_view_stub=native.start(); self.addCleanup(native.stop); self.native_view_patch=native
+
+    def test_missing_native_view_fails_before_the_fixed_loader(self):
+        self.native_view_patch.stop()
+        owner=self.ready(); owner.start(); self.executor.run()
+        self.loader_stub.assert_not_called(); self.assertEqual(self.publications[-1]["status"],"failed")
+        self.assertEqual(self.publications[-1]["error"]["code"],"private_training_failed")
+
+    @unittest.skipUnless(sys.platform=="win32","Original native session composition uses the declared Windows profile")
+    def test_actual_native_view_is_passed_to_fixed_loader_with_unchanged_sealed_request(self):
+        from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import borrowed_model_view
+        self.native_view_patch.stop()
+        defined=definition(); defined["request"]["baseModel"]["localPath"]="X:\\models\\selected"
+        owner=self.owner(defined=defined); value=staged(); value["payload"]["baseModel"]["localPath"]="X:\\models\\selected"
+        payload=TrainModelTaskRequest.model_validate(value["payload"])
+        @contextmanager
+        def borrow():
+            self.resources.calls.append("borrow")
+            with borrowed_model_view(defined,payload.model_dump(mode="json"),model_native) as (view,physical):
+                self.physical=physical; yield view
+        self.resources.borrow=borrow
+        def fixed_loader(request,**options):
+            self.assertEqual(request.baseModel.localPath,"X:\\models\\selected")
+            self.assertFalse(options["compare_validation_baseline"])
+            self.assertEqual(model_native.resolve_original_model_view(options["_model_view"],request.model_dump(mode="json")),self.physical)
+            return TrainModelTaskResult(runId="inert",status="succeeded")
+        owner.loader=fixed_loader  # Explicit inert supplier; no engine or model is imported.
+        self.assertEqual(owner.prepare(),"prepared"); self.assertEqual(owner.seal(value),"ready")
+        before=owner.payload.model_dump(mode="json"); owner.start(); self.executor.run()
+        self.assertEqual(self.publications[-1]["status"],"succeeded"); self.assertEqual(owner.payload.model_dump(mode="json"),before)
     def test_only_positive_no_effect_capture_disarms_worker_exit_requirement(self):
         producer = Producer(); producer.capture = lambda _: None
         owner = session.OriginalTrainingSession(definition(), producer, lambda: True, lambda **_: True, lambda _: None)
@@ -322,6 +357,9 @@ class OriginalRoutesTests(unittest.TestCase):
         self.executor = QueuedExecutor(); self.resources = Resources(); self.producer = Producer(self.resources)
         self.patches = [patch.object(app, "TASK_REGISTRY", {}), patch.object(app, "TASK_EXECUTOR", self.executor),
                         patch.object(session, "train_model_from_local_files", return_value=TrainModelTaskResult(runId="inert", status="succeeded")),
+                        # Route control-flow tests isolate the Native-view neighbor;
+                        # the actual registered view is exercised separately above.
+                        patch.object(session, "resolve_original_model_view", return_value="inert/protected/model"),
                         patch.object(app, "_ORIGINAL_TRAINING_PRODUCER", None), patch.object(app, "_ORIGINAL_TRAINING_PROFILE", None)]
         for item in self.patches: item.start()
         self.addCleanup(lambda: [item.stop() for item in reversed(self.patches)])

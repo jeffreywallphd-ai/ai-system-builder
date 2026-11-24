@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 class WorkerMainEntrypointTests(unittest.TestCase):
     def _run_flat_deployment(self, *, decoy=False, collision=False, missing_app=False,
-                             private_cache=None, repeat=False):
+                             private_cache=None, repeat=False, bootstrap=False):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             worker = root / "flat-deployment" / "worker"
@@ -26,15 +26,22 @@ class WorkerMainEntrypointTests(unittest.TestCase):
             (worker / "tasks" / "helper.py").write_text('VALUE = "relative-task"\n', encoding="utf-8")
             if not missing_app:
                 (worker / "app.py").write_text(
+                    ('from .native.windows_original_worker_launch import INITIALIZED\nassert INITIALIZED\n' if bootstrap is True else '') +
                     'from .models import MARKER\nfrom .tasks.helper import VALUE\napp = (MARKER, VALUE)\n',
                     encoding="utf-8",
                 )
+            if bootstrap is True:
+                (worker / "native").mkdir()
+                (worker / "native/windows_original_worker_launch.py").write_text(
+                    'INITIALIZED = False\ndef capture_original_model_bootstrap(nonce):\n'
+                    '    global INITIALIZED\n    assert nonce == "a" * 64 and not INITIALIZED\n    INITIALIZED = True\n',encoding="utf8")
             unrelated = root / "unrelated-working-directory"
             unrelated.mkdir()
             probe = '''
-import json, runpy, sys, types
+import json, os, runpy, sys, types
 from pathlib import Path
-main, decoy, collision, missing_app, private_cache, repeat = json.loads(sys.argv[1])
+main, decoy, collision, missing_app, private_cache, repeat, bootstrap = json.loads(sys.argv[1])
+if bootstrap: os.environ["PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP"] = "wrong" if bootstrap == "malformed" else "a" * 64
 sys.modules["uvicorn"] = types.ModuleType("uvicorn")
 if decoy:
     decoy_app = types.ModuleType("modules.adapters.runtime.python.worker.app")
@@ -67,11 +74,11 @@ before = list(sys.path)
 try:
     result = runpy.run_path(main, run_name="flat_worker_probe")
 except RuntimeError:
-    assert collision or private_cache
+    assert collision or private_cache or bootstrap == "malformed"
 except ModuleNotFoundError:
-    assert missing_app and not collision
+    assert (missing_app or bootstrap == "missing") and not collision
 else:
-    assert not collision and not missing_app and not private_cache
+    assert not collision and not missing_app and not private_cache and bootstrap not in ("missing", "malformed")
     assert result["app"] == ("deployment-local", "relative-task")
     if repeat:
         again = runpy.run_path(main, run_name="flat_worker_repeat_probe")
@@ -82,13 +89,22 @@ assert sys.path == before, "worker bootstrap changed the interpreter search path
                            if key.upper() in {"SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"}}
             result = subprocess.run(
                 [sys.executable, "-I", "-B", "-c", probe,
-                 json.dumps([str(worker / "main.py"), decoy, collision, missing_app, private_cache, repeat])],
+                 json.dumps([str(worker / "main.py"), decoy, collision, missing_app, private_cache, repeat, bootstrap])],
                 cwd=unrelated, env=environment, capture_output=True, timeout=15,
             )
             self.assertEqual(result.returncode, 0, result.stderr[-8192:].decode(errors="replace"))
 
     def test_flat_deployment_loads_relative_models_and_tasks_without_repository_or_cwd(self):
         self._run_flat_deployment()
+
+    def test_original_bootstrap_runs_from_fixed_deployed_package_before_app_import(self):
+        self._run_flat_deployment(bootstrap=True,decoy=True)
+
+    def test_missing_original_bootstrap_never_falls_back_to_repository(self):
+        self._run_flat_deployment(bootstrap="missing",decoy=True)
+
+    def test_malformed_bootstrap_mode_denies_before_app_import(self):
+        self._run_flat_deployment(bootstrap="malformed")
 
     def test_flat_deployment_does_not_adopt_a_cached_repository_app(self):
         self._run_flat_deployment(decoy=True)

@@ -2662,8 +2662,8 @@ that admission. Successful startup ends only the startup-specific grant; worker
 host ownership, task business policy and original retirement remain independent.
 Denied or uncertain preparation retains original custody. It cannot prove zero
 source effects, release storage or authorize another attempt. These inert
-component checks do not implement the protected source protocol/bootstrap,
-complete native producer, public Roots or actual host qualification.
+startup checks alone do not implement the protected source handoff described
+below, complete native producer, public Roots or actual host qualification.
 
 ### Original Model observed-byte preparation
 
@@ -2711,7 +2711,7 @@ Only the original controller stdio owner can acknowledge the bounded stage
 sequence against that captured observation/reservation. It rereads the current
 saved Model through its original authorized metadata reader
 after awaited admission/accounting work; a changed revision or locator denies.
-Source-aware v2 binds the existing concrete Native graph before preparation, copies/hashes/seals it
+Source-aware v3 binds the existing concrete Native graph before preparation, copies/hashes/seals it
 and places checked read-only duplicates in creation-time inheritance. Preserve
 source-free v1. Repeated, foreign, lost or malformed messages cannot repeat
 accounting or effects. Per-stage permission checks do not promise instantaneous
@@ -2721,7 +2721,24 @@ Native source/worker/Job/readers and uncertain callbacks retain their original
 owner. After graph handles close, disk charge must remain acknowledged through
 the original reservation independently of requester permission. Controller exit
 alone is not retirement. No deletion, Save or disk-credit release is inferred.
-The reservation implementation's durable protection/accounting, inherited worker
-bootstrap/live Model view, full input/output producer, production activation and
-physical/host qualification remain separate. Source tests use controlled Node
-channels and actual Native ABI code with in-memory replies, never model quality.
+V3 transfers the original captured definition bytes in ordered bounded chunks
+before charging; their digest is checked without cross-runtime reserialization.
+The controller passes them and creation-time read-only graph handles through an
+inherited pipe. Its original parent-only writer starts after Resume and retains
+pending buffers/handles until actual return and original retirement. Stop and
+uncertain IO remain owned. Source-free v1 stays unchanged; v2 remains readable.
+
+The fixed worker entry captures the bootstrap before app import. Shared Native
+inspection checks the full graph, access, identity, protection and byte hashes.
+Only the verified receiver can bind a one-use private lease and same-thread live
+view. The original session consumes its actual borrow result. The fixed loader
+validates the unchanged sealed request before resolving the protected physical
+reference; logical approval fields remain unchanged. No JSON field, environment
+marker, callback replacement or copied handle record can mint a view. Releasing
+a view does not release original process, native guard or retained disk custody.
+
+The reservation implementation's durable protection/accounting, full input/output
+producer, production activation and physical/host qualification remain separate.
+Source tests use controlled Node channels and actual Native ABI code with
+in-memory replies, never model quality. Ordinary standalone local loading remains
+compatible; the source-only path does not advertise complete training readiness.

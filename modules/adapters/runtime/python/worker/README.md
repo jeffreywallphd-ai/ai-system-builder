@@ -1858,8 +1858,30 @@ readers stop and its graph handles close, it must acknowledge retained disk
 accounting before reporting original retirement. Requester withdrawal does not
 prevent this accounting. Closure never means deletion or released disk credit.
 
-The inherited worker bootstrap, live Model view, fixed-loader use, full native
-input/output producer and physical qualification remain pending. Default app
-composition still configures no producer. In-memory API/stdio tests are source
-evidence only; they do not load DLLs or a model, authorize physical effects or
-qualify the parent roadmap.
+V3 adds ordered transfer of the original definition bytes before source charging.
+The original controller bounds and hashes those bytes. A creation-time inherited
+pipe carries that definition and the checked read-only graph handles. Its writer
+starts after Resume, remains owned while IO is pending and joins before original
+retirement. The writer retains its pipe peer while the worker is alive. Stop or
+unknown IO never supplies replacement authority or disk credit. V1 is unchanged;
+the controller still reads the earlier v2 source protocol.
+
+Before importing the app, the fixed entry point captures that bootstrap through
+the fixed Native module. The environment nonce selects this mode; it is not
+proof. The receiver checks the original byte digest, selected Model, actual
+read-only handles, complete graph, hashes, NTFS identity, private protected ACL
+and root path. It never closes an unverified incoming handle or reopens the
+selected mutable source. Its Native inspection is shared with the controller;
+the worker does not construct a replacement controller or Job owner.
+
+Only a receiver registered after those checks can bind one lease and live view.
+The session consumes the actual borrowed value. The fixed loader checks that
+view against the unchanged sealed request, then uses the protected physical
+reference. Foreign, replayed, expired, cross-thread or changed requests fail
+closed before loading. Borrow completion does not retire the process, guards or
+disk charge. Ordinary local loading without this private view is unchanged.
+
+The full native input/output producer, durable reservation implementation and
+physical qualification remain pending. Default app composition still configures
+no producer. In-memory API/stdio tests are source evidence only; they do not load
+DLLs or a model, authorize physical effects or qualify the parent roadmap.
