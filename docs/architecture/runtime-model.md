@@ -3047,3 +3047,22 @@ Private trainer dispatch captures the loaded class operations before SDK and
 progress callbacks, then binds their original receiver. Later instance/class
 method replacement cannot fabricate completion. Ordinary no-view dispatch stays
 unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.
+
+### Finite original training output namespaces
+
+One private `OriginalTrainingOutputFamily` can own a fixed set of at most 16 fresh
+sibling output configurations under the same original joint view and exact
+request. Bound names, parent and summed maximum bytes before resource callbacks;
+retain the family on the original lease before capturing external methods. Each
+original Native graph claims one configured namespace once and keeps its full
+file/permission/allocation/byte proof. The next graph requires the preceding
+member's actual complete seal. Default single-output construction is unchanged.
+
+Per-member controls use the original captured business and reservation methods.
+Charge each declared maximum at most once and retain its attempted amount even
+on lost replies. A failed or uncertain member freezes further acquisition.
+Retention acknowledgement remains available after business withdrawal/borrow exit
+without refund, deletion, ownership transfer, retry or family revival. The finite
+local ledger is not a measured or durable exclusive reservation implementation.
+This private component enables no Root and does not supply SDK checkpoint policy,
+full training/controller integration, retirement, Save or actual host evidence.

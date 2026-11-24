@@ -1018,3 +1018,11 @@ Private trainer dispatch captures the loaded class operations before SDK and
 progress callbacks, then binds their original receiver. Later instance/class
 method replacement cannot fabricate completion. Ordinary no-view dispatch stays
 unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.
+
+The optional private output family permits a finite declared set of fresh sibling
+outputs under one original joint view. Every member uses the existing complete
+Native writer and captured original controls. Count, exact names and total
+capacity are fixed before suppliers; another member needs the prior real seal.
+Failure retains the family and charges. Accounting acknowledgement survives
+business withdrawal but never refunds storage or reopens work. This is not SDK
+checkpoint wiring, a durable quota or a qualified producer/Save/host profile.

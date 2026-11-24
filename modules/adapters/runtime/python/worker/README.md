@@ -2084,3 +2084,26 @@ Private trainer dispatch captures the loaded class operations before SDK and
 progress callbacks, then binds their original receiver. Later instance/class
 method replacement cannot fabricate completion. Ordinary no-view dispatch stays
 unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.
+
+### Finite protected training output family
+
+`OriginalTrainingOutputFamily` binds at most 16 copied fresh sibling configurations
+and their explicit total byte cap to one genuine original joint view/request.
+Retain the family before external method capture. Capture the original business,
+resource, charge and retention methods and receivers once. The original Native
+writer can claim each configured member once with `_family`; ordinary one-output
+construction still denies a second owner.
+
+A member retains its graph before suppliers and must actually seal before the
+next member can bind. Existing exact inventory, private ACL/OWNER_RIGHTS,
+allocation, time, thread, hash and readback checks remain. The local charge ledger
+never exceeds the declared total; external measured exclusive capacity is still
+required and is not created by this class. Failed, unknown or caught reentrant
+work prevents more members without discarding handles or charges. Retention
+acknowledgement is one-use accounting after business withdrawal or borrow exit;
+it grants no refund, deletion, ownership transfer, new work or family revival.
+
+In-memory ABI tests establish software behavior only. SDK checkpoint callbacks,
+checkpoint settings/optimizer semantics, the complete producer, durable quotas,
+SDK/worker retirement, separate Save and physical/host qualification remain
+pending. No new wire schema, Root, real model or quality test is introduced.

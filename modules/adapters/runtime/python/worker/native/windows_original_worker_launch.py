@@ -26,7 +26,7 @@ import subprocess
 import struct
 import sys
 from threading import Event, Lock, RLock, Thread, get_ident
-from types import ModuleType
+from types import BuiltinMethodType, MethodType, ModuleType
 from weakref import WeakKeyDictionary
 import time
 
@@ -1117,6 +1117,7 @@ _model_views = WeakKeyDictionary()
 _model_leases = WeakKeyDictionary()
 _verified_model_receivers = WeakKeyDictionary()
 _sealed_training_inputs = WeakKeyDictionary()
+_training_output_families = WeakKeyDictionary()
 
 
 def _input_view_binding(state, request):
@@ -1977,13 +1978,19 @@ _TRAINING_OUTPUT_FILES = frozenset(("config.json", "generation_config.json", "to
     "model.safetensors", "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"))
 
 
-def _capture_training_output(request, configuration, files):
-    """Finite byte-container profile; filenames never attest model validity."""
+def _capture_training_output_configuration(configuration):
     config = exact(_copy_model_json(configuration),
         ("freshParent", "freshName", "maximumCopyBytes", "bufferBytes", "preparationMs"))
     _input_copy_directory(config["freshParent"]); model_leaf(config["freshName"])
-    maximum = integer(config["maximumCopyBytes"], 1, 2**53-1)
+    integer(config["maximumCopyBytes"], 1, 2**53-1)
     integer(config["bufferBytes"], 4096, 1024**2); integer(config["preparationMs"], 1, 86400000)
+    return config
+
+
+def _capture_training_output(request, configuration, files):
+    """Finite byte-container profile; filenames never attest model validity."""
+    config = _capture_training_output_configuration(configuration)
+    maximum = config["maximumCopyBytes"]
     rows = _copy_model_json(files); need(type(rows) is list and 1 <= len(rows) <= len(_TRAINING_OUTPUT_FILES))
     names, total = set(), 0
     for row in rows:
@@ -2000,6 +2007,158 @@ def _capture_training_output(request, configuration, files):
     return {"schema": "windows-original-training-output-graph-v1", **config, "files": tuple(rows)}
 
 
+def _output_family_record(family):
+    need(type(family) is OriginalTrainingOutputFamily)
+    record = _training_output_families.get(family); need(record is not None)
+    return record
+
+
+def _output_family_snapshot(family, member=None):
+    record = _output_family_record(family)
+    need(get_ident() == record["thread"] and record["phase"] in ("bound", "sealed")
+         and _model_views.get(record["view"]) is record["binding"]
+         and _model_leases.get(record["lease"]) is record["lease_state"]
+         and record["lease_state"].get("output_copy_owner") is family
+         and not record["lease_state"]["view_lost"] and record["lease_state"]["source"].phase == "borrowed")
+    if member is not None:
+        need(any(row is member for row in record["members"]) and member["stage"] in ("bound", "sealed"))
+    return record
+
+
+def _fail_output_family(family):
+    if family is not None:
+        _output_family_record(family)["phase"] = "failed"
+
+
+class OriginalTrainingOutputFamily:
+    """Finite fresh namespaces, not checkpoint policy or a durable quota.
+
+    Trusted composition must already hold an exclusive measured reservation for
+    the complete declared capacity. Every member keeps the original Native writer.
+    """
+    __slots__ = ("__weakref__",)
+
+    def __init__(self, view, sealed_request, configuration, reservation, admission):
+        need(type(self) is OriginalTrainingOutputFamily and self not in _training_output_families
+             and type(view) is _OriginalModelView)
+        binding = _model_views.get(view); need(binding is not None and binding[2] == get_ident())
+        lease = binding[0]; state = _model_leases.get(lease); need(state is not None)
+        _, inputs = resolve_original_training_references(view, sealed_request); need(inputs is not None)
+        raw = exact(_copy_model_json(configuration),("maximumCopyBytes", "outputs"))
+        maximum = integer(raw["maximumCopyBytes"],1,2**53-1)
+        need(type(raw["outputs"]) is list and 1 <= len(raw["outputs"]) <= 16)
+        outputs = tuple(_capture_training_output_configuration(row) for row in raw["outputs"])
+        need(len({row["freshName"].casefold() for row in outputs}) == len(outputs)
+             and len({row["freshParent"].casefold() for row in outputs}) == 1
+             and sum(row["maximumCopyBytes"] for row in outputs) <= maximum)
+        lock = state["lock"]; need(lock.acquire(blocking=False))
+        try:
+            need(_model_views.get(view) is binding and "output_copy_owner" not in state
+                 and not state["view_lost"] and state["source"].phase == "borrowed")
+            record = {"view":view, "binding":binding, "lease":lease, "lease_state":state,
+                "thread":get_ident(), "request":_copy_model_json(sealed_request), "outputs":outputs,
+                "maximum":maximum, "charged":0, "phase":"binding", "members":[],
+                "reservation":reservation, "admission":admission, "methods":{}, "lock":Lock()}
+            _training_output_families[self] = record
+            state["output_copy_owner"] = self  # Before any external attribute/receiver access.
+            need(record["lock"].acquire(blocking=False))
+            try:
+                for key, owner, name in (("resource",reservation,"assert_current"),("charge",reservation,"charge_source_copy"),
+                        ("retain",reservation,"retain_source_copy"),("business",admission,"assert_current")):
+                    method = getattr(owner,name)
+                    need(type(method) in (MethodType,BuiltinMethodType) and method.__self__ is owner)
+                    record["methods"][key] = method
+                need(record["phase"] == "binding")
+                record["phase"] = "bound"
+                _output_family_snapshot(self)
+            except BaseException:
+                record["phase"] = "failed"; raise LaunchUnavailable() from None
+            finally: record["lock"].release()
+        finally: lock.release()
+
+    @property
+    def phase(self): return _output_family_record(self)["phase"]
+
+    @property
+    def next_configuration(self):
+        record = _output_family_snapshot(self)
+        need(len(record["members"]) < len(record["outputs"]))
+        return _copy_model_json(record["outputs"][len(record["members"])])
+
+
+def _claim_output_family(family, graph, view, request, configuration, reservation, admission):
+    record = _output_family_record(family)
+    need(get_ident() == record["thread"])
+    if not record["lock"].acquire(blocking=False):
+        record["phase"] = "failed"; raise LaunchUnavailable()
+    try:
+        _output_family_snapshot(family)
+        need(record["view"] is view and _same_model_json(record["request"],request)
+             and record["reservation"] is reservation and record["admission"] is admission)
+        need(len(record["members"]) < len(record["outputs"]))
+        need(not record["members"] or record["members"][-1]["stage"] == "sealed")
+        planned = record["outputs"][len(record["members"])]
+        need(_same_model_json(planned,_capture_training_output_configuration(configuration)))
+        member = {"graph":graph, "configuration":planned, "stage":"constructing", "charge_attempted":False,
+            "charged":False, "retain_attempted":False, "retained":False}
+        record["members"].append(member)  # Before any per-member supplier call.
+        return member
+    except BaseException:
+        record["phase"] = "failed"; raise LaunchUnavailable() from None
+    finally: record["lock"].release()
+
+
+class _OriginalOutputFamilyControls:
+    def __init__(self, family, member):
+        self.family, self.member = family, member
+        record = _output_family_record(family)
+        self.resource, self.business = record["methods"]["resource"], record["methods"]["business"]
+        self.charge, self.retain = record["methods"]["charge"], record["methods"]["retain"]
+        self.checking = False
+
+    def assert_current(self):
+        need(get_ident() == _output_family_record(self.family)["thread"])
+        try:
+            need(not self.checking); self.checking = True
+            _output_family_snapshot(self.family,self.member)
+            need(self.business() is True and self.resource() is True)
+            _output_family_snapshot(self.family,self.member)
+            return True
+        except BaseException:
+            _fail_output_family(self.family); raise LaunchUnavailable() from None
+        finally: self.checking = False
+
+    def charge_source_copy(self, amount):
+        need(get_ident() == _output_family_record(self.family)["thread"])
+        try:
+            record = _output_family_snapshot(self.family,self.member); member = self.member
+            need(member["graph"]._operation_active and member["stage"] == "bound"
+                 and not member["charge_attempted"] and type(amount) is int
+                 and amount == member["configuration"]["maximumCopyBytes"]
+                 and record["charged"] + amount <= record["maximum"])
+            member["charge_attempted"] = True; record["charged"] += amount
+            need(self.charge(amount) is True)
+            _output_family_snapshot(self.family,member)
+            member["charged"] = True; return True
+        except BaseException:
+            _fail_output_family(self.family); raise LaunchUnavailable() from None
+
+    def retain_source_copy(self, amount):
+        # Accounting survives revoked business permission and expired borrow.
+        # It grants no new IO, retry, deletion, credit or family revival.
+        record = _output_family_record(self.family); member = self.member
+        need(get_ident() == record["thread"])
+        try:
+            need(any(row is member for row in record["members"]) and member["charge_attempted"]
+                 and not member["retain_attempted"] and type(amount) is int
+                 and amount == member["configuration"]["maximumCopyBytes"])
+            member["retain_attempted"] = True
+            need(self.resource() is True and self.retain(amount) is True)
+            member["retained"] = True; return True
+        except BaseException:
+            _fail_output_family(self.family); raise LaunchUnavailable() from None
+
+
 class _OriginalOutputAdmission:
     def __init__(self, graph, admission):
         self.graph, self.current = graph, admission.assert_current
@@ -2009,8 +2168,12 @@ class _OriginalOutputAdmission:
         graph = self.graph
         need(_model_views.get(graph.view) is graph._view_binding
              and _model_leases.get(graph.lease) is graph._lease_state
-             and graph._lease_state.get("output_copy_owner") is graph
              and graph.owner is graph._native_owner and graph._operation_active)
+        if graph._output_family is None:
+            need(graph._lease_state.get("output_copy_owner") is graph)
+        else:
+            _output_family_snapshot(graph._output_family,graph._output_member)
+            need(graph._output_member["graph"] is graph)
         _, inputs = resolve_original_training_references(graph.view, graph._request)
         need(inputs is not None)
 
@@ -2026,25 +2189,38 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
     This implements custody, not serialization, model validity, Save, worker
     retirement or durable reservation. No existing path is adopted or removed.
     """
-    def __init__(self, view, sealed_request, configuration, files, reservation, admission):
+    def __init__(self, view, sealed_request, configuration, files, reservation, admission, *, _family=None):
+        self._output_family, self._output_member = _family, None
+        need(_family is None or type(_family) is OriginalTrainingOutputFamily)
         need(type(view) is _OriginalModelView)
         binding = _model_views.get(view); need(binding is not None)
         lease, _, thread = binding; need(thread == get_ident())
         _, inputs = resolve_original_training_references(view, sealed_request); need(inputs is not None)
         state = _model_leases.get(lease); lock = state["lock"]; need(lock.acquire(blocking=False))
         try:
-            need(_model_views.get(view) is binding and "output_copy_owner" not in state
+            need(_model_views.get(view) is binding and (_family is not None or "output_copy_owner" not in state)
                  and not state["view_lost"] and state["source"].phase == "borrowed")
+            if _family is not None:
+                self._output_member = _claim_output_family(_family,self,view,sealed_request,configuration,reservation,admission)
             descriptor = _capture_training_output(sealed_request, configuration, files)
-            state["output_copy_owner"] = self  # Retain BEFORE reservation/admission suppliers.
+            if _family is None: state["output_copy_owner"] = self
             self.view, self.lease, self._view_binding, self._lease_state = view, lease, binding, state
             self._request = _copy_model_json(sealed_request)
+        except BaseException:
+            _fail_output_family(_family); raise
         finally: lock.release()
         self._operation_lock, self._operation_active, self._output_guard_active = Lock(), False, False
         owner = InheritedModelNativeCalls(state["native_owner"].kernel, clock=state["native_owner"].clock)
         self.owner = self._native_owner = owner
-        self._output_admission = _OriginalOutputAdmission(self, admission)
-        self._bind_copy(owner, descriptor, reservation, self._output_admission)
+        try:
+            controls = _OriginalOutputFamilyControls(_family,self._output_member) if _family is not None else None
+            self._output_admission = _OriginalOutputAdmission(self, controls if controls is not None else admission)
+            self._bind_copy(owner, descriptor, controls if controls is not None else reservation, self._output_admission)
+            if self._output_member is not None:
+                record = _output_family_record(_family); need(record["phase"] == "bound")
+                self._output_member["stage"] = "bound"
+        except BaseException:
+            _fail_output_family(_family); raise
 
     def guard(self):
         try:
@@ -2060,12 +2236,15 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                 need((self.owner.clock() - self.started) * 1000 < self.descriptor["preparationMs"])
         except BaseException:
             self.phase = "failed"
+            _fail_output_family(self._output_family)
             raise LaunchUnavailable() from None
         finally: self._output_guard_active = False
 
     @contextmanager
     def _output_call(self):
-        self.owner._main(); need(self._operation_lock.acquire(blocking=False))
+        self.owner._main()
+        if not self._operation_lock.acquire(blocking=False):
+            _fail_output_family(self._output_family); raise LaunchUnavailable()
         try:
             need(not self._operation_active and not self.owner.unknown and not self.owner.pending)
             self._operation_active = True
@@ -2130,8 +2309,13 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                 for handle in self.guards:
                     need(self.permissions(handle) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
                 self.graph_matches(root, self.records); self.guard(); self.phase = "sealed"
+                if self._output_member is not None:
+                    self._output_member["stage"] = "sealed"
+                    record = _output_family_record(self._output_family)
+                    if len(record["members"]) == len(record["outputs"]): record["phase"] = "sealed"
             except BaseException:
                 self.phase = "failed"
+                _fail_output_family(self._output_family)
                 raise LaunchUnavailable() from None
 
     def assert_sealed(self):
@@ -2139,6 +2323,7 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
             try: return _OriginalProtectedFlatCopy.assert_sealed(self)
             except BaseException:
                 self.phase = "failed"
+                _fail_output_family(self._output_family)
                 raise LaunchUnavailable() from None
 
 

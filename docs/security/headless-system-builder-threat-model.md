@@ -2732,3 +2732,25 @@ Private trainer dispatch captures the loaded class operations before SDK and
 progress callbacks, then binds their original receiver. Later instance/class
 method replacement cannot fabricate completion. Ordinary no-view dispatch stays
 unchanged. This is an owned call-boundary check, not an SDK-internals sandbox.
+
+### Finite checkpoint and candidate namespace ownership
+
+Keep one original output-family owner, not repeated standalone output admission.
+Require the genuine borrowed joint view/request, at most 16 fixed distinct fresh
+sibling configurations and an explicit summed byte cap. Bind before external
+method access and capture original receivers/methods. JSON, copied IDs, another
+view/request, changed controls/configuration or a forged family cannot mint a
+member. Ordinary standalone output keeps its one-owner guard.
+
+Retain each graph before suppliers. Actual Native sealing, not an asserted ready
+flag, permits the next namespace. Original exact inventory, allocation, private
+ACL/OWNER_RIGHTS, bytes, hashes/readback, time, thread and live-view/resource
+checks remain authoritative. One per-member charge and the finite aggregate
+ledger cannot release attempted capacity. Unknown writes/charges, lost authority
+or caught reentry freeze further acquisition and preserve custody. Wrong-thread
+preconditions do not poison the original owner. One-use retention acknowledgement
+after business withdrawal is accounting only: it does not refund, revive, delete
+or transfer ownership. External measured exclusive capacity and durable accounting
+still require their own implementation and evidence. Inert ABI tests grant no
+physical effects, SDK checkpoint/optimizer behavior, complete producer, retirement,
+Save, host or parent qualification.

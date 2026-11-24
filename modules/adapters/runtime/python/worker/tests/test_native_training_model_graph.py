@@ -882,6 +882,161 @@ class CombinedTrainingInputViewTests(unittest.TestCase):
             self.assertTrue(all(not handle.closed for handle in graph.guards)); self.assertEqual(control.retained,[])
 
 
+class TrainingOutputFamilyTests(unittest.TestCase):
+    def fixture(self):
+        case=TrainingOutputCustodyTests(); facts=case.fixture(); self.addCleanup(case.doCleanups)
+        actual,source,lease,inputs,request,input_control,kernel,config,contents,files,reservation=facts
+        business=Control()
+        outputs=[{**config,"freshName":"checkpoint-1"},{**config,"freshName":"final-candidate"}]
+        return facts,business,{"maximumCopyBytes":256*1024,"outputs":outputs}
+
+    def test_original_finite_family_seals_distinct_outputs_with_exact_inventory_and_capacity(self):
+        facts,business,configuration=self.fixture()
+        actual,source,lease,inputs,request,_,kernel,_,contents,files,reservation=facts
+        with lease.borrow(request) as view:
+            family=actual.OriginalTrainingOutputFamily(view,request,configuration,reservation,business)
+            configuration["outputs"][0]["freshName"]="caller-change"
+            # Changes on the external objects cannot replace captured methods.
+            reservation.charge_source_copy=lambda _:self.fail("Replacement charge selected")
+            business.assert_current=lambda:self.fail("Replacement policy selected")
+            graphs=[]
+            for name in ("checkpoint-1","final-candidate"):
+                config=family.next_configuration; self.assertEqual(config["freshName"],name)
+                graph=actual.OriginalTrainingOutputGraph(view,request,config,files,reservation,business,_family=family)
+                graph.prepare({key:iter((raw,)) for key,raw in contents.items()}); graph.assert_sealed(); graphs.append(graph)
+                self.assertEqual({r["name"] for r in graph.records},set(contents))
+                self.assertTrue(all(not h.closed for h in graph.guards))
+            self.assertEqual(family.phase,"sealed"); self.assertEqual(reservation.charges,[128*1024]*2)
+            self.assertEqual(reservation.retained,[]); self.assertNotEqual(graphs[0].physical_path,graphs[1].physical_path)
+            for graph in graphs:graph.assert_sealed()
+            before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):unused=family.next_configuration
+            self.assertEqual(len(kernel.calls),before)
+            effects=lambda:sum(name in ("WriteFile","NtSetSecurityObject","SetFileInformationByHandle","CreateProcessW") for name,_ in kernel.calls)
+            mutations=effects()
+            with self.assertRaises(actual.LaunchUnavailable):actual.OriginalTrainingOutputGraph(view,request,graphs[0].descriptor,files,reservation,business)
+            self.assertEqual(effects(),mutations)  # Existing read-only view checks still run.
+
+    def test_invalid_count_capacity_names_and_parent_cannot_bind_a_family(self):
+        for mode in ("empty","wide","capacity","boolean","duplicate","parent","traversal"):
+            with self.subTest(mode=mode):
+                facts,business,config=self.fixture()
+                actual,_,lease,_,request,_,kernel,_,_,_,reservation=facts
+                if mode=="empty":config["outputs"]=[]
+                elif mode=="wide":config["outputs"]=[{**config["outputs"][0],"freshName":"output-"+str(i)} for i in range(17)]
+                elif mode=="capacity":config["maximumCopyBytes"]-=1
+                elif mode=="boolean":config["maximumCopyBytes"]=True
+                elif mode=="duplicate":config["outputs"][1]["freshName"]="CHECKPOINT-1"
+                elif mode=="parent":config["outputs"][1]["freshParent"]="X:\\another"
+                elif mode=="traversal":config["outputs"][1]["freshName"]="../other"
+                with lease.borrow(request) as view:
+                    with self.assertRaises(actual.LaunchUnavailable):actual.OriginalTrainingOutputFamily(view,request,config,reservation,business)
+                    self.assertNotIn("output_copy_owner",actual._model_leases[lease])
+                    self.assertEqual(reservation.charges,[])
+
+    def test_unsealed_or_failed_member_cannot_be_followed_or_retried(self):
+        for mode in ("unsealed","write-failure","caught-reentry"):
+            with self.subTest(mode=mode):
+                facts,business,config=self.fixture()
+                actual,_,lease,_,request,_,kernel,_,contents,files,reservation=facts
+                with lease.borrow(request) as view:
+                    family=actual.OriginalTrainingOutputFamily(view,request,config,reservation,business)
+                    first_config=family.next_configuration
+                    graph=actual.OriginalTrainingOutputGraph(view,request,first_config,files,reservation,business,_family=family)
+                    if mode=="unsealed":
+                        with self.assertRaises(actual.LaunchUnavailable):actual.OriginalTrainingOutputGraph(view,request,first_config,files,reservation,business,_family=family)
+                    else:
+                        if mode=="write-failure":kernel.fail="WriteFile"
+                        else:
+                            entered=[]
+                            def reenter(name):
+                                if name=="WriteFile" and not entered:
+                                    entered.append(True)
+                                    try:actual.OriginalTrainingOutputGraph(view,request,first_config,files,reservation,business,_family=family)
+                                    except actual.LaunchUnavailable:pass
+                            kernel.after=reenter
+                        with self.assertRaises(actual.LaunchUnavailable):graph.prepare({key:iter((raw,)) for key,raw in contents.items()})
+                        self.assertEqual(reservation.charges,[128*1024]); self.assertEqual(reservation.retained,[])
+                    self.assertEqual(family.phase,"failed"); before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):unused=family.next_configuration
+                    with self.assertRaises(actual.LaunchUnavailable):graph.prepare({})
+                    self.assertEqual(len(kernel.calls),before)
+
+    def test_retention_after_business_withdrawal_survives_borrow_and_never_releases_credit(self):
+        facts,business,config=self.fixture()
+        actual,_,lease,_,request,_,kernel,_,contents,files,reservation=facts
+        with lease.borrow(request) as view:
+            family=actual.OriginalTrainingOutputFamily(view,request,config,reservation,business)
+            graph=actual.OriginalTrainingOutputGraph(view,request,family.next_configuration,files,reservation,business,_family=family)
+            graph.prepare({key:iter((raw,)) for key,raw in contents.items()})
+            business.current=False
+            with self.assertRaises(actual.LaunchUnavailable):graph.assert_sealed()
+            self.assertEqual(family.phase,"failed")
+        before=len(kernel.calls)
+        self.assertTrue(graph.reservation.retain_source_copy(128*1024))
+        self.assertEqual(reservation.retained,[128*1024]); self.assertEqual(reservation.charges,[128*1024])
+        with self.assertRaises(actual.LaunchUnavailable):graph.reservation.retain_source_copy(128*1024)
+        self.assertEqual(len(kernel.calls),before); self.assertEqual(reservation.retained,[128*1024]); self.assertEqual(family.phase,"failed")
+
+    def test_foreign_thread_does_not_poison_or_claim_a_family_member(self):
+        facts,business,config=self.fixture()
+        actual,_,lease,_,request,_,kernel,_,contents,files,reservation=facts
+        with lease.borrow(request) as view:
+            family=actual.OriginalTrainingOutputFamily(view,request,config,reservation,business); original=family.next_configuration
+            outcomes=[]
+            def foreign():
+                try:actual.OriginalTrainingOutputGraph(view,request,original,files,reservation,business,_family=family)
+                except actual.LaunchUnavailable:outcomes.append("denied")
+            worker=Thread(target=foreign); worker.start(); worker.join(2)
+            self.assertFalse(worker.is_alive()); self.assertEqual(outcomes,["denied"]); self.assertEqual(family.phase,"bound")
+            graph=actual.OriginalTrainingOutputGraph(view,request,original,files,reservation,business,_family=family)
+            graph.prepare({key:iter((raw,)) for key,raw in contents.items()}); self.assertEqual(family.phase,"bound")
+
+
+    def test_permission_loss_or_uncertain_charge_never_creates_output_or_retries(self):
+        for uncertain in (False,True):
+            with self.subTest(uncertain=uncertain):
+                facts,business,config=self.fixture()
+                actual,_,lease,_,request,_,kernel,_,contents,files,_=facts
+                class Reservation(Control):
+                    def charge_source_copy(self,amount):
+                        self.charges.append(amount)
+                        if uncertain:raise RuntimeError("private charge acknowledgement")
+                        business.current=False;return True
+                reservation=Reservation()
+                with lease.borrow(request) as view:
+                    family=actual.OriginalTrainingOutputFamily(view,request,config,reservation,business)
+                    graph=actual.OriginalTrainingOutputGraph(view,request,family.next_configuration,files,reservation,business,_family=family)
+                    writes=sum(name=="WriteFile" for name,_ in kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):graph.prepare({key:iter((raw,)) for key,raw in contents.items()})
+                    self.assertEqual(family.phase,"failed");self.assertEqual(reservation.charges,[128*1024])
+                    self.assertEqual(sum(name=="WriteFile" for name,_ in kernel.calls),writes)
+                    self.assertNotIn("X:\\private\\outputs\\checkpoint-1",kernel.nodes)
+                    with self.assertRaises(actual.LaunchUnavailable):graph.prepare({})
+                    self.assertEqual(reservation.charges,[128*1024])
+                self.assertTrue(graph.reservation.retain_source_copy(128*1024))
+                self.assertEqual(reservation.retained,[128*1024]);self.assertEqual(family.phase,"failed")
+
+    def test_forged_and_mismatched_families_cannot_mint_an_output(self):
+        for mode in ("forged","different-request","different-controls","changed-configuration","second-family"):
+            with self.subTest(mode=mode):
+                facts,business,config=self.fixture()
+                actual,_,lease,_,request,_,kernel,_,contents,files,reservation=facts
+                with lease.borrow(request) as view:
+                    family=actual.OriginalTrainingOutputFamily(view,request,config,reservation,business)
+                    supplied=family.next_configuration; selected_request=json.loads(json.dumps(request)); selected_reservation=reservation
+                    if mode=="forged":family=object.__new__(actual.OriginalTrainingOutputFamily)
+                    elif mode=="different-request":selected_request["output"]["outputModelName"]="another"
+                    elif mode=="different-controls":selected_reservation=Control()
+                    elif mode=="changed-configuration":supplied["freshName"]="unplanned"
+                    if mode=="second-family":
+                        with self.assertRaises(actual.LaunchUnavailable):actual.OriginalTrainingOutputFamily(view,request,config,reservation,business)
+                    else:
+                        with self.assertRaises(actual.LaunchUnavailable):actual.OriginalTrainingOutputGraph(view,selected_request,supplied,files,selected_reservation,business,_family=family)
+                    self.assertEqual(reservation.charges,[])
+                    self.assertNotIn("X:\\private\\outputs\\checkpoint-1",kernel.nodes)
+
+
 class TrainingOutputCustodyTests(unittest.TestCase):
     def fixture(self, method="lora"):
         case=CombinedTrainingInputViewTests()
