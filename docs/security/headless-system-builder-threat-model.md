@@ -2578,3 +2578,20 @@ request and Native custody proof before charge/create/write/seal effects. Keep
 one recursion latch across that complete check. An eventual rejection after a
 write is insufficient. The causal regression preserves the original failure
 and requires zero effects after callback-induced joint-authority loss.
+
+Safetensors framing has a separate finite metadata/header/byte boundary. Capture
+known dtypes, bounded names/shapes/counts and byte-supplier references before
+iteration. Include exact contiguous offsets and header bytes in the reserved
+file size; do not collect the complete tensor data. One consumer thread may
+advance a stream once. Malformed, oversized, short, extra, foreign-thread and
+reentrant input fails permanently with fixed diagnostics. Keep original supplier
+references; do not infer SDK-reader shutdown or close foreign suppliers. The
+codec imports no SDK and grants no Native custody, model validity, Save or
+runtime readiness. Actual fixed SDK extraction/reader compatibility, full
+producer, protected durable quota and physical/host qualification stay pending.
+
+Validate checked dtype-bit times nonzero-dimension products even for empty
+tensors. Otherwise a zero can hide consumer-stride overflow in an apparently
+empty, bounded file. Keep that arithmetic check separate from the actual stored
+byte budget; valid empty shapes remain supported. The original red/green
+reproduction and independent checked-arithmetic probe remain inspectable.

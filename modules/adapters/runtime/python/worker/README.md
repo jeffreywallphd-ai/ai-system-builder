@@ -1984,3 +1984,13 @@ reservation, separately approved Save and physical/host qualification still need
 their own implementation and evidence. Ordinary SDK path serialization is
 unchanged. Focused tests use actual Native code with in-memory replies and inert
 container bytes; no model or quality scoring runs.
+
+The private `OriginalTrainingTensorStream` frames dense tensor byte suppliers
+using the existing safetensors format. Capture finite declarations and supplier
+references without reading bytes, compute exact size/offsets and a bounded
+aligned header, then emit bounded chunks once on the original consumer thread.
+Reject malformed metadata, unsupported dtype/name/shape, short/extra/nonbyte
+chunks, failed suppliers and reentry. Keep supplier references after failure;
+the codec does not close a supplier or establish reader retirement. It imports
+no model SDK. Fixed SDK tensor extraction, installed-reader compatibility and
+the complete producer are still pending; ordinary SDK serialization is unchanged.

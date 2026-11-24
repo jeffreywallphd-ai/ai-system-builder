@@ -1129,6 +1129,160 @@ class TrainingOutputCustodyTests(unittest.TestCase):
             self.assertEqual(len(kernel.calls),before); self.assertEqual(control.retained,[])
 
 
+class TrainingTensorStreamTests(unittest.TestCase):
+    def plan(self, rows=None, streams=None, maximum=128*1024):
+        rows=rows if rows is not None else [{"name":"layer.weight","dtype":"F32","shape":[2]}]
+        streams=streams if streams is not None else {"layer.weight":(struct.pack("<ff",1.5,-2.0),)}
+        return n.OriginalTrainingTensorStream(rows,streams,maximum_bytes=maximum,chunk_bytes=4096)
+
+    def decode(self, raw):
+        length,=struct.unpack_from("<Q",raw)
+        self.assertEqual(length%8,0); header=json.loads(raw[8:8+length]); body=raw[8+length:]
+        self.assertEqual(header.pop("__metadata__"),{"format":"pt"})
+        return header,body
+
+    def test_exact_scalar_empty_and_dense_tensor_values_follow_official_framing(self):
+        rows=[{"name":"layer.weight","dtype":"F32","shape":[2]},
+            {"name":"scalar","dtype":"I64","shape":[]},{"name":"empty","dtype":"BF16","shape":[0,4]}]
+        streams={"layer.weight":(struct.pack("<f",1.5),struct.pack("<f",-2.0)),"scalar":(struct.pack("<q",17),),"empty":()}
+        plan=self.plan(rows,streams); expected_size=plan.size_bytes
+        rows[0]["shape"][0]=999; streams["scalar"]=(b"changed",)
+        raw=b"".join(plan); self.assertEqual(len(raw),expected_size)
+        header,body=self.decode(raw)
+        self.assertEqual(header,{"layer.weight":{"dtype":"F32","shape":[2],"data_offsets":[0,8]},
+            "scalar":{"dtype":"I64","shape":[],"data_offsets":[8,16]},
+            "empty":{"dtype":"BF16","shape":[0,4],"data_offsets":[16,16]}})
+        self.assertEqual(struct.unpack("<ffq",body),(1.5,-2.0,17)); self.assertEqual(plan.phase,"complete")
+        with self.assertRaises(n.LaunchUnavailable): iter(plan)
+        self.assertEqual(plan.phase,"complete")
+
+    def test_all_supported_dtype_widths_and_padded_header_match_exact_sizes(self):
+        widths={"BOOL":1,"U8":1,"I8":1,"I16":2,"I32":4,"I64":8,"F16":2,"BF16":2,"F32":4,"F64":8}
+        rows=[{"name":"tensor_"+name,"dtype":name,"shape":[2,3]} for name in widths]
+        data={r["name"]:(bytes([index])*6*widths[r["dtype"]],) for index,r in enumerate(rows)}
+        plan=self.plan(rows,data); raw=b"".join(plan); header,body=self.decode(raw); offset=0
+        for index,row in enumerate(rows):
+            size=6*widths[row["dtype"]]; self.assertEqual(header[row["name"]]["data_offsets"],[offset,offset+size])
+            self.assertEqual(body[offset:offset+size],bytes([index])*size); offset+=size
+        self.assertEqual(offset,len(body)); self.assertEqual(len(raw),plan.size_bytes)
+
+    def test_plan_refuses_bad_metadata_before_touching_any_supplier(self):
+        class Bomb:
+            def __iter__(self): raise AssertionError("Declaration refusal must perform no supplier IO")
+        for mode in ("duplicate","reserved","name","unicode","dtype","shape","bool","negative","rank","overflow","unknown","foreign-stream","total"):
+            with self.subTest(mode=mode):
+                rows=[{"name":"x","dtype":"F32","shape":[1]}]; streams={"x":Bomb()}; maximum=128*1024
+                if mode=="duplicate": rows.append(dict(rows[0]))
+                elif mode=="reserved": rows[0]["name"]="__metadata__"
+                elif mode=="name": rows[0]["name"]="../weight"
+                elif mode=="unicode": rows[0]["name"]="weight-\u202e"
+                elif mode=="dtype": rows[0]["dtype"]="OBJECT"
+                elif mode=="shape": rows[0]["shape"]=(1,)
+                elif mode=="bool": rows[0]["shape"]=[True]
+                elif mode=="negative": rows[0]["shape"]=[-1]
+                elif mode=="rank": rows[0]["shape"]=[1]*33
+                elif mode=="overflow": rows[0]["shape"]=[maximum,maximum]
+                elif mode=="unknown": rows[0]["callback"]=True
+                elif mode=="foreign-stream": streams["extra"]=Bomb()
+                else: maximum=4
+                with self.assertRaises(n.LaunchUnavailable): self.plan(rows,streams,maximum)
+
+    def test_malformed_byte_streams_fail_permanently_without_raw_supplier_errors(self):
+        for mode in ("short","extra","empty","wrong-type","large","exception"):
+            with self.subTest(mode=mode):
+                raw=struct.pack("<ff",1.5,-2.0)
+                value={"short":(raw[:-1],),"extra":(raw,b"!"),"empty":(b"",raw),
+                    "wrong-type":(bytearray(raw),),"large":(b"x"*4097,)}
+                def failed(): yield raw; raise RuntimeError("private supplier details")
+                plan=self.plan(streams={"layer.weight":failed() if mode=="exception" else value[mode]})
+                with self.assertRaises(n.LaunchUnavailable) as caught: b"".join(plan)
+                self.assertNotIn("private",str(caught.exception)); self.assertEqual(plan.phase,"failed")
+                with self.assertRaises(n.LaunchUnavailable): iter(plan)
+
+    def test_empty_shapes_check_all_nonzero_strides_before_zero_storage(self):
+        maximum=2**53-1
+        class Bomb:
+            def __iter__(self): raise AssertionError("Overflowing shape must not reach a supplier")
+        for shape in ([0,maximum,maximum],[maximum,0,maximum],[maximum,maximum,0]):
+            with self.subTest(denied_shape=shape):
+                with self.assertRaises(n.LaunchUnavailable):
+                    self.plan([{"name":"empty","dtype":"U8","shape":shape}],{"empty":Bomb()},maximum)
+        for shape in ([0,2,3],[2048,2048,0],[0,2048,2048]):
+            with self.subTest(valid_shape=shape):
+                plan=self.plan([{"name":"empty","dtype":"F32","shape":shape}],{"empty":()},65536)
+                raw=b"".join(plan); header,body=self.decode(raw)
+                self.assertEqual(header["empty"]["shape"],shape)
+                self.assertEqual(header["empty"]["data_offsets"],[0,0]); self.assertEqual(body,b"")
+                self.assertEqual(len(raw),plan.size_bytes); self.assertEqual(plan.phase,"complete")
+
+    def test_large_tensor_is_lazy_and_each_supplier_chunk_is_forwarded_without_collection(self):
+        amount=8*1024*1024; calls=[]; piece=b"z"*4096
+        def data():
+            for index in range(amount//len(piece)): calls.append(index); yield piece
+        plan=self.plan([{"name":"large","dtype":"U8","shape":[amount]}],{"large":data()},amount+4096)
+        self.assertEqual(calls,[]); iterator=iter(plan)
+        first,header=next(iterator),next(iterator); self.assertEqual(calls,[])
+        self.assertEqual(len(first),8); total=len(first)+len(header); digest=hashlib.sha256()
+        for chunk in iterator:
+            self.assertIs(chunk,piece); self.assertLessEqual(len(chunk),4096); total+=len(chunk); digest.update(chunk)
+        self.assertEqual(len(calls),amount//4096); self.assertEqual(total,plan.size_bytes)
+        self.assertEqual(digest.hexdigest(),hashlib.sha256(piece*(amount//4096)).hexdigest())
+        with self.assertRaises(StopIteration): next(iterator)
+        self.assertEqual(plan.phase,"complete")
+
+    def test_large_header_is_emitted_in_bounded_chunks(self):
+        rows=[{"name":"layer_"+str(i),"dtype":"U8","shape":[1]} for i in range(250)]
+        plan=self.plan(rows,{r["name"]:(b"x",) for r in rows})
+        chunks=list(plan); self.assertTrue(all(0<len(c)<=4096 for c in chunks)); raw=b"".join(chunks)
+        self.assertEqual(len(raw),plan.size_bytes); header,body=self.decode(raw)
+        self.assertEqual(len(header),250); self.assertEqual(body,b"x"*250)
+
+    def test_foreign_thread_and_caught_reentry_cannot_complete_the_same_stream(self):
+        for mode in ("thread","iter-reentry","next-reentry"):
+            with self.subTest(mode=mode):
+                calls=[]; holder={}
+                class Source:
+                    def __iter__(self): return self
+                    def __next__(self):
+                        if mode=="iter-reentry":
+                            with self_case.assertRaises(n.LaunchUnavailable): iter(holder["plan"])
+                        else:
+                            with self_case.assertRaises(n.LaunchUnavailable): next(holder["iterator"])
+                        calls.append(True); return b"12345678"
+                self_case=self
+                plan=self.plan(streams={"layer.weight":Source()}); holder["plan"]=plan
+                iterator=iter(plan); holder["iterator"]=iterator
+                if mode=="thread":
+                    result=[]
+                    def foreign():
+                        try: next(iterator)
+                        except n.LaunchUnavailable: result.append("denied")
+                    thread=Thread(target=foreign); thread.start(); thread.join(2)
+                    self.assertFalse(thread.is_alive()); self.assertEqual(result,["denied"]); self.assertEqual(calls,[])
+                else:
+                    next(iterator); next(iterator)
+                    with self.assertRaises(n.LaunchUnavailable): next(iterator)
+                    self.assertEqual(calls,[True])
+                self.assertEqual(plan.phase,"failed")
+
+    def test_actual_protected_writer_consumes_framed_tensor_bytes_and_retains_exact_native_graph(self):
+        case=TrainingOutputCustodyTests(); self.addCleanup(case.doCleanups)
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=case.fixture()
+        tensor=actual.OriginalTrainingTensorStream([{"name":"adapter.weight","dtype":"F32","shape":[2]}],
+            {"adapter.weight":(struct.pack("<ff",1.5,-2.0),)},maximum_bytes=64*1024,chunk_bytes=4096)
+        weight="adapter_model.safetensors"
+        for row in files:
+            if row["name"]==weight: row["sizeBytes"]=tensor.size_bytes
+        streams={name:(raw,) for name,raw in contents.items()}; streams[weight]=tensor
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            graph.prepare(streams); graph.assert_sealed()
+            raw=bytes(kernel.nodes[graph.physical_path+"\\"+weight]["data"]); header,body=self.decode(raw)
+            self.assertEqual(header["adapter.weight"],{"dtype":"F32","shape":[2],"data_offsets":[0,8]})
+            self.assertEqual(struct.unpack("<ff",body),(1.5,-2.0)); self.assertEqual(tensor.phase,"complete")
+            self.assertEqual(graph.phase,"sealed"); self.assertEqual(control.charges,[128*1024]); self.assertEqual(control.retained,[])
+
+
 class InheritedModelViewTests(unittest.TestCase):
     def fixture(self):
         owner,kernel,control=SourceLaunchExchangeTests().bound_bootstrap()

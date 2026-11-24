@@ -945,3 +945,12 @@ valid model, SDK serialization, candidate readiness or Save authority. Full
 producer/serializer wiring, protected durable reservation, SDK/cache retirement
 and actual host qualification remain pending. Tests use synthetic bytes and
 in-memory Native replies; they perform no Native effects or model-quality tests.
+
+`OriginalTrainingTensorStream` supplies bounded dense safetensors framing for
+that writer. It captures finite names, dtypes, shapes and contiguous offsets,
+declares the exact file size before allocation, and emits header/body chunks
+without collecting weights. Its byte suppliers are single-use and thread-bound;
+invalid, short, extra or reentrant streams fail permanently. Synthetic tensor
+bytes are reconstructed independently and passed through the actual writer.
+Fixed SDK tensor extraction and installed-reader compatibility remain pending;
+this codec grants no model, custody, Save, full-producer or host readiness.

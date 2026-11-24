@@ -1633,6 +1633,107 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
             self.phase = "failed"; return False
 
 
+_TENSOR_BYTE_WIDTHS = {"BOOL": 1, "U8": 1, "I8": 1, "I16": 2, "I32": 4, "I64": 8,
+    "F16": 2, "BF16": 2, "F32": 4, "F64": 8}
+
+
+class OriginalTrainingTensorStream:
+    """Bounded dense safetensors framing, not a model or custody capability.
+
+    The fixed SDK adapter must supply exact dense tensor bytes. This component
+    neither imports an SDK nor collects weights or chooses an output location.
+    """
+    def __init__(self, tensors, streams, *, maximum_bytes, chunk_bytes):
+        maximum = integer(maximum_bytes, 1, 2**53-1)
+        self.chunk_bytes = integer(chunk_bytes, 4096, 1024**2)
+        need(type(tensors) is list and 1 <= len(tensors) <= 4096 and type(streams) is dict)
+        rows, names, offset = [], set(), 0
+        header = {"__metadata__": {"format": "pt"}}
+        for supplied in tensors:
+            exact(supplied, ("name", "dtype", "shape"))
+            name, dtype, shape = supplied["name"], supplied["dtype"], supplied["shape"]
+            need(type(name) is str and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,511}", name) is not None
+                 and name != "__metadata__" and name not in names and type(dtype) is str and dtype in _TENSOR_BYTE_WIDTHS
+                 and type(shape) is list and len(shape) <= 32)
+            count, dimensions, stride_bits = 1, [], _TENSOR_BYTE_WIDTHS[dtype] * 8
+            for size in shape:
+                dimensions.append(integer(size, 0, maximum))
+                # Match the reader's checked bits * NONZERO dimensions rule.
+                # Empty tensors still have consumer strides; a leading/middle
+                # zero cannot hide overflow. Stored byte capacity is separate.
+                if size:
+                    need(stride_bits <= (2**64-1) // size)
+                    stride_bits *= size
+                count *= size
+            size = count * _TENSOR_BYTE_WIDTHS[dtype]; need(offset + size <= maximum)
+            header[name] = {"dtype": dtype, "shape": dimensions, "data_offsets": [offset, offset+size]}
+            rows.append((name, size)); names.add(name); offset += size
+        need(all(type(name) is str for name in streams) and set(streams) == names)
+        raw = json.dumps(header, ensure_ascii=True, allow_nan=False, separators=(",", ":")).encode("ascii")
+        need(len(raw) <= 1024**2)
+        self._header = raw + b" " * (-len(raw) % 8)
+        self._size = 8 + len(self._header) + offset; need(self._size <= maximum)
+        self._rows = tuple(rows); self._streams = {name: streams[name] for name, _ in rows}
+        self.phase = "bound"; self._thread = None; self._lock = Lock()
+
+    @property
+    def size_bytes(self): return self._size
+
+    def __iter__(self):
+        if not self._lock.acquire(blocking=False):
+            self.phase = "failed"
+            raise LaunchUnavailable()
+        try:
+            if self.phase != "bound":
+                if self.phase == "active": self.phase = "failed"
+                raise LaunchUnavailable()
+            self.phase = "active"; self._thread = get_ident()
+            return _OriginalTensorIterator(self, self._frames())
+        finally: self._lock.release()
+
+    def _current(self):
+        need(self.phase == "active" and self._thread == get_ident())
+
+    def _frames(self):
+        self._current(); yield struct.pack("<Q", len(self._header))
+        for at in range(0, len(self._header), self.chunk_bytes):
+            self._current(); yield self._header[at:at+self.chunk_bytes]
+        for name, size in self._rows:
+            self._current(); stream = iter(self._streams[name]); self._current()
+            copied = 0
+            while True:
+                self._current()
+                try: chunk = next(stream)
+                except StopIteration: self._current(); break
+                self._current()
+                need(type(chunk) is bytes and 0 < len(chunk) <= self.chunk_bytes and copied+len(chunk) <= size)
+                copied += len(chunk); yield chunk
+            need(copied == size)
+
+
+class _OriginalTensorIterator:
+    def __init__(self, owner, frames): self.owner, self.frames = owner, frames
+    def __iter__(self): return self
+    def __next__(self):
+        owner = self.owner
+        if not owner._lock.acquire(blocking=False):
+            owner.phase = "failed"
+            raise LaunchUnavailable()
+        try:
+            if owner.phase == "complete": raise StopIteration
+            owner._current()
+            try: result = next(self.frames)
+            except StopIteration:
+                owner._current(); owner.phase = "complete"
+                raise
+            owner._current(); return result
+        except StopIteration: raise
+        except BaseException:
+            owner.phase = "failed"
+            raise LaunchUnavailable() from None
+        finally: owner._lock.release()
+
+
 _TRAINING_OUTPUT_FILES = frozenset(("config.json", "generation_config.json", "tokenizer.json",
     "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt",
     "model.safetensors", "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json"))

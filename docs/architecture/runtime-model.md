@@ -2849,3 +2849,26 @@ the computed byte digests, not model validity or generated quality. SDK serializ
 integration, candidate validation/Save, protected durable accounting, full
 producer composition, cache/reader retirement and physical/actual-host
 qualification remain separate. In-memory ABI fixtures grant no parent pass.
+
+The same private IO module provides `OriginalTrainingTensorStream`, a bounded
+dense byte framer for the [safetensors format](https://github.com/huggingface/safetensors#format).
+It captures at most 4096 finite tensor declarations, supported dtype widths and
+at most 32 dimensions, then computes exact contiguous data offsets, fixed `pt`
+metadata, an eight-byte-aligned header capped at one MiB and total file size.
+The explicit output byte budget includes that header. Emit header/body chunks
+within the configured buffer limit without assembling trained weights in memory.
+Capture supplier references without reading them; allow one consumer on one
+thread. Malformed/short/extra/oversized byte streams, supplier failure, cross-thread
+use and reentry permanently refuse completion. The Native writer independently
+rechecks its genuine joint authority and actual IO before sealing. The framer
+does not grant that authority, close suppliers, extract SDK tensors or attest
+model semantics. Synthetic format/value reconstruction and Native-writer tests
+do not qualify an installed SDK reader or actual model/host. Fixed SDK extraction,
+full producer, durable quota, Save and SDK/worker retirement remain pending.
+
+Check dtype bits multiplied by every nonzero dimension against the reader's
+unsigned 64-bit bound before the empty-tensor special case. A zero dimension
+does not suppress stride-overflow validation. Apply the separate file budget to
+actual stored bytes, so valid empty shapes do not fail merely because a partial
+dimension product exceeds that byte budget. Preserve the causal failures and
+valid-empty regression; no installed-reader compatibility is inferred.
