@@ -2205,6 +2205,14 @@ final result reader/custody integration, retirement, Save and real hosts remain.
 
 ### Final private trained result
 
+The original Use binds its run ID to the task UUID from the verified bootstrap
+bytes. The receiver captures this ID before later Native observers; a changed
+definition cannot supply a new task. The fixed metadata resolver checks the exact
+active view, request and thread with no Native IO or approval/issuance authority.
+Capture original resolvers before live source callbacks, then recheck identities
+and task correlation before returning. Unknown IDs have no timestamp fallback.
+Ordinary no-view training keeps its existing naming and behavior.
+
 The original wrapper seals the last reserved sibling only after its driver and
 every scheduled snapshot complete. Retain a single final attempt before tensor,
 tokenizer or config suppliers. Register an immutable export proof that binds the

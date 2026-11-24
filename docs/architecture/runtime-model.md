@@ -3026,6 +3026,17 @@ exception, so established private runtime failure handling remains compatible.
 
 ### Protected original training completion records
 
+Private run identity is the original task UUID, retained from the already
+integrity-checked bootstrap definition before later Native readbacks. A fixed
+metadata-only resolver requires the exact active view/request/thread and original
+definition correlation. It performs no Native IO and supplies no approval or task
+issuance. The Use captures original task/source resolvers before SDK loading and
+rechecks bindings and ID around live source observations. Missing, changed or
+foreign identity cannot use a generated timestamp fallback. Checkpoint, final
+run/manifest and later candidate provenance keep this same task ID; ordinary
+unbound training retains its earlier naming. Producer/custody/Save/host proof
+remains separate from this metadata link.
+
 The genuine private training use captures one fixed trainer driver and run
 identity before SDK callbacks. Retain its original attempt and actual completion
 observations. A completed run contributes immutable `training-run.json` and

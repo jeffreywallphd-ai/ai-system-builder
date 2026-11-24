@@ -21,7 +21,7 @@ from ..native.windows_original_worker_launch import (LaunchUnavailable, Original
     OriginalTrainingOutputFamily, OriginalTrainingOutputGraph, _fail_output_family, _output_family_snapshot,
     _resolve_output_family_for_training, _claim_output_family_training, _guard_output_family_training,
     _output_family_training_binding,
-    resolve_original_training_references)
+    resolve_original_training_references, resolve_original_training_task_id)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -47,6 +47,7 @@ DEFAULT_SEQUENCE_LENGTH = 512
 MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
 _NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_python
 _NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
+_NATIVE_TASK_ID_RESOLVER = resolve_original_training_task_id
 _NATIVE_TENSOR_STREAM = OriginalTrainingDenseTensorStream
 _NATIVE_OUTPUT_INIT = OriginalTrainingOutputGraph.__init__
 _NATIVE_OUTPUT_GUARD = OriginalTrainingOutputGraph.guard
@@ -363,7 +364,7 @@ def _capture_passive_sdk_attribute(obj, name, expected):
 
 class _ProtectedTrainingUse:
     """Fixed private view use, not a caller-selected guard or public capability."""
-    __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
+    __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_resolve_task_id","_serialize",
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
         "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
         "_run_identity","_training_driver","_training_slot","_thread","_completion_helpers",
@@ -376,6 +377,7 @@ class _ProtectedTrainingUse:
             raise ValueError("The private protected training request is unavailable.")
         self.payload, self.view = payload, view
         self._resolve, self._serialize = _NATIVE_REFERENCE_RESOLVER, _NATIVE_REQUEST_SERIALIZER
+        self._resolve_task_id = _NATIVE_TASK_ID_RESOLVER
         self._tensor_stream_type = _NATIVE_TENSOR_STREAM
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
@@ -391,8 +393,6 @@ class _ProtectedTrainingUse:
         self._checkpoint_family_resolve, self._checkpoint_family_claim = _NATIVE_CHECKPOINT_FAMILY_RESOLVE, _NATIVE_CHECKPOINT_FAMILY_CLAIM
         self._checkpoint_family_guard = _NATIVE_CHECKPOINT_FAMILY_GUARD
         self._checkpoint_family_owner = _NATIVE_CHECKPOINT_FAMILY_OWNER
-        started = datetime.now(timezone.utc)
-        self._run_identity = (f"train-{started.strftime('%Y%m%d%H%M%S')}", started.isoformat())
         self._training_driver, self._training_slot = _run_trainer_impl, None
         self._thread = get_ident()
         self._embedding_observation_lost = False
@@ -400,7 +400,14 @@ class _ProtectedTrainingUse:
             request = self._serialize(payload,mode="json")
             self._request_stamp = json.dumps(request,sort_keys=True,allow_nan=False,separators=(",",":"))
         except Exception: raise ValueError("The private protected training request is unavailable.") from None
-        model,inputs = self._resolve(view,request)
+        task_resolver, reference_resolver = self._resolve_task_id, self._resolve
+        task_id = task_resolver(view,request)
+        self._run_identity = (task_id,datetime.now(timezone.utc).isoformat())
+        model,inputs = reference_resolver(view,request)
+        if (self._resolve_task_id is not task_resolver or self._resolve is not reference_resolver
+                or self._serialize is not _NATIVE_REQUEST_SERIALIZER or self.view is not view
+                or task_resolver(view,request) != task_id):
+            raise ValueError("The private original training task changed.")
         self.model_reference, self.dataset_references = model, inputs
 
     def assert_snapshot(self):
@@ -411,6 +418,10 @@ class _ProtectedTrainingUse:
                 or any(original is not current for original,current in zip(self._completion_helpers,
                     (_protected_output_seal_facts,_sealed_training_checkpoint_facts,_finalize_protected_training_result)))):
             raise ValueError("The private training completion helpers changed.")
+        if (self._resolve_task_id is not _NATIVE_TASK_ID_RESOLVER or self._resolve is not _NATIVE_REFERENCE_RESOLVER
+                or self._serialize is not _NATIVE_REQUEST_SERIALIZER or type(self._run_identity) is not tuple
+                or len(self._run_identity) != 2 or any(type(value) is not str for value in self._run_identity)):
+            raise ValueError("The private original training identity changed.")
         try:
             request = self._serialize(self.payload,mode="json")
             stamp = json.dumps(request,sort_keys=True,allow_nan=False,separators=(",",":"))
@@ -423,8 +434,19 @@ class _ProtectedTrainingUse:
 
     def assert_current(self):
         request = _ProtectedTrainingUse.assert_snapshot(self)
-        if self._resolve(self.view,request) != (self.model_reference,self.dataset_references):
+        task_resolver, reference_resolver = self._resolve_task_id,self._resolve
+        view,identity = self.view,self._run_identity
+        references = (self.model_reference,self.dataset_references)
+        if task_resolver(view,request) != identity[0]:
+            raise ValueError("The private original training task changed.")
+        resolved = reference_resolver(view,request)
+        _ProtectedTrainingUse.assert_snapshot(self)
+        if (self.view is not view or self._run_identity is not identity or self._resolve_task_id is not task_resolver
+                or self._resolve is not reference_resolver or self.model_reference is not references[0]
+                or self.dataset_references is not references[1] or resolved != references):
             raise ValueError("The private protected training references are unavailable.")
+        if task_resolver(view,request) != identity[0]:
+            raise ValueError("The private original training task changed.")
 
 
 def _check_protected_use(use, payload=None):

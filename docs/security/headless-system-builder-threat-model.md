@@ -2866,6 +2866,19 @@ must not be presented as reader validation, quality, custody or Save authority.
 Keep actual producer/data-cache, durable quota, protected reader/custody, owned
 retirement, Save and real-host qualification pending; no public Root is enabled.
 
+### Original training task identity
+
+Keep private run identity tied to the original verified bootstrap task UUID.
+Capture it from integrity-checked bytes before later Native observers, and never
+first-adopt a later edited definition ID. Metadata lookup requires the exact
+active view, request, thread and original source record; it grants no IO, approval,
+task issuance or Save. Reject missing/malformed/foreign/spent identities without
+poisoning another owner. Capture fixed source/task resolvers before callbacks and
+check their identities and original task before and after live observations.
+Never invoke a replacement during the recheck or fall back to ordinary naming.
+Keep ordinary training compatible and all producer/resource/custody/retirement/
+Save/actual-host qualification separate.
+
 ### Approved text-training settings and SDK seed boundary
 
 Do not silently drop selected seed, scheduler or evaluation cadence. Reject

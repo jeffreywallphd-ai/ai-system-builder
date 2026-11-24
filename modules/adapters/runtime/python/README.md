@@ -1085,3 +1085,9 @@ parent/child binding, changed history, revocation or failed write freezes the
 owned family and retains its files/capacity. No ordinary path save or retry is
 enabled. Complete producer/data-cache orchestration, durable quota, reader/custody,
 retirement, Save and actual-host qualification remain pending.
+
+Protected training now uses the original task UUID from the verified bootstrap
+definition for run, checkpoint and final-result records. It captures that value
+before SDK loading and checks the same task around live source observations.
+Ordinary unbound training keeps its existing run naming. This metadata link is
+not approval, execution, output custody or host qualification.

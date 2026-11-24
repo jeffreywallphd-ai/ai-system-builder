@@ -40,6 +40,7 @@ MODEL_FILES, MODEL_PAGE_BYTES = 32, 65536
 MODEL_WRITE_DENIAL = 0xD0156
 MODEL_WORLD = b'\x01\x01\0\0\0\0\0\x01\0\0\0\0'
 MODEL_OWNER_RIGHTS = b'\x01\x01\0\0\0\0\0\x03\x04\0\0\0'
+_TRAINING_TASK_UUID = re.compile(r"[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}")
 
 
 class LaunchUnavailable(RuntimeError):
@@ -1224,6 +1225,29 @@ def resolve_original_model_view(view, sealed_request):
     return resolve_original_training_references(view,sealed_request)[0]
 
 
+def resolve_original_training_task_id(view, sealed_request):
+    """Original source metadata only; grants no IO, approval or task issuance."""
+    need(type(view) is _OriginalModelView)
+    binding = _model_views.get(view); need(binding is not None)
+    lease, expected, thread = binding
+    state = _model_leases.get(lease)
+    need(state is not None and thread == get_ident())
+    lock = state["lock"]; need(lock.acquire(blocking=False))
+    try:
+        need(_model_views.get(view) is binding and state["entered"] and not state["view_lost"]
+             and _same_model_json(expected,_copy_model_json(sealed_request)))
+        record = _verified_model_receivers.get(state["source"])
+        need(record is not None and record["bound"] and record["lease_issued"]
+             and record["native_owner"] is state["native_owner"])
+        task_id = record.get("task_id")
+        definition = record.get("definition")
+        need(type(task_id) is str and len(task_id) == 36 and _TRAINING_TASK_UUID.fullmatch(task_id) is not None
+             and type(definition) is dict and type(definition.get("requestId")) is str
+             and definition["requestId"] == task_id)
+        return task_id
+    finally: lock.release()
+
+
 class OriginalModelBootstrapReceiver(NativeModelInspection):
     """Fixed-entry consumer of the original creation-time stdin conduit.
 
@@ -1257,6 +1281,11 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
         need("sha256:" + hashlib.sha256(raw).hexdigest() == self.descriptor["definitionDigest"])
         self.definition = _copy_model_json(parse_json_bytes(raw, DEFINITION_BYTES))
         need(type(self.definition) is dict and self.definition.get("modelUpdatedAt") == self.descriptor["modelUpdatedAt"])
+        # Freeze correlation from the already integrity-checked bytes before
+        # later Native observers. Model-only bootstrap remains compatible.
+        task_id = self.definition.get("requestId")
+        if type(task_id) is not str or len(task_id) != 36 or _TRAINING_TASK_UUID.fullmatch(task_id) is None:
+            task_id = None
         self.physical_path = self.descriptor["freshParent"] + "\\" + self.descriptor["freshName"]
         need(header["physicalPath"] == self.physical_path)
         self.principal = self.private_principal()
@@ -1281,6 +1310,7 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
         for handle in (self.pipe,*self.guards): handle.verified = True
         self.phase = "available"
         _verified_model_receivers[self] = {"definition": _copy_model_json(self.definition),
+            "task_id": task_id,
             "definition_digest": self.descriptor["definitionDigest"], "physical_path": self.physical_path,
             "native_owner": self.owner,
             "guard": OriginalModelBootstrapReceiver.assert_graph.__get__(self),

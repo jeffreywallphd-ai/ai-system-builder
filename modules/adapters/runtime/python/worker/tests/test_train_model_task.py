@@ -271,6 +271,7 @@ def _install_checkpoint_trainer(monkeypatch,steps,*,during=None,catch=False):
 def test_checkpoint_handler_seals_each_updated_snapshot_without_sdk_path_io(monkeypatch,tmp_path,method):
     from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingTensorStreamTests
     with _checkpoint_schedule_fixture(monkeypatch,maximum=3,interval=2,retention=2,outputs=3,method=method) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        assert use._run_identity[0]=="11111111-1111-4111-8111-111111111111"
         assert train_model_module._bind_protected_checkpoint_schedule(use)==(2,3)
         with monkeypatch.context() as args_patch:
             _checkpoint_arguments_spy(args_patch)
@@ -1664,7 +1665,8 @@ def test_private_fixed_loader_consumes_actual_live_view_without_rewriting_logica
     request=payload.model_dump(mode="json")
     # Native source-only fixture. Whole session validation is tested separately;
     # no Transformers supplier, model, dataset, trainer or quality score runs.
-    definition={"modelUpdatedAt":"2026-11-23T00:00:00Z","request":request}
+    definition={"requestId":"11111111-1111-4111-8111-111111111111",
+        "modelUpdatedAt":"2026-11-23T00:00:00Z","request":request}
     references=[]
     monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value: references.append(value) or value)
     calls=[]
@@ -1674,9 +1676,59 @@ def test_private_fixed_loader_consumes_actual_live_view_without_rewriting_logica
         assert train_model_module.train_model_from_local_files(payload,_model_view=view)=="controlled-loader-result"
         assert payload.model_dump(mode="json")==request
         assert calls[0][1]["local_model_ref"]==physical and calls[0][1]["compare_validation_baseline"] is False
+        assert calls[0][1]["_protected_use"]._run_identity[0]==definition["requestId"]
         assert references==[physical]
     with pytest.raises(native.LaunchUnavailable): train_model_module.train_model_from_local_files(payload,_model_view=view)
     assert len(calls)==1 and references==[physical]
+
+
+@pytest.mark.parametrize("task_id",[None,True,"not-a-task"])
+def test_private_training_needs_original_task_identity_before_model_preflight(monkeypatch,tmp_path,task_id):
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import borrowed_model_view
+    payload=_request(tmp_path);payload.baseModel.localPath="X:\\models\\selected";payload.baseModel.modelRecordId="model.synthetic"
+    request=payload.model_dump(mode="json")
+    definition={"requestId":task_id,"modelUpdatedAt":"2026-11-23T00:00:00Z","request":request}
+    calls=[]
+    monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value:calls.append(value))
+    monkeypatch.setattr(train_model_module,"_train_model",lambda *args,**kwargs:pytest.fail("Training must not start"))
+    with borrowed_model_view(definition,request,native) as (view,_):
+        state=native._model_leases[native._model_views[view][0]];kernel=state["native_owner"].kernel
+        before=len(kernel.calls)
+        with pytest.raises(native.LaunchUnavailable):train_model_module.train_model_from_local_files(payload,_model_view=view)
+        assert len(kernel.calls)==before and calls==[]
+
+
+@pytest.mark.parametrize("failure",["resolver","source-resolver","serializer","run-id"])
+def test_private_training_task_identity_drift_has_no_new_native_effect(monkeypatch,failure):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,kernel,Tensor):
+        calls=[]
+        if failure=="resolver":use._resolve_task_id=lambda *args:calls.append(True)
+        elif failure=="source-resolver":use._resolve=lambda *args:calls.append(True)
+        elif failure=="serializer":use._serialize=lambda *args,**kwargs:calls.append(True)
+        else:use._run_identity=("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",use._run_identity[1])
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._check_protected_use(use)
+        assert len(kernel.calls)==before and calls==[] and control.charges==[] and Tensor.copies==[]
+        assert family.phase=="bound"
+
+
+def test_training_task_recheck_does_not_invoke_replacement_after_native_observer(monkeypatch):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,kernel,Tensor):
+        changed=[];called=[]
+        def after(name):
+            if changed:return
+            frame=sys._getframe(1)
+            while frame:
+                if frame.f_code is train_model_module._ProtectedTrainingUse.assert_current.__code__ and frame.f_locals.get("self") is use:
+                    use._resolve_task_id=lambda *args:called.append(True)
+                    changed.append((name,len(kernel.calls)));return
+                frame=frame.f_back
+        kernel.after=after
+        with pytest.raises(ValueError):train_model_module._check_protected_use(use)
+        assert len(changed)==1 and called==[] and control.charges==[] and Tensor.copies==[]
+        assert not any(name in ("WriteFile","NtCreateFile") for name,_ in kernel.calls[changed[0][1]:])
+        assert family.phase=="bound"
 
 
 def test_private_fixed_loader_refuses_forged_view_before_path_or_supplier(monkeypatch,tmp_path):

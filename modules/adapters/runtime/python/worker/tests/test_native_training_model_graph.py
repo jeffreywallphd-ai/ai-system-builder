@@ -492,6 +492,84 @@ def borrowed_model_view(definition,sealed_request,native_module=n):
             raise AssertionError("Inert original Model custody did not retire with retained charge")
 
 
+class OriginalTrainingTaskIdentityTests(unittest.TestCase):
+    task_id="11111111-1111-4111-8111-111111111111"
+    other_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+
+    def definition(self):
+        return {"requestId":self.task_id,"modelUpdatedAt":descriptor()["modelUpdatedAt"],
+            "request":{"baseModel":{"modelRecordId":descriptor()["modelId"],"localPath":descriptor()["logicalPath"]}}}
+
+    def test_original_task_metadata_has_no_io_and_foreign_denials_do_not_consume_the_view(self):
+        definition=self.definition();request=definition["request"]
+        with borrowed_model_view(definition,request) as (view,physical):
+            state=n._model_leases[n._model_views[view][0]];kernel=state["native_owner"].kernel
+            before=len(kernel.calls)
+            self.assertEqual(n.resolve_original_training_task_id(view,request),self.task_id)
+            for wrong in (object(),n._OriginalModelView()):
+                with self.assertRaises(n.LaunchUnavailable):n.resolve_original_training_task_id(wrong,request)
+            with self.assertRaises(n.LaunchUnavailable):n.resolve_original_training_task_id(view,{**request,"wrong":True})
+            outcomes=[]
+            def foreign():
+                try:n.resolve_original_training_task_id(view,request);outcomes.append("unexpected")
+                except n.LaunchUnavailable:outcomes.append("denied")
+            thread=Thread(target=foreign);thread.start();thread.join(1)
+            self.assertFalse(thread.is_alive());self.assertEqual(outcomes,["denied"])
+            self.assertEqual(n.resolve_original_training_task_id(view,request),self.task_id)
+            self.assertEqual(len(kernel.calls),before)
+            self.assertEqual(n.resolve_original_model_view(view,request),physical)
+        before=len(kernel.calls)
+        with self.assertRaises(n.LaunchUnavailable):n.resolve_original_training_task_id(view,request)
+        self.assertEqual(len(kernel.calls),before)
+
+    def test_missing_or_malformed_identity_cannot_be_adopted_later(self):
+        for identity in (None,False,"short",self.other_id.upper(),"11111111111141118111111111111111"):
+            with self.subTest(identity=identity):
+                definition=self.definition();definition["requestId"]=identity;request=definition["request"]
+                with borrowed_model_view(definition,request) as (view,physical):
+                    state=n._model_leases[n._model_views[view][0]];kernel=state["native_owner"].kernel
+                    record=n._verified_model_receivers[state["source"]]
+                    self.assertIsNone(record["task_id"])
+                    before=len(kernel.calls)
+                    with self.assertRaises(n.LaunchUnavailable):n.resolve_original_training_task_id(view,request)
+                    record["definition"]["requestId"]=self.task_id
+                    with self.assertRaises(n.LaunchUnavailable):n.resolve_original_training_task_id(view,request)
+                    self.assertEqual(len(kernel.calls),before)
+                    self.assertEqual(n.resolve_original_model_view(view,request),physical)
+
+    def test_task_id_is_captured_from_verified_bytes_before_later_native_observers(self):
+        definition=self.definition();owner,kernel,control=SourceLaunchExchangeTests().bound_bootstrap(definition)
+        try:
+            owner.resume()
+            for thread in owner.readers:thread.join(1)
+            child=kernel.inherited_child();changed=[]
+            def after(name):
+                if changed:return
+                frame=sys._getframe(1)
+                while frame:
+                    if frame.f_code is n.OriginalModelBootstrapReceiver.__init__.__code__ and "task_id" in frame.f_locals:
+                        receiver=frame.f_locals["self"]
+                        if receiver.definition.get("requestId")==self.task_id:
+                            receiver.definition["requestId"]=self.other_id;changed.append(name)
+                        return
+                    frame=frame.f_back
+            child.after=after
+            receiver=n.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+            self.assertEqual(len(changed),1)
+            altered=copy.deepcopy(definition);altered["requestId"]=self.other_id
+            lease=receiver.bind(altered)
+            with lease.borrow(definition["request"]) as view:
+                before=len(child.calls)
+                self.assertEqual(n._verified_model_receivers[receiver]["task_id"],self.task_id)
+                with self.assertRaises(n.LaunchUnavailable):n.resolve_original_training_task_id(view,definition["request"])
+                self.assertEqual(len(child.calls),before)
+        finally:
+            owner.request_stop()
+            for thread in owner.readers:thread.join(1)
+            self.assertTrue(owner.observe_retirement())
+            self.assertEqual(control.retained,[descriptor()["maximumCopyBytes"]])
+
+
 class TrainingInputCopyTests(unittest.TestCase):
     def fixture(self, media="application/x-ndjson", count=1, native_module=n, method="lora", output=None):
         value = json.loads((Path(__file__).parent/"fixtures/approved_training_staged_input.json").read_text())
