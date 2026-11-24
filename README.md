@@ -6,6 +6,10 @@ AI System Builder is a TypeScript platform for composing, running, and managing 
 
 ## Start here
 
+Prospective token phases separate pre-review implementation, review-driven
+fixes, other later work and legacy/uncertain attribution without changing
+numeric totals. See the [token guide](docs/diagnostics/token-usage-tracking.md).
+
 - Contributors and coding agents: read [`AGENTS.md`](AGENTS.md), then the [`docs` map](docs/README.md).
 - AI-assisted contributor work: use the [development control plane](docs/diagnostics/ai-development-control-plane.md).
   Start its local JSON-backed review site and share the returned link for workflow work requests.

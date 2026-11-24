@@ -1310,6 +1310,20 @@ class RoadmapEngineTest(unittest.TestCase):
                 }
             )
 
+    def test_usage_phase_guidance_is_optional_portable_and_keeps_review_authority(self) -> None:
+        skill_root = MODULE_PATH.parent.parent
+        for relative in ('SKILL.md', 'references/workflow.md', 'references/installation.md'):
+            source = (skill_root / relative).read_text(encoding='utf-8')
+            for phrase in ('usage phase --from', 'review-start', 'correction-resume', 'pre_review', 'optional', 'approval gate'):
+                self.assertIn(phrase, source, relative)
+            self.assertIn('without', source, relative)
+        guide = skill_root.parents[1] / 'docs/diagnostics/token-usage-tracking.md'
+        if guide.is_file():
+            source = guide.read_text(encoding='utf-8')
+            self.assertIn('actual first substantive technical review handoff', source)
+            self.assertIn('legacy_unknown', source)
+            self.assertIn('never a review approval gate', source)
+
     def test_skill_requires_economically_cohesive_increments(self) -> None:
         skill_root = MODULE_PATH.parent.parent
         skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")

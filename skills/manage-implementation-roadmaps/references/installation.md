@@ -93,6 +93,13 @@ record its canonical source and version and add an automated parity check.
 
 ## Publishing checks
 
+Preserve optional token phase guidance and its focused `usage_phase` test.
+The target repository adapter uses `usage phase --from`, `review-start` and
+`correction-resume`, explicit Work/thread association and `pre_review` only for
+attributed initial work. Installing this portable skill does not install the
+adapter, start a collector or create an approval gate. Repositories without it
+retain their existing workflow; unknown/legacy attribution stays unknown.
+
 Install `scripts/roadmap_storage.py` beside `scripts/roadmap.py`, plus the shared
 `tests/fixtures/roadmap-storage-vectors.json` and storage/publication tests. Legacy
 plain records need no codec, but encoded `roadmap-record-tree-v1` records refuse

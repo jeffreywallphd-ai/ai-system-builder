@@ -2,6 +2,14 @@
 
 # Dynamic Development Review
 
+The phase table gives **Implementation** only attributed pre-review counts.
+Review fixes, other later work, mixed, unknown and legacy unknown stay separate.
+The local phase filter covers daily/weekly/quarterly and bounded agent rows
+without another fetch or timer. Numeric measurement and declared attribution
+are independent. Old readouts remain legacy unknown; malformed phase data does
+not break Work/navigation. Restart the v2 reader before any writer migrates the
+authoritative v1 store.
+
 The **Token usage** sidebar page is a dedicated read-only dashboard for reported
 input/output, cached/reasoning subsets, day/week/quarter trends, coarse purposes
 and observed agent relationships. Measurements, estimates and unavailable fields

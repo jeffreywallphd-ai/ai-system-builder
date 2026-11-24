@@ -91,11 +91,19 @@ def validate_receipt(receipt):
 
 
 class Work:
-    def _usage_boundary(self, result):
+    def _usage_boundary(self, result, action=None, *, correction_of=None, review_ref=None):
         # Telemetry never changes Work root/claims/receipts or gates progress.
         try:
             from .usage_local import configured_boundary
-            status = configured_boundary(self.root)
+            status = None; uncertain = False
+            if action:
+                from .usage_phases import work_event
+                phase = work_event(self.root, result["work_id"], action, correction_of=correction_of, review_ref=review_ref)
+                if phase is not None:
+                    uncertain = phase.get("state") == "unavailable"
+                    status = phase.pop("token_capture", None)
+                    result["token_phase"] = phase
+            if status is None: status = configured_boundary(self.root, attribution_unknown=True) if uncertain else configured_boundary(self.root)
             if status is not None: result["token_capture"] = status
         except Exception:
             result["token_capture"] = {"state": "unavailable", "live_capture": False, "work_may_continue": True}
@@ -105,7 +113,7 @@ class Work:
         self.root = root.resolve()
         self.records = Records(self.root)
 
-    def start(self, spec, invocation, minutes=120):
+    def start(self, spec, invocation, minutes=120, *, usage_correction_of=None, usage_review_ref=None):
         validate_spec(spec)
         identifier(invocation)
         authority = roadmap_authority(self.root, spec.get("roadmap"))
@@ -123,7 +131,7 @@ class Work:
                     refuse("claim.scope-overlap", "This checkout already has an active claim.", "Serialize work in this checkout, or use a separately authorized isolated checkout.")
             s["work_items"][spec["work_id"]] = {"spec": spec, "spec_digest": digest(spec), "authority_digest": authority, "baseline": baseline, "status": "active", "contributors": [invocation], "claim": claim, "receipts": [], "reviews": [], "events": [{"at": now(), "code": "work.started"}]}
             return {"work_id": spec["work_id"], "claim": claim}
-        return self._usage_boundary(self.records.mutate(transition))
+        return self._usage_boundary(self.records.mutate(transition), "start", correction_of=usage_correction_of, review_ref=usage_review_ref)
 
     def check_completion_phase(self, spec):
         required = {c for a in spec["acceptance"] for c in a["check_ids"]}
@@ -182,7 +190,7 @@ class Work:
             work["status"] = "verifying"
             work["events"].append({"at": now(), "code": "verification." + receipt["qualification"]})
             return {"work_id": work_id, "receipt_digest": receipt["receipt_digest"], "qualification": receipt["qualification"], "checks": [{"id": a["check_id"], "status": a["status"]} for a in attempts]}
-        return self._usage_boundary(self.records.mutate(transition))
+        return self._usage_boundary(self.records.mutate(transition), "verify")
 
     def current_receipt(self, w):
         if not w["receipts"]:
@@ -243,7 +251,8 @@ class Work:
             record["review_digest"] = digest(record)
             w["reviews"].append(record)
             return {"work_id": request["work_id"], "review_digest": record["review_digest"], "disposition": record["disposition"], "identity_assurance": request["assurance"]}
-        return self.records.mutate(transition)
+        result = self.records.mutate(transition)
+        return self._usage_boundary(result, "review", review_ref=result["review_digest"])
 
     def complete(self, work_id, invocation, claim_id):
         def transition(s):
@@ -259,7 +268,7 @@ class Work:
             w["claim"] = None
             w["completion"] = {"at": now(), "source_digest": receipt["source_digest"], "receipt_digest": receipt["receipt_digest"], "review_digest": review["review_digest"]}
             return {"work_id": work_id, "status": "complete"}
-        return self._usage_boundary(self.records.mutate(transition))
+        return self._usage_boundary(self.records.mutate(transition), "complete")
 
     def claim(self, work_id, invocation, claim_id=None, *, action="renew", minutes=120):
         identifier(invocation)

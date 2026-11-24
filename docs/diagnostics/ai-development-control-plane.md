@@ -1,6 +1,14 @@
 
 ## Numeric capture at coding-session initialization
 
+`usage phase --from` associates exact known threads to the owning checkout,
+Work and spec identity. Work start establishes initial context when configured;
+review handoff uses `review-start`, and author corrections use `correction-resume`
+with a real review digest or source-bound advisory. Decisions and completion
+reconcile context without changing qualification. New Work is initial unless
+its start supplies `--correction-of` and `--review-ref`. Missing/crossing contexts
+stay unknown. See the token guide for caps, migration and restart order.
+
 Run `python dev-tools/helpers/development_control_plane.py usage session-start`
 once when a coding session initializes. This nonblocking check initializes exact
 selected local response capture, or receives an existing explicitly configured

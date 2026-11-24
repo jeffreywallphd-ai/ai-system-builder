@@ -4,6 +4,11 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Baseline
 
+- Prospective implementation token splits route to the token-usage guide and
+  optional `usage phase` review-start/correction-resume protocol. Add
+  `docs-standards` and `security` for schema/storage/readout changes. Legacy and
+  uncertain attribution stay unknown; numeric capture grants no Work/review authority.
+
 - Coding-session initialization follows `AGENTS.md` and runs `usage session-start`
   once. Route selected local response capture and numeric host bridge semantics to
   `docs/diagnostics/token-usage-tracking.md`, adding `docs-standards` and `security`

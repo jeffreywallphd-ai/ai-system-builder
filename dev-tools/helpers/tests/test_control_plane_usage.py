@@ -62,6 +62,8 @@ class UsageTests(unittest.TestCase):
         self.enable()
         first = self.event(outcome="failed")
         self.assertEqual(self.call(first)["accepted"], 1)
+        self.assertEqual(usage.summary(self.root)["implementation_phases"]["unknown"]["measured"]["input_tokens"], 100)
+        self.assertIsNone(usage.summary(self.root)["implementation_phases"]["pre_review"]["measured"]["input_tokens"])
         before = self.path.read_bytes()
         self.assertEqual(self.call(first)["duplicates"], 1)
         self.assertEqual(self.path.read_bytes(), before)

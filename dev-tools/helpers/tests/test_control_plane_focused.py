@@ -537,6 +537,23 @@ class FocusedPythonCollectionTests(unittest.TestCase):
 
 
 class TokenUsageRoutingTests(unittest.TestCase):
+    def test_exact_phase_scope_runs_owned_migration_lifecycle_ui_and_portable_guidance(self):
+        root = Path(__file__).resolve().parents[3]
+        required = ['control-plane', 'review-site', 'documentation', 'agent-support']
+        selected = {row['id']: row for row in catalog.plan(root, list(catalog.TOKEN_PHASE_SCOPE), required, 'phase-fixture')['selected']}
+        for name in ('usage', 'phases', 'capture', 'local_usage', 'delivery', 'evaluations'):
+            self.assertIn('test_control_plane_' + name + '.', selected['control-plane']['argv'])
+        self.assertEqual(selected['roadmap']['argv'][-2:], ['-k', 'usage_phase'])
+        self.assertNotIn('focused-tests', selected)
+        for extra, checks in [(['docs/unknown.md'], required), ([], [*required, 'focused-tests'])]:
+            result = {row['id']: row for row in catalog.plan(root, [*catalog.TOKEN_PHASE_SCOPE, *extra], checks, 'phase-fixture')['selected']}
+            self.assertNotIn('-k', result['control-plane']['argv'])
+            self.assertNotIn('-k', result['roadmap']['argv'])
+        with patch.object(catalog, '_automatic_files_available', return_value=False):
+            result = {row['id']: row for row in catalog.plan(root, list(catalog.TOKEN_PHASE_SCOPE), required, 'phase-fixture')['selected']}
+            self.assertNotIn('-k', result['control-plane']['argv'])
+            self.assertNotIn('-k', result['roadmap']['argv'])
+
     def test_exact_local_scope_covers_capture_work_boundaries_and_preserves_generic_fallback(self):
         root = Path(__file__).resolve().parents[3]
         required = ['control-plane', 'review-site', 'documentation', 'agent-support']

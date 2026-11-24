@@ -14,6 +14,13 @@ This file is the repository entry point for coding agents. Keep it short; use th
 
 ## AI Development Control Plane
 
+Optional token phase telemetry uses `usage phase --from` at the first substantive
+`review-start` handoff and `correction-resume` before genuine review fixes. Bind
+known threads to the exact Work; invocation names are not host IDs. New Work is
+initial unless explicitly linked by `--correction-of` and `--review-ref`.
+Crossing/legacy/unknown intervals stay unknown; telemetry never gates work.
+See `docs/diagnostics/token-usage-tracking.md`.
+
 - At coding-session initialization run
   `python dev-tools/helpers/development_control_plane.py usage session-start`.
   This captures bounded numeric response records from the known current session,
