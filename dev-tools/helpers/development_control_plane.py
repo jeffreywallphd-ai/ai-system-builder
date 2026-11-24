@@ -39,6 +39,9 @@ def parser():
         c.add_argument("--minutes", type=int, default=120)
     review = sub.add_parser("review")
     review.add_argument("--from", dest="input", required=True)
+    support = sub.add_parser("support", help="Optional single-pass contributor data support; never executes work")
+    support.add_argument("operation", choices=("prepare", "freeze", "export", "transition-before", "transition-after", "checkpoint", "progress", "handoff"))
+    support.add_argument("--from", dest="input", required=True)
     site = sub.add_parser("review-site")
     site.add_argument("action", choices=("start", "status", "stop"))
     site.add_argument("--port", type=int, default=8766)
@@ -72,6 +75,9 @@ def main(argv=None):
                 raise ValueError("A view is required for paging.")
             options = {"page": {"view": args.view, "page": args.page}} if args.view else {}
             result = project(root, compact_work_items=args.compact, **options)
+        elif args.command == "support":
+            from control_plane.deterministic_support import run_from
+            result = run_from(root, args.operation, args.input)
         elif args.command == "recover":
             result = {"recovered": work.records.recover()}
         elif args.command == "start":
