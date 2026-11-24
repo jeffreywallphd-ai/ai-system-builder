@@ -3106,6 +3106,35 @@ Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
 
+### Finite private checkpoint admission
+
+The task can bind one explicit-step snapshot schedule to the output family owned
+by its actual original joint view. Native code resolves only that family and
+retains opaque task/binding/snapshot identities; it never invokes the supplied
+snapshot. Capture the selected positive integer max steps, interval and retention.
+Include the final step, bound count arithmetic before allocation, and require at
+most 15 snapshots plus one final candidate. Reject requests needing rotation or
+implicit epoch scheduling rather than changing their semantics.
+
+Original output business/resource methods guard argument construction. Recheck
+the passive family/owner proof after each callback and stop caught reentry before
+another supplier. Private arguments disable SDK path saving and select model-only
+snapshots. Optimizer/RNG resumability is outside this finite profile. A bound task
+still refuses before Trainer construction while its fixed checkpoint handler is
+unavailable; default Root and ordinary unbound argument behavior are unchanged.
+This is admission/argument evidence, not actual checkpoint/controller execution,
+complete producer/durable quota, owned retirement, Save or host qualification.
+The argument wrapper resolves original Native ownership before selecting a path,
+including when the local checkpoint record has disappeared. Its retained binding
+owns failures across imports, device checks and construction. Freeze only the
+proven original family and retain its attempt. A ready-record duplicate is a
+no-effect refusal only after passive original-owner proof passes; a forged ready
+record cannot bypass failure handling or restore ordinary SDK saving.
+Retained Native ownership is also the authority to mark a binding failed. A
+foreign use sharing its record must leave the genuine owner unchanged. Reading
+that retained proof after failure on the original thread supplies no IO or new
+lifetime and never revives admission.
+
 ### Text-training setting fidelity
 
 The text worker validates selected seed and scheduler/evaluation value shapes

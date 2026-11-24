@@ -1047,6 +1047,23 @@ Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
 
+Private checkpoint admission can bind one explicit-step schedule to the original
+output family. It includes the final step and permits at most 15 model snapshots
+plus the final candidate, within requested retention. Requests needing rotation
+or an inferred epoch schedule remain unsupported. Original output permissions
+and reservation are checked around private argument construction.
+
+Bound private arguments disable SDK path saving and select model snapshots only,
+without optimizer/RNG resume. Training still refuses before Trainer construction
+until the fixed checkpoint handler is installed; no saves are silently dropped.
+Ordinary unbound argument behavior and the default-off Root remain unchanged.
+Actual checkpoint writing, full producer/quota, retirement, Save and hosts remain.
+Argument setup resolves the original Native owner even if its local record is
+lost. Failures across imports, device checks and construction freeze only that
+owned family. A genuine duplicate completed setup remains a no-effect refusal.
+Failure handling may change a binding only after proving its actual Native owner;
+a second use holding the same record cannot fail the original task.
+
 Text training now forwards the selected scheduler and seed into Trainer arguments.
 An explicit seed also initializes the existing SDK before model, embedding and
 adapter setup; a missing seed preserves early-loading behavior and Trainer's

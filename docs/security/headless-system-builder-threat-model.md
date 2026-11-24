@@ -2791,6 +2791,36 @@ Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
 
+### Original checkpoint schedule and SDK argument boundary
+
+Resolve only the family on the genuine original joint model/data view. Retain one
+opaque task/binding/snapshot identity before SDK setup; Native code never executes
+that snapshot. Failure authority begins only after successful original ownership,
+so duplicate or foreign owners cannot poison another task. Preserve thread,
+request, helper, copied inventory and finite byte/count checks. Admit exact
+positive integer steps/cadence/retention, at most 15 model snapshots plus final
+output, and no rotation or implicit epoch schedule. No unbounded tuple allocation.
+
+Guard original output permissions/reservation around SDK arguments and recheck
+passive proof after each supplier. Caught reentry freezes this family before
+another supplier. Disable ordinary SDK disk saving for bound private arguments;
+model-only snapshots cannot claim optimizer/RNG resume. While the fixed handler
+is absent, refuse before Trainer construction rather than omit checkpoints or
+fall back to path writes. Keep ordinary unbound behavior and the default-off Root.
+No model/quality/native process, complete producer/quota, retirement, Save or
+host/parent qualification follows from these controlled source checks.
+Do not infer absence of checkpoint authority from a missing local slot. Resolve
+the actual Native family/owner before any SDK argument path. The retained owned
+binding must handle failures during imports, device checks and construction,
+freezing only the proven original family without a later member, refund or retry.
+Validate passive original proof before accepting an already-ready duplicate as a
+no-effect precondition; a forged record or changed property cannot escape cleanup
+of authority. Failure handling retains data and is not filesystem deletion.
+Do not mark an opaque shared binding failed unless the retained Native marker
+proves both this use and that exact binding. A foreign denial or reentry must not
+change the genuine owner's state. The original-thread read-only marker remains
+inspectable after failure, but grants no IO, retry, refund or lifetime renewal.
+
 ### Approved text-training settings and SDK seed boundary
 
 Do not silently drop selected seed, scheduler or evaluation cadence. Reject

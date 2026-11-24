@@ -890,6 +890,64 @@ class TrainingOutputFamilyTests(unittest.TestCase):
         outputs=[{**config,"freshName":"checkpoint-1"},{**config,"freshName":"final-candidate"}]
         return facts,business,{"maximumCopyBytes":256*1024,"outputs":outputs}
 
+    def test_training_resolver_claim_and_guard_keep_the_actual_original_family(self):
+        facts,business,configuration=self.fixture()
+        actual,_,lease,_,request,_,kernel,_,_,_,reservation=facts
+        with lease.borrow(request) as view:
+            self.assertIsNone(actual._resolve_output_family_for_training(view,request))
+            family=actual.OriginalTrainingOutputFamily(view,request,configuration,reservation,business)
+            self.assertIs(actual._resolve_output_family_for_training(view,request),family)
+            changed=copy.deepcopy(request);changed["commonParameters"]["maxSteps"]=999
+            with self.assertRaises(actual.LaunchUnavailable):actual._resolve_output_family_for_training(view,changed)
+            owner=object();binding={};snapshot=lambda:None
+            actual._claim_output_family_training(family,owner,binding,snapshot)
+            proof=actual._output_family_snapshot(family)["training_owner"]
+            with self.assertRaises(actual.LaunchUnavailable):actual._claim_output_family_training(family,object(),{},snapshot)
+            with self.assertRaises(actual.LaunchUnavailable):actual._guard_output_family_training(family,object(),binding)
+            self.assertIs(actual._output_family_snapshot(family)["training_owner"],proof)
+            business.assert_current=lambda:self.fail("A replaced admission method was called")
+            actual._guard_output_family_training(family,owner,binding)
+            self.assertEqual(family.phase,"bound");self.assertEqual(reservation.charges,[])
+        with self.assertRaises(actual.LaunchUnavailable):actual._resolve_output_family_for_training(view,request)
+
+    def test_training_guard_freezes_on_business_or_resource_loss_without_file_effects(self):
+        for mode in ("business","resource"):
+            with self.subTest(mode=mode):
+                facts,business,configuration=self.fixture()
+                actual,_,lease,_,request,_,kernel,_,_,_,reservation=facts
+                with lease.borrow(request) as view:
+                    family=actual.OriginalTrainingOutputFamily(view,request,configuration,reservation,business)
+                    owner=object();binding={}
+                    actual._claim_output_family_training(family,owner,binding,lambda:None)
+                    proof=actual._output_family_training_binding(family)
+                    (business if mode=="business" else reservation).current=False
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):actual._guard_output_family_training(family,owner,binding)
+                    self.assertEqual(family.phase,"failed");self.assertEqual(len(kernel.calls),before)
+                    self.assertIs(actual._output_family_training_binding(family),proof)
+                    self.assertEqual(reservation.charges,[])
+
+    def test_caught_training_guard_reentry_stops_before_another_supplier(self):
+        facts,_,configuration=self.fixture()
+        actual,_,lease,_,request,_,_,_,_,_,reservation=facts
+        called=[];holder={}
+        class Business:
+            def assert_current(inner):
+                called.append("business")
+                try:actual._guard_output_family_training(holder["family"],holder["owner"],holder["binding"])
+                except actual.LaunchUnavailable:called.append("caught")
+                return True
+        class Resource(Control):
+            def assert_current(inner):called.append("resource");return True
+        resource=Resource()
+        with lease.borrow(request) as view:
+            family=actual.OriginalTrainingOutputFamily(view,request,configuration,resource,Business())
+            owner=object();binding={};holder.update(family=family,owner=owner,binding=binding)
+            actual._claim_output_family_training(family,owner,binding,lambda:None)
+            with self.assertRaises(actual.LaunchUnavailable):actual._guard_output_family_training(family,owner,binding)
+            self.assertEqual(called,["business","caught"]);self.assertEqual(family.phase,"failed")
+            self.assertEqual(resource.charges,[])
+
     def test_original_finite_family_seals_distinct_outputs_with_exact_inventory_and_capacity(self):
         facts,business,configuration=self.fixture()
         actual,source,lease,inputs,request,_,kernel,_,contents,files,reservation=facts

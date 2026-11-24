@@ -2142,6 +2142,36 @@ Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
 
+### Private checkpoint schedule and arguments
+
+`_bind_protected_checkpoint_schedule` resolves only the genuine original joint
+view's output family. Claim one opaque task/binding/snapshot identity before SDK
+work. Keep failures and ownership; another use cannot freeze the original owner.
+Use positive exact integer `maxSteps`, checkpoint interval and retention. Include
+the final update even when it is not an interval multiple. Bound arithmetic before
+allocation; require at most 15 snapshots plus one final output and no checkpoint
+rotation. The exact copied family inventory and request remain pinned.
+
+Captured original business/resource methods guard private SDK arguments, with
+passive proof after each supplier. Caught reentry freezes admission before another
+supplier runs. Arguments disable ordinary SDK saving with `should_save=False`
+and use `save_only_model=True`; this finite profile offers no optimizer/RNG resume.
+Binding/settings/helper/argument drift cannot grant work. The fixed checkpoint
+handler is still pending, so bound training refuses before collator/Trainer
+construction instead of silently dropping saves. Unbound ordinary setup is
+unchanged. No Root, full producer/quota, actual checkpoint/native/model/quality,
+retirement, Save or host pass is supplied by these inert software checks.
+The complete argument-preparation operation owns failure handling, including SDK
+imports and device checks before construction. Consult the original Native marker
+before choosing an argument path; losing a local slot cannot restore ordinary
+saving. Retain the original binding on failure and freeze only its proven family.
+Verify passive original proof before treating a ready record as a harmless
+duplicate. Forged ready records fail; genuine duplicates create no new effect.
+Check retained Native ownership before changing even a binding's failure status.
+A foreign use holding a genuine shared record cannot poison its owner during
+argument rejection or reentry. Read-only retained ownership remains available
+after failure on the original thread; it grants no IO, retry or renewed lifetime.
+
 ### Honoring selected text-training settings
 
 Text training applies an explicit integer seed in the range 0–4294967295 through

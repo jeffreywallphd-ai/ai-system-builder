@@ -26,7 +26,7 @@ import subprocess
 import struct
 import sys
 from threading import Event, Lock, RLock, Thread, get_ident
-from types import BuiltinMethodType, MethodType, ModuleType
+from types import BuiltinMethodType, FunctionType, MethodType, ModuleType
 from weakref import WeakKeyDictionary
 import time
 
@@ -2084,6 +2084,51 @@ class OriginalTrainingOutputFamily:
         record = _output_family_snapshot(self)
         need(len(record["members"]) < len(record["outputs"]))
         return _copy_model_json(record["outputs"][len(record["members"])])
+
+
+def _resolve_output_family_for_training(view, request):
+    """Read only the original joint view's owner; never discover a path/provider."""
+    _, inputs = resolve_original_training_references(view,request)
+    need(inputs is not None)
+    binding = _model_views.get(view); need(binding is not None)
+    state = _model_leases.get(binding[0]); need(state is not None)
+    family = state.get("output_copy_owner")
+    if family is None: return None
+    record = _output_family_snapshot(family)
+    need(record["view"] is view and _same_model_json(record["request"],request))
+    return family
+
+
+def _claim_output_family_training(family, owner, binding, snapshot):
+    """Retain opaque original task identities; never invoke their callback."""
+    record = _output_family_snapshot(family)
+    need(owner is not None and type(binding) is dict and type(snapshot) is FunctionType
+         and not record["members"] and "training_owner" not in record)
+    record["training_owner"] = (owner,binding,snapshot)
+
+
+def _guard_output_family_training(family, owner, binding):
+    record = _output_family_snapshot(family)
+    proof = record.get("training_owner")
+    need(type(proof) is tuple and len(proof) == 3 and proof[0] is owner and proof[1] is binding)
+    if record.get("training_checking"):
+        record["phase"] = "failed"; raise LaunchUnavailable()
+    record["training_checking"] = True
+    try:
+        for key in ("business","resource"):
+            need(record["methods"][key]() is True)
+            current = _output_family_snapshot(family)
+            need(current is record and current.get("training_owner") is proof and current.get("training_checking") is True)
+    except BaseException:
+        record["phase"] = "failed"; raise LaunchUnavailable() from None
+    finally: record["training_checking"] = False
+
+
+def _output_family_training_binding(family):
+    """Read retained ownership after failure; grants no IO or renewed lifetime."""
+    record = _output_family_record(family)
+    need(get_ident() == record["thread"])
+    return record.get("training_owner")
 
 
 def _claim_output_family(family, graph, view, request, configuration, reservation, admission):

@@ -121,6 +121,233 @@ def test_private_seed_matches_original_and_rechecks_authority_before_loading(mon
 
 
 @contextmanager
+def _checkpoint_schedule_fixture(monkeypatch,*,maximum=1,interval=50,retention=2,outputs=2,family=True):
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import SourceLaunchExchangeTests
+    original=SourceLaunchExchangeTests.bound_bootstrap
+    def settings(self,definition=None,*args,**kwargs):
+        if definition is not None:
+            definition["request"].setdefault("commonParameters",{})["maxSteps"]=maximum
+            definition["request"].setdefault("advancedParameters",{}).update(
+                checkpointIntervalSteps=interval,saveTotalLimit=retention)
+        return original(self,definition,*args,**kwargs)
+    with monkeypatch.context() as input_patch:
+        input_patch.setattr(SourceLaunchExchangeTests,"bound_bootstrap",settings)
+        with _protected_training_metadata_fixture(input_patch,capture_weights=False) as (facts,tokenizer,_,_):
+            actual,use,model,_,_,_,Tensor,_=facts
+            kernel,configuration,_,_,control=model.test_output
+            group=None
+            if family:
+                configurations=[{**configuration,"freshName":f"snapshot-{i}"} for i in range(outputs-1)]+[configuration]
+                group=actual.OriginalTrainingOutputFamily(use.view,use.payload.model_dump(mode="json"),
+                    {"maximumCopyBytes":128*1024*outputs,"outputs":configurations},control,control)
+            yield actual,use,model,tokenizer,group,control,kernel,Tensor
+
+
+def _checkpoint_arguments_spy(monkeypatch,*,during=None):
+    constructed=[];disk=[]
+    class Arguments:
+        @property
+        def should_save(self):return True
+        def __init__(self,**options):
+            self.__dict__.update(options);constructed.append(options)
+            if during is not None:during(self)
+            if self.should_save:disk.append("ordinary-sdk-directory")
+    monkeypatch.setitem(sys.modules,"transformers",SimpleNamespace(TrainingArguments=Arguments))
+    monkeypatch.setitem(sys.modules,"torch",SimpleNamespace(cuda=SimpleNamespace(is_available=lambda:False)))
+    return constructed,disk
+
+
+@pytest.mark.parametrize("maximum,interval,retention,expected",[(1,50,2,(1,)),(6,3,2,(3,6)),
+    (7,3,3,(3,6,7)),(15,1,15,tuple(range(1,16)))])
+def test_checkpoint_schedule_binds_actual_family_and_blocks_sdk_path_saving(monkeypatch,tmp_path,maximum,interval,retention,expected):
+    with _checkpoint_schedule_fixture(monkeypatch,maximum=maximum,interval=interval,retention=retention,
+            outputs=len(expected)+1) as (actual,use,_,_,family,control,kernel,Tensor):
+        before=len(kernel.calls)
+        assert train_model_module._bind_protected_checkpoint_schedule(use)==expected
+        record=actual._output_family_snapshot(family)
+        assert record["training_owner"][0] is use and record["training_owner"][1] is use._checkpoint_slot
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert args.should_save is False and args.save_only_model is True and args.save_strategy=="steps"
+            assert (args.max_steps,args.save_steps,args.save_total_limit)==(maximum,interval,retention)
+            assert len(constructed)==1 and disk==[]
+            with pytest.raises(ValueError):train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert len(constructed)==1 and family.phase=="bound"
+        assert control.charges==[] and Tensor.copies==[]
+        assert not any(name in ("NtCreateFile","WriteFile","NtSetSecurityObject","CreateProcessW") for name,_ in kernel.calls[before:])
+
+
+@pytest.mark.parametrize("changes",[{"maximum":None},{"maximum":True},{"maximum":0},{"maximum":1.5},
+    {"maximum":2**31},{"interval":True},{"interval":0},{"interval":1.5},{"retention":False},
+    {"retention":0},{"maximum":16,"interval":1,"retention":16},
+    {"maximum":7,"interval":3,"retention":2,"outputs":4},{"outputs":3}])
+def test_checkpoint_schedule_denies_unsupported_or_unbounded_settings_before_sdk(monkeypatch,changes):
+    with _checkpoint_schedule_fixture(monkeypatch,**changes) as (_,use,_,_,family,control,_,Tensor):
+        with pytest.raises(ValueError,match="private checkpoint schedule"):
+            train_model_module._bind_protected_checkpoint_schedule(use)
+        assert use._checkpoint_slot["stage"]=="failed" and family.phase=="failed"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+def test_checkpoint_schedule_requires_original_family_and_does_not_poison_another_owner(monkeypatch):
+    with _checkpoint_schedule_fixture(monkeypatch,family=False) as (_,use,*_):
+        with pytest.raises(ValueError):train_model_module._bind_protected_checkpoint_schedule(use)
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        other=train_model_module._ProtectedTrainingUse(use.payload,use.view)
+        with pytest.raises(ValueError):train_model_module._bind_protected_checkpoint_schedule(other)
+        assert family.phase=="bound" and use._checkpoint_slot["stage"]=="ready"
+        train_model_module._check_protected_use(use)
+        assert control.charges==[] and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("failure",["permission","settings","helper","slot","caught-reentry"])
+def test_checkpoint_arguments_fail_closed_if_sdk_callback_loses_original_binding(monkeypatch,tmp_path,failure):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use);original_slot=use._checkpoint_slot
+        def during(args):
+            if failure=="permission":control.current=False
+            elif failure=="settings":use.payload.commonParameters["maxSteps"]=999
+            elif failure=="helper":use._checkpoint_family_claim=lambda *a:pytest.fail("Replacement helper")
+            elif failure=="slot":use._checkpoint_slot=None
+            else:
+                try:train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+                except ValueError:pass
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch,during=during)
+            with pytest.raises(ValueError):train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert len(constructed)==1 and disk==[]
+        assert original_slot["stage"]=="failed" and family.phase=="failed"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("lost_slot",[False,True])
+def test_bound_checkpoint_schedule_cannot_silently_train_without_fixed_handler(monkeypatch,tmp_path,lost_slot):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,model,tokenizer,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        with monkeypatch.context() as sdk_patch:
+            _checkpoint_arguments_spy(sdk_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            if lost_slot:use._checkpoint_slot=None
+            with pytest.raises(ValueError,match="checkpoint handler"):
+                train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert use._training_slot is None and family.phase=="failed"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("failure",["interval","maximum","retention","snapshot"])
+def test_checkpoint_schedule_drift_denies_before_sdk_argument_construction(monkeypatch,tmp_path,failure):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,_,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        slot=use._checkpoint_slot
+        slot[{"interval":"interval","maximum":"maximum_steps","retention":"retention","snapshot":"snapshot"}[failure]]=(
+            (lambda:None) if failure=="snapshot" else 999)
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            with pytest.raises(ValueError):train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert constructed==[] and disk==[]
+        assert control.charges==[] and Tensor.copies==[]
+
+
+def test_forged_ready_checkpoint_record_cannot_construct_sdk_arguments(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch,family=False) as (_,use,*_):
+        use._checkpoint_slot={"stage":"ready","family":None,"snapshot":lambda:None}
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            with pytest.raises(ValueError):train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert constructed==[] and disk==[]
+
+
+def test_erased_checkpoint_record_before_arguments_cannot_restore_ordinary_sdk_saving(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        original=use._checkpoint_slot;use._checkpoint_slot=None
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            with pytest.raises(ValueError):train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert constructed==[] and disk==[]
+        assert original["stage"]=="failed" and family.phase=="failed"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+def test_checkpoint_preconstructor_failure_cannot_leave_a_native_member_available(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,model,_,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        first=family.next_configuration
+        def cuda_probe():
+            use._checkpoint_family_claim=lambda *a:pytest.fail("Replacement helper")
+            return False
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            sys.modules["torch"].cuda.is_available=cuda_probe
+            with pytest.raises(ValueError):train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert constructed==[] and disk==[]
+        assert use._checkpoint_slot["stage"]=="failed" and family.phase=="failed"
+        before=len(kernel.calls)
+        with pytest.raises(actual.LaunchUnavailable):
+            actual.OriginalTrainingOutputGraph(use.view,use.payload.model_dump(mode="json"),first,
+                model.test_output[3],control,control,_family=family)
+        assert not any(name in ("NtCreateFile","WriteFile","NtSetSecurityObject") for name,_ in kernel.calls[before:])
+        assert control.charges==[] and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("failure",["replaced-ready-record","changed-save-property"])
+def test_checkpoint_duplicate_precondition_does_not_accept_forged_ready_proof(monkeypatch,tmp_path,failure):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,_,_,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use);original=use._checkpoint_slot
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            if failure=="replaced-ready-record":use._checkpoint_slot=dict(original)
+            else:type(args).should_save=property(lambda _:True)
+            with pytest.raises((ValueError,actual.LaunchUnavailable)):
+                train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert len(constructed)==1 and disk==[]
+        assert original["stage"]=="failed" and family.phase=="failed"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+def test_foreign_use_cannot_fail_another_owners_shared_checkpoint_binding(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,_,_,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use);original=use._checkpoint_slot
+        other=train_model_module._ProtectedTrainingUse(use.payload,use.view)
+        other._checkpoint_slot=original  # A real record is not another use's authority.
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch)
+            with pytest.raises((ValueError,actual.LaunchUnavailable)):
+                train_model_module._build_training_args(use.payload,tmp_path,_protected_use=other)
+            assert constructed==[] and disk==[]
+            assert original["stage"]=="ready" and family.phase=="bound"
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert args.should_save is False and len(constructed)==1 and disk==[]
+        assert control.charges==[] and Tensor.copies==[]
+
+
+def test_foreign_reentry_cannot_fail_the_original_argument_constructor(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,_,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use);original=use._checkpoint_slot
+        other=train_model_module._ProtectedTrainingUse(use.payload,use.view)
+        other._checkpoint_slot=original
+        def during(_):
+            with pytest.raises(ValueError):train_model_module._bind_protected_checkpoint_schedule(other)
+            assert original["stage"]=="arguments-constructing" and family.phase=="bound"
+        with monkeypatch.context() as sdk_patch:
+            constructed,disk=_checkpoint_arguments_spy(sdk_patch,during=during)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+            assert args.should_save is False and len(constructed)==1 and disk==[]
+        assert original["stage"]=="arguments-ready" and family.phase=="bound"
+        assert control.charges==[] and Tensor.copies==[]
+
+
+def test_unbound_ordinary_training_arguments_preserve_sdk_saving_behavior(monkeypatch,tmp_path):
+    constructed,disk=_checkpoint_arguments_spy(monkeypatch)
+    args=train_model_module._build_training_args(_request(tmp_path),tmp_path)
+    assert args.should_save is True and disk==["ordinary-sdk-directory"] and len(constructed)==1
+    assert "save_only_model" not in constructed[0] and "save_strategy" not in constructed[0]
+
+
+@contextmanager
 def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_proj",),output=None):
     from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingTensorStreamTests,Control
     sdk_case=DenseTensorByteAdapterTests(); facts,sdk,Tensor,Device=sdk_case.fixture(); extra=None

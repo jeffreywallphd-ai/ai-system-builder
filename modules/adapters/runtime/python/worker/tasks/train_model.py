@@ -18,6 +18,8 @@ from typing import Any, Callable
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
 from ..native.windows_original_worker_launch import (LaunchUnavailable, OriginalTrainingDenseTensorStream,
     OriginalTrainingOutputFamily, OriginalTrainingOutputGraph, _fail_output_family, _output_family_snapshot,
+    _resolve_output_family_for_training, _claim_output_family_training, _guard_output_family_training,
+    _output_family_training_binding,
     resolve_original_training_references)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
@@ -52,6 +54,10 @@ _NATIVE_OUTPUT_ASSERT_SEALED = OriginalTrainingOutputGraph.assert_sealed
 _NATIVE_OUTPUT_FAMILY_TYPE = OriginalTrainingOutputFamily
 _NATIVE_OUTPUT_FAMILY_SNAPSHOT = _output_family_snapshot
 _NATIVE_OUTPUT_FAMILY_FAIL = _fail_output_family
+_NATIVE_CHECKPOINT_FAMILY_RESOLVE = _resolve_output_family_for_training
+_NATIVE_CHECKPOINT_FAMILY_CLAIM = _claim_output_family_training
+_NATIVE_CHECKPOINT_FAMILY_GUARD = _guard_output_family_training
+_NATIVE_CHECKPOINT_FAMILY_OWNER = _output_family_training_binding
 _SDK_ATTRIBUTE_MISSING = object()
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
@@ -335,7 +341,9 @@ class _ProtectedTrainingUse:
         "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
         "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
         "_run_identity","_training_driver","_training_slot","_thread",
-        "_output_family_type","_output_family_snapshot","_output_family_fail")
+        "_output_family_type","_output_family_snapshot","_output_family_fail",
+        "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
+        "_checkpoint_family_owner")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -349,6 +357,10 @@ class _ProtectedTrainingUse:
         self._output_graph_type, self._output_slot = _ProtectedTrainingOutputGraph, None
         self._output_family_type = _NATIVE_OUTPUT_FAMILY_TYPE
         self._output_family_snapshot, self._output_family_fail = _NATIVE_OUTPUT_FAMILY_SNAPSHOT, _NATIVE_OUTPUT_FAMILY_FAIL
+        self._checkpoint_slot = None
+        self._checkpoint_family_resolve, self._checkpoint_family_claim = _NATIVE_CHECKPOINT_FAMILY_RESOLVE, _NATIVE_CHECKPOINT_FAMILY_CLAIM
+        self._checkpoint_family_guard = _NATIVE_CHECKPOINT_FAMILY_GUARD
+        self._checkpoint_family_owner = _NATIVE_CHECKPOINT_FAMILY_OWNER
         started = datetime.now(timezone.utc)
         self._run_identity = (f"train-{started.strftime('%Y%m%d%H%M%S')}", started.isoformat())
         self._training_driver, self._training_slot = _run_trainer_impl, None
@@ -392,6 +404,106 @@ def _check_protected_use(use, payload=None):
         if type(training) is not dict or type(training.get("snapshot")) is not FunctionType:
             raise ValueError("The private training binding is unavailable.")
         training["snapshot"]()
+    checkpoint = use._checkpoint_slot
+    if type(checkpoint) is dict and checkpoint.get("family") is not None:
+        _NATIVE_CHECKPOINT_FAMILY_GUARD(checkpoint["family"],use,checkpoint)
+    _checkpoint_snapshot(use)
+
+
+def _checkpoint_snapshot(use):
+    slot = use._checkpoint_slot
+    if slot is None: return
+    if type(slot) is not dict or type(slot.get("snapshot")) is not FunctionType:
+        raise ValueError("The private checkpoint binding is unavailable.")
+    family = slot.get("family")
+    if family is None and slot.get("stage") != "binding":
+        raise ValueError("The private checkpoint family is unavailable.")
+    if family is not None:
+        record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+        proof = record.get("training_owner")
+        if (type(proof) is not tuple or len(proof) != 3 or proof[0] is not use
+                or proof[1] is not slot or proof[2] is not slot["snapshot"]):
+            raise ValueError("The private checkpoint owner changed.")
+    slot["snapshot"]()
+
+
+def _bind_protected_checkpoint_schedule(use):
+    """Bind finite snapshot-only policy; no SDK/controller/Root activation."""
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private checkpoint binding is unavailable.")
+    if use._checkpoint_slot is not None:
+        previous = use._checkpoint_slot
+        if type(previous) is dict and previous.get("stage") in ("binding","arguments-constructing"):
+            if previous.get("family") is not None: _fail_checkpoint_arguments(use,previous)
+            elif previous.get("owner") is use: previous["stage"] = "failed"
+        raise ValueError("The private checkpoint attempt is unavailable.")
+    if use._training_slot is not None or use._tensor_selection_slot is not None or use._metadata_slot is not None:
+        raise ValueError("The private checkpoint binding is unavailable.")
+    slot = {"owner":use,"stage":"binding","family":None,"steps":None,"arguments":None,"arguments_type":None}
+    family = stamp = schedule = None
+    resolve, claim = _NATIVE_CHECKPOINT_FAMILY_RESOLVE, _NATIVE_CHECKPOINT_FAMILY_CLAIM
+    def snapshot():
+        _ProtectedTrainingUse.assert_snapshot(use)
+        if (use._checkpoint_slot is not slot or slot["owner"] is not use or slot["snapshot"] is not snapshot
+                or slot["stage"] not in ("binding","ready","arguments-constructing","arguments-ready")
+                or use._checkpoint_family_resolve is not resolve or use._checkpoint_family_claim is not claim
+                or use._checkpoint_family_guard is not _NATIVE_CHECKPOINT_FAMILY_GUARD
+                or use._checkpoint_family_owner is not _NATIVE_CHECKPOINT_FAMILY_OWNER
+                or use._output_family_snapshot is not _NATIVE_OUTPUT_FAMILY_SNAPSHOT
+                or use._output_family_fail is not _NATIVE_OUTPUT_FAMILY_FAIL):
+            raise ValueError("The private checkpoint binding changed.")
+        if family is not None:
+            record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+            proof = record.get("training_owner")
+            if (slot["family"] is not family or record["view"] is not use.view
+                    or type(proof) is not tuple or len(proof) != 3
+                    or proof[0] is not use or proof[1] is not slot or proof[2] is not snapshot
+                    or json.dumps(record["outputs"],sort_keys=True,allow_nan=False,separators=(",",":")) != stamp):
+                raise ValueError("The private checkpoint family changed.")
+        if schedule is not None and slot["steps"] is not schedule:
+            raise ValueError("The private checkpoint schedule changed.")
+        if schedule is not None and any(type(slot.get(key)) is not int or slot.get(key) != value
+                for key,value in (("maximum_steps",maximum),("interval",interval),("retention",retention))):
+            raise ValueError("The private checkpoint settings changed.")
+        arguments = slot["arguments"]
+        if arguments is not None:
+            cls = slot["arguments_type"]
+            fields = _sdk_passive_fields(arguments)
+            if (type(arguments) is not cls or _sdk_static_attribute(cls,"should_save") is not slot["save_property"]
+                    or any(type(fields.get(key)) is not type(value) or fields.get(key) != value
+                        for key,value in slot["argument_fields"])):
+                raise ValueError("The private checkpoint arguments changed.")
+    slot["snapshot"] = snapshot; use._checkpoint_slot = slot
+    try:
+        _check_protected_use(use)
+        request = _ProtectedTrainingUse.assert_snapshot(use)
+        selected = resolve(use.view,request)
+        snapshot()
+        if selected is None: raise ValueError("The private checkpoint family is unavailable.")
+        claim(selected,use,slot,snapshot)
+        # Failure authority starts only after the original one-use claim succeeds.
+        family = selected; slot["family"] = family
+        record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+        stamp = json.dumps(record["outputs"],sort_keys=True,allow_nan=False,separators=(",",":"))
+        common, advanced = _to_dict(use.payload.commonParameters), _to_dict(use.payload.advancedParameters)
+        maximum = common.get("maxSteps")
+        interval, retention = advanced.get("checkpointIntervalSteps",50), advanced.get("saveTotalLimit",2)
+        if any(type(value) is not int or not 1 <= value <= 2**31-1 for value in (maximum,interval,retention)):
+            raise ValueError("The private checkpoint settings are unavailable.")
+        count = (maximum+interval-1)//interval
+        if count > 15 or count > retention or len(record["outputs"]) != count+1:
+            raise ValueError("The private checkpoint capacity is unavailable.")
+        schedule = tuple(range(interval,maximum+1,interval))
+        if not schedule or schedule[-1] != maximum: schedule += (maximum,)
+        slot.update(steps=schedule,maximum_steps=maximum,interval=interval,retention=retention,stage="ready")
+        _check_protected_use(use); snapshot()
+        return schedule
+    except BaseException:
+        slot["stage"] = "failed"
+        if family is not None:
+            try: _NATIVE_OUTPUT_FAMILY_FAIL(family)
+            except BaseException: pass
+        raise ValueError("The private checkpoint schedule is unavailable.") from None
 
 
 def _record_protected_embedding_status(use, status):
@@ -1348,13 +1460,119 @@ def _tokenize_dataset(
     return result
 
 
+def _fail_checkpoint_arguments(use, slot=None):
+    if slot is None: slot = use._checkpoint_slot
+    if type(slot) is not dict: return
+    try:
+        family = slot.get("family")
+        if family is not None:
+            proof = _NATIVE_CHECKPOINT_FAMILY_OWNER(family)
+            if type(proof) is tuple and len(proof) == 3 and proof[0] is use and proof[1] is slot:
+                slot["stage"] = "failed"
+                _NATIVE_OUTPUT_FAMILY_FAIL(family)
+    except BaseException: pass
+
+
+def _checkpoint_argument_factory(base, use, slot):
+    if type(base) is not type or slot["stage"] != "arguments-constructing":
+        _fail_checkpoint_arguments(use,slot)
+        raise ValueError("The private checkpoint arguments are unavailable.")
+    original_snapshot = slot["snapshot"]
+    def check():
+        _check_protected_use(use)
+        original_snapshot()
+    class SnapshotArguments(base):
+        @property
+        def should_save(self):
+            check()
+            return False  # No SDK directory/model/optimizer/state path writing.
+    slot["arguments_type"] = SnapshotArguments
+    slot["save_property"] = vars(SnapshotArguments)["should_save"]
+    def create(**options):
+        try:
+            check()
+            result = SnapshotArguments(**options,save_only_model=True,save_strategy="steps")
+            check()
+            if type(result) is not SnapshotArguments:
+                raise ValueError("The private checkpoint argument receiver is unavailable.")
+            fields = _sdk_passive_fields(result)
+            expected = (("max_steps",slot["maximum_steps"]),("save_steps",slot["interval"]),
+                ("save_total_limit",slot["retention"]),("save_only_model",True))
+            if any(type(fields.get(key)) is not type(value) or fields.get(key) != value for key,value in expected):
+                raise ValueError("The private checkpoint settings changed.")
+            strategy = fields.get("save_strategy")
+            if not isinstance(strategy,str) or strategy != "steps":
+                raise ValueError("The private checkpoint strategy is unavailable.")
+            slot.update(arguments=result,argument_fields=expected+(("save_strategy",strategy),),stage="arguments-ready")
+            check()
+            return result
+        except BaseException:
+            _fail_checkpoint_arguments(use,slot)
+            raise ValueError("The private checkpoint arguments are unavailable.") from None
+    return create
+
+
 def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path, *, _protected_use=None) -> Any:
+    implementation = _build_training_args_impl
+    if _protected_use is None:
+        return implementation(payload,output_dir)
+    use = _protected_use
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private checkpoint argument binding is unavailable.")
+    original = use._checkpoint_slot
+    family = original.get("family") if type(original) is dict else None
+    # A duplicate completed setup has no new effect and cannot poison its owner.
+    if type(original) is dict and original.get("stage") == "arguments-ready":
+        try: _checkpoint_snapshot(use)  # Fixed passive original-owner proof only.
+        except BaseException: pass  # A forged ready record is an owned failure.
+        else: raise ValueError("The private checkpoint argument attempt is unavailable.")
+    try:
+        _check_protected_use(use,payload)
+        if use.dataset_references is not None:
+            family = _NATIVE_CHECKPOINT_FAMILY_RESOLVE(use.view,_ProtectedTrainingUse.assert_snapshot(use))
+        if family is not None:
+            proof = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family).get("training_owner")
+            if (type(original) is not dict or use._checkpoint_slot is not original
+                    or type(proof) is not tuple or len(proof) != 3 or proof[0] is not use
+                    or proof[1] is not original or proof[2] is not original.get("snapshot")):
+                raise ValueError("The private checkpoint argument binding is unavailable.")
+        elif original is not None:
+            raise ValueError("The private checkpoint family is unavailable.")
+        return implementation(payload,output_dir,_protected_use=use,_checkpoint_binding=original)
+    except BaseException:
+        # The Native marker survives a missing local slot. It is also the limit
+        # of failure authority: another use's family must remain untouched.
+        if family is not None:
+            try:
+                proof = _NATIVE_CHECKPOINT_FAMILY_OWNER(family)
+                if type(proof) is tuple and len(proof) == 3 and proof[0] is use:
+                    if type(proof[1]) is dict: proof[1]["stage"] = "failed"
+                    _NATIVE_OUTPUT_FAMILY_FAIL(family)
+            except BaseException: pass
+        _fail_checkpoint_arguments(use,original)
+        raise
+
+
+def _build_training_args_impl(payload: TrainModelTaskRequest, output_dir: Path, *, _protected_use=None,
+        _checkpoint_binding=None) -> Any:
     _check_protected_use(_protected_use,payload)
     seed, scheduler, evaluation_interval = _text_training_settings(payload)
+    checkpoint = _checkpoint_binding
+    if _protected_use is not None and _protected_use._checkpoint_slot is not checkpoint:
+        raise ValueError("The private checkpoint argument binding changed.")
+    if checkpoint is not None:
+        if checkpoint["stage"] != "ready":
+            if checkpoint["stage"] == "arguments-constructing": _fail_checkpoint_arguments(_protected_use)
+            raise ValueError("The private checkpoint argument attempt is unavailable.")
+        checkpoint["stage"] = "arguments-constructing"
     try:
         from transformers import TrainingArguments
     except Exception as error:  # pragma: no cover
+        if checkpoint is not None: _fail_checkpoint_arguments(_protected_use)
         raise RuntimeError("transformers is required for TrainingArguments.") from error
+
+    arguments_factory = (TrainingArguments if checkpoint is None else
+        _checkpoint_argument_factory(TrainingArguments,_protected_use,checkpoint))
 
     try:
         import torch
@@ -1368,7 +1586,7 @@ def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path, *, _p
     common_max_steps = common.get("maxSteps")
     normalized_max_steps = int(common_max_steps) if isinstance(common_max_steps, (int, float)) else -1
     _check_protected_use(_protected_use,payload)
-    result = TrainingArguments(
+    result = arguments_factory(
         output_dir=str(output_dir / "checkpoints"),
         num_train_epochs=float(common.get("numEpochs", 1)),
         max_steps=normalized_max_steps,
@@ -1537,6 +1755,17 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
     if previous is not None:
         if type(previous) is dict and previous.get("stage") == "running": previous["stage"] = "failed"
         raise ValueError("The private training attempt is unavailable.")
+    _check_protected_use(use)
+    checkpoint_family = _NATIVE_CHECKPOINT_FAMILY_RESOLVE(use.view,_ProtectedTrainingUse.assert_snapshot(use))
+    if use._checkpoint_slot is not None or checkpoint_family is not None:
+        # A bound schedule must never fall back to SDK path checkpoints or
+        # silently lose saves while the fixed handler is still unconfigured.
+        if checkpoint_family is not None:
+            proof = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(checkpoint_family).get("training_owner")
+            if type(proof) is tuple and len(proof) == 3 and proof[0] is use:
+                _NATIVE_OUTPUT_FAMILY_FAIL(checkpoint_family)
+        _fail_checkpoint_arguments(use)
+        raise ValueError("The private checkpoint handler is unavailable.")
     if (use._tensor_selection_slot is not None or use._metadata_slot is not None
             or model is not use._embedding_model or tokenizer is not use._embedding_tokenizer
             or use._training_driver is not _run_trainer_impl):
