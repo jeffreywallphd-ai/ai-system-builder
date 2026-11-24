@@ -15,6 +15,7 @@ sys.path.insert(0, str(HELPERS))
 from control_plane.criterion_presentation import BLOCKER_REFERENCE, REFERENCE, apply_presentations
 from control_plane.projection import CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, encode_review_projection, expanded_review_work_items, project, review_content
 from control_plane.records import Records
+from control_plane.roadmap_state import read_roadmap_state
 
 
 class CriterionPresentationTests(unittest.TestCase):
@@ -185,7 +186,7 @@ class CriterionPresentationTests(unittest.TestCase):
         count = 0
         for path in sorted((root / '.implementation-roadmaps').glob('*/state.json')):
             state_bytes[path] = path.read_bytes()
-            state = json.loads(state_bytes[path])
+            state = read_roadmap_state(root, path.relative_to(root).as_posix())
             increments = [{'id': i['id'], 'criteria': [{'id': c['id'], 'description': safe_text(c['description'], 1500)}
                                                      for c in i['acceptanceCriteria']]} for i in state['increments']]
             count += sum(len(i['criteria']) for i in increments)

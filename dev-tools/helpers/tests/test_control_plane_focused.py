@@ -232,6 +232,42 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         self.assertIn(focused.python_test_command(root, pure), commands)
         self.assertTrue(all(path not in command for command in commands for path in native))
 
+    def test_functionality_profile_copies_the_actual_node_reader_dependency(self):
+        import json
+        import os
+        import shutil
+        import subprocess
+
+        root = Path(__file__).resolve().parents[3]
+        profile = json.loads((root / 'dev-tools/config/contributor-check-profiles.json').read_bytes())['profiles']['functionality-outcomes']
+        core = 'dev-tools/scripts/qualification/functionality-qualification-core.mjs'
+        reader = 'dev-tools/scripts/qualification/roadmap-record-storage.mjs'
+        for name in (core, reader):
+            self.assertIn(name, profile['source_paths'])
+            target = self.root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((root / name).read_bytes())
+
+        node = shutil.which('node')
+        self.assertIsNotNone(node, 'The fixed Node import probe requires the existing Node runtime.')
+        script = ('import {pathToFileURL} from "node:url"; '
+                  'try { await import(pathToFileURL(process.argv[1]).href); '
+                  'console.log(JSON.stringify({loaded:true})); } '
+                  'catch (error) { console.log(JSON.stringify({loaded:false, '
+                  'code:error.code === "ERR_MODULE_NOT_FOUND" ? error.code : "other"})); process.exitCode=1; }')
+        env = dict(os.environ)
+        env.pop('NODE_TEST_CONTEXT', None)
+
+        def imported():
+            result = subprocess.run([node, '--input-type=module', '--eval', script, str(self.root / core)],
+                                    cwd=self.root, env=env, capture_output=True, text=True, timeout=10)
+            self.assertLessEqual(len(result.stdout) + len(result.stderr), 8192)
+            return result.returncode, json.loads(result.stdout)
+
+        self.assertEqual(imported(), (0, {'loaded': True}))
+        (self.root / reader).unlink()
+        self.assertEqual(imported(), (1, {'loaded': False, 'code': 'ERR_MODULE_NOT_FOUND'}))
+
     def test_fake_supplier_suite_retains_every_legacy_pure_case_without_native_collection(self):
         import importlib.util
         root = Path(__file__).resolve().parents[3]
