@@ -14,6 +14,7 @@ from math import ceil, isfinite
 from pathlib import Path
 from threading import get_ident
 from typing import Any, Callable
+from weakref import WeakKeyDictionary, ref
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
 from ..native.windows_original_worker_launch import (LaunchUnavailable, OriginalTrainingDenseTensorStream,
@@ -71,6 +72,31 @@ _TRAINING_TASK_REQUIRED_PURPOSES = {
     "vision-detection": ("label",),
     "vision-segmentation": ("label",),
 }
+_CHECKPOINT_EXPORTS = WeakKeyDictionary()
+
+
+class _CheckpointExport:
+    """Fixed private proof; weak registry values cannot retain an old run."""
+    __slots__ = ("current","snapshot","__weakref__")
+
+    def __init__(self,current,snapshot):
+        object.__setattr__(self,"current",current)
+        object.__setattr__(self,"snapshot",snapshot)
+
+    def __setattr__(self,_name,_value):
+        raise ValueError("The private checkpoint export is immutable.")
+
+
+def _checkpoint_export_proof(use):
+    stored = _CHECKPOINT_EXPORTS.get(use)
+    proof = stored() if stored is not None else None
+    if proof is None:
+        if use._checkpoint_export_guard is not None or use._checkpoint_export_binding is not None:
+            raise ValueError("The private checkpoint export is unavailable.")
+    elif (type(proof) is not _CheckpointExport or use._checkpoint_export_binding is not proof
+            or use._checkpoint_export_guard is not proof.current):
+        raise ValueError("The private checkpoint export changed.")
+    return proof
 
 
 class TrainingCancellationRequested(RuntimeError):
@@ -343,7 +369,7 @@ class _ProtectedTrainingUse:
         "_run_identity","_training_driver","_training_slot","_thread",
         "_output_family_type","_output_family_snapshot","_output_family_fail",
         "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
-        "_checkpoint_family_owner")
+        "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","__weakref__")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -358,6 +384,8 @@ class _ProtectedTrainingUse:
         self._output_family_type = _NATIVE_OUTPUT_FAMILY_TYPE
         self._output_family_snapshot, self._output_family_fail = _NATIVE_OUTPUT_FAMILY_SNAPSHOT, _NATIVE_OUTPUT_FAMILY_FAIL
         self._checkpoint_slot = None
+        self._checkpoint_export_guard = None
+        self._checkpoint_export_binding = None
         self._checkpoint_family_resolve, self._checkpoint_family_claim = _NATIVE_CHECKPOINT_FAMILY_RESOLVE, _NATIVE_CHECKPOINT_FAMILY_CLAIM
         self._checkpoint_family_guard = _NATIVE_CHECKPOINT_FAMILY_GUARD
         self._checkpoint_family_owner = _NATIVE_CHECKPOINT_FAMILY_OWNER
@@ -397,6 +425,16 @@ def _check_protected_use(use, payload=None):
     if use is None: return
     if type(use) is not _ProtectedTrainingUse or payload is not None and use.payload is not payload:
         raise ValueError("The private protected training inputs are unavailable.")
+    export_proof = _checkpoint_export_proof(use)
+    if export_proof is not None:
+        # Only a registered same-view export can borrow the parent's live proof.
+        # Its fixed current operation includes the original Native permission/
+        # resource checks. Repeat only passive local proof after those callbacks.
+        export_proof.current()
+        if _checkpoint_export_proof(use) is not export_proof:
+            raise ValueError("The private checkpoint export changed.")
+        export_proof.snapshot()
+        return
     # Call the fixed class operation; an instance cannot select another guard.
     _ProtectedTrainingUse.assert_current(use)
     training = use._training_slot
@@ -529,8 +567,12 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
                 or type(chunk_bytes) is not int or not 4096 <= chunk_bytes <= 1024**2):
             raise ValueError("The private tensor limits are unavailable.")
         embedding_status = use._embedding_status
+        export_proof = _checkpoint_export_proof(use)
         stream = None
         def binding():
+            if _checkpoint_export_proof(use) is not export_proof:
+                raise ValueError("The private checkpoint export changed.")
+            if export_proof is not None: export_proof.snapshot()
             _ProtectedTrainingUse.assert_snapshot(use)
             if (use._embedding_model is not model or use._embedding_status != embedding_status
                     or use._embedding_observation_lost):
@@ -678,6 +720,8 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
         bindings = slot["bindings"] = []
         package = None
         history = use._training_slot
+        checkpoint_guard = use._checkpoint_export_guard
+        checkpoint_record = checkpoint_guard() if checkpoint_guard is not None else None
         if history is not None:
             if type(history) is not dict or history.get("stage") != "complete" or type(history.get("snapshot")) is not FunctionType:
                 raise ValueError("The private completed training history is unavailable.")
@@ -689,7 +733,7 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
             selection_snapshot()
             if (use._metadata_slot is not slot or use._tensor_selection_slot is not selection or selection.get("stage") != "captured"
                     or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
-                    or use._embedding_observation_lost):
+                    or use._embedding_observation_lost or use._checkpoint_export_guard is not checkpoint_guard):
                 raise ValueError("The private metadata binding changed.")
             # Read actual SDK references AFTER all original-view callbacks. A
             # matching earlier snapshot is not proof of the current receiver.
@@ -836,6 +880,11 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
             if type(raw) is not dict: raise ValueError("The private model configuration is unavailable.")
             config = plain(raw,strip_paths=True,model_config=use.payload.method == "full-finetune")
             files = list(history_files)
+            if checkpoint_record is not None:
+                identity,step = checkpoint_record
+                files.append(("training-run.json",encode({"runId":identity[0],"startedAt":identity[1],
+                    "method":use.payload.method,"status":"checkpoint-snapshot","trainingStatus":"running",
+                    "checkpointStep":step,"candidateValidation":"pending"})))
             if use.payload.method in ("lora","qlora"):
                 config["base_model_name_or_path"] = use.payload.baseModel.modelId
                 config["inference_mode"] = True
@@ -1743,6 +1792,181 @@ def _freeze_training_history(raw, *, loss_key="loss"):
     return tuple(result)
 
 
+def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
+    """Fixed snapshot dispatch for one original Trainer; no SDK path writer.
+
+    SDK internals remain trusted. The closure pins the task-owned handoff and
+    each fresh export to the original permission/resource lifetime. It does not
+    supply a producer, durable reservation, result Save or host qualification.
+    """
+    slot = use._checkpoint_slot
+    training = use._training_slot
+    if (type(slot) is not dict or slot.get("stage") != "arguments-ready"
+            or slot.get("arguments") is not args or type(training) is not dict
+            or training.get("stage") != "running" or "checkpoint_execution" in training):
+        raise ValueError("The private checkpoint handler is unavailable.")
+    family = slot["family"]
+    record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+    configurations = tuple(dict(row) for row in record["outputs"])
+    reservation, admission = record["reservation"], record["admission"]
+    schedule = slot["steps"]
+    embedding_status = use._embedding_status
+    view,model_reference,dataset_references = use.view,use.model_reference,use.dataset_references
+    training_snapshot,binding_snapshot = training["snapshot"],slot["snapshot"]
+    execution = {"stage":"constructing","trainer":None,"active":None,"saved":(),"exports":[]}
+    training["checkpoint_execution"] = execution  # One attempt before SDK callbacks.
+    retained = []
+    expected_methods = {}
+    export_type = _ProtectedTrainingUse
+    select = _capture_protected_training_tensor_stream
+    metadata = _capture_protected_training_metadata
+    write = _write_protected_training_output
+
+    def fail():
+        execution["stage"] = "failed"
+        _fail_checkpoint_arguments(use,slot)
+
+    def passive():
+        if (use._checkpoint_slot is not slot or use._training_slot is not training
+                or training.get("checkpoint_execution") is not execution
+                or execution["stage"] not in ("constructing","training","saving","complete")
+                or slot.get("arguments") is not args or training.get("snapshot") is not training_snapshot
+                or slot.get("snapshot") is not binding_snapshot
+                or use.view is not view or use.model_reference != model_reference or use.dataset_references != dataset_references
+                or use._serialize is not _NATIVE_REQUEST_SERIALIZER or use._resolve is not _NATIVE_REFERENCE_RESOLVER
+                or use._embedding_status != embedding_status or use._embedding_observation_lost
+                or use._checkpoint_export_guard is not None or use._checkpoint_export_binding is not None
+                or _ProtectedTrainingUse is not export_type
+                or _capture_protected_training_tensor_stream is not select
+                or _capture_protected_training_metadata is not metadata or _write_protected_training_output is not write
+                or execution["saved"] != tuple(retained)):
+            raise ValueError("The private checkpoint execution changed.")
+        _checkpoint_snapshot(use)
+        training_snapshot()
+        receiver = execution["trainer"]
+        if receiver is not None:
+            fields = _sdk_passive_fields(receiver)
+            if (type(receiver) is not SnapshotTrainer or fields.get("model") is not model
+                    or fields.get("args") is not args or fields.get("processing_class") is not tokenizer
+                    or any(name in fields or vars(SnapshotTrainer).get(name) is not function
+                        for name,function in expected_methods.items())):
+                raise ValueError("The private checkpoint receiver changed.")
+
+    def check():
+        _check_protected_use(use)
+        passive()
+
+    def save(receiver, selected_model, trial):
+        # A foreign receiver has no failure authority over the original attempt.
+        if get_ident() != use._thread:
+            raise ValueError("The private checkpoint thread is unavailable.")
+        if receiver is not execution["trainer"] or receiver is None:
+            if execution["trainer"] is None and type(receiver) is SnapshotTrainer: fail()
+            raise ValueError("The private checkpoint receiver is unavailable.")
+        try:
+            if execution["stage"] != "training" or selected_model is not model or trial is not None:
+                raise ValueError("The private checkpoint handoff is unavailable.")
+            check()
+            state = _sdk_passive_fields(receiver).get("state")
+            step = _sdk_passive_fields(state).get("global_step")
+            index = len(retained)
+            if type(step) is not int or index >= len(schedule) or step != schedule[index]:
+                raise ValueError("The private checkpoint step is unavailable.")
+            current_record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+            if len(current_record["members"]) != index:
+                raise ValueError("The private checkpoint inventory changed.")
+            execution["stage"] = "saving"
+            child = export_type(use.payload,use.view)
+            execution["exports"].append(child)  # Retain every attempted export.
+            execution["active"] = child
+            identity = use._run_identity
+            export_proof = None
+            def export_snapshot():
+                passive()  # No business/Native observer after final resource proof.
+                current_state = _sdk_passive_fields(receiver).get("state")
+                if (execution["stage"] != "saving" or execution["active"] is not child
+                        or child._checkpoint_export_guard is not export_guard or child._run_identity is not identity
+                        or _checkpoint_export_proof(child) is not export_proof
+                        or child.view is not view or child.payload is not use.payload
+                        or child.model_reference != model_reference or child.dataset_references != dataset_references
+                        or child._serialize is not _NATIVE_REQUEST_SERIALIZER or child._resolve is not _NATIVE_REFERENCE_RESOLVER
+                        or child._training_slot is not None or child._checkpoint_slot is not None
+                        or child._embedding_model is not model or child._embedding_tokenizer is not tokenizer
+                        or child._embedding_status != embedding_status or child._embedding_observation_lost
+                        or use._run_identity is not identity or current_state is not state
+                        or type(_sdk_passive_fields(state).get("global_step")) is not int
+                        or _sdk_passive_fields(state)["global_step"] != step):
+                    raise ValueError("The private checkpoint export changed.")
+                _ProtectedTrainingUse.assert_snapshot(child)
+                return identity,step
+            def export_guard():
+                check()
+                return export_snapshot()
+            child._checkpoint_export_guard = export_guard
+            export_proof = _CheckpointExport(export_guard,export_snapshot)
+            child._checkpoint_export_binding = export_proof
+            _CHECKPOINT_EXPORTS[child] = ref(export_proof)
+            child._run_identity = identity
+            child._embedding_model,child._embedding_tokenizer = model,tokenizer
+            child._embedding_status = use._embedding_status
+            child._embedding_observation_lost = use._embedding_observation_lost
+            configuration = configurations[index]
+            export_guard()
+            select(model,child,maximum_bytes=configuration["maximumCopyBytes"],chunk_bytes=configuration["bufferBytes"])
+            export_guard()
+            metadata(model,tokenizer,child,maximum_bytes=min(configuration["maximumCopyBytes"],64*1024**2))
+            export_guard()
+            graph = write(child,configuration=configuration,reservation=reservation,admission=admission,_family=family)
+            export_guard()
+            member_record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+            if (len(member_record["members"]) != index+1 or member_record["members"][-1]["graph"] is not graph
+                    or member_record["members"][-1]["stage"] != "sealed"):
+                raise ValueError("The private checkpoint sealing is unavailable.")
+            retained.append((step,configuration["freshName"],graph))
+            execution.update(saved=tuple(retained),active=None,stage="training")
+            check()
+        except BaseException:
+            fail()
+            raise ValueError("The private checkpoint could not be saved.") from None
+
+    def deny(receiver,*_args,**_kwargs):
+        if get_ident() == use._thread and receiver is execution["trainer"] and receiver is not None: fail()
+        raise ValueError("The private SDK path operation is unavailable.")
+
+    class SnapshotTrainer(base):
+        _save_checkpoint = save
+        save_model = _save = save_state = _rotate_checkpoints = _sorted_checkpoints = deny
+        _save_optimizer_and_scheduler = _save_scaler = _save_rng_state = deny
+        _load_from_checkpoint = _load_best_model = _load_optimizer_and_scheduler = _load_scaler = deny
+        _push_from_checkpoint = push_to_hub = init_hf_repo = deny
+
+    expected_methods.update({name:function for name,function in vars(SnapshotTrainer).items() if type(function) is FunctionType})
+
+    def attach(receiver):
+        try:
+            check()
+            if execution["stage"] != "constructing" or execution["trainer"] is not None or type(receiver) is not SnapshotTrainer:
+                raise ValueError("The private checkpoint receiver is unavailable.")
+            execution.update(trainer=receiver,stage="training")
+            check()
+        except BaseException:
+            fail(); raise ValueError("The private checkpoint handler is unavailable.") from None
+
+    def finish():
+        try:
+            check()
+            members = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)["members"]
+            if (execution["stage"] != "training" or tuple(row[0] for row in retained) != schedule
+                    or len(members) != len(retained) or any(member["graph"] is not row[2] or member["stage"] != "sealed"
+                        for member,row in zip(members,retained))):
+                raise ValueError("The private checkpoint schedule is incomplete.")
+            execution["stage"] = "complete"
+            check()
+        except BaseException:
+            fail(); raise ValueError("The private checkpoint schedule is incomplete.") from None
+    return SnapshotTrainer,attach,check,finish
+
+
 def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=None,
         compare_validation_baseline=False, on_validation_progress=None, _protected_use=None):
     if _protected_use is None:
@@ -1757,9 +1981,10 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
         raise ValueError("The private training attempt is unavailable.")
     _check_protected_use(use)
     checkpoint_family = _NATIVE_CHECKPOINT_FAMILY_RESOLVE(use.view,_ProtectedTrainingUse.assert_snapshot(use))
-    if use._checkpoint_slot is not None or checkpoint_family is not None:
-        # A bound schedule must never fall back to SDK path checkpoints or
-        # silently lose saves while the fixed handler is still unconfigured.
+    checkpoint = use._checkpoint_slot
+    if (checkpoint is not None or checkpoint_family is not None) and (
+            type(checkpoint) is not dict or checkpoint.get("stage") != "arguments-ready"
+            or checkpoint.get("arguments") is not args):
         if checkpoint_family is not None:
             proof = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(checkpoint_family).get("training_owner")
             if type(proof) is tuple and len(proof) == 3 and proof[0] is use:
@@ -1832,6 +2057,7 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
         return metrics, checkpoints
     except BaseException as error:
         slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
+        if checkpoint_family is not None: _fail_checkpoint_arguments(use,checkpoint)
         if isinstance(error, (TrainingCancellationRequested, LaunchUnavailable)):
             raise
         raise ValueError("The private training attempt is unavailable.") from None
@@ -1869,10 +2095,17 @@ def _run_trainer_impl(
         evaluate_function = _sdk_static_attribute(Trainer,"evaluate") if compare_validation_baseline else None
         if type(train_function) is not FunctionType or compare_validation_baseline and type(evaluate_function) is not FunctionType:
             raise ValueError("The private trainer operation is unavailable.")
-    _check_protected_use(_protected_use)
+    checkpoint_attach = checkpoint_check = checkpoint_finish = None
+    if _protected_use is not None and _protected_use._checkpoint_slot is not None:
+        Trainer,checkpoint_attach,checkpoint_check,checkpoint_finish = _protected_checkpoint_trainer(
+            Trainer,_protected_use,model,tokenizer,args)
+    def current():
+        if checkpoint_check is not None: checkpoint_check()
+        else: _check_protected_use(_protected_use)
+    current()
     if compare_validation_baseline and _protected_use is not None:
         eval_dataset, sample_count = _validation_subset(eval_dataset)
-        _check_protected_use(_protected_use)
+        current()
 
     def gradient_accumulation_steps() -> int:
         return max(int(getattr(args, "gradient_accumulation_steps", 1) or 1), 1)
@@ -1892,6 +2125,7 @@ def _run_trainer_impl(
             self.completed_batches = 0
 
         def _report_completed_batch(self, _args: Any, state: Any) -> None:
+            current()
             if on_progress is None:
                 return
             total_batches = estimate_total_batches()
@@ -1904,6 +2138,7 @@ def _run_trainer_impl(
                 "batch": self.completed_batches,
                 "totalBatches": max(total_batches, 0),
             })
+            current()
 
         def on_substep_end(self, _args: Any, state: Any, _control: Any, **_kwargs: Any) -> None:
             self._report_completed_batch(_args, state)
@@ -1914,7 +2149,7 @@ def _run_trainer_impl(
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
     if _protected_use is not None: _protected_use._training_slot["collator"] = collator
     training_data = dataset["train"]
-    _check_protected_use(_protected_use)
+    current()
     trainer = Trainer(
         model=model,
         args=args,
@@ -1931,7 +2166,8 @@ def _run_trainer_impl(
         captured_train = MethodType(train_function,trainer)
         captured_evaluate = MethodType(evaluate_function,trainer) if evaluate_function is not None else None
         _protected_use._training_slot.update(trainer=trainer,train_operation=captured_train,evaluate_operation=captured_evaluate)
-    _check_protected_use(_protected_use)
+    if checkpoint_attach is not None: checkpoint_attach(trainer)
+    current()
     if on_progress is not None:
         total_epochs = int(ceil(float(getattr(args, "num_train_epochs", 1) or 1)))
         on_progress({
@@ -1942,25 +2178,26 @@ def _run_trainer_impl(
         })
     if compare_validation_baseline and on_validation_progress is not None:
         on_validation_progress("baseline-validation")
-    _check_protected_use(_protected_use)
+    current()
     baseline = _measure_validation_loss(trainer, eval_dataset, "baseline_validation",
         **({"_captured_evaluate":captured_evaluate} if captured_evaluate is not None else {})) if compare_validation_baseline else None
-    _check_protected_use(_protected_use)
+    current()
     if compare_validation_baseline and on_validation_progress is not None:
         on_validation_progress("training")
-    _check_protected_use(_protected_use)
+    current()
     train_result = trainer.train() if captured_train is None else captured_train()
     if _protected_use is not None: _protected_use._training_slot["train_result"] = train_result
-    _check_protected_use(_protected_use)
+    current()
+    if checkpoint_finish is not None: checkpoint_finish()
     metrics: dict[str, float] = (dict(_freeze_training_metrics(train_result.metrics)) if _protected_use is not None else
         {k: float(v) for k, v in train_result.metrics.items() if isinstance(v, (int, float))})
     if compare_validation_baseline:
         if on_validation_progress is not None:
             on_validation_progress("trained-validation")
-        _check_protected_use(_protected_use)
+        current()
         trained = _measure_validation_loss(trainer, eval_dataset, "trained_validation",
             **({"_captured_evaluate":captured_evaluate} if captured_evaluate is not None else {}))
-        _check_protected_use(_protected_use)
+        current()
         if on_validation_progress is not None:
             on_validation_progress("comparison-complete")
         # These exact measured fields override similarly named supplier metrics.
@@ -1970,14 +2207,14 @@ def _run_trainer_impl(
     checkpoints = []
     if _protected_use is not None:
         history = _freeze_training_history(trainer.state.log_history)
-        _check_protected_use(_protected_use)
+        current()
         output = str(Path(_protected_use.payload.output["outputDirectory"]) / "checkpoints")
         checkpoints = [{"path":output, "step":step, "metric":"loss", "value":loss} for step,loss in history]
     else:
         for state in trainer.state.log_history:
             if "loss" in state and "step" in state:
                 checkpoints.append({"path": str(args.output_dir), "step": int(state["step"]), "metric": "loss", "value": float(state["loss"])})
-    _check_protected_use(_protected_use)
+    current()
     return metrics, checkpoints
 
 

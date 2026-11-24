@@ -21,6 +21,7 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
     unit = "model-training-worker-unit"
     other_source = "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py"
     minimum_cases = 45
+    command_timeout = 180
 
     def selected(self, paths, required=("architecture",), root=None):
         return {row["id"]: row for row in catalog.plan(root or self.root, paths, list(required), "a" * 64)["selected"]}
@@ -29,7 +30,7 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
         for path in [self.source, self.test]:
             selected = self.selected([path])
             self.assertEqual(selected[self.unit]["argv"], [sys.executable, "-B", self.helper, "--regression-test", self.test])
-            self.assertLessEqual(selected[self.unit]["timeout"], 120)
+            self.assertEqual(selected[self.unit]["timeout"], self.command_timeout)
             self.assertNotIn("focused-tests", selected)
             self.assertNotIn("completion-all", selected)
 
@@ -73,7 +74,7 @@ class ModelTrainingWorkerRoutingTests(unittest.TestCase):
             env = {**os.environ, "TEMP": str(owned), "TMP": str(owned), "TMPDIR": str(owned),
                    "PYTEST_ADDOPTS": "--definitely-not-an-allowed-ambient-argument",
                    "PYTEST_PLUGINS": "nonexistent_ambient_plugin_must_not_load"}
-            result = subprocess.run(argv, cwd=self.root, env=env, timeout=120, stdout=subprocess.PIPE,
+            result = subprocess.run(argv, cwd=self.root, env=env, timeout=self.command_timeout, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
             self.assertEqual(result.returncode, 0, result.stdout[-3000:])
             counts = re.findall(r"\b([0-9]+) passed\b", result.stdout)
@@ -100,6 +101,7 @@ class ModelTrainingImageWorkerRoutingTests(ModelTrainingWorkerRoutingTests):
     unit = "model-training-image-worker-unit"
     other_source = ModelTrainingWorkerRoutingTests.source
     minimum_cases = 7
+    command_timeout = 120
 
 
 if __name__ == "__main__":

@@ -3050,6 +3050,19 @@ Its mandatory routing harness also executes the actual fixture assertions; shape
 checks alone cannot pass. It covers Tiny-only original/private function identity,
 active/missing/aliased/foreign module refusal and source wiring without engines.
 
+The distinct `model-training-worker-unit` check retains its exact complete
+training-task test file. Its 374-case controlled batch measured 127.65 seconds,
+so its fixed outer ceiling is 180 seconds. Preserve prior timeout receipts and
+all test cases. Other checks and model/runtime limits remain unchanged; this
+developer-check calibration starts no real model or Native controller and grants
+no qualification retry, public capability or roadmap completion.
+The existing routing fixture uses that same 180-second text bound; its image
+subclass keeps 120 seconds. Only the complete exact five-file calibration scope
+can select the two existing related controller modules. They execute actual full
+text/image commands, hostile-environment checks and routing denials. Empty,
+incomplete, mixed, unknown or missing/nonregular support and explicit generic
+requests preserve broad controller coverage. No model case is deselected.
+
 Only the two exact adapter/test files, with all three required files present,
 replace automatic operational-ui selection. An explicit operational-ui request,
 any other operational source, and unavailable-file fallback preserve the original

@@ -4,6 +4,7 @@ import importlib
 import hashlib
 import gc
 import json
+import struct
 import sys
 from contextlib import contextmanager
 from enum import Enum
@@ -121,7 +122,7 @@ def test_private_seed_matches_original_and_rechecks_authority_before_loading(mon
 
 
 @contextmanager
-def _checkpoint_schedule_fixture(monkeypatch,*,maximum=1,interval=50,retention=2,outputs=2,family=True):
+def _checkpoint_schedule_fixture(monkeypatch,*,maximum=1,interval=50,retention=2,outputs=2,family=True,method="lora"):
     from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import SourceLaunchExchangeTests
     original=SourceLaunchExchangeTests.bound_bootstrap
     def settings(self,definition=None,*args,**kwargs):
@@ -132,7 +133,7 @@ def _checkpoint_schedule_fixture(monkeypatch,*,maximum=1,interval=50,retention=2
         return original(self,definition,*args,**kwargs)
     with monkeypatch.context() as input_patch:
         input_patch.setattr(SourceLaunchExchangeTests,"bound_bootstrap",settings)
-        with _protected_training_metadata_fixture(input_patch,capture_weights=False) as (facts,tokenizer,_,_):
+        with _protected_training_metadata_fixture(input_patch,method,capture_weights=False) as (facts,tokenizer,_,_):
             actual,use,model,_,_,_,Tensor,_=facts
             kernel,configuration,_,_,control=model.test_output
             group=None
@@ -223,17 +224,191 @@ def test_checkpoint_arguments_fail_closed_if_sdk_callback_loses_original_binding
 
 
 @pytest.mark.parametrize("lost_slot",[False,True])
-def test_bound_checkpoint_schedule_cannot_silently_train_without_fixed_handler(monkeypatch,tmp_path,lost_slot):
+def test_bound_checkpoint_schedule_requires_sdk_and_original_binding(monkeypatch,tmp_path,lost_slot):
     with _checkpoint_schedule_fixture(monkeypatch) as (_,use,model,tokenizer,family,control,_,Tensor):
         train_model_module._bind_protected_checkpoint_schedule(use)
         with monkeypatch.context() as sdk_patch:
             _checkpoint_arguments_spy(sdk_patch)
             args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
             if lost_slot:use._checkpoint_slot=None
-            with pytest.raises(ValueError,match="checkpoint handler"):
+            with pytest.raises(ValueError,match="checkpoint handler" if lost_slot else "training attempt"):
                 train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
-        assert use._training_slot is None and family.phase=="failed"
+        assert (use._training_slot is None if lost_slot else use._training_slot["stage"]=="failed")
+        assert family.phase=="failed"
         assert control.charges==[] and Tensor.copies==[]
+
+
+def _install_checkpoint_trainer(monkeypatch,steps,*,during=None,catch=False):
+    calls=[];objects=[];disk=[]
+    class Trainer:
+        def __init__(self,**options):
+            self.__dict__.update(options);self.state=type("State",(),{})()
+            self.state.global_step=0;self.state.log_history=[];self.test_steps=[];objects.append(self);calls.append("construct")
+            if self.args.should_save:disk.append("constructor-directory")
+        def train(self):
+            calls.append("train")
+            for step in steps:
+                self.test_steps.append(step)
+                self.state.global_step=step
+                for tensor in self.model.state.values():
+                    tensor._storage[:]=struct.pack("<4f",*[float(step)]*4);tensor._counter[0]+=1
+                if during is not None:during(self,step)
+                try:self._save_checkpoint(self.model,None)
+                except ValueError:
+                    if not catch:raise
+                self.state.log_history.append({"step":step,"loss":0.25})
+            return SimpleNamespace(metrics={"train_loss":0.25})
+        def _save_checkpoint(self,*args):disk.append("ordinary-sdk-checkpoint")
+        def save_model(self,*args,**kwargs):disk.append("ordinary-sdk-save")
+    module=ModuleType("transformers");module.Trainer=Trainer
+    module.TrainerCallback=type("TrainerCallback",(),{})
+    module.DataCollatorForLanguageModeling=lambda **options:SimpleNamespace(**options)
+    monkeypatch.setitem(sys.modules,"transformers",module)
+    return calls,objects,disk
+
+
+@pytest.mark.parametrize("method",["lora","qlora","full-finetune"])
+def test_checkpoint_handler_seals_each_updated_snapshot_without_sdk_path_io(monkeypatch,tmp_path,method):
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingTensorStreamTests
+    with _checkpoint_schedule_fixture(monkeypatch,maximum=3,interval=2,retention=2,outputs=3,method=method) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        assert train_model_module._bind_protected_checkpoint_schedule(use)==(2,3)
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+        def foreign_thread(trainer,step):
+            if method!="lora" or step!=2:return
+            from concurrent.futures import ThreadPoolExecutor
+            before=len(kernel.calls)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                with pytest.raises(ValueError):pool.submit(trainer._save_checkpoint,model,None).result(timeout=5)
+                with pytest.raises(ValueError):pool.submit(trainer.save_model,"forbidden").result(timeout=5)
+            assert family.phase=="bound" and len(kernel.calls)==before
+            assert use._training_slot["checkpoint_execution"]["stage"]=="training"
+        calls,objects,disk=_install_checkpoint_trainer(monkeypatch,(2,3),during=foreign_thread)
+        result=train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert result[0]=={"train_loss":0.25} and calls==["construct","train"] and disk==[]
+        execution=use._training_slot["checkpoint_execution"]
+        assert execution["stage"]=="complete" and [row[0] for row in execution["saved"]]==[2,3]
+        assert family.phase=="bound" and len(actual._output_family_snapshot(family)["members"])==2
+        assert family.next_configuration["freshName"]=="candidate-output"
+        for step,name,graph in execution["saved"]:
+            assert graph.phase=="sealed" and name==f"snapshot-{0 if step==2 else 1}"
+            weight="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
+            raw=bytes(kernel.nodes[graph.physical_path+"\\"+weight]["data"])
+            header,body=TrainingTensorStreamTests().decode(raw)
+            assert body==struct.pack("<4f",*[float(step)]*4)*len(header)
+            run=json.loads(bytes(kernel.nodes[graph.physical_path+"\\training-run.json"]["data"]))
+            assert run["runId"]==use._run_identity[0] and run["checkpointStep"]==step
+            assert run["status"]=="checkpoint-snapshot" and run["trainingStatus"]=="running"
+            assert run["candidateValidation"]=="pending" and "metrics" not in run
+        assert control.charges==[128*1024]*2 and len(execution["exports"])==2
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):objects[0]._save_checkpoint(model,None)
+        assert len(kernel.calls)==before and family.phase=="failed" and disk==[]
+
+
+@pytest.mark.parametrize("failure",["missing-save","out-of-order","duplicate","wrong-model","foreign-receiver",
+    "path-writer","revoked","erased-binding","reentry","write-error","caught-write-error","replaced-dispatch","erased-export-guard"])
+def test_checkpoint_handler_refuses_failed_or_missing_snapshots_without_retry(monkeypatch,tmp_path,failure):
+    with _checkpoint_schedule_fixture(monkeypatch,maximum=3,interval=2,retention=2,outputs=3) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+        def during(trainer,step):
+            if failure=="wrong-model":trainer.model=object()
+            elif failure=="foreign-receiver":
+                with pytest.raises(ValueError):type(trainer)._save_checkpoint(object(),model,None)
+                assert family.phase=="bound"
+                trainer.state.global_step=99
+            elif failure=="path-writer":trainer.save_model("forbidden")
+            elif failure=="revoked":control.current=False
+            elif failure=="erased-binding":use._checkpoint_slot=None
+            elif failure in ("write-error","caught-write-error"):kernel.fail="WriteFile"
+            elif failure=="replaced-dispatch":trainer._save_checkpoint=lambda *args:pytest.fail("Replaced dispatch called")
+            elif failure in ("reentry","erased-export-guard"):
+                def after():
+                    if failure=="reentry":
+                        with pytest.raises(ValueError):trainer._save_checkpoint(model,None)
+                    else:use._training_slot["checkpoint_execution"]["active"]._checkpoint_export_guard=None
+                model.after_state=after
+        steps=() if failure=="missing-save" else (3,) if failure=="out-of-order" else (2,2) if failure=="duplicate" else (2,3)
+        calls,objects,disk=_install_checkpoint_trainer(monkeypatch,steps,during=during,catch=failure=="caught-write-error")
+        if failure=="replaced-dispatch":
+            # Catch the replacement before the fake SDK tries dispatch, just as
+            # the real task's progress/currentness fence does at each handoff.
+            model.after_state=lambda:pytest.fail("No state supplier should run")
+            original=objects
+            def progress(_):
+                if original:original[0]._save_checkpoint=lambda *args:pytest.fail("Replaced dispatch called")
+            options={"on_progress":progress}
+        else:options={}
+        with pytest.raises((ValueError,actual.LaunchUnavailable)):
+            train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use,**options)
+        assert family.phase=="failed" and use._training_slot["stage"]=="failed" and disk==[]
+        execution=use._training_slot["checkpoint_execution"]
+        assert len(execution["exports"])==(1 if failure in ("duplicate","reentry","write-error","caught-write-error","erased-export-guard") else 0)
+        assert control.charges==([128*1024] if failure in ("duplicate","write-error","caught-write-error") else [])
+        assert objects[0].test_steps==([] if failure in ("missing-save","replaced-dispatch") else [2,2] if failure=="duplicate" else [3] if failure=="out-of-order" else [2,3] if failure=="caught-write-error" else [2])
+        before=len(kernel.calls);charges=list(control.charges)
+        with pytest.raises(ValueError):train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert len(kernel.calls)==before and control.charges==charges
+        assert calls==(["construct"] if failure=="replaced-dispatch" else ["construct","train"])
+
+
+def test_checkpoint_handler_rechecks_parent_passively_after_final_native_proof(monkeypatch,tmp_path):
+    with _checkpoint_schedule_fixture(monkeypatch) as (actual,use,model,tokenizer,family,control,kernel,Tensor):
+        train_model_module._bind_protected_checkpoint_schedule(use)
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            args=train_model_module._build_training_args(use.payload,tmp_path,_protected_use=use)
+        _install_checkpoint_trainer(monkeypatch,(1,));changed=[]
+        def after(name):
+            training=use._training_slot
+            execution=training.get("checkpoint_execution") if type(training) is dict else None
+            child=execution.get("active") if type(execution) is dict else None
+            output=child._output_slot if child is not None else None
+            graph=output.get("graph") if type(output) is dict else None
+            if changed or graph is None or output["stage"]!="writing":return
+            native=flat=chunk=False;frame=sys._getframe(1)
+            while frame:
+                if frame.f_locals.get("self") is graph:
+                    native|=frame.f_code is actual.OriginalTrainingOutputGraph.guard.__code__
+                    flat|=frame.f_code is actual._OriginalProtectedFlatCopy.guard.__code__
+                    if frame.f_code is actual.OriginalTrainingOutputGraph.prepare.__code__:
+                        chunk|=type(frame.f_locals.get("chunk")) is bytes and frame.f_locals.get("copied")==0
+                frame=frame.f_back
+            if native and not flat and chunk:
+                changed.append((name,len(kernel.calls),training))
+                use._checkpoint_slot=None
+        kernel.after=after
+        with pytest.raises((ValueError,actual.LaunchUnavailable)):
+            train_model_module._run_trainer(model,tokenizer,{"train":[{}]},None,args,_protected_use=use)
+        assert len(changed)==1
+        assert not any(name=="WriteFile" for name,_ in kernel.calls[changed[0][1]:])
+        assert family.phase=="failed" and changed[0][2]["stage"]=="failed" and control.charges==[128*1024]
+
+
+def test_checkpoint_export_registration_does_not_retain_a_retired_cycle():
+    from weakref import ref
+    def owned_cycle():
+        child=object.__new__(train_model_module._ProtectedTrainingUse)
+        proof=train_model_module._CheckpointExport(lambda:child,lambda:child)
+        child._checkpoint_export_binding=proof;child._checkpoint_export_guard=proof.current
+        train_model_module._CHECKPOINT_EXPORTS[child]=ref(proof)
+        with pytest.raises(ValueError,match="immutable"):proof.current=lambda:None
+        return ref(child),ref(proof)
+    child,proof=owned_cycle();gc.collect()
+    assert child() is None and proof() is None
+
+
+def test_checkpoint_export_cannot_replace_native_authority_with_an_unregistered_guard(monkeypatch):
+    with _checkpoint_schedule_fixture(monkeypatch) as (_,use,_,_,family,control,kernel,Tensor):
+        use._checkpoint_export_guard=lambda:pytest.fail("Unregistered guard ran")
+        before=len(kernel.calls)
+        with pytest.raises(ValueError,match="checkpoint export"):
+            train_model_module._check_protected_use(use)
+        assert len(kernel.calls)==before and control.charges==[] and Tensor.copies==[] and family.phase=="bound"
 
 
 @pytest.mark.parametrize("failure",["interval","maximum","retention","snapshot"])

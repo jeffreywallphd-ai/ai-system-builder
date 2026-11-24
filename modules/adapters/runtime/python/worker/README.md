@@ -2156,11 +2156,12 @@ Captured original business/resource methods guard private SDK arguments, with
 passive proof after each supplier. Caught reentry freezes admission before another
 supplier runs. Arguments disable ordinary SDK saving with `should_save=False`
 and use `save_only_model=True`; this finite profile offers no optimizer/RNG resume.
-Binding/settings/helper/argument drift cannot grant work. The fixed checkpoint
-handler is still pending, so bound training refuses before collator/Trainer
-construction instead of silently dropping saves. Unbound ordinary setup is
-unchanged. No Root, full producer/quota, actual checkpoint/native/model/quality,
-retirement, Save or host pass is supplied by these inert software checks.
+Binding/settings/helper/argument drift cannot grant work. The fixed private
+Trainer routes its save callback through the protected writer described below.
+Missing arguments or original binding cannot restore ordinary disk saving.
+Unbound ordinary setup is unchanged. No Root, full producer/quota, actual
+installed-SDK/native/model/quality, retirement, Save or host pass is supplied by
+these controlled software checks.
 The complete argument-preparation operation owns failure handling, including SDK
 imports and device checks before construction. Consult the original Native marker
 before choosing an argument path; losing a local slot cannot restore ordinary
@@ -2171,6 +2172,36 @@ Check retained Native ownership before changing even a binding's failure status.
 A foreign use holding a genuine shared record cannot poison its owner during
 argument rejection or reentry. Read-only retained ownership remains available
 after failure on the original thread; it grants no IO, retry or renewed lifetime.
+
+### Fixed private checkpoint saving
+
+Keep one original Trainer and capture its loaded training entry before callbacks.
+Override the task-owned save dispatch. Refuse ordinary SDK path saves, checkpoint
+rotation, resume, optimizer/RNG persistence and Hub publication. Check original
+model, tokenizer, arguments, owned method identities and every requested step.
+Progress handoffs also recheck permission and resource lifetime.
+
+For each scheduled step, retain a fresh export attempt bound to that active save
+and the original joint view. Reuse bounded tensor selection, fast-tokenizer/config
+capture and the original Native output writer. Record the step only after the
+exact next sibling seals. The checkpoint run record says training is running;
+it never claims completion, validation or model accuracy. Earlier sealed bytes
+remain snapshots when subsequent controlled training changes the source tensors.
+Keep all failed attempts/capacity; never delete, rotate, refund or retry them.
+Register each child with a fixed immutable current/passive proof. A caller-set
+guard supplies no authority. The registered child borrows the same original
+parent's live checks instead of repeating its identical view inspection. After
+the final Native/resource callback, recheck only passive parent/save/step and
+child identities before any write. Losing the parent binding must prevent the
+very next write. Weak registry values must not keep retired runs alive.
+
+The finish check requires all scheduled saves, including a nonmultiple final
+step. A caught writer failure, replaced dispatch, missing save, wrong step/model,
+reentry or lost authority cannot produce successful private training. Preserve
+the separate final candidate slot. Tests drive controlled training callbacks
+through the actual serializer and a fake Native ABI, with distinct weight bytes.
+They qualify this component only. Full producer, measured/durable quota, final
+candidate composition, native custody/retirement, Save and real hosts remain.
 
 ### Honoring selected text-training settings
 

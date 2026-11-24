@@ -256,6 +256,20 @@ DETERMINISTIC_SUPPORT_SCOPE = (
     "dev-tools/helpers/control_plane/catalog.py",
     "dev-tools/helpers/tests/test_control_plane_focused.py",
 )
+MODEL_TRAINING_BOUND_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_focused.py",
+    "dev-tools/helpers/tests/test_control_plane_model_training_worker.py",
+    "dev-tools/helpers/README.md",
+    "docs/diagnostics/ai-development-control-plane.md",
+)
+MODEL_TRAINING_BOUND_REQUIRED = MODEL_TRAINING_BOUND_SCOPE + (
+    "dev-tools/helpers/run_focused_checks.py",
+    "modules/adapters/runtime/python/worker/tasks/train_model.py",
+    "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+    "modules/adapters/runtime/python/worker/tasks/train_model_multimodal.py",
+    "modules/adapters/runtime/python/worker/tests/test_train_model_multimodal_task.py",
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -692,6 +706,9 @@ PUBLISHED_FORM_CHECKS = {
     },
     "model-training-worker-unit": {
         "interpreter": "python",
+        # Full inert training regression grew beyond120s; retain every case.
+        # This developer-check ceiling does not change model/runtime limits.
+        "timeout": 180,
         "automatic_sources": (
             "modules/adapters/runtime/python/worker/tasks/train_model.py",
             "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
@@ -3670,6 +3687,17 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   "-k", "test_control_plane_deterministic_support.",
+                                  "-k", "test_control_plane_focused."]
+    if (set(paths) == set(MODEL_TRAINING_BOUND_SCOPE) and "focused-tests" not in explicit_required and
+            _automatic_files_available(root, {"automatic_required_files": MODEL_TRAINING_BOUND_REQUIRED})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            # Both existing modules run, including their actual complete text/
+            # image commands and environment/negative routing cases. This does
+            # not trim the model regression file or relax another check limit.
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                                  "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                                  "-k", "test_control_plane_model_training_worker.",
                                   "-k", "test_control_plane_focused."]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(

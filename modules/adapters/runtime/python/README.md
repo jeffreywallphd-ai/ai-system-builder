@@ -1054,10 +1054,13 @@ or an inferred epoch schedule remain unsupported. Original output permissions
 and reservation are checked around private argument construction.
 
 Bound private arguments disable SDK path saving and select model snapshots only,
-without optimizer/RNG resume. Training still refuses before Trainer construction
-until the fixed checkpoint handler is installed; no saves are silently dropped.
-Ordinary unbound argument behavior and the default-off Root remain unchanged.
-Actual checkpoint writing, full producer/quota, retirement, Save and hosts remain.
+without optimizer/RNG resume. The fixed private Trainer now sends each scheduled
+save through the existing protected tensor/metadata and Native output writer.
+Keep the original model, tokenizer, arguments, step and output family. Each fresh
+sibling must seal before its save is recorded; a missing or failed save cannot
+report successful training. Ordinary unbound behavior and the default-off Root
+remain unchanged. Actual installed-SDK/model/native execution, complete producer/
+quota, final candidate composition, retirement, Save and hosts remain pending.
 Argument setup resolves the original Native owner even if its local record is
 lost. Failures across imports, device checks and construction freeze only that
 owned family. A genuine duplicate completed setup remains a no-effect refusal.

@@ -3119,11 +3119,11 @@ implicit epoch scheduling rather than changing their semantics.
 Original output business/resource methods guard argument construction. Recheck
 the passive family/owner proof after each callback and stop caught reentry before
 another supplier. Private arguments disable SDK path saving and select model-only
-snapshots. Optimizer/RNG resumability is outside this finite profile. A bound task
-still refuses before Trainer construction while its fixed checkpoint handler is
-unavailable; default Root and ordinary unbound argument behavior are unchanged.
-This is admission/argument evidence, not actual checkpoint/controller execution,
-complete producer/durable quota, owned retirement, Save or host qualification.
+snapshots. Optimizer/RNG resumability is outside this finite profile. The fixed
+private Trainer now routes scheduled saves through the protected writer. Default
+Root and ordinary unbound behavior are unchanged. Controlled component evidence
+does not qualify actual installed-SDK/model/controller execution, complete
+producer/durable quota, final candidate, owned retirement, Save or real hosts.
 The argument wrapper resolves original Native ownership before selecting a path,
 including when the local checkpoint record has disappeared. Its retained binding
 owns failures across imports, device checks and construction. Freeze only the
@@ -3134,6 +3134,24 @@ Retained Native ownership is also the authority to mark a binding failed. A
 foreign use sharing its record must leave the genuine owner unchanged. Reading
 that retained proof after failure on the original thread supplies no IO or new
 lifetime and never revives admission.
+
+Each private save binds the original Trainer/model/tokenizer/arguments and exact
+next scheduled step to one fresh export attempt. Parent permission/resource and
+request proof remain current across selection, metadata and writing callbacks.
+An immutable registered child proof permits reuse of the same parent's live
+view/resource checks; a mutable guard alone grants no authority. The fixed final
+passive snapshot rechecks the original parent/save/step and child bindings after
+Native callbacks without calling another observer. Weak registry values avoid
+retaining a retired run solely for this lookup.
+Reuse the existing bounded safe-format writer and original family controls; record
+the snapshot only after its exact sibling seals. Preserve a distinct final
+candidate slot. Checkpoint metadata identifies the running training step rather
+than fabricating completed training or validation. Later model updates cannot
+rewrite earlier sealed bytes. The finish check rejects missing scheduled saves.
+The task-owned Trainer subclass refuses SDK path saves, rotation, resume and Hub
+publication. Caught failure, reentry, foreign receiver, dispatch replacement or
+erased binding cannot authorize fallback, retry, deletion or credit. SDK internals
+remain trusted; this is a fixed call boundary, not an arbitrary-Python sandbox.
 
 ### Text-training setting fidelity
 

@@ -2804,11 +2804,12 @@ output, and no rotation or implicit epoch schedule. No unbounded tuple allocatio
 Guard original output permissions/reservation around SDK arguments and recheck
 passive proof after each supplier. Caught reentry freezes this family before
 another supplier. Disable ordinary SDK disk saving for bound private arguments;
-model-only snapshots cannot claim optimizer/RNG resume. While the fixed handler
-is absent, refuse before Trainer construction rather than omit checkpoints or
-fall back to path writes. Keep ordinary unbound behavior and the default-off Root.
-No model/quality/native process, complete producer/quota, retirement, Save or
-host/parent qualification follows from these controlled source checks.
+model-only snapshots cannot claim optimizer/RNG resume. The fixed private Trainer
+save override uses the original protected writer; missing arguments or original
+binding cannot restore SDK path saving. Keep ordinary unbound behavior and the
+default-off Root. No actual installed-SDK/model/quality/native process, complete
+producer/quota, final candidate, retirement, Save or host/parent qualification
+follows from these controlled source checks.
 Do not infer absence of checkpoint authority from a missing local slot. Resolve
 the actual Native family/owner before any SDK argument path. The retained owned
 binding must handle failures during imports, device checks and construction,
@@ -2820,6 +2821,25 @@ Do not mark an opaque shared binding failed unless the retained Native marker
 proves both this use and that exact binding. A foreign denial or reentry must not
 change the genuine owner's state. The original-thread read-only marker remains
 inspectable after failure, but grants no IO, retry, refund or lifetime renewal.
+
+Bind the loaded training entry, owned save/refusal methods, original receiver,
+model, tokenizer, arguments and exact next step before a save can acquire a fresh
+output sibling. Each child export retains original view/request and active-save
+proof across SDK callbacks. A missing/duplicate/reordered save, wrong receiver,
+revocation, changed dispatch, lost binding, caught failure or reentry must stop
+the original attempt. A foreign receiver supplies no failure authority over it.
+Only an exact sealed Native family member can count as a saved checkpoint.
+Checkpoint run metadata identifies running training and pending validation;
+it grants no completed-candidate or model-quality claim. Preserve attempted
+capacity and the final candidate slot without rotation, deletion, refund or retry.
+Refuse ordinary SDK path saving/resume/Hub operations. SDK internals are trusted;
+this component does not supply native physical or arbitrary-code isolation proof.
+Only a registered immutable child proof can reuse the same original parent's
+live view/resource check. A caller-set guard cannot replace that authority.
+Check fixed passive parent/save/step and child identity after the final Native
+callback and before the next write, with no intervening observer. Preserve the
+causal late-write failure and corrected zero-write denial. Registry values remain
+weak so the proof lookup cannot keep an otherwise retired run alive.
 
 ### Approved text-training settings and SDK seed boundary
 

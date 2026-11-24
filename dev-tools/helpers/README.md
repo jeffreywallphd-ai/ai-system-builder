@@ -42,6 +42,14 @@ They use only the Python standard library.
 
 Copy `helpers.example.json` into an ignored local directory and pass it with
 `--config`. Command-line values override matching configuration values.
+The fixed `model-training-worker-unit` check retains the complete inert training
+test file with a 180-second outer ceiling. Its measured 374-case batch exceeded
+the old 120 seconds. This changes no test selector, model/runtime resource limit,
+Native execution permission or controlled qualification allowance.
+For the exact complete five-file bound-calibration scope, run the existing
+training-worker and focused-controller modules. They execute the full text and
+image commands plus routing/environment denials. Missing/nonregular support,
+mixed/unknown/incomplete scopes and explicit generic checks keep broad coverage.
 Repository paths must resolve within the selected repository.
 Verification paths must also remain positional after normalization: option-like,
 absolute and drive-relative selections are refused during planning. Focused
