@@ -18,6 +18,108 @@ train_model_module = importlib.import_module("modules.adapters.runtime.python.wo
 multimodal_module = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model_multimodal")
 
 
+def _settings_argument_spy(monkeypatch):
+    calls=[]
+    class Arguments:
+        def __init__(self,**options):
+            calls.append(options)
+            self.options={"seed":42,"lr_scheduler_type":"linear","eval_strategy":"no",**options}
+    monkeypatch.setitem(sys.modules,"transformers",SimpleNamespace(TrainingArguments=Arguments))
+    monkeypatch.setitem(sys.modules,"torch",SimpleNamespace(cuda=SimpleNamespace(is_available=lambda:False)))
+    return calls
+
+
+@pytest.mark.parametrize("seed",[0,19])
+def test_text_training_applies_selected_seed_scheduler_and_evaluation_interval(monkeypatch,tmp_path,seed):
+    calls=_settings_argument_spy(monkeypatch); payload=_request(tmp_path)
+    payload.commonParameters["seed"]=seed
+    payload.advancedParameters={"schedulerType":"cosine","evalIntervalSteps":3}
+    validation=payload.datasets[0].model_copy(deep=True);validation.splitRole="validation"
+    payload.datasets.append(validation)
+    result=train_model_module._build_training_args(payload,tmp_path)
+    assert len(calls)==1
+    assert {k:result.options[k] for k in ("seed","lr_scheduler_type","eval_strategy","eval_steps")}=={
+        "seed":seed,"lr_scheduler_type":"cosine","eval_strategy":"steps","eval_steps":3}
+
+
+def test_text_training_defaults_do_not_enable_evaluation(monkeypatch,tmp_path):
+    _settings_argument_spy(monkeypatch);payload=_request(tmp_path)
+    result=train_model_module._build_training_args(payload,tmp_path)
+    assert result.options["seed"]==42 and result.options["lr_scheduler_type"]=="linear"
+    assert result.options["eval_strategy"]=="no" and result.options["eval_steps"] is None
+
+
+@pytest.mark.parametrize("seed",[0,19])
+def test_explicit_training_seed_runs_before_tokenizer_and_model_initialization(monkeypatch,seed):
+    calls=_inert_transformers(monkeypatch)
+    sys.modules["transformers"].set_seed=lambda value:calls.append(("seed",value))
+    train_model_module._load_transformers_objects("synthetic/base","lora",{},training_seed=seed)
+    assert [row[0] for row in calls]==["seed","tokenizer","model"] and calls[0][1]==seed
+
+
+def test_training_orchestration_forwards_explicit_seed_before_loading(monkeypatch,tmp_path):
+    payload=_request(tmp_path);payload.commonParameters["seed"]=19;calls=[]
+    monkeypatch.setattr(train_model_module,"_load_dataset",lambda *args,**kwargs:({"train":[1]},None))
+    def load(*args,**kwargs):
+        calls.append(kwargs);raise train_model_module.TrainingCancellationRequested()
+    monkeypatch.setattr(train_model_module,"_load_transformers_objects",load)
+    with pytest.raises(train_model_module.TrainingCancellationRequested):train_model_module.train_model(payload)
+    assert calls==[{"training_seed":19}]
+
+
+@pytest.mark.parametrize("section,key,value",[("commonParameters","seed",True),("commonParameters","seed",-1),
+    ("commonParameters","seed",2**32),("commonParameters","seed",1.5),("commonParameters","seed","19"),
+    ("advancedParameters","schedulerType",True),("advancedParameters","schedulerType",""),
+    ("advancedParameters","schedulerType","private/path"),("advancedParameters","evalIntervalSteps",True),
+    ("advancedParameters","evalIntervalSteps",-1),("advancedParameters","evalIntervalSteps",1.5),
+    ("advancedParameters","evalIntervalSteps",2**53)])
+def test_bad_text_training_settings_deny_before_output_or_model_setup(monkeypatch,tmp_path,section,key,value):
+    payload=_request(tmp_path)
+    if getattr(payload,section) is None:setattr(payload,section,{})
+    getattr(payload,section)[key]=value
+    monkeypatch.setattr(train_model_module,"Path",lambda *args:pytest.fail("Invalid settings reached output setup"))
+    monkeypatch.setattr(train_model_module,"_load_dataset",lambda *args,**kwargs:pytest.fail("Invalid settings reached dataset loading"))
+    with pytest.raises(ValueError) as raised:train_model_module.train_model(payload)
+    assert "private/path" not in str(raised.value)
+
+
+def test_interval_evaluation_without_validation_denies_before_arguments(monkeypatch,tmp_path):
+    calls=_settings_argument_spy(monkeypatch);payload=_request(tmp_path);payload.advancedParameters={"evalIntervalSteps":3}
+    with pytest.raises(ValueError,match="Select a validation dataset"):
+        train_model_module._build_training_args(payload,tmp_path)
+    assert calls==[]
+
+
+@pytest.mark.parametrize("mismatch",[False,True])
+def test_private_seed_matches_original_and_rechecks_authority_before_loading(monkeypatch,mismatch):
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import SourceLaunchExchangeTests
+    original=SourceLaunchExchangeTests.bound_bootstrap
+    def initial_seed(self,definition=None,*args,**kwargs):
+        if definition is not None:definition["request"].setdefault("commonParameters",{})["seed"]=7
+        return original(self,definition,*args,**kwargs)
+    # Set the controlled input before real fixture capture/digest/Native binding.
+    # The product admission/resolver and original request proof are not patched.
+    missing=object(); original_torch=sys.modules.get("torch",missing)
+    with monkeypatch.context() as input_patch:
+        input_patch.setattr(SourceLaunchExchangeTests,"bound_bootstrap",initial_seed)
+        with _protected_tensor_selection_fixture(input_patch) as facts:
+            actual,use,model,_,_,control,_,_=facts
+            assert use.payload.commonParameters["seed"]==7
+            # Undo the nested SDK replacement before the fixture's patch.dict
+            # restores its original module table. Reversed cleanup leaks Torch.
+            with monkeypatch.context() as sdk_patch:
+                calls=_inert_transformers(sdk_patch)
+                def seed(value):calls.append(("seed",value));control.current=False
+                sys.modules["transformers"].set_seed=seed
+                paths=[];sdk_patch.setattr(train_model_module,"_local_training_model_reference",lambda value:paths.append(value) or value)
+                with pytest.raises((ValueError,actual.LaunchUnavailable)):
+                    train_model_module._load_transformers_objects(use.model_reference,use.payload.method,{},
+                        local_files_only=True,_protected_use=use,training_seed=8 if mismatch else 7)
+                assert calls==([] if mismatch else [("seed",7)])
+                if mismatch:assert paths==[]
+    assert sys.modules.get("torch",missing) is original_torch
+
+
 @contextmanager
 def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_proj",),output=None):
     from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingTensorStreamTests,Control

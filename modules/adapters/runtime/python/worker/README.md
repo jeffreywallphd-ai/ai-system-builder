@@ -2126,3 +2126,20 @@ complete producer, durable quota, installed reader, retirement, Save or host pas
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
+
+### Honoring selected text-training settings
+
+Text training applies an explicit integer seed in the range 0–4294967295 through
+the existing SDK before tokenizer/model loading, embedding resize and adapter
+initialization. The same seed reaches `TrainingArguments`; no explicit seed
+keeps the earlier loading behavior and Trainer's default 42. This does not claim
+cross-hardware/kernel determinism or quality. The private seed must match the
+original request, and lost authority after the SDK callback prevents loading.
+
+Map `schedulerType` to `lr_scheduler_type`. A positive `evalIntervalSteps` sets
+`eval_strategy` to `steps` and needs a validation split; zero or omission leaves
+evaluation disabled. Shape/range failures stop before output/model setup and use
+fixed actionable messages. The pinned SDK still validates supported scheduler
+names. Tests use inert SDK call order and arguments, never real model scoring.
+Checkpoint/controller, producer/accounting, retirement, Save and actual hosts
+remain separately pending.

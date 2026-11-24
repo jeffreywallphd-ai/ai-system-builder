@@ -3087,3 +3087,22 @@ pending. The composition tests use inert SDK data and in-memory ABI only.
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
+
+### Text-training setting fidelity
+
+The text worker validates selected seed and scheduler/evaluation value shapes
+before output or model setup. An explicit 32-bit nonnegative seed is applied
+through the already-supported SDK before tokenizer/model, embedding and adapter
+initialization and passed unchanged to Trainer. Omission preserves early-loading
+behavior with Trainer's normal default seed. Hardware/kernel determinism is not
+inferred. Private loading requires the seed from the exact original request and
+rechecks authority before and after this SDK callback.
+
+Forward the scheduler through `lr_scheduler_type`; the existing pinned SDK owns
+its accepted names. A positive evaluation interval enables step evaluation only
+with a requested validation split. Omission/zero leaves it disabled. These are
+software setting corrections, not model-quality or actual training qualification.
+See the pinned [seed helper](https://github.com/huggingface/transformers/blob/v4.51.3/src/transformers/trainer_utils.py)
+and [Trainer arguments](https://github.com/huggingface/transformers/blob/v4.51.3/src/transformers/training_args.py).
+Safe loading, memory/native guards, checkpoint ownership, complete producer,
+retirement, Save and host qualification retain their existing requirements.

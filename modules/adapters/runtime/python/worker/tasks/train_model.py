@@ -98,6 +98,28 @@ def _to_dict(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _validate_training_seed(value):
+    if value is not None and (type(value) is not int or not 0 <= value < 2**32):
+        raise ValueError("Training seed must be a whole number from 0 to 4294967295.")
+    return value
+
+
+def _text_training_settings(payload):
+    seed = _validate_training_seed(_to_dict(payload.commonParameters).get("seed"))
+    advanced = _to_dict(payload.advancedParameters)
+    scheduler = advanced.get("schedulerType")
+    if scheduler is None: scheduler = "linear"
+    if type(scheduler) is not str or re.fullmatch(r"[a-z][a-z0-9_]{0,63}",scheduler) is None:
+        raise ValueError("Select a supported training scheduler.")
+    interval = advanced.get("evalIntervalSteps")
+    if interval is None: interval = 0
+    if type(interval) is not int or not 0 <= interval <= 2**53-1:
+        raise ValueError("Evaluation interval must be a nonnegative whole number.")
+    if interval > 0 and not any(row.splitRole == "validation" for row in payload.datasets):
+        raise ValueError("Select a validation dataset or turn off interval evaluation.")
+    return seed, scheduler, interval
+
+
 def _to_positive_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
@@ -1014,19 +1036,26 @@ def _local_training_model_reference(reference: str | None) -> str:
 
 def _load_transformers_objects(
     base_model_ref: str, method: str, quantization: dict[str, Any], *, local_files_only: bool = False, _protected_use=None,
+    training_seed: int | None = None,
 ) -> tuple[Any, Any]:
     _check_protected_use(_protected_use)
+    training_seed = _validate_training_seed(training_seed)
     if _protected_use is not None and (not local_files_only or base_model_ref != _protected_use.model_reference
-            or method != _protected_use.payload.method):
+            or method != _protected_use.payload.method
+            or training_seed != _validate_training_seed(_to_dict(_protected_use.payload.commonParameters).get("seed"))):
         raise ValueError("The private protected training model is unavailable.")
     if local_files_only:
         base_model_ref = _local_training_model_reference(base_model_ref)
     _check_protected_use(_protected_use)
     try:
         from transformers import AutoModelForCausalLM, AutoTokenizer
+        if training_seed is not None: from transformers import set_seed
     except Exception as error:  # pragma: no cover
         raise RuntimeError("transformers is required for model training.") from error
     _check_protected_use(_protected_use)
+    if training_seed is not None:
+        set_seed(training_seed)  # Before model/embedding/adapter initialization; never select another provider.
+        _check_protected_use(_protected_use)
 
     model_kwargs: dict[str, Any] = {}
     if method == "qlora":
@@ -1313,6 +1342,7 @@ def _tokenize_dataset(
 
 def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path, *, _protected_use=None) -> Any:
     _check_protected_use(_protected_use,payload)
+    seed, scheduler, evaluation_interval = _text_training_settings(payload)
     try:
         from transformers import TrainingArguments
     except Exception as error:  # pragma: no cover
@@ -1338,11 +1368,14 @@ def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path, *, _p
         per_device_eval_batch_size=int(common.get("batchSize", 1)),
         learning_rate=float(common.get("learningRate", 5e-5)),
         weight_decay=float(common.get("weightDecay", 0.0)),
+        seed=42 if seed is None else seed,
+        lr_scheduler_type=scheduler,
         gradient_accumulation_steps=int(advanced.get("gradientAccumulationSteps", 1)),
         warmup_steps=int(advanced.get("warmupSteps", 0)),
         warmup_ratio=float(advanced.get("warmupRatio", 0.0)),
         save_steps=int(advanced.get("checkpointIntervalSteps", 50)),
-        eval_steps=int(advanced.get("evalIntervalSteps", 0)) if int(advanced.get("evalIntervalSteps", 0)) > 0 else None,
+        eval_strategy="steps" if evaluation_interval > 0 else "no",
+        eval_steps=evaluation_interval if evaluation_interval > 0 else None,
         logging_steps=1,
         save_total_limit=int(advanced.get("saveTotalLimit", 2)),
         label_names=["labels"],
@@ -1792,6 +1825,9 @@ def _train_model(
     if payload.method not in SUPPORTED_METHODS:
         raise ValueError(f"Training method '{payload.method}' is not supported. Supported methods: {', '.join(sorted(SUPPORTED_METHODS))}")
 
+    training_seed = _text_training_settings(payload)[0] if training_task in TEXT_CAUSAL_TRAINING_TASKS else None
+    seed_options = {"training_seed":training_seed} if training_seed is not None else {}
+
     run_id = (_protected_use._run_identity[0] if _protected_use is not None else
         f"train-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
     output_model_name = payload.output.get("outputModelName")
@@ -1874,8 +1910,8 @@ def _train_model(
         quantization = _to_dict(advanced.get("quantization"))
         model, tokenizer = (
             _load_transformers_objects(base_model_ref, payload.method, quantization, local_files_only=True,
-                **({"_protected_use":_protected_use} if _protected_use is not None else {}))
-            if local_model_ref is not None else _load_transformers_objects(base_model_ref, payload.method, quantization)
+                **({"_protected_use":_protected_use} if _protected_use is not None else {}),**seed_options)
+            if local_model_ref is not None else _load_transformers_objects(base_model_ref, payload.method, quantization,**seed_options)
         )
         _check_protected_use(_protected_use,payload)
 

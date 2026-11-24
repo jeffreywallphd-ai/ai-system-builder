@@ -2774,3 +2774,18 @@ installed reader, retirement, Save, host or parent qualification.
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
+
+### Approved text-training settings and SDK seed boundary
+
+Do not silently drop selected seed, scheduler or evaluation cadence. Reject
+malformed/oversized scalar choices and interval evaluation without a validation
+split before output/model setup. Apply an explicit bounded integer seed through
+the existing pinned SDK, never a request-selected callable/provider. It precedes
+model/embedding/adapter initialization and matches the Trainer seed. The private
+loader compares the exact original request and checks authority on both sides of
+the seed callback; a loss cannot continue to tokenizer or model loading.
+
+Preserve all local-only/safe-format flags, defaults and resource/actor controls.
+A seed supplies no hardware determinism, quality, admission or additional model
+execution authority. Focused inert settings/callback tests supply no actual model
+score, producer, native resource, checkpoint, retirement, Save or host pass.

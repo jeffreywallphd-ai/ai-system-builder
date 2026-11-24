@@ -1038,3 +1038,11 @@ execution, complete producer/accounting, retirement, Save and hosts stay pending
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
+
+Text training now forwards the selected scheduler and seed into Trainer arguments.
+An explicit seed also initializes the existing SDK before model, embedding and
+adapter setup; a missing seed preserves early-loading behavior and Trainer's
+usual default. Positive evaluation intervals select step evaluation and require
+a validation split. Malformed values fail before output/model setup. Private
+loading still rechecks the exact seed and original authority before and after
+seeding. No loading flags, resource guards, real model scores or Root change.
