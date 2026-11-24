@@ -245,6 +245,7 @@ class LocalUsageTests(unittest.TestCase):
         self.assertEqual(self.real_repository(self.root/'w')[0],one)
 
     def test_actual_work_start_verify_complete_capture_to_usage_destination_without_rerouting_work(self):
+        patch.object(local.os,'environ',{**local.os.environ,'CODEX_THREAD_ID':PARENT}).start()
         self.root=self.root/'r';self.root.mkdir()
         for name,text in {'AGENTS.md':'Fixture contributor entry\n','.gitignore':'.local-codex/\n',
                           'docs/result.md':'initial\n','dev-tools/scripts/docs/check-doc-drift.mjs':
@@ -262,6 +263,7 @@ class LocalUsageTests(unittest.TestCase):
         self.write_line(PARENT,self.record(at=stamp,counts=self.counts(150,30,20,8)))
         owner=Work(self.root);started=owner.start(spec,'fixture-author');claim=started['claim']['claim_id']
         self.assertTrue(started['token_capture']['live_capture'])
+        self.assertEqual(started['token_phase']['state'],'recorded')
         (self.root/'docs/result.md').write_text('completed\n',encoding='utf-8')
         self.write_line(PARENT,self.record(at=stamp,counts=self.counts(200,40,30,11)))
         receipt=owner.verify('local-boundary-fixture','fixture-author',claim)

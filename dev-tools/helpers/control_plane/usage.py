@@ -16,8 +16,10 @@ from .common import digest, fields, now, read_json, refuse
 from .contracts import ControlError
 from .storage import atomic_write, confined_path, exclusive_lock
 
-SCHEMA = "contributor-token-usage-v1"
+V1_SCHEMA = "contributor-token-usage-v1"
+SCHEMA = "contributor-token-usage-v2"
 IMPORT_SCHEMA = "contributor-token-import-v1"
+IMPORT_V2 = "contributor-token-import-v2"
 MAX_BYTES = 4 * 1024 * 1024
 MAX_INPUT_BYTES = 128 * 1024
 MAX_STREAMS = 4096
@@ -28,6 +30,7 @@ METRICS = ("input_tokens", "output_tokens", "cached_input_tokens", "reasoning_ou
 PURPOSES = {"planning", "research", "implementation", "tests", "review", "bookkeeping", "mixed", "unclassified"}
 SCOPES = {"own", "includes-descendants", "unknown"}
 PROVENANCE = {"host-reported", "operator-declared", "unavailable"}
+PHASES = ("pre_review", "review_fixes", "post_review_other", "mixed", "unknown", "legacy_unknown")
 DEFAULT_RETENTION = {"daily": 400, "weekly": 156, "quarterly": 40}
 RETENTION_BOUNDS = {"daily": (90, 730), "weekly": (13, 520), "quarterly": (4, 80)}
 BASE = ".local-codex/control-plane/usage"
@@ -93,7 +96,29 @@ def _retention(value):
 def _empty(retention):
     return {"schema_version": SCHEMA, "revision": 0, "retention": _retention(retention), "streams": {}, "active_epochs": {},
             "totals": {}, "daily": {}, "weekly": {}, "quarterly": {}, "older_quarters": {},
-            "recent": [], "recent_rotated": 0, "last_updated": None}
+            "recent": [], "recent_rotated": 0, "last_updated": None, "phase_contexts": {}, "phase_markers": []}
+
+
+def _migrate_v1(value):
+    """In-memory only; preserve numeric fields, replay digests and stream identity."""
+    def groups(source):
+        result = {}
+        for key, stats in source.items():
+            parts = key.split("|")
+            _need(len(parts) == 3)
+            _need(set(stats) == set(_stats()) - {"phase_basis"})
+            stats["phase_basis"] = [0, 0, stats["intervals"]]
+            result[key + "|" + ("legacy_unknown" if parts[1] == "implementation" else "not_applicable")] = stats
+        return result
+    value["totals"] = groups(value["totals"]); value["older_quarters"] = groups(value["older_quarters"])
+    for period in DEFAULT_RETENTION:
+        for stamp in value[period]: value[period][stamp] = groups(value[period][stamp])
+    for row in value["streams"].values(): row["totals"] = groups(row["totals"])
+    for row in value["recent"]:
+        row["implementation_phase"] = "legacy_unknown" if row["purpose"] == "implementation" else "not_applicable"
+        row["stats"]["phase_basis"] = [0, 0, row["stats"]["intervals"]]
+    value.update(schema_version=SCHEMA, phase_contexts={}, phase_markers=[])
+    return value
 
 
 def _load(root):
@@ -101,10 +126,13 @@ def _load(root):
     if not path.exists():
         return None
     value = read_json(path, maximum=MAX_BYTES)
-    required = (set(_empty(DEFAULT_RETENTION)) - {"active_epochs"}) | {"state_digest"}
+    legacy = value.get("schema_version") == V1_SCHEMA
+    required = (set(_empty(DEFAULT_RETENTION)) - {"active_epochs"} - ({"phase_contexts", "phase_markers"} if legacy else set())) | {"state_digest"}
     fields(value, required | {"active_epochs"}, required)
-    _need(value["schema_version"] == SCHEMA and value["state_digest"] == digest({k: v for k, v in value.items() if k != "state_digest"}),
+    _need(value["schema_version"] in {SCHEMA, V1_SCHEMA} and value["state_digest"] == digest({k: v for k, v in value.items() if k != "state_digest"}),
           "usage.integrity", "Usage storage integrity is unavailable; original bytes were preserved.")
+    from .usage_phases import validate_state
+    if not legacy: validate_state(value)
     _integer(value["revision"]); _integer(value["recent_rotated"])
     _retention(value["retention"])
     _need(isinstance(value["streams"], dict) and len(value["streams"]) <= MAX_STREAMS)
@@ -112,7 +140,7 @@ def _load(root):
     for key in ("daily", "weekly", "quarterly"):
         _need(isinstance(value[key], dict) and len(value[key]) <= value["retention"][key])
     _need(all(isinstance(value[k], dict) for k in ("totals", "older_quarters")))
-    _validate_groups(value["totals"]); _validate_groups(value["older_quarters"])
+    _validate_groups(value["totals"], legacy=legacy); _validate_groups(value["older_quarters"], legacy=legacy)
     for period in DEFAULT_RETENTION:
         for stamp, groups in value[period].items():
             if period == "quarterly":
@@ -120,7 +148,7 @@ def _load(root):
             else:
                 parsed = _time(stamp + "T00:00:00Z")
                 _need(period != "weekly" or parsed.weekday() == 0)
-            _validate_groups(groups)
+            _validate_groups(groups, legacy=legacy)
     row_fields = {"agent", "parent", "mode", "scope", "sequence", "baselines", "totals", "first_at", "ended_at",
                   "last_digest", "model", "source", "purpose_basis"}
     for key, row in value["streams"].items():
@@ -131,7 +159,7 @@ def _load(root):
             if row[name] is not None: _hash(row[name])
         _need(row["mode"] in {"delta", "cumulative"} and row["scope"] in SCOPES and row["purpose_basis"] in {"declared", "inferred", "unavailable"})
         _integer(row["sequence"]); _need(_time(row["first_at"]) <= _time(row["ended_at"]))
-        _validate_groups(row["totals"])
+        _validate_groups(row["totals"], legacy=legacy)
         _need(isinstance(row["baselines"], dict) and set(row["baselines"]) <= set(METRICS))
         for baseline in row["baselines"].values():
             fields(baseline, {"value", "status", "at", "provenance"}, {"value", "status", "at", "provenance"})
@@ -152,11 +180,14 @@ def _load(root):
         _hash(family); _hash(identity); _need(identity in families[family])
     for row in value["recent"]:
         names = {"agent", "sequence", "ended_at", "purpose", "purpose_basis", "outcome", "stats"}
+        if not legacy: names.add("implementation_phase")
         fields(row, names, names); _hash(row["agent"]); _integer(row["sequence"]); _time(row["ended_at"])
         _need(row["purpose"] in PURPOSES and row["purpose_basis"] in {"declared", "inferred", "unavailable"}
               and row["outcome"] in {"succeeded", "failed", "cancelled", "unavailable"})
-        _validate_stats(row["stats"])
+        _validate_stats(row["stats"], legacy=legacy)
+        if not legacy: _need(row["implementation_phase"] in (PHASES if row["purpose"] == "implementation" else {"not_applicable"}))
     if value["last_updated"] is not None: _time(value["last_updated"])
+    if legacy: value = _migrate_v1(value)
     return value
 
 
@@ -190,7 +221,7 @@ def enable(root: Path, retention=None):
 
 def _stats():
     return {"measured": [0] * 4, "estimated": [0] * 4, "known_measured": [0] * 4,
-            "known_estimated": [0] * 4, "unavailable": [0] * 4, "purpose_basis": [0] * 3, "intervals": 0, "coarse": 0}
+            "known_estimated": [0] * 4, "unavailable": [0] * 4, "purpose_basis": [0] * 3, "phase_basis": [0] * 3, "intervals": 0, "coarse": 0}
 
 
 def _hash(value):
@@ -201,26 +232,30 @@ def _family(agent, scope):
     return digest([agent, scope])
 
 
-def _validate_stats(value):
-    fields(value, set(_stats()), set(_stats()))
-    for key, example in _stats().items():
+def _validate_stats(value, *, legacy=False):
+    examples = _stats()
+    if legacy: examples.pop("phase_basis")
+    fields(value, set(examples), set(examples))
+    for key, example in examples.items():
         if isinstance(example, list):
             _need(isinstance(value[key], list) and len(value[key]) == len(example))
             for count in value[key]: _integer(count)
         else:
             _integer(value[key])
     _need(value["coarse"] <= value["intervals"] and sum(value["purpose_basis"]) == value["intervals"])
+    if not legacy: _need(sum(value["phase_basis"]) == value["intervals"])
     for index in range(4):
         _need(value["known_measured"][index] + value["known_estimated"][index] + value["unavailable"][index] == value["intervals"])
 
 
-def _validate_groups(groups):
-    _need(isinstance(groups, dict) and len(groups) <= len(SCOPES) * len(PURPOSES) * len(PROVENANCE))
+def _validate_groups(groups, *, legacy=False):
+    _need(isinstance(groups, dict) and len(groups) <= len(SCOPES) * (len(PURPOSES) if legacy else len(PURPOSES) - 1 + len(PHASES)) * len(PROVENANCE))
     for group, stats in groups.items():
-        _need(isinstance(group, str) and len(group) <= 80)
+        _need(isinstance(group, str) and len(group) <= 100)
         parts = group.split("|")
-        _need(len(parts) == 3 and parts[0] in SCOPES and parts[1] in PURPOSES and parts[2] in PROVENANCE)
-        _validate_stats(stats)
+        _need(len(parts) == (3 if legacy else 4) and parts[0] in SCOPES and parts[1] in PURPOSES and parts[2] in PROVENANCE)
+        if not legacy: _need(parts[3] in (PHASES if parts[1] == "implementation" else {"not_applicable"}))
+        _validate_stats(stats, legacy=legacy)
 
 
 def _merge(target, source):
@@ -263,8 +298,8 @@ EVENT_FIELDS = {"producer", "run_id", "agent_id", "parent_agent_id", "counter_ep
                 "outcome", "counts"}
 
 
-def _event(raw, clock):
-    fields(raw, EVENT_FIELDS, EVENT_FIELDS)
+def _event(raw, clock, *, v2=False):
+    fields(raw, EVENT_FIELDS | ({"attribution"} if v2 else set()), EVENT_FIELDS | ({"attribution"} if v2 else set()))
     for key in ("producer", "run_id", "agent_id", "counter_epoch"):
         _label(raw[key])
     if raw["parent_agent_id"] is not None:
@@ -300,6 +335,14 @@ def _event(raw, clock):
     event = {k: raw[k] for k in ("sequence", "counter_mode", "from_zero", "started_at", "ended_at", "scope", "purpose", "purpose_basis", "provenance", "outcome", "counts")}
     event.update(agent=agent, parent=parent, stream=stream, model=digest(raw["model"]) if raw["model"] else None,
                  source=digest(raw["producer"]))
+    if v2:
+        attribution = raw["attribution"]
+        names = {"work_ref", "context_ref", "source_ref", "position"}
+        fields(attribution, names, names)
+        for key in names - {"position"}:
+            if attribution[key] is not None: _hash(attribution[key])
+        if attribution["position"] is not None: _integer(attribution["position"])
+        event["attribution"] = dict(attribution)
     return event
 
 
@@ -318,9 +361,9 @@ def import_observations(root: Path, manifest, *, at=None):
     """One bounded atomic import. Repeated imports do not repeat consumption."""
     clock = _time(at or now())
     fields(manifest, {"schema_version", "events"}, {"schema_version", "events"})
-    _need(manifest["schema_version"] == IMPORT_SCHEMA and isinstance(manifest["events"], list) and 1 <= len(manifest["events"]) <= MAX_EVENTS)
+    _need(manifest["schema_version"] in {IMPORT_SCHEMA, IMPORT_V2} and isinstance(manifest["events"], list) and 1 <= len(manifest["events"]) <= MAX_EVENTS)
     _need(len(_encoded(manifest)) <= MAX_INPUT_BYTES)
-    events = [_event(raw, clock) for raw in manifest["events"]]
+    events = [_event(raw, clock, v2=manifest["schema_version"] == IMPORT_V2) for raw in manifest["events"]]
     root = root.resolve()
     _directory_clean(root)
     with exclusive_lock(_path(root, "writer.lock"), timeout_seconds=0.2):
@@ -364,6 +407,9 @@ def import_observations(root: Path, manifest, *, at=None):
                 state["active_epochs"][family] = identity
             stats = _stats(); stats["intervals"] = 1
             stats["purpose_basis"][("declared", "inferred", "unavailable").index(event["purpose_basis"])] = 1
+            from .usage_phases import classify
+            phase, phase_basis = classify(state, event)
+            stats["phase_basis"][("declared", "inferred", "unavailable").index(phase_basis)] = 1
             stats["coarse"] = int(event["started_at"][:10] != event["ended_at"][:10])
             for index, metric in enumerate(METRICS):
                 count = event["counts"][metric]
@@ -391,7 +437,7 @@ def import_observations(root: Path, manifest, *, at=None):
                 for status in ("measured", "estimated"):
                     if stats["known_" + status][part] and stats["known_" + status][whole]:
                         _need(stats[status][part] <= stats[status][whole], "usage.subset", "Counter deltas violate cache/reasoning subset semantics; nothing was imported.")
-            group = "|".join(event[k] for k in ("scope", "purpose", "provenance"))
+            group = "|".join(event[k] for k in ("scope", "purpose", "provenance")) + "|" + phase
             _add(row["totals"], group, stats)
             _add(state["totals"], group, stats)
             _prune(state, floors)
@@ -403,7 +449,7 @@ def import_observations(root: Path, manifest, *, at=None):
             row.update(sequence=event["sequence"], ended_at=event["ended_at"], last_digest=event_digest,
                        model=event["model"], source=event["source"], purpose_basis=event["purpose_basis"])
             state["recent"].append({"agent": event["agent"], "sequence": event["sequence"], "ended_at": event["ended_at"],
-                                    "purpose": event["purpose"], "purpose_basis": event["purpose_basis"], "outcome": event["outcome"], "stats": stats})
+                                    "purpose": event["purpose"], "purpose_basis": event["purpose_basis"], "outcome": event["outcome"], "stats": stats, "implementation_phase": phase})
             if len(state["recent"]) > MAX_RECENT:
                 state["recent"].pop(0)
                 state["recent_rotated"] += 1
@@ -420,20 +466,21 @@ def import_observations(root: Path, manifest, *, at=None):
             "warnings": warnings, "summary": summary(root)}
 
 
-def _rollup(groups, *, scope="own", purpose=None):
+def _rollup(groups, *, scope="own", purpose=None, phase=None):
     result = _stats()
     provenance = set()
     for group, stats in groups.items():
-        current_scope, current_purpose, current_provenance = group.split("|")
+        current_scope, current_purpose, current_provenance, current_phase = group.split("|")
         _need(current_scope in SCOPES and current_purpose in PURPOSES and current_provenance in PROVENANCE)
-        if current_scope == scope and (purpose is None or current_purpose == purpose):
+        if current_scope == scope and (purpose is None or current_purpose == purpose) and (phase is None or current_phase == phase):
             _merge(result, stats)
             provenance.add(current_provenance)
     value = {status: {metric: result[status][index] if result["known_" + status][index] else None for index, metric in enumerate(METRICS)}
              for status in ("measured", "estimated")}
     value.update(intervals=result["intervals"], unavailable_fields=dict(zip(METRICS, result["unavailable"])),
                  coarse_intervals=result["coarse"], provenance=sorted(provenance),
-                 purpose_attribution=dict(zip(("declared", "inferred", "unavailable"), result["purpose_basis"])))
+                 purpose_attribution=dict(zip(("declared", "inferred", "unavailable"), result["purpose_basis"])),
+                 phase_attribution=dict(zip(("declared", "inferred", "unavailable"), result["phase_basis"])))
     return value
 
 
@@ -461,7 +508,8 @@ def _summary(root, period=None, limit=8):
     used = _path(root, "state.json").stat().st_size
     if used >= MAX_BYTES * 0.9 or len(state["streams"]) >= MAX_STREAMS * 0.9:
         warnings.append("usage-capacity-near-limit-imports-may-be-refused")
-    trends = {key: [{"period": stamp, "usage": _rollup(groups)} for stamp, groups in sorted(state[key].items())[-(limit if period else (7 if key == "daily" else 8)):]]
+    phases = lambda groups: {phase: _rollup(groups, purpose="implementation", phase=phase) for phase in PHASES}
+    trends = {key: [{"period": stamp, "usage": _rollup(groups), "implementation_phases": phases(groups)} for stamp, groups in sorted(state[key].items())[-(limit if period else (7 if key == "daily" else 8)):]]
               for key in ([period] if period else DEFAULT_RETENTION)}
     rows = sorted(agents.items(), key=lambda pair: (pair[1]["ended_at"], pair[0]), reverse=True)
     reported_parents = {row["parent"] for row in agents.values() if row["parent"]}
@@ -469,7 +517,8 @@ def _summary(root, period=None, limit=8):
         if key in reported_parents:
             return "parent-and-child" if row["parent"] else "parent"
         return "child" if row["parent"] else "unclassified"
-    return {"status": "enabled", "coverage": "partial-or-unavailable", "revision": state["revision"],
+    return {"status": "enabled", "schema_version": "contributor-token-summary-v2", "coverage": "partial-or-unavailable", "revision": state["revision"],
+            "implementation_phases": phases(state["totals"]),
             "last_updated": state["last_updated"], "warnings": warnings, "known_own_subtotal": _rollup(state["totals"]),
             "unaggregated_scopes": {scope: _rollup(state["totals"], scope=scope) for scope in sorted(SCOPES - {"own"})},
             "purpose": {purpose: _rollup(state["totals"], purpose=purpose) for purpose in sorted(PURPOSES)
@@ -477,7 +526,7 @@ def _summary(root, period=None, limit=8):
             "agents_observed": len(agents), "missing_reported_parents": missing_parents, "agents_shown": min(16, len(rows)),
             "agents": [{"alias": "agent-" + key[:12], "parent_alias": "agent-" + row["parent"][:12] if row["parent"] else None,
                         "role": observed_role(key, row), "role_basis": "reported-parent-links",
-                        "own_usage": _rollup(row["totals"]), "last_updated": row["ended_at"]} for key, row in rows[:16]],
+                        "own_usage": _rollup(row["totals"]), "implementation_phases": phases(row["totals"]), "last_updated": row["ended_at"]} for key, row in rows[:16]],
             "trends": trends, "older_quarters": _rollup(state["older_quarters"]),
             "storage": {"bytes": used, "maximum_bytes": MAX_BYTES, "stream_cursors": len(state["streams"]),
                         "maximum_stream_cursors": MAX_STREAMS, "recent_detail": len(state["recent"]),

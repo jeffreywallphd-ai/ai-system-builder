@@ -2,6 +2,7 @@
 let data = null;
 let view = "roadmaps";
 let lastDigest = "";
+let implementationPhaseView = "all";
 let disclosureRepository = null;
 let disclosureIdentityDigest = null;
 const incrementChoices = new Map();
@@ -101,7 +102,9 @@ function tokenUsagePanel(value) {
       const list = el("ul");
       for (const [purpose, usage] of purposes) {
         if (!["planning", "research", "implementation", "tests", "review", "bookkeeping", "mixed", "unclassified"].includes(purpose)) throw new Error("usage purpose");
-        list.append(el("li", `${readable(purpose)}: measured ${pair(usage.measured)}; estimated ${pair(usage.estimated)}.`));
+        if (purpose === "implementation") {
+          for (const [phase, row] of Object.entries(usagePhaseMap(value))) list.append(el("li", `${usagePhaseLabels[phase]}: measured ${pair(row.measured)}; estimated ${pair(row.estimated)}.`));
+        } else list.append(el("li", `${readable(purpose)}: measured ${pair(usage.measured)}; estimated ${pair(usage.estimated)}.`));
       }
       panel.append(el("h3", "Coarse purpose groups"), list);
     }
@@ -119,6 +122,21 @@ function tokenUsagePanel(value) {
 const usageFields = ["input_tokens", "output_tokens", "cached_input_tokens", "reasoning_output_tokens"];
 const usageFieldNames = ["Input", "Output", "Cached input (subset)", "Reasoning output (subset)"];
 const usageRoles = { parent: "Has reported children", child: "Reported child", "parent-and-child": "Child with reported children", unclassified: "Relationship not recorded" };
+const usagePhaseLabels = { pre_review: "Implementation", review_fixes: "Post-review implementation fixes", post_review_other: "Other later implementation", mixed: "Mixed phase", unknown: "Phase unknown", legacy_unknown: "Legacy implementation — phase unknown" };
+function usagePhaseMap(value) {
+  const rows = value.implementation_phases;
+  if (rows === undefined) return value.purpose?.implementation ? { legacy_unknown: usageRollup(value.purpose.implementation) } : {};
+  if (!rows || Array.isArray(rows) || Object.keys(rows).length !== 6 || Object.keys(rows).some(key => !Object.hasOwn(usagePhaseLabels, key))) throw new Error("usage phases");
+  for (const row of Object.values(rows)) usageRollup(row);
+  return rows;
+}
+function phaseUsage(value, overall) {
+  return implementationPhaseView === "all" ? overall : value.implementation_phases?.[implementationPhaseView] || null;
+}
+function phasePair(row, status) {
+  return `${usageNumber(row?.[status].input_tokens ?? null)} / ${usageNumber(row?.[status].output_tokens ?? null)}`;
+}
+
 function usageNumber(value) {
   if (value === null) return "Unavailable";
   if (!Number.isSafeInteger(value) || value < 0) throw new Error("usage number");
@@ -138,6 +156,13 @@ function usageRollup(value) {
     if (value.purpose_attribution[key] === null) throw new Error("usage purpose basis");
     usageNumber(value.purpose_attribution[key]);
   }
+  if (value.phase_attribution !== undefined) {
+    if (!value.phase_attribution || Object.keys(value.phase_attribution).length !== 3) throw new Error("usage phase basis");
+    for (const key of ["declared", "inferred", "unavailable"]) {
+      if (value.phase_attribution[key] === null || value.phase_attribution[key] === undefined) throw new Error("usage phase basis");
+      usageNumber(value.phase_attribution[key]);
+    }
+  }
   if (!Array.isArray(value.provenance) || value.provenance.length > 3 ||
       value.provenance.some(v => !["host-reported", "operator-declared", "unavailable"].includes(v))) throw new Error("usage provenance");
   return value;
@@ -146,6 +171,12 @@ function usageDashboardData(value) {
   if (value?.status !== "enabled") return { status: value?.status === "disabled" ? "disabled" : "unavailable" };
   try {
     usageRollup(value.known_own_subtotal);
+    const phases = usagePhaseMap(value);
+    if (value.implementation_phases !== undefined) for (const status of ["measured", "estimated"]) for (const field of usageFields) {
+      const known = Object.values(phases).map(row => row[status][field]).filter(number => number !== null);
+      const sum = known.length ? known.reduce((total, number) => total + number, 0) : null;
+      if (sum !== null && !Number.isSafeInteger(sum) || sum !== (value.purpose.implementation?.[status][field] ?? null)) throw new Error("usage phase conservation");
+    }
     for (const scope of ["includes-descendants", "unknown"]) usageRollup(value.unaggregated_scopes[scope]);
     for (const name of ["agents_observed", "agents_shown", "missing_reported_parents"]) {
       if (!Number.isSafeInteger(value[name]) || value[name] < 0 || value[name] > 4096) throw new Error("usage agents");
@@ -157,7 +188,7 @@ function usageDashboardData(value) {
           agent.parent_alias !== null && !/^agent-[a-f0-9]{12}$/.test(agent.parent_alias) ||
           agent.role !== undefined && !Object.hasOwn(usageRoles, agent.role) ||
           agent.role_basis !== undefined && agent.role_basis !== "reported-parent-links") throw new Error("usage relationship");
-      seen.add(agent.alias); usageRollup(agent.own_usage);
+      seen.add(agent.alias); usageRollup(agent.own_usage); if (agent.implementation_phases !== undefined) usagePhaseMap(agent);
     }
     const purposes = Object.entries(value.purpose);
     if (purposes.length > 8 || purposes.some(([key]) => !["planning", "research", "implementation", "tests", "review", "bookkeeping", "mixed", "unclassified"].includes(key))) throw new Error("usage purposes");
@@ -175,7 +206,7 @@ function usageDashboardData(value) {
           const date = new Date(`${row.period}T00:00:00Z`);
           if (date.toISOString().slice(0, 10) !== row.period || period === "weekly" && date.getUTCDay() !== 1) throw new Error("usage date");
         }
-        previous = row.period; usageRollup(row.usage);
+        previous = row.period; usageRollup(row.usage); if (row.implementation_phases !== undefined) usagePhaseMap(row);
       }
     }
     if (value.last_updated !== null && (typeof value.last_updated !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value.last_updated) ||
@@ -233,24 +264,31 @@ function tokenUsageDashboard(input) {
   breakdown.append(usageTable("Reported own token counts", ["Count", "Reported measured", "Estimated", "Unavailable field observations"], usageFields.map((field, index) =>
     [usageFieldNames[index], usageNumber(enabled ? own.measured[field] : null), usageNumber(enabled ? own.estimated[field] : null), enabled ? usageNumber(own.unavailable_fields[field]) : "Unavailable"])));
   body.append(breakdown);
+  const phases = usageSection("Implementation phases", "Implementation contains only attributed pre-review work. Review-driven fixes, other later work and legacy or uncertain attribution stay separate. Numeric measurement is independent of declared phase; a crossing response stays mixed or unknown.");
+  phases.append(usageTable("Implementation phase counts", ["Phase", "Measured input / output", "Estimated input / output", "Attribution"], enabled ? Object.entries(usagePhaseMap(value)).map(([phase, row]) =>
+    [usagePhaseLabels[phase], phasePair(row, "measured"), phasePair(row, "estimated"), row.phase_attribution ? ["declared", "inferred", "unavailable"].map(key => usageNumber(row.phase_attribution[key])).join(" / ") : "Unavailable"]) : []));
+  const label = el("label", "Trend and agent view "); label.htmlFor = "usage-phase-filter";
+  const filter = el("select"); filter.id = "usage-phase-filter";
+  for (const [key, title] of Object.entries({ all: "All reported usage", ...usagePhaseLabels })) { const option = el("option", title); option.value = key; option.selected = implementationPhaseView === key; filter.append(option); }
+  filter.addEventListener("change", () => { implementationPhaseView = Object.hasOwn(usagePhaseLabels, filter.value) ? filter.value : "all"; render(); });
+  label.append(filter); phases.append(label); body.append(phases);
   const trends = el("div", undefined, "usage-trends");
   for (const [period, title, maximum] of [["daily", "Daily", 7], ["weekly", "Weekly", 8], ["quarterly", "Quarterly", 8]]) {
     const section = usageSection(`${title} trends`, `Latest ${maximum} reported UTC periods. Sparse reports are attributed to the interval end; multi-day intervals remain coarse.`);
     const rows = enabled ? value.trends[period] : [];
-    section.append(usageTable(`${title} input and output`, ["Period", "Measured input", "Measured output", "Estimated input", "Estimated output", "Coarse intervals"], rows.map(row =>
-      [row.period, usageNumber(row.usage.measured.input_tokens), usageNumber(row.usage.measured.output_tokens), usageNumber(row.usage.estimated.input_tokens), usageNumber(row.usage.estimated.output_tokens), usageNumber(row.usage.coarse_intervals)])));
+    section.append(usageTable(`${title} input and output`, ["Period", "Measured input", "Measured output", "Estimated input", "Estimated output", "Coarse intervals"], rows.map(row => { const selected = phaseUsage(row, row.usage); return [row.period, usageNumber(selected?.measured.input_tokens ?? null), usageNumber(selected?.measured.output_tokens ?? null), usageNumber(selected?.estimated.input_tokens ?? null), usageNumber(selected?.estimated.output_tokens ?? null), selected ? usageNumber(selected.coarse_intervals) : "Unavailable"]; })));
     trends.append(section);
   }
   body.append(trends);
   const purposes = usageSection("Coarse purpose groups", "Purpose comes from declared or inferred task labels. It is separate from measurement status; no per-call category is required.");
-  purposes.append(usageTable("Own usage by purpose", ["Purpose", "Measured input / output", "Estimated input / output", "Declared / inferred / unavailable labels"], enabled ? Object.entries(value.purpose).map(([name, row]) =>
+  purposes.append(usageTable("Own usage by purpose", ["Purpose", "Measured input / output", "Estimated input / output", "Declared / inferred / unavailable labels"], enabled ? Object.entries(value.purpose).filter(([name]) => name !== "implementation").map(([name, row]) =>
     [readable(name), `${usageNumber(row.measured.input_tokens)} / ${usageNumber(row.measured.output_tokens)}`, `${usageNumber(row.estimated.input_tokens)} / ${usageNumber(row.estimated.output_tokens)}`,
       ["declared", "inferred", "unavailable"].map(key => usageNumber(row.purpose_attribution[key])).join(" / ")]) : []));
   body.append(purposes);
   const agents = usageSection("Observed agent relationships", "Relationships use reported parent links only. They do not identify job roles or prove that every child is represented. Aliases hide original agent identifiers.");
   agents.append(usageTable("Own usage by reported agent", ["Agent alias", "Observed relationship", "Reported parent", "Measured input / output", "Estimated input / output"], enabled ? value.agents.map(agent =>
-    [agent.alias, usageRoles[agent.role] || usageRoles.unclassified, agent.parent_alias || "Not recorded", `${usageNumber(agent.own_usage.measured.input_tokens)} / ${usageNumber(agent.own_usage.measured.output_tokens)}`,
-      `${usageNumber(agent.own_usage.estimated.input_tokens)} / ${usageNumber(agent.own_usage.estimated.output_tokens)}`]) : []));
+    [agent.alias, usageRoles[agent.role] || usageRoles.unclassified, agent.parent_alias || "Not recorded", phasePair(phaseUsage(agent, agent.own_usage), "measured"),
+      phasePair(phaseUsage(agent, agent.own_usage), "estimated")]) : []));
   body.append(agents);
   const excluded = usageSection("Separately reported scopes", "These counts are excluded from the own subtotal. Parent rollups plus children are not added together.");
   excluded.append(usageTable("Scopes outside the own subtotal", ["Scope", "Measured input / output", "Estimated input / output"], enabled ? ["includes-descendants", "unknown"].map(scope => {

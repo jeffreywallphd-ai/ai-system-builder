@@ -199,6 +199,24 @@ and unsupported custom paths fail before creation.
 
 ## Evaluation and feedback
 
+Numeric usage v2 adds fixed implementation phases, independent of activity,
+measurement and provider assurance. v1 read-time migration preserves numbers,
+stream/epoch/sequence/baseline identity and latest replay digests. Old
+implementation cells become legacy unknown in memory; only a successful mutation
+publishes v2. Lifetime, periods and agents use the same phase cells. Work/review
+IDs never become rollup dimensions. Raw purpose remains an activity total; the
+user-facing Implementation metric is exclusively pre-review. Subsets stay subsets.
+
+`usage_phases.py` owns bounded usage-only context/markers under the existing
+writer lock. Context hashes owning checkout, exact Work/spec and candidate/ref
+identity and binds explicitly selected host threads. Imports revalidate live
+context refs under that lock. The first response after an observed source-position
+fence stays mixed/unknown because it may have been in flight. Later bounded
+cutpoints support declared attribution, without wall-time proportions or epoch
+resets. Conflicting Work associations stay mixed; unavailable fences unknown.
+Work hooks run after normal mutations and never mutate Work during verification
+or supply approval. One existing summary and local UI filter preserve paging.
+
 Optional contributor token accounting uses a separate versioned numeric sidecar,
 not Work qualification or trial run admission. Its normalized host import has no
 provider connection, transcript reader or background poller. Atomic publication

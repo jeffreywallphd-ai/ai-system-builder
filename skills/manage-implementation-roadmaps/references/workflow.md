@@ -1,5 +1,14 @@
 # Implementation roadmap workflow
 
+Where the target repository provides optional token attribution, use its
+`usage phase --from` `review-start` marker at the existing substantive review
+handoff and `correction-resume` before genuine fixes. Bind actual Work/source/
+review or declared advisory refs and known threads. New Work is `pre_review`
+unless explicitly linked to predecessor corrections. Unknown intervals stay
+unknown; review/tests/bookkeeping remain separate. This optional telemetry adds
+no approval gate or model call and cannot mutate Work during concurrent checks.
+Repositories without that adapter retain their existing workflow.
+
 Publication retains the complete JSON state under the existing one-MiB reader
 limit. Small records use indentation; larger records use canonical compact JSON
 with LF/CRLF headroom. The actual complete recovery journal must also fit before

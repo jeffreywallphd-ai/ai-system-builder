@@ -37,6 +37,37 @@ function dashboardFixture() {
     storage: { bytes: 3456, maximum_bytes: 4194304, stream_cursors: 2, maximum_stream_cursors: 4096, recent_detail: 3, recent_detail_compacted: 0 },
     trends: { daily: [{ period: "2026-11-24", usage: own }], weekly: [{ period: "2026-11-23", usage: own }], quarterly: [{ period: "2026-Q4", usage: own }] } };
 }
+test("phase dashboard keeps implementation exclusive and filters all bounded periods and agents without new polling", async () => {
+  const dom = new JSDOM(readFileSync('dev-tools/review-site/index.html', 'utf8'), { runScripts: 'outside-only', url: 'http://127.0.0.1:8766' });
+  const { window } = dom; const value = dashboardFixture(); let requests = 0, timers = 0;
+  const phaseKeys = ['pre_review', 'review_fixes', 'post_review_other', 'mixed', 'unknown', 'legacy_unknown'];
+  const inputs = [30,20,10,5,15,20], outputs = [6,4,2,1,3,4], caches = [9,6,3,1,5,6], reasoning = [1,1,1,0,1,1];
+  value.implementation_phases = Object.fromEntries(phaseKeys.map((key,index) => [key, { ...dashboardRollup({input_tokens:inputs[index],output_tokens:outputs[index],cached_input_tokens:caches[index],reasoning_output_tokens:reasoning[index]}, index === 0 ? {output_tokens:0} : {}), phase_attribution: {declared:index<3?1:0,inferred:0,unavailable:index<3?0:1} }]));
+  value.agents[0].implementation_phases = structuredClone(value.implementation_phases);
+  for (const rows of Object.values(value.trends)) for (const row of rows) row.implementation_phases = structuredClone(value.implementation_phases);
+  const response = { schema_version:'development-review-v1', repository_id:'phases', source_digest:'first', roadmaps:[], work_items:[], evaluations:[], feedback:[], diagnostics:[], token_usage:value };
+  window.fetch = async () => { requests++; return {ok:true,json:async()=>structuredClone(response)}; };
+  window.setInterval = () => {timers++;return 1;};
+  try {
+    window.eval(readFileSync('dev-tools/review-site/app.js','utf8'));await pause();window.document.querySelector('[data-view="token_usage"]').click();await pause();
+    const find = caption => [...window.document.querySelectorAll('table')].find(table=>table.caption?.textContent===caption);
+    const phases = [...find('Implementation phase counts').querySelectorAll('tbody tr')];
+    assert.deepEqual([...phases[0].children].slice(0,2).map(node=>node.textContent),['Implementation','30 / 6']);
+    assert.match(phases[1].textContent,/Post-review implementation fixes20 \/ 4/);
+    assert.match(phases[5].textContent,/Legacy implementation/);
+    assert.ok(![...find('Own usage by purpose').querySelectorAll('tbody tr')].some(row=>row.children[0].textContent==='Implementation'));
+    const previous = requests; const filter = window.document.querySelector('#usage-phase-filter');filter.value='review_fixes';filter.dispatchEvent(new window.Event('change'));
+    for (const title of ['Daily','Weekly','Quarterly']) assert.deepEqual([...find(`${title} input and output`).querySelector('tbody tr').children].slice(1,3).map(node=>node.textContent),['20','4']);
+    assert.match(find('Own usage by reported agent').textContent,/20 \/ 4/);
+    assert.equal(requests,previous);assert.equal(timers,1);
+    for (const corrupt of [v=>{v.implementation_phases.pre_review.measured.input_tokens=31;},v=>{v.implementation_phases.extra='<img src=x>';},v=>{v.implementation_phases.pre_review.phase_attribution.declared=Infinity;}]) {
+      const saved=structuredClone(value);corrupt(value);response.source_digest+='x';window.document.querySelector('#refresh').click();await pause();
+      assert.deepEqual([...window.document.querySelectorAll('#summary strong')].map(node=>node.textContent),Array(4).fill('Unavailable'));
+      assert.equal(window.document.querySelectorAll('img').length,0);Object.assign(value,saved);
+    }
+    window.document.querySelector('[data-view="work_items"]').click();assert.equal(window.document.querySelector('#heading').textContent,'Work items');
+  } finally {window.close();}
+});
 test("token dashboard navigates existing bounded pages and keeps statuses subsets roles and themes honest", async () => {
   const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
   const { window } = dom; const urls = []; let timers = 0;

@@ -11,6 +11,16 @@ resume faithfully without committing verbose progress reports.
 
 ## Start
 
+When the target repository provides optional token phase telemetry, use its
+`usage phase --from` protocol at the existing `review-start` handoff and
+`correction-resume` boundary. Keep explicit Work/thread association; do not infer
+host IDs from invocation names. New Work uses `pre_review` unless explicitly
+linked to a predecessor correction. Review/tests/planning/bookkeeping remain
+separate; legacy and ambiguous attribution stay unknown. This is optional
+telemetry, never an approval gate or a reason to delay approved work.
+Portable repositories without that adapter retain their existing workflow.
+These token phases do not rename roadmap increments or add execution stages.
+
 When the target repository provides the development control plane linked from
 `AGENTS.md`, read that guide, start or safely reuse its JSON-backed review site,
 and provide the verified link on workflow work requests. Keep this skill's

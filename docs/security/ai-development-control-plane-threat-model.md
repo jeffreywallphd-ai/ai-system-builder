@@ -242,6 +242,25 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
+Prospective phase attribution protects integrity separately from numeric status.
+Use strict v2 contracts, fixed enums, opaque owning-checkout/Work/spec/source/review
+refs and exact selected-thread association. Never guess UUIDs from invocations or
+retain free-text findings, code or prompts. Read v1 in memory without publication,
+preserving numeric totals and replay digests; migration/cap failures preserve bytes.
+The usage lock serializes markers/counters and revalidates context after source
+reads. Crossing, missing, multiple unconsumed or overlapping contexts stay mixed
+or unknown. Canonical corrections require current changes-requested refs;
+source-bound advisories remain declared, never fabricated review dispositions.
+
+Cap contexts at16 and recent marker refs at64. Old marker requests use expected
+context refs; reviewed context cannot revert to initial. Closed context compaction
+preserves permanent cursors/aggregates. Keep4MiB/128detail/4096cursors and period
+retention. No arbitrary Work/finding IDs enter permanent rollups or public output.
+Known failed transitions attempt to invalidate attribution; lock/I/O failure can
+prevent even metadata publication, so refresh the marker before relying on phase.
+Unreported boundaries/activity cannot be authenticated from counters. Telemetry
+never gates quality/approval. Inert UI validation preserves legacy/unknown and null.
+
 The opted-in local counter source is a narrowly selected user-authorized read
 boundary, not general transcript access. Resolve only exact known UUID filenames
 in three bounded creation-day directories under the documented session root.

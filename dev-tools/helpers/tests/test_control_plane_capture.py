@@ -93,6 +93,8 @@ class CaptureTests(unittest.TestCase):
         self.assertTrue(result["status"]["live_capture"])
         self.assertEqual(result["status"]["last_actual_event_at"], T1)
         self.assertEqual(result["billing_assurance"], "not-attested")
+        self.assertEqual(result["implementation_phase"], "unknown")
+        self.assertIsNone(usage.summary(self.root)["implementation_phases"]["pre_review"]["measured"]["input_tokens"])
 
     def test_identical_counters_are_noop_and_cannot_refresh_stale_capture(self):
         self.call(self.frame(), self.frame(T1, (150, 30, 20, 8)))

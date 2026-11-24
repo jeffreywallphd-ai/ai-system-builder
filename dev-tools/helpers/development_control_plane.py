@@ -30,6 +30,8 @@ def parser():
     start.add_argument("--from", dest="input", required=True)
     start.add_argument("--invocation", required=True)
     start.add_argument("--minutes", type=int, default=120)
+    start.add_argument("--correction-of")
+    start.add_argument("--review-ref")
     plan = sub.add_parser("plan-checks")
     plan.add_argument("work_id")
     for command in ("verify", "complete", "renew", "release", "recover-claim"):
@@ -61,7 +63,7 @@ def parser():
     compare = sub.add_parser("compare-trials")
     compare.add_argument("trial_ids", nargs="+")
     usage = sub.add_parser("usage", help="Optional bounded numeric usage import and UTC trends; never gates Work")
-    usage.add_argument("operation", choices=("enable", "import", "summary", "capture", "session-start", "local-enable", "local-poll"))
+    usage.add_argument("operation", choices=("enable", "import", "summary", "capture", "session-start", "local-enable", "local-poll", "phase", "phase-status"))
     usage.add_argument("--session")
     usage.add_argument("--thread", action="append", default=[])
     usage.add_argument("--capture-destination")
@@ -94,7 +96,15 @@ def main(argv=None):
             result = run_from(root, args.operation, args.input)
         elif args.command == "usage":
             from control_plane import usage
-            if args.operation in {"local-enable", "local-poll"}:
+            if args.operation == "phase-status":
+                from control_plane.usage_phases import status
+                result = status(root)
+            elif args.operation == "phase":
+                from control_plane.usage_phases import command
+                if not args.input or not args.input.startswith(".local-codex/"):
+                    raise ControlError("phase.private-input", "Select a bounded ignored phase request.", {}, [])
+                result = command(root, read_json(confined_path(root, relative(args.input)), maximum=32*1024))
+            elif args.operation in {"local-enable", "local-poll"}:
                 from control_plane import usage_local
                 result = usage_local.poll(root) if args.operation == "local-poll" else usage_local.enable(
                     root, thread_ids=args.thread or [args.session or os.environ.get("CODEX_THREAD_ID")],
@@ -114,7 +124,8 @@ def main(argv=None):
         elif args.command == "recover":
             result = {"recovered": work.records.recover()}
         elif args.command == "start":
-            result = work.start(read_json(confined_path(root, relative(args.input))), args.invocation, args.minutes)
+            result = work.start(read_json(confined_path(root, relative(args.input))), args.invocation, args.minutes,
+                                usage_correction_of=args.correction_of, usage_review_ref=args.review_ref)
         elif args.command == "plan-checks":
             result = work.plan(args.work_id)
         elif args.command == "verify":

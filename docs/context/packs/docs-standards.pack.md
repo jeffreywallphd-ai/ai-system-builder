@@ -21,6 +21,11 @@
 
 ## Core Guidance
 
+- Token phase attribution is prospective optional telemetry. Use `usage phase`
+  at review-start/correction-resume boundaries with explicit Work/thread
+  association. Legacy and uncertain intervals are not pre-review implementation.
+  Keep the token guide's v2 migration, atomic bounds and existing approval gates.
+
 - Contributor token tracking is optional numeric telemetry with bounded day/week/
   quarter trends. Use the control-plane guide's authorized import seam when a host
   supplies counters; unavailable usage never gates Work. Do not scan transcripts,

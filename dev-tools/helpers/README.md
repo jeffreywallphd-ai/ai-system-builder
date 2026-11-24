@@ -2,6 +2,13 @@
 
 # Contributor helpers
 
+Optional [token phases](../../docs/diagnostics/token-usage-tracking.md) use
+`usage phase --from` at existing review handoff/correction boundaries. Work start
+associates the calling known thread; source-bound markers never guess host UUIDs
+from invocation labels or mutate Work during verification. The v2 reader
+preserves v1 counters/replay and labels old implementation phase unknown.
+Telemetry never grants qualification or approval authority.
+
 Optional [token tracking](../../docs/diagnostics/token-usage-tracking.md) uses
 `usage enable`, `usage import --from` and `usage summary` through the control
 plane. Authorized numeric exports retain bounded day/week/quarter/lifetime

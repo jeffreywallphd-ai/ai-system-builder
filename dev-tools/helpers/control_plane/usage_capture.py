@@ -179,7 +179,7 @@ def capture(root: Path, *, session, config_path=CONFIG, source=None, at=None):
         accepted = 0
     return {"schema_version": "token-capture-receipt-v1", "adapter": PROTOCOL, "source_events_validated": len(frames),
             "observations_accepted": accepted, "duplicate_counter_snapshots": duplicates, "initial_baselines": baselines,
-            "status": _status(root, config, selected, clock), "billing_assurance": "not-attested"}
+            "status": _status(root, config, selected, clock), "billing_assurance": "not-attested", "implementation_phase": "unknown"}
 
 
 def _status(root, config, selected, clock):

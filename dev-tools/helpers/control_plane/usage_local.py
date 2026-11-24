@@ -7,6 +7,7 @@ file remains the only counter/sequence authority; no raw-event archive exists.
 from __future__ import annotations
 
 import json
+import copy
 import os
 import re
 import stat
@@ -126,7 +127,7 @@ def _stamp(value):
     return parsed.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _read_source(root, identity, workspace, primary, clock, *, minimum_offset=0, establish=False):
+def _read_source(root, identity, workspace, primary, clock, *, minimum_offset=0, establish=False, cut_position=None):
     path = _source_path(identity)
     with path.open("rb") as stream:
         before = os.fstat(stream.fileno())
@@ -160,7 +161,7 @@ def _read_source(root, identity, workspace, primary, clock, *, minimum_offset=0,
         # Never decode the partial row being concurrently appended.
         complete = payload.rpartition(b"\n")[0]
         incomplete = not payload.endswith(b"\n")
-        latest = None; selected = 0; foreign = 0; oversized = 0
+        latest = boundary = None; selected = 0; foreign = 0; oversized = 0
         offset = start
         for raw_line in complete.splitlines(keepends=True):
             record_offset = offset; offset += len(raw_line)
@@ -186,13 +187,14 @@ def _read_source(root, identity, workspace, primary, clock, *, minimum_offset=0,
             if latest and not establish:
                 _need(ended >= latest["at"] and all(counts[key] >= latest["counts"][key] for key in usage.METRICS), "local-capture.nonmonotonic")
             latest = {"at": ended, "counts": counts, "offset": record_offset}; selected += 1
+            if cut_position is not None and boundary is None and record_offset >= cut_position: boundary = dict(latest)
         stream.seek(0)
         _need(usage.digest(stream.readline(MAX_HEADER + 1).hex()) == header_digest, "local-capture.header-changed")
         after = os.fstat(stream.fileno())
         current = path.stat()
         _need((before.st_dev, before.st_ino) == (after.st_dev, after.st_ino) == (current.st_dev, current.st_ino) and
               after.st_size >= before.st_size and current.st_size >= before.st_size, "local-capture.source-changed")
-    return {"identity": identity, "parent": parent, "source_id": source_id, "latest": latest,
+    return {"identity": identity, "parent": parent, "source_id": source_id, "latest": latest, "boundary": boundary, "snapshot_end": before.st_size,
             "records_selected": selected, "inherited_records_ignored": foreign, "oversized_rows_skipped": oversized,
             "partial_append": incomplete, "tail_only": start > 0}
 
@@ -234,7 +236,7 @@ def _event(workspace, binding, source):
             "model": None, "outcome": "unavailable", "counts": {key: {"value": value, "status": "measured"} for key, value in latest["counts"].items()}}
 
 
-def poll(root: Path, *, at=None):
+def poll(root: Path, *, at=None, attribution_unknown=False):
     """Read at most16 selected bounded tails once; errors never gate contributor work."""
     try:
         root = root.resolve(); config = _config(root)
@@ -244,32 +246,52 @@ def poll(root: Path, *, at=None):
         destination = Path(config["destination"]) if config["destination"] else root
         _need(_repository(destination)[0] == workspace, "local-capture.destination")
         clock = usage._time(at or now()); sources = []
+        state = usage._load(destination)
         for binding in config["threads"]:
             _need(time.monotonic() < deadline, "local-capture.time-cap")
-            source = _read_source(root, binding["thread_id"], workspace, primary, clock, minimum_offset=binding["minimum_offset"])
+            agent = usage.digest([PROTOCOL, workspace, binding["thread_id"]])
+            context = state["phase_contexts"].get(agent) if state else None
+            cut = context["fence"] if context and not context["settled"] and context["source_ref"] == binding["source_id"] else None
+            source = _read_source(root, binding["thread_id"], workspace, primary, clock, minimum_offset=binding["minimum_offset"], cut_position=cut)
             _need(source["source_id"] == binding["source_id"] and source["parent"] == binding["parent_id"], "local-capture.source-replaced")
-            sources.append((binding, source))
+            sources.append((binding, source, context))
         _need(time.monotonic() < deadline, "local-capture.time-cap")
-        state = usage._load(destination)
+        cursors = copy.deepcopy(state["streams"]) if state else {}
+        active = dict(state["active_epochs"]) if state else {}
         events = []; duplicates = missing = 0; identities = []
-        for binding, source in sources:
+        for binding, source, context in sources:
             if source["latest"] is None: missing += 1; continue
-            event = _event(workspace, binding, source)
-            identity = usage._event(event, clock); identities.append(identity)
-            row = state["streams"].get(identity["stream"]) if state else None
-            if row:
-                _need(state["active_epochs"].get(usage._family(identity["agent"], "own")) == identity["stream"], "local-capture.retired-epoch")
-                _need(row["mode"] == "cumulative" and row["scope"] == "own" and row["parent"] == identity["parent"], "local-capture.stream-collision")
-                previous = {metric: row["baselines"][metric]["value"] for metric in usage.METRICS}
-                _need(all(row["baselines"][key]["status"] == "measured" and row["baselines"][key]["provenance"] == "host-reported" for key in usage.METRICS))
-                if source["latest"]["counts"] == previous: duplicates += 1; continue
-                _need(all(source["latest"]["counts"][key] >= previous[key] for key in usage.METRICS), "local-capture.counter-decrease")
-                event.update(sequence=row["sequence"] + 1, started_at=row["ended_at"])
-            events.append(event)
+            points = [source["latest"]]
+            if source["boundary"] and source["boundary"]["offset"] != source["latest"]["offset"]:
+                points.insert(0, source["boundary"])
+            for point in points:
+                event = _event(workspace, binding, {"latest": point})
+                if context and context["active"] and context["activity"] is not None:
+                    event["purpose"] = context["activity"]; event["purpose_basis"] = "declared"
+                identity = usage._event(event, clock)
+                row = cursors.get(identity["stream"])
+                if row:
+                    _need(active.get(usage._family(identity["agent"], "own")) == identity["stream"], "local-capture.retired-epoch")
+                    _need(row["mode"] == "cumulative" and row["scope"] == "own" and row["parent"] == identity["parent"], "local-capture.stream-collision")
+                    previous = {metric: row["baselines"][metric]["value"] for metric in usage.METRICS}
+                    _need(all(row["baselines"][key]["status"] == "measured" and row["baselines"][key]["provenance"] == "host-reported" for key in usage.METRICS))
+                    if point["offset"] != source["latest"]["offset"] and all(point["counts"][key] <= previous[key] for key in usage.METRICS):
+                        continue  # a bounded cutpoint already consumed on an earlier poll
+                    if point["counts"] == previous: duplicates += 1; continue
+                    _need(all(point["counts"][key] >= previous[key] for key in usage.METRICS), "local-capture.counter-decrease")
+                    event.update(sequence=row["sequence"] + 1, started_at=row["ended_at"])
+                active[usage._family(identity["agent"], "own")] = identity["stream"]
+                cursors[identity["stream"]] = {"mode": "cumulative", "scope": "own", "parent": identity["parent"],
+                    "sequence": event["sequence"], "ended_at": point["at"],
+                    "baselines": {key: {**value, "provenance": "host-reported"} for key, value in event["counts"].items()}}
+                event["attribution"] = {"work_ref": context["work_ref"] if context else None,
+                    "context_ref": context["ref"] if context and not attribution_unknown else None, "source_ref": source["source_id"], "position": point["offset"]}
+                events.append(event)
+            identities.append(identity)
         accepted = stale_sequences = 0
         if events:
             if state is None: usage.enable(destination)
-            imported = usage.import_observations(destination, {"schema_version": usage.IMPORT_SCHEMA, "events": events}, at=at)
+            imported = usage.import_observations(destination, {"schema_version": usage.IMPORT_V2, "events": events}, at=at)
             accepted = imported["accepted"]
             duplicates += imported["duplicates"]
             stale_sequences = imported["older_sequences_not_recounted"]
@@ -290,9 +312,9 @@ def poll(root: Path, *, at=None):
                 "missing_selected_threads": missing, "last_actual_event_at": latest_actual, "unreported_agents": "unknown",
                 "observations_accepted": accepted, "duplicate_counter_snapshots": duplicates,
                 "stale_sequences_not_recounted": stale_sequences, "scopes": ["own"],
-                "bounded_tail_only": any(source["tail_only"] for _, source in sources),
-                "oversized_rows_skipped": sum(source["oversized_rows_skipped"] for _, source in sources),
-                "partial_append_threads": sum(source["partial_append"] for _, source in sources)}
+                "bounded_tail_only": any(source["tail_only"] for _, source, _ in sources),
+                "oversized_rows_skipped": sum(source["oversized_rows_skipped"] for _, source, _ in sources),
+                "partial_append_threads": sum(source["partial_append"] for _, source, _ in sources)}
     except (ControlError, OSError, ValueError, TypeError, KeyError, IndexError, OverflowError, RecursionError, subprocess.SubprocessError) as error:
         return _unavailable(error.code if isinstance(error, ControlError) else "local-capture.source-unavailable")
 
@@ -358,10 +380,10 @@ def session_start(root: Path, *, session=None, at=None):
         return _unavailable(error.code if isinstance(error, ControlError) else "local-capture.source-unavailable")
 
 
-def configured_boundary(root: Path):
+def configured_boundary(root: Path, *, attribution_unknown=False):
     """No configuration means no source lookup, source read or store creation."""
     try:
         if not usage_capture._file(root.resolve(), CONFIG).exists(): return None
-        return poll(root)
+        return poll(root, attribution_unknown=attribution_unknown)
     except (ControlError, OSError, ValueError, TypeError):
         return _unavailable("local-capture.configuration-unavailable")

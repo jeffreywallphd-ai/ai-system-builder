@@ -7,6 +7,111 @@ Imports are optional at existing handoff/completion boundaries. Coding-session
 initialization validates capture once and never gates work; no polling, extra
 model call, per-call label or approval stage is added.
 
+## Prospective implementation phases (v2)
+
+The dashboard label **Implementation** contains only attributed `pre_review`
+counts. `review_fixes`, `post_review_other`, `mixed`, `unknown` and
+`legacy_unknown` remain separate. Review, tests, planning/research and bookkeeping
+remain their own activity purposes. Numeric measured/estimated/unavailable status
+is independent of declared/inferred/unavailable attribution. A phase label is
+coarse Work context, not proof of a token's semantic purpose or billable cost.
+
+Work start associates the calling known `CODEX_THREAD_ID` with the owning
+checkout/Work/spec, when that selected source is configured. It never derives a
+thread ID from an invocation name or associates every reviewer/child automatically.
+For Work already started before this version, or an explicitly delegated author,
+use an `associate` request with its exact known `agents` UUID list. Startup alone
+does not guess an active Work from unrelated claims. A source/thread can have
+conflicting active Work; that overlap stays mixed until explicitly disambiguated.
+
+At the **actual first substantive technical review handoff**, including early
+static/code/security review before formal disposition, invoke:
+
+```text
+python dev-tools/helpers/development_control_plane.py usage phase --from .local-codex/review-start.json
+```
+
+```json
+{
+  "schema_version": "usage-phase-command-v1",
+  "operation": "review-start",
+  "work_id": "example-work",
+  "marker_id": "review-round-one",
+  "source_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}
+```
+
+Use the actual frozen source digest, not the example digest. Omitted `agents`
+selects only already-associated authors for that exact owning Work. The request
+is limited to32KiB under ignored storage, with no code/finding prose or prompts.
+It is optional telemetry at the existing handoff, never a review approval gate.
+Existing Work review decisions reconcile later phase but cannot reconstruct when
+substantive review began. Verification and test failures alone do not start review.
+
+Before genuine reviewer-driven implementation changes, use the same request
+shape with `operation: correction-resume`, a new marker ID and the actual
+`review_ref` digest of the current `changes-requested` decision. An ordinary
+post-review bug or approved scope addition uses `later` or a new Work, respectively;
+it does not become reviewer-caused effort by chronology. Source-bound advisory
+fixes can instead supply `advisory_ref` (SHA256), `source_ref` and one to eight
+bounded `finding_refs`. They remain declared advisory attribution and never
+fabricate a canonical rejection or supply technical qualification.
+
+New Work is initial by default. A successor solely closing a predecessor finding
+can use `start ... --correction-of <prior-work-id> --review-ref <actual-digest>`;
+that changes only optional attribution, not Work scope/approval. A canonical
+correction must reference the current changes-requested decision, not a closed
+historical rejection. Several review rounds accumulate in fixes without new
+permanent aggregate categories. `activity` requests can set any existing coarse
+activity purpose at a useful boundary; no per-call labels are required.
+
+A marker performs a best-effort bounded capture then records the observed source
+position fence atomically with context under the existing usage writer. Source
+reads retain at most the first response after that fence and the latest snapshot.
+The first post-fence response stays mixed/unknown because it might have been in
+flight; later supported cumulative spans can use the declared phase. Missing,
+lagging or out-of-tail cutpoints, multiple unconsumed transitions and stale context
+refs are not pre-review. The importer revalidates the live context under its lock,
+so a concurrent review-start cannot import an earlier captured pre-review label.
+No time prorating, new epoch/baseline or per-response-plus-cumulative doublecount.
+
+Markers are idempotent; changed contents with a repeated marker ID refuse.
+Expected context refs protect delayed marker requests. The writer retains at most
+16 contexts and64 recent marker references; closed context metadata can compact,
+while numeric cursors/aggregates remain. No Work/review/finding IDs become rollup
+keys. Failed transition metadata attempts to invalidate attribution; a storage or
+lock failure can prevent even that write. Report unavailable and refresh a marker
+before relying on phase; no work/quality action is blocked. Unreported transitions
+cannot be authenticated from numeric counters.
+
+Once the64-reference window is full, a new external request must include
+`expected_contexts`; recent retained requests still deduplicate first. Use the
+read-only `usage phase-status` to obtain opaque agent aliases and current context
+refs, then include `{ "agent-<alias>": "<current-context-ref>" }` for each selected
+author. Exact known UUID keys are also accepted. Persist those expected refs with
+the request when retrying it; an expired old marker cannot obtain a fresh expected
+ref implicitly. Source lifecycle wrappers supply live refs for actual immutable
+Work transitions. No reference ledger grows beyond the fixed ring.
+
+Storage/import/readout are explicitly versioned. Reading v1 migrates only in
+memory: old implementation becomes legacy unknown with exactly the same numeric
+values, epoch/sequence/baselines and latest-event replay digest. Summaries do not
+write. A later successful numeric/marker publication writes v2; capacity/atomic
+failure preserves old bytes. Future unassociated v1/manual/external observations
+are unknown, not historical or initial. No historical totals are reallocated.
+The raw `purpose.implementation` field remains the all-phase activity aggregate
+for conservation; the exclusive displayed metric is
+`implementation_phases.pre_review`. Phase tables are breakdowns, never extra
+usage. The same fixed cells persist in lifetime/day/week/quarter/agent aggregates.
+4MiB storage,128 detail,4096 cursors and400day/156week/40quarter retention remain.
+
+For activation, integrate the complete reader/writer/UI first and restart the
+read-only review server with the new code **before the first v2 writer runs**.
+An old v1 server deliberately cannot read v2. Then initialize/poll using only the
+explicit destination; never copy/sum independent stores. Old v1 data and old
+readout fixtures remain visible as legacy unknown; no rollback may rewrite a v2
+store into a guessed v1 file. Preserve it and run the compatible reader.
+
 ## Selected local response capture
 
 `usage session-start` selects only the current known `CODEX_THREAD_ID` unless an
