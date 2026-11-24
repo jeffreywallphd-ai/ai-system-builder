@@ -254,7 +254,7 @@ class SupportTests(Fixture):
         self.assertEqual(self.call("progress", packet_id="progress")["status"], "needs-input")
         self.assertEqual(digest(self.work.records.load()), before)
 
-    def test_progress_uses_canonical_loader_whole_plan_digest_and_pure_engine(self):
+    def progress_fixture(self):
         # Use the actual portable engine and its own maintained fixture builders.
         fixture_path = HELPERS.parents[1] / "skills/manage-implementation-roadmaps/tests/test_roadmap.py"
         spec = importlib.util.spec_from_file_location("support_roadmap_fixtures", fixture_path)
@@ -277,6 +277,10 @@ class SupportTests(Fixture):
         event = {"type": "work-chunks-reconfigured", "incrementId": "slice", "plan": replacement, "authorityRef": "fixture-tracking-authority", "reason": "Synthetic authorized tracking refinement"}
         work = copy.deepcopy(self.work.records.load()["work_items"]["fixture-work"])
         work["spec"]["roadmap"] = {"state_path": config["statePath"], "increment_id": "slice"}
+        return engine, work, event, config, current_plan
+
+    def test_progress_uses_canonical_loader_whole_plan_digest_and_pure_engine(self):
+        engine, work, event, config, current_plan = self.progress_fixture()
         raw_before = (self.root / config["statePath"]).read_bytes()
         with patch.object(support, "_engine", return_value=engine), patch.object(engine, "load_state", wraps=engine.load_state) as loader:
             result = support._progress(self.request(events=[event]), work, support.Files(self.root))
@@ -292,6 +296,58 @@ class SupportTests(Fixture):
         event["expectedPlanDigest"] = current_plan["fingerprint"]
         with patch.object(support, "_engine", return_value=engine), self.assertRaises(ControlError):
             support._progress(self.request(events=[event]), work, support.Files(self.root))
+
+    def test_progress_explains_missing_authority_and_stored_plan_metadata_together(self):
+        engine, work, event, config, _ = self.progress_fixture()
+        del event["authorityRef"]
+        event["plan"].update(recordedAt="synthetic-private-value", fingerprint="synthetic-private-value", outlineOnly=False)
+        original = copy.deepcopy(event)
+        raw = (self.root / config["statePath"]).read_bytes()
+        records = digest(self.work.records.load())
+        with patch.object(support, "_engine") as loader:
+            result = support._progress(self.request(events=[event]), work, support.Files(self.root))
+        loader.assert_not_called()
+        self.assertEqual(result["status"], "needs-input")
+        self.assertEqual(result["needed"], ["events[0].authorityRef", "events[0].plan"])
+        self.assertEqual(result["input_diagnostics"][0]["fields"], ["recordedAt", "fingerprint", "outlineOnly"])
+        self.assertNotIn("synthetic-private-value", json.dumps(result))
+        self.assertEqual(event, original)
+        self.assertEqual((self.root / config["statePath"]).read_bytes(), raw)
+        self.assertEqual(digest(self.work.records.load()), records)
+        self.assertFalse((self.root / support.DIRECTORY).exists())
+        # Only the caller supplies real authority and removes record metadata.
+        event["authorityRef"] = "explicit-fixture-authority"
+        for name in ("recordedAt", "fingerprint", "outlineOnly"):
+            del event["plan"][name]
+        with patch.object(support, "_engine", return_value=engine):
+            corrected = support._progress(self.request(events=[event]), work, support.Files(self.root))
+        self.assertEqual(corrected["events"][0]["authorityRef"], "explicit-fixture-authority")
+        self.assertNotIn("expectedPlanDigest", event)
+        self.assertEqual((self.root / config["statePath"]).read_bytes(), raw)
+
+    def test_progress_names_required_chunk_input_and_keeps_target_denial(self):
+        _, work, event, config, _ = self.progress_fixture()
+        raw = (self.root / config["statePath"]).read_bytes()
+        with patch.object(support, "_engine") as loader:
+            result = support._progress(self.request(events=[{"type": "chunk-recorded", "summary": " "}]), work, support.Files(self.root))
+            self.assertEqual(result["needed"], ["events[0].chunkId", "events[0].summary", "events[0].areas"])
+            event["incrementId"] = "foreign-target"
+            del event["authorityRef"]
+            with self.assertRaises(ControlError):
+                support._progress(self.request(events=[event]), work, support.Files(self.root))
+        loader.assert_not_called()
+        self.assertEqual((self.root / config["statePath"]).read_bytes(), raw)
+
+    def test_progress_unknown_engine_refusal_stays_generic_and_private(self):
+        engine, work, event, config, _ = self.progress_fixture()
+        raw = (self.root / config["statePath"]).read_bytes()
+        with patch.object(support, "_engine", return_value=engine), patch.object(engine, "apply_event", side_effect=engine.RoadmapError("synthetic-private-error")):
+            with self.assertRaises(ControlError) as refused:
+                support._progress(self.request(events=[event]), work, support.Files(self.root))
+        result = refused.exception.as_result()
+        self.assertEqual(result["code"], "support.progress-refused")
+        self.assertNotIn("synthetic-private-error", json.dumps(result))
+        self.assertEqual((self.root / config["statePath"]).read_bytes(), raw)
 
     def test_fixed_engine_loader_uses_the_real_repository_engine(self):
         engine = support._engine(HELPERS.parents[1])

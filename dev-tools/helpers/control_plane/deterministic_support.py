@@ -342,12 +342,42 @@ def _engine(root):
     return module
 
 
+def _progress_inputs(events, target_id):
+    needed, diagnostics = [], []
+    for index, event in enumerate(events):
+        _need(isinstance(event, dict), "support.event", "Tracking events must be explicit JSON objects.")
+        kind = event.get("type")
+        _need(kind in {"work-chunks-reconfigured", "chunk-recorded"}, "support.event", "Only existing tracking events are supported.")
+        required = {"incrementId": str, "plan": dict, "authorityRef": str, "reason": str} if kind == "work-chunks-reconfigured" else {"chunkId": str, "summary": str, "areas": list}
+        for name, expected in required.items():
+            value = event.get(name)
+            if not isinstance(value, expected) or not value or isinstance(value, str) and not value.strip():
+                needed.append(f"events[{index}].{name}")
+        # A supplied different target remains an ownership refusal, even when
+        # descriptive fields are missing. No authority value is inferred here.
+        if kind == "work-chunks-reconfigured" and event.get("incrementId"):
+            _need(event["incrementId"] == target_id)
+        if kind == "work-chunks-reconfigured" and isinstance(event.get("plan"), dict):
+            metadata = [name for name in ("recordedAt", "fingerprint", "outlineOnly") if name in event["plan"]]
+            if metadata:
+                location = f"events[{index}].plan"
+                needed.append(location)
+                diagnostics.append({"code": "stored-plan-metadata", "path": location, "fields": metadata,
+                                    "message": "Remove stored-only recordedAt, fingerprint and outlineOnly from the proposed event plan explicitly; the helper does not rewrite inputs."})
+    if needed:
+        return {**need_input(*dict.fromkeys(needed)), "input_diagnostics": diagnostics}
+    return None
+
+
 def _progress(request, work, reader):
     binding = work["spec"].get("roadmap")
     if not binding or not request.get("events"):
         return need_input("roadmap-bound work and explicit tracking events")
     events = request["events"]
     _need(isinstance(events, list) and 0 < len(events) <= 8, "support.events", "Select one to eight explicit tracking events.")
+    inputs = _progress_inputs(events, binding["increment_id"])
+    if inputs is not None:
+        return inputs
     engine = _engine(reader.root)
     _path(reader.root, binding["state_path"])
     try:

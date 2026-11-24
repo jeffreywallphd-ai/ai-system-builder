@@ -101,6 +101,16 @@ state with the canonical engine's `load_state`, including its current codec. For
 refinement, omit `expectedPlanDigest` to derive the fingerprint of the complete
 stored plan. A supplied stale/internal fingerprint refuses.
 
+Supply `incrementId`, `plan`, `authorityRef` and `reason` for reconfiguration;
+chunk recording needs `chunkId`, `summary` and a nonempty `areas` list. Known
+missing or empty required fields return `needs-input` with exact `events[i]`
+field paths. The authority reference must come from the actual authorized work.
+Replacement event plans must omit stored-only `recordedAt`, `fingerprint` and
+`outlineOnly`. A fixed `stored-plan-metadata` diagnostic names those fields;
+remove them explicitly. The helper never strips input or infers permission.
+These advisories create no packet, live event or qualification. Other canonical
+engine refusals retain a fixed generic message without echoing private errors.
+
 The canonical engine replays events in memory and validates each result. The
 helper checks unchanged approval/evidence/obligations, other increments, original
 completed definitions/order and existing history. The packet provides prospective
@@ -134,3 +144,9 @@ Run its focused model-free behavior and denial checks with:
 ```text
 python -m unittest discover -s dev-tools/helpers/tests -p test_control_plane_deterministic_support.py
 ```
+
+For the exact helper, helper tests, this guide, catalog and focused-routing test
+scope, the catalog uses native unittest module filters to execute the helper and
+focused-routing regressions. Its actual command is stored in the plan/receipt.
+Partial, mixed or shared-source changes, missing/nonregular required support,
+and explicit generic `focused-tests` requests retain the full controller gate.
