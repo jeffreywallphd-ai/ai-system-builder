@@ -9,6 +9,8 @@ AI System Builder is a TypeScript platform for composing, running, and managing 
 - Contributors and coding agents: read [`AGENTS.md`](AGENTS.md), then the [`docs` map](docs/README.md).
 - AI-assisted contributor work: use the [development control plane](docs/diagnostics/ai-development-control-plane.md).
   Start its local JSON-backed review site and share the returned link for workflow work requests.
+  At coding-session initialization run `python dev-tools/helpers/development_control_plane.py usage session-start`;
+  [numeric capture setup](docs/diagnostics/token-usage-tracking.md) reads only selected local response counters, validates recent actual deltas and supports a usage-only worktree destination without blocking work.
 - Cross-agent implementation roadmaps: use the
   [repository roadmap skill](skills/manage-implementation-roadmaps/SKILL.md);
   natural-language requests are sufficient and do not require its exact name.

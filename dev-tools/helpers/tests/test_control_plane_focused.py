@@ -524,6 +524,45 @@ class FocusedPythonCollectionTests(unittest.TestCase):
 
 
 class TokenUsageRoutingTests(unittest.TestCase):
+    def test_exact_local_scope_covers_capture_work_boundaries_and_preserves_generic_fallback(self):
+        root = Path(__file__).resolve().parents[3]
+        required = ['control-plane', 'review-site', 'documentation', 'agent-support']
+        selected = {row['id']: row for row in catalog.plan(root, list(catalog.TOKEN_LOCAL_SCOPE), required, 'synthetic-local')['selected']}
+        for module in ('local_usage', 'capture', 'usage', 'delivery', 'evaluations'):
+            self.assertIn('test_control_plane_' + module + '.', selected['control-plane']['argv'])
+        self.assertIn('documentation', selected); self.assertIn('agent-support', selected)
+        self.assertNotIn('focused-tests', selected)
+        for extra, checks in [(['docs/unknown.md'], required), ([], required + ['focused-tests'])]:
+            result = catalog.plan(root, [*catalog.TOKEN_LOCAL_SCOPE, *extra], checks, 'synthetic-local')
+            self.assertNotIn('-k', next(row for row in result['selected'] if row['id'] == 'control-plane')['argv'])
+        with patch.object(catalog, '_automatic_files_available', return_value=False):
+            result = catalog.plan(root, list(catalog.TOKEN_LOCAL_SCOPE), required, 'synthetic-local')
+            self.assertNotIn('-k', next(row for row in result['selected'] if row['id'] == 'control-plane')['argv'])
+        guide = (root / 'AGENTS.md').read_text(encoding='utf-8')
+        self.assertIn('Work start/verify/complete', guide); self.assertIn('owning checkout', guide)
+        self.assertIn('selected local response capture', (root / 'docs/context/prompt-routing.md').read_text(encoding='utf-8'))
+
+    def test_exact_capture_scope_checks_receiver_and_startup_guidance_with_conservative_fallback(self):
+        root = Path(__file__).resolve().parents[3]
+        required = ['control-plane', 'review-site', 'documentation', 'agent-support']
+        selected = {row['id']: row for row in catalog.plan(root, list(catalog.TOKEN_CAPTURE_SCOPE), required, 'synthetic-capture')['selected']}
+        self.assertIn('test_control_plane_capture.', selected['control-plane']['argv'])
+        self.assertIn('test_control_plane_usage.', selected['control-plane']['argv'])
+        self.assertIn('documentation', selected)
+        self.assertIn('agent-support', selected)
+        self.assertNotIn('focused-tests', selected)
+        for extra, checks in [(['docs/unknown.md'], required), ([], required + ['focused-tests'])]:
+            value = catalog.plan(root, [*catalog.TOKEN_CAPTURE_SCOPE, *extra], checks, 'synthetic-capture')
+            self.assertNotIn('-k', next(row for row in value['selected'] if row['id'] == 'control-plane')['argv'])
+        with patch.object(catalog, '_automatic_files_available', return_value=False):
+            value = catalog.plan(root, list(catalog.TOKEN_CAPTURE_SCOPE), required, 'synthetic-capture')
+            self.assertNotIn('-k', next(row for row in value['selected'] if row['id'] == 'control-plane')['argv'])
+        guidance = (root / 'AGENTS.md').read_text(encoding='utf-8')
+        self.assertIn('usage session-start', guidance)
+        self.assertIn('adapter_ready', guidance)
+        self.assertIn('continue work', guidance)
+        self.assertIn('numeric host bridge', (root / 'docs/context/prompt-routing.md').read_text(encoding='utf-8'))
+
     def test_exact_dashboard_scope_preserves_feature_gates_and_generic_fallback(self):
         root = Path(__file__).resolve().parents[3]
         selected = {row['id']:row for row in catalog.plan(root,list(catalog.TOKEN_DASHBOARD_SCOPE),['control-plane','review-site','documentation','agent-support'],'synthetic-dashboard')['selected']}

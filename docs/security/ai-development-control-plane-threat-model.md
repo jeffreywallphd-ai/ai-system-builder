@@ -242,6 +242,55 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
+The opted-in local counter source is a narrowly selected user-authorized read
+boundary, not general transcript access. Resolve only exact known UUID filenames
+in three bounded creation-day directories under the documented session root.
+Reject nonregular/multiple-link/reparse files, ambiguous or compressed sources,
+foreign first-header identities/workspaces and changed pinned header/file/parent
+identity. Decode only canonical session metadata and strict outer numeric response
+records; never decode message/tool/reasoning/quota rows or emit retained raw rows,
+private paths, identifiers or source exception text. Source reads use bounded
+256 KiB headers and 1 MiB tails; partial trailing records wait for completion.
+
+Validate exact record.thread_id before own accounting, safe integer/subset/total
+consistency, real timestamps, monotonic progression and the explicit epoch/floor.
+Fork/resume totals can include inherited history; first totals are always uncounted.
+Shared session/root-turn IDs are not own-scope evidence. Only reported own-response
+cumulative differences feed existing atomic replay cursors. Context token_count
+and quota/budget counters never substitute. Unsupported/capped/conflicting inputs
+fail closed without guessed totals. Fixed partial/tail/freshness counts disclose
+coverage; missing fields/agents are not zero or discovered completeness.
+
+Serialize additive selected-source configuration under a bounded lock. Explicit
+central destinations must be existing checkouts of the same canonical repository
+and receive only usage writes. Work roots/claims/receipts/authority remain local.
+Existing Work boundaries poll after successful mutations and isolate telemetry
+exceptions from work progress; no permanent daemon or model call is added.
+Config/source-forgery and same-user in-place filesystem races remain cooperative
+limits, not authentication or hard filesystem custody. Public protocol evidence
+and current numeric observations do not prove account billing or complete capture.
+
+The external numeric capture receiver reads only explicitly selected ignored regular JSON
+files under `.local-codex/token-capture/`, with 32 KiB config/64 bindings and
+128 KiB feed/64 numeric-only notifications. Reject unknown content, duplicate
+keys, unsupported protocol/source/session binding, reparse/traversal, changed
+file observations, invalid safe integers/subsets and synthetic context budgets.
+No log/history scan, account API, process/socket attachment or new host is allowed.
+Bindings declare known ancestry/scope/purpose; they do not discover children or
+prove noninclusive semantics. Source versions and resets establish uncounted
+baselines; decreases, overlap, old epochs and conflicting publication fail closed.
+The existing locked atomic importer remains the sole counter authority.
+
+Session startup invokes the receiver once, returning fixed nonblocking diagnostics
+without placeholder data. A recent counted delta is required for `live_capture`;
+baseline-only, stale or duplicate snapshots cannot revive freshness. This means
+recent declared numeric evidence, not authenticated producer or continuous-process
+attestation. Config and feed retain only selected numeric metadata; durable/public
+data hashes identities. Same-user filesystem replacement races and a dishonest
+operator/producer remain cooperative-local limits. A real selected-session host
+callback is separate unavailable qualification; quotas and goal budgets never
+substitute. No release, parent qualification or model authority follows.
+
 Optional token imports add a local telemetry/retention boundary. Protect prompts,
 responses, tool payloads, paths, credentials and private identifiers: accept only
 strict bounded numeric fields, enum purpose/status and hashed identity/model

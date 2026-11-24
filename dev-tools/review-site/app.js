@@ -216,7 +216,7 @@ function tokenUsageDashboard(input) {
     metric(usageNumber(own.estimated.input_tokens), "Estimated input"), metric(usageNumber(own.estimated.output_tokens), "Estimated output")];
   const known = enabled && usageFields.some(field => own.measured[field] !== null);
   const coverage = usageSection(known ? "Partial reported usage" : "Own measurements unavailable",
-    "No automatic capture runs here. Only explicitly imported numeric observations appear. Measured means source-reported; declarations are not independently verified.");
+    "This page reads recorded observations. Selected local response counters or a configured numeric host bridge can supply usage; run usage session-start to validate recent capture. Adapter readiness alone is not live capture. Coverage is partial. Measured means source-reported; declarations are not independently verified.");
   coverage.append(el("p", enabled ? `Last imported observation: ${value.last_updated || "Not recorded"}. ${usageNumber(value.agents_observed)} agents reported; ${usageNumber(value.agents_shown)} shown. Coverage of unreported agents and intervals is unknown.` :
     value.status === "disabled" ? "Optional local retention is not enabled. No measurements have been filled in." : "Usage data is missing or could not be validated. Other review pages remain usable; no measurements have been filled in.", "usage-note"));
   if (enabled) {

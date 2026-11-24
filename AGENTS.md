@@ -14,6 +14,18 @@ This file is the repository entry point for coding agents. Keep it short; use th
 
 ## AI Development Control Plane
 
+- At coding-session initialization run
+  `python dev-tools/helpers/development_control_plane.py usage session-start`.
+  This captures bounded numeric response records from the known current session,
+  or validates an explicitly configured numeric host bridge once. It never starts
+  another host, discovers unrelated chats or emits conversation content.
+  Configured capture also runs once at existing Work start/verify/complete boundaries.
+  `adapter_ready` alone is not live
+  capture: check `live_capture`, recent actual events and selected-thread coverage.
+  If unavailable, baseline-only or stale, report that limitation once and continue work.
+  See `docs/diagnostics/token-usage-tracking.md` for setup and source requirements.
+  An explicit usage-only destination may share one canonical repository store
+  across worktrees; keep Work commands pointed at their owning checkout.
 - For a work request using the contributor workflow, read
   `docs/diagnostics/ai-development-control-plane.md`, run
   `python dev-tools/helpers/development_control_plane.py review-site start`,
