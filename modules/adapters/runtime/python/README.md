@@ -982,3 +982,12 @@ reject auxiliary saving or trainable-token overrides across callbacks.
 These are controlled software checks. Configuration/tokenizer export, complete
 serialization/producer wiring, durable quota, Save, installed SDK and real-host
 qualification remain pending. Ordinary SDK serialization is unchanged.
+
+Private training metadata capture uses the same actual model, synchronized
+tokenizer and selected-weight binding. It retains one attempt and returns bounded
+immutable configuration/fast-tokenizer JSON bytes, with added/special tokens,
+templates and settings preserved. Captured local SDK methods do not write paths
+or discover providers. Unknown, changed, custom-code or oversized exports deny;
+known private input locators are removed and adapter base association stays
+logical. Ordinary serialization is unchanged. Installed-reader, complete output
+driver/producer, durable quota, Save, retirement and real-host proof stay pending.

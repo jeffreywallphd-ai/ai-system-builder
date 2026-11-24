@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import hashlib
 import json
 import sys
 from contextlib import contextmanager
@@ -44,6 +45,7 @@ def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_pr
         def get_input_embeddings(self): return SimpleNamespace(num_embeddings=self.vocab)
         def resize_token_embeddings(self,size): calls.append(("resize",size)); self.vocab=size
     model=Model(); module=ModuleType("peft")
+    if method=="lora": model.test_output=facts[6:]
     def get_peft_model_state_dict(original,*,state_dict,adapter_name,unwrap_compiled,save_embedding_layers):
         assert original is model and adapter_name=="default" and unwrap_compiled is False
         assert type(save_embedding_layers) is bool  # Never the SDK's provider-discovering 'auto'.
@@ -260,6 +262,169 @@ def test_protected_selection_cannot_borrow_another_model_or_method_receiver(monk
             model.state_dict=other.state_dict if mode=="foreign-method" else lambda: pytest.fail("Free state callback selected")
         with pytest.raises(ValueError): train_model_module._capture_protected_training_tensor_stream(selected,use,maximum_bytes=65536,chunk_bytes=4096)
         assert calls==[] and Tensor.copies==[] and use._tensor_selection_slot["stage"]=="failed"
+
+
+@contextmanager
+def _protected_training_metadata_fixture(monkeypatch,method="lora"):
+    with _protected_tensor_selection_fixture(monkeypatch,method) as facts:
+        actual,use,model,peft,calls,control,Tensor,oracle=facts
+        module=ModuleType("tokenizers"); metadata_calls=[]
+        class AddedToken:
+            def __init__(self,content): self.content=content
+            def __getstate__(self):
+                metadata_calls.append("token-state")
+                return {"content":self.content,"single_word":False,"lstrip":True,"rstrip":False,"normalized":False,"special":True}
+        class Backend:
+            def __init__(self): self.raw='{"version":"1.0","added_tokens":[{"id":10,"content":"<pad>","special":true}],"model":{"type":"WordLevel","vocab":{"sample":0,"<pad>":10}}}'; self.after_export=None
+            def to_str(self,*,pretty):
+                assert pretty is False; metadata_calls.append("backend-json")
+                result=self.raw
+                if self.after_export: self.after_export()
+                return result
+        module.Tokenizer=Backend;module.AddedToken=AddedToken
+        monkeypatch.setitem(sys.modules,"tokenizers",module)
+        class Config:
+            def __init__(self,values): self.values=values;self.after_export=None
+            def to_dict(self):
+                metadata_calls.append("config-dict"); result=dict(self.values)
+                if self.after_export: self.after_export()
+                return result
+        class SyntheticTokenizerFast:
+            def __init__(self):
+                self.backend_tokenizer=Backend(); self.model_max_length=10**30; self.clean_up_tokenization_spaces=False
+                self.padding_side="left"; self.chat_template={"default":"{{ messages }}","alternate":"{{ tools }}"}
+                self.pad=AddedToken("<pad>"); self.special_tokens_map={"pad_token":"<pad>"}
+                self.special_tokens_map_extended={"pad_token":self.pad}; self.extra_special_tokens={"image_token":"<image>"}
+                self.added_tokens_decoder={10:self.pad}; self.init_inputs=("synthetic",)
+                self.init_kwargs={"padding_side":"right","pad_token":self.pad,"custom_token":self.pad,"name_or_path":"X:\\private\\stage",
+                    "tokenizer_file":"X:\\private\\stage\\tokenizer.json","nested":{"_name_or_path":"X:\\private\\stage"}}
+                self.vocab_files_names={"vocab_file":"vocab.json","merges_file":"merges.txt","tokenizer_file":"tokenizer.json"}
+                self._auto_class=None; self._auto_map=None; self._processor_class=None
+            def __len__(self): return 12
+            def save_pretrained(self,*args,**kwargs): pytest.fail("Metadata export invoked a path writer")
+        tokenizer=SyntheticTokenizerFast()
+        model.config=Config({"model_type":"synthetic","vocab_size":12,"_name_or_path":"X:\\private\\stage","nested":{"_name_or_path":"X:\\private\\stage","retained":True}})
+        model.generation_config=Config({"max_new_tokens":8,"_name_or_path":"X:\\private\\stage"})
+        if method!="full-finetune":
+            configuration=model.peft_config["default"]
+            def to_dict(obj): return {**vars(obj),"base_model_name_or_path":"X:\\private\\stage","inference_mode":False}
+            monkeypatch.setattr(type(configuration),"to_dict",to_dict,raising=False)
+        train_model_module._synchronize_model_token_embeddings(model,tokenizer,_protected_use=use)
+        stream=train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        yield facts,tokenizer,metadata_calls,stream
+
+
+@pytest.mark.parametrize("method",["full-finetune","lora","qlora"])
+def test_protected_training_metadata_preserves_reload_fields_without_path_writes(monkeypatch,method):
+    with _protected_training_metadata_fixture(monkeypatch,method) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,control,Tensor,oracle=facts
+        files=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        assert type(files) is tuple and all(type(data) is bytes for _,data in files) and Tensor.copies==[]
+        decoded={name:json.loads(data) for name,data in files}
+        expected={"tokenizer.json","tokenizer_config.json","special_tokens_map.json"}
+        if method=="full-finetune":
+            expected|={"config.json","generation_config.json"}
+            assert decoded["config.json"]["nested"]=={"retained":True} and decoded["generation_config.json"]=={"max_new_tokens":8}
+        else:
+            expected.add("adapter_config.json")
+            assert decoded["adapter_config.json"]["base_model_name_or_path"]==use.payload.baseModel.modelId
+            assert decoded["adapter_config.json"]["inference_mode"] is True
+            assert decoded["adapter_config.json"]["target_modules"]==["q_proj"]
+        assert set(decoded)==expected and all(b"private" not in data for _,data in files)
+        config=decoded["tokenizer_config.json"]
+        assert config["padding_side"]=="left" and config["model_max_length"]==10**30
+        assert config["extra_special_tokens"]=={"image_token":"<image>"} and config["image_token"]=="<image>"
+        assert config["chat_template"]==[{"name":"default","template":"{{ messages }}"},{"name":"alternate","template":"{{ tools }}"}]
+        assert config["added_tokens_decoder"]["10"]["lstrip"] is True and config["added_tokens_decoder"]["10"]["special"] is True
+        assert config["custom_token"]["__type"]=="AddedToken" and config["custom_token"]["normalized"] is False
+        assert config["tokenizer_class"]==type(tokenizer).__name__ and config["init_inputs"]==["synthetic"]
+        assert decoded["special_tokens_map.json"]["pad_token"]["content"]=="<pad>"
+        assert "special" not in decoded["special_tokens_map.json"]["pad_token"]
+        assert decoded["tokenizer.json"]["model"]["vocab"]["<pad>"]==10
+        assert metadata_calls.count("backend-json")==2 and use._metadata_slot["stage"]=="captured"
+        before=list(metadata_calls)
+        with pytest.raises(ValueError): train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        assert metadata_calls==before
+
+
+def test_protected_training_metadata_and_weights_feed_actual_guarded_output_writer(monkeypatch):
+    with _protected_training_metadata_fixture(monkeypatch) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,control,Tensor,oracle=facts
+        kernel,configuration,_,_,output_control=model.test_output
+        metadata=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        files=[{"name":name,"sizeBytes":len(raw)} for name,raw in metadata]
+        files.append({"name":"adapter_model.safetensors","sizeBytes":stream.size_bytes})
+        streams={name:(raw,) for name,raw in metadata}; streams["adapter_model.safetensors"]=stream
+        request=use.payload.model_dump(mode="json")
+        graph=actual.OriginalTrainingOutputGraph(use.view,request,configuration,files,output_control,output_control)
+        graph.prepare(streams); graph.assert_sealed()
+        assert graph.phase=="sealed" and stream.phase=="complete"
+        for row in graph.records:
+            node=kernel.nodes[graph.physical_path+"\\"+row["name"]]; raw=bytes(node["data"])
+            assert row["sizeBytes"]==len(raw) and row["sha256"]==hashlib.sha256(raw).hexdigest()
+            if row["name"]=="adapter_model.safetensors":
+                assert set(oracle.decode(raw)[0])=={"layer.lora_A.weight","embed_tokens.weight"}
+            else: assert raw==dict(metadata)[row["name"]]
+        assert output_control.retained==[] and output_control.charges==[128*1024]
+        assert use.payload.model_dump(mode="json")==request
+
+
+@pytest.mark.parametrize("method,boundary",[("lora","backend"),("full-finetune","backend"),
+    ("full-finetune","model-config"),("full-finetune","generation-config")])
+def test_protected_training_metadata_rechecks_receivers_after_final_callback(monkeypatch,method,boundary):
+    with _protected_training_metadata_fixture(monkeypatch,method) as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,control,Tensor,oracle=facts; changed=[]
+        def current(obj):
+            slot=use._metadata_slot
+            if obj is control and not changed and slot is not None and slot["operations"]:
+                last=slot["operations"][-1]
+                if last["label"]=="fast-tokenizer-json" and last["returned"] and metadata_calls.count("backend-json")==2:
+                    changed.append(True)
+                    if boundary=="backend": tokenizer.backend_tokenizer=type(tokenizer.backend_tokenizer)()
+                    elif boundary=="model-config": model.config=type(model.config)({"model_type":"foreign"})
+                    else: model.generation_config=type(model.generation_config)({"max_new_tokens":99})
+            return obj.__dict__["current"]
+        monkeypatch.setattr(type(control),"current",property(current,lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises(ValueError,match="private trained metadata export"):
+            train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        assert changed==[True] and Tensor.copies==[] and use._metadata_slot["stage"]=="failed"
+        assert use._metadata_slot["bindings"]  # Retain the actual original receivers.
+
+
+@pytest.mark.parametrize("failure",["wrong-tokenizer","wrong-model","withdraw","settings","missing-sdk","foreign-backend",
+    "custom-tokenizer","custom-config","cycles","wide-metadata","nan","duplicate-json","malformed-json","large-json",
+    "config-error","backend-error","changed-json","changed-config","changed-backend","bad-decoder"])
+def test_protected_training_metadata_denies_incomplete_or_changed_metadata(monkeypatch,failure):
+    with _protected_training_metadata_fixture(monkeypatch,"full-finetune") as (facts,tokenizer,metadata_calls,stream):
+        actual,use,model,peft,calls,control,Tensor,oracle=facts
+        chosen_model,chosen_tokenizer=model,tokenizer
+        if failure=="wrong-tokenizer": chosen_tokenizer=object()
+        elif failure=="wrong-model": chosen_model=object()
+        elif failure=="withdraw": control.current=False
+        elif failure=="settings": use.payload.commonParameters["maxSteps"]=999
+        elif failure=="missing-sdk": monkeypatch.delitem(sys.modules,"tokenizers")
+        elif failure=="foreign-backend": tokenizer.backend_tokenizer=object()
+        elif failure=="custom-tokenizer": tokenizer._auto_class="AutoTokenizer"
+        elif failure=="custom-config": model.config.values["auto_map"]={"AutoConfig":"custom.Code"}
+        elif failure=="cycles": model.config.values["cycle"]=model.config.values
+        elif failure=="wide-metadata": model.config.values["large"]="x"*65537
+        elif failure=="nan": model.config.values["score"]=float("nan")
+        elif failure=="duplicate-json": tokenizer.backend_tokenizer.raw='{"model":{},"model":{}}'
+        elif failure=="malformed-json": tokenizer.backend_tokenizer.raw='[true]'
+        elif failure=="large-json": tokenizer.backend_tokenizer.raw='x'*65537
+        elif failure=="config-error": model.config.after_export=lambda: (_ for _ in ()).throw(RuntimeError("private supplier details"))
+        elif failure=="backend-error": tokenizer.backend_tokenizer.after_export=lambda: (_ for _ in ()).throw(RuntimeError("private supplier details"))
+        elif failure=="changed-json": tokenizer.backend_tokenizer.after_export=lambda: setattr(tokenizer.backend_tokenizer,"raw",'{"changed":true}')
+        elif failure=="changed-config": model.config.after_export=lambda: model.config.values.update(vocab_size=99)
+        elif failure=="changed-backend": model.config.after_export=lambda: setattr(tokenizer,"backend_tokenizer",object())
+        elif failure=="bad-decoder": tokenizer.added_tokens_decoder={True:tokenizer.pad}
+        with pytest.raises(ValueError,match="private trained metadata export") as caught:
+            train_model_module._capture_protected_training_metadata(chosen_model,chosen_tokenizer,use,maximum_bytes=65536)
+        assert "supplier details" not in str(caught.value) and Tensor.copies==[]
+        assert use._metadata_slot["stage"]=="failed"
+        before=list(metadata_calls)
+        with pytest.raises(ValueError): train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        assert metadata_calls==before
 
 
 def test_private_fixed_loader_consumes_actual_live_view_without_rewriting_logical_model(monkeypatch,tmp_path):

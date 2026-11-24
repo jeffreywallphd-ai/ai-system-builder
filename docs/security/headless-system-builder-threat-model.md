@@ -2653,3 +2653,25 @@ serialize SDK objects, paths, provider data or errors into public diagnostics.
 The dense stream and Native output owner retain independent checks. Controlled
 fixtures qualify no installed SDK/model, provider effect, quality, complete
 producer, durable quota, Save, SDK retirement, physical/host or parent outcome.
+
+### Protected training metadata capture
+
+Bind model configuration and fast-tokenizer export to the original private use
+and its actual weight selection. Keep one attempt and original SDK operations,
+arguments and returned objects privately, including unknown failures. Do not
+expose those objects, input locators or raw errors through diagnostics. Recheck
+the current request and original model/tokenizer/configuration binding around
+suppliers. Caller JSON cannot select a metadata callback or confer Save authority.
+Read actual backend/configuration references after the final authority callbacks;
+retained earlier receivers and equal exported bytes alone do not prove currentness.
+Keep the independently reproduced replacement failures and original receipt with
+the fixed candidate's regression and separate review evidence.
+
+Use only the loaded local SDK metadata methods. Refuse custom-code exports,
+unknown types, cyclic or oversized metadata, nonfinite numbers, malformed or
+duplicate-key tokenizer JSON and changed captures. Preserve added-token behavior,
+special tokens and templates; replace private adapter base locators with the
+approved logical ID. Produce immutable bytes, never invoke SDK path writers or
+provider/config discovery. The Native output owner still enforces its own guards.
+Controlled fixtures do not qualify atomic SDK state, installed readers, physical
+effects, durable quota, complete producer, Save, retirement or actual hosts.

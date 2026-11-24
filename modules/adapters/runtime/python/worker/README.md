@@ -2033,3 +2033,16 @@ diagnosis; these private objects must not enter public diagnostics. The genuine
 dense stream performs its own tensor and authority checks. Config/tokenizer
 export, complete producer, durable quota, Save, real SDK/hardware and host
 qualification remain pending. No model quality test or model load runs here.
+
+`_capture_protected_training_metadata` uses that selected model and the tokenizer
+recorded by actual embedding synchronization. It captures one retained attempt,
+checks currentness around SDK operations and exports only immutable metadata
+bytes. Local bound `to_dict` and fast backend `to_str` preserve configuration,
+templates, settings and added/special token flags without `save_pretrained`,
+path copies or provider lookup. Known input locators are removed; adapters keep
+the approved logical base ID. Explicit package/file bounds and one before/after
+comparison reject malformed, cyclic, unknown, custom-code or changed state.
+Legacy tokenizer export is unsupported on this private profile; ordinary SDK
+serialization remains intact. These inert software checks do not qualify atomic
+SDK state, installed readers, full serializer/producer, durable quota, physical
+resources, retirement, separate Save or hosts. No model-quality test runs.

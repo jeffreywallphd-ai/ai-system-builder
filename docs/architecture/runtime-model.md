@@ -2949,3 +2949,33 @@ They load no model and score no quality. Configuration/tokenizer export, full
 serialization/Native producer composition, durable quota, Save, SDK/worker
 retirement, installed-runtime/reader and actual-host qualification remain pending.
 Ordinary no-view loading and SDK path serialization stay compatible.
+
+### Protected training configuration and tokenizer bytes
+
+The fixed loader's private use also records the tokenizer used for embedding
+synchronization. After actual weight selection, capture model configuration and
+fast-tokenizer metadata from those same objects. Retain one metadata attempt and
+its supplier operations/results before calling SDK methods. Unknown replies,
+changed bindings, expired authority or a changed request deny export; no ordinary
+path writer or provider lookup is a fallback.
+Recheck the actual tokenizer backend, model configuration and generation
+configuration references after every live-view callback, including the final
+check. Equal earlier byte captures cannot certify a replaced SDK receiver.
+
+Use captured bound `to_dict` and fast-tokenizer `to_str(pretty=False)` methods.
+Produce immutable, exact-size JSON files for the existing finite protected output
+profile. Preserve configuration, generation options, tokenizer settings, chat
+templates, special tokens and complete added-token state. Adapter configuration
+uses the logical approved base-model ID and inference mode. Remove known private
+input locators and refuse custom-code export. Support the current fast-tokenizer
+JSON profile; unsupported legacy tokenizers remain unavailable on this private
+path while ordinary serialization stays unchanged.
+
+Require an explicit total byte limit, at most 64 MiB, with bounded JSON depth,
+node count and supported plain types. Reject cycles, nonfinite numbers,
+duplicate JSON keys, unknown values and oversized files/packages. Compare two
+bounded captures once; a mismatch is a failure, never a retry. This is software
+metadata capture, not an atomic SDK or physical filesystem qualification.
+Installed-reader compatibility, complete serializer/output composition, durable
+reservations, full producer, retirement, separate Save and actual hosts remain
+pending. Inert SDK fixtures load no model and score no model quality.

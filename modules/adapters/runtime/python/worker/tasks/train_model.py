@@ -224,7 +224,8 @@ def _resolve_training_purpose_paths(
 class _ProtectedTrainingUse:
     """Fixed private view use, not a caller-selected guard or public capability."""
     __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
-        "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_observation_lost","_tensor_selection_slot")
+        "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_tokenizer",
+        "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
@@ -234,6 +235,7 @@ class _ProtectedTrainingUse:
         self._tensor_stream_type = _NATIVE_TENSOR_STREAM
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
+        self._embedding_tokenizer, self._metadata_slot = None, None
         self._embedding_observation_lost = False
         try: request = self._serialize(payload,mode="json")
         except Exception: raise ValueError("The private protected training request is unavailable.") from None
@@ -351,6 +353,8 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
                 fixed_policy(fields)
         elif method != "full-finetune":
             raise ValueError("The private training method is unavailable.")
+        slot["selection_current"] = adapter_current if adapter else current
+        slot["configuration"] = configuration if adapter else None
         state_method = model.state_dict
         slot["state_method"] = state_method
         current()
@@ -387,6 +391,231 @@ def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chun
         slot["failed_stage"] = slot["stage"]
         slot["stage"] = "failed"
         raise ValueError("The private trained tensor export is unavailable.") from None
+
+
+def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes):
+    """Capture local metadata bytes, never call an SDK path writer or provider.
+
+    The finite fast-tokenizer profile is intentionally separate from physical
+    output creation. Its immutable bytes still require the original output
+    owner's live guards and real reader/host qualification before product use.
+    """
+    if type(use) is not _ProtectedTrainingUse or use._metadata_slot is not None:
+        raise ValueError("The private trained metadata export is unavailable.")
+    slot = {"model":model,"tokenizer":tokenizer,"stage":"capturing","operations":[],"files":None}
+    use._metadata_slot = slot  # Retain the attempt before any SDK access.
+    try:
+        _check_protected_use(use)
+        if type(maximum_bytes) is not int or not 1 <= maximum_bytes <= 64*1024**2:
+            raise ValueError("The private metadata limit is unavailable.")
+        selection = use._tensor_selection_slot
+        if (type(selection) is not dict or selection.get("stage") != "captured"
+                or selection.get("model") is not model
+                or type(selection.get("selection_current")) is not FunctionType):
+            raise ValueError("The private selected model is unavailable.")
+        selection_current = selection["selection_current"]
+        bindings = slot["bindings"] = []
+        def current():
+            _check_protected_use(use)
+            selection_current()
+            if (use._metadata_slot is not slot or use._tensor_selection_slot is not selection or selection.get("stage") != "captured"
+                    or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
+                    or use._embedding_observation_lost):
+                raise ValueError("The private metadata binding changed.")
+            # Read actual SDK references AFTER all original-view callbacks. A
+            # matching earlier snapshot is not proof of the current receiver.
+            for obj,name,original in bindings:
+                if getattr(obj,name,None) is not original:
+                    raise ValueError("The private metadata receiver changed.")
+            if (use._metadata_slot is not slot or use._embedding_model is not model
+                    or use._embedding_tokenizer is not tokenizer or use._embedding_observation_lost):
+                raise ValueError("The private metadata binding changed.")
+        current()
+        def operation(label, supplier, *args, **kwargs):
+            current()
+            flight = {"label":label,"supplier":supplier,"args":args,"kwargs":kwargs,"returned":False,"result":None}
+            slot["operations"].append(flight); slot["stage"] = label
+            result = supplier(*args,**kwargs)
+            flight.update(result=result,returned=True)
+            current()
+            return result
+        missing = object()
+        def read(obj, name, default=missing):
+            return operation("metadata-read",getattr,obj,name,default)
+        def bound(obj, name):
+            method = read(obj,name)
+            if type(method) not in (MethodType,BuiltinMethodType) or method.__self__ is not obj:
+                raise ValueError("The private metadata method is unavailable.")
+            return method
+        tokenizers = sys.modules.get("tokenizers")
+        if type(tokenizers) is not ModuleType:
+            raise ValueError("The private fast tokenizer is unavailable.")
+        namespace = vars(tokenizers)
+        backend_type, token_type = namespace.get("Tokenizer"), namespace.get("AddedToken")
+        if not isinstance(backend_type,type) or not isinstance(token_type,type):
+            raise ValueError("The private fast tokenizer is unavailable.")
+        token_state = token_type.__getstate__
+        backend = read(tokenizer,"backend_tokenizer")
+        if type(backend) is not backend_type:
+            raise ValueError("The private fast tokenizer is unavailable.")
+        bindings.append((tokenizer,"backend_tokenizer",backend))
+        backend_export = bound(backend,"to_str")
+        configuration = selection["configuration"] if use.payload.method in ("lora","qlora") else read(model,"config")
+        if use.payload.method == "full-finetune": bindings.append((model,"config",configuration))
+        config_export = bound(configuration,"to_dict")
+        generation = read(model,"generation_config",None) if use.payload.method == "full-finetune" else None
+        if use.payload.method == "full-finetune": bindings.append((model,"generation_config",generation))
+        generation_export = bound(generation,"to_dict") if generation is not None else None
+        peft = sys.modules.get("peft")
+        enums = tuple(value for name in ("PeftType","TaskType")
+            if isinstance(peft,ModuleType) and isinstance(value:=vars(peft).get(name),type))
+        path_keys = frozenset(("_name_or_path","name_or_path","tokenizer_file","special_tokens_map_file",
+            "vocab_file","merges_file","cache_dir","device_map"))
+        def token_record(value, typed=True, legacy=False):
+            if type(value) is not token_type:
+                raise ValueError("The private added token is unavailable.")
+            record = operation("added-token-state",token_state,value)
+            if (type(record) is not dict or set(record) != {"content","single_word","lstrip","rstrip","normalized","special"}
+                    or type(record["content"]) is not str
+                    or any(type(record[k]) is not bool for k in record if k != "content")):
+                raise ValueError("The private added token is unavailable.")
+            record = dict(record)
+            if legacy: record.pop("special")
+            if typed: record["__type"] = "AddedToken"
+            return record
+        def plain(value, *, strip_paths=False, typed_tokens=True, legacy_tokens=False):
+            nodes, characters, active = 0, 0, set()
+            def visit(item,depth=0):
+                nonlocal nodes,characters
+                nodes += 1
+                if nodes > min(maximum_bytes,1_000_000) or depth > 32:
+                    raise ValueError("The private metadata structure is too large.")
+                if item is None or type(item) is bool: return item
+                if type(item) is str:
+                    characters += len(item)
+                    if characters > maximum_bytes: raise ValueError("The private metadata is too large.")
+                    return item
+                if type(item) is int and item.bit_length() <= 256: return item
+                if type(item) is float and isfinite(item): return item
+                if type(item) in enums: return visit(item.value,depth+1)
+                if type(item) is token_type:
+                    return visit(token_record(item,typed_tokens,legacy_tokens),depth+1)
+                identity = id(item)
+                if identity in active: raise ValueError("The private metadata is cyclic.")
+                active.add(identity)
+                try:
+                    if type(item) in (list,tuple):
+                        if len(item) > maximum_bytes: raise ValueError("The private metadata is too large.")
+                        return [visit(v,depth+1) for v in item]
+                    if type(item) in (set,frozenset):
+                        if len(item) > 4096 or any(type(v) is not str for v in item):
+                            raise ValueError("The private metadata set is unavailable.")
+                        return [visit(v,depth+1) for v in sorted(item)]
+                    if type(item) is not dict or len(item) > maximum_bytes or any(type(k) is not str for k in item):
+                        raise ValueError("The private metadata value is unavailable.")
+                    result = {}
+                    for key,value in item.items():
+                        if strip_paths and key in path_keys: continue
+                        if (strip_paths and key in ("auto_map","auto_mapping","_auto_class") and value is not None
+                                and not (type(value) is dict and not value)):
+                            raise ValueError("Custom metadata code export is unavailable.")
+                        result[visit(key,depth+1)] = visit(value,depth+1)
+                    return result
+                finally: active.remove(identity)
+            return visit(value)
+        def encode(value):
+            data = bytearray()
+            for part in json.JSONEncoder(ensure_ascii=False,allow_nan=False,sort_keys=True,separators=(",",":")).iterencode(value):
+                encoded = part.encode("utf8")
+                if len(data)+len(encoded) > maximum_bytes: raise ValueError("The private metadata is too large.")
+                data.extend(encoded)
+            return bytes(data)
+        def no_duplicates(pairs):
+            result = {}
+            for key,value in pairs:
+                if key in result: raise ValueError("The private tokenizer JSON is unavailable.")
+                result[key] = value
+            return result
+        def capture():
+            current()
+            if read(tokenizer,"backend_tokenizer") is not backend:
+                raise ValueError("The private tokenizer binding changed.")
+            if use.payload.method == "full-finetune":
+                if read(model,"config") is not configuration or read(model,"generation_config",None) is not generation:
+                    raise ValueError("The private model configuration changed.")
+            raw = operation("model-configuration",config_export)
+            if type(raw) is not dict: raise ValueError("The private model configuration is unavailable.")
+            config = plain(raw,strip_paths=True)
+            files = []
+            if use.payload.method in ("lora","qlora"):
+                config["base_model_name_or_path"] = use.payload.baseModel.modelId
+                config["inference_mode"] = True
+                files.append(("adapter_config.json",encode(config)))
+            else:
+                files.append(("config.json",encode(config)))
+                if generation_export is not None:
+                    generated = operation("generation-configuration",generation_export)
+                    if type(generated) is not dict: raise ValueError("The private generation configuration is unavailable.")
+                    files.append(("generation_config.json",encode(plain(generated,strip_paths=True))))
+            initial = read(tokenizer,"init_kwargs")
+            vocabulary = read(tokenizer,"vocab_files_names")
+            if (type(initial) is not dict or len(initial) > 4096 or any(type(k) is not str for k in initial)
+                    or type(vocabulary) is not dict or len(vocabulary) > 64 or any(type(k) is not str for k in vocabulary)):
+                raise ValueError("The private tokenizer configuration is unavailable.")
+            token_config = {}
+            for key in initial:
+                if key not in path_keys and key not in vocabulary:
+                    token_config[key] = read(tokenizer,key,initial[key])
+            token_config["model_max_length"] = read(tokenizer,"model_max_length")
+            token_config["clean_up_tokenization_spaces"] = read(tokenizer,"clean_up_tokenization_spaces")
+            special = read(tokenizer,"special_tokens_map")
+            extra = read(tokenizer,"extra_special_tokens")
+            if type(special) is not dict or type(extra) is not dict:
+                raise ValueError("The private special tokens are unavailable.")
+            token_config.update(special)
+            if "extra_special_tokens" not in token_config:
+                token_config["extra_special_tokens"] = extra; token_config.update(extra)
+            template = read(tokenizer,"chat_template",None)
+            if template is not None:
+                token_config["chat_template"] = ([{"name":k,"template":v} for k,v in template.items()]
+                    if type(template) is dict else template)
+            inputs = read(tokenizer,"init_inputs")
+            if type(inputs) not in (tuple,list): raise ValueError("The private tokenizer inputs are unavailable.")
+            if inputs: token_config["init_inputs"] = inputs
+            token_config = plain(token_config,strip_paths=True)
+            decoder = read(tokenizer,"added_tokens_decoder")
+            if (type(decoder) is not dict or len(decoder) > 4096
+                    or any(type(k) is not int or not 0 <= k < 2**32 for k in decoder)):
+                raise ValueError("The private added-token decoder is unavailable.")
+            token_config["added_tokens_decoder"] = {str(k):token_record(v,typed=False) for k,v in decoder.items()}
+            token_config["tokenizer_class"] = type(tokenizer).__name__
+            if read(tokenizer,"_auto_class",None) is not None or read(tokenizer,"_auto_map",None) is not None:
+                raise ValueError("Custom tokenizer code export is unavailable.")
+            processor = read(tokenizer,"_processor_class",None)
+            if processor is not None: token_config["processor_class"] = plain(processor)
+            files.append(("tokenizer_config.json",encode(token_config)))
+            extended = read(tokenizer,"special_tokens_map_extended")
+            if type(extended) is not dict: raise ValueError("The private special tokens are unavailable.")
+            files.append(("special_tokens_map.json",encode(plain(extended,typed_tokens=False,legacy_tokens=True))))
+            tokenizer_json = operation("fast-tokenizer-json",backend_export,pretty=False)
+            if type(tokenizer_json) is not str or len(tokenizer_json) > maximum_bytes or len(tokenizer_json.encode("utf8")) > maximum_bytes:
+                raise ValueError("The private fast tokenizer JSON is too large.")
+            parsed = json.loads(tokenizer_json,object_pairs_hook=no_duplicates,
+                parse_constant=lambda _: (_ for _ in ()).throw(ValueError("Invalid tokenizer JSON")))
+            if type(parsed) is not dict: raise ValueError("The private fast tokenizer JSON is unavailable.")
+            files.append(("tokenizer.json",encode(plain(parsed))))
+            if sum(len(data) for _,data in files) > maximum_bytes:
+                raise ValueError("The private metadata package is too large.")
+            return tuple(files)
+        first = capture(); slot["files"] = first
+        second = capture()  # One bounded consistency comparison, never a retry.
+        current()
+        if first != second: raise ValueError("The private metadata changed during capture.")
+        slot["stage"] = "captured"
+        return first
+    except BaseException:
+        slot["failed_stage"] = slot["stage"]; slot["stage"] = "failed"
+        raise ValueError("The private trained metadata export is unavailable.") from None
 
 
 def _capture_local_dataset_references(payload, references):
@@ -559,6 +788,7 @@ def _synchronize_model_token_embeddings(model: Any, tokenizer: Any, *, _protecte
                 or _protected_use._embedding_model is not None and _protected_use._embedding_model is not model):
             raise ValueError("The private embedding model binding is unavailable.")
         _protected_use._embedding_model = model
+        _protected_use._embedding_tokenizer = tokenizer
         previous_status = _protected_use._embedding_status
         # Retain uncertainty before any supplier can mutate the model or fail.
         # A caught failure or later no-op cannot recertify an unknown resize.
