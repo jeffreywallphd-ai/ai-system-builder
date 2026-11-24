@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
-from ..native.windows_original_worker_launch import resolve_original_model_view
+from ..native.windows_original_worker_launch import resolve_original_training_references
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -36,6 +36,7 @@ VISION_TRAINING_TASKS = {"vision-classification", "vision-detection", "vision-se
 DEFAULT_SEQUENCE_LENGTH = 512
 MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
 _NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_python
+_NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
     "llm-instruction": ("instruction", "output"),
@@ -216,12 +217,57 @@ def _resolve_training_purpose_paths(
     return available[0]
 
 
-def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
+class _ProtectedTrainingUse:
+    """Fixed private view use, not a caller-selected guard or public capability."""
+    __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize")
+
+    def __init__(self, payload, view):
+        if type(payload) is not TrainModelTaskRequest:
+            raise ValueError("The private protected training request is unavailable.")
+        self.payload, self.view = payload, view
+        self._resolve, self._serialize = _NATIVE_REFERENCE_RESOLVER, _NATIVE_REQUEST_SERIALIZER
+        try: request = self._serialize(payload,mode="json")
+        except Exception: raise ValueError("The private protected training request is unavailable.") from None
+        model,inputs = self._resolve(view,request)
+        self.model_reference, self.dataset_references = model, inputs
+
+    def assert_current(self):
+        if type(self) is not _ProtectedTrainingUse or type(self.payload) is not TrainModelTaskRequest:
+            raise ValueError("The private protected training request is unavailable.")
+        try: request = self._serialize(self.payload,mode="json")
+        except Exception: raise ValueError("The private protected training request is unavailable.") from None
+        if self._resolve(self.view,request) != (self.model_reference,self.dataset_references):
+            raise ValueError("The private protected training references are unavailable.")
+
+
+def _check_protected_use(use, payload=None):
+    if use is None: return
+    if type(use) is not _ProtectedTrainingUse or payload is not None and use.payload is not payload:
+        raise ValueError("The private protected training inputs are unavailable.")
+    # Call the fixed class operation; an instance cannot select another guard.
+    _ProtectedTrainingUse.assert_current(use)
+
+
+def _capture_local_dataset_references(payload, references):
+    if references is None: return None
+    if (type(references) is not tuple or len(references) != len(payload.datasets)
+            or not 1 <= len(references) <= 16 or any(type(value) is not str or not 0 < len(value) <= 4096
+                or not Path(value).is_absolute() or value.startswith(("\\\\","//"))
+                or any(ord(c)<32 or ord(c)==127 for c in value) for value in references)):
+        raise ValueError("The private protected training inputs are unavailable.")
+    return references
+
+
+def _load_dataset(payload: TrainModelTaskRequest, *, local_dataset_refs=None, _protected_use=None) -> tuple[Any, Any]:
+    _check_protected_use(_protected_use,payload)
+    if _protected_use is not None and local_dataset_refs != _protected_use.dataset_references:
+        raise ValueError("The private protected training inputs are unavailable.")
+    local_dataset_refs = _capture_local_dataset_references(payload,local_dataset_refs)
     train_files: list[str] = []
     validation_files: list[str] = []
     dataset_format: str | None = None
 
-    for dataset in payload.datasets:
+    for index,dataset in enumerate(payload.datasets):
         # Held-out test data is not a training or validation input. Match the
         # existing multimodal separation without inspecting its paths or bytes.
         if dataset.splitRole == "test":
@@ -229,7 +275,7 @@ def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
         if dataset.splitRole not in {"train", "validation"}:
             raise ValueError("Unsupported training dataset split role.")
         _require_non_empty(dataset.artifactId, "datasets[].artifactId")
-        path = _dataset_path(dataset)
+        path = _dataset_path(dataset) if local_dataset_refs is None else Path(local_dataset_refs[index])
         if not path.exists():
             raise ValueError(f"Dataset path does not exist: {path}")
         fmt = _infer_dataset_format(dataset, path)
@@ -257,7 +303,9 @@ def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
 
     # JSON Lines uses Datasets' built-in local JSON reader, not a Hub dataset.
     builder = "json" if dataset_format == "jsonl" else dataset_format
+    _check_protected_use(_protected_use,payload)  # Imports and callbacks grant no renewed authority.
     loaded = load_dataset(builder, data_files=dataset_dict)
+    _check_protected_use(_protected_use,payload)
     if len(loaded["train"]) == 0:
         raise ValueError("Training dataset is empty; refusing to train.")
     return loaded, loaded["validation"] if "validation" in loaded else None
@@ -296,14 +344,20 @@ def _local_training_model_reference(reference: str | None) -> str:
 
 
 def _load_transformers_objects(
-    base_model_ref: str, method: str, quantization: dict[str, Any], *, local_files_only: bool = False,
+    base_model_ref: str, method: str, quantization: dict[str, Any], *, local_files_only: bool = False, _protected_use=None,
 ) -> tuple[Any, Any]:
+    _check_protected_use(_protected_use)
+    if _protected_use is not None and (not local_files_only or base_model_ref != _protected_use.model_reference
+            or method != _protected_use.payload.method):
+        raise ValueError("The private protected training model is unavailable.")
     if local_files_only:
         base_model_ref = _local_training_model_reference(base_model_ref)
+    _check_protected_use(_protected_use)
     try:
         from transformers import AutoModelForCausalLM, AutoTokenizer
     except Exception as error:  # pragma: no cover
         raise RuntimeError("transformers is required for model training.") from error
+    _check_protected_use(_protected_use)
 
     model_kwargs: dict[str, Any] = {}
     if method == "qlora":
@@ -314,9 +368,11 @@ def _load_transformers_objects(
         except Exception as error:
             raise RuntimeError("QLoRA requires bitsandbytes + torch CUDA support in the Python runtime.") from error
 
+        _check_protected_use(_protected_use)
         if not torch.cuda.is_available():
             raise RuntimeError("QLoRA requires CUDA GPU support; torch.cuda.is_available() is false.")
 
+        _check_protected_use(_protected_use)
         model_kwargs["quantization_config"] = BitsAndBytesConfig(
             load_in_4bit=bool(quantization.get("loadIn4Bit", True)),
             load_in_8bit=bool(quantization.get("loadIn8Bit", False)),
@@ -328,7 +384,9 @@ def _load_transformers_objects(
     # Chosen by the private Python entry, never by a raw Task payload flag.
     # Failure must propagate; retrying ordinary loading would weaken this policy.
     local_kwargs = {"local_files_only": True, "trust_remote_code": False, "token": False} if local_files_only else {}
+    _check_protected_use(_protected_use)
     tokenizer = AutoTokenizer.from_pretrained(base_model_ref, use_fast=True, **local_kwargs)
+    _check_protected_use(_protected_use)
     if tokenizer.pad_token is None:
         if tokenizer.eos_token is not None:
             tokenizer.pad_token = tokenizer.eos_token
@@ -340,10 +398,14 @@ def _load_transformers_objects(
     if local_files_only:
         # Tokenizer/import callbacks and intervening work grant no permission to
         # discover an adapter. Observe again at the model-factory handoff.
+        _check_protected_use(_protected_use)
         _local_training_model_reference(base_model_ref)
         model_kwargs.update(local_kwargs, use_safetensors=True, weights_only=True)
+    _check_protected_use(_protected_use)
     model = AutoModelForCausalLM.from_pretrained(base_model_ref, **model_kwargs)
+    _check_protected_use(_protected_use)
     _synchronize_model_token_embeddings(model, tokenizer)
+    _check_protected_use(_protected_use)
     return model, tokenizer
 
 
@@ -413,7 +475,9 @@ def _tokenize_dataset(
     *,
     training_task: str | None = None,
     purpose_paths: dict[str, tuple[str, ...]] | None = None,
+    _protected_use=None,
 ) -> Any:
+    _check_protected_use(_protected_use)
     block_size = _to_positive_int(max_sequence_length) or DEFAULT_SEQUENCE_LENGTH
 
     column_names = list(dataset["train"].column_names)
@@ -531,16 +595,25 @@ def _tokenize_dataset(
         return " ".join(value(column) for column in column_names if value(column))
 
     def tokenize(batch: dict[str, list[Any]]) -> dict[str, Any]:
+        _check_protected_use(_protected_use)
         row_count = max((len(values) for values in batch.values() if isinstance(values, list)), default=0)
         texts = [format_row(batch, index) for index in range(row_count)]
+        _check_protected_use(_protected_use)
         encoded = tokenizer(texts, truncation=True, padding="max_length", max_length=block_size)
+        _check_protected_use(_protected_use)
         encoded["labels"] = list(encoded["input_ids"])
+        _check_protected_use(_protected_use)
         return encoded
 
-    return dataset.map(tokenize, batched=True, remove_columns=dataset["train"].column_names)
+    columns = dataset["train"].column_names
+    _check_protected_use(_protected_use)
+    result = dataset.map(tokenize, batched=True, remove_columns=columns)
+    _check_protected_use(_protected_use)
+    return result
 
 
-def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path) -> Any:
+def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path, *, _protected_use=None) -> Any:
+    _check_protected_use(_protected_use,payload)
     try:
         from transformers import TrainingArguments
     except Exception as error:  # pragma: no cover
@@ -551,12 +624,14 @@ def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path) -> An
         dataloader_pin_memory = bool(torch.cuda.is_available())
     except Exception:
         dataloader_pin_memory = False
+    _check_protected_use(_protected_use,payload)
 
     common = _to_dict(payload.commonParameters)
     advanced = _to_dict(payload.advancedParameters)
     common_max_steps = common.get("maxSteps")
     normalized_max_steps = int(common_max_steps) if isinstance(common_max_steps, (int, float)) else -1
-    return TrainingArguments(
+    _check_protected_use(_protected_use,payload)
+    result = TrainingArguments(
         output_dir=str(output_dir / "checkpoints"),
         num_train_epochs=float(common.get("numEpochs", 1)),
         max_steps=normalized_max_steps,
@@ -579,9 +654,12 @@ def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path) -> An
         report_to=[],
         remove_unused_columns=False,
     )
+    _check_protected_use(_protected_use,payload)
+    return result
 
 
-def _apply_lora(model: Any, payload: TrainModelTaskRequest) -> Any:
+def _apply_lora(model: Any, payload: TrainModelTaskRequest, *, _protected_use=None) -> Any:
+    _check_protected_use(_protected_use,payload)
     try:
         from peft import LoraConfig, TaskType, get_peft_model
     except Exception as error:  # pragma: no cover
@@ -605,8 +683,12 @@ def _apply_lora(model: Any, payload: TrainModelTaskRequest) -> Any:
     if target_modules:
         lora_config_args["target_modules"] = target_modules
 
+    _check_protected_use(_protected_use,payload)
     lora_config = LoraConfig(**lora_config_args)
-    return get_peft_model(model, lora_config)
+    _check_protected_use(_protected_use,payload)
+    result = get_peft_model(model, lora_config)
+    _check_protected_use(_protected_use,payload)
+    return result
 
 
 def _validation_loss(report: Any, key: str) -> float:
@@ -670,6 +752,7 @@ def _run_trainer(
     on_progress: Callable[[dict[str, int]], None] | None = None,
     compare_validation_baseline: bool = False,
     on_validation_progress: Callable[[str], None] | None = None,
+    _protected_use=None,
 ) -> tuple[dict[str, float], list[dict[str, Any]]]:
     if type(compare_validation_baseline) is not bool:
         raise ValueError("The private validation comparison option is unavailable.")
@@ -680,6 +763,7 @@ def _run_trainer(
         from transformers import DataCollatorForLanguageModeling, Trainer, TrainerCallback
     except Exception as error:  # pragma: no cover
         raise RuntimeError("transformers Trainer is required for training.") from error
+    _check_protected_use(_protected_use)
 
     def gradient_accumulation_steps() -> int:
         return max(int(getattr(args, "gradient_accumulation_steps", 1) or 1), 1)
@@ -718,15 +802,19 @@ def _run_trainer(
         def on_step_end(self, _args: Any, state: Any, _control: Any, **_kwargs: Any) -> None:
             self._report_completed_batch(_args, state)
 
+    collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    training_data = dataset["train"]
+    _check_protected_use(_protected_use)
     trainer = Trainer(
         model=model,
         args=args,
-        train_dataset=dataset["train"],
+        train_dataset=training_data,
         eval_dataset=eval_dataset,
         processing_class=tokenizer,
-        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
+        data_collator=collator,
         callbacks=[_TrainingProgressCallback()],
     )
+    _check_protected_use(_protected_use)
     if on_progress is not None:
         total_epochs = int(ceil(float(getattr(args, "num_train_epochs", 1) or 1)))
         on_progress({
@@ -737,15 +825,21 @@ def _run_trainer(
         })
     if compare_validation_baseline and on_validation_progress is not None:
         on_validation_progress("baseline-validation")
+    _check_protected_use(_protected_use)
     baseline = _measure_validation_loss(trainer, eval_dataset, "baseline_validation") if compare_validation_baseline else None
+    _check_protected_use(_protected_use)
     if compare_validation_baseline and on_validation_progress is not None:
         on_validation_progress("training")
+    _check_protected_use(_protected_use)
     train_result = trainer.train()
+    _check_protected_use(_protected_use)
     metrics: dict[str, float] = {k: float(v) for k, v in train_result.metrics.items() if isinstance(v, (int, float))}
     if compare_validation_baseline:
         if on_validation_progress is not None:
             on_validation_progress("trained-validation")
+        _check_protected_use(_protected_use)
         trained = _measure_validation_loss(trainer, eval_dataset, "trained_validation")
+        _check_protected_use(_protected_use)
         if on_validation_progress is not None:
             on_validation_progress("comparison-complete")
         # These exact measured fields override similarly named supplier metrics.
@@ -791,15 +885,20 @@ def train_model_from_local_files(
     if _resolve_training_task(payload) not in TEXT_CAUSAL_TRAINING_TASKS:
         raise ValueError("This private training task is unavailable.")
     # Capture the original local locator before progress/supplier callbacks.
+    local_dataset_refs = None; protected_use = None
     if _model_view is not None:
         if type(payload) is not TrainModelTaskRequest:
             raise ValueError("The private protected Model request is unavailable.")
-        protected_reference = resolve_original_model_view(_model_view, _NATIVE_REQUEST_SERIALIZER(payload, mode="json"))
-        local_model_ref = _local_training_model_reference(protected_reference)
+        protected_use = _ProtectedTrainingUse(payload,_model_view)
+        local_dataset_refs = protected_use.dataset_references
+        local_model_ref = _local_training_model_reference(protected_use.model_reference)
+        _check_protected_use(protected_use,payload)
     else:
         local_model_ref = _local_training_model_reference(payload.baseModel.localPath)
     return _train_model(payload, on_progress=on_progress, local_model_ref=local_model_ref,
-                        compare_validation_baseline=compare_validation_baseline)
+        compare_validation_baseline=compare_validation_baseline,
+        **({"local_dataset_refs":local_dataset_refs} if local_dataset_refs is not None else {}),
+        **({"_protected_use":protected_use} if protected_use is not None else {}))
 
 
 def _train_model(
@@ -808,9 +907,27 @@ def _train_model(
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     local_model_ref: str | None = None,
     compare_validation_baseline: bool = False,
+    local_dataset_refs: tuple[str,...] | None = None,
+    _protected_use=None,
 ) -> TrainModelTaskResult:
+    _check_protected_use(_protected_use,payload)
+    if _protected_use is not None and (local_model_ref != _protected_use.model_reference
+            or local_dataset_refs != _protected_use.dataset_references):
+        raise ValueError("The private protected training inputs are unavailable.")
     if type(compare_validation_baseline) is not bool or compare_validation_baseline and local_model_ref is None:
         raise ValueError("The private local validation comparison is unavailable.")
+    if local_dataset_refs is not None:
+        if (_protected_use is None or local_model_ref is None
+                or _resolve_training_task(payload) not in TEXT_CAUSAL_TRAINING_TASKS):
+            raise ValueError("The private protected training inputs are unavailable.")
+        local_dataset_refs = _capture_local_dataset_references(payload,local_dataset_refs)
+    if _protected_use is not None:
+        original_progress = on_progress
+        def protected_progress(value):
+            _check_protected_use(_protected_use,payload)
+            if original_progress is not None: original_progress(value)
+            _check_protected_use(_protected_use,payload)
+        on_progress = protected_progress
     _require_non_empty(payload.output.get("outputModelName"), "output.outputModelName")
     training_task = _resolve_training_task(payload)
 
@@ -820,10 +937,13 @@ def _train_model(
     run_id = f"train-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
     output_model_name = payload.output.get("outputModelName")
     configured_output_directory = payload.output.get("outputDirectory")
+    _check_protected_use(_protected_use,payload)
     output_directory = configured_output_directory or tempfile.mkdtemp(prefix=f"{output_model_name}-")
 
     output_path = Path(output_directory)
+    _check_protected_use(_protected_use,payload)
     output_path.mkdir(parents=True, exist_ok=True)
+    _check_protected_use(_protected_use,payload)
 
     warnings: list[str] = []
     logs: list[str] = []
@@ -883,16 +1003,22 @@ def _train_model(
 
         stage = "base-model-resolution"
         base_model_ref = _local_training_model_reference(local_model_ref) if local_model_ref is not None else _resolve_base_model(payload)
+        _check_protected_use(_protected_use,payload)
         stage = "dataset-loading"
-        dataset, eval_dataset = _load_dataset(payload)
+        dataset, eval_dataset = _load_dataset(payload,
+            **({"local_dataset_refs":local_dataset_refs} if local_dataset_refs is not None else {}),
+            **({"_protected_use":_protected_use} if _protected_use is not None else {}))
+        _check_protected_use(_protected_use,payload)
 
         stage = "model-loading"
         advanced = _to_dict(payload.advancedParameters)
         quantization = _to_dict(advanced.get("quantization"))
         model, tokenizer = (
-            _load_transformers_objects(base_model_ref, payload.method, quantization, local_files_only=True)
+            _load_transformers_objects(base_model_ref, payload.method, quantization, local_files_only=True,
+                **({"_protected_use":_protected_use} if _protected_use is not None else {}))
             if local_model_ref is not None else _load_transformers_objects(base_model_ref, payload.method, quantization)
         )
+        _check_protected_use(_protected_use,payload)
 
         stage = "sequence-length"
         effective_sequence_length, sequence_length_warning = _resolve_effective_sequence_length(
@@ -900,6 +1026,7 @@ def _train_model(
             tokenizer,
             _to_dict(payload.commonParameters).get("maxSequenceLength"),
         )
+        _check_protected_use(_protected_use,payload)
         if sequence_length_warning is not None:
             warnings.append(sequence_length_warning)
             logs.append(sequence_length_warning)
@@ -911,16 +1038,21 @@ def _train_model(
             effective_sequence_length,
             training_task=training_task,
             purpose_paths=purpose_paths,
+            **({"_protected_use":_protected_use} if _protected_use is not None else {}),
         )
+        _check_protected_use(_protected_use,payload)
         tokenized_eval = tokenized["validation"] if "validation" in tokenized else None
 
         if payload.method in {"lora", "qlora"}:
             stage = "adapter-configuration"
-            model = _apply_lora(model, payload)
+            model = _apply_lora(model, payload,**({"_protected_use":_protected_use} if _protected_use is not None else {}))
+            _check_protected_use(_protected_use,payload)
             logs.append(f"Applied {payload.method.upper()} adapter config.")
 
         stage = "training-arguments"
-        train_args = _build_training_args(payload, output_path)
+        train_args = _build_training_args(payload, output_path,
+            **({"_protected_use":_protected_use} if _protected_use is not None else {}))
+        _check_protected_use(_protected_use,payload)
         def on_training_progress(progress: dict[str, int]) -> None:
             message = (
                 f"Epoch [{progress.get('epoch', 0)}]/[{progress.get('totalEpochs', 0)}], "
@@ -940,7 +1072,9 @@ def _train_model(
                 # The existing task callback checks cancellation at each boundary.
                 on_progress({"stage": phase, "message": messages[phase]})
         metrics, checkpoints = _run_trainer(model, tokenizer, tokenized, tokenized_eval, train_args, on_progress=on_training_progress,
-            **({"compare_validation_baseline": True, "on_validation_progress": on_validation_progress} if compare_validation_baseline else {}))
+            **({"compare_validation_baseline": True, "on_validation_progress": on_validation_progress} if compare_validation_baseline else {}),
+            **({"_protected_use":_protected_use} if _protected_use is not None else {}))
+        _check_protected_use(_protected_use,payload)
         comparison = _validation_comparison_report(metrics) if compare_validation_baseline else None
 
         stage = "serialization"
@@ -948,6 +1082,7 @@ def _train_model(
             on_progress({"stage": "serializing", "message": "Serializing trained model artifacts..."})
 
         max_shard_size = _parse_max_shard_size(payload)
+        _check_protected_use(_protected_use,payload)
         if payload.method in {"lora", "qlora"}:
             serialization = save_adapter_pretrained(
                 model,
@@ -959,6 +1094,7 @@ def _train_model(
         else:
             serialization = save_full_model_pretrained(model, tokenizer, output_path, max_shard_size=max_shard_size)
             artifact_form = "full-model"
+        _check_protected_use(_protected_use,payload)
 
         stage = "validation"
         if on_progress is not None:
@@ -982,6 +1118,7 @@ def _train_model(
         )
 
         stage = "serialization-manifest"
+        _check_protected_use(_protected_use,payload)
         manifest_path = write_serialization_manifest(output_path, {
             "runId": run_id,
             "method": payload.method,
@@ -991,6 +1128,7 @@ def _train_model(
         })
 
         stage = "run-metadata"
+        _check_protected_use(_protected_use,payload)
         run_metadata_path = _write_run_metadata(
             output_path,
             {

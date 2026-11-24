@@ -25,6 +25,7 @@ import subprocess
 import struct
 import sys
 from threading import Event, Lock, RLock, Thread, get_ident
+from types import ModuleType
 from weakref import WeakKeyDictionary
 import time
 
@@ -1114,10 +1115,24 @@ class _OriginalModelView:
 _model_views = WeakKeyDictionary()
 _model_leases = WeakKeyDictionary()
 _verified_model_receivers = WeakKeyDictionary()
+_sealed_training_inputs = WeakKeyDictionary()
+
+
+def _input_view_binding(state, request):
+    if "input_copy_owner" not in state: return None
+    graph = state["input_copy_owner"]
+    need(type(graph) is OriginalTrainingInputGraph)
+    record = _sealed_training_inputs.get(graph)
+    need(record is not None and record["lease_state"] is state and not record["active"] and not record["lost"]
+         and graph.owner is record["native_owner"] and graph.phase == "sealed" and not graph.retired
+         and not graph.owner.unknown and not graph.owner.pending
+         and state.get("input_copy_io_active") is None and state.get("input_source_read_active") is None
+         and _same_model_json(record["request"],request))
+    return record
 
 
 class OriginalInheritedModelLease:
-    """One exact source/session binding. No input/output or full producer proof."""
+    """One exact live Model/optional input binding, never full producer proof."""
     def __init__(self, source):
         need(type(source) is OriginalModelBootstrapReceiver)
         record = _verified_model_receivers.get(source)
@@ -1132,41 +1147,79 @@ class OriginalInheritedModelLease:
         state = _model_leases.get(self); need(type(self) is OriginalInheritedModelLease and state is not None)
         source = state["source"]
         request = _copy_model_json(sealed_request)
-        # Fast refusal also avoids waiting behind a held input Native operation.
-        # A combined input/loader borrow is a separate, still-pending component.
-        need("input_copy_owner" not in state and state.get("input_source_read_active") is None)
-        with state["lock"]:
+        # Refuse partial/held input work before waiting on its operation lock.
+        _input_view_binding(state,request)
+        need(state.get("input_source_read_active") is None)
+        lock = state["lock"]; need(lock.acquire(blocking=False))
+        input_record = None
+        try:
             owner = state["native_owner"]
-            need(not state["entered"] and source.phase == "bound" and "input_copy_owner" not in state
+            need(not state["entered"] and source.phase == "bound"
                  and source.owner is owner and not owner.unknown and not owner.pending
                  and state.get("input_source_read_active") is None)
-            state["entered"] = True; source.phase = "borrowed"; owner.thread = get_ident()
+            input_record = _input_view_binding(state,request)
+            state["entered"] = True; state["view_lost"] = False
+            source.phase = "borrowed"; owner.thread = get_ident()
+            if input_record is not None:
+                input_record["native_owner"].thread = get_ident()
+                input_record["active"] = True
+                state["borrowed_input"] = input_record
             view = _OriginalModelView()
             try:
                 state["model_guard"](request)
                 state["guard"]()
+                if input_record is not None:
+                    input_record["guard"]()
+                    state["guard"]()
             except BaseException:
-                source.phase = "failed"
+                source.phase = "failed"; state["view_lost"] = True
+                if input_record is not None: input_record["active"] = False; input_record["lost"] = True
                 raise
             _model_views[view] = (self, request, get_ident())
+        finally: lock.release()
         try: yield view
         finally:
             with state["lock"]:
                 _model_views.pop(view, None)
+                if input_record is not None: input_record["active"] = False
                 # Retain every guard. Context exit is not SDK/worker/Job IO
                 # retirement, handle close, disk credit or another borrow.
                 source.phase = "spent"
 
 
-def resolve_original_model_view(view, sealed_request):
+def resolve_original_training_references(view, sealed_request):
+    """Private fixed-loader references; a caller cannot supply these as proof."""
     need(type(view) is _OriginalModelView)
     binding = _model_views.get(view); need(binding is not None)
     lease, expected, thread = binding
     state = _model_leases.get(lease); need(state is not None and thread == get_ident())
-    with state["lock"]:
-        need(state["source"].phase == "borrowed" and _same_model_json(expected, _copy_model_json(sealed_request)))
-        state["guard"]()
-        return state["physical_path"]
+    lock = state["lock"]; need(lock.acquire(blocking=False))
+    try:
+        need(state["source"].phase == "borrowed" and not state["view_lost"]
+             and _same_model_json(expected, _copy_model_json(sealed_request)))
+        input_record = state.get("borrowed_input")
+        if "input_copy_owner" in state:
+            need(input_record is not None and _sealed_training_inputs.get(state["input_copy_owner"]) is input_record
+                 and input_record["active"] and not input_record["lost"])
+        # Caller thread/request mistakes above do not consume legitimate use.
+        # An actual Native/currentness loss below is permanent for this view.
+        try:
+            need(state["source"].owner is state["native_owner"]
+                 and not state["native_owner"].unknown and not state["native_owner"].pending)
+            state["guard"]()
+            if input_record is not None:
+                input_record["guard"]()
+                state["guard"]()
+        except BaseException:
+            state["view_lost"] = True
+            if input_record is not None: input_record["lost"] = True
+            raise
+        return state["physical_path"], None if input_record is None else input_record["dataset_references"]
+    finally: lock.release()
+
+
+def resolve_original_model_view(view, sealed_request):
+    return resolve_original_training_references(view,sealed_request)[0]
 
 
 class OriginalModelBootstrapReceiver(NativeModelInspection):
@@ -1371,6 +1424,45 @@ def _capture_training_input_copy(definition, staged, configuration, definition_d
         "sourcePath":source,**config,"files":tuple(files)}
 
 
+def _capture_input_loader_request(definition, staged):
+    """Use only the already-loaded fixed worker schema, without import effects.
+
+    The standalone controller can inspect/copy a finite graph but cannot mint a
+    worker input view. Missing worker models leave that consumer unavailable.
+    """
+    if not __package__: return None
+    name = __package__.rsplit(".",1)[0]+".models"
+    module = sys.modules.get(name)
+    if module is None: return None
+    need(type(module) is ModuleType)
+    request_type = vars(module).get("TrainModelTaskRequest")
+    model_type = vars(module).get("TrainModelBaseModelInput")
+    dataset_type = vars(module).get("TrainModelDatasetInput")
+    need(all(isinstance(item,type) and item.__module__ == name for item in (request_type,model_type,dataset_type)))
+    validator = request_type.__pydantic_validator__.validate_python
+    serializer = request_type.__pydantic_serializer__.to_python
+    raw = _copy_model_json(staged["payload"])
+    workspace = raw.pop("workspaceId",None)
+    need(type(workspace) is str and workspace == definition.get("workspaceId")
+         and set(raw) <= frozenset(request_type.model_fields)
+         and type(raw.get("baseModel")) is dict and set(raw["baseModel"]) <= frozenset(model_type.model_fields)
+         and type(raw.get("datasets")) is list
+         and all(type(row) is dict and set(row) <= frozenset(dataset_type.model_fields) for row in raw["datasets"]))
+    try: normalized = _copy_model_json(serializer(validator(raw),mode="json"))
+    except Exception: raise LaunchUnavailable() from None
+    # Only declared default fields may be added. No supplied scalar, open data
+    # object, array order or nested value may be coerced, removed or rewritten.
+    for key,value in raw.items():
+        if key == "baseModel":
+            need(all(_same_model_json(item,normalized[key][field]) for field,item in value.items()))
+        elif key == "datasets":
+            need(len(value) == len(normalized[key]) and all(
+                all(_same_model_json(item,after[field]) for field,item in before.items())
+                for before,after in zip(value,normalized[key])))
+        else: need(_same_model_json(value,normalized[key]))
+    return normalized
+
+
 class _OriginalInputAdmission:
     """Compose actual registered Model custody with captured business admission."""
     def __init__(self, lease, state, record, admission, input_owner):
@@ -1435,8 +1527,10 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
                  and source.owner is record["native_owner"] and not record["native_owner"].unknown
                  and not record["native_owner"].pending and state.get("input_source_read_active") is None)
             descriptor = _capture_training_input_copy(record["definition"],staged,configuration,record["definition_digest"])
+            loader_request = _capture_input_loader_request(record["definition"],staged)
             state["input_copy_owner"] = self  # Retain atomically BEFORE suppliers.
             self.lease, self._lease_state, self._lease_record = lease, state, record
+            self._loader_request = loader_request
         finally: lock.release()
         owner = InheritedModelNativeCalls(record["native_owner"].kernel,clock=record["native_owner"].clock)
         self.owner = owner
@@ -1464,20 +1558,60 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
             lock.release()
 
     def guard(self):
+        record = _sealed_training_inputs.get(self)
+        if record is not None and self._lease_state.get("borrowed_input") is record:
+            return self._borrow_guard(record)
         need(self._lease_state.get("input_copy_io_active") is self)
         return _OriginalProtectedFlatCopy.guard(self)
 
     def prepare(self):
-        with self._copy_call(): return _OriginalProtectedFlatCopy.prepare(self)
+        with self._copy_call():
+            _OriginalProtectedFlatCopy.prepare(self)
+            if self._loader_request is not None:
+                need(self not in _sealed_training_inputs)
+                _sealed_training_inputs[self] = {"lease_state":self._lease_state,"native_owner":self.owner,
+                    "request":_copy_model_json(self._loader_request),
+                    "dataset_references":tuple(self.physical_path+"\\"+row["name"] for row in self.records[:-1]),
+                    "guard":OriginalTrainingInputGraph._assert_live_borrow.__get__(self),
+                    "current":self.admission.current,"active":False,"lost":False,"checking":False}
 
     def assert_sealed(self):
         with self._copy_call(): return _OriginalProtectedFlatCopy.assert_sealed(self)
 
+    def _borrow_guard(self, record):
+        if record["checking"]:
+            record["lost"] = True
+            raise LaunchUnavailable()
+        record["checking"] = True
+        try:
+            self.owner._main()
+            state = self._lease_state
+            def bound():
+                need(_sealed_training_inputs.get(self) is record and record["lease_state"] is state
+                     and state.get("input_copy_owner") is self and state.get("borrowed_input") is record
+                     and state["entered"] and state["source"].phase == "borrowed"
+                     and record["active"] and not record["lost"] and self.owner is record["native_owner"]
+                     and not self.owner.unknown and not self.owner.pending
+                     and not state["native_owner"].unknown and not state["native_owner"].pending
+                     and state.get("input_copy_io_active") is None and state.get("input_source_read_active") is None)
+            bound(); need(record["current"]() is True); bound()
+        except BaseException:
+            record["lost"] = True
+            raise LaunchUnavailable() from None
+        finally: record["checking"] = False
+
+    def _assert_live_borrow(self):
+        record = _sealed_training_inputs.get(self); need(record is not None)
+        try: return _OriginalProtectedFlatCopy.assert_sealed(self)
+        except BaseException:
+            record["lost"] = True
+            raise LaunchUnavailable() from None
+
     def retire_copy_io(self):
         """Close this copy's own IO; retain bytes, not worker/global settlement.
 
-        No borrower or SDK reader is admitted by this component. A future full
-        producer must also own those readers, outputs and original worker exit.
+        A borrowed combined view retains all guards after context exit. A future
+        full producer must own SDK reader retirement, outputs and worker exit.
         This result cannot implement NativeTrainingResources.settle by itself.
         """
         if self.retired: return True

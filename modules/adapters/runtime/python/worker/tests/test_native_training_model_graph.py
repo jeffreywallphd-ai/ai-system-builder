@@ -492,7 +492,7 @@ def borrowed_model_view(definition,sealed_request,native_module=n):
 
 
 class TrainingInputCopyTests(unittest.TestCase):
-    def fixture(self, media="application/x-ndjson", count=1):
+    def fixture(self, media="application/x-ndjson", count=1, native_module=n):
         value = json.loads((Path(__file__).parent/"fixtures/approved_training_staged_input.json").read_text())
         request = value["approvedRequest"]; request["baseModel"]["localPath"] = descriptor()["logicalPath"]
         fmt = n._TRAINING_INPUT_MEDIA[media]
@@ -500,15 +500,18 @@ class TrainingInputCopyTests(unittest.TestCase):
         digest = lambda raw: "sha256:"+hashlib.sha256(raw).hexdigest()
         request["datasets"] = [{"artifactId":"input-"+str(i),"splitRole":"train" if i==0 else "validation","format":fmt} for i in range(count)]
         definition = {"requestId":"11111111-1111-4111-8111-111111111111","workspaceId":request["workspaceId"],
+            "owner":{"organizationId":"synthetic-org","principalId":"synthetic-actor",
+                "clientId":"22222222-2222-4222-8222-222222222222","hostIncarnationId":"33333333-3333-4333-8333-333333333333"},
+            "proposalDigest":"sha256:"+"e"*64,
             "request":request,"modelUpdatedAt":descriptor()["modelUpdatedAt"],
             "inputs":[{"artifactId":row["artifactId"],"role":row["splitRole"],"mediaType":media,"digest":digest(content),"sizeBytes":len(content)} for row in request["datasets"]],
             "dataset":{"datasetId":"synthetic-data","versionId":"synthetic-version","versionDigest":"sha256:"+"d"*64,"recipeDigest":digest(recipe)},
             "recipeSizeBytes":len(recipe)}
-        owner,parent,model_control=SourceLaunchExchangeTests().bound_bootstrap(definition)
+        owner,parent,model_control=SourceLaunchExchangeTests().bound_bootstrap(definition,native_module)
         owner.resume()
         for thread in owner.readers: thread.join(1)
         self.assertEqual(owner.model_bootstrap.outcome,"written")
-        child=parent.inherited_child(); source=n.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
+        child=parent.inherited_child(); source=native_module.OriginalModelBootstrapReceiver(owner.boot["nonce"],kernel=child)
         lease=source.bind(definition)
         for path in ("X:\\inputs","X:\\inputs\\batch","X:\\private\\inputs"):
             child.node(path,True)
@@ -772,6 +775,108 @@ class TrainingInputCopyTests(unittest.TestCase):
                 else: n._model_leases[lease]["entered"]=True
                 with self.assertRaises(n.LaunchUnavailable): graph.prepare()
                 self.assertEqual(control.charges,[]); self.assertNotIn(graph.physical_path,kernel.nodes)
+
+
+class CombinedTrainingInputViewTests(unittest.TestCase):
+    def fixture(self, prepare=True):
+        from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest
+        from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as actual
+        case=TrainingInputCopyTests()
+        source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=actual)
+        self.addCleanup(case.doCleanups)
+        graph=actual.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        if prepare: graph.prepare()
+        request=TrainModelTaskRequest.model_validate(staged["payload"]).model_dump(mode="json")
+        return actual,source,lease,graph,request,staged,control,kernel
+
+    def test_actual_joint_view_uses_protected_inputs_and_preserves_normalized_request(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        expected=copy.deepcopy(request); original=copy.deepcopy(staged); source_thread=source.owner.thread; result=[]
+        def run():
+            try:
+                with lease.borrow(request) as view:
+                    model,inputs=actual.resolve_original_training_references(view,request)
+                    result.append((model,inputs)); self.assertEqual(actual.resolve_original_model_view(view,request),model)
+                    self.assertFalse(graph.retire_copy_io()); self.assertTrue(all(not h.closed for h in graph.guards))
+                with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            except BaseException as error: result.append(type(error).__name__)
+        worker=Thread(target=run); worker.start(); worker.join(3)
+        self.assertFalse(worker.is_alive()); self.assertEqual(len(result),1)
+        self.assertEqual(result[0],(source.physical_path,tuple(graph.physical_path+"\\"+row["name"] for row in graph.records[:-1])))
+        self.assertNotEqual(source.owner.thread,source_thread); self.assertEqual(request,expected); self.assertEqual(staged,original)
+        self.assertEqual(source.phase,"spent"); self.assertFalse(graph.retire_copy_io()); self.assertEqual(control.retained,[])
+        self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]])
+
+    def test_partial_retired_forged_or_changed_inputs_never_mint_a_view(self):
+        for mode in ("partial","retired","forged","changed","scalar-kind"):
+            with self.subTest(mode=mode):
+                actual,source,lease,graph,request,staged,control,kernel=self.fixture(prepare=mode!="partial")
+                if mode=="retired": self.assertTrue(graph.retire_copy_io())
+                elif mode=="forged": actual._model_leases[lease]["input_copy_owner"]=object()
+                elif mode=="changed": request["datasets"][0]["path"]="X:\\other\\substituted.jsonl"
+                elif mode=="scalar-kind": request["commonParameters"]["maxSteps"]=True
+                before=len(kernel.calls)
+                with self.assertRaises(actual.LaunchUnavailable):
+                    with lease.borrow(request): self.fail("Invalid input binding reached a live view")
+                self.assertEqual(len(kernel.calls),before); self.assertEqual(source.phase,"bound")
+                if mode!="forged": graph.retire_copy_io()
+
+    def test_currentness_loss_stays_lost_and_cross_thread_reads_do_not_touch_native(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            outcomes=[]; before=len(kernel.calls)
+            def foreign():
+                try: actual.resolve_original_training_references(view,request); outcomes.append("unexpected")
+                except actual.LaunchUnavailable: outcomes.append("denied")
+            other=Thread(target=foreign); other.start(); other.join(2)
+            self.assertEqual(outcomes,["denied"]); self.assertEqual(len(kernel.calls),before)
+            control.current=False
+            with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            control.current=True; before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            self.assertEqual(len(kernel.calls),before); self.assertFalse(graph.retire_copy_io())
+
+    def test_unknown_input_inspection_retains_original_slots_and_denies_more_calls(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            original=graph.owner.invoke
+            def lost(name,args,row):
+                result=original(name,args,row)
+                if name=="GetFileInformationByHandleEx": raise RuntimeError("Synthetic lost input inspection return")
+                return result
+            graph.owner.invoke=lost
+            with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            self.assertTrue(graph.owner.unknown); self.assertTrue(graph.owner.pending)
+            self.assertTrue(graph.owner.pending[-1]["value_returned"]); before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            self.assertFalse(graph.retire_copy_io()); self.assertEqual(len(kernel.calls),before)
+        self.assertEqual(control.retained,[])
+
+    def test_fixed_schema_cannot_drop_unknown_or_coerce_invalid_supplied_values(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture(prepare=False)
+        for mode in ("workspace","top","model","dataset","typed-value"):
+            with self.subTest(mode=mode):
+                raw=copy.deepcopy(staged)
+                if mode=="workspace": raw["payload"]["workspaceId"]="other-workspace"
+                elif mode=="top": raw["payload"]["privateOverride"]="unapproved"
+                elif mode=="model": raw["payload"]["baseModel"]["nativeReady"]=True
+                elif mode=="dataset": raw["payload"]["datasets"][0]["unchecked"]=True
+                else: raw["payload"]["trainingTask"]=True
+                before=len(kernel.calls)
+                with self.assertRaises(actual.LaunchUnavailable): actual._capture_input_loader_request(source.definition,raw)
+                self.assertEqual(len(kernel.calls),before); self.assertEqual(control.charges,[])
+        self.assertTrue(graph.retire_copy_io())
+
+    def test_observed_model_protection_loss_cannot_revive_the_same_joint_view(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            root=kernel.nodes[source.physical_path]; sealed=root["acl"]
+            root["acl"]=actual.model_acl(kernel.sid,sealed=False)
+            with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            root["acl"]=sealed; before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): actual.resolve_original_training_references(view,request)
+            self.assertEqual(len(kernel.calls),before)
+            self.assertTrue(all(not handle.closed for handle in graph.guards)); self.assertEqual(control.retained,[])
 
 
 class InheritedModelViewTests(unittest.TestCase):

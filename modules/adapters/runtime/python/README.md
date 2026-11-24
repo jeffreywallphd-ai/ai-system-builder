@@ -876,8 +876,8 @@ copies, hashes, reads back and seals every input with the same Native allocation
 identity, stream, link/reparse, ACL/OWNER_RIGHTS and read-only handle checks.
 Unknown calls keep their return slots and handles. Closing this copy's own IO
 retains its byte charge and never deletes files, releases disk credit, settles
-the training worker or supplies full producer readiness. Loader input consumption,
-output protection, concrete durable reservations, production activation and real
+the training worker or supplies full producer readiness. Full producer/output
+protection, concrete durable reservations, production activation and real
 host qualification remain pending. Tests use synthetic in-memory Native replies.
 
 The original lease lock serializes input operations and the Model read proof
@@ -885,5 +885,38 @@ across actual request threads. Transfer a ledger's thread only for its exact
 known, idle operation; restore it only after all Native returns are known. A held
 or unknown call refuses another operation without waiting or repeating effects.
 Admission callbacks cannot enter a Model borrow during copying. A bound input
-owner also fences the Model-only borrow after copy IO closes. A combined input
-and loader borrow remains separate pending work; no readiness is inferred.
+owner also fences the Model-only borrow after copy IO closes. Only the combined
+view below can admit sealed inputs; copy IO alone supplies no readiness.
+
+### Combined protected training view
+
+The original lease can borrow a genuine completed input graph with its Model.
+Require the actual registered Native copy, idle known ledgers, exact sealed
+request and the already-loaded fixed worker request schema. Capture that schema
+and request before supplier callbacks. Only declared defaults may be added;
+workspace metadata stays in the original definition outside the training DTO.
+No supplied setting, scalar kind, open object or order may be coerced or dropped.
+The standalone controller cannot mint this worker view.
+
+One serialized handoff moves both actual read ledgers to the borrower thread.
+Recheck the Model, complete protected input graph and current business admission.
+Missing, partial, retired, foreign, unknown or expired inputs refuse without an
+ordinary-path fallback. The same fixed loader receives the protected model and
+dataset references privately. Its existing data reader uses those references
+without rewriting the approved logical request or saved dataset history. No
+task field or public API accepts this view or a private runtime-path override.
+
+Borrow exit retains native guards and byte charges. It does not prove SDK reader,
+output or worker retirement and cannot release disk capacity. Full native
+producer/output protection, durable reservation, production activation and actual
+host qualification remain pending. Tests use synthetic Native replies, a
+controlled loader and local synthetic dataset bytes; no model quality is scored.
+
+The fixed loader captures a private use object from the genuine view and exact
+typed request. It rechecks that view after progress and supplier callbacks and
+at its dataset, model, trainer and output dispatch boundaries. This object does
+not accept a caller-selected guard. Observed Native protection/currentness loss
+permanently invalidates the view; restoring facts cannot revive it. A wrong
+request or foreign-thread query fails without poisoning an otherwise valid view.
+These are cooperative checks at owned SDK boundaries, not instant revocation
+inside a running supplier or proof of protected output/cache/SDK retirement.

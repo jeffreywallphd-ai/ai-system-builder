@@ -4,7 +4,7 @@ import importlib
 import json
 import sys
 from types import SimpleNamespace
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -43,6 +43,153 @@ def test_private_fixed_loader_refuses_forged_view_before_path_or_supplier(monkey
     monkeypatch.setattr(train_model_module,"_train_model",lambda *a,**kw: calls.append("unavailable"))
     with pytest.raises(native.LaunchUnavailable): train_model_module.train_model_from_local_files(payload,_model_view=object())
     assert calls==[]
+
+
+def test_private_fixed_loader_consumes_actual_combined_input_view_without_changing_request(monkeypatch):
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
+    case=TrainingInputCopyTests()
+    source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=native)
+    graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control)
+    try:
+        graph.prepare(); payload=TrainModelTaskRequest.model_validate(staged["payload"])
+        original=payload.model_dump(mode="json"); calls=[]; paths=[]
+        monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value: paths.append(value) or value)
+        monkeypatch.setattr(train_model_module,"_train_model",lambda actual,**options: calls.append((actual,options)) or "controlled-result")
+        with lease.borrow(original) as view:
+            assert train_model_module.train_model_from_local_files(payload,_model_view=view)=="controlled-result"
+            assert payload.model_dump(mode="json")==original
+            assert calls[0][0] is payload
+            assert calls[0][1]["local_model_ref"]==source.physical_path
+            assert calls[0][1]["local_dataset_refs"]==tuple(graph.physical_path+"\\"+row["name"] for row in graph.records[:-1])
+            assert calls[0][1]["compare_validation_baseline"] is False
+            control.current=False
+            with pytest.raises(native.LaunchUnavailable): train_model_module.train_model_from_local_files(payload,_model_view=view)
+            assert len(calls)==1 and paths==[source.physical_path]
+        with pytest.raises(native.LaunchUnavailable): train_model_module.train_model_from_local_files(payload,_model_view=view)
+        assert len(calls)==1 and control.retained==[]  # No SDK/worker settlement or quota credit.
+    finally: case.doCleanups()
+
+
+def test_private_dataset_reader_uses_protected_references_and_keeps_logical_paths(monkeypatch,tmp_path):
+    payload=_request(tmp_path)
+    payload.datasets[0].path=str(tmp_path/"missing-logical-staging.jsonl")
+    protected=tmp_path/"protected-input.jsonl"; protected.write_text('{"text":"Approved copied row"}\n',encoding="utf8")
+    before=payload.model_dump(mode="json"); calls=[]
+    def load_local(builder,*,data_files):
+        calls.append((builder,data_files))
+        return {"train":[json.loads(Path(data_files["train"][0]).read_text(encoding="utf8"))]}
+    monkeypatch.setitem(sys.modules,"datasets",SimpleNamespace(load_dataset=load_local))
+    monkeypatch.setattr(train_model_module,"_dataset_path",lambda _: pytest.fail("Protected inputs fell back to a logical path"))
+    loaded,evaluation=train_model_module._load_dataset(payload,local_dataset_refs=(str(protected),))
+    assert loaded=={"train":[{"text":"Approved copied row"}]} and evaluation is None
+    assert calls==[("json",{"train":[str(protected)]})] and payload.model_dump(mode="json")==before
+
+
+@pytest.mark.parametrize("change",["permission","settings"])
+def test_live_view_is_rechecked_after_progress_before_actual_dataset_use(monkeypatch,change):
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
+    case=TrainingInputCopyTests()
+    source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=native)
+    graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control); effects=[]
+    class OutputPath(PureWindowsPath):
+        def mkdir(self,*args,**options): effects.append("output-before-callback")
+    payload=TrainModelTaskRequest.model_validate(staged["payload"])
+    def progress(value):
+        if value.get("stage")=="initializing":
+            if change=="permission": control.current=False
+            else: payload.commonParameters["maxSteps"]=9876
+    def dataset(*args,**options):
+        effects.append("dataset-IO")
+        raise RuntimeError("Controlled stop before any model supplier")
+    monkeypatch.setattr(train_model_module,"Path",OutputPath)
+    monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value:value)
+    monkeypatch.setattr(train_model_module,"_load_dataset",dataset)
+    monkeypatch.setattr(train_model_module,"_load_transformers_objects",lambda *a,**k: pytest.fail("No model may load"))
+    try:
+        graph.prepare()
+        with lease.borrow(payload.model_dump(mode="json")) as view:
+            try: train_model_module.train_model_from_local_files(payload,on_progress=progress,_model_view=view)
+            except native.LaunchUnavailable: pass
+            assert "dataset-IO" not in effects
+    finally: case.doCleanups()
+
+
+@pytest.mark.parametrize("refs",[[],(),("relative.jsonl",),("https://example.invalid/data.jsonl",),("\\\\host\\share\\data.jsonl",),(True,)])
+def test_invalid_private_dataset_references_deny_before_output_or_dataset_work(monkeypatch,tmp_path,refs):
+    payload=_request(tmp_path)
+    monkeypatch.setattr(train_model_module,"_load_dataset",lambda *a,**k: pytest.fail("Invalid references reached dataset IO"))
+    monkeypatch.setattr(train_model_module,"_load_transformers_objects",lambda *a,**k: pytest.fail("Invalid references reached model loading"))
+    with pytest.raises(ValueError,match="protected training inputs"):
+        train_model_module._train_model(payload,local_model_ref="inert-local-only",local_dataset_refs=refs)
+    assert not (tmp_path/"out").exists()
+
+
+@pytest.mark.parametrize("withdraw",[False,True])
+def test_live_use_checked_after_dataset_import_before_reader_factory(monkeypatch,withdraw):
+    import builtins
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
+    case=TrainingInputCopyTests()
+    source,lease,staged,config,control,kernel,*_=case.fixture(native_module=native)
+    graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control); calls=[]
+    class LocalPath(PureWindowsPath):
+        def exists(self): return True  # Only this inert SDK boundary; Native facts remain real fixture replies.
+    def read(builder,*,data_files): calls.append(data_files); return {"train":[{"text":"synthetic"}]}
+    original_import=builtins.__import__
+    def importing(name,*args,**options):
+        if name=="datasets":
+            if withdraw: control.current=False
+            return SimpleNamespace(load_dataset=read)
+        return original_import(name,*args,**options)
+    try:
+        graph.prepare(); payload=TrainModelTaskRequest.model_validate(staged["payload"])
+        with lease.borrow(payload.model_dump(mode="json")) as view:
+            use=train_model_module._ProtectedTrainingUse(payload,view)
+            monkeypatch.setattr(train_model_module,"Path",LocalPath)
+            monkeypatch.setattr(builtins,"__import__",importing)
+            if withdraw:
+                with pytest.raises(native.LaunchUnavailable): train_model_module._load_dataset(payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+                assert calls==[]
+            else:
+                result,_=train_model_module._load_dataset(payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+                assert result=={"train":[{"text":"synthetic"}]} and len(calls)==1
+    finally: case.doCleanups()
+
+
+@pytest.mark.parametrize("withdraw",[False,True])
+def test_live_use_checked_after_tokenizer_before_model_factory(monkeypatch,withdraw):
+    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
+    case=TrainingInputCopyTests()
+    source,lease,staged,config,control,kernel,*_=case.fixture(native_module=native)
+    graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control); calls=[]
+    class Tokenizer:
+        pad_token="pad"; eos_token="end"
+        def __len__(self): return 0
+    def tokenize(reference,**options):
+        calls.append("tokenizer")
+        if withdraw: control.current=False
+        return Tokenizer()
+    def model(reference,**options):
+        calls.append("model")
+        assert options["local_files_only"] is True and options["trust_remote_code"] is False
+        assert options["use_safetensors"] is True and options["weights_only"] is True and options["token"] is False
+        return object()
+    monkeypatch.setitem(sys.modules,"transformers",SimpleNamespace(AutoTokenizer=SimpleNamespace(from_pretrained=tokenize),AutoModelForCausalLM=SimpleNamespace(from_pretrained=model)))
+    monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value:value)
+    try:
+        graph.prepare(); payload=TrainModelTaskRequest.model_validate(staged["payload"])
+        with lease.borrow(payload.model_dump(mode="json")) as view:
+            use=train_model_module._ProtectedTrainingUse(payload,view)
+            if withdraw:
+                with pytest.raises(native.LaunchUnavailable): train_model_module._load_transformers_objects(use.model_reference,payload.method,{},local_files_only=True,_protected_use=use)
+                assert calls==["tokenizer"]
+            else:
+                train_model_module._load_transformers_objects(use.model_reference,payload.method,{},local_files_only=True,_protected_use=use)
+                assert calls==["tokenizer","model"]
+    finally: case.doCleanups()
 
 
 def _validation_comparison_fixture(monkeypatch, *, baseline=4.0, candidate=3.0, fail_at=None):

@@ -128,6 +128,37 @@ class OriginalSessionTests(unittest.TestCase):
         owner = session.OriginalTrainingSession(definition(), producer, lambda: True, lambda **_: True, lambda _: None)
         self.assertEqual(owner.prepare(), "unavailable"); self.assertTrue(owner.settled)
         self.assertFalse(owner.blocks_recovery)
+
+    @unittest.skipUnless(sys.platform=="win32","Original native input composition uses the declared Windows profile")
+    def test_session_passes_actual_joint_view_and_keeps_the_approved_payload(self):
+        from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
+        self.native_view_patch.stop(); case=TrainingInputCopyTests()
+        source,lease,value,config,control,kernel,*_=case.fixture(count=2,native_module=model_native)
+        self.addCleanup(case.doCleanups)
+        owner=self.owner(defined=deepcopy(source.definition)); graphs=[]; calls=[]
+        def seal(raw):
+            # Controlled resource neighbor: actual Model/input proof, but no
+            # output/resource/full-producer readiness or real ML qualification.
+            graph=model_native.OriginalTrainingInputGraph(lease,raw,config,control,control)
+            graphs.append(graph); graph.prepare()
+            return TrainModelTaskRequest.model_validate(raw["payload"])
+        self.resources.seal_inputs=seal
+        self.resources.borrow=lambda: lease.borrow(owner.payload.model_dump(mode="json"))
+        self.resources.closed=False  # This fixture cannot prove whole-worker retirement.
+        def fixed_loader(payload,**options):
+            request=payload.model_dump(mode="json")
+            calls.append(model_native.resolve_original_training_references(options["_model_view"],request))
+            self.assertEqual(request,owner.payload.model_dump(mode="json")); self.assertFalse(options["compare_validation_baseline"])
+            return TrainModelTaskResult(runId="controlled",status="succeeded")
+        owner.loader=fixed_loader
+        self.assertEqual(owner.prepare(),"prepared"); self.assertEqual(owner.seal(value),"ready")
+        before=owner.payload.model_dump(mode="json"); self.assertEqual(owner.start()["kind"],"accepted")
+        runner=Thread(target=self.executor.run); runner.start(); runner.join(3)
+        self.assertFalse(runner.is_alive()); self.assertEqual(self.publications[-1]["status"],"succeeded")
+        graph=graphs[0]
+        self.assertEqual(calls,[(source.physical_path,tuple(graph.physical_path+"\\"+row["name"] for row in graph.records[:-1]))])
+        self.assertEqual(owner.payload.model_dump(mode="json"),before)
+        self.assertFalse(owner.settle()); self.assertTrue(owner.blocks_recovery); self.assertEqual(control.retained,[])
     def test_unknown_capture_keeps_the_original_worker_fenced(self):
         producer = Producer()
         def unknown(_): raise RuntimeError("inert binding outcome unknown")

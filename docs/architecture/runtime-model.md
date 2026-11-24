@@ -2770,7 +2770,7 @@ checks with captured business currentness; observed loss remains lost.
 Closing only the copy's own IO retains bytes and the original reservation charge.
 Unknown API/close/accounting outcomes stay owned and cannot repeat effects. This
 does not settle an SDK reader, output, worker, Job or global reservation. The
-complete NativeTrainingProducer, input-loader use, protected output namespace,
+complete NativeTrainingProducer, protected output namespace,
 durable reservation implementation, Root activation and actual-host qualification
 remain pending. Synthetic ABI checks are source evidence, never physical, model
 quality or parent qualification.
@@ -2782,5 +2782,42 @@ the former thread only after known completion; uncertainty retains that thread
 and flight. Reentrant admission cannot enter Model borrowing or authorize a
 changed lease state. Refuse a competing operation without waiting behind held
 Native IO. The bound input owner fences the Model-only borrow even after its
-copy IO closes. The combined input/loader lifetime is still pending and cannot
-be inferred from a sealed graph or successful copy-IO closure.
+copy IO closes. Only the joint view below can admit input-loader use. Full SDK
+and worker retirement cannot be inferred from a sealed graph or copy-IO closure.
+
+### One live protected Model and input view
+
+Register an input consumer only after its actual original Native copy and seal
+complete and the fixed worker request schema is already loaded. Capture schema
+operations and the exact raw staged request before supplier callbacks. Compare
+every provided value against its normalized result with exact scalar kinds;
+allow only declared default additions and the separately bound workspace field
+outside the training DTO. Missing schema leaves the standalone controller's
+copy-only consumer unavailable. A ready flag or copied metadata cannot register it.
+
+The original lease atomically admits one joint borrower only for exact sealed
+request data, the actual registered input owner and known idle original Model
+and input ledgers. Transfer both read-call owners to that borrower thread under
+the same lock. Recheck Model liveness/protection, input inventory/identity/access/
+ACL and current business admission before returning captured dataset references.
+Partial, retired, foreign, changed, reentrant, wrong-thread, unknown and expired
+states deny. An input binding cannot fall back to unprotected source paths.
+
+The fixed local loader consumes these private references through the existing
+dataset reader. Keep approved logical paths, data roles, settings and lineage
+unchanged; no caller-selected public runtime override or executor is introduced.
+Ordinary source-free/Model-only/standalone behavior remains compatible. Exiting
+the view retains all Native guards and accounting, not SDK/worker retirement or
+disk credit. Complete producer/output protection, durable reservation, host/Root
+composition and physical qualification remain pending. Controlled source/data
+tests never score a real model or supply parent qualification.
+
+Capture the fixed loader's private use object from the genuine view, exact
+typed payload and original resolver/serializer before callbacks. Revalidate at
+owned dataset/model/trainer/output dispatch boundaries and after progress or
+supplier callbacks. It is not a selectable callable, public flag or second
+executor. Observed Native/currentness failure latches the original view lost
+while retaining all guards and charges. Caller request/thread mistakes deny
+without poisoning valid custody. These checks are cooperative SDK boundaries;
+they do not prove instantaneous supplier revocation, protected output/cache
+ownership or lazy-reader retirement. Ordinary no-view behavior is preserved.

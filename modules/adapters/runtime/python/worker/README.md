@@ -1910,7 +1910,7 @@ and private ACL/OWNER_RIGHTS sealing precede publication of the copied graph.
 handles, then retains its disk charge. Unknown results or closes cannot retry.
 It is not worker retirement, SDK-reader proof, output custody, deletion, quota
 credit or `NativeTrainingResources.settle`. The live Model lease remains owned.
-Input-loader consumption, the complete producer, protected outputs, durable
+The complete producer, protected outputs, durable
 reservation implementation and physical host qualification are still pending.
 Ordinary Model bootstrap/launch and local training remain unchanged. Component
 tests use actual Native code with in-memory replies; they run no DLLs or models.
@@ -1921,5 +1921,40 @@ lock. A known idle Native ledger may transfer to that operation's thread; pendin
 or unknown calls keep their original thread, flight, slots and buffers. Recheck
 the original lease and pre-borrow state after admission callbacks. Refuse active
 operations without waiting. Once the input owner is bound, a Model-only borrow
-is unavailable, even after input-copy IO closes. A future combined loader view
-must qualify input borrowing separately; this fence grants no training readiness.
+is unavailable, even after input-copy IO closes. Only a genuine sealed combined
+view can supply protected input references; closure grants no training readiness.
+
+### Fixed loader consumption of protected inputs
+
+The actual completed input owner can register one private joint Model/input view.
+It must have the fixed worker models already loaded. Capture their actual schema
+operations and exact staged data before suppliers run. Normalization may add
+declared defaults and remove the separately bound workspace metadata from the
+training DTO; it cannot drop or coerce any provided setting or nested data.
+The standalone Native controller keeps copy-only behavior and cannot mint a
+worker input view when that schema is missing.
+
+Under the original lease lock, require exact normalized sealed data, known idle
+Model/input ledgers and complete sealed graph proof before one borrower-thread
+handoff. Check currentness and both actual Native graphs before returning private
+references. Reentrant, wrong-thread, changed, partial, closed, unknown or expired
+uses deny before loading. A bound input owner never falls back to logical source
+paths. Ordinary Model-only views and standalone local loading stay compatible.
+
+`train_model_from_local_files` obtains both references from the genuine live view.
+Its existing core/data reader accepts dataset aliases only through a private
+runtime argument; the logical payload, approved settings and lineage remain
+unchanged. The public task DTO has no alias/view option. No quality comparison is
+enabled. Context exit retains guards and charges, including unknown Native slots.
+It is not SDK/worker/Job retirement or quota credit. Full producer, output
+protection, durable reservations, Roots and actual host qualification stay pending.
+
+The loader carries one fixed private use object containing its genuine view,
+same typed payload and captured resolver/serializer. It accepts no arbitrary
+guard/provider callback. Revalidate after progress/import/supplier callbacks and
+before owned dataset/model/trainer/output effects. Changed settings or lost
+admission cannot reach the next SDK operation. Actual Native/currentness loss
+is latched for the original view; restored ACLs or permission cannot revive it.
+Wrong-request and foreign-thread preconditions remain nonpoisoning denials.
+No-view loading stays compatible. Supplier internals are still trusted and
+cooperative; output/cache protection and SDK/worker retirement remain separate.

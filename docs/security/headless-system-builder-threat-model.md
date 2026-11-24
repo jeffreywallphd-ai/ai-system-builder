@@ -2499,7 +2499,7 @@ protection.
 Every Native call retains its original slots, buffers and handles. Unknown
 returns or closes remain owned and cannot repeat. Copy-IO closure retains the
 disk charge; it does not authorize deletion, capacity release, reader/worker
-settlement or output Save. Full producer/input consumption, output protection,
+settlement or output Save. Full producer, output protection,
 concrete durable reservation, crash recovery and actual-host qualification remain
 pending. In-memory API tests do not grant physical effects or score model quality.
 
@@ -2508,5 +2508,39 @@ lease lock. Transfer only the exact known idle Native ledger to a request thread
 retain its original thread/flight on any unknown return. Recheck lease identity,
 pre-borrow state and currentness after callbacks. Refuse held/unknown or reentrant
 operations without waiting or new effects. A bound input owner fences Model-only
-borrowing, including after its copy-IO closure. Combined input/loader borrowing
-requires its own implementation and qualification; the copy cannot bypass it.
+borrowing, including after its copy-IO closure. Only the joint live view below
+admits protected input loading; copy status cannot bypass that admission.
+
+### Joint protected Model and input loading
+
+Only an actual registered completed input graph and original Model lease can
+issue the joint view. Capture the already-loaded fixed worker schema and exact
+staged request before callbacks. Add only declared defaults and omit the
+separately bound workspace field from the training DTO. Refuse any normalization
+that drops/coerces supplied settings or nested data. No standalone-controller
+context, raw field, callback, ready flag or copied record grants a worker view.
+
+Serialize one actual borrower-thread handoff of known idle Model/input Native
+ledgers. Require the exact sealed request and repeat actual Model/input graph,
+read-only access, protection and currentness checks. Partial, closed, forged,
+changed, reentrant, wrong-thread, unknown or expired inputs fail before SDK work.
+Keep unknown slots/buffers/thread ownership and deny another effect or fallback.
+The fixed loader passes captured references privately to the existing data reader;
+approved logical fields and dataset history are unchanged. Public tasks cannot
+supply a private alias/view or choose a loader.
+
+Borrow exit retains native guards and byte charges. It is not reader/worker/Job
+retirement, output ownership, deletion or storage credit. Full native producer,
+protected outputs, concrete durable reservations, Root/host composition and actual
+physical qualification remain pending. Component tests use in-memory Native
+replies, controlled suppliers and synthetic local data, without model scoring.
+
+A path tuple is not continuing authority. The fixed loader captures a private
+use object with the genuine view, same typed request and original resolver/
+serializer, then rechecks after progress/import/supplier callbacks and before
+owned SDK/output dispatch. No caller-supplied guard/provider is accepted. Latch
+actual Native/currentness loss permanently for that view; restoring protection
+cannot revive it. Preserve nonpoisoning foreign-thread/wrong-request denials.
+Retain guards, Native uncertainty and byte charges on failure. Cooperative
+dispatch checks do not prove supplier-internal instant revocation, protected
+output/cache custody or SDK/lazy-reader/worker retirement; those stay pending.
