@@ -2908,3 +2908,22 @@ and callback loss without publishing a partial result or falling back to paths.
 Installed-SDK synthetic tests deny writes, network and capability fingerprinting.
 This is a data-preparation component, not proof of input byte custody, hard total
 RAM/disk enforcement, complete training, cleanup, Save, quality or host operation.
+
+### Original training dataset handle consumption
+
+Do not treat paths or mutable copy metadata as dataset-read authority. Retain
+original inventory, handles, identity, native numbers and principal before later
+callbacks. Require the exact registered view, request, thread and original owner.
+Reserve one read before seek/read effects. Recheck current source/permission and
+pure bindings around bounded reads, including EOF and the final callback.
+Return nothing until every dataset size/SHA verifies; exclude the recipe.
+The final original admission check follows the last Native observation. Only
+fixed passive bindings may follow it before the effect; passive checks cannot
+dispatch a replaceable Native number method or virtual scalar equality.
+
+Foreign requests do not poison another owner. Owned reentry, revocation,
+corruption, early/trailing EOF and changed bindings stay failed without partial
+results, path fallback, refund or retry. Unknown Native outcomes retain call
+buffers, handles and the read marker; they do not authorize closing resources
+or proving worker/Job retirement. Synthetic ABI tests supply no physical Native,
+parser, complete resource/producer/custody, Save, model-quality or host pass.

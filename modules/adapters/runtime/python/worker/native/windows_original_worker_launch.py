@@ -682,12 +682,14 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
                 self.owner.close(writer)
                 read = self.open(self.fresh, original["name"], 0x20089, directory=False)
                 need(self.facts(read) == (identity, size, allocation)); self.guards.append(read)
+                _retain_training_input_read_handle(self,read,original,identity)
                 self.verify_bytes(read, original)
                 self.records.append({**{k: original[k] for k in ("name", "sizeBytes", "sha256")}, "identity": identity})
             self.graph_matches(source, source_records); self.graph_matches(self.fresh, self.records)
             self.checkpoint("seal"); root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
             root = self.open(parent, self.descriptor["freshName"], 0x200a1, directory=True)
             need(self.identity(root) == root_identity); self.guards.append(root)
+            _retain_training_input_read_handle(self,root,None,root_identity)
             for handle in self.guards:
                 need(self.permissions(handle) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
             self.graph_matches(root, self.records)
@@ -1118,7 +1120,72 @@ _model_views = WeakKeyDictionary()
 _model_leases = WeakKeyDictionary()
 _verified_model_receivers = WeakKeyDictionary()
 _sealed_training_inputs = WeakKeyDictionary()
+_training_input_readers = WeakKeyDictionary()
 _training_output_families = WeakKeyDictionary()
+
+
+def _retain_training_input_read_handle(graph, handle, row, identity, *, _number=OriginalWorker.number):
+    """Capture original copy locals before later observers; no Native effect."""
+    record = _training_input_readers.get(graph)
+    if record is None: return  # Other flat-copy owners keep their existing path.
+    need(type(graph) is OriginalTrainingInputGraph and record["preparing"] and not record["sealed"]
+         and graph.owner is record["owner"] and type(identity) is bytes and len(identity) == 24)
+    number = _number(record["owner"],handle)
+    if record["principal"] is None:
+        need(type(graph.principal) is bytes and len(graph.principal) > 0)
+        record["principal"] = graph.principal
+    need(type(graph.principal) is bytes and graph.principal == record["principal"])
+    if row is None:
+        need(record["root"] is None and len(record["handles"]) == len(record["files"]))
+        record["root"] = (handle,identity,number)
+    else:
+        index = len(record["handles"]); need(index < len(record["files"]) and type(row) is dict)
+        name,size,sha,_ = record["files"][index]
+        need(type(row.get("name")) is str and row["name"] == name
+             and type(row.get("sizeBytes")) is int and row["sizeBytes"] == size
+             and type(row.get("sha256")) is str and row["sha256"] == sha)
+        record["handles"].append((handle,identity,number))
+
+
+def _assert_training_input_read_binding(graph, record, *, preparing=False, _number=OriginalWorker.number):
+    """Pure original associations; never adopts mutable graph metadata."""
+    need(type(graph) is OriginalTrainingInputGraph and _training_input_readers.get(graph) is record
+         and graph.owner is record["owner"] and type(graph.phase) is str and graph.phase == "sealed"
+         and type(record["owner"]) is InheritedModelNativeCalls
+         and type(record["owner"].handles) is list
+         and all(type(handle) is Handle for handle in record["owner"].handles)
+         and graph.retired is False and graph.retirement_attempted is False
+         and graph.charged is True and graph.charge_attempted is True and graph.attempted is True
+         and type(graph.principal) is bytes and graph.principal == record["principal"]
+         and (record["sealed"] or preparing and record["preparing"])
+         and record["read_state"] in ("unread","reading","complete"))
+    descriptor = graph.descriptor
+    need(type(descriptor) is dict and set(descriptor) == {key for key,_ in record["configuration"]}|{"files"})
+    for key,value in record["configuration"]:
+        need(type(descriptor[key]) is type(value) and descriptor[key] == value)
+    files = descriptor["files"]
+    need(type(files) is tuple and len(files) == len(record["files"])
+         and len(record["handles"]) == len(files) and record["root"] is not None
+         and type(graph.guards) is list and len(graph.guards) == len(files)+1
+         and type(graph.records) is list and len(graph.records) == len(files)
+         and type(graph.physical_path) is str and graph.physical_path == record["physical_path"])
+    for index, (name,size,sha,_) in enumerate(record["files"]):
+        declared,observed = files[index],graph.records[index]
+        handle,identity,number = record["handles"][index]
+        need(type(handle) is Handle and handle.known is True and handle.close_attempted is False
+             and handle.closed is False and type(handle.slot) is P)
+        need(type(declared) is dict and set(declared) == {"name","sizeBytes","sha256"}
+             and type(observed) is dict and set(observed) == {"name","sizeBytes","sha256","identity"}
+             and graph.guards[index] is handle and _number(record["owner"],handle) == number)
+        for row in (declared,observed):
+            need(type(row["name"]) is str and row["name"] == name
+                 and type(row["sizeBytes"]) is int and row["sizeBytes"] == size
+                 and type(row["sha256"]) is str and row["sha256"] == sha)
+        need(type(observed["identity"]) is bytes and observed["identity"] == identity)
+    root = record["root"][0]
+    need(type(root) is Handle and root.known is True and root.close_attempted is False
+         and root.closed is False and type(root.slot) is P
+         and graph.guards[-1] is root and _number(record["owner"],root) == record["root"][2])
 
 
 def _input_view_binding(state, request):
@@ -1246,6 +1313,111 @@ def resolve_original_training_task_id(view, sealed_request):
              and definition["requestId"] == task_id)
         return task_id
     finally: lock.release()
+
+
+def read_original_training_input_bytes(view, sealed_request):
+    """One all-or-nothing read of original dataset handles, never recipe/paths."""
+    need(type(view) is _OriginalModelView)
+    binding = _model_views.get(view); need(binding is not None)
+    lease, expected, thread = binding
+    state = _model_leases.get(lease); need(state is not None and thread == get_ident())
+    request = _copy_model_json(sealed_request)
+    need(_same_model_json(expected,request))
+    lock = state["lock"]; need(lock.acquire(blocking=False))
+    entered = False; reader = None; input_record = None; owner = model_owner = None
+    try:
+        graph = state.get("input_copy_owner")
+        need(type(graph) is OriginalTrainingInputGraph)
+        input_record = _sealed_training_inputs.get(graph)
+        reader = _training_input_readers.get(graph)
+        need(input_record is not None and reader is not None and reader["sealed"] is True
+             and input_record["lease_state"] is state and state.get("borrowed_input") is input_record
+             and input_record["active"] is True and input_record["lost"] is False
+             and _model_views.get(view) is binding and state["entered"] is True and state["view_lost"] is False
+             and type(reader["read_state"]) is str)
+        if reader["read_state"] == "reading":
+            reader["read_state"] = "failed"; input_record["lost"] = True; state["view_lost"] = True
+            raise LaunchUnavailable()  # Caught owned reentry cannot leave the first read valid.
+        need(reader["read_state"] == "unread" and state.get("input_data_read_active") is None)
+        operation = object()
+        reader["active"] = operation; reader["read_state"] = "reading"
+        state["input_data_read_active"] = operation; entered = True
+        owner,model_owner = reader["owner"],state["native_owner"]
+        source = state["source"]; source_record = _verified_model_receivers.get(source)
+        files,configuration = reader["files"],reader["configuration"]
+        handles,root = tuple(reader["handles"]),reader["root"]
+        model_guard,input_guard = state["guard"],input_record["guard"]
+        admission = input_record["current"]
+        assert_binding = _assert_training_input_read_binding
+        need(len(files) == len(request["datasets"])+1 and files[-1][3] == "recipe"
+             and all(row[3] in ("train","validation") and row[3] == item["splitRole"]
+                 for row,item in zip(files[:-1],request["datasets"])))
+        assert_binding(graph,reader)
+
+        def bound():
+            need(_model_views.get(view) is binding and _model_leases.get(lease) is state
+                 and state["source"] is source and source.owner is model_owner
+                 and type(source.phase) is str and source.phase == "borrowed"
+                 and _verified_model_receivers.get(source) is source_record and graph._lease_record is source_record
+                 and graph.lease is lease and graph._lease_state is state
+                 and state.get("input_copy_owner") is graph and state.get("borrowed_input") is input_record
+                 and _sealed_training_inputs.get(graph) is input_record and input_record["active"] is True and input_record["lost"] is False
+                 and state["entered"] is True and state["view_lost"] is False and _same_model_json(expected,request)
+                 and state["guard"] is model_guard and input_record["guard"] is input_guard
+                 and input_record["current"] is admission and input_record["native_owner"] is owner
+                 and reader["files"] is files and reader["configuration"] is configuration and reader["root"] is root
+                 and type(reader["handles"]) is list and len(reader["handles"]) == len(handles)
+                 and all(a is b for a,b in zip(reader["handles"],handles))
+                 and type(reader["read_state"]) is str and reader["read_state"] == "reading" and reader["active"] is operation
+                 and state.get("input_data_read_active") is operation
+                 and owner.unknown is False and type(owner.pending) is list and not owner.pending
+                 and model_owner.unknown is False and type(model_owner.pending) is list and not model_owner.pending)
+            assert_binding(graph,reader)
+
+        def guard():
+            bound(); model_guard(); bound(); input_guard(); bound(); model_guard(); bound()
+            # No Native observer or replaceable instance method may run after
+            # the final original business-admission decision before an effect.
+            need(admission() is True); bound()
+
+        native_call = OriginalWorker.call.__get__(owner)
+        OriginalWorker._main(owner); guard()
+        results = []; total = 0
+        buffer_size = dict(configuration)["bufferBytes"]
+        for (name,size,sha,role),(handle,identity,number) in zip(files[:-1],handles[:-1]):
+            guard()
+            need(NativeModelInspection.facts(graph,handle)[0:2] == (identity,size))
+            guard(); position = C.c_int64()
+            native_call("SetFilePointerEx",number,0,C.byref(position),0,keep=(handle,position))
+            guard(); need(position.value == 0)
+            remaining = size; parts = []; digest = hashlib.sha256()
+            buffer = C.create_string_buffer(buffer_size)
+            while remaining:
+                guard(); count = U32(); capacity = min(remaining,buffer_size)
+                native_call("ReadFile",number,buffer,capacity,C.byref(count),None,keep=(handle,buffer,count))
+                guard(); need(0 < count.value <= capacity)
+                chunk = buffer.raw[:count.value]; parts.append(chunk); digest.update(chunk)
+                remaining -= count.value
+            guard(); count = U32()
+            native_call("ReadFile",number,buffer,1,C.byref(count),None,keep=(handle,buffer,count))
+            guard(); need(count.value == 0 and digest.hexdigest() == sha)
+            total += size; need(total <= 256*1024**2)
+            raw = b"".join(parts); need(len(raw) == size); results.append(raw)
+        guard()
+        need(NativeModelInspection.identity(graph,root[0]) == root[1]); guard()
+        result = tuple(results)
+        reader["read_state"] = "complete"
+        return result
+    except BaseException:
+        if entered:
+            reader["read_state"] = "failed"; input_record["lost"] = True; state["view_lost"] = True
+        raise LaunchUnavailable() from None
+    finally:
+        if (entered and owner is not None and model_owner is not None
+                and owner.unknown is False and type(owner.pending) is list and not owner.pending
+                and model_owner.unknown is False and type(model_owner.pending) is list and not model_owner.pending):
+            reader["active"] = None; state.pop("input_data_read_active",None)
+        lock.release()
 
 
 class OriginalModelBootstrapReceiver(NativeModelInspection):
@@ -1559,6 +1731,11 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
                  and source.owner is record["native_owner"] and not record["native_owner"].unknown
                  and not record["native_owner"].pending and state.get("input_source_read_active") is None)
             descriptor = _capture_training_input_copy(record["definition"],staged,configuration,record["definition_digest"])
+            roles = tuple(row["role"] for row in record["definition"]["inputs"])+( "recipe",)
+            original_files = tuple((row["name"],row["sizeBytes"],row["sha256"],role)
+                for row,role in zip(descriptor["files"],roles))
+            need(len(original_files) == len(descriptor["files"]) == len(roles)
+                 and original_files[-1][0] == "approved-recipe.json")
             loader_request = _capture_input_loader_request(record["definition"],staged)
             state["input_copy_owner"] = self  # Retain atomically BEFORE suppliers.
             self.lease, self._lease_state, self._lease_record = lease, state, record
@@ -1566,6 +1743,11 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
         finally: lock.release()
         owner = InheritedModelNativeCalls(record["native_owner"].kernel,clock=record["native_owner"].clock)
         self.owner = owner
+        _training_input_readers[self] = {"owner":owner,"files":original_files,
+            "configuration":tuple((key,value) for key,value in descriptor.items() if key != "files"),
+            "physical_path":descriptor["freshParent"]+"\\"+descriptor["freshName"],
+            "handles":[],"root":None,"principal":None,"preparing":False,"sealed":False,
+            "read_state":"unread","active":None}
         authority = _OriginalInputAdmission(lease,state,record,admission,self)
         self._bind_copy(owner,descriptor,reservation,authority)
 
@@ -1598,7 +1780,16 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
 
     def prepare(self):
         with self._copy_call():
-            _OriginalProtectedFlatCopy.prepare(self)
+            reader = _training_input_readers.get(self)
+            need(reader is not None and not reader["preparing"] and not reader["sealed"])
+            reader["preparing"] = True
+            try:
+                _OriginalProtectedFlatCopy.prepare(self)
+                _assert_training_input_read_binding(self,reader,preparing=True)
+                reader["sealed"] = True
+            except BaseException:
+                reader["read_state"] = "failed"; self.phase = "failed"
+                raise
             if self._loader_request is not None:
                 need(self not in _sealed_training_inputs)
                 _sealed_training_inputs[self] = {"lease_state":self._lease_state,"native_owner":self.owner,
@@ -1634,7 +1825,11 @@ class OriginalTrainingInputGraph(_OriginalProtectedFlatCopy):
 
     def _assert_live_borrow(self):
         record = _sealed_training_inputs.get(self); need(record is not None)
-        try: return _OriginalProtectedFlatCopy.assert_sealed(self)
+        try:
+            reader = _training_input_readers.get(self); need(reader is not None)
+            _assert_training_input_read_binding(self,reader)
+            _OriginalProtectedFlatCopy.assert_sealed(self)
+            _assert_training_input_read_binding(self,reader)
         except BaseException:
             record["lost"] = True
             raise LaunchUnavailable() from None

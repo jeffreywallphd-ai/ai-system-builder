@@ -2277,3 +2277,24 @@ Keep formatted text, token IDs, masks, labels and row counts. Ordinary mapping
 is unchanged. The feature tests require the installed Datasets SDK and use only
 synthetic data with write/network/fingerprint sentinels. They supply no model
 score, protected byte-reader, full producer/resource, cleanup, Save or host pass.
+
+### Original protected dataset bytes
+
+The private original-input reader uses the exact registered joint view, copied
+request and thread. Input preparation retains original dataset/recipe inventory
+and native handle/identity/number associations before later observers. Pure
+checks reject substituted metadata, handles, principal or charge state. The byte
+reader reserves one operation before IO, rewinds held dataset handles, verifies
+bounded chunks and exact SHA/EOF, then returns all dataset bytes together. It
+never opens a path, writes a cache or reads the recipe.
+Each effect ends its guard with the captured original business-admission check,
+then fixed passive bindings. Passive checks use the original Native number
+function, not replaceable instance dispatch; no Native observer runs afterward.
+
+Foreign callers do not consume the original read. Owned reentry, lost permission
+or changed content/bindings fails permanently without partial publication.
+Unknown Native replies retain the original call, buffer, handles and read marker;
+neither retry nor copy retirement follows. A completed byte read does not retire
+the original worker/Job or release retained accounting. Fake-ABI tests qualify
+only this component. Bounded parsing, complete producer/resource/custody, Save
+and actual-host qualification remain pending; accepted accuracy is not rerun.

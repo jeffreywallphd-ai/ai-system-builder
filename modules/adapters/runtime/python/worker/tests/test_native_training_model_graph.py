@@ -866,6 +866,7 @@ class CombinedTrainingInputViewTests(unittest.TestCase):
         source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=actual,method=method,output=output)
         self.addCleanup(case.doCleanups)
         graph=actual.OriginalTrainingInputGraph(lease,staged,config,control,control)
+        self.addCleanup(actual._training_input_readers.pop,graph,None)  # Inert ABI fixture only; not production retirement.
         if prepare: graph.prepare()
         request=TrainModelTaskRequest.model_validate(staged["payload"]).model_dump(mode="json")
         return actual,source,lease,graph,request,staged,control,kernel
@@ -887,6 +888,218 @@ class CombinedTrainingInputViewTests(unittest.TestCase):
         self.assertNotEqual(source.owner.thread,source_thread); self.assertEqual(request,expected); self.assertEqual(staged,original)
         self.assertEqual(source.phase,"spent"); self.assertFalse(graph.retire_copy_io()); self.assertEqual(control.retained,[])
         self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]])
+
+    def test_original_dataset_reader_returns_only_verified_dataset_bytes_once(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        expected=tuple(bytes(kernel.nodes[graph.physical_path+"\\"+row["name"]]["data"])
+            for row in graph.records[:-1])
+        with lease.borrow(request) as view:
+            before=len(kernel.calls)
+            result=actual.read_original_training_input_bytes(view,request)
+            self.assertIs(type(result),tuple); self.assertEqual(result,expected)
+            self.assertTrue(all(type(raw) is bytes for raw in result)); self.assertEqual(len(result),2)
+            self.assertFalse(any(name in ("NtCreateFile","WriteFile","CloseHandle") for name,_ in kernel.calls[before:]))
+            recipe_number=graph.owner.number(graph.guards[-2])
+            self.assertFalse(any(name=="ReadFile" and args[0]==recipe_number for name,args in kernel.calls[before:]))
+            self.assertEqual(actual._training_input_readers[graph]["read_state"],"complete")
+            before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(len(kernel.calls),before)
+            self.assertFalse(actual._model_leases[lease]["view_lost"])
+            self.assertEqual(actual.resolve_original_training_references(view,request)[1],
+                tuple(graph.physical_path+"\\"+row["name"] for row in graph.records[:-1]))
+        self.assertFalse(graph.retire_copy_io()); self.assertEqual(control.retained,[])
+
+    def test_original_dataset_reader_foreign_request_and_thread_do_not_poison_owner(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            before=len(kernel.calls); wrong=copy.deepcopy(request);wrong["method"]="full-finetune"
+            with self.assertRaises(actual.LaunchUnavailable): actual.read_original_training_input_bytes(object(),request)
+            with self.assertRaises(actual.LaunchUnavailable): actual.read_original_training_input_bytes(view,wrong)
+            denied=[]
+            def other():
+                try: actual.read_original_training_input_bytes(view,request)
+                except actual.LaunchUnavailable: denied.append(True)
+            worker=Thread(target=other);worker.start();worker.join(2)
+            self.assertFalse(worker.is_alive());self.assertEqual(denied,[True]);self.assertEqual(len(kernel.calls),before)
+            self.assertEqual(actual._training_input_readers[graph]["read_state"],"unread")
+            self.assertEqual(len(actual.read_original_training_input_bytes(view,request)),2)
+
+    def test_original_dataset_reader_keeps_observed_inventory_loss_permanent(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            sha=graph.records[0]["sha256"];graph.records[0]["sha256"]="0"*64;before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable): actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(len(kernel.calls),before)
+            graph.records[0]["sha256"]=sha
+            with self.assertRaises(actual.LaunchUnavailable): actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(len(kernel.calls),before)
+            self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+
+    def test_original_dataset_reader_accepts_bounded_short_reads(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        original=graph.owner.invoke
+        def short(name,args,row):
+            if name=="ReadFile" and args[2]>1:
+                args=tuple((*args[:2],min(args[2],7),*args[3:]))
+            return original(name,args,row)
+        graph.owner.invoke=short
+        with lease.borrow(request) as view:
+            result=actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(result,(b'{"instruction":"Say yes","output":"yes"}\n',)*2)
+            self.assertEqual(actual._training_input_readers[graph]["read_state"],"complete")
+
+    def test_original_dataset_reader_never_publishes_a_partial_corrupt_result(self):
+        for index in (0,1):
+            with self.subTest(index=index):
+                actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+                row=graph.records[index]
+                kernel.nodes[graph.physical_path+"\\"+row["name"]]["data"][0]=ord("!")
+                with lease.borrow(request) as view:
+                    result=None
+                    with self.assertRaises(actual.LaunchUnavailable):result=actual.read_original_training_input_bytes(view,request)
+                    self.assertIsNone(result)
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+                    self.assertEqual(len(kernel.calls),before)
+                    self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+
+    def test_original_dataset_reader_refuses_late_permission_loss_without_result(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            reads=[]
+            def revoke(name):
+                if name=="ReadFile":
+                    reads.append(name)
+                    if len(reads)==2:control.current=False  # First file's EOF reply.
+            kernel.after=revoke
+            result=None
+            with self.assertRaises(actual.LaunchUnavailable):result=actual.read_original_training_input_bytes(view,request)
+            self.assertIsNone(result);self.assertEqual(len(reads),2)
+            control.current=True;before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(len(kernel.calls),before)
+
+    def test_original_dataset_reader_caught_owned_reentry_invalidates_outer_attempt(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            entered=[];denied=[]
+            def reenter(name):
+                if name=="ReadFile" and not entered:
+                    entered.append(True)
+                    try:actual.read_original_training_input_bytes(view,request)
+                    except actual.LaunchUnavailable:denied.append(True)
+            kernel.after=reenter
+            result=None
+            with self.assertRaises(actual.LaunchUnavailable):result=actual.read_original_training_input_bytes(view,request)
+            self.assertIsNone(result);self.assertEqual(entered,[True]);self.assertEqual(denied,[True])
+            self.assertFalse(graph.owner.unknown);self.assertFalse(graph.owner.pending)
+            self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+
+    def test_original_dataset_reader_unknown_read_retains_call_buffers_and_blocks_more_io(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            kernel.error_after_return="ReadFile"
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+            self.assertTrue(graph.owner.unknown);self.assertTrue(graph.owner.pending)
+            pending=graph.owner.pending[-1]
+            self.assertEqual(pending["name"],"ReadFile");self.assertTrue(pending["value_returned"])
+            self.assertEqual(len(pending["keep"]),3)
+            self.assertIsNotNone(actual._training_input_readers[graph]["active"])
+            self.assertIsNotNone(actual._model_leases[lease].get("input_data_read_active"))
+            before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+            with self.assertRaises(actual.LaunchUnavailable):actual.resolve_original_training_references(view,request)
+            self.assertFalse(graph.retire_copy_io());self.assertEqual(len(kernel.calls),before)
+            self.assertTrue(all(not handle.closed for handle in graph.guards));self.assertEqual(control.retained,[])
+
+    def test_original_dataset_reader_checks_early_and_trailing_eof_replies(self):
+        for mode in ("early","trailing"):
+            with self.subTest(mode=mode):
+                actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+                original=graph.owner.invoke
+                def eof(name,args,row):
+                    result=original(name,args,row)
+                    if name=="ReadFile" and (mode=="early" and args[2]>1 or mode=="trailing" and args[2]==1):
+                        args[3]._obj.value=0 if mode=="early" else 1
+                    return result
+                graph.owner.invoke=eof
+                with lease.borrow(request) as view:
+                    result=None
+                    with self.assertRaises(actual.LaunchUnavailable):result=actual.read_original_training_input_bytes(view,request)
+                    self.assertIsNone(result);self.assertFalse(graph.owner.unknown);self.assertFalse(graph.owner.pending)
+                    self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+
+    def test_original_dataset_reader_rechecks_final_callback_without_adopting_changed_bindings(self):
+        for mode in ("handle","hash","number","principal","charge"):
+            with self.subTest(mode=mode):
+                actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+                with lease.borrow(request) as view:
+                    reads=[];original=graph.guards[0];sha=graph.records[0]["sha256"]
+                    number=original.slot.value;principal=graph.principal
+                    def change(name):
+                        if name=="ReadFile":
+                            reads.append(name)
+                            if len(reads)==4:  # Last dataset EOF, after its bytes were checked.
+                                if mode=="handle":graph.guards[0]=graph.guards[1]
+                                elif mode=="hash":graph.records[0]["sha256"]="0"*64
+                                elif mode=="number":original.slot.value=graph.guards[1].slot.value
+                                elif mode=="principal":graph.principal=b"changed-synthetic-principal"
+                                else:graph.charged=False
+                    kernel.after=change
+                    result=None
+                    with self.assertRaises(actual.LaunchUnavailable):result=actual.read_original_training_input_bytes(view,request)
+                    self.assertIsNone(result);self.assertEqual(len(reads),4)
+                    graph.guards[0]=original;graph.records[0]["sha256"]=sha
+                    original.slot.value=number;graph.principal=principal;graph.charged=True
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+                    self.assertEqual(len(kernel.calls),before)
+                    self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+
+    def test_original_dataset_reader_does_not_invoke_virtual_phase_equality(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        called=[]
+        class Phase:
+            def __eq__(self,other):called.append(other);return True
+        with lease.borrow(request) as view:
+            graph.phase=Phase();before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(called,[]);self.assertEqual(len(kernel.calls),before)
+            graph.phase="sealed"
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+            self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+
+    def test_original_dataset_binding_does_not_dispatch_replaceable_number_method(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            original=graph.owner.number;called=[];before=len(kernel.calls)
+            def replacement(handle):called.append(True);return original(handle)
+            graph.owner.number=replacement
+            try:actual._assert_training_input_read_binding(graph,actual._training_input_readers[graph])
+            finally:graph.owner.number=original
+            self.assertEqual(called,[]);self.assertEqual(len(kernel.calls),before)
+
+    def test_original_dataset_reader_has_no_read_after_last_model_observer_revokes_permission(self):
+        actual,source,lease,graph,request,staged,control,kernel=self.fixture()
+        with lease.borrow(request) as view:
+            state=actual._model_leases[lease];original=state["guard"];active_calls=[];changed=[]
+            def observed_model_guard():
+                original()
+                frame=sys._getframe(1)
+                while frame and frame.f_code is not actual.read_original_training_input_bytes.__code__:
+                    frame=frame.f_back
+                if frame and "buffer" in frame.f_locals and frame.f_locals.get("remaining",0)>0:
+                    active_calls.append(True)
+                    if len(active_calls)==2:
+                        changed.append(len(kernel.calls));control.current=False
+            state["guard"]=observed_model_guard
+            try:
+                with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_input_bytes(view,request)
+                self.assertEqual(len(changed),1)
+                self.assertFalse(any(name=="ReadFile" for name,_ in kernel.calls[changed[0]:]))
+                self.assertEqual(actual._training_input_readers[graph]["read_state"],"failed")
+            finally:state["guard"]=original;control.current=True
 
     def test_partial_retired_forged_or_changed_inputs_never_mint_a_view(self):
         for mode in ("partial","retired","forged","changed","scalar-kind"):

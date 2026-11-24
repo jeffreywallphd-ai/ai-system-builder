@@ -1100,3 +1100,13 @@ fingerprinting. Ordinary training keeps
 its existing mapper. Installed Datasets feature tests use synthetic text only.
 Input-handle reading, total resource ownership and complete host execution remain
 separate requirements; this component activates no private training producer.
+
+### Original dataset byte consumption
+
+`read_original_training_input_bytes` consumes one genuine joint Model/input view.
+It reads only original held dataset handles, excludes the recipe and returns an
+immutable tuple after all size, SHA and EOF checks pass. Original inventory,
+handle numbers, identity and charge state cannot be replaced by later callbacks.
+Failures publish no partial bytes; uncertain calls retain their buffers/handles
+and prohibit retry. Parsing, producer/resource ownership, retirement, Save and
+actual-host qualification remain separate. Ordinary loading is unchanged.

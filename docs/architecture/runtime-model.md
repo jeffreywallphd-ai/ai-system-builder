@@ -3211,3 +3211,21 @@ before and after every row callback. Ordinary training retains its existing path
 Single-row mapping limits transient padding only. Approved-byte reading, total
 resource reservation, complete producer/custody, retirement, Save and actual-host
 qualification remain separate and pending; no public capability is activated.
+
+### Original training input byte reader
+
+The input copy retains immutable original inventory and held-handle associations
+during preparation. A registered joint view can consume its dataset bytes once,
+on its original thread and request, using the captured handles and Native call
+ledger. Guard seek, each bounded read, EOF and final publication. Verify every
+size/SHA before returning the immutable dataset-only tuple; exclude the recipe
+and never reopen paths or create SDK caches. Caught owned reentry and integrity
+loss remain failed; foreign mistakes do not poison a valid owner. Unknown IO
+retains original pending resources and prohibits retry/retirement.
+Finish each effect/publication guard with original business admission followed
+only by fixed passive bindings. Native observations precede that final decision;
+passive handle checks bypass replaceable instance methods.
+
+This private byte component does not supply a parser, full training producer,
+global memory/disk reservation, output custody, permanent worker/Job retirement,
+Save or actual-host qualification. Defaults and ordinary training stay unchanged.
