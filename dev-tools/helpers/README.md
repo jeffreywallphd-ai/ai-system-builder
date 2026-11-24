@@ -6,10 +6,16 @@ Optional [token tracking](../../docs/diagnostics/token-usage-tracking.md) uses
 `usage enable`, `usage import --from` and `usage summary` through the control
 plane. Authorized numeric exports retain bounded day/week/quarter/lifetime
 aggregates; missing counters never block delivery. `usage session-start` validates
-an explicitly configured numeric host bridge once at coding-session initialization;
+the exact current session's local numeric response records, or an explicitly
+configured numeric host bridge, once at coding-session initialization;
 `usage capture` receives bounded Codex-v2 cumulative notifications. No host is
-started, no conversation/log store is read and no provider connection is added.
+started and no provider connection is added. Local mode reads only bounded exact
+selected numeric records and emits no conversation content.
 Adapter readiness, an initial baseline and recent actual deltas are distinct states.
+After explicit startup/configuration, existing Work start/verify/complete boundaries
+poll the configured selections once. `usage local-enable --thread <known-uuid>`
+can add known selections and `--capture-destination <same-repository-checkout>`
+can centralize only usage writes; Work/source/claim ownership stays local.
 
 The existing `security-runtime` profile includes model-free dependency-preparation
 observer, Context/Worker, shared-helper, host-composition and private journal

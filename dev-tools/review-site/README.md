@@ -14,10 +14,13 @@ provider feed, storage mutation or polling interval. Existing dark/light control
 and accessible keyboard-scrollable tables apply to the new page.
 
 Capture initialization is outside the browser: `usage session-start` validates
-the configured numeric host bridge once and distinguishes missing, baseline,
+the selected local response source or configured numeric host bridge once and distinguishes missing, baseline,
 stale and recent counted events. The dashboard only displays stored observations;
 adapter readiness alone never proves live capture. The current desktop tools do
-not expose that counter bridge. See the numeric setup guide below.
+not expose a public counter bridge; exact authorized local numeric records provide
+partial observed capture. An explicit usage-only destination can feed this
+primary dashboard from a linked worktree without changing Work ownership.
+See the numeric setup guide below.
 
 Work items includes an optional **Contributor token usage** disclosure. It shows
 repository-local measured/estimated own subtotals, partial coverage, coarse

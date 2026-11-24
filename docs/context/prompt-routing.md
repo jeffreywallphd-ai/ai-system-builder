@@ -5,10 +5,12 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 ## Baseline
 
 - Coding-session initialization follows `AGENTS.md` and runs `usage session-start`
-  once. Route numeric host bridge setup/counter semantics to
+  once. Route selected local response capture and numeric host bridge semantics to
   `docs/diagnostics/token-usage-tracking.md`, adding `docs-standards` and `security`
   for receiver changes. Missing/stale/baseline-only counters never block work;
-  adapter readiness is not live capture. No log/transcript or quota fallback.
+  adapter readiness is not live capture. Exact selected numeric records and
+  explicit usage-only worktree destinations follow that guide; no unrelated
+  log/transcript scan or quota fallback.
 
 - Add runtime and security context for private exact-file Model downloads.
   Source manifests and accepted completion bind model/commit/digest/handle;

@@ -61,8 +61,11 @@ def parser():
     compare = sub.add_parser("compare-trials")
     compare.add_argument("trial_ids", nargs="+")
     usage = sub.add_parser("usage", help="Optional bounded numeric usage import and UTC trends; never gates Work")
-    usage.add_argument("operation", choices=("enable", "import", "summary", "capture", "session-start"))
+    usage.add_argument("operation", choices=("enable", "import", "summary", "capture", "session-start", "local-enable", "local-poll"))
     usage.add_argument("--session")
+    usage.add_argument("--thread", action="append", default=[])
+    usage.add_argument("--capture-destination")
+    usage.add_argument("--counter-epoch")
     usage.add_argument("--capture-config", default=".local-codex/token-capture/config.json")
     usage.add_argument("--from", dest="input")
     usage.add_argument("--period", choices=("daily", "weekly", "quarterly"))
@@ -91,7 +94,12 @@ def main(argv=None):
             result = run_from(root, args.operation, args.input)
         elif args.command == "usage":
             from control_plane import usage
-            if args.operation in {"capture", "session-start"}:
+            if args.operation in {"local-enable", "local-poll"}:
+                from control_plane import usage_local
+                result = usage_local.poll(root) if args.operation == "local-poll" else usage_local.enable(
+                    root, thread_ids=args.thread or [args.session or os.environ.get("CODEX_THREAD_ID")],
+                    destination=args.capture_destination, counter_epoch=args.counter_epoch)
+            elif args.operation in {"capture", "session-start"}:
                 from control_plane import usage_capture
                 options = {"session": args.session or os.environ.get("CODEX_THREAD_ID"), "config_path": args.capture_config}
                 result = usage_capture.session_start(root, **options) if args.operation == "session-start" else usage_capture.capture(root, source=args.input, **options)

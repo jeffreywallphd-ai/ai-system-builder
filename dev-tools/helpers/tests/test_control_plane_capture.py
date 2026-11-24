@@ -65,7 +65,7 @@ class CaptureTests(unittest.TestCase):
         # Replacing the Python mapping avoids changing native Windows empty
         # environment values (including inherited fixture Git config values).
         with patch.object(capture.os, "environ", {"CODEX_THREAD_ID": "selected-session"}):
-            result = capture.session_start(self.root, at=T3)
+            result = capture.session_start(self.root, config_path=capture.PREFIX + "explicit-export-only.json", at=T3)
         self.assertEqual(result["reason_code"], "capture.host-bridge-not-configured")
         self.assertTrue(result["adapter_ready"] and result["work_may_continue"])
         self.assertFalse(result["live_capture"])

@@ -28,9 +28,13 @@
   The Token usage dashboard is a read-only view of the same bounded summary;
   observed parent links are not job-role or complete-coverage evidence.
   Coding-session initialization runs `usage session-start` once. It validates an
-  explicitly configured numeric host bridge without gating work. Adapter readiness,
+  selected local numeric response source or explicitly configured numeric host
+  bridge without gating work. Configured Work start/verify/complete boundaries
+  capture once; a usage-only destination never changes Work ownership. Adapter readiness,
   baseline-only, stale and recent counted events are distinct; current app tools
-  supply no live desktop counter bridge. Never substitute quotas or scan logs.
+  supply no public live desktop counter bridge. Exact authorized local numeric
+  records can supply partial observed usage; never substitute quotas or scan
+  unrelated logs/conversations.
 
 - User-owned offline human acceptance uses the roadmap skill's explicit handoff;
   close only solely human-blocked legacy increments and preserve technical qualification.

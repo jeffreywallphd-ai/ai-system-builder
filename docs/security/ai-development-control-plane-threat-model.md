@@ -242,7 +242,35 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
-The numeric capture receiver reads only explicitly selected ignored regular JSON
+The opted-in local counter source is a narrowly selected user-authorized read
+boundary, not general transcript access. Resolve only exact known UUID filenames
+in three bounded creation-day directories under the documented session root.
+Reject nonregular/multiple-link/reparse files, ambiguous or compressed sources,
+foreign first-header identities/workspaces and changed pinned header/file/parent
+identity. Decode only canonical session metadata and strict outer numeric response
+records; never decode message/tool/reasoning/quota rows or emit retained raw rows,
+private paths, identifiers or source exception text. Source reads use bounded
+256 KiB headers and 1 MiB tails; partial trailing records wait for completion.
+
+Validate exact record.thread_id before own accounting, safe integer/subset/total
+consistency, real timestamps, monotonic progression and the explicit epoch/floor.
+Fork/resume totals can include inherited history; first totals are always uncounted.
+Shared session/root-turn IDs are not own-scope evidence. Only reported own-response
+cumulative differences feed existing atomic replay cursors. Context token_count
+and quota/budget counters never substitute. Unsupported/capped/conflicting inputs
+fail closed without guessed totals. Fixed partial/tail/freshness counts disclose
+coverage; missing fields/agents are not zero or discovered completeness.
+
+Serialize additive selected-source configuration under a bounded lock. Explicit
+central destinations must be existing checkouts of the same canonical repository
+and receive only usage writes. Work roots/claims/receipts/authority remain local.
+Existing Work boundaries poll after successful mutations and isolate telemetry
+exceptions from work progress; no permanent daemon or model call is added.
+Config/source-forgery and same-user in-place filesystem races remain cooperative
+limits, not authentication or hard filesystem custody. Public protocol evidence
+and current numeric observations do not prove account billing or complete capture.
+
+The external numeric capture receiver reads only explicitly selected ignored regular JSON
 files under `.local-codex/token-capture/`, with 32 KiB config/64 bindings and
 128 KiB feed/64 numeric-only notifications. Reject unknown content, duplicate
 keys, unsupported protocol/source/session binding, reparse/traversal, changed

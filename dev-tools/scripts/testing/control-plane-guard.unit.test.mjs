@@ -59,7 +59,7 @@ test("token dashboard navigates existing bounded pages and keeps statuses subset
     assert.equal(window.document.querySelector('.toolbar').hidden, true);
     assert.deepEqual([...window.document.querySelectorAll('#summary strong')].map(n => n.textContent), ['100', '20', 'Unavailable', '0']);
     const body = window.document.querySelector('.usage-dashboard').textContent;
-    for (const label of ['usage session-start', 'Adapter readiness alone is not live capture', 'Cached input (subset)', 'Reasoning output (subset)', 'Daily trends', 'Weekly trends', 'Quarterly trends', '2026-Q4', 'Has reported children', 'Reported child', 'Supplying measurements']) assert.ok(body.includes(label), label);
+    for (const label of ['Selected local response counters', 'Coverage is partial', 'usage session-start', 'Adapter readiness alone is not live capture', 'Cached input (subset)', 'Reasoning output (subset)', 'Daily trends', 'Weekly trends', 'Quarterly trends', '2026-Q4', 'Has reported children', 'Reported child', 'Supplying measurements']) assert.ok(body.includes(label), label);
     const rows = [...window.document.querySelectorAll('.usage-table')][0].querySelectorAll('tbody tr');
     assert.deepEqual([...rows[2].children].map(n => n.textContent), ['Cached input (subset)', '30', 'Unavailable', '2']);
     assert.deepEqual([...rows[3].children].map(n => n.textContent), ['Reasoning output (subset)', '5', 'Unavailable', '2']);

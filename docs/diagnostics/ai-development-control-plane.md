@@ -2,12 +2,15 @@
 ## Numeric capture at coding-session initialization
 
 Run `python dev-tools/helpers/development_control_plane.py usage session-start`
-once when a coding session initializes. This nonblocking check receives one
-explicitly configured numeric host export; `adapter_ready` does not mean live
+once when a coding session initializes. This nonblocking check initializes exact
+selected local response capture, or receives an existing explicitly configured
+numeric host export; `adapter_ready` does not mean live
 capture. Inspect recent actual deltas and selected-thread missing/baseline/stale
 coverage. With no bridge, report the fixed unavailable diagnostic once and
-continue feature work. No null placeholder, host process, log/history scan or
-quota estimate is created. Setup, actual desktop limitations, strict protocol
+continue feature work. No null placeholder, host process, unrelated history scan or
+quota estimate is created. Configured local capture runs once at existing Work
+start/verify/complete boundaries; an explicit same-repository usage destination
+never reroutes Work source/claims/receipts. Setup, partial desktop coverage, strict protocol
 and retention are in [token usage tracking](token-usage-tracking.md).
 
 The exact source-owned receiver profile runs capture/storage/CLI, scoped routing,

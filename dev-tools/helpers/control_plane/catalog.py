@@ -292,6 +292,11 @@ TOKEN_CAPTURE_SCOPE = (
     "docs/context/packs/docs-standards.pack.md", "docs/context/prompt-routing.md",
 )
 TOKEN_CAPTURE_REQUIRED = TOKEN_CAPTURE_SCOPE + TOKEN_USAGE_REQUIRED
+TOKEN_LOCAL_SCOPE = TOKEN_CAPTURE_SCOPE + (
+    "dev-tools/helpers/control_plane/usage_local.py", "dev-tools/helpers/tests/test_control_plane_local_usage.py",
+    "dev-tools/helpers/control_plane/work.py",
+)
+TOKEN_LOCAL_REQUIRED = TOKEN_LOCAL_SCOPE + TOKEN_CAPTURE_REQUIRED
 DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
     "dev-tools/helpers/control_plane/" + name for name in (
         "__init__.py", "candidate.py", "common.py", "contracts.py", "execution.py",
@@ -3687,12 +3692,14 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})
                 for index in range(0, len(support), 16))
             for scope, support in ((TOKEN_USAGE_SCOPE, TOKEN_USAGE_REQUIRED), (TOKEN_DASHBOARD_SCOPE, TOKEN_DASHBOARD_REQUIRED),
-                                   (TOKEN_CAPTURE_SCOPE, TOKEN_CAPTURE_REQUIRED)))):
+                                   (TOKEN_CAPTURE_SCOPE, TOKEN_CAPTURE_REQUIRED), (TOKEN_LOCAL_SCOPE, TOKEN_LOCAL_REQUIRED)))):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         browser = next((check for check in selected if check["id"] == "review-site"), None)
         if controller is not None and browser is not None:
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests",
-                                  "-p", "test_control_plane*.py", *[item for name in TOKEN_USAGE_TEST_MODULES + (("capture",) if set(paths) == set(TOKEN_CAPTURE_SCOPE) else ())
+                                  "-p", "test_control_plane*.py", *[item for name in TOKEN_USAGE_TEST_MODULES +
+                                  (("capture",) if set(paths) in (set(TOKEN_CAPTURE_SCOPE), set(TOKEN_LOCAL_SCOPE)) else ()) +
+                                  (("local_usage",) if set(paths) == set(TOKEN_LOCAL_SCOPE) else ())
                                   for item in ("-k", "test_control_plane_" + name + ".")]]
             # All DOM/controller cases still run. Its wrapper that launches the
             # complete Python controller is covered by the exact suites above.

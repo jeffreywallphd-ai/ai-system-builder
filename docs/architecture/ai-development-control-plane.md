@@ -222,9 +222,29 @@ scope remains unknown rather than joining own subtotals.
 Coding-session initialization invokes `usage session-start` once and reports
 adapter readiness separately from selected-thread missing/baseline/stale/recent
 actual deltas. Missing/invalid feeds are nonblocking fixed diagnostics, with no
-placeholder imports. The installed receiver does not make the desktop host expose
-its counters: a selected-session numeric-only callback/export remains required.
+placeholder imports. The external receiver does not make the desktop host expose
+its counters: that route requires a selected-session numeric-only callback/export.
+The selected local route below supplies an independently bounded source.
 Declared export provenance is cooperative, not authenticated billing proof.
+
+`usage_local.py` supplies the selected desktop numeric boundary when a public
+counter callback is unavailable. It inspects only filename metadata for exact
+known UUIDs, validates canonical first-header/workspace/source identity and reads
+bounded numeric response tails. Message/tool rows never enter its decoder and
+no raw row archive is retained. Exact `record.thread_id` identifies own reported
+response usage; shared session/root-turn IDs do not aggregate descendants.
+Inherited first thread totals are uncounted, with a fixed initial byte boundary;
+subsequent monotonic cumulative deltas use the sole existing atomic cursor store.
+Context-oriented `token_count` events are not an accounting fallback.
+
+Startup pins at most sixteen selections in one 32 KiB ignored configuration plus
+a one-byte selection lock. Existing successful Work start/verify/complete paths
+poll only configured selections once, returning optional nonblocking capture
+status. They do not change Work records, source, authority or claim ownership.
+An explicit usage-only destination must share the canonical Git repository;
+atomic cumulative dedup allows linked checkouts to feed one primary dashboard.
+Missing sources, replacement/reset, partial append, tail limits, unknown agents
+and stale data remain explicit. No automatic full-team or account coverage follows.
 
 The dedicated Token usage dashboard reuses that global summary on the existing
 bounded Work-items first-page read, preserving all four collection paging

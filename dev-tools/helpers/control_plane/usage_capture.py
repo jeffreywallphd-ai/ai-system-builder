@@ -215,6 +215,9 @@ def session_start(root: Path, *, session=None, config_path=CONFIG, at=None):
         session = session or os.environ.get("CODEX_THREAD_ID")
         _need(bool(session), "capture.session-reference-unavailable")
         path = _file(root.resolve(), config_path)
+        if not path.exists() and config_path == CONFIG:
+            from . import usage_local
+            return usage_local.session_start(root, session=session, at=at)
         _need(path.exists(), "capture.host-bridge-not-configured")
         return capture(root, session=session, config_path=config_path, at=at)["status"]
     except (ControlError, OSError, ValueError, TypeError, KeyError, IndexError, OverflowError, RecursionError) as error:

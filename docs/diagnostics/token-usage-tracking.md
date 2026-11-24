@@ -1,13 +1,113 @@
 # Optional contributor token tracking
 
 The control-plane `usage` commands import authorized numeric counter exports.
-They never invoke a model, scan chat histories/logs, estimate from account quotas,
+They never invoke a model, scan unrelated chat histories, estimate from account quotas,
 or grant Work/review/roadmap authority. Unsupported hosts remain unavailable.
 Imports are optional at existing handoff/completion boundaries. Coding-session
 initialization validates capture once and never gates work; no polling, extra
 model call, per-call label or approval stage is added.
 
-## Coding-session initialization and real capture
+## Selected local response capture
+
+`usage session-start` selects only the current known `CODEX_THREAD_ID` unless an
+explicit `--session` is provided. When no external export config is present, it
+initializes the local numeric adapter and captures once. Successful initialization
+pins the source and retains its selection in ignored configuration; existing
+Work start/verify/complete boundaries then poll configured selections once.
+No daemon, background timer, extra model call or per-call label is required.
+
+```text
+python dev-tools/helpers/development_control_plane.py usage session-start
+python dev-tools/helpers/development_control_plane.py usage local-poll
+python dev-tools/helpers/development_control_plane.py usage local-enable --thread <known-thread-uuid>
+python dev-tools/helpers/development_control_plane.py usage local-enable --thread <known-thread-uuid> --capture-destination <absolute-same-repository-checkout>
+```
+
+Additional `--thread` flags select only already known authorized parent/subagent
+UUIDs. No other sessions are discovered or opened. Selections are additive under
+a bounded writer lock. Unknown descendants remain unknown. Default purpose is
+`mixed` with `unavailable` basis; an existing coarse task default can be declared
+in the generated config without reading content or adding per-call labels.
+
+The local adapter uses the official public
+[rollout location and canonical first-header rules](https://github.com/openai/codex/blob/main/codex-rs/rollout/src/recorder.rs),
+[persisted numeric-record policy](https://github.com/openai/codex/blob/main/codex-rs/rollout/src/policy.rs)
+and [TokenUsageRecord schema](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/protocol.rs).
+It reads only exact selected UUID filenames in at most three adjacent creation-day
+directories under `CODEX_HOME/sessions` (default `~/.codex/sessions`). The official
+recorder uses local dates. Directory inspection is filename-only and capped at
+4,096 entries per day; multiple/reverted/compressed candidates refuse safely.
+There is no recursive search, database/account read, credential access or content
+search. Canonical header identity and workspace must match the selected thread
+and canonical Git repository; copied later headers cannot override the first.
+
+Only a bounded first header (256 KiB, checked again after reading) and latest
+1 MiB tail per selected file are examined locally. Message, tool, reasoning and
+quota rows never enter the decoder; only exact outer `token_usage_record` rows
+and canonical session metadata are decoded. Raw rows, prompts and responses are
+never emitted, stored in tracker files or copied to artifacts. Only exact matching
+`record.thread_id` is eligible. The public
+[response caller](https://github.com/openai/codex/blob/main/codex-rs/core/src/session/turn.rs),
+[session recorder](https://github.com/openai/codex/blob/main/codex-rs/core/src/session/mod.rs)
+and [state accumulator](https://github.com/openai/codex/blob/main/codex-rs/core/src/state/session.rs)
+bind reported response usage to the current thread and add it to that thread's
+cumulative totals. These own counters may include internal compaction and
+reported incomplete responses; outcome/model remain unavailable. Shared
+`session_id` and `root_turn_id` are correlation, never descendant sums or epochs.
+
+The first latest cumulative record is always an uncounted baseline. Fork/resume
+history can seed thread totals; neither that inherited total, every repeated
+`thread_token_usage`, `turn_token_usage` nor `record.usage` is added separately.
+Subsequent exact-thread cumulative differences enter the existing atomic importer
+as source-reported measured own usage. This avoids an unbounded response-ID log.
+Per-response numeric shapes/subsets are validated too. `event_msg/token_count`
+is deliberately not a fallback: it can be estimated, replayed or synthetic
+context-window state. Cached/reasoning values remain subsets, never extra tokens.
+
+Each source is pinned to a regular, single-link, non-reparse file identity and
+canonical header digest. A fixed initial byte boundary excludes earlier copied
+history; durable usage cursors protect subsequent replay. Counter/time decreases,
+changed parentage, source replacement/truncation, unsupported fields and integer
+or subset failures preserve the old store and report unavailable. After a genuine
+qualified reset/replacement, `usage local-enable --thread <known-thread-uuid>
+--counter-epoch <new-unique-label>` explicitly pins a new uncounted baseline.
+Do not guess reset epochs or reuse old epochs. Ordinary startup preserves the
+configured epoch. Keep a shared epoch/source policy when several checkouts use
+the same central store.
+
+The generated `.local-codex/token-capture/local.json` is limited to 32 KiB and
+16 selected bindings, with a one-byte `local.lock`; it retains no log/archive.
+It records selected UUID/known parent, opaque source/workspace digests, initial
+byte boundary, epoch, coarse purpose/basis and optional destination. Configured
+polls have a two-second work budget between bounded operations; fixed Git metadata
+queries time out after one second. Busy/unavailable/capped input never gates Work.
+Individual local filesystem IO is cooperative, not a hard real-time guarantee.
+The existing 4 MiB usage file and aggregate retention remain unchanged.
+
+This is partial observed coverage, never an account/billing audit. Capture begins
+at the initial baseline; old usage is not backfilled. Sparse reports are attributed
+to the final UTC bucket without fabricated daily shares. A missing numeric record,
+oversized skipped row, incomplete append, bounded-tail history and unknown agents
+stay explicit. Retried concurrent polls use actual importer receipts; a refused
+or older sequence is not counted. A duplicate cannot refresh stale capture.
+Recent actual deltas must exist before `live_capture` becomes true.
+
+`--capture-destination` changes only the usage store. The destination must be an
+existing checkout of the same canonical Git repository. Keep every Work command's
+`--repo` at its owning checkout; claims, source, checks and receipts never move.
+For a primary dashboard shared with a secondary author worktree, initialize that
+worktree's local capture with an explicit primary usage destination. Both can
+poll the same counters without copying stores; atomic cumulative dedup protects
+the central store. Independent stores are never automatically summed. Avoid
+importing the same consumption through both local and external producers.
+
+Removing local capture configuration stops boundary capture; it does not erase
+aggregate history or replay cursors. Current installed-file behavior must still
+match the strict public schema. Same-user filesystem forgery and missing provider
+usage remain limitations; source-reported counts are not authenticated billing
+proof or a model/Work/parent qualification pass.
+
+## Coding-session initialization and configured host exports
 
 ```text
 python dev-tools/helpers/development_control_plane.py usage session-start
@@ -15,11 +115,11 @@ python dev-tools/helpers/development_control_plane.py usage session-start --sess
 python dev-tools/helpers/development_control_plane.py usage capture --session selected-session
 ```
 
-The startup command uses only the known `CODEX_THREAD_ID` reference unless
-`--session` is supplied. It validates and receives one explicitly configured
-numeric batch. Without a host bridge it returns `state: unavailable`,
-`reason_code: capture.host-bridge-not-configured`, `live_capture: false` and
-`work_may_continue: true`. It creates no placeholder observations. An explicit
+The startup command prefers an existing explicit external config; otherwise it
+uses the selected local path above. An explicit nondefault export config never
+falls back to a different source. Missing/invalid source reports `state: unavailable`,
+`live_capture: false` and `work_may_continue: true` with a fixed reason code.
+It creates no placeholder observations. An explicit
 capture error is a failed import; startup reports the same failure without
 blocking feature work. Report unavailable/stale coverage once and continue.
 
@@ -32,11 +132,12 @@ threads expose partial coverage. Identical counter snapshots never refresh
 freshness. This is recent source data, not proof of a continuously running host,
 source authentication, complete coverage or billable usage.
 
-**Current desktop bridge limitation:** the available app tools expose chat
+**Public desktop bridge limitation:** the available app tools expose chat
 metadata and quota percentages, but no selected-chat input/output counters or
-subscription to numeric notifications. This receiver does not attach to the
-existing desktop host. Automatic capture of those sessions remains unavailable
-until that host exposes an authorized numeric-only callback/export. Do not start
+subscription to numeric notifications. The external receiver does not attach to
+the existing desktop host; selected local capture uses the precise numeric
+boundary above instead. A public numeric-only callback/export remains preferable
+when available. Do not start
 a duplicate App Server, scan its private logs/history or infer tokens from context
 budgets, account quotas or goal budgets. Existing unavailable imports are not
 capture. No estimator is supplied.
