@@ -268,6 +268,54 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         (self.root / reader).unlink()
         self.assertEqual(imported(), (1, {'loaded': False, 'code': 'ERR_MODULE_NOT_FOUND'}))
 
+    def test_deterministic_support_route_requires_exact_scope_and_executes_both_modules(self):
+        import os
+        import subprocess
+
+        for name in catalog.DETERMINISTIC_SUPPORT_REQUIRED:
+            self.put(name, '\n')
+        scope = list(catalog.DETERMINISTIC_SUPPORT_SCOPE)
+
+        def controller(paths, required=None):
+            plan = catalog.plan(self.root, paths, required or ['control-plane'], 'synthetic-support-candidate')
+            return next(check['argv'] for check in plan['selected'] if check['id'] == 'control-plane')
+
+        command = controller(scope)
+        self.assertEqual(command[-4:], ['-k', 'test_control_plane_deterministic_support.', '-k', 'test_control_plane_focused.'])
+        full = next(check['argv'] for check in catalog.definitions(self.root) if check['id'] == 'control-plane')
+        for paths in ([], scope[:-1], [scope[0]], [*scope, 'dev-tools/helpers/control_plane/common.py'],
+                      [*scope, 'dev-tools/helpers/control_plane/unknown.py']):
+            with self.subTest(paths=paths):
+                self.assertEqual(controller(paths), full)
+        self.assertEqual(controller(scope, ['control-plane', 'focused-tests']), full)
+        dependency = self.root / 'dev-tools/helpers/run_focused_checks.py'
+        dependency.unlink()
+        self.assertEqual(controller(scope), full)
+        dependency.mkdir()
+        self.assertEqual(controller(scope), full)
+        dependency.rmdir()
+        dependency.write_text('\n')
+
+        # Execute the exact planned command on controlled modules. The selected
+        # tests need sibling imports, and an actual failing assertion must fail.
+        self.put('dev-tools/helpers/tests/sibling.py', 'VALUE = True\n')
+        source = ('import unittest\nfrom sibling import VALUE\nclass Checks(unittest.TestCase):\n'
+                  '    def test_fixture(self): self.assertTrue(VALUE)\n')
+        first = 'dev-tools/helpers/tests/test_control_plane_deterministic_support.py'
+        second = 'dev-tools/helpers/tests/test_control_plane_focused.py'
+        self.put(first, source)
+        self.put(second, source)
+        self.put('dev-tools/helpers/tests/test_control_plane_unselected.py',
+                 'import unittest\nclass Excluded(unittest.TestCase):\n    def test_unselected(self): self.fail("must not execute")\n')
+        env = {k: v for k, v in os.environ.items() if k != 'PYTHONOPTIMIZE'}
+        positive = subprocess.run(command, cwd=self.root, env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(positive.returncode, 0)
+        self.assertIn('Ran 2 tests', positive.stderr)
+        self.put(second, source.replace('assertTrue(VALUE)', 'assertFalse(VALUE)'))
+        negative = subprocess.run(command, cwd=self.root, env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(negative.returncode, 1)
+        self.assertIn('FAILED (failures=1)', negative.stderr)
+
     def test_fake_supplier_suite_retains_every_legacy_pure_case_without_native_collection(self):
         import importlib.util
         root = Path(__file__).resolve().parents[3]
@@ -275,7 +323,8 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             root / 'dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        loader = unittest.defaultTestLoader
+        # Parent CLI selection must not filter this independent nested census.
+        loader = unittest.TestLoader()
         expected = set(loader.getTestCaseNames(module.fixtures.GenerationBoundsTests))
         expected.update(loader.getTestCaseNames(module.fixtures.PinnedLoaderBoundaryTests))
         native = {'test_pinned_supplier_exact_alias_lookup_reads_the_canonical_tensor',

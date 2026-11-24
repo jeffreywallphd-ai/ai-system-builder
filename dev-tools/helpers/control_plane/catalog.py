@@ -249,6 +249,26 @@ ROADMAP_STORAGE_CONTROLLER_TESTS = tuple("dev-tools/helpers/tests/" + name for n
     "test_control_plane_journal_capacity.py", "test_control_plane_delivery.py",
 ))
 
+DETERMINISTIC_SUPPORT_SCOPE = (
+    "dev-tools/helpers/control_plane/deterministic_support.py",
+    "dev-tools/helpers/tests/test_control_plane_deterministic_support.py",
+    "docs/diagnostics/deterministic-contributor-support.md",
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_focused.py",
+)
+DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
+    "dev-tools/helpers/control_plane/" + name for name in (
+        "__init__.py", "candidate.py", "common.py", "contracts.py", "execution.py",
+        "records.py", "storage.py", "work.py", "roadmap_state.py", "projection.py",
+    )) + (
+    "dev-tools/helpers/development_control_plane.py",
+    "dev-tools/helpers/run_focused_checks.py",
+    "dev-tools/helpers/tests/test_control_plane_delivery.py",
+    "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+    "skills/manage-implementation-roadmaps/scripts/roadmap_storage.py",
+    "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
+)
+
 PUBLISHED_FORM_CHECKS = {
     "roadmap-storage-node": {
         "automatic_sources": (
@@ -3615,6 +3635,17 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None:
             controller["argv"] = [sys.executable, "-B", "dev-tools/helpers/tests/test_control_plane_roadmap_storage.py", "--related"]
+    if (set(paths) == set(DETERMINISTIC_SUPPORT_SCOPE) and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": DETERMINISTIC_SUPPORT_REQUIRED[index:index+16]})
+                for index in range(0, len(DETERMINISTIC_SUPPORT_REQUIRED), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            # Discovery preserves sibling imports; repeated native unittest -k
+            # filters execute only these two existing regression modules.
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                                  "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                                  "-k", "test_control_plane_deterministic_support.",
+                                  "-k", "test_control_plane_focused."]
     value = {"schema_version": "check-plan-v1", "candidate": candidate, "catalog_digest": policy_digest(root, checks), "changed_paths": paths, "coverage": covered, "selected": selected, "deferred": [c["id"] for c in checks if c not in selected]}
     value["plan_digest"] = digest(value)
     return value
