@@ -612,6 +612,92 @@ def test_fixed_serializer_consumes_original_family_after_a_sealed_checkpoint(mon
         assert family.phase=="sealed" and control.charges==[128*1024]*2
 
 
+@pytest.mark.parametrize("method",["full-finetune","lora","qlora"])
+def test_fixed_family_output_opens_in_installed_safe_readers(monkeypatch,tmp_path,method):
+    # Real format consumers, not the fixture's decoder. No model is loaded.
+    from safetensors import SafetensorError, safe_open
+    from tokenizers import AddedToken, Tokenizer, models
+    backend=Tokenizer(models.WordLevel(
+        vocab={"<unk>":0,**{f"word-{i}":i for i in range(1,10)},"<pad>":10,"<image>":11},
+        unk_token="<unk>"))
+    backend.add_special_tokens([AddedToken("<pad>",normalized=False,special=True)])
+    backend_json=backend.to_str()
+    missing=object(); original_torch=sys.modules.get("torch",missing)
+    original_tokenizers=sys.modules["tokenizers"]
+    with monkeypatch.context() as fixture_patch:
+        with _protected_training_metadata_fixture(fixture_patch,method) as (facts,tokenizer,_,stream):
+            actual,use,model,_,_,_,Tensor,_=facts
+            # The synthetic producer supplies genuine SDK-generated backend JSON.
+            # Ownership, metadata export and all actual Native writer code stay real.
+            tokenizer.backend_tokenizer.raw=backend_json
+            train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+            kernel,configuration,_,_,control=model.test_output
+            family=actual.OriginalTrainingOutputFamily(use.view,use.payload.model_dump(mode="json"),
+                {"maximumCopyBytes":128*1024,"outputs":[configuration]},control,control)
+            graph=train_model_module._write_protected_training_output(use,configuration=configuration,
+                reservation=control,admission=control,_family=family)
+            assert graph.phase=="sealed" and family.phase=="sealed" and control.charges==[128*1024]
+            emitted={row["name"]:bytes(kernel.nodes[graph.physical_path+"\\"+row["name"]]["data"])
+                for row in graph.records}
+            assert sum(len(raw) for raw in emitted.values())<=128*1024
+            assert stream.phase=="complete" and Tensor.copies
+    # Restore all inert modules before the installed readers import dependencies.
+    assert sys.modules.get("torch",missing) is original_torch
+    assert sys.modules["tokenizers"] is original_tokenizers
+    for name,raw in emitted.items():
+        assert "/" not in name and "\\" not in name
+        (tmp_path/name).write_bytes(raw)  # Only this disposable pytest directory.
+    weight="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
+    expected=({"base.weight","layer.lora_A.default.weight","embed_tokens.weight"}
+        if method=="full-finetune" else {"layer.lora_A.weight","embed_tokens.weight"})
+    with safe_open(str(tmp_path/weight),framework="np") as result:
+        assert set(result.keys())==expected
+        for key in expected:
+            tensor=result.get_tensor(key)
+            assert tensor.shape==(4,) and tensor.dtype.name=="float32"
+            assert tensor.tolist()==[0.0,1.0,2.0,3.0]
+    restored=Tokenizer.from_file(str(tmp_path/"tokenizer.json"))
+    assert restored.get_vocab_size(with_added_tokens=True)==12
+    assert restored.token_to_id("<pad>")==10 and restored.token_to_id("<image>")==11
+    assert restored.encode("word-1").ids==[1]
+    config=json.loads(emitted["tokenizer_config.json"])
+    assert config["padding_side"]=="left" and config["model_max_length"]==10**30
+    assert config["extra_special_tokens"]=={"image_token":"<image>"}
+    assert all(b"X:\\private" not in raw for name,raw in emitted.items() if name.endswith(".json"))
+    # The official parser must reject truncated output; no tolerant fallback.
+    truncated=tmp_path/"truncated.safetensors"
+    truncated.write_bytes(emitted[weight][:-1])
+    with pytest.raises(SafetensorError):
+        with safe_open(str(truncated),framework="np"):pass
+
+
+@pytest.mark.parametrize("field,values",[("id2label",{0:"negative",1:"positive"}),("pruned_heads",{0:[1],2:[3]}),
+    ("id2label",{"0":"negative",1:"positive"}),("id2label",{2**53-1:"bounded"})])
+def test_protected_metadata_keeps_standard_model_integer_index_maps(monkeypatch,field,values):
+    with _protected_training_metadata_fixture(monkeypatch,"full-finetune") as (facts,tokenizer,_,_):
+        _,use,model,*_=facts
+        model.config.values[field]=values
+        files=train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        configuration=json.loads(dict(files)["config.json"])
+        assert configuration[field]=={str(key):value for key,value in values.items()}
+
+
+@pytest.mark.parametrize("failure",["boolean","float","negative","oversized","collision","custom-key","unknown-map","generation-map"])
+def test_protected_metadata_denies_ambiguous_or_unknown_integer_maps(monkeypatch,failure):
+    with _protected_training_metadata_fixture(monkeypatch,"full-finetune") as (facts,tokenizer,_,_):
+        _,use,model,_,_,_,Tensor,_=facts
+        class CustomKey:
+            def __str__(self):pytest.fail("Metadata keys must not use arbitrary string conversion")
+        keys={"boolean":True,"float":0.5,"negative":-1,"oversized":2**53,"custom-key":CustomKey()}
+        if failure=="collision":model.config.values["id2label"]={0:"first","0":"second"}
+        elif failure=="unknown-map":model.config.values["custom_map"]={0:"unsupported"}
+        elif failure=="generation-map":model.generation_config.values["sequence_bias"]={(1,2):1.0}
+        else:model.config.values["id2label"]={keys[failure]:"unsupported"}
+        with pytest.raises(ValueError,match="private trained metadata export"):
+            train_model_module._capture_protected_training_metadata(model,tokenizer,use,maximum_bytes=65536)
+        assert use._metadata_slot["stage"]=="failed" and Tensor.copies==[]
+
+
 @pytest.mark.parametrize("failure",["forged","wrong-namespace","wrong-controls","missing-metadata","native-write","helper-changed","late-helper"])
 def test_fixed_family_serializer_failure_keeps_ownership_and_freezes_new_outputs(monkeypatch,failure):
     with _protected_training_metadata_fixture(monkeypatch) as (facts,tokenizer,_,stream):

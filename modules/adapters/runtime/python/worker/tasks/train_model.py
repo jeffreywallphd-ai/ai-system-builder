@@ -652,9 +652,9 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
             if legacy: record.pop("special")
             if typed: record["__type"] = "AddedToken"
             return record
-        def plain(value, *, strip_paths=False, typed_tokens=True, legacy_tokens=False):
+        def plain(value, *, strip_paths=False, typed_tokens=True, legacy_tokens=False, model_config=False):
             nodes, characters, active = 0, 0, set()
-            def visit(item,depth=0):
+            def visit(item,depth=0,*,index_map=False):
                 nonlocal nodes,characters
                 nodes += 1
                 if nodes > min(maximum_bytes,1_000_000) or depth > 32:
@@ -680,15 +680,23 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
                         if len(item) > 4096 or any(type(v) is not str for v in item):
                             raise ValueError("The private metadata set is unavailable.")
                         return [visit(v,depth+1) for v in sorted(item)]
-                    if type(item) is not dict or len(item) > maximum_bytes or any(type(k) is not str for k in item):
+                    if type(item) is not dict or len(item) > maximum_bytes:
                         raise ValueError("The private metadata value is unavailable.")
                     result = {}
                     for key,value in item.items():
+                        # These two standard model-config maps use integer IDs
+                        # in the pinned SDK. Convert only exact bounded ints at
+                        # that fixed location; arbitrary keys stay unsupported.
+                        if index_map and type(key) is int and 0 <= key <= 2**53-1:
+                            key = str(key)
+                        if type(key) is not str or key in result:
+                            raise ValueError("The private metadata key is unavailable.")
                         if strip_paths and key in path_keys: continue
                         if (strip_paths and key in ("auto_map","auto_mapping","_auto_class") and value is not None
                                 and not (type(value) is dict and not value)):
                             raise ValueError("Custom metadata code export is unavailable.")
-                        result[visit(key,depth+1)] = visit(value,depth+1)
+                        result[visit(key,depth+1)] = visit(value,depth+1,
+                            index_map=model_config and depth == 0 and key in ("id2label","pruned_heads"))
                     return result
                 finally: active.remove(identity)
             return visit(value)
@@ -714,7 +722,7 @@ def _capture_protected_training_metadata(model, tokenizer, use, *, maximum_bytes
                     raise ValueError("The private model configuration changed.")
             raw = operation("model-configuration",config_export)
             if type(raw) is not dict: raise ValueError("The private model configuration is unavailable.")
-            config = plain(raw,strip_paths=True)
+            config = plain(raw,strip_paths=True,model_config=use.payload.method == "full-finetune")
             files = list(history_files)
             if use.payload.method in ("lora","qlora"):
                 config["base_model_name_or_path"] = use.payload.baseModel.modelId

@@ -3084,6 +3084,24 @@ standalone writing stays intact. Actual checkpoint SDK wiring/settings, complete
 producer, durable quota, reader/retirement, separate Save and real hosts remain
 pending. The composition tests use inert SDK data and in-memory ABI only.
 
+Direct consumer tests additionally read the emitted synthetic weights with the
+installed safetensors NumPy reader and the emitted SDK-generated tokenizer JSON
+with the installed Tokenizers reader. Exact F32 keys, shapes and data, tokenizer
+IDs and encoding, and truncated-file rejection are checked after inert module
+restoration. This is format interoperability, not actual model/inference reload,
+training, checkpoint execution, native custody or host qualification. See the
+[safetensors format API](https://huggingface.co/docs/safetensors/en/index) and
+[Tokenizers API](https://huggingface.co/docs/tokenizers/en/api/tokenizer).
+
+Standard model configuration can contain integer IDs in root `id2label` and
+`pruned_heads`. Only these full-model maps normalize exact nonnegative integer
+keys within the JSON safe-integer bound to strings. Reject collisions with
+existing strings, other key types and integer maps at unknown locations. Keep
+the original byte/node/depth/cycle, redaction and custom-code refusals. A separate
+controlled pinned-SDK check confirms local GPT2Config and PreTrainedTokenizerFast
+metadata reload; it loads no model weights and grants no general model/host pass.
+Tuple-keyed generation `sequence_bias` remains outside this finite profile.
+
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.

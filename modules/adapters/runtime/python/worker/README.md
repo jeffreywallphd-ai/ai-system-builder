@@ -2123,6 +2123,21 @@ Successful one-use standalone output is unchanged. Controlled full-model/LoRA/
 QLoRA composition is source evidence, not actual SDK checkpoint execution or a
 complete producer, durable quota, installed reader, retirement, Save or host pass.
 
+The installed safe format readers separately consume fixed-writer output from
+all three controlled profiles. Check exact F32 tensor keys/shapes/data and an
+SDK-generated WordLevel tokenizer backend, plus truncated-weight rejection.
+Restore inert fixture modules before real reader use. Only the owned disposable
+test copy uses ordinary paths; product Native admission/writing stays unchanged.
+This qualifies those synthetic formats, not `AutoModel`/`AutoTokenizer` reload,
+real training, checkpoint callbacks, native custody, retirement, Save or hosts.
+For full-model configuration only, convert exact nonnegative integer keys up to
+the JSON safe-integer bound in root `id2label` and `pruned_heads` maps. Reject
+converted/string key collisions, booleans, floats, custom keys and other integer
+maps. Existing byte/node/depth/cycle and path/code controls still apply. The
+separate controlled pinned-SDK check exports and locally reloads GPT2Config and
+PreTrainedTokenizerFast metadata without model weights. This narrow result does
+not qualify model inference, arbitrary configs or tuple-keyed `sequence_bias`.
+
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.

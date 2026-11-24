@@ -2771,6 +2771,22 @@ forged object cannot select a real family's state. Source-only composition prove
 no physical effects, actual SDK checkpoint policy, complete producer/quota,
 installed reader, retirement, Save, host or parent qualification.
 
+Installed safe-format readers independently check copied synthetic fixed-writer
+output: exact F32 weights, SDK-generated tokenizer backend and truncated-weight
+refusal. Fixtures restore SDK module tables before the real consumer runs and
+write only their disposable test copy. No pickle, remote code, provider discovery,
+SDK path-writer fallback or model-quality score is used. Format compatibility
+does not grant model reload, Native custody, checkpoint execution, producer,
+retirement, Save, public activation, host or parent qualification.
+
+Limit integer-key conversion to full-model root `id2label` and `pruned_heads`.
+Accept only exact nonnegative integers within the JSON safe-integer bound and
+existing strings; refuse converted-key collisions, bool/float/custom keys and
+unknown integer maps. Never call arbitrary key stringifiers. Preserve original
+byte/node/depth/cycle, path stripping, code refusal and currentness checks.
+Controlled local configuration/tokenizer reload is no model execution or broader
+reader/producer/host qualification; tuple-keyed generation bias remains denied.
+
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.

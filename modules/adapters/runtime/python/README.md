@@ -1035,6 +1035,14 @@ serializer freezes further family admission and retains bytes/charges without
 fallback or cleanup. Standalone output remains compatible; actual SDK checkpoint
 execution, complete producer/accounting, retirement, Save and hosts stay pending.
 
+Installed `safetensors` and `tokenizers` readers also check the emitted synthetic
+full-model/LoRA/QLoRA files, exact tensor data and generated tokenizer backend.
+Truncated weights are rejected. This is format interoperability only; it does
+not qualify model inference loading, training, native custody or actual hosts.
+The model-config exporter now preserves standard integer IDs in `id2label` and
+`pruned_heads`. It converts only these fixed root-map keys to JSON strings,
+rejects ambiguity and keeps unknown integer maps unsupported.
+
 Failure authority binds only after the fixed Native snapshot proves the family
 belongs to this original view/request. A different genuine family cannot be
 frozen by a mismatched serializer invocation.
