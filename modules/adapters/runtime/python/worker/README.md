@@ -20,6 +20,14 @@ source copy before creating its app process. Source handles, native call outputs
 fresh-file provenance and read-only inheritance remain owned by that controller.
 Its explicit manifest supports only flat safe-format files; executable code,
 pickle weights, shards, links, reparse points and unexpected entries are refused.
+Existing directory components use a separate bounded ASCII grammar. It permits
+normal cache ancestors such as `.cache`, `.local-codex` and `Test User`. It still
+refuses dot/dotdot components, trailing dots/spaces, DOS devices (also before an
+extension), stream syntax, separators and controls. Manifest files and the fresh
+copy name keep their stricter grammar. These strings grant no authority: native
+parent-handle traversal, locality, identity and reparse checks remain mandatory.
+Unicode directory names remain outside this initial native profile. Inert API
+tests cover the supported names; physical Windows qualification stays separate.
 The original selected Model and shared provider cache are never modified.
 Atomic construction restricts DAC, owner, metadata and delete rights; exclusive
 creator handles and complete post-seal enumeration remain necessary. Only the

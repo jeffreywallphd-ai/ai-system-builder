@@ -185,6 +185,20 @@ def model_leaf(value):
     return value
 
 
+def model_directory_component(value):
+    """Existing directory names are not manifest files or fresh copy names.
+
+    Common cache ancestors contain leading dots or internal spaces. Keep the
+    initial bounded ASCII profile and deny Windows aliases before native opens;
+    handle identity, locality and reparse checks still establish the real graph.
+    """
+    need(type(value) is str and re.fullmatch(r"[A-Za-z0-9_.-][A-Za-z0-9_. -]{0,119}", value) is not None
+         and value not in (".", "..") and value[-1] not in (".", " ")
+         and value.split(".", 1)[0].rstrip(" ").upper() not in
+         {"CON", "PRN", "AUX", "NUL", *("COM" + str(n) for n in range(10)), *("LPT" + str(n) for n in range(10))})
+    return value
+
+
 def capture_model_graph(raw):
     """Closed data only. This does not grant source or reservation authority."""
     value = exact(raw, ("schema", "definitionDigest", "modelId", "modelUpdatedAt", "logicalPath", "sourcePath",
@@ -199,7 +213,7 @@ def capture_model_graph(raw):
         text = value[key]
         need(type(text) is str and 3 < len(text) <= 4096 and re.fullmatch(r"[A-Za-z]:\\[^:\x00-\x1f]*", text) is not None)
         parts = text[3:].split("\\"); need(1 <= len(parts) <= 64)
-        for part in parts: model_leaf(part)
+        for part in parts: model_directory_component(part)
     model_leaf(value["freshName"])
     maximum = integer(value["maximumCopyBytes"], 1, 2**53 - 1)
     integer(value["bufferBytes"], 4096, 1024 * 1024)
@@ -358,7 +372,10 @@ class OriginalModelGraph:
         if parent is None:
             need(type(name) is str and re.fullmatch(r"\\\?\?\\[A-Za-z]:\\", name) is not None)
         else:
-            model_leaf(name)
+            if directory and not fresh:
+                model_directory_component(name)
+            else:
+                model_leaf(name)
         handle = self.owner.handle("model-copy" if fresh else "model-read")
         self.owned_handles.append(handle)
         text = C.create_unicode_buffer(name)

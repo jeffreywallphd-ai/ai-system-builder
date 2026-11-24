@@ -47,6 +47,7 @@ class Kernel:
     sid = b"\x01\x02\0\0\0\0\0\x05" + struct.pack("<II", 21, 101)
     def __init__(self):
         self.calls = []; self.handles = {}; self.nodes = {}; self.next = 101; self.allocations = []
+        self.opened_names = []
         self.fail = self.after = self.error_after_return = None; self.short_write = False
         self.identity_counter = 1; self.after_write = None
         self.active = 1; self.attributes = {}; self.limits = None
@@ -114,6 +115,7 @@ class Kernel:
             return 0, 0
         if name == "NtCreateFile":
             attrs = a[2]._obj; text = C.wstring_at(attrs.name.contents.buffer, attrs.name.contents.length // 2)
+            self.opened_names.append(text)
             path = self.obj(attrs.root)["node"]["path"].rstrip("\\") + "\\" + text if attrs.root else text[4:]
             create, directory = a[7] == 2, bool(a[8] & 1)
             if create:
@@ -227,6 +229,68 @@ class ModelGraphTests(unittest.TestCase):
         owner = n.OriginalWorker(boot(), kernel=kernel, executable="X:/inert/python.exe", worker_root=_root)
         graph = n.OriginalModelGraph(owner, value or descriptor(), control, control)
         return graph, kernel, control
+
+    def cache_graph(self):
+        value = descriptor()
+        original_source, original_parent = value["sourcePath"], value["freshParent"]
+        value["sourcePath"] = value["logicalPath"] = "X:\\Users\\Test User\\.cache\\selected"
+        value["freshParent"] = "X:\\Users\\Test User\\.local-codex\\training"
+        graph, kernel, control = self.graph(value)
+        for name in ("X:\\Users", "X:\\Users\\Test User", "X:\\Users\\Test User\\.cache",
+                     "X:\\Users\\Test User\\.local-codex"):
+            kernel.node(name, True)
+        for old, new in ((original_source, value["sourcePath"]), (original_parent, value["freshParent"])):
+            for name in list(kernel.nodes):
+                if name == old or name.startswith(old + "\\"):
+                    node = kernel.nodes.pop(name)
+                    node["path"] = new + name[len(old):]
+                    kernel.nodes[node["path"]] = node
+        return graph, kernel, control
+
+    def test_realistic_cache_names_copy_hash_seal_and_inherit_through_native_parent_handles(self):
+        graph, kernel, control = self.cache_graph()
+        originals = {row["name"]: bytes(kernel.nodes[graph.descriptor["sourcePath"] + "\\" + row["name"]]["data"])
+                     for row in graph.descriptor["files"]}
+        graph.prepare()
+        self.assertEqual(graph.phase, "sealed")
+        inherited = graph.inherited_handles()
+        self.assertEqual(len(inherited), 4)
+        for name in ("Test User", ".cache", ".local-codex"):
+            self.assertIn(name, kernel.opened_names)
+        for row in graph.records:
+            copied = kernel.nodes[graph.physical_path + "\\" + row["name"]]
+            self.assertEqual(bytes(copied["data"]), originals[row["name"]])
+            self.assertEqual(copied["acl"], n.model_acl(kernel.sid, sealed=True))
+        self.assertEqual(control.charges, [graph.descriptor["maximumCopyBytes"]])
+        self.assertFalse(any(name in ("CreateProcessW", "DeleteFileW", "SetFileInformationByHandle") for name, _ in kernel.calls))
+
+    def test_cache_name_support_does_not_follow_reparse_ancestors(self):
+        for path in ("X:\\Users\\Test User\\.cache", "X:\\Users\\Test User\\.local-codex"):
+            with self.subTest(path=path):
+                graph, kernel, _ = self.cache_graph()
+                kernel.nodes[path]["attributes"] |= 0x400
+                with self.assertRaises(n.LaunchUnavailable): graph.prepare()
+                self.assertFalse(graph.attempted)
+                self.assertFalse(any(name in ("WriteFile", "CreateProcessW") for name, _ in kernel.calls))
+
+    def test_cache_directory_aliases_devices_and_streams_refuse_before_native_io(self):
+        for component in (".", "..", "cache.", "cache ", " CON", "CON", "con.txt", "NUL.data",
+                          "COM0", "COM1.log", "LPT9", "CON .txt", "name:stream", "a/b", "bad\tname", "bad\x00name"):
+            with self.subTest(component=component):
+                value = descriptor()
+                value["sourcePath"] = "X:\\models\\" + component + "\\selected"
+                with self.assertRaises(n.LaunchUnavailable): self.graph(value)
+        for component in ("a\\b", ".", "..", "a/b", "name:stream", "cache ", "cache."):
+            with self.assertRaises(n.LaunchUnavailable): n.model_directory_component(component)
+
+    def test_directory_grammar_does_not_expand_manifest_or_fresh_names(self):
+        for target in ("fresh", "file"):
+            for name in (".cache", "Test User", "model weights.safetensors"):
+                with self.subTest(target=target, name=name):
+                    value = descriptor()
+                    if target == "fresh": value["freshName"] = name
+                    else: value["files"][0]["name"] = name
+                    with self.assertRaises(n.LaunchUnavailable): self.graph(value)
 
     def test_fixture_hashes_and_complete_safe_manifest(self):
         graph, kernel, _ = self.graph()
