@@ -2013,3 +2013,23 @@ shape/type/device/version fields and reject a changed snapshot. For CPU copy,
 check a closed private slice record again after the last observer, before
 dispatch. It contains only the registered source and exact start/length, not
 a selectable callback or public grant. No stabilization or automatic retry runs.
+
+`_capture_protected_training_tensor_stream` selects weights from the fixed
+loader's actual private model binding. Embedding synchronization records a
+known observation or resize; resize stays recorded after a later no-op. Only
+the fixed `_apply_lora` handoff can transfer this binding to its returned wrapper.
+Capture one original bound `state_dict` receiver and the already-loaded pinned
+PEFT getter before supplier calls. Full-model selection needs no PEFT. Adapter
+selection requires one known default LoRA configuration and explicit embedding
+preservation, never `auto` provider/config lookup. Check target settings, private
+observation and request lifetime across callbacks; reject foreign receivers,
+unknown/malformed/broad mappings and drift without ordinary fallback or retry.
+Mark synchronization uncertain before supplier calls. Lost or incomplete replies
+keep export unavailable even after a later no-op. Recheck fixed LoRA/no-bias/
+no-DoRA selection and no auxiliary saving or trainable-token overrides through
+plain configuration fields after the final live-view callback.
+Keep original methods, returned states and the fixed failure stage for later
+diagnosis; these private objects must not enter public diagnostics. The genuine
+dense stream performs its own tensor and authority checks. Config/tokenizer
+export, complete producer, durable quota, Save, real SDK/hardware and host
+qualification remain pending. No model quality test or model load runs here.

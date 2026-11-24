@@ -2912,3 +2912,40 @@ This prevents an observed metadata or later observer change from enlarging the
 copy. The record accepts no arbitrary predicate, provider, path or permission.
 The check is bounded and runs once; it does not freeze tensors atomically,
 stabilize by retrying or replace real SDK/resource qualification.
+
+### Fixed trained-weight selection
+
+The fixed loader's private use can select a trained full-model or LoRA/QLoRA
+tensor state for the existing dense byte stream. Record the actual model object
+and known embedding synchronization/resize in that use; a later no-op does not
+erase resizing. Only the fixed PEFT construction handoff transfers this binding
+to the returned wrapper. Caller JSON cannot set it. Require a genuine live joint
+view and unchanged request; latch one selection attempt before supplier access.
+Mark the embedding observation uncertain before synchronization suppliers run.
+A partial resize, lost reply or incomplete observation permanently prevents
+export through that use; a later matching vocabulary cannot recertify it.
+Capture the original bound model state method and already-loaded pinned PEFT
+getter before callbacks. Refuse foreign method receivers and unknown SDK state.
+
+For adapters, use one known default LoRA configuration and an explicit Boolean
+`save_embedding_layers`. Preserve observed resized embeddings and supported
+embedding targets. The [pinned PEFT selector](https://github.com/huggingface/peft/blob/v0.15.2/src/peft/utils/save_and_load.py)
+can perform provider/config discovery with `auto`; this path never selects it.
+Capture bounded mapping references, not copied weights. Recheck private model,
+embedding observation, target configuration and request across supplier calls.
+Keep the fixed LoRA type, no-bias/no-DoRA policy and absence of auxiliary saving
+or trainable-token overrides. Check plain configuration fields after the last
+live-view callback and reread the actual model configuration mapping/default
+reference. Changed selector policy cannot add or rename saved weights.
+The actual dense stream independently validates selected tensors and lifetime.
+Failed/unknown selection retains its original slot and cannot retry. The slot
+contains private SDK objects, not public diagnostics or a readiness/Save grant.
+
+Controlled model/SDK and in-memory Native fixtures verify selection software,
+including sticky resize, uncertain resize, wrapper lineage, no-provider options,
+fixed selector policy, failure and drift. Preserve both independent causal failures
+and the earlier passing-but-incomplete receipt with the corrected evidence.
+They load no model and score no quality. Configuration/tokenizer export, full
+serialization/Native producer composition, durable quota, Save, SDK/worker
+retirement, installed-runtime/reader and actual-host qualification remain pending.
+Ordinary no-view loading and SDK path serialization stay compatible.

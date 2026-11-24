@@ -968,3 +968,17 @@ producer, durable quotas, Save and real hardware/hosts remain pending.
 Metadata checks use one before/after consistency check, not a retry loop. Repeat
 the fixed shape/dtype/device/version check after the last original-view callback
 and before CPU copy. Changed slices cannot enlarge the dispatched transfer.
+
+The fixed loader can select a full-model or LoRA/QLoRA state for that stream.
+Its genuine private use records embedding synchronization against the actual
+loaded model; the fixed PEFT wrapper carries that binding forward. Preserve
+resized or targeted embeddings with an explicit Boolean SDK option, avoiding
+PEFT's automatic provider/config discovery. Capture one original state method
+and loaded getter before callbacks; reject unknown observations, foreign model
+receivers, changed settings and malformed mappings without transfer or retry.
+An incomplete synchronization permanently invalidates its private observation;
+a later no-op cannot clear it. Keep fixed LoRA/no-bias/no-DoRA selection and
+reject auxiliary saving or trainable-token overrides across callbacks.
+These are controlled software checks. Configuration/tokenizer export, complete
+serialization/producer wiring, durable quota, Save, installed SDK and real-host
+qualification remain pending. Ordinary SDK serialization is unchanged.

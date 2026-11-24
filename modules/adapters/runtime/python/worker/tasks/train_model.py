@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 import re
 import stat
+import sys
 import tempfile
+from collections import OrderedDict
+from types import BuiltinMethodType, FunctionType, MethodType, ModuleType
 from shutil import rmtree
 from datetime import datetime, timezone
 from math import ceil, isfinite
@@ -11,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ..models import TrainModelTaskRequest, TrainModelTaskResult
-from ..native.windows_original_worker_launch import resolve_original_training_references
+from ..native.windows_original_worker_launch import OriginalTrainingDenseTensorStream, resolve_original_training_references
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output
 
@@ -37,6 +40,7 @@ DEFAULT_SEQUENCE_LENGTH = 512
 MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
 _NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_python
 _NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
+_NATIVE_TENSOR_STREAM = OriginalTrainingDenseTensorStream
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
     "llm-instruction": ("instruction", "output"),
@@ -219,13 +223,18 @@ def _resolve_training_purpose_paths(
 
 class _ProtectedTrainingUse:
     """Fixed private view use, not a caller-selected guard or public capability."""
-    __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize")
+    __slots__ = ("payload","view","model_reference","dataset_references","_resolve","_serialize",
+        "_tensor_stream_type","_embedding_status","_embedding_model","_embedding_observation_lost","_tensor_selection_slot")
 
     def __init__(self, payload, view):
         if type(payload) is not TrainModelTaskRequest:
             raise ValueError("The private protected training request is unavailable.")
         self.payload, self.view = payload, view
         self._resolve, self._serialize = _NATIVE_REFERENCE_RESOLVER, _NATIVE_REQUEST_SERIALIZER
+        self._tensor_stream_type = _NATIVE_TENSOR_STREAM
+        self._embedding_status, self._tensor_selection_slot = "unknown", None
+        self._embedding_model = None
+        self._embedding_observation_lost = False
         try: request = self._serialize(payload,mode="json")
         except Exception: raise ValueError("The private protected training request is unavailable.") from None
         model,inputs = self._resolve(view,request)
@@ -246,6 +255,138 @@ def _check_protected_use(use, payload=None):
         raise ValueError("The private protected training inputs are unavailable.")
     # Call the fixed class operation; an instance cannot select another guard.
     _ProtectedTrainingUse.assert_current(use)
+
+
+def _record_protected_embedding_status(use, status):
+    if use is None: return
+    _check_protected_use(use)
+    if status not in ("unchanged","resized"):
+        raise ValueError("The private embedding observation is unavailable.")
+    if use._embedding_status != "resized": use._embedding_status = status
+    use._embedding_observation_lost = False
+
+
+def _capture_protected_training_tensor_stream(model, use, *, maximum_bytes, chunk_bytes):
+    """Select the fixed model/PEFT state; never infer a provider or Save grant."""
+    _check_protected_use(use)
+    if (type(use) is not _ProtectedTrainingUse or use.dataset_references is None
+            or use._tensor_selection_slot is not None):
+        raise ValueError("The private trained tensor export is unavailable.")
+    slot = {"model":model,"state_method":None,"adapter_method":None,"state":None,"selected":None,
+        "stage":"capturing","entered":False,"returned":False,"stream":None}
+    use._tensor_selection_slot = slot  # One attempt, retained BEFORE suppliers.
+    try:
+        if (type(maximum_bytes) is not int or not 1 <= maximum_bytes <= 2**53-1
+                or type(chunk_bytes) is not int or not 4096 <= chunk_bytes <= 1024**2):
+            raise ValueError("The private tensor limits are unavailable.")
+        embedding_status = use._embedding_status
+        def current():
+            _check_protected_use(use)
+            if (use._embedding_model is not model or use._embedding_status != embedding_status
+                    or use._embedding_observation_lost):
+                raise ValueError("The private trained model binding changed.")
+        if use._embedding_model is not model or use._embedding_observation_lost:
+            raise ValueError("The private trained model binding is unavailable.")
+        method = use.payload.method
+        adapter = method in ("lora","qlora")
+        save_embeddings, getter = False, None
+        if adapter:
+            if use._embedding_status not in ("unchanged","resized"):
+                raise ValueError("The private embedding observation is unavailable.")
+            # _apply_lora already loads this pinned SDK. Never import/install or
+            # choose its auto embedding/provider discovery during serialization.
+            module = sys.modules.get("peft")
+            if type(module) is not ModuleType: raise ValueError("The private adapter exporter is unavailable.")
+            namespace = vars(module); getter = namespace.get("get_peft_model_state_dict")
+            config_type = namespace.get("LoraConfig")
+            peft_type = namespace.get("PeftType")
+            if (type(getter) is not FunctionType or getter.__module__ != "peft.utils.save_and_load"
+                    or not isinstance(config_type,type) or not isinstance(peft_type,type)):
+                raise ValueError("The private adapter exporter is unavailable.")
+            lora_type = peft_type.LORA
+            slot["adapter_method"] = getter
+            current()
+            configurations = model.peft_config
+            current()
+            if type(configurations) is not dict or set(configurations) != {"default"}:
+                raise ValueError("The private adapter configuration is unavailable.")
+            configuration = configurations["default"]
+            if type(configuration) is not config_type: raise ValueError("The private adapter configuration is unavailable.")
+            current()
+            configuration_fields = object.__getattribute__(configuration,"__dict__")
+            if type(configuration_fields) is not dict:
+                raise ValueError("The private adapter configuration is unavailable.")
+            targets = configuration_fields.get("target_modules")
+            if (type(targets) not in (set,frozenset,list,tuple) or not 1 <= len(targets) <= 4096
+                    or any(type(name) is not str or not 1 <= len(name) <= 512 for name in targets)):
+                raise ValueError("The private adapter targets are unavailable.")
+            targets = frozenset(targets)
+            def fixed_policy(fields):
+                # These selector branches are fixed by _apply_lora. In particular,
+                # another bias/PEFT/DoRA policy can silently change saved tensors.
+                if (fields.get("peft_type") is not lora_type or type(fields.get("bias")) is not str
+                        or fields["bias"] != "none" or fields.get("use_dora") is not False
+                        or fields.get("modules_to_save") is not None
+                        or fields.get("trainable_token_indices") is not None):
+                    raise ValueError("The private adapter selection policy changed.")
+            fixed_policy(configuration_fields)
+            # Names from pinned PEFT0.15.2's embedding profile; include qualified
+            # targets too. True preserves embeddings without provider discovery.
+            save_embeddings = use._embedding_status == "resized" or any(
+                name.rsplit(".",1)[-1] in ("embed_tokens","lm_head") for name in targets)
+            def adapter_current():
+                observed_configurations = model.peft_config
+                current()
+                observed_configurations = model.peft_config
+                # Read fixed dataclass fields after the final live-view callback;
+                # no SDK/property callback may change them between proof and use.
+                fields = object.__getattribute__(configuration,"__dict__")
+                if type(fields) is not dict: raise ValueError("The private adapter configuration changed.")
+                observed_targets = fields.get("target_modules")
+                if (observed_configurations is not configurations or set(configurations) != {"default"}
+                        or configurations.get("default") is not configuration
+                        or type(observed_targets) not in (set,frozenset,list,tuple) or len(observed_targets) > 4096
+                        or any(type(name) is not str for name in observed_targets) or frozenset(observed_targets) != targets):
+                    raise ValueError("The private adapter configuration changed.")
+                fixed_policy(fields)
+        elif method != "full-finetune":
+            raise ValueError("The private training method is unavailable.")
+        state_method = model.state_dict
+        slot["state_method"] = state_method
+        current()
+        if type(state_method) not in (MethodType,BuiltinMethodType) or state_method.__self__ is not model:
+            raise ValueError("The private model state is unavailable.")
+        slot.update(stage="model-state",entered=True,returned=False)
+        state = state_method(); slot.update(state=state,returned=True)
+        current()
+        if type(state) not in (dict,OrderedDict) or not 1 <= len(state) <= 4096:
+            raise ValueError("The private model state is unavailable.")
+        state = dict(state); slot["state"] = state
+        selected = state
+        if adapter:
+            adapter_current()
+            slot.update(stage="adapter-state",entered=True,returned=False)
+            selected = getter(model,state_dict=state,adapter_name="default",unwrap_compiled=False,
+                save_embedding_layers=save_embeddings)
+            slot.update(selected=selected,returned=True)
+            current()
+            adapter_current()
+        if type(selected) not in (dict,OrderedDict) or not 1 <= len(selected) <= 4096:
+            raise ValueError("The private selected model state is unavailable.")
+        selected = dict(selected); slot["selected"] = selected
+        request = use._serialize(use.payload,mode="json")
+        current()
+        slot["stage"] = "tensor-stream"
+        stream = use._tensor_stream_type(use.view,request,selected,maximum_bytes=maximum_bytes,chunk_bytes=chunk_bytes)
+        slot["stream"] = stream
+        current()
+        if adapter: adapter_current()
+        slot["stage"] = "captured"
+        return stream
+    except BaseException:
+        slot["failed_stage"] = slot["stage"]
+        slot["stage"] = "failed"
+        raise ValueError("The private trained tensor export is unavailable.") from None
 
 
 def _capture_local_dataset_references(payload, references):
@@ -404,32 +545,61 @@ def _load_transformers_objects(
     _check_protected_use(_protected_use)
     model = AutoModelForCausalLM.from_pretrained(base_model_ref, **model_kwargs)
     _check_protected_use(_protected_use)
-    _synchronize_model_token_embeddings(model, tokenizer)
+    _synchronize_model_token_embeddings(model, tokenizer,
+        **({"_protected_use":_protected_use} if _protected_use is not None else {}))
     _check_protected_use(_protected_use)
     return model, tokenizer
 
 
-def _synchronize_model_token_embeddings(model: Any, tokenizer: Any) -> None:
+def _synchronize_model_token_embeddings(model: Any, tokenizer: Any, *, _protected_use=None) -> None:
+    _check_protected_use(_protected_use)
+    previous_status = None
+    if _protected_use is not None:
+        if (_protected_use._embedding_observation_lost
+                or _protected_use._embedding_model is not None and _protected_use._embedding_model is not model):
+            raise ValueError("The private embedding model binding is unavailable.")
+        _protected_use._embedding_model = model
+        previous_status = _protected_use._embedding_status
+        # Retain uncertainty before any supplier can mutate the model or fail.
+        # A caught failure or later no-op cannot recertify an unknown resize.
+        _protected_use._embedding_status = "unknown"
+        _protected_use._embedding_observation_lost = True
     try:
         tokenizer_size = len(tokenizer)
     except Exception:
         return
 
-    if tokenizer_size <= 0 or not hasattr(model, "get_input_embeddings"):
-        return
+    _check_protected_use(_protected_use)
 
-    embeddings = model.get_input_embeddings()
+    if tokenizer_size <= 0:
+        return
+    get_embeddings = getattr(model,"get_input_embeddings",None)
+    _check_protected_use(_protected_use)
+    if get_embeddings is None: return
+    embeddings = get_embeddings()
+    _check_protected_use(_protected_use)
     model_vocab_size = getattr(embeddings, "num_embeddings", None)
-    if not isinstance(model_vocab_size, int) or tokenizer_size <= model_vocab_size:
+    _check_protected_use(_protected_use)
+    if not isinstance(model_vocab_size,int):
+        return
+    if _protected_use is not None and (type(model_vocab_size) is not int or model_vocab_size < 0):
+        return
+    if tokenizer_size <= model_vocab_size:
+        _record_protected_embedding_status(_protected_use,"resized" if previous_status == "resized" else "unchanged")
         return
 
-    if not hasattr(model, "resize_token_embeddings"):
+    resize_embeddings = getattr(model,"resize_token_embeddings",None)
+    _check_protected_use(_protected_use)
+    if resize_embeddings is None:
         raise RuntimeError(
             f"Tokenizer vocabulary size ({tokenizer_size}) exceeds model embedding size ({model_vocab_size}), "
             "and this model does not support embedding resizing."
         )
 
-    model.resize_token_embeddings(tokenizer_size)
+    _check_protected_use(_protected_use)
+    resize_embeddings(tokenizer_size)
+    _check_protected_use(_protected_use)
+    _record_protected_embedding_status(_protected_use,"resized")
 
 
 def _read_model_context_length(model: Any, tokenizer: Any) -> int | None:
@@ -660,6 +830,9 @@ def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path, *, _p
 
 def _apply_lora(model: Any, payload: TrainModelTaskRequest, *, _protected_use=None) -> Any:
     _check_protected_use(_protected_use,payload)
+    if _protected_use is not None and (_protected_use._embedding_model is not model
+            or _protected_use._embedding_observation_lost):
+        raise ValueError("The private adapter model binding is unavailable.")
     try:
         from peft import LoraConfig, TaskType, get_peft_model
     except Exception as error:  # pragma: no cover
@@ -688,6 +861,10 @@ def _apply_lora(model: Any, payload: TrainModelTaskRequest, *, _protected_use=No
     _check_protected_use(_protected_use,payload)
     result = get_peft_model(model, lora_config)
     _check_protected_use(_protected_use,payload)
+    if _protected_use is not None:
+        if _protected_use._embedding_model is not model:
+            raise ValueError("The private adapter model binding is unavailable.")
+        _protected_use._embedding_model = result
     return result
 
 

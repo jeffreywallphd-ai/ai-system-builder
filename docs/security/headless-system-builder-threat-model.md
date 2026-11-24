@@ -2629,3 +2629,27 @@ shape/dtype/device/version after the last observer. The record is data, not a
 caller-selected guard or permission. No retry/stabilization loop or atomic
 freeze is claimed. Preserve the visible-mutation oversized-copy reproduction
 and corrected zero-copy evidence; real SDK/resource/host proof stays pending.
+
+### Fixed trained-weight selection boundary
+
+Bind private embedding observations to the actual loaded model and carry them
+only through the fixed PEFT wrapper handoff. Require a genuine live joint view,
+exact request and one retained selection slot before supplier access. Capture
+the original model state receiver and fixed loaded PEFT getter; refuse another
+model, foreign/free state callback or unknown SDK/configuration. Preserve resized
+or explicitly targeted embeddings through a Boolean option. Never choose PEFT
+automatic provider/config discovery, install, arbitrary getter or ordinary retry.
+
+Invalidate embedding observations before suppliers run. A partial resize or
+lost result keeps that use unavailable, including after a later no-op. Check
+private model/observation, configuration targets and request after supplier
+callbacks. Keep the fixed LoRA/no-bias/no-DoRA policy and no auxiliary saving or
+trainable-token overrides; read plain configuration fields after the final
+live-view callback. Bound mapping counts and retain references rather than copying weights.
+Malformed/empty/broad states, unknown observations, revoked lifetime, settings
+drift and unknown replies cannot reach a tensor transfer or supply Save/readiness.
+Retain original methods/results and a fixed failure-stage label privately; do not
+serialize SDK objects, paths, provider data or errors into public diagnostics.
+The dense stream and Native output owner retain independent checks. Controlled
+fixtures qualify no installed SDK/model, provider effect, quality, complete
+producer, durable quota, Save, SDK retirement, physical/host or parent outcome.

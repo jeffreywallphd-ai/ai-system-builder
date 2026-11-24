@@ -3,7 +3,9 @@ from __future__ import annotations
 import importlib
 import json
 import sys
-from types import SimpleNamespace
+from contextlib import contextmanager
+from enum import Enum
+from types import ModuleType, SimpleNamespace
 from pathlib import Path, PureWindowsPath
 
 import pytest
@@ -12,6 +14,252 @@ from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest
 
 train_model_module = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model")
 multimodal_module = importlib.import_module("modules.adapters.runtime.python.worker.tasks.train_model_multimodal")
+
+
+@contextmanager
+def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_proj",)):
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingTensorStreamTests
+    sdk_case=DenseTensorByteAdapterTests(); facts,sdk,Tensor,Device=sdk_case.fixture(); extra=None
+    actual,_,lease,_,request,control,*_=facts
+    if method != "lora":
+        extra=CombinedTrainingInputViewTests(); actual,_,lease,_,request,_,control,_=extra.fixture(method=method)
+    payload=TrainModelTaskRequest.model_validate(request); calls=[]
+    class PeftType(Enum): LORA="LORA"
+    class LoraConfig:
+        def __init__(self,**options):
+            self.target_modules=set(options.get("target_modules",targets))
+            self.peft_type=PeftType.LORA; self.bias=options.get("bias","none"); self.use_dora=False
+            self.modules_to_save=None; self.trainable_token_indices=None
+    class Model:
+        def __init__(self):
+            self.vocab=10; self.peft_config={"default":LoraConfig()}; self.after_state=None
+            base,_=sdk_case.tensor(Tensor,sdk,Device,tag="base")
+            adapter,_=sdk_case.tensor(Tensor,sdk,Device,tag="adapter")
+            embedding,_=sdk_case.tensor(Tensor,sdk,Device,tag="embedding")
+            self.state={"base.weight":base,"layer.lora_A.default.weight":adapter,"embed_tokens.weight":embedding}
+        def state_dict(self):
+            calls.append("model-state")
+            if self.after_state: self.after_state()
+            return self.state
+        def get_input_embeddings(self): return SimpleNamespace(num_embeddings=self.vocab)
+        def resize_token_embeddings(self,size): calls.append(("resize",size)); self.vocab=size
+    model=Model(); module=ModuleType("peft")
+    def get_peft_model_state_dict(original,*,state_dict,adapter_name,unwrap_compiled,save_embedding_layers):
+        assert original is model and adapter_name=="default" and unwrap_compiled is False
+        assert type(save_embedding_layers) is bool  # Never the SDK's provider-discovering 'auto'.
+        calls.append(("adapter-state",save_embedding_layers))
+        selected={name.replace(".default",""):tensor for name,tensor in state_dict.items() if "lora_" in name}
+        if save_embedding_layers: selected["embed_tokens.weight"]=state_dict["embed_tokens.weight"]
+        return selected
+    get_peft_model_state_dict.__module__="peft.utils.save_and_load"
+    module.get_peft_model_state_dict=get_peft_model_state_dict; module.LoraConfig=LoraConfig; module.PeftType=PeftType
+    monkeypatch.setitem(sys.modules,"peft",module)
+    try:
+        with lease.borrow(request) as view:
+            use=train_model_module._ProtectedTrainingUse(payload,view)
+            yield actual,use,model,module,calls,control,Tensor,TrainingTensorStreamTests()
+    finally:
+        if extra is not None: extra.doCleanups()
+        sdk_case.doCleanups()
+
+
+@pytest.mark.parametrize("method,resized,targeted",[("full-finetune",False,False),("lora",False,False),
+    ("lora",True,False),("lora",False,True),("qlora",False,False)])
+def test_protected_tensor_selection_preserves_full_adapter_and_embedding_weights(monkeypatch,method,resized,targeted):
+    with _protected_tensor_selection_fixture(monkeypatch,method,targets=("model.embed_tokens",) if targeted else ("q_proj",)) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 12 if resized and model.vocab==10 else model.vocab
+        train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        if resized:
+            assert use._embedding_status=="resized"
+            train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+            assert use._embedding_status=="resized"  # A later no-op cannot erase actual resizing.
+        else: assert use._embedding_status=="unchanged"
+        assert Tensor.copies==[]
+        stream=train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert Tensor.copies==[]
+        raw=b"".join(stream); header,body=oracle.decode(raw)
+        if method=="full-finetune":
+            assert set(header)==set(model.state) and not any(isinstance(row,tuple) and row[0]=="adapter-state" for row in calls)
+        else:
+            expected={"layer.lora_A.weight"}|({"embed_tokens.weight"} if resized or targeted else set())
+            assert set(header)==expected and ("adapter-state",resized or targeted) in calls
+            assert "base.weight" not in header
+        assert stream.phase=="complete" and len(raw)==stream.size_bytes
+        assert use._tensor_selection_slot["stage"]=="captured"
+        before=list(calls)
+        with pytest.raises(ValueError,match="private trained tensor export"):
+            train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert calls==before
+
+
+@pytest.mark.parametrize("mode",["unknown-embedding","missing-peft","unknown-getter","extra-adapter","unknown-targets","empty-state","wide-state","state-error","getter-error","empty-selected","wide-selected","foreign-selected"])
+def test_protected_tensor_selection_refuses_unknown_state_without_transfer_or_retry(monkeypatch,mode):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 10
+        if mode!="unknown-embedding": train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        if mode=="missing-peft": monkeypatch.delitem(sys.modules,"peft")
+        elif mode=="unknown-getter": module.get_peft_model_state_dict=lambda *a,**k: pytest.fail("Unknown exporter selected")
+        elif mode=="extra-adapter": model.peft_config["foreign"]=model.peft_config["default"]
+        elif mode=="unknown-targets": model.peft_config["default"].target_modules="provider-selected-regex"
+        elif mode=="empty-state": model.state={}
+        elif mode=="wide-state": model.state={str(i):None for i in range(4097)}
+        elif mode=="state-error": model.after_state=lambda: (_ for _ in ()).throw(RuntimeError("private supplier details"))
+        elif mode in ("getter-error","empty-selected","wide-selected","foreign-selected"):
+            def bad_getter(*args,**options):
+                assert type(options["save_embedding_layers"]) is bool
+                if mode=="getter-error": raise RuntimeError("private supplier details")
+                if mode=="empty-selected": return {}
+                if mode=="wide-selected": return {str(i):None for i in range(4097)}
+                class Foreign(dict): pass
+                return Foreign()
+            bad_getter.__module__="peft.utils.save_and_load"; module.get_peft_model_state_dict=bad_getter
+        with pytest.raises(ValueError) as caught:
+            train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert "private supplier" not in str(caught.value) and Tensor.copies==[]
+        assert use._tensor_selection_slot["stage"]=="failed"
+        before=list(calls)
+        with pytest.raises(ValueError): train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert calls==before
+
+
+@pytest.mark.parametrize("mode",["withdraw","settings","replace-getter","embedding-observation","model-binding","target-settings"])
+def test_protected_tensor_selection_rechecks_callbacks_and_captures_original_getter(monkeypatch,mode):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 10
+        train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        def after_state():
+            if mode=="withdraw": control.current=False
+            elif mode=="settings": use.payload.commonParameters["maxSteps"]=999
+            elif mode=="embedding-observation":
+                class GrownTokenizer:
+                    def __len__(self): return 12
+                train_model_module._synchronize_model_token_embeddings(model,GrownTokenizer(),_protected_use=use)
+            elif mode=="model-binding": use._embedding_model=object()
+            elif mode=="target-settings": model.peft_config["default"].target_modules.add("embed_tokens")
+            else: module.get_peft_model_state_dict=lambda *a,**kw: pytest.fail("Replaced getter selected")
+        model.after_state=after_state
+        if mode=="replace-getter":
+            stream=train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+            assert ("adapter-state",False) in calls and "layer.lora_A.weight" in oracle.decode(b"".join(stream))[0]
+        else:
+            with pytest.raises(ValueError): train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+            assert calls==(["model-state",("resize",12)] if mode=="embedding-observation" else ["model-state"]) and Tensor.copies==[]
+
+
+def test_protected_embedding_observation_follows_only_the_fixed_lora_wrapper(monkeypatch):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,base,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 12
+        train_model_module._synchronize_model_token_embeddings(base,Tokenizer(),_protected_use=use)
+        assert use._embedding_model is base and use._embedding_status=="resized"
+        class Wrapper:
+            def __init__(self,configuration): self.peft_config={"default":configuration}
+            def state_dict(self): calls.append("wrapped-state"); return base.state
+        module.TaskType=SimpleNamespace(CAUSAL_LM="causal")
+        module.get_peft_model=lambda original,configuration: Wrapper(configuration)
+        wrapped=train_model_module._apply_lora(base,use.payload,_protected_use=use)
+        assert use._embedding_model is wrapped and use._embedding_status=="resized"
+        def export(original,*,state_dict,adapter_name,unwrap_compiled,save_embedding_layers):
+            assert original is wrapped and save_embedding_layers is True
+            return {"layer.lora_A.weight":state_dict["layer.lora_A.default.weight"],"embed_tokens.weight":state_dict["embed_tokens.weight"]}
+        export.__module__="peft.utils.save_and_load"; module.get_peft_model_state_dict=export
+        stream=train_model_module._capture_protected_training_tensor_stream(wrapped,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert set(oracle.decode(b"".join(stream))[0])=={"layer.lora_A.weight","embed_tokens.weight"}
+
+
+@pytest.mark.parametrize("initial_status",["unchanged","resized"])
+@pytest.mark.parametrize("failure",["resize","length","get-embeddings"])
+def test_protected_embedding_observation_cannot_reuse_uncertain_supplier_result(monkeypatch,initial_status,failure):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 12 if initial_status=="resized" and model.vocab==10 else model.vocab
+        train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        assert use._embedding_status==initial_status
+        def fail(*args):
+            model.vocab=14
+            raise RuntimeError("inert supplier changed model then lost its reply")
+        class GrownTokenizer:
+            def __len__(self):
+                if failure=="length": return fail()
+                return 14
+        with monkeypatch.context() as changed:
+            if failure=="resize": changed.setattr(model,"resize_token_embeddings",fail)
+            elif failure=="get-embeddings": changed.setattr(model,"get_input_embeddings",fail)
+            if failure=="length":
+                train_model_module._synchronize_model_token_embeddings(model,GrownTokenizer(),_protected_use=use)
+            else:
+                with pytest.raises(RuntimeError):
+                    train_model_module._synchronize_model_token_embeddings(model,GrownTokenizer(),_protected_use=use)
+        assert use._embedding_status=="unknown" and use._embedding_observation_lost
+        # Restoring supplier methods or matching the new vocabulary is no proof
+        # about the uncertain mutation. Neither a no-op nor export may recover it.
+        with pytest.raises(ValueError):
+            train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        with pytest.raises(ValueError):
+            train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert Tensor.copies==[] and not any(isinstance(row,tuple) and row[0]=="adapter-state" for row in calls)
+
+
+@pytest.mark.parametrize("field,value",[("bias","all"),("use_dora",True),("peft_type","ADALORA"),
+    ("modules_to_save",["lm_head"]),("trainable_token_indices",[1])])
+@pytest.mark.parametrize("during_state",[False,True])
+def test_protected_tensor_selection_keeps_fixed_adapter_policy(monkeypatch,field,value,during_state):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 10
+        train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        config=model.peft_config["default"]
+        if during_state: model.after_state=lambda: setattr(config,field,value)
+        else: setattr(config,field,value)
+        with pytest.raises(ValueError):
+            train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert calls==(["model-state"] if during_state else []) and Tensor.copies==[]
+
+
+@pytest.mark.parametrize("replacement",["mapping","default"])
+def test_protected_tensor_selection_rechecks_actual_config_after_last_view_observer(monkeypatch,replacement):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 10
+        train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        original=model.peft_config; foreign=module.LoraConfig(); foreign.bias="all"; changed=[]
+        def current(obj):
+            slot=use._tensor_selection_slot
+            if obj is control and not changed and slot is not None and slot["stream"] is not None:
+                changed.append(True)
+                if replacement=="mapping": model.peft_config={"default":foreign}
+                else: original["default"]=foreign
+            return obj.__dict__["current"]
+        monkeypatch.setattr(type(control),"current",property(current,lambda obj,value: obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises(ValueError):
+            train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert changed==[True] and Tensor.copies==[] and use._tensor_selection_slot["stage"]=="failed"
+
+
+@pytest.mark.parametrize("mode",["different-model","foreign-method","free-function"])
+def test_protected_selection_cannot_borrow_another_model_or_method_receiver(monkeypatch,mode):
+    with _protected_tensor_selection_fixture(monkeypatch) as facts:
+        actual,use,model,module,calls,control,Tensor,oracle=facts
+        class Tokenizer:
+            def __len__(self): return 10
+        train_model_module._synchronize_model_token_embeddings(model,Tokenizer(),_protected_use=use)
+        other=type(model)()
+        if mode=="different-model": selected=other
+        else:
+            selected=model
+            model.state_dict=other.state_dict if mode=="foreign-method" else lambda: pytest.fail("Free state callback selected")
+        with pytest.raises(ValueError): train_model_module._capture_protected_training_tensor_stream(selected,use,maximum_bytes=65536,chunk_bytes=4096)
+        assert calls==[] and Tensor.copies==[] and use._tensor_selection_slot["stage"]=="failed"
 
 
 def test_private_fixed_loader_consumes_actual_live_view_without_rewriting_logical_model(monkeypatch,tmp_path):
