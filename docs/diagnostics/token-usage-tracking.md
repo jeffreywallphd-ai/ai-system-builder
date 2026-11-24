@@ -3,8 +3,148 @@
 The control-plane `usage` commands import authorized numeric counter exports.
 They never invoke a model, scan chat histories/logs, estimate from account quotas,
 or grant Work/review/roadmap authority. Unsupported hosts remain unavailable.
-Imports are optional at existing handoff/completion boundaries; no polling,
-extra model call, per-call label or mandatory contributor stage is added.
+Imports are optional at existing handoff/completion boundaries. Coding-session
+initialization validates capture once and never gates work; no polling, extra
+model call, per-call label or approval stage is added.
+
+## Coding-session initialization and real capture
+
+```text
+python dev-tools/helpers/development_control_plane.py usage session-start
+python dev-tools/helpers/development_control_plane.py usage session-start --session selected-session
+python dev-tools/helpers/development_control_plane.py usage capture --session selected-session
+```
+
+The startup command uses only the known `CODEX_THREAD_ID` reference unless
+`--session` is supplied. It validates and receives one explicitly configured
+numeric batch. Without a host bridge it returns `state: unavailable`,
+`reason_code: capture.host-bridge-not-configured`, `live_capture: false` and
+`work_may_continue: true`. It creates no placeholder observations. An explicit
+capture error is a failed import; startup reports the same failure without
+blocking feature work. Report unavailable/stale coverage once and continue.
+
+`adapter_ready: true` means the receiver is installed, never that collection is
+running. `adapter-ready` has no observations; `baseline-only` has an uncounted
+starting cumulative sample. `recent-actual-events` means at least one selected
+thread has a counted numeric delta ending within 900 seconds; `stale-actual-events`
+has only older deltas. Counts of recent, stale, baseline and missing selected
+threads expose partial coverage. Identical counter snapshots never refresh
+freshness. This is recent source data, not proof of a continuously running host,
+source authentication, complete coverage or billable usage.
+
+**Current desktop bridge limitation:** the available app tools expose chat
+metadata and quota percentages, but no selected-chat input/output counters or
+subscription to numeric notifications. This receiver does not attach to the
+existing desktop host. Automatic capture of those sessions remains unavailable
+until that host exposes an authorized numeric-only callback/export. Do not start
+a duplicate App Server, scan its private logs/history or infer tokens from context
+budgets, account quotas or goal budgets. Existing unavailable imports are not
+capture. No estimator is supplied.
+
+For future separately owned CLI sessions, official
+[non-interactive JSON output](https://developers.openai.com/codex/noninteractive)
+includes `turn.completed.usage`. The current public
+[JSONL processor](https://github.com/openai/codex/blob/main/codex-rs/exec/src/event_processor_with_jsonl_output.rs)
+builds those values from cumulative thread totals; never sum them as per-turn
+deltas without a version-qualified source contract. That stream also includes
+conversation/tool payloads, so a future producer must filter allowed numeric
+metadata in memory without retaining raw events. This receiver accepts the
+App Server shape below, not a raw CLI stream. Starting a new CLI job does not
+measure an existing desktop chat; no CLI/model call is needed for startup validation.
+
+The supported input shape follows the official
+[App Server notification documentation](https://developers.openai.com/codex/app-server)
+and public protocol declarations for
+[thread notifications](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/schema/typescript/v2/ThreadTokenUsageUpdatedNotification.ts),
+[cumulative totals](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/schema/typescript/v2/ThreadTokenUsage.ts)
+and [six counter fields](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/schema/typescript/v2/TokenUsageBreakdown.ts).
+The producer must verify its source version, real cumulative-provider semantics,
+selected threads, reset epoch, counter scope and known parent links. Public
+protocol shape alone does not qualify a particular installed host. Unknown scope
+must stay `unknown`; use `own` only with established noninclusive semantics.
+
+Opt in with the following **synthetic schema example**, replacing identifiers
+only from authorized metadata. Store regular ignored JSON files under
+`.local-codex/token-capture/`; no prompts, responses, messages or tool payloads.
+The receiver reads one config (32 KiB, at most 64 thread bindings) and one feed
+(128 KiB, at most 64 events). The external producer must replace that fixed feed
+atomically, retain unacknowledged numeric samples on refusal, and avoid accumulating
+files. It may invoke `usage capture` at existing event/handoff boundaries; the
+repository starts no service and adds no timer or model call.
+
+`.local-codex/token-capture/config.json`:
+
+```json
+{
+  "schema_version": "codex-token-capture-config-v1",
+  "protocol": "codex-app-server-v2-six-token-fields",
+  "source_version": "verified-host-version",
+  "counter_semantics": "cumulative-provider-counters",
+  "session_id": "selected-session",
+  "feed_path": ".local-codex/token-capture/feed.json",
+  "threads": [{
+    "thread_id": "selected-thread", "parent_thread_id": null,
+    "counter_epoch": "host-lifetime-one", "scope": "unknown",
+    "purpose": "mixed", "purpose_basis": "unavailable"
+  }]
+}
+```
+
+`.local-codex/token-capture/feed.json`:
+
+```json
+{
+  "schema_version": "codex-token-feed-v1",
+  "session_id": "selected-session",
+  "source_version": "verified-host-version",
+  "events": [{
+    "observed_at": "2026-11-24T10:00:00Z",
+    "notification": {
+      "method": "thread/tokenUsage/updated",
+      "params": {
+        "threadId": "selected-thread", "turnId": "selected-turn",
+        "tokenUsage": {
+          "total": {"totalTokens": 120, "inputTokens": 100, "outputTokens": 20,
+            "cachedInputTokens": 10, "cacheWriteInputTokens": 0, "reasoningOutputTokens": 5},
+          "last": {"totalTokens": 120, "inputTokens": 100, "outputTokens": 20,
+            "cachedInputTokens": 10, "cacheWriteInputTokens": 0, "reasoningOutputTokens": 5},
+          "modelContextWindow": null
+        }
+      }
+    }
+  }]
+}
+```
+
+The first sample always establishes an uncounted baseline, including on a new
+epoch or source version; inherited/forked history is never charged. Subsequent
+monotonic totals yield exact four-field deltas through the existing atomic
+importer. `last`, `totalTokens` and `modelContextWindow` are never additional usage.
+`totalTokens` must equal input plus output; synthetic context-window-fill counters
+are refused. Cached input plus cache-write input must fit input; reasoning must
+fit output. Cache-write is validated as an input subset but has no separate
+retained metric. Failed/retried attempts are included when the source cumulative
+counter includes them; outcome stays unavailable because this notification
+does not prove success. Model identity also stays unavailable.
+
+The host must supply a new explicit `counter_epoch` on reset, compaction that
+changes counter semantics, or source replacement. A source-version change also
+creates a new baseline. Old epochs are permanently retired; old/reordered lower
+snapshots refuse the whole batch rather than guessing a reset. Repeated latest
+counters are no-ops, even with a newer timestamp. Export only current/new samples
+after acknowledgement; replaying a whole old feed with lower snapshots is refused
+safely. Concurrent receivers may refuse a changed sequence; preserve the numeric
+export and retry from current state, never silently drop it. Parent metadata is
+immutable; selected unknown descendants remain undiscovered. Own, inclusive and
+unknown scope accounting remains separate. Coarse purpose defaults require no
+per-call labels or content inspection.
+
+Config/feed files are cooperative local declarations, not authenticated billing
+proof. Raw host identifiers remain only in the explicitly selected ignored config
+and bounded feed; durable tracker cursors use hashes. The receiver retains no
+additional raw-event archive and emits only fixed diagnostics/counts/status. Stop
+invoking capture and remove its external numeric callback to stop collection;
+no repository background process continues. Existing aggregate retention applies.
 
 ## Enable local aggregate retention
 
@@ -141,8 +281,9 @@ cached-input/reasoning-output subsets, daily/weekly/quarterly tables, coarse
 purposes and at most sixteen agent aliases. Reported parent links classify only
 observed parent/child relationships, never job roles or complete coverage.
 Dark/light controls are shared with the rest of review. Disabled, missing or
-invalid telemetry keeps a useful empty dashboard and static import guidance;
-there is no automatic capture, quota/billing inference or new polling.
+invalid telemetry keeps a useful empty dashboard and numeric capture guidance.
+The dashboard reads stored observations; it does not start capture, infer
+quota/billing use or add polling. Validate actual freshness with `usage session-start`.
 The page uses the global summary on the existing bounded first Work-items page,
 so no server endpoint or collection paging contract changes.
 

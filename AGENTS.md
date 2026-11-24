@@ -14,6 +14,13 @@ This file is the repository entry point for coding agents. Keep it short; use th
 
 ## AI Development Control Plane
 
+- At coding-session initialization run
+  `python dev-tools/helpers/development_control_plane.py usage session-start`.
+  This validates an explicitly configured numeric host bridge once; it never
+  starts another host or scans conversations. `adapter_ready` alone is not live
+  capture: check `live_capture`, recent actual events and selected-thread coverage.
+  If unavailable, baseline-only or stale, report that limitation once and continue work.
+  See `docs/diagnostics/token-usage-tracking.md` for setup and source requirements.
 - For a work request using the contributor workflow, read
   `docs/diagnostics/ai-development-control-plane.md`, run
   `python dev-tools/helpers/development_control_plane.py review-site start`,

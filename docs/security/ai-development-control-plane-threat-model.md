@@ -242,6 +242,27 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
+The numeric capture receiver reads only explicitly selected ignored regular JSON
+files under `.local-codex/token-capture/`, with 32 KiB config/64 bindings and
+128 KiB feed/64 numeric-only notifications. Reject unknown content, duplicate
+keys, unsupported protocol/source/session binding, reparse/traversal, changed
+file observations, invalid safe integers/subsets and synthetic context budgets.
+No log/history scan, account API, process/socket attachment or new host is allowed.
+Bindings declare known ancestry/scope/purpose; they do not discover children or
+prove noninclusive semantics. Source versions and resets establish uncounted
+baselines; decreases, overlap, old epochs and conflicting publication fail closed.
+The existing locked atomic importer remains the sole counter authority.
+
+Session startup invokes the receiver once, returning fixed nonblocking diagnostics
+without placeholder data. A recent counted delta is required for `live_capture`;
+baseline-only, stale or duplicate snapshots cannot revive freshness. This means
+recent declared numeric evidence, not authenticated producer or continuous-process
+attestation. Config and feed retain only selected numeric metadata; durable/public
+data hashes identities. Same-user filesystem replacement races and a dishonest
+operator/producer remain cooperative-local limits. A real selected-session host
+callback is separate unavailable qualification; quotas and goal budgets never
+substitute. No release, parent qualification or model authority follows.
+
 Optional token imports add a local telemetry/retention boundary. Protect prompts,
 responses, tool payloads, paths, credentials and private identifiers: accept only
 strict bounded numeric fields, enum purpose/status and hashed identity/model

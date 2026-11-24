@@ -27,6 +27,10 @@
   invent measurements or add a mandatory stage. See `docs/diagnostics/token-usage-tracking.md`.
   The Token usage dashboard is a read-only view of the same bounded summary;
   observed parent links are not job-role or complete-coverage evidence.
+  Coding-session initialization runs `usage session-start` once. It validates an
+  explicitly configured numeric host bridge without gating work. Adapter readiness,
+  baseline-only, stale and recent counted events are distinct; current app tools
+  supply no live desktop counter bridge. Never substitute quotas or scan logs.
 
 - User-owned offline human acceptance uses the roadmap skill's explicit handoff;
   close only solely human-blocked legacy increments and preserve technical qualification.

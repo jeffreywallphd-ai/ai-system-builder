@@ -5,7 +5,11 @@
 Optional [token tracking](../../docs/diagnostics/token-usage-tracking.md) uses
 `usage enable`, `usage import --from` and `usage summary` through the control
 plane. Authorized numeric exports retain bounded day/week/quarter/lifetime
-aggregates; missing counters never block delivery. No provider connection is added.
+aggregates; missing counters never block delivery. `usage session-start` validates
+an explicitly configured numeric host bridge once at coding-session initialization;
+`usage capture` receives bounded Codex-v2 cumulative notifications. No host is
+started, no conversation/log store is read and no provider connection is added.
+Adapter readiness, an initial baseline and recent actual deltas are distinct states.
 
 The existing `security-runtime` profile includes model-free dependency-preparation
 observer, Context/Worker, shared-helper, host-composition and private journal

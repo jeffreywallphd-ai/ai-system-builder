@@ -1,4 +1,21 @@
 
+## Numeric capture at coding-session initialization
+
+Run `python dev-tools/helpers/development_control_plane.py usage session-start`
+once when a coding session initializes. This nonblocking check receives one
+explicitly configured numeric host export; `adapter_ready` does not mean live
+capture. Inspect recent actual deltas and selected-thread missing/baseline/stale
+coverage. With no bridge, report the fixed unavailable diagnostic once and
+continue feature work. No null placeholder, host process, log/history scan or
+quota estimate is created. Setup, actual desktop limitations, strict protocol
+and retention are in [token usage tracking](token-usage-tracking.md).
+
+The exact source-owned receiver profile runs capture/storage/CLI, scoped routing,
+Work/evaluation and projection/wire/pagination cases, plus existing DOM checks,
+documentation and agent-support. Missing support, mixed/unknown paths or explicit
+generic requests keep conservative fallback. Synthetic receiver success is not
+real host-feed, billable usage, parent or release qualification.
+
 The fixed `headless-training-runtime-worker-unit` profile runs the original
 training-session/controller tests and protected source-copy ABI fixtures.
 It requires the actual controller, both tests and their exact JSON fixtures.
