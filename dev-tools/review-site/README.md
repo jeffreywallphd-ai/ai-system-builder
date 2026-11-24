@@ -2,6 +2,17 @@
 
 # Dynamic Development Review
 
+The **Token usage** sidebar page is a dedicated read-only dashboard for reported
+input/output, cached/reasoning subsets, day/week/quarter trends, coarse purposes
+and observed agent relationships. Measurements, estimates and unavailable fields
+stay separate. Parent links describe reported relationships, not inferred job
+roles or complete child coverage. Empty/disabled/corrupt telemetry still produces
+a useful dashboard with counter-supply guidance; no data is filled in.
+It reuses the existing bounded Work-items first-page request and global numeric
+summary, leaving the four paging contracts unchanged. It adds no endpoint,
+provider feed, storage mutation or polling interval. Existing dark/light controls
+and accessible keyboard-scrollable tables apply to the new page.
+
 Work items includes an optional **Contributor token usage** disclosure. It shows
 repository-local measured/estimated own subtotals, partial coverage, coarse
 purpose and bounded daily/weekly/quarterly trends. Agent aliases distinguish own

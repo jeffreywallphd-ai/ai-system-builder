@@ -16,7 +16,7 @@ HELPERS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HELPERS))
 from control_plane import usage
 from control_plane.contracts import ControlError
-from control_plane.projection import project
+from control_plane.projection import project, encode_review_projection, REVIEW_MAX_BYTES
 
 AT = "2026-11-24T12:00:00Z"
 
@@ -355,6 +355,46 @@ class UsageTests(unittest.TestCase):
         code, result = run("import", "--from", ".local-codex/export.json")
         self.assertEqual(code, 2); self.assertNotIn("synthetic-private-prompt", json.dumps(result))
         self.assertEqual(run("summary", "--period", "quarterly", "--limit", "40")[0], 0)
+
+    def test_dashboard_observed_relationship_roles_use_all_reported_links_and_stay_bounded(self):
+        self.enable()
+        self.call(self.event(), self.event(agent_id="bridge", parent_agent_id="synthetic-parent"),
+                  self.event(agent_id="leaf", parent_agent_id="bridge"), self.event(agent_id="unclassified"))
+        value = usage.summary(self.root)
+        self.assertCountEqual([row["role"] for row in value["agents"]], ["parent", "parent-and-child", "child", "unclassified"])
+        self.assertTrue(all(row["role_basis"] == "reported-parent-links" for row in value["agents"]))
+        self.call(*[self.event(agent_id=f"bounded-{index}", parent_agent_id="synthetic-parent") for index in range(24)])
+        value = usage.summary(self.root)
+        self.assertEqual(value["agents_observed"], 28)
+        self.assertEqual(value["agents_shown"], 16)
+        self.assertEqual(len(value["agents"]), 16)
+        self.assertEqual(value["coverage"], "partial-or-unavailable")
+        for private in ("synthetic-parent", "bounded-", "bridge", "leaf"):
+            self.assertNotIn(private, json.dumps(value))
+
+    def test_dashboard_global_summary_survives_compact_paging_and_wire_without_filling_unknowns(self):
+        self.enable()
+        event = self.event()
+        event['counts']['output_tokens'] = {'value': 0, 'status': 'estimated'}
+        event['counts']['reasoning_output_tokens'] = {'value': None, 'status': 'unavailable'}
+        self.call(event)
+        expected = usage.summary(self.root)
+        before = self.path.read_bytes()
+        for compact in (False, True):
+            value = project(self.root, compact_work_items=compact, page={'view':'work_items','page':1})
+            encoded = encode_review_projection(value)
+            self.assertLess(len(encoded), REVIEW_MAX_BYTES)
+            self.assertEqual(json.loads(encoded)['token_usage'], expected)
+            self.assertEqual(value['pagination']['view'], 'work_items')
+            self.assertEqual(set(value['totals']), {'roadmaps','work_items','evaluations','feedback'})
+            row = value['token_usage']['known_own_subtotal']
+            self.assertEqual(row['measured']['input_tokens'], 100)
+            self.assertEqual(row['measured']['cached_input_tokens'], 10)
+            self.assertEqual(row['estimated']['output_tokens'], 0)
+            self.assertIsNone(row['measured']['output_tokens'])
+            self.assertIsNone(row['measured']['reasoning_output_tokens'])
+            self.assertEqual(row['unavailable_fields']['reasoning_output_tokens'], 1)
+        self.assertEqual(self.path.read_bytes(), before)
 
 
 if __name__ == "__main__":

@@ -135,7 +135,18 @@ duration/files. Purpose basis counts remain separate from numeric status.
   periods still contributes to lifetime/older-quarter totals. Empty periods mean
   no reported observations, not measured zeros.
 
-The Work view includes a compact disclosure with seven daily/eight weekly/eight
+The **Token usage** sidebar page provides a dedicated dashboard. It shows reported
+measured and estimated input/output separately, unavailable field observations,
+cached-input/reasoning-output subsets, daily/weekly/quarterly tables, coarse
+purposes and at most sixteen agent aliases. Reported parent links classify only
+observed parent/child relationships, never job roles or complete coverage.
+Dark/light controls are shared with the rest of review. Disabled, missing or
+invalid telemetry keeps a useful empty dashboard and static import guidance;
+there is no automatic capture, quota/billing inference or new polling.
+The page uses the global summary on the existing bounded first Work-items page,
+so no server endpoint or collection paging contract changes.
+
+The Work view retains its compact disclosure with seven daily/eight weekly/eight
 quarterly buckets, at most sixteen agent aliases and eight purpose groups. CLI
 period queries expose the retained range within the requested bounded limit.
 The repository-local summary is independent of the current work page and cannot

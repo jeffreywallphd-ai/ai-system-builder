@@ -488,6 +488,19 @@ class FocusedPythonCollectionTests(unittest.TestCase):
 
 
 class TokenUsageRoutingTests(unittest.TestCase):
+    def test_exact_dashboard_scope_preserves_feature_gates_and_generic_fallback(self):
+        root = Path(__file__).resolve().parents[3]
+        selected = {row['id']:row for row in catalog.plan(root,list(catalog.TOKEN_DASHBOARD_SCOPE),['control-plane','review-site','documentation','agent-support'],'synthetic-dashboard')['selected']}
+        self.assertIn('test_control_plane_usage.', selected['control-plane']['argv'])
+        self.assertIn('test_control_plane_site.', selected['control-plane']['argv'])
+        self.assertIn('--test-skip-pattern=^contributor control plane passes focused behavioral qualification$',selected['review-site']['argv'])
+        for extra,required in [(['docs/unrelated.md'],['control-plane','review-site']),([],['control-plane','review-site','focused-tests'])]:
+            selected = {row['id']:row for row in catalog.plan(root,[*catalog.TOKEN_DASHBOARD_SCOPE,*extra],required,'synthetic-dashboard')['selected']}
+            self.assertNotIn('-k',selected['control-plane']['argv'])
+        with patch.object(catalog,'_automatic_files_available',return_value=False):
+            selected = {row['id']:row for row in catalog.plan(root,list(catalog.TOKEN_DASHBOARD_SCOPE),['control-plane','review-site'],'synthetic-dashboard')['selected']}
+        self.assertNotIn('-k',selected['control-plane']['argv'])
+
     def test_exact_usage_scope_executes_owned_and_related_cases_without_whole_controller(self):
         root = Path(__file__).resolve().parents[3]
         value = catalog.plan(root, list(catalog.TOKEN_USAGE_SCOPE), ['control-plane', 'review-site', 'documentation', 'agent-support'], 'synthetic-candidate')

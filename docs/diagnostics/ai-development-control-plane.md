@@ -202,7 +202,10 @@ deeper input. Source checks cannot replace the skipped physical qualification.
 
 Optional [contributor token tracking](token-usage-tracking.md) imports authorized
 numeric host exports and shows bounded daily, weekly and quarterly trends. It
-adds no mandatory stage or model call; unavailable telemetry never blocks Work.
+has a dedicated **Token usage** dashboard plus the compact Work disclosure. Reported
+measurements, estimates, unavailable fields, subsets and observed relationships
+remain explicit even when no host counters are available. The page is read-only.
+It adds no mandatory stage or model call; unavailable telemetry never blocks Work.
 Enable local retention explicitly and import only at useful existing boundaries.
 Trial declarations remain separate from ongoing contributor accounting.
 

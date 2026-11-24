@@ -210,6 +210,13 @@ separate from inclusive/unknown scope; numeric status, source assurance, coarse
 purpose and missing coverage remain explicit. Optional projection failure does
 not affect Work. See the [schema and retention rules](../diagnostics/token-usage-tracking.md).
 
+The dedicated Token usage dashboard reuses that global summary on the existing
+bounded Work-items first-page read, preserving all four collection paging
+contracts and the compact Work disclosure. It adds no endpoint, capture loop or
+storage write. Agent relation labels derive only from reported parent links;
+unclassified/missing relationships remain unknown. Fixed row/count/date/enum
+validation and inert tables preserve numeric status, subset and coverage meanings.
+
 The functionality qualification assessor reads a versioned requirements crosswalk
 and canonical owner JSON without changing either. It binds its ignored report to
 all bounded Git-listed files in the product/tooling roots, including UI assets,

@@ -263,6 +263,18 @@ no review/parent authority. Tests cover replay, capacity, compaction, private an
 malformed fields and publication failure. Actual host semantics and hostile
 same-user native filesystem races remain separate qualification limits.
 
+The Token usage dashboard adds no transport or collection authority: it reuses
+the global numeric summary from existing fixed-view GET pages. Dashboard data
+admits bounded dates/rows/counts, enum purposes and reported relationship roles,
+and opaque aliases only; all visible content uses inert text. Reject malformed
+usage independently of ordinary review. Disabled/unavailable counters stay
+unavailable, including zero-versus-null and measured-versus-estimated fields.
+Cached/reasoning subsets and inclusive scopes are displayed without additive
+totals. Roles derive only from reported links, never private labels or job-role
+inference. UI refresh uses the existing timer and starts no import/provider call.
+Focused projection/wire/HTTP/DOM fixtures cover privacy, bounds, read-only denial,
+unavailable/malformed data, navigation and dark/light behavior.
+
 Review paging adds only bounded read selectors on the existing loopback route.
 Use fixed page sizes and allowlisted views with canonical positive integers and
 bounded exact parent identifiers; reject unknown/duplicate/encoded/incompatible
