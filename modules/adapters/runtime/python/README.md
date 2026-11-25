@@ -1331,10 +1331,40 @@ permanently fences new work. Cleanup needs no renewed business grant.
 
 `exit-ready` returns a separate closed local-readiness envelope, never
 `settled=True`. It retains Model/input guards, all result bytes and accounting.
-The existing Node session settlement coordinator is still v1; this change adds
-no default producer or host activation. Full parent exit-ready orchestration,
+The Node coordinator can explicitly select the same mode; its default stays v1.
+This adds no default producer or host activation. Actual original
 actual worker/SDK/Job retirement, capacity/destination/crash custody, complete
 producer, Save/generation and actual host qualification remain pending.
 Existing settled-v1 and default hosts are unchanged; no new wire path is enabled.
 Actual capacity, protected destination/crash lifecycle, full producer, Save and
 host qualification remain pending. The barrier issues no Native or file effects.
+
+### Opt-in parent exit-ready coordinator
+
+Trusted Foundation composition may supply `OriginalTrainingExitConfiguration`
+as the fourth `createApprovedTrainingPort` argument. It captures the exact mode
+and synchronous output factory before reservation/startup, then requires the
+matching HTTP capability. A missing or uncertain storage IO capability refuses
+before channel startup. Ordinary callers retain settled-v1 and no output factory.
+
+The parent caches exact terminal task metadata before permanently fencing
+output and normal remote actions. Success first requires completed delivery;
+failed or cancelled tasks can drain their actual outstanding IO without new
+business permission. Read/ACK/publish promises and original file handles must
+actually close before the readiness request. Cached reads/cancellation never
+use HTTP after the fence. Only a closed nonconsuming pending reply permits
+another readiness observation; unknown, malformed and lost replies retain custody.
+
+Local readiness still precedes the captured original supervisor retirement.
+The parent rechecks local closure around that operation, retaining its execution
+slot until the original process/Job/readers/controller proof succeeds. It releases
+only that existing concurrency reservation. All result bytes and disk/source
+accounting remain retained, including provisional or uncertain publication.
+Latch release before its callback; an unknown acknowledgement cannot repeat it.
+There is no delete, retry, resource credit, Model registration or automatic Save.
+
+Synthetic filesystem/channel/Foundation tests qualify this coordinator only.
+An unfinished preparation without a qualifying file/run barrier stays pending.
+Complete producer, exclusive both-copy capacity, protected destination/crash
+custody, actual bounded training, original Native/host qualification and separate
+Save/evaluation/generation remain pending. Default Roots are not enabled.

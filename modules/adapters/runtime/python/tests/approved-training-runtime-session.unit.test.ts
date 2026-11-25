@@ -13,6 +13,9 @@ import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput} 
 import {TaskType} from "../../../../contracts/runtime";
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import type {OriginalTrainingSourceReservationFactory, OriginalTrainingSourceReservation} from "../client/originalTrainingModelSource";
+import type {OriginalTrainingExitConfiguration} from "../client/approvedTrainingTaskSession";
+import {createFilesystemTrainingResultFileByteStorageAdapter} from "../../../storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
+import type {OrganizationId} from "../../../../contracts/organization";
 
 const id = "11111111-1111-4111-8111-111111111111", workspace = "22222222-2222-4222-8222-222222222222" as WorkspaceId;
 const profile = {profileId: "inert-only", profileFingerprint: "sha256:" + "a".repeat(64)};
@@ -57,6 +60,25 @@ test("an unknown retirement mode is denied before ownership or HTTP discovery", 
   const f = exitReadyClient([ORIGINAL_TRAINING_CAPABILITY]);
   await assert.rejects(() => f.client.captureOriginalTrainingChannel(profile, "unknown" as never));
   assert.deepEqual(f.calls, []);
+});
+
+test("parent exit-ready selection requires a known mode and output factory before any reservation", () => {
+  let reservations = 0;
+  const options = {reserve() {reservations++; return () => {};}, async captureChannel() {throw Error("must not capture");}};
+  assert.throws(() => createOriginalTrainingPort({...options, retirementProtocol: "unknown" as never}));
+  assert.throws(() => createOriginalTrainingPort({...options, retirementProtocol: "original-exit-ready-v1"}));
+  assert.equal(reservations, 0);
+});
+
+test("unused exit-ready execution cannot report settled after an uncertain asynchronous release", async () => {
+  let attempts = 0;
+  const session = createOriginalTrainingPort({retirementProtocol: "original-exit-ready-v1",
+    createOutputStorage() {throw Error("must not create storage before prepare");},
+    async captureChannel() {throw Error("must not capture");},
+    reserve: () => (() => {attempts++; return Promise.reject(Error("synthetic uncertain release"));}) as never,
+  }).createSession(definition(), {isCurrent: () => true, stillAllowed: async () => true})!;
+  assert.equal(await session.settle(), false); assert.equal(await session.settle(), false);
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(attempts, 1);
 });
 function definition(): ApprovedLocalTrainingDefinition {
   return {requestId: id, workspaceId: workspace, owner: {organizationId: "org", principalId: "actor", clientId: id, hostIncarnationId: workspace},
@@ -626,7 +648,7 @@ test("foundation denies private training without native configuration before any
   assert.equal(calls, 0);
 });
 
-function retirementFoundation() {
+function retirementFoundation(exitConfiguration?: OriginalTrainingExitConfiguration) {
   let alive = false, taskStatus = "running", preparePhase = "ready";
   let hostLive = true, download: (() => Promise<void>) | undefined;
   const calls: string[] = [];
@@ -634,7 +656,8 @@ function retirementFoundation() {
   const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url, init) => {
     const endpoint = new URL(String(url)).pathname; calls.push(endpoint);
     if (endpoint === "/health") return Response.json({healthy: alive, status: {...runtime, status: alive ? "ready" : "stopped"}});
-    if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId, capabilities: [ORIGINAL_TRAINING_CAPABILITY]});
+    if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId,
+      capabilities: [exitConfiguration ? "train-model.original-exit-ready-v1" : ORIGINAL_TRAINING_CAPABILITY]});
     if (endpoint === "/tasks/start" && JSON.parse(String(init?.body)).taskType === "ensure-model-download") {
       await download?.(); throw Error("inert download response ended");
     }
@@ -643,19 +666,53 @@ function retirementFoundation() {
     if (action === "start") return Response.json({binding, kind: "accepted", requestId: id, workspaceId: workspace, status: "running"});
     if (action === "read") return Response.json({binding, record: {requestId: id, taskType: "train-model", status: taskStatus, metadata: {workspaceId: workspace}}});
     if (action === "settle") return Response.json({binding, settled: true, retirement: "settled"});
+    if (action === "exit-ready") return Response.json({binding, schema: "original-training-exit-ready-v1", ready: true, retirement: "ready"});
     throw Error("unexpected synthetic endpoint");
   }) as typeof fetch}, supervisor: {...controller.configuration, startupTimeoutMs: 200, healthCheckIntervalMs: 1,
     verifyRuntimeEnvironment: async () => true,
   }});
   foundation.bindHostAdmission(() => {if (!hostLive) throw Error("host stopped");});
-  const port = foundation.createApprovedTrainingPort(profile);
+  const port = foundation.createApprovedTrainingPort(profile, undefined, undefined, exitConfiguration);
   const create = (requestId = id) => port.createSession({...definition(), requestId}, {isCurrent: () => true, stillAllowed: async () => true});
   return {foundation, child, calls, create, get kills() {return controller.stops;},
     endHost() {hostLive = false;}, set download(value: (() => Promise<void>) | undefined) {download = value;},
-    succeed() {taskStatus = "succeeded";}, unavailable() {preparePhase = "unavailable";},
+    succeed() {taskStatus = "succeeded";}, fail() {taskStatus = "failed";}, unavailable() {preparePhase = "unavailable";},
     exit() {alive = false; child.emit("exit", 0, null);},
     close() {alive = false; controller.closeWithProof();}};
 }
+
+test("opt-in Foundation captures the matching exit mode and storage factory, retaining execution through original Job proof", async t => {
+  const directory = await mkdtemp(path.join(tmpdir(), "parent-exit-foundation-"));
+  const publicationId = "c".repeat(32);
+  const storage = createFilesystemTrainingResultFileByteStorageAdapter({rootDirectory: directory, publicationId,
+    maximumFiles: 4, maximumFileBytes: 1024, maximumTotalBytes: 4096, trackIoRetirement: true});
+  const configuration: OriginalTrainingExitConfiguration = {retirementProtocol: "original-exit-ready-v1",
+    createOutputStorage(original) {assert.equal(this, configuration); assert.equal(original.definition.requestId, id);
+      return {storage, context: {requestId: id, workspaceId: workspace, organizationId: "org" as OrganizationId, principalId: "actor"},
+        publicationId, maximumFiles: 4, maximumFileBytes: 1024, maximumTotalBytes: 4096, maximumDurationMs: 1000};}};
+  const f = retirementFoundation(configuration);
+  t.after(async () => {f.close(); await rm(directory, {recursive: true, force: true});});
+  (configuration as any).createOutputStorage = () => {throw Error("replacement must not run");};
+  const session = f.create()!; assert.equal(await session.prepare(), "ready");
+  assert.equal((await session.start(staged(), () => true)).kind, "accepted");
+  f.fail(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(await session.settle(), false); assert.equal(f.kills, 1);
+  assert.equal(f.calls.filter(endpoint => endpoint.endsWith("/exit-ready")).length, 1);
+  assert.equal(f.calls.some(endpoint => endpoint.endsWith("/settle")), false);
+  const calls = [...f.calls]; assert.equal((await session.read()).status, "failed"); await session.cancel();
+  assert.equal(f.create(workspace), undefined); f.exit(); assert.equal(await session.settle(), false);
+  f.close(); assert.equal(await session.settle(), true); assert.equal(f.kills, 1); assert.deepEqual(f.calls, calls);
+  const next = f.create(workspace); assert.ok(next); assert.equal(await next.settle(), true);
+});
+
+test("Foundation rejects malformed exit configuration before configuration callbacks or startup", () => {
+  const f = retirementFoundation(); let getters = 0;
+  const configuration = {retirementProtocol: "original-exit-ready-v1", get createOutputStorage() {getters++; throw Error("must not run");}};
+  assert.throws(() => f.foundation.createApprovedTrainingPort(profile, undefined, undefined, configuration as never));
+  assert.throws(() => f.foundation.createApprovedTrainingPort(profile, undefined, undefined,
+    {retirementProtocol: "settled-v1", createOutputStorage() {throw Error("must not run");}} as never));
+  assert.equal(getters, 0); assert.deepEqual(f.calls, []);
+});
 
 test("foundation composes both original acknowledgements and denies unloading through uncertainty", async () => {
   const f = retirementFoundation(), session = f.create()!;

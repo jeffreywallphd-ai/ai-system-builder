@@ -3498,7 +3498,38 @@ The worker advertises `train-model.original-exit-ready-v1` separately from the
 legacy capability. Its authenticated `exit-ready` route returns only
 `original-training-exit-ready-v1` local readiness; no `settled` field or Native
 token crosses the wire. The HTTP client requires explicit matching capture and
-denies legacy settle on that channel. The existing Node session coordinator
-remains v1. Complete parent orchestration, original worker/SDK/empty-Job proof,
+denies legacy settle on that channel. The Node session coordinator supports an
+explicit matching opt-in; default callers remain v1. Actual original worker/SDK/empty-Job proof,
 real capacity, protected destination/crash custody, producer, Save/generation
 and real host qualification remain pending. Local readiness cannot replace them.
+
+### Original parent retirement composition
+
+The trusted Foundation may capture a closed `OriginalTrainingExitConfiguration`
+and its exact factory receiver before startup. This supplies mode selection and
+the existing bounded private storage configuration, not Native capacity or custody.
+There is no default activation or request-selected factory. The selected client
+must capture the distinct capability; legacy settled-v1 composition is unchanged.
+
+Before a readiness request, the parent copies the exact original terminal record,
+permanently fences output/normal remote work, and observes actual receiver and
+original storage IO closure. A successful task must complete delivery first.
+Failed/cancelled tasks retain the same outstanding promises through cancellation
+or deadline; cleanup does not need a renewed business grant. Post-fence reads
+use only retained metadata and cannot issue normal HTTP. An unknown readiness
+attempt cannot be repeated or replaced by legacy settlement. Only the distinct
+closed pending result identifies a nonconsuming observation that can recur.
+
+After local readiness, the original captured Native supervisor must independently
+prove its exact worker, empty Job, source-retain, reader and controller retirement.
+Recheck parent IO closure before and after that original operation. Release only
+the existing execution reservation; retain every result and disk/source charge.
+Release latches before its original callback. Unknown acknowledgement cannot retry.
+Ready is not global settlement, publication success, storage credit or Save.
+No PID lookup, timer, HTTP boolean or replacement callback supplies Native proof.
+
+Focused synthetic filesystem/HTTP/controller fixtures qualify the coordinator,
+not the physical Native/host lifecycle. A pre-start preparation lacking actual
+barrier proof stays pending. Complete producer, real exclusive capacity of both
+copies, protected destination/crash custody, actual bounded training, separately
+approved Save, evaluation/generation and whole-host qualification remain pending.

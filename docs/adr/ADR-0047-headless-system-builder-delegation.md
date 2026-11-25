@@ -1532,7 +1532,33 @@ existing protocol. No Native token, callback-selected operation or resource
 credit is carried on the wire. Model/input guards and result accounting remain.
 
 This closes the worker-side protocol/thread-alignment component, not complete
-execution. The Node session coordinator stays v1; parent orchestration, actual
+execution. The Node coordinator has a matching explicit opt-in; actual
 Native worker/SDK/Job exit, exclusive both-copy capacity, protected destination
 and crash handoff, complete producer, Save/generation and real host qualification
 remain pending. No new executor, provider, policy limit or default activation.
+
+### Parent composition of original IO and worker retirement
+
+Reuse the existing Node session and Foundation seams for an explicit matching
+exit-ready mode. Capture trusted configuration and the original factory receiver
+before startup. Require the existing genuine parent IO capability rather than
+accepting a completed receive flag as file closure. Preserve default settled-v1.
+
+Cache terminal metadata, fence all normal remote actions/output, and wait for
+actual original read/ACK/publish/permission/iterator operations and storage
+handles to close. Successful delivery must finish before that fence; failure
+and cancellation may close actual IO while result publication remains uncertain.
+Cleanup relies on retained ownership, never a new business grant. The separate
+readiness reply grants no Native proof. Only a closed nonconsuming pending result
+allows another readiness observation; unknown dispatch or replies cannot retry.
+
+Retire through the already captured original Native supervisor, preserving its
+exact process/Job/source-retain/reader/controller checks. Recheck parent closure
+around retirement. Release only the existing execution slot, retaining all bytes
+and disk/source accounting. No new resource-credit, retry/delete/recovery policy,
+executor, provider, Model registration or Save authority follows. Actual capacity,
+destination/crash custody, complete producer, bounded training and real Native/
+host qualification remain separate. Pre-start custody without a qualified file
+barrier remains pending rather than granting termination from a status DTO.
+Latch the execution release before its original callback. A thrown, asynchronous
+or invalid acknowledgement retains uncertainty and cannot repeat that callback.

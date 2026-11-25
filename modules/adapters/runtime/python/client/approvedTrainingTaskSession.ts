@@ -30,6 +30,11 @@ export interface OriginalTrainingCapture {
   assertCurrent(): void;
   assertAllowed(): Promise<void>;
 }
+/** Trusted host composition only. This never supplies Native capacity or custody. */
+export interface OriginalTrainingExitConfiguration {
+  readonly retirementProtocol: "original-exit-ready-v1";
+  readonly createOutputStorage: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
+}
 type CaptureSource = {reserved: boolean; stage: "bound" | "preparing" | "closed";
   reader?: () => Promise<ApprovedLocalTrainingModelSelection>; lost: boolean};
 const originalSources = new WeakMap<OriginalTrainingCapture, CaptureSource>();
@@ -74,11 +79,15 @@ export function createOriginalTrainingPort(options: {
   reserve: (original: OriginalTrainingCapture) => (() => void) | undefined;
   /** Trusted private composition only; no default host or wire-supplied storage. */
   createOutputStorage?: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
+  retirementProtocol?: "original-exit-ready-v1";
 }): ApprovedLocalModelTrainingPort {
   need(!types.isProxy(options));
-  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage"]);
+  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol"]);
   const capture = options.captureChannel, reserve = options.reserve, outputFactory = capturedOptions.createOutputStorage;
   need(outputFactory === undefined || typeof outputFactory === "function" && !types.isProxy(outputFactory));
+  const exitReady = capturedOptions.retirementProtocol === "original-exit-ready-v1";
+  need(capturedOptions.retirementProtocol === undefined || exitReady);
+  need(!exitReady || typeof outputFactory === "function");
   return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl,
     rawSource?: ApprovedLocalTrainingModelReader) {
     const definition = copy(raw), isCurrent = rawControl.isCurrent, allowed = rawControl.stillAllowed;
@@ -124,7 +133,9 @@ export function createOriginalTrainingPort(options: {
     const originalRelease = reserve.call(options, originalCapture);
     if (!originalRelease) {source.stage = "closed"; return undefined;}
     need(typeof originalRelease === "function"); source.reserved = true;
+    let releaseAttempted = false;
     const release = () => {
+      if (exitReady) {need(!releaseAttempted); releaseAttempted = true;}
       const result: unknown = originalRelease();
       if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
       need(result === undefined); source.reserved = false; source.stage = "closed";
@@ -136,14 +147,17 @@ export function createOriginalTrainingPort(options: {
     let cached: RuntimeTaskRecord | undefined, cancellation: boolean | undefined;
     let output: ReturnType<typeof createOriginalTrainingOutputReceiver> | undefined;
     let outputSetupUnknown = false, outputStarted = false, outputAborted = false;
+    let parentFenced = false;
     const abortOutput = () => {if (outputFactory) {outputAborted = true; output?.abort();}};
     const send = async (action: string, input?: unknown, dispatch?: () => void) => {
       need(!!channel && !!binding && phase !== "settled");
+      need(!exitReady || !parentFenced || action === "exit-ready");
       const rawReply = await channel!.send("/training/original/" + definition.requestId + "/" + action,
         {binding, ...(input === undefined ? {} : action === "output-ack" ? {sequence: input} : {input})}, dispatch);
       need(!!rawReply && typeof rawReply === "object" && !types.isProxy(rawReply));
       const keys = ["binding", ...(action === "read" ? ["record"] : action === "start" ? ["kind", "requestId", "workspaceId", "status"] :
           action === "cancel" ? ["cancelled"] : action === "settle" ? ["settled", "retirement"] :
+            action === "exit-ready" ? ["schema", "ready", "retirement"] :
             action === "output-read" ? ["output"] : action === "output-ack" ? ["acknowledged"] : ["phase"])];
       // The concrete private receiver validates bounded wire bytes itself;
       // ordinary metadata keeps its existing 2 KiB scalar copier unchanged.
@@ -152,6 +166,57 @@ export function createOriginalTrainingPort(options: {
       const original = exact(reply.binding, Object.keys(binding!));
       need(Object.keys(binding!).every(key => original[key] === binding![key]));
       return reply;
+    };
+    const parentIoClosed = () => !!output && !outputSetupUnknown && output.inspectIoRetirement().phase === "closed";
+    const settleExitReady = async () => {
+      if (phase === "settled") return true;
+      if (releaseAttempted) return false; // An unknown accepted release cannot be repeated or healed.
+      if (operations || closing || !remoteRetired && closeAttempted || outputSetupUnknown) return false;
+      if (phase === "bound") {
+        // No factory, startup or other IO was dispatched. Fence before release reentry.
+        closing = true; parentFenced = true; phase = "unconfirmed";
+        try {release(); phase = "settled"; return true;} catch {return false;}
+        finally {closing = false;}
+      }
+      if (!binding) return false;
+      closing = true; operations++;
+      try {
+        if (!parentFenced) {
+          const result = mapTaskStatusResponse((await send("read")).record);
+          need(result.requestId === definition.requestId && result.taskType === "train-model" && result.status !== "unknown" &&
+            result.metadata?.workspaceId === definition.workspaceId);
+          cached = copy({...result, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
+            progress: result.progress ? {details: result.progress} : undefined,
+            status: result.status as RuntimeTaskRecord["status"], concurrencyClass: "gpu-exclusive"} as RuntimeTaskRecord);
+          if (!cancelAttempted && phase !== "accepted") {
+            cancelAttempted = true; const cancelled = await send("cancel"); need(typeof cancelled.cancelled === "boolean");
+            cancellation = cancelled.cancelled as boolean;
+          }
+          if (phase === "accepted" && !["succeeded", "failed", "cancelled"].includes(result.status)) return false;
+          // A successful task must finish its original receive flight before fencing.
+          if (result.status === "succeeded" && !output?.isComplete()) return false;
+          parentFenced = true; // Before any synchronous storage callback can reenter.
+          abortOutput();
+        }
+        if (!parentIoClosed()) return false;
+        if (!remoteRetired) {
+          closeAttempted = true; // Unknown dispatch/reply cannot issue another readiness request.
+          const ready = await send("exit-ready");
+          need(ready.schema === "original-training-exit-ready-v1");
+          if (ready.ready === false && ready.retirement === "pending") {closeAttempted = false; return false;}
+          need(ready.ready === true && ready.retirement === "ready");
+          remoteRetired = true; // No HTTP work remains, even during pending original worker exit.
+        }
+        if (!parentIoClosed()) return false;
+        need(!!retireWorker);
+        const retired = await retireWorker!();
+        need(retired === true || retired === false);
+        if (!retired || !parentIoClosed()) return false;
+        need(operations === 1);
+        // This releases the existing execution slot only. All disk/result charges remain retained.
+        release(); phase = "settled"; return true;
+      } catch {phase = "unconfirmed"; return false;}
+      finally {operations--; closing = false;}
     };
     const session: ApprovedLocalTrainingSession = Object.freeze({requestId: definition.requestId, workspaceId: definition.workspaceId,
       async prepare() {
@@ -167,6 +232,7 @@ export function createOriginalTrainingPort(options: {
               assertCurrent() {current(); need(!outputAborted && !!channel); channel!.assertCurrent();}, assertAllowed: permission,
               read: async () => (await send("output-read")).output,
               acknowledge: async sequence => (await send("output-ack", sequence)).acknowledged});
+            if (exitReady) need(output.inspectIoRetirement().storagePhase === "open");
             need(!outputAborted); current(); outputSetupUnknown = false;
           }
           await permission(); const original = await capture.call(options, originalCapture); current();
@@ -191,7 +257,9 @@ export function createOriginalTrainingPort(options: {
           binding = candidate;
           if (reply.phase === "unavailable") {
             // Only the original producer's positive no-effect/settlement reply.
+            if (exitReady) {parentFenced = true; abortOutput(); need(parentIoClosed());}
             releaseUnusedWorker();
+            if (exitReady) {need(parentIoClosed()); release(); phase = "settled"; return "unavailable" as const;}
             phase = "settled"; release(); return "unavailable" as const;
           }
           need(reply.phase === "ready"); phase = "ready"; return "ready" as const;
@@ -199,7 +267,7 @@ export function createOriginalTrainingPort(options: {
         finally {source.stage = "closed"; operations--;}
       },
       async start(input: ApprovedLocalTrainingStagedInput, admission: () => boolean) {
-        need(phase === "ready" && !closing); phase = "issuing"; operations++;
+        need(phase === "ready" && !closing && !parentFenced); phase = "issuing"; operations++;
         const startCurrent = () => {current(); need(admission() === true);};
         try {
           const staged = copy(input); await permission(); startCurrent();
@@ -218,7 +286,7 @@ export function createOriginalTrainingPort(options: {
       },
       async read() {
         await permission();
-        if (phase === "settled" || remoteRetired) {need(!!cached); return copy(cached!);}
+        if (phase === "settled" || remoteRetired || parentFenced) {need(!!cached); return copy(cached!);}
         need(!closing);
         operations++;
         try {
@@ -235,7 +303,7 @@ export function createOriginalTrainingPort(options: {
         // Local fencing requires no current business permission and proves no IO settlement.
         abortOutput();
         await permission();
-        if (phase === "settled" || remoteRetired) return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};
+        if (phase === "settled" || remoteRetired || parentFenced) return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};
         need(!closing);
         if (!cancelAttempted) {
           cancelAttempted = true; operations++;
@@ -246,6 +314,7 @@ export function createOriginalTrainingPort(options: {
         return {requestId: definition.requestId, status: cached?.status ?? "running", cancelled: cancellation!};
       },
       async settle() {
+        if (exitReady) return settleExitReady();
         if (phase === "settled") return true;
         if (outputSetupUnknown || outputStarted && !output?.isComplete()) return false;
         if (operations || (!remoteRetired && closeAttempted) || closing) return false;

@@ -3267,7 +3267,33 @@ This source connection grants none of those capabilities or model-quality result
   authorization and scope denials, original executor replacement/lost-reply
   cases, legacy compatibility, client/type and focused routing tests. No model,
   accuracy, physical Native or whole-host qualification is claimed.
-- Residual scope: parent release coordinator, original SDK/process/Job exit,
+- Residual scope: actual original SDK/process/Job exit qualification,
   capacity and protected destination/crash custody, complete producer,
   Save/generation and actual host qualification. All bytes/guards/accounting
   remain retained; local readiness grants no resource release or parent pass.
+
+### Parent coordination of local IO and original worker exit
+
+- Threats: a completed stream or timed-out observer hides live file/ACK work;
+  cleanup obtains a new business grant; worker readiness is treated as process
+  exit; lost ready replies retry consuming work; callbacks redirect retirement;
+  early execution release enables overlapping work or grants disk credit.
+- Controls: explicit trusted mode/factory and matching capability; retain exact
+  original channel, worker owner, task/result binding and captured methods. Cache
+  final metadata before permanent parent fencing. Success requires delivered
+  output; failures retain the original IO promises until actual closure. Local
+  inspection requires no new business permission. No ordinary HTTP after fencing.
+  Only a closed nonconsuming pending ready reply can be observed again. Unknown
+  or malformed replies retain custody and cannot terminate the worker. The actual
+  supervisor's original process/Job/readers/controller proof remains mandatory.
+  Recheck parent closure around retirement; release only the execution slot.
+  Latch release before its original callback; unknown acknowledgement cannot retry.
+- Evidence: focused real disposable-file/stream fixtures, held actual ACK/publish
+  promises, pending/lost/malformed readiness, unchanged v1 behavior, original
+  Foundation/controller ownership, replacement/getter denial and strict types.
+  These are synthetic software fixtures, not physical Native or model evidence.
+- Residual scope: all disk/result/source accounting and provisional bytes stay
+  retained. Pre-start custody without barrier proof stays pending. Complete
+  producer, exclusive both-copy capacity, protected destination/crash lifecycle,
+  actual bounded training, Native/host qualification, separate Save and
+  evaluation/generation remain pending. No default Root or new authority is added.

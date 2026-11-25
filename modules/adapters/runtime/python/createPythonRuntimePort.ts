@@ -4,7 +4,9 @@ import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
-import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile, type OriginalTrainingCapture} from "./client/approvedTrainingTaskSession";
+import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile, type OriginalTrainingCapture,
+  type OriginalTrainingExitConfiguration} from "./client/approvedTrainingTaskSession";
+import {readStrictPassiveRecord} from "../../../contracts/shared";
 import {createOriginalTrainingModelSourceFactory, type OriginalTrainingModelObservationPolicy,
   type OriginalTrainingModelObservation, type ObservedOriginalTrainingModelSource, bindOriginalTrainingSourceLaunch,
   type OriginalTrainingSourceReservationFactory, type OriginalTrainingSourceLaunch,
@@ -48,7 +50,7 @@ export interface CreatePythonRuntimePortOptions {
 export interface PythonRuntimeAdapterFoundation {
   /** Private trusted composition; no profile means no availability or startup. */
   createApprovedTrainingPort(profile?: OriginalTrainingProfile, observation?: OriginalTrainingModelObservationPolicy,
-    sourceReservation?: OriginalTrainingSourceReservationFactory): ApprovedLocalModelTrainingPort;
+    sourceReservation?: OriginalTrainingSourceReservationFactory, exitConfiguration?: OriginalTrainingExitConfiguration): ApprovedLocalModelTrainingPort;
   runtimePort: PythonRuntimePort;
   supervisor: PythonRuntimeSupervisor;
   /** Trusted host composition, once only. It can add a guard, never replace it. */
@@ -551,7 +553,18 @@ export function createPythonRuntimeAdapterFoundation(
     runtimePort,
     supervisor,
     bindHostAdmission,
-    createApprovedTrainingPort(rawProfile, rawObservation, sourceReservation) {
+    createApprovedTrainingPort(rawProfile, rawObservation, sourceReservation, rawExitConfiguration) {
+      let exitConfiguration: OriginalTrainingExitConfiguration | undefined;
+      if (rawExitConfiguration !== undefined) {
+        if (!rawExitConfiguration || types.isProxy(rawExitConfiguration)) throw new Error("Original training retirement configuration is unavailable.");
+        const row = readStrictPassiveRecord(rawExitConfiguration, ["retirementProtocol", "createOutputStorage"]);
+        if (Object.keys(row).length !== 2 || row.retirementProtocol !== "original-exit-ready-v1" ||
+            typeof row.createOutputStorage !== "function" || types.isProxy(row.createOutputStorage))
+          throw new Error("Original training retirement configuration is unavailable.");
+        const factory = row.createOutputStorage as OriginalTrainingExitConfiguration["createOutputStorage"];
+        exitConfiguration = Object.freeze({retirementProtocol: "original-exit-ready-v1",
+          createOutputStorage: (original: OriginalTrainingCapture) => Reflect.apply(factory, rawExitConfiguration, [original])});
+      }
       if (rawProfile === undefined || !hasNativeTrainingConfiguration) return Object.freeze({createSession: () => undefined});
       if (sourceReservation !== undefined && (typeof sourceReservation !== "function" || rawObservation === undefined))
         throw new Error("Original Model source reservation is unavailable.");
@@ -561,6 +574,7 @@ export function createPythonRuntimeAdapterFoundation(
       const captureRetirement = supervisor.captureOriginalTrainingWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
       return createOriginalTrainingPort({
+        ...(exitConfiguration ?? {}),
         reserve(capture) {
           const requestId = capture.definition.requestId;
           if (!hostAdmission || trainingCustodyLive() || trainingReservations.has(requestId) || trainingReservations.size >= 256 ||
@@ -618,7 +632,7 @@ export function createPythonRuntimeAdapterFoundation(
           const retire = worker.retireOriginal.bind(worker), unused = worker.releaseUnused.bind(worker);
           workerCurrent();
           await allowedCapture();
-          const original = await captureOriginal(profile);
+          const original = await captureOriginal(profile, exitConfiguration?.retirementProtocol);
           const channelCurrent = original.assertCurrent.bind(original), sendOriginal = original.send.bind(original);
           const current = () => {workerCurrent(); channelCurrent();};
           await allowedCapture(); current();

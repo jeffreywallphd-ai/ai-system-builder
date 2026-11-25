@@ -43,12 +43,15 @@ function frames(large = false) {
   add("streams-complete", {fileCount: files.length, totalBytes: bytes.reduce((n, data) => n + data.length, 0), provisional: true});
   return {rows, bytes, files};
 }
-async function fixture(large = false, trackIoRetirement = false) {
+async function fixture(large = false, trackIoRetirement = false, exitReady = false) {
   const root = await mkdtemp(path.join(tmpdir(), "training-receive-"));
   const original = createFilesystemTrainingResultFileByteStorageAdapter({rootDirectory: root, publicationId, maximumFiles: 8, maximumFileBytes: 32768, maximumTotalBytes: 131072, trackIoRetirement});
   const input = frames(large), calls: string[] = [], acks: number[] = [];
   let current = true, permission = true, releases = 0, published = 0, ack = 0, completed = false;
-  const f = {root, original, input, calls, acks, publications: [] as number[], factoryCalls: 0,
+  const f = {root, original, input, calls, acks, publications: [] as number[], factoryCalls: 0, workerRetirements: 0,
+    retireHook: undefined as undefined | (() => Promise<boolean>),
+    releaseHook: undefined as undefined | (() => unknown),
+    ioRetirement: undefined as ReturnType<NonNullable<TrainingResultFileByteStoragePort["captureIoRetirement"]>> | undefined,
     sendHook: undefined as undefined | ((action: string, body: any) => Promise<unknown> | unknown),
     storageHook: undefined as undefined | ((input: Parameters<TrainingResultFileByteStoragePort["publishResultFile"]>[0]) => Promise<void> | void),
     configureHook: undefined as undefined | (() => void),
@@ -59,10 +62,13 @@ async function fixture(large = false, trackIoRetirement = false) {
     const result = await original.publishResultFile(file, context);
     if (result.ok) published++; return result;
   }};
-  if (trackIoRetirement) storage.captureIoRetirement = (input, context) => original.captureIoRetirement!(input, context);
+  if (trackIoRetirement) storage.captureIoRetirement = (input, context) => {
+    f.ioRetirement = original.captureIoRetirement!(input, context); return f.ioRetirement;
+  };
   const configuration: OriginalTrainingOutputStorage = {storage, context: {requestId: id, workspaceId: workspace, organizationId: "org" as OrganizationId, principalId: "actor"},
     publicationId, maximumFiles: 8, maximumFileBytes: 32768, maximumTotalBytes: 131072, maximumDurationMs: 10000};
-  const channel: OriginalTrainingOwnedChannel = {identity, assertCurrent() {assert.ok(current);}, async retireOriginalWorker() {return true;}, releaseUnusedWorker() {},
+  const channel: OriginalTrainingOwnedChannel = {identity, assertCurrent() {assert.ok(current);},
+    async retireOriginalWorker() {f.workerRetirements++; return f.retireHook ? f.retireHook() : true;}, releaseUnusedWorker() {},
     async send(endpoint, body: any, dispatch) {
       dispatch?.(); const segments = endpoint.split("/"), action = segments[segments.length - 1]!; calls.push(action);
       const result = await f.sendHook?.(action, body); if (result !== undefined) return result;
@@ -70,6 +76,7 @@ async function fixture(large = false, trackIoRetirement = false) {
       if (action === "start") return {binding, kind: "accepted", requestId: id, workspaceId: workspace, status: "running"};
       if (action === "cancel") return {binding, cancelled: true};
       if (action === "settle") return {binding, settled: true, retirement: "settled"};
+      if (action === "exit-ready") return {binding, schema: "original-training-exit-ready-v1", ready: true, retirement: "ready"};
       if (action === "output-read") return {binding, output: {phase: "active", acknowledged: ack, frame: input.rows[ack]}};
       if (action === "output-ack") {
         assert.deepEqual(Object.keys(body).sort(), ["binding", "sequence"]); assert.equal(body.sequence, ack + 1);
@@ -83,7 +90,8 @@ async function fixture(large = false, trackIoRetirement = false) {
       }
       return {binding, record: {requestId: id, taskType: "train-model", status: "succeeded", metadata: {workspaceId: workspace}, data: {runId: id}}};
     }};
-  const options = {captureChannel: async () => channel, reserve: () => () => {releases++;},
+  const options = {captureChannel: async () => channel, reserve: () => () => {releases++; return f.releaseHook?.();},
+    ...(exitReady ? {retirementProtocol: "original-exit-ready-v1" as const} : {}),
     createOutputStorage() {f.factoryCalls++; f.configureHook?.(); return configuration;}};
   const session = createOriginalTrainingPort(options).createSession(definition(), {isCurrent: () => current, stillAllowed: async () => permission})!;
   return Object.assign(f, {configuration, storage, channel, options, session,
@@ -98,6 +106,160 @@ test("original session receives checkpoint and candidate bytes through actual ve
     assert.equal(f.acks.length, f.input.rows.length); assert.equal(await f.session.settle(), true); assert.equal(f.releases, 1);
   } finally {await f.close();}
 });
+
+test("exit-ready parent fences actual storage before readiness and retains bytes after original worker retirement", async () => {
+  const f = await fixture(false, true, true);
+  try {
+    f.sendHook = action => {if (action === "exit-ready") {
+      assert.equal(f.ioRetirement!.inspect().phase, "closed");
+      assert.equal(f.ioRetirement!.inspect().pendingOperations, 0);
+      assert.equal(f.published, 4); assert.equal(f.releases, 0);
+    }};
+    await f.start(); await until(() => f.completed); await tick();
+    assert.equal(await f.session.settle(), true); assert.equal(await f.session.settle(), true);
+    assert.equal(f.calls.filter(action => action === "exit-ready").length, 1); assert.equal(f.calls.includes("settle"), false);
+    assert.equal(f.workerRetirements, 1); assert.equal(f.releases, 1);
+    const calls = [...f.calls]; assert.equal((await f.session.read()).status, "succeeded"); await f.session.cancel();
+    assert.deepEqual(f.calls, calls); await assert.rejects(() => f.session.start(staged(), () => true));
+    for (let i = 0; i < 4; i++) assert.deepEqual(await readFile(path.join(f.root,
+      `workspaces/${workspace}/artifacts/training-results/${publicationId}/${i}`)), f.input.bytes[i]);
+  } finally {await f.close();}
+});
+
+test("exit-ready requires parent IO support before any original channel startup", async () => {
+  const f = await fixture(false, false, true);
+  try {assert.equal(await f.session.prepare(), "unconfirmed"); assert.deepEqual(f.calls, []);
+    assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0); assert.equal(f.workerRetirements, 0);
+  } finally {await f.close();}
+});
+
+test("exit-ready no-effect preparation closes only its unused local IO before releasing execution", async () => {
+  const f = await fixture(false, true, true);
+  try {
+    f.sendHook = action => action === "prepare" ? {binding, phase: "unavailable"} : undefined;
+    assert.equal(await f.session.prepare(), "unavailable"); assert.equal(f.ioRetirement!.inspect().phase, "closed");
+    assert.equal(f.releases, 1); assert.equal(f.workerRetirements, 0); assert.equal(await f.session.settle(), true);
+    assert.deepEqual(f.calls, ["prepare"]); assert.deepEqual(f.publications, []);
+  } finally {await f.close();}
+});
+
+test("exit-ready uncertainty detected after original worker retirement still retains execution and bytes", async () => {
+  const f = await fixture(false, true, true); let retired = false;
+  try {
+    const capture = f.storage.captureIoRetirement!;
+    f.storage.captureIoRetirement = (input, context) => {
+      const capability = capture(input, context);
+      return {fencePublication: capability.fencePublication,
+        inspect() {const row = capability.inspect(); return retired ? {...row, phase: "unconfirmed"} : row;}};
+    };
+    f.retireHook = async () => {retired = true; return true;};
+    await f.start(); await until(() => f.completed); await tick();
+    assert.equal(await f.session.settle(), false); const calls = [...f.calls];
+    assert.equal(f.workerRetirements, 1); assert.equal(f.releases, 0); assert.equal(await f.session.settle(), false);
+    assert.deepEqual(f.calls, calls); assert.equal(f.workerRetirements, 1); assert.equal(f.published, 4);
+  } finally {await f.close();}
+});
+
+test("exit-ready waits for the actual cancelled ACK promise without requiring renewed permission", async () => {
+  const f = await fixture(false, true, true), gate = deferred(), entered = deferred();
+  try {
+    f.sendHook = async (action, body) => {
+      if (action === "output-ack" && body.sequence === 1) {entered.resolve(); await gate.promise;}
+      if (action === "read") return {binding, record: {requestId: id, taskType: "train-model", status: "cancelled", metadata: {workspaceId: workspace}}};
+    };
+    await f.start(); await entered.promise; await f.session.cancel();
+    assert.equal(await f.session.settle(), false); const calls = [...f.calls];
+    assert.equal(calls.includes("exit-ready"), false); assert.equal(f.workerRetirements, 0); assert.equal(f.releases, 0);
+    f.deny(); gate.resolve(); await tick(); await tick();
+    assert.equal(await f.session.settle(), true); assert.equal(f.workerRetirements, 1); assert.equal(f.releases, 1);
+    assert.equal(f.published, 0); assert.equal(f.calls.filter(action => action === "read").length, 1);
+  } finally {gate.resolve(); await tick(); await f.close();}
+});
+
+test("known pending exit readiness permits only another nonconsuming readiness observation", async () => {
+  const f = await fixture(false, true, true); let observations = 0;
+  try {
+    f.sendHook = action => action === "exit-ready" && ++observations === 1
+      ? {binding, schema: "original-training-exit-ready-v1", ready: false, retirement: "pending"} : undefined;
+    await f.start(); await until(() => f.completed); await tick();
+    assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0); const calls = [...f.calls];
+    await f.session.read(); await f.session.cancel(); assert.deepEqual(f.calls, calls);
+    assert.equal(await f.session.settle(), true); assert.deepEqual(f.calls.slice(calls.length), ["exit-ready"]);
+    assert.equal(f.workerRetirements, 1); assert.equal(f.releases, 1);
+  } finally {await f.close();}
+});
+
+test("exit-ready retains a late actual publication and its bytes until the original promise returns", async () => {
+  const f = await fixture(false, true, true), gate = deferred(), entered = deferred();
+  try {
+    const publish = f.storage.publishResultFile;
+    f.storage.publishResultFile = async (file, context) => {
+      const result = await publish(file, context); entered.resolve(); await gate.promise; return result;
+    };
+    f.sendHook = action => action === "read" ? {binding, record: {requestId: id, taskType: "train-model", status: "failed", metadata: {workspaceId: workspace}}} : undefined;
+    await f.start(); await entered.promise;
+    assert.equal(await f.session.settle(), false); assert.equal(f.published, 1); assert.equal(f.workerRetirements, 0);
+    assert.equal(f.calls.includes("exit-ready"), false); assert.equal(f.releases, 0);
+    gate.resolve(); await tick(); await tick(); assert.equal(await f.session.settle(), true);
+    assert.equal(f.releases, 1); assert.deepEqual(f.publications, [0]);
+    assert.deepEqual(await readFile(path.join(f.root,
+      `workspaces/${workspace}/artifacts/training-results/${publicationId}/0`)), f.input.bytes[0]);
+  } finally {gate.resolve(); await tick(); await f.close();}
+});
+
+for (const mode of ["lost", "legacy", "mixed", "extra", "binding"] as const)
+  test(`unknown ${mode} exit readiness never retries, retires worker or releases execution`, async () => {
+    const f = await fixture(false, true, true);
+    try {
+      f.sendHook = action => {
+        if (action !== "exit-ready") return undefined;
+        if (mode === "lost") throw Error("synthetic lost readiness");
+        if (mode === "legacy") return {binding, settled: true, retirement: "settled"};
+        return {binding: mode === "binding" ? {...binding, workspaceId: "other"} : binding,
+          schema: "original-training-exit-ready-v1", ready: mode !== "mixed", retirement: "ready", ...(mode === "extra" ? {settled: true} : {})};
+      };
+      await f.start(); await until(() => f.completed); await tick();
+      assert.equal(await f.session.settle(), false); f.sendHook = undefined;
+      const calls = [...f.calls]; assert.equal(await f.session.settle(), false);
+      assert.equal((await f.session.read()).status, "succeeded"); await f.session.cancel();
+      assert.deepEqual(f.calls, calls); assert.equal(f.calls.filter(action => action === "exit-ready").length, 1);
+      assert.equal(f.workerRetirements, 0); assert.equal(f.releases, 0);
+    } finally {await f.close();}
+  });
+
+test("exit-ready keeps the same retirement owner and cached result while actual worker exit is pending", async () => {
+  const f = await fixture(false, true, true), entered = deferred(), gate = deferred<boolean>();
+  try {
+    f.retireHook = () => {entered.resolve(); return gate.promise;};
+    await f.start(); await until(() => f.completed); await tick();
+    const retirement = f.session.settle(); await entered.promise;
+    f.channel.retireOriginalWorker = async () => {throw Error("replacement must not run");};
+    const calls = [...f.calls]; assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
+    assert.equal((await f.session.read()).status, "succeeded"); await f.session.cancel(); assert.deepEqual(f.calls, calls);
+    gate.resolve(true); assert.equal(await retirement, true); assert.equal(f.workerRetirements, 1); assert.equal(f.releases, 1);
+  } finally {gate.resolve(false); await tick(); await f.close();}
+});
+
+for (const mode of ["throw", "resolved-promise", "rejected-promise", "value"] as const)
+  test(`uncertain exit-ready release is attempted once after original retirement (${mode})`, async () => {
+    const f = await fixture(false, true, true);
+    try {
+      f.releaseHook = () => {
+        if (mode === "throw") throw Error("synthetic unknown release");
+        if (mode === "resolved-promise") return Promise.resolve();
+        if (mode === "rejected-promise") return Promise.reject(Error("synthetic unknown asynchronous release"));
+        return false;
+      };
+      await f.start(); await until(() => f.completed); await tick();
+      assert.equal(await f.session.settle(), false); const calls = [...f.calls];
+      f.releaseHook = undefined;
+      assert.equal(await f.session.settle(), false); await tick();
+      assert.equal(f.releases, 1); assert.equal(f.workerRetirements, 1); assert.deepEqual(f.calls, calls);
+      assert.equal(f.calls.filter(action => action === "exit-ready").length, 1); assert.equal(f.published, 4);
+      assert.deepEqual(await readFile(path.join(f.root,
+        `workspaces/${workspace}/artifacts/training-results/${publicationId}/0`)), f.input.bytes[0]);
+    } finally {await f.close();}
+  });
 test("maximum 8 KiB wire segments survive the original session and verified byte publication", async () => {
   const f = await fixture(true); try {
     await f.start(); await until(() => f.completed); await tick();
