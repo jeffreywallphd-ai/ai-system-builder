@@ -3400,3 +3400,15 @@ separately required full text regression. Every declared prerequisite must be a
 regular file. Missing support, incomplete or unknown mixed scope, and explicit
 generic coverage retain full discovery. No model scoring or physical Native
 test runs. These receipts do not establish global retirement or parent closure.
+
+
+`headless-training-output-delivery-unit` runs the entire one-pass backend delivery
+file through the existing focused runner (270-second child, 300-second outer
+limit). It tests actual finite Native readers with inert SDK data, all three
+training methods, serial acknowledgements and denial paths. Its closed controller
+scope also runs whole related original-file, workflow, retirement, runtime,
+Native-model, parser and routing modules. Complete regular support files are
+required. Unknown, mixed, missing or explicit generic scopes retain broad
+fallback. The full existing text-worker check remains separately selected for
+worker/fixture changes. No limit, full-suite command, real model test or parent
+qualification is enabled by this profile.

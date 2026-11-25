@@ -1404,3 +1404,15 @@ exact transfer/result lineage remain necessary. Do not reinterpret legacy
 `settled=True`, claim physical/crash qualification or enable a default Root from
 these cooperative file tests. Later protocol/producer integration must document
 its distinct original-worker and final parent proof; separate Save stays required.
+
+The optional private `OriginalTrainingOutputDelivery` streams original Native
+events during the existing structural checks. `OriginalTrainingFiles` binds the
+receiver before SDK callbacks. A global indexed manifest, 8 KiB byte segments,
+one outstanding frame, exact acknowledgement and a fixed deadline bound local
+delivery. The parser receives each original event once, including final iterator
+exhaustion after the last file EOF. Receivers get provisional bytes;
+`streams-complete` is not training success, parent custody, Save or retirement.
+Default hosts remain unconfigured. Actual parent transport, protected destination
+custody, measured capacity for both copies, original worker/Job exit, resource
+settlement, separate Save approval and real host journeys remain pending. Finite
+Native/inert SDK tests cover software behavior, never model accuracy.

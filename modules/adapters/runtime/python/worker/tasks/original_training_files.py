@@ -16,6 +16,7 @@ from weakref import ReferenceType, WeakKeyDictionary, ref
 
 from ..models import TrainModelTaskRequest
 from ..native import windows_original_worker_launch as native
+from . import original_training_output_delivery as output_delivery
 training = import_module(".train_model",__package__)
 
 
@@ -38,6 +39,8 @@ _FAMILY_IO = native._original_output_family_io
 _LOADER = training.train_model_from_local_files
 _VALIDATE = TrainModelTaskRequest.__pydantic_validator__.validate_python
 _SERIALIZE = TrainModelTaskRequest.__pydantic_serializer__.to_python
+_DELIVERY_RECORD = output_delivery._record
+_DELIVERY_BIND = output_delivery.bind_original_output_delivery
 _owners = WeakKeyDictionary()
 _leases = WeakKeyDictionary()
 _bindings = WeakKeyDictionary()
@@ -82,11 +85,13 @@ def _helpers():
         native.OriginalTrainingOutputFamily.__init__,native.retire_original_training_output_family,
         native._output_family_io_snapshot,native._original_output_family_io,training.train_model_from_local_files,
         TrainModelTaskRequest.__pydantic_validator__.validate_python,
-        TrainModelTaskRequest.__pydantic_serializer__.to_python)
+        TrainModelTaskRequest.__pydantic_serializer__.to_python,
+        output_delivery._record,output_delivery.bind_original_output_delivery)
 
 
 _ORIGINAL_HELPERS = (_COPY,_LEASE,_CONFIG,_OUTPUTS,_INPUT_MANIFEST,_EXACT,_INPUT_TYPE,_INPUT_INIT,_INPUT_PREPARE,_INPUT_SEALED,
-    _BORROW,_FAMILY_TYPE,_FAMILY_INIT,_RETIRE,_CLOSED,_FAMILY_IO,_LOADER,_VALIDATE,_SERIALIZE)
+    _BORROW,_FAMILY_TYPE,_FAMILY_INIT,_RETIRE,_CLOSED,_FAMILY_IO,_LOADER,_VALIDATE,_SERIALIZE,
+    _DELIVERY_RECORD,_DELIVERY_BIND)
 
 
 def _api():
@@ -102,7 +107,8 @@ def _record(owner):
 
 def _snapshot(owner,record):
     _need(_record(owner) is record and _leases.get(record["lease"]) is owner)
-    frame=_bindings.get(owner);_need(type(frame) is tuple and len(frame)==11)
+    frame=_bindings.get(owner);_need(type(frame) is tuple and len(frame)==12)
+    _need(record["delivery"] is frame[11])
     _need(all(record[name] is original for name,original in zip(
         ("lease","state","source_record","source","resource","admission"),frame[:6])))
     _need(type(record["methods"]) is dict and len(record["methods"])==len(frame[9])
@@ -196,8 +202,9 @@ class OriginalTrainingFiles:
     """Actual local custody, with no full resource-readiness/settlement claim."""
     __slots__=("__weakref__",)
 
-    def __init__(self,lease,input_configuration,output_configuration,reservation,admission):
+    def __init__(self,lease,input_configuration,output_configuration,reservation,admission,*,delivery=None):
         _need(type(self) is OriginalTrainingFiles)
+        if delivery is not None:_need(_DELIVERY_RECORD(delivery)["phase"]=="unbound")
         try:
             input_configuration=_CONFIG(input_configuration)
             maximum,outputs=_OUTPUTS(output_configuration)
@@ -219,12 +226,12 @@ class OriginalTrainingFiles:
                 "input_configuration":input_configuration,"output_configuration":{"maximumCopyBytes":maximum,"outputs":list(outputs)},
                 "maximum":maximum,"outputs":outputs,"methods":methods,"phase":"bound","cancelled":False,
                 "closed":False,"output_closed":False,"poisoned":False,"input":None,"family":None,"payload":None,
-                "thread":get_ident(),"lock":RLock()}
+                "thread":get_ident(),"lock":RLock(),"delivery":delivery}
             _owners[self]=record;_leases[lease]=self
             record["resource"]=_Resource(self);record["admission"]=_Admission(self)
             _bindings[self]=(lease,state,source_record,source,record["resource"],record["admission"],
                 _stamp(definition),_stamp(input_configuration),_stamp(record["output_configuration"]),
-                tuple(methods.items()),record["thread"])
+                tuple(methods.items()),record["thread"],delivery)
             _snapshot(self,record)
         finally:lock.release()
 
@@ -274,6 +281,8 @@ class OriginalTrainingFiles:
                 family=object.__new__(_FAMILY_TYPE);record["family"]=family
                 _FAMILY_INIT(family,view,_COPY(record["payload"]),record["output_configuration"],
                     record["resource"],record["admission"])
+                if record["delivery"] is not None:
+                    _DELIVERY_BIND(record["delivery"],family,view,_COPY(record["payload"]))
                 _snapshot(self,record);_admitted(self,record)
                 record["phase"]="running"
                 try:yield view

@@ -201,3 +201,15 @@ regression remains a separate required command. All sixteen runtime prerequisite
 must be regular files. Incomplete support, mixed or unknown scope, and explicit
 generic requests retain full controller discovery. These checks prove local file
 composition only, not physical Native execution or global resource settlement.
+
+
+`headless-training-output-delivery-unit` runs the entire one-pass backend delivery
+file through the existing focused runner (270-second child, 300-second outer
+limit). It tests actual finite Native readers with inert SDK data, all three
+training methods, serial acknowledgements and denial paths. Its closed controller
+scope also runs whole related original-file, workflow, retirement, runtime,
+Native-model, parser and routing modules. Complete regular support files are
+required. Unknown, mixed, missing or explicit generic scopes retain broad
+fallback. The full existing text-worker check remains separately selected for
+worker/fixture changes. No limit, full-suite command, real model test or parent
+qualification is enabled by this profile.

@@ -27,6 +27,9 @@ from ..native.windows_original_worker_launch import (LaunchUnavailable, Original
     read_original_training_input_bytes, read_original_training_output_chunks)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
 from .model_validation import validate_model_output, validate_protected_training_output_chunks
+from .original_training_output_delivery import (capture_original_output_delivery,original_output_delivery_matches,
+    begin_original_output_delivery, tee_original_output_delivery, finish_original_output_delivery,
+    abort_original_output_delivery)
 
 SUPPORTED_METHODS = {"lora", "qlora", "full-finetune"}
 SUPPORTED_DATASET_FORMATS = {"jsonl", "json", "csv", "parquet"}
@@ -53,6 +56,8 @@ _NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
 _NATIVE_TASK_ID_RESOLVER = resolve_original_training_task_id
 _NATIVE_TRAINING_INPUT_READER = read_original_training_input_bytes
 _NATIVE_TRAINING_OUTPUT_READER = read_original_training_output_chunks
+_ORIGINAL_OUTPUT_DELIVERIES = WeakKeyDictionary()
+_ORIGINAL_OUTPUT_ABORT = abort_original_output_delivery
 _NATIVE_TENSOR_STREAM = OriginalTrainingDenseTensorStream
 _NATIVE_OUTPUT_INIT = OriginalTrainingOutputGraph.__init__
 _NATIVE_OUTPUT_GUARD = OriginalTrainingOutputGraph.guard
@@ -478,6 +483,7 @@ class _ProtectedTrainingUse:
         task_resolver, reference_resolver = self._resolve_task_id, self._resolve
         task_id = task_resolver(view,request)
         self._run_identity = (task_id,datetime.now(timezone.utc).isoformat())
+        _ORIGINAL_OUTPUT_DELIVERIES[self] = capture_original_output_delivery(view,request)
         model,inputs = reference_resolver(view,request)
         if (self._resolve_task_id is not task_resolver or self._resolve is not reference_resolver
                 or self._serialize is not _NATIVE_REQUEST_SERIALIZER or self.view is not view
@@ -495,10 +501,12 @@ class _ProtectedTrainingUse:
             raise ValueError("The private training completion helpers changed.")
         if (getattr(self,"_result_validation_driver",None) is not _validate_protected_training_results
                 or getattr(self,"_result_validation_helpers",None) is not _PROTECTED_RESULT_VALIDATION_HELPERS
-                or type(self._result_validation_helpers) is not tuple or len(self._result_validation_helpers) != 5
+                or type(self._result_validation_helpers) is not tuple or len(self._result_validation_helpers) != 11
                 or any(original is not current for original,current in zip(self._result_validation_helpers,
                     (_NATIVE_TRAINING_OUTPUT_READER,validate_protected_training_output_chunks,_protected_output_seal_facts,
-                     _resolve_training_task,_training_result_summary)))):
+                     _resolve_training_task,_training_result_summary,capture_original_output_delivery,original_output_delivery_matches,
+                     begin_original_output_delivery,tee_original_output_delivery,finish_original_output_delivery,
+                     abort_original_output_delivery)))):
             raise ValueError("The private result validation helpers changed.")
         if getattr(self,"_workflow_slot",None) is not None or _TRAINING_WORKFLOWS.get(self) is not None:
             _ProtectedTrainingUse.assert_workflow_helpers(self)
@@ -523,6 +531,9 @@ class _ProtectedTrainingUse:
             # Keep the established original-view refusal type without invoking
             # a Native observer in the passive post-resource comparison.
             raise LaunchUnavailable()
+        if (self not in _ORIGINAL_OUTPUT_DELIVERIES or
+                self._result_validation_helpers[6](_ORIGINAL_OUTPUT_DELIVERIES[self],self.view) is not True):
+            raise ValueError("The private output delivery owner changed.")
         return request
 
     def assert_workflow_helpers(self):
@@ -3044,6 +3055,7 @@ def _validate_protected_training_results(use):
         raise ValueError("The private training result validation attempt is unavailable.")
     slot = {"stage":"validating","facts":None}
     use._result_validation_slot = slot  # Reserve before any Native observer.
+    original_abort,original_delivery = _ORIGINAL_OUTPUT_ABORT,_ORIGINAL_OUTPUT_DELIVERIES.get(use)
     try:
         _ProtectedTrainingUse.assert_snapshot(use)
         _checkpoint_snapshot(use)  # Passive original owner/method binding first.
@@ -3055,7 +3067,8 @@ def _validate_protected_training_results(use):
                 or type(checkpoint) is not dict):
             raise ValueError("The private completed training run is unavailable.")
         identity,view,helpers = use._run_identity,use.view,use._result_validation_helpers
-        reader,validate,seal_facts,resolve_task,summary = helpers
+        reader,validate,seal_facts,resolve_task,summary,_,_,begin_delivery,tee_delivery,finish_delivery,_ = helpers
+        delivery = _ORIGINAL_OUTPUT_DELIVERIES[use]
         request = _ProtectedTrainingUse.assert_snapshot(use)
         training_task = resolve_task(use.payload)
         family = checkpoint["family"];record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
@@ -3106,11 +3119,13 @@ def _validate_protected_training_results(use):
                 snapshot()  # Business is last; no observer follows this proof.
         summaries = []
         current()
+        begin_delivery(delivery,graphs,inventories,steps,current)
         for index,(graph,files,configuration) in enumerate(zip(graphs,inventories,configurations)):
             settings = dict(configuration)
             current()
             stream = reader(graph,view,request)
             current()
+            stream = tee_delivery(delivery,stream,index)
             result = validate(stream,files,method=request["method"],
                 maximum_copy_bytes=settings["maximumCopyBytes"],
                 maximum_metadata_bytes=min(settings["maximumCopyBytes"],64*1024**2),
@@ -3124,17 +3139,22 @@ def _validate_protected_training_results(use):
             current()
         facts = tuple(summaries)
         current()
+        finish_delivery(delivery)
+        current()
         slot.update(facts=facts,stage="complete")
         return facts
     except BaseException as error:
         slot["stage"] = "failed"
+        original_abort(original_delivery)
         _fail_checkpoint_arguments(use)
         if isinstance(error,(TrainingCancellationRequested,LaunchUnavailable,KeyboardInterrupt,SystemExit)):raise
         raise ValueError("The private training results could not be checked.") from None
 
 
 _PROTECTED_RESULT_VALIDATION_HELPERS = (_NATIVE_TRAINING_OUTPUT_READER,
-    validate_protected_training_output_chunks,_protected_output_seal_facts,_resolve_training_task,_training_result_summary)
+    validate_protected_training_output_chunks,_protected_output_seal_facts,_resolve_training_task,_training_result_summary,
+    capture_original_output_delivery,original_output_delivery_matches,begin_original_output_delivery,tee_original_output_delivery,
+    finish_original_output_delivery,abort_original_output_delivery)
 
 
 def _passive_workflow_result(result,copy,api):

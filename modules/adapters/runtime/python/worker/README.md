@@ -2548,3 +2548,15 @@ Existing parent input/output reservation remains mandatory; the source-v1 Model
 ACK covers no additional copies. Synthetic fixtures exercise all three methods.
 Complete producer/quota, SDK/all-readers and original worker/Job settlement,
 separate Save and actual-host qualification remain pending.
+
+The optional private `OriginalTrainingOutputDelivery` streams original Native
+events during the existing structural checks. `OriginalTrainingFiles` binds the
+receiver before SDK callbacks. A global indexed manifest, 8 KiB byte segments,
+one outstanding frame, exact acknowledgement and a fixed deadline bound local
+delivery. The parser receives each original event once, including final iterator
+exhaustion after the last file EOF. Receivers get provisional bytes;
+`streams-complete` is not training success, parent custody, Save or retirement.
+Default hosts remain unconfigured. Actual parent transport, protected destination
+custody, measured capacity for both copies, original worker/Job exit, resource
+settlement, separate Save approval and real host journeys remain pending. Finite
+Native/inert SDK tests cover software behavior, never model accuracy.

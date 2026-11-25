@@ -21,7 +21,7 @@ class Current(fixture.Control):
 
 
 class OriginalTrainingFilesTests(unittest.TestCase):
-    def fixture(self,*,control=None,method="lora",bind=True):
+    def fixture(self,*,control=None,method="lora",bind=True,delivery=None):
         case=fixture.TrainingInputCopyTests();self.addCleanup(case.doCleanups)
         source,lease,staged,configuration,ordinary,kernel,content,recipe=case.fixture(count=2,native_module=native,method=method)
         kernel.node("X:\\outputs",True)
@@ -29,7 +29,7 @@ class OriginalTrainingFilesTests(unittest.TestCase):
             {"freshParent":"X:\\outputs","freshName":name,"maximumCopyBytes":128*1024,
              "bufferBytes":4096,"preparationMs":30000} for name in ("checkpoint-1","candidate")]}
         control=ordinary if control is None else control
-        owner=files.OriginalTrainingFiles(lease,configuration,output,control,control) if bind else None
+        owner=files.OriginalTrainingFiles(lease,configuration,output,control,control,delivery=delivery) if bind else None
         if owner is not None:
             self.addCleanup(lambda:files._owners.pop(owner,None))
             self.addCleanup(lambda:files._bindings.pop(owner,None))
@@ -45,6 +45,29 @@ class OriginalTrainingFilesTests(unittest.TestCase):
                 with patch.object(cls,"owner",property(getter)):
                     with self.assertRaises(ValueError):control.assert_current()
                 self.assertEqual(calls,[])
+
+    def test_optional_delivery_binds_exact_family_before_loader_and_retains_local_guards(self):
+        from time import monotonic
+        from modules.adapters.runtime.python.worker.tasks import original_training_output_delivery as delivery
+        _,source,lease,staged,configuration,output,control,_,_,_=self.fixture(bind=False)
+        queue=delivery.OriginalTrainingOutputDelivery(native._verified_model_receivers[source]["task_id"],
+            maximum_files=64,maximum_payload_bytes=256*1024,deadline=monotonic()+30)
+        owner=files.OriginalTrainingFiles(lease,configuration,output,control,control,delivery=queue)
+        self.addCleanup(lambda:files._owners.pop(owner,None));self.addCleanup(lambda:files._bindings.pop(owner,None))
+        payload=owner.prepare(staged)
+        with owner.borrow() as view:
+            self.assertIs(delivery.capture_original_output_delivery(view,payload.model_dump(mode="json")),queue)
+            self.assertTrue(delivery.original_output_delivery_matches(queue,view))
+            self.assertEqual(queue.read()["phase"],"bound")
+        self.assertEqual(owner.local_status()["guardCustody"],"retained")
+        self.assertEqual(owner.local_status()["globalRetirement"],"not-qualified")
+        self.assertEqual(queue.read()["phase"],"bound")  # No transfer or settlement was claimed.
+
+    def test_replacing_optional_delivery_is_denied_before_any_input_io(self):
+        owner,_,_,staged,_,_,_,kernel,_,_=self.fixture();before=len(kernel.calls)
+        files._owners[owner]["delivery"]=object()
+        with self.assertRaises(ValueError):owner.prepare(staged)
+        self.assertEqual(len(kernel.calls),before)
 
     def test_concurrent_constructor_cannot_replace_original_lease_owner(self):
         _,_,lease,_,configuration,output,control,kernel,_,_=self.fixture(bind=False)

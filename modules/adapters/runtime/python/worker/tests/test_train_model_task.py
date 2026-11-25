@@ -268,11 +268,15 @@ def _install_checkpoint_trainer(monkeypatch,steps,*,during=None,catch=False):
 
 
 @contextmanager
-def _protected_pipeline_fixture(monkeypatch,*,method="full-finetune",family=True,during=None):
+def _protected_pipeline_fixture(monkeypatch,*,method="full-finetune",family=True,during=None,delivery_factory=None):
     # Load the real in-memory Dataset SDK before the inert Torch fixture.
     import datasets
     with _checkpoint_schedule_fixture(monkeypatch,method=method,family=family) as facts:
         actual,original,model,tokenizer,group,control,kernel,Tensor=facts
+        if delivery_factory is not None:
+            # Test-only receiver construction before the fresh original Use and
+            # before any installed SDK callback; no production producer grant.
+            delivery_factory(actual,group,original.view,original.payload.model_dump(mode="json"))
         use=train_model_module._ProtectedTrainingUse(original.payload,original.view)
         sdk=sys.modules["torch"]
         calls,objects,disk=_install_checkpoint_trainer(monkeypatch,(1,),during=during)
