@@ -1,5 +1,11 @@
 # Prompt Routing
 
+Requests about fixed roadmap stories, expandable tasks or their execution
+evidence use the existing implementation-roadmap skill and docs-standards pack.
+Keep execution Work separate from planned tasks, preserve compatible chunk IDs,
+and follow exact ownership/Work-proof events. A display label never changes
+approved scope or technical qualification.
+
 Use this guide to select **minimum-sufficient** context packs. Start with `index.pack.md`, then add only packs that materially affect the requested work.
 
 ## Baseline

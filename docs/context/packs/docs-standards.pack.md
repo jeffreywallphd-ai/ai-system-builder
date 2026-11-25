@@ -21,6 +21,13 @@
 
 ## Core Guidance
 
+- For roadmap progress, use fixed approved stories (`workPackages`) and expandable
+  tasks (compatible chunk IDs). Adopt exact ownership through the skill's
+  `story-tasks-assigned` event after research/formal planning and candidate
+  checkpoint. Keep completed history, approval and technical qualification;
+  refinement updates ownership atomically and records no pass. Unassigned legacy
+  history stays explicit. See the skill's event and installation references.
+
 - Token phase attribution is prospective optional telemetry. Use `usage phase`
   at review-start/correction-resume boundaries with explicit Work/thread
   association. Legacy and uncertain intervals are not pre-review implementation.

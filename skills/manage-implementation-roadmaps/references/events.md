@@ -316,6 +316,16 @@ target chunk count; choose the smallest coherent set.
 
 ### `work-chunks-reconfigured`
 
+User explanations call chunks **tasks**. For an adopted story/task plan, include
+`storyAssignments` (one `{taskId, storyId}` for every replacement task) and
+`expectedTrackingDigest` (the whole current tracking revision digest). These
+fields update the audited ownership map atomically with the existing plan
+refinement. Existing tasks cannot move to another story; completed definitions
+and their order remain exact. Missing, foreign, duplicate, stale or incomplete
+ownership refuses without publication. Legacy unadopted plans keep their existing
+event shape and history. New increment definitions require one to forty unique
+stories in `workPackages`; existing stored legacy definitions are not rewritten.
+
 Use this event only to improve tracking within already approved scope. Supply
 `incrementId`, `expectedPlanDigest`, a full `plan` in the shape documented above,
 `authorityRef`, and a clear `reason`. For a missing pending plan, the expected
@@ -378,7 +388,81 @@ roadmap revisions; a current unrelated approval cannot rewrite old authority. Mi
 records refuse. Do not rewrite the restriction archive or use a new root to repair
 an invalid chain. Semantic scope review remains required; hashes do not prove it.
 
+### `story-tasks-assigned`
+
+Adopt explicit story ownership only for the current researched, formally planned
+implementing or verifying increment with current approval. Fixed approved
+`workPackages` supply story IDs. `expectedPlanDigest` hashes the whole stored
+plan, including metadata; `expectedTrackingDigest` is explicitly JSON null for
+first adoption. Ownership is adopted once; subsequent task refinements use the
+current tracking revision's digest in `work-chunks-reconfigured`. Read both from
+`status` (`chunkPlans` and `storyPlans`). Supply actual authority and a reason.
+
+```json
+{
+  "type": "story-tasks-assigned",
+  "incrementId": "contract-slice",
+  "expectedPlanDigest": "replace-with-current-whole-plan-sha256",
+  "expectedTrackingDigest": null,
+  "assignments": [{"taskId": "contract-use-case", "storyId": "contract"}],
+  "authorityRef": "approved-story-task-tracking",
+  "reason": "Expose task ownership within the unchanged approved story."
+}
+```
+
+First adoption preserves exact plans, completed task IDs/order, evidence,
+qualification and roadmap approval. `storyTaskTracking` archives each assignment
+revision, canonical task/story/plan hashes, prior revision digest, approval,
+original event digest, authority, reason and timestamp. History binds each exact
+revision. Read validation rejects detached, changed or incomplete chains. There
+are at most 100 tasks per increment and 1,000 assignment revisions; existing
+physical publication bounds still apply. No history is trimmed on overflow.
+Removed task IDs remain retired and cannot be reintroduced under any story.
+Existing offline-acceptance scope events retain archived criterion IDs in exact
+historical task definitions; adoption does not restore retired human acceptance
+or turn its transfer into a pass. Current technical criteria remain mandatory.
+Complete source candidate checks/review, release those claims and checkpoint
+coherent source before adoption/refinement. A no-op, pending outline, blocked, stale, foreign or finalized
+target cannot adopt ownership. This event supplies no test or completion pass.
+
+The established governed metadata workflow may retain its own claim. Supply
+optional `metadataWork: {workId, invocationId, claimId}` with the exact current
+v1 Work/owner/claim. This allows only an active writer before any verification
+receipt or review, with exact target state and generated-roadmap file scopes and
+optional fixed operations presentation/support JSON files. Directory scopes,
+source files, another target, drift, expired/foreign claims and any other claim
+refuse. A roadmap-bound metadata Work must name this exact increment. The guard
+holds the Records mutation lock through publication, under the roadmap lock;
+read-only Work state lookup does not take the roadmap lock. This grants no new
+approval, source scope or authenticated identity. Dry-run remains pure. The
+existing no-claim checkpoint/handoff path still works.
+Pending Records transaction journals and explicit bootstrap recovery ownership
+refuse before claim inspection. Use ordinary Records recovery first; this guard
+does not recover or mutate the contributor store. Work claim admission rechecks
+task authority under Records without acquiring the roadmap publication lock.
+
+The ignored recovery journal retains the optional bounded metadata reference.
+Interrupted ownership publication rechecks the same guard; an unrelated source
+claim cannot bypass it through `render`. After explicit ordinary claim recovery,
+use `render --metadata-work .local-codex/current-metadata-owner.json` to supply the
+fresh exact reference. This input has only those three fields and is at most
+16 KiB. Keep it ignored. Journal/state limits and history remain unchanged.
+
 ### `chunk-recorded`
+
+User explanations call this a task. For an adopted `control-plane-v1` increment,
+include `workProof` with `workId`, `receiptDigest` and `reviewDigest`. Use actual
+completed `development-work-v2` Work bound to this task and current definitions;
+its target selects actual scoped Work acceptance IDs through `work_criteria`,
+`coverage: task-outcome`, `scope` and `limitations`. `partial-support` Work may
+finish as a contribution but cannot complete the task. Parent criterion links
+remain support while parent qualification stays separate. The canonical CLI checks source,
+qualifying receipt, completion and separate accepted review before recording the
+task. A stored completion digest binds exact proof/history. Missing, wrong-target,
+old v1, stale, failed, self-reviewed or unavailable evidence refuses. One Work may
+cover several explicit tasks, but never supplies a parent qualification pass or
+duplicate metric allocation. Unadopted legacy/portable records keep their existing
+descriptive contract; no old receipt or completion is upgraded automatically.
 
 ```json
 {

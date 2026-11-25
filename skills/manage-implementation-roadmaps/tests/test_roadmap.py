@@ -2604,6 +2604,14 @@ class HeadlessWorkflowRestrictionTest(unittest.TestCase):
 
 
 class WorkChunkCollectionTest(unittest.TestCase):
+    def test_registered_direct_runner_collects_story_ownership_cases(self):
+        selected = "StoryTaskTrackingTests.test_adoption_preserves_approved_scope_original_plan_and_every_evidence_fact"
+        result = subprocess.run([sys.executable, "-B", str(Path(__file__)), "-k", selected, "-v"],
+                                capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+        self.assertIn(b"Ran 1 test", result.stderr)
+        self.assertNotIn(b"skipped", result.stderr)
+
     def test_registered_runner_executes_actual_storage_protocol_cases(self):
         selected = "StorageCodecTests.test_typed_values_and_protocol_vectors_roundtrip"
         result = subprocess.run([sys.executable, "-B", str(Path(__file__)), "-k", selected, "-v"],
@@ -2644,4 +2652,5 @@ if __name__ == "__main__":
     from test_work_chunk_refinement import WorkChunkRefinementTests
     from test_state_publication_bounds import PublicationSizeTests, EncodedPublicationTests
     from test_roadmap_storage import StorageCodecTests
+    from test_story_task_tracking import StoryTaskTrackingTests
     unittest.main()

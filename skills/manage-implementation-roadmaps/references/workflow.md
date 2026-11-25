@@ -82,6 +82,39 @@ do not certify full ASD-STE100 conformance.
 
 ## Artifact model
 
+The planning hierarchy is roadmap, increment, fixed story and expandable task.
+Stories reuse approved `workPackages`; tasks retain the canonical chunk IDs and
+completion ledger for compatibility. `storyTaskTracking` stores only audited
+ownership relationships and exact definition/plan hashes. It is not another
+backlog or a copied set of acceptance criteria. Every adopted task belongs to one
+story, while shared technical criteria remain authoritative at increment scope.
+Task completion and story task counts never supply parent qualification.
+
+When the repository provides the adapter, exact scoped task implementation may
+use `development-work-v2` with separate `task_targets`. The legacy increment
+binding remains unchanged. Bind current task definitions and ownership revision,
+select actual scoped Work criteria, explicit outcome/support coverage and
+scope/limitations, and complete actual checks/separate review. Parent criterion
+links remain support; controlled parent evidence can stay pending. Partial
+support cannot complete a task, and targeted Work cannot qualify an increment. Adopted
+governed task records consume `workProof` with exact completed Work/receipt/review
+references. Reusing one Work for several declared targets supplies no timing or
+token allocation and no whole-increment pass. Portable/legacy declarative history
+keeps its existing evidence policy; installing a skill does not create receipts.
+
+Use `story-tasks-assigned` after formal active planning and independently review
+the mapping. The CLI refuses unrelated/source candidate claims. Its own exact
+metadata writer may publish before checks/review with explicit `metadataWork`
+ownership. Exact target state/roadmap paths, a closed metadata-only file scope,
+current spec/context and unexpired claim are required. No other claim may exist.
+The Records mutation lock stays held through publication. Lock order is roadmap
+publication then Records; Work state reads never acquire the publication lock,
+and this guard calls no recursive Records mutation. Dry-run and deterministic
+previews stay data-only. Later task refinement
+must provide ownership in the same event. Keep completed task owners/definitions
+and all earlier plan/evidence history. Unadopted legacy records remain readable
+without invented owners; finalized roadmaps stay immutable.
+
 Maintain three repository-relative files:
 
 1. A Markdown roadmap for approved intent, increment definitions, acceptance

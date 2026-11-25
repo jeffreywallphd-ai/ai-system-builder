@@ -228,6 +228,54 @@ deeper input. Source checks cannot replace the skipped physical qualification.
 
 # Contributor Control Plane
 
+### Fixed stories, planned tasks and execution Work
+
+Stories are the approved increment `workPackages`. Tasks keep compatible chunk
+IDs and belong to one explicitly adopted story. Execution Work stays a separate
+immutable source/check/review record. Do not rename old Work, acceptance or task
+IDs to make them look interchangeable.
+
+For actual ownership adoption/refinement, finish and release any source candidate.
+The governing metadata Work can instead keep its own active pre-check claim by
+supplying exact `metadataWork` in the event. Its file scope must name this state
+and generated roadmap exactly, with only the fixed optional operations metadata
+files. Wrong target, source/directory scope, foreign/expired claims, prior checks
+or review, and any other claim refuse. The guard holds the existing Records
+mutation lock through publication. See the skill's event reference for bounded
+interrupted recovery with a fresh owned metadata reference.
+Recover an interrupted Records transaction through its normal recovery command
+before ownership publication. A pending journal or explicit Records bootstrap
+owner refuses; the metadata guard never performs recursive Records recovery.
+
+Optional `development-work-v2` specs keep the existing
+`roadmap: {state_path, increment_id}` binding unchanged and add bounded
+`task_targets`. Each target has `task_id`, `story_id`,
+`task_definition_digest`, `tracking_digest`, `work_criteria`, `coverage`, `scope`
+and `limitations`. Use the exact current task definition and complete ownership
+revision hashes. Select actual scoped Work acceptance IDs in `work_criteria`;
+state the covered outcome and its limits. `coverage: task-outcome` can support
+task completion; `partial-support` records a contribution only. Parent criterion
+links remain support relationships, so local task acceptance can pass while
+controlled parent evidence remains pending. Duplicate, foreign, stale or already completed
+implementation targets refuse. Existing v1 specs and their authority digest stay
+unchanged; never add targets to a completed old spec.
+
+After task-bound Work passes its actual checks and separate review, complete it
+and clear its source claim. An adopted governed `chunk-recorded` event requires
+`workProof: {workId, receiptDigest, reviewDigest}`. The CLI checks current exact
+task targets, completed Work, the qualifying receipt and independent accepted
+review before publication. One Work can support several exact tasks. That does
+not allocate its whole timing or token count to each task and supplies no whole
+increment qualification. Task-targeted Work is excluded from whole-increment
+closure even when its acceptance IDs match the parent's. Current increment/overall
+checks remain separate.
+
+The exact `story-task-bindings` check runs actual Work/task/proof, governed
+roadmap and deterministic support fixtures. Only its complete known source scope
+can replace generic controller discovery. Unknown paths, missing support and an
+explicit generic request retain the conservative check. This is contributor
+framework evidence; it starts no model or product host and grants no parent pass.
+
 Optional [contributor token tracking](token-usage-tracking.md) imports authorized
 numeric host exports and shows bounded daily, weekly and quarterly trends. It
 has a dedicated **Token usage** dashboard plus the compact Work disclosure. Reported

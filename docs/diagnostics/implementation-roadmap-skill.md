@@ -4,6 +4,14 @@
 
 # Implementation roadmap skill
 
+Use fixed stories and expandable tasks within increments. Stories reuse approved
+`workPackages`; compatibility chunk IDs and completion history remain unchanged.
+After active research and formal planning, `story-tasks-assigned` adopts an
+explicit owner for every task. Read the skill's event reference for exact plan
+and tracking digests. Task refinement updates ownership atomically, keeps
+completed definitions/order and supplies no qualification pass. A scope change
+still needs actual governed approval. Unadopted historical tasks stay unassigned.
+
 The canonical cross-agent workflow is
 `skills/manage-implementation-roadmaps/SKILL.md`. It prepares, approves,
 executes, reviews, and resumes substantial implementation roadmaps as ordered

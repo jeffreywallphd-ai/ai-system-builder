@@ -2,6 +2,15 @@
 
 # Contributor helpers
 
+Planned tasks and execution Work have separate identities. The optional
+`development-work-v2` spec binds exact task/story/definition/ownership hashes
+without changing the existing increment binding or old v1 specs. Adopted governed
+task completion consumes actual completed Work, receipt and independent review
+through `workProof`; local task completion never qualifies its parent. The exact
+`story-task-bindings` feature check runs related controller fixtures and retains
+generic fallback for missing, mixed or explicitly generic impact. See the
+[control-plane guide](../../docs/diagnostics/ai-development-control-plane.md).
+
 Optional [token phases](../../docs/diagnostics/token-usage-tracking.md) use
 `usage phase --from` at existing review handoff/correction boundaries. Work start
 associates the calling known thread; source-bound markers never guess host UUIDs

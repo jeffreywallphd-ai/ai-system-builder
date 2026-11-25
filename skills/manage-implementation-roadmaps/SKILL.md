@@ -250,7 +250,44 @@ from the earlier one. If an increment would contain only a small UI adjustment,
 rename, helper, documentation update, test-only step, or shared primitive, merge it
 unless an explicit risk boundary above justifies separation.
 
-## Size work chunks for visible progress
+## Keep stories fixed and refine tasks
+
+Use the hierarchy roadmap, increment, story and task. Approved increment
+`workPackages` are fixed story intent. A task is a coherent implementation,
+focused verification, documentation and review/checkpoint outcome beneath one
+story. Say **stories** and **tasks** in user explanations. The existing JSON
+`chunks`, `completedChunks` and chunk event names are compatibility contracts;
+do not rename saved IDs, completed definitions, archives or evidence.
+
+After ordered start, research and formal planning, explicitly adopt task owners
+with `story-tasks-assigned` in [events.md](references/events.md). Each task has
+one known primary story. Inspect all obligations before assigning them; labels
+and digests cannot prove semantic coverage. Finish current candidate review and
+release source candidate claims before publishing ownership changes. An explicit
+exact-target metadata Work may remain active before its checks/review; see the
+strict `metadataWork` allowance in the event reference. Adoption records no
+implementation, test pass or approval. Unadopted history remains explicitly
+unassigned rather than guessed.
+
+Keep story boundaries and outcomes stable. Add or split unfinished tasks within
+their story through `work-chunks-reconfigured`, supplying the complete
+`storyAssignments` and current `expectedTrackingDigest` atomically. Existing
+tasks retain their owner; completed tasks retain their exact definitions/order.
+New story outcomes or materially changed scope require governed scope approval.
+Task counts describe implementation tracking, separately from technical
+qualification. An empty or unplanned story is not complete.
+
+With the repository adapter, optional `development-work-v2` specs bind exact
+task/story IDs and task-definition/tracking hashes separately from the unchanged
+increment binding. Each target selects actual scoped Work acceptance IDs with
+`work_criteria`, explicit `coverage` (`task-outcome` or `partial-support`), `scope`
+and `limitations`. Parent criterion links remain support, not a claim of parent
+qualification. Only task-outcome coverage can complete a task. A
+governed adopted task records `workProof` only after that exact Work, current
+receipt and separate review are complete. Never retag old v1 Work or reuse
+completed task IDs. Several tasks may share one Work without duplicating effort
+or tokens; task-targeted Work cannot qualify the whole increment. Increment and
+overall qualification still need their own exact scope.
 
 Use a chunk for one coherent outcome that can be implemented, feature-tested,
 independently reviewed and committed before the entire increment closes. Include

@@ -13,7 +13,7 @@ import re
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -154,14 +154,18 @@ def state_publication_content(state: dict[str, Any]) -> str:
         raise RoadmapError("State publication exceeds the supported bounded JSON storage; no records were discarded.") from None
 
 
-def publication_journal_content(before: str, successor: dict[str, Any], previous_report: str | None) -> str:
+def publication_journal_content(before: str, successor: dict[str, Any], previous_report: str | None,
+                                *, metadata_work: dict[str, str] | None = None) -> str:
     """Admit both managed state and the entire actual recovery envelope."""
     state_publication_content(successor)
-    content = canonical_json({"before": before, "successor": successor, "previousReport": previous_report})
+    envelope = {"before": before, "successor": successor, "previousReport": previous_report}
+    if metadata_work is not None:
+        envelope["metadataWork"] = metadata_work_reference(metadata_work)
+    content = canonical_json(envelope)
     if len(content.encode("utf-8")) <= MAX_JSON_BYTES:
         return content
     try:
-        return storage_codec().encode_record({"before": before, "successor": successor, "previousReport": previous_report}, maximum=MAX_JSON_BYTES)
+        return storage_codec().encode_record(envelope, maximum=MAX_JSON_BYTES)
     except ValueError:
         raise RoadmapError("Publication journal exceeds the supported bounded JSON storage; no journal was published.") from None
 
@@ -428,11 +432,12 @@ def publication_lock(repo: Path, state_path: str):
                 fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
-def recover_publication(repo: Path, journal: Path, state_path: str) -> None:
+def recover_publication(repo: Path, journal: Path, state_path: str, *, metadata_work=None) -> None:
     if not journal.exists():
         return
     value = read_json(journal, "publication journal", stored=True)
-    reject_unknown(value, {"before", "successor", "previousReport"}, "journal")
+    reject_unknown(value, {"before", "successor", "previousReport", "metadataWork"}, "journal")
+    saved_metadata = metadata_work_reference(value["metadataWork"]) if "metadataWork" in value else None
     successor = value["successor"]
     validate_state_shape(repo, successor)
     if successor["paths"]["state"] != state_path:
@@ -445,9 +450,18 @@ def recover_publication(repo: Path, journal: Path, state_path: str) -> None:
     current = read_json(repo / state_path, "state", stored=True) if (repo / state_path).exists() else None
     if fingerprint(current) not in {value["before"], fingerprint(successor)}:
         raise RoadmapError("Publication recovery conflicts with an external state change.")
-    # Only the successor's validated generated outputs are written, never arbitrary journal paths.
-    write_project_files(repo, successor, previous_report_path=value.get("previousReport"))
-    journal.unlink()
+    # Recovery cannot bypass task-ownership admission. An already-published
+    # successor needs only identical generated-document repair, not new authority.
+    changed = current is not None and current.get("storyTaskTracking") != successor.get("storyTaskTracking")
+    with ExitStack() as guards:
+        if changed:
+            if not successor.get("storyTaskTracking"):
+                raise RoadmapError("Ownership recovery cannot remove adopted story/task history.")
+            target = successor["storyTaskTracking"]["revisions"][-1]["incrementId"]
+            guards.enter_context(story_publication_guard(repo, current, metadata_work or saved_metadata, target))
+        # Only validated generated outputs are written, never arbitrary journal paths.
+        write_project_files(repo, successor, previous_report_path=value.get("previousReport"))
+        journal.unlink()
 
 
 def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bool = False,
@@ -465,6 +479,7 @@ def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bo
         expected = {"overall-validation"} if overall else {c["id"] for c in find_increment(state, target_id)["acceptanceCriteria"]}
         candidates = [w for w in controller.records.load()["work_items"].values() if w["status"] == "complete" and
                       (work_id is None or w["spec"]["work_id"] == work_id) and
+                      "task_targets" not in w["spec"] and
                       (w["spec"].get("roadmap") or {}) == {"state_path": state["paths"]["state"], "increment_id": target_id} and
                       {c["id"] for c in w["spec"]["acceptance"]} == expected]
         if not candidates:
@@ -495,6 +510,141 @@ def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bo
         raise
     except Exception as error:
         raise RoadmapError("Control-plane completion evidence is unavailable or stale.") from error
+    finally:
+        sys.path.pop(0)
+
+
+def work_reference_identifier(value: Any, label: str) -> str:
+    item = require_string(value, label, maximum=80)
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}", item):
+        raise RoadmapError("Work references must use the existing bounded canonical identity contract.")
+    return item
+
+
+def metadata_work_reference(value: Any) -> dict[str, str]:
+    reference = require_object(value, "metadata Work reference")
+    keys = {"workId", "invocationId", "claimId"}
+    if set(reference) != keys:
+        raise RoadmapError("Metadata publication requires exact Work, invocation and claim references.")
+    result = {}
+    for key in keys:
+        result[key] = work_reference_identifier(reference[key], "metadata Work " + key)
+    return result
+
+
+@contextmanager
+def story_publication_guard(repo: Path, state: dict[str, Any], reference: Any, increment_id: str):
+    """Serialize ownership publication without treating its own writer as source Work.
+
+    Lock order is roadmap publication, then Records mutation. Work claim paths
+    may read canonical state while holding Records, but never acquire this
+    publication lock. No Records mutation is called recursively here.
+    """
+    reference = metadata_work_reference(reference) if reference is not None else None
+    if not (repo / "dev-tools/helpers/control_plane/records.py").is_file():
+        if reference is not None:
+            raise RoadmapError("The metadata Work adapter is unavailable; no claim authority was inferred.")
+        yield
+        return
+    sys.path.insert(0, str(repo / "dev-tools/helpers"))
+    try:
+        from control_plane.records import Records
+        from control_plane.storage import exclusive_lock
+        records = Records(repo)
+        with exclusive_lock(records.lock):
+            # A pending successor may hide a source claim or checking phase.
+            # Require ordinary explicit recovery; this guard never mutates or
+            # recursively recovers Records while publishing roadmap metadata.
+            records._bootstrap_guard()
+            if records.journal.exists() or records.journal.is_symlink():
+                raise RoadmapError("Recover the pending Records transaction before publishing story ownership.")
+            saved = records.load()
+            claims = {identity: work for identity, work in saved["work_items"].items() if work.get("claim") is not None}
+            if claims:
+                if reference is None or set(claims) != {reference["workId"]}:
+                    raise RoadmapError("Finish candidate verification/review and release source claims, or provide the exact owning metadata Work.")
+                from control_plane.work import Work, owned, validate_spec
+                from control_plane.common import digest
+                work = claims[reference["workId"]]
+                spec = validate_spec(work["spec"])
+                claim = work["claim"]
+                owned(work, reference["invocationId"], reference["claimId"])
+                allowed = {state["paths"]["state"], state["paths"]["roadmap"],
+                           "docs/operations/roadmap-supporting-work.json",
+                           "docs/operations/roadmap-user-descriptions.json",
+                           "docs/operations/roadmap-user-support-descriptions.json"}
+                scopes = set(spec["write_scope"])
+                required = {state["paths"]["state"], state["paths"]["roadmap"]}
+                if (spec["schema_version"] != "development-work-v1" or spec["work_id"] != reference["workId"]
+                        or digest(spec) != work.get("spec_digest") or work.get("status") != "active"
+                        or work.get("receipts") or work.get("reviews") or not required <= scopes <= allowed
+                        or type(claim.get("fence")) is not int or claim["fence"] < 1
+                        or (spec.get("roadmap") is not None and spec["roadmap"] != {
+                            "state_path": state["paths"]["state"], "increment_id": increment_id})):
+                    raise RoadmapError("Only the active exact-target metadata writer before checks/review may publish story ownership.")
+                # Includes source/scope/authority drift checks, with read-only
+                # Records access. The mutation lock remains held through write.
+                Work(repo).context(work)
+            yield
+    except RoadmapError:
+        raise
+    except Exception:
+        raise RoadmapError("The checkout's source claims or exact metadata ownership are unavailable; no ownership was published.") from None
+    finally:
+        sys.path.pop(0)
+
+
+def task_completion_proof(value: Any) -> dict[str, str]:
+    proof = require_object(value, "task work proof")
+    if set(proof) != {"workId", "receiptDigest", "reviewDigest"}:
+        raise RoadmapError("Task completion requires exact Work, receipt and separate-review references.")
+    result = {"workId": work_reference_identifier(proof["workId"], "task proof Work")}
+    for key in ("receiptDigest", "reviewDigest"):
+        if not isinstance(proof[key], str) or not re.fullmatch(r"[a-f0-9]{64}", proof[key]):
+            raise RoadmapError("Task completion requires exact receipt and review digests.")
+        result[key] = proof[key]
+    return result
+
+
+def require_task_completion(repo: Path, state: dict[str, Any], event: dict[str, Any]) -> None:
+    """A task snapshot does not substitute for exact whole-increment review."""
+    increment = current_increment(state)
+    proof = task_completion_proof(event.get("workProof"))
+    sys.path.insert(0, str(repo / "dev-tools/helpers"))
+    try:
+        from control_plane.work import Work, validate_spec
+        from control_plane.common import digest
+        controller = Work(repo)
+        work = controller.records.load()["work_items"].get(proof["workId"])
+        if not work or work.get("status") != "complete" or work.get("claim") is not None:
+            raise RoadmapError("Complete and release the exact task-bound Work before recording its task.")
+        spec = work["spec"]
+        validate_spec(spec)
+        outcome_targets = {target["task_id"] for target in spec.get("task_targets", [])
+                           if target.get("coverage") == "task-outcome"}
+        if (spec.get("work_id") != proof["workId"] or spec.get("kind") != "roadmap"
+                or spec.get("schema_version") != "development-work-v2" or spec.get("roadmap") != {
+                "state_path": state["paths"]["state"], "increment_id": increment["id"]}
+                or event.get("chunkId") not in outcome_targets):
+            raise RoadmapError("Task completion must consume Work bound to this exact planned task.")
+        receipt = controller.current_receipt(work)
+        completion = work.get("completion", {})
+        review = next((row for row in work["reviews"] if row["review_digest"] == proof["reviewDigest"]), None)
+        if (receipt.get("work_id") != proof["workId"] or receipt["receipt_digest"] != proof["receiptDigest"] or not review
+                or completion.get("source_digest") != receipt["source_digest"]
+                or completion.get("receipt_digest") != proof["receiptDigest"]
+                or completion.get("review_digest") != proof["reviewDigest"]
+                or review.get("disposition") != "accepted" or review.get("work_id") != proof["workId"]
+                or review.get("source_digest") != receipt["source_digest"]
+                or review.get("receipt_digest") != proof["receiptDigest"]
+                or review.get("review_digest") != digest({key: value for key, value in review.items() if key != "review_digest"})
+                or review.get("invocation_id") in work["contributors"]
+                or set(review.get("reviewed_criteria", [])) != {criterion["id"] for criterion in spec["acceptance"]}):
+            raise RoadmapError("Task completion requires the exact current qualifying receipt and independent accepted review.")
+    except RoadmapError:
+        raise
+    except Exception:
+        raise RoadmapError("Task-bound completion evidence is unavailable, malformed or stale; no task was completed.") from None
     finally:
         sys.path.pop(0)
 
@@ -669,6 +819,294 @@ def validate_work_package(value: Any, label: str) -> dict[str, str]:
     }
 
 
+def story_definitions(increment: dict[str, Any]) -> list[dict[str, str]]:
+    """Stories reuse approved intent; adoption never rewrites that intent."""
+    stories = require_list(increment.get("workPackages"), "increment stories", minimum=1)
+    if len(stories) > 40:
+        raise RoadmapError("Keep stories within the complete forty-story proposal projection.")
+    normalized = [validate_work_package(story, "story") for story in stories]
+    if len({story["id"] for story in normalized}) != len(normalized):
+        raise RoadmapError("Story identities must be unique within an increment.")
+    return normalized
+
+
+def current_story_tracking(state: dict[str, Any], increment_id: str) -> dict[str, Any] | None:
+    rows = (state.get("storyTaskTracking") or {}).get("revisions", [])
+    return next((row for row in reversed(rows) if row.get("incrementId") == increment_id), None)
+
+
+def archived_story_criterion_ids(state: dict[str, Any], increment_id: str) -> set[str]:
+    """Retired human criteria remain in immutable historical task definitions."""
+    result = set()
+    for family, key in (("humanAcceptanceTransfers", "criteria"),
+                        ("acceptanceScopeRevisions", "removedCriteria"),
+                        ("legacyAcceptanceScopeRevisions", "removedCriteria")):
+        for row in require_list(state.get(family, []), family):
+            row = require_object(row, "acceptance archive")
+            if row.get("incrementId") == increment_id:
+                for criterion in require_list(row.get(key, []), "archived criteria"):
+                    result.add(require_identifier(require_object(criterion, "archived criterion").get("id"), "archived criterion id"))
+    return result
+
+
+def story_assignments(increment: dict[str, Any], value: Any,
+                      previous: dict[str, Any] | None = None, *, retired_criteria: set[str] | None = None) -> list[dict[str, str]]:
+    stories = {story["id"] for story in story_definitions(increment)}
+    stored_plan = require_object(increment.get("plan"), "task plan")
+    current_ids = {criterion["id"] for criterion in increment["acceptanceCriteria"]}
+    historical = [{"id": identity} for identity in sorted((retired_criteria or set()) - current_ids)]
+    validation_increment = {**increment, "acceptanceCriteria": [*increment["acceptanceCriteria"], *historical]}
+    validate_plan({key: value for key, value in stored_plan.items()
+                   if key not in {"recordedAt", "fingerprint", "outlineOnly"}}, validation_increment)
+    tasks = (increment.get("plan") or {}).get("chunks", [])
+    if not tasks or len(tasks) > 100:
+        raise RoadmapError("Adopt a nonempty bounded task plan before assigning stories.")
+    proposed = require_list(value, "story assignments", minimum=1)
+    if len(proposed) != len(tasks):
+        raise RoadmapError("Every planned task requires exactly one primary story.")
+    by_id = {task["id"]: task for task in tasks}
+    result, seen = [], set()
+    for item in proposed:
+        item = require_object(item, "story assignment")
+        reject_unknown(item, {"taskId", "storyId"}, "story assignment")
+        task_id = require_identifier(item.get("taskId"), "assignment.taskId")
+        story_id = require_identifier(item.get("storyId"), "assignment.storyId")
+        if task_id not in by_id or task_id in seen or story_id not in stories:
+            raise RoadmapError("Task assignments require unique known tasks and known stories.")
+        seen.add(task_id)
+        result.append({"taskId": task_id, "storyId": story_id,
+                       "taskDefinitionDigest": fingerprint(by_id[task_id])})
+    # Canonical plan order, never caller order, owns task progress and identity.
+    result.sort(key=lambda item: next(n for n, task in enumerate(tasks) if task["id"] == item["taskId"]))
+    if previous:
+        old = {item["taskId"]: item for item in previous["assignments"]}
+        for item in result:
+            if item["taskId"] in old and item["storyId"] != old[item["taskId"]]["storyId"]:
+                raise RoadmapError("Existing tasks keep their primary story; scope changes need governed revision.")
+            if item["taskId"] in increment.get("completedChunks", []) and item != old.get(item["taskId"]):
+                raise RoadmapError("Preserve every completed task's definition and story owner.")
+    return result
+
+
+def record_story_tracking(state: dict[str, Any], increment: dict[str, Any], event: dict[str, Any],
+                          assignments: Any) -> None:
+    previous = current_story_tracking(state, increment["id"])
+    if "expectedTrackingDigest" not in event or event["expectedTrackingDigest"] != (fingerprint(previous) if previous else None):
+        raise RoadmapError("Story ownership changed; inspect the current tracking digest.")
+    normalized = story_assignments(increment, assignments, previous,
+                                   retired_criteria=archived_story_criterion_ids(state, increment["id"]))
+    historical_ids = {item["taskId"] for row in (state.get("storyTaskTracking") or {}).get("revisions", [])
+                      if row["incrementId"] == increment["id"] for item in row["assignments"]}
+    previous_ids = {item["taskId"] for item in (previous or {}).get("assignments", [])}
+    if any(item["taskId"] in historical_ids - previous_ids for item in normalized):
+        raise RoadmapError("Retired task identities cannot be reused; preserve their original story lineage.")
+    if previous and normalized == previous["assignments"] and fingerprint(increment["plan"]) == previous["planDigest"]:
+        raise RoadmapError("Story tracking must change unfinished task tracking.")
+    record = {"incrementId": increment["id"], "revision": (previous or {}).get("revision", 0) + 1,
+              "priorDigest": fingerprint(previous) if previous else None,
+              "planDigest": fingerprint(increment["plan"]),
+              "storiesDigest": fingerprint(story_definitions(increment)), "assignments": normalized,
+              "approvedScopeDigest": state["roadmapApproval"]["fingerprint"],
+              "authorityRef": require_identifier(event.get("authorityRef"), "event.authorityRef"),
+              "reason": require_string(event.get("reason"), "event.reason"),
+              "recordedAt": now_utc(), "eventFingerprint": fingerprint(event)}
+    tracking = state.setdefault("storyTaskTracking", {"schemaVersion": 1, "revisions": []})
+    if len(tracking["revisions"]) >= 1000:
+        raise RoadmapError("The bounded story-tracking history is full; preserve its history.")
+    tracking["revisions"].append(record)
+
+
+def handle_story_tasks_assigned(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "incrementId", "expectedPlanDigest", "expectedTrackingDigest",
+                           "assignments", "authorityRef", "reason", "metadataWork"}, "event")
+    if "metadataWork" in event:
+        metadata_work_reference(event["metadataWork"])
+    if not approval_is_current(state) or execution_blocked(state):
+        raise RoadmapError("Current approval and no unresolved human action are required.")
+    increment = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
+    if current_story_tracking(state, increment["id"]):
+        raise RoadmapError("Story ownership is already adopted; refine unfinished tasks atomically with their plan.")
+    if (state.get("currentIncrementId") != increment["id"] or
+            increment["status"] not in {"implementing", "verifying"} or
+            not increment.get("research") or not increment.get("plan") or increment["plan"].get("outlineOnly")):
+        raise RoadmapError("Assign stories only after ordered start, research and a formal active task plan.")
+    if event.get("expectedPlanDigest") != fingerprint(increment["plan"]):
+        raise RoadmapError("The task plan changed; inspect its whole-plan digest.")
+    record_story_tracking(state, increment, event, event.get("assignments"))
+
+
+def validate_story_tracking(state: dict[str, Any]) -> None:
+    tracking = state.get("storyTaskTracking")
+    history = [require_object(row, "history row") for row in require_list(state.get("history"), "state.history")]
+    events = [(index, row) for index, row in enumerate(history) if row.get("type") == "story-tasks-assigned"
+              or "storyTaskRevisionDigest" in row]
+    if tracking is None:
+        if events:
+            raise RoadmapError("Story-tracking history requires its complete audited assignments.")
+        return
+    tracking = require_object(tracking, "story tracking")
+    reject_unknown(tracking, {"schemaVersion", "revisions"}, "story tracking")
+    revisions = require_list(tracking.get("revisions"), "story tracking revisions", minimum=1)
+    if tracking.get("schemaVersion") != 1 or len(revisions) > 1000 or len(events) != len(revisions):
+        raise RoadmapError("Story tracking requires its bounded exact event/revision chain.")
+    latest, ever_owned, plan_versions, refinement_versions = {}, {}, {}, {}
+    for increment in require_list(state.get("increments"), "state.increments"):
+        increment = require_object(increment, "increment")
+        identity = increment.get("id")
+        if identity in plan_versions:
+            raise RoadmapError("Adopted story tracking requires unique increment identities.")
+        plan_versions[identity] = {}
+        if isinstance(increment.get("plan"), dict):
+            plan_versions[identity][fingerprint(increment["plan"])] = increment["plan"]
+    for archive in require_list(state.get("workChunkPlanRevisions", []), "chunk plan revisions"):
+        archive = require_object(archive, "chunk plan revision")
+        versions = plan_versions.get(archive.get("incrementId"))
+        if versions is None:
+            raise RoadmapError("Story tracking cannot join a foreign plan archive.")
+        for plan in (archive.get("originalPlan"), archive.get("replacementPlan")):
+            if isinstance(plan, dict):
+                versions[fingerprint(plan)] = plan
+        if archive.get("eventFingerprint"):
+            key = (archive["incrementId"], archive["eventFingerprint"], fingerprint(archive))
+            if key in refinement_versions:
+                raise RoadmapError("Story tracking cannot join duplicate refinement archives.")
+            refinement_versions[key] = archive.get("replacementPlan")
+    keys = {"incrementId", "revision", "priorDigest", "planDigest", "storiesDigest", "assignments",
+            "approvedScopeDigest", "authorityRef", "reason", "recordedAt", "eventFingerprint"}
+    for row, (history_index, event) in zip(revisions, events):
+        row = require_object(row, "story tracking revision")
+        reject_unknown(row, keys, "story tracking revision")
+        if set(row) != keys:
+            raise RoadmapError("Story revisions require every exact audit field.")
+        identity = require_identifier(row["incrementId"], "story increment")
+        previous = latest.get(identity)
+        expected_type = "work-chunks-reconfigured" if previous else "story-tasks-assigned"
+        if (type(row["revision"]) is not int or row["revision"] != (previous or {}).get("revision", 0) + 1
+                or row["priorDigest"] != (fingerprint(previous) if previous else None)
+                or event.get("type") != expected_type
+                or type(event.get("sequence")) is not int or event["sequence"] != history_index + 1
+                or event.get("eventFingerprint") != row["eventFingerprint"]
+                or event.get("storyTaskRevisionDigest") != fingerprint(row)):
+            raise RoadmapError("Story assignments must retain their exact ordered audit lineage.")
+        for key in ("planDigest", "storiesDigest", "approvedScopeDigest", "eventFingerprint"):
+            if not isinstance(row[key], str) or not re.fullmatch(r"[a-f0-9]{64}", row[key]):
+                raise RoadmapError("Story tracking requires exact definition and authority digests.")
+        require_identifier(row["authorityRef"], "story authority")
+        require_string(row["reason"], "story reason")
+        require_string(row["recordedAt"], "story time", maximum=80)
+        assignments = require_list(row["assignments"], "stored story assignments", minimum=1)
+        if len(assignments) > 100:
+            raise RoadmapError("Story task assignments exceed the existing task bound.")
+        seen = set()
+        owners = ever_owned.setdefault(identity, {})
+        previous_ids = {item["taskId"] for item in (previous or {}).get("assignments", [])}
+        for item in assignments:
+            item = require_object(item, "stored story assignment")
+            if set(item) != {"taskId", "storyId", "taskDefinitionDigest"}:
+                raise RoadmapError("Stored task assignments require exact fields.")
+            require_identifier(item["taskId"], "stored task")
+            require_identifier(item["storyId"], "stored story")
+            if item["taskId"] in seen or not isinstance(item["taskDefinitionDigest"], str) or not re.fullmatch(r"[a-f0-9]{64}", item["taskDefinitionDigest"]):
+                raise RoadmapError("Stored task assignments require unique identities and exact digests.")
+            if item["taskId"] in owners and (item["storyId"] != owners[item["taskId"]] or item["taskId"] not in previous_ids):
+                raise RoadmapError("Every historical task retains its owner; retired identities cannot be reused.")
+            owners[item["taskId"]] = item["storyId"]
+            seen.add(item["taskId"])
+        plan = plan_versions.get(identity, {}).get(row["planDigest"])
+        refined = refinement_versions.get((identity, row["eventFingerprint"], event.get("chunkPlanRevisionDigest")))
+        if plan is None or (previous and refined != plan):
+            raise RoadmapError("Story revisions must bind the exact adoption or refinement plan lineage.")
+        tasks = require_list(plan.get("chunks"), "historical task plan", minimum=1)
+        expected_tasks = [(task["id"], fingerprint(task)) for task in tasks]
+        if [(item["taskId"], item["taskDefinitionDigest"]) for item in assignments] != expected_tasks:
+            raise RoadmapError("Historical story assignments must retain their complete exact task definitions and order.")
+        latest[identity] = row
+    for identity, row in latest.items():
+        increment = find_increment(state, identity)
+        normalized = story_assignments(increment, [{"taskId": item["taskId"], "storyId": item["storyId"]}
+                                                   for item in row["assignments"]],
+                                       retired_criteria=archived_story_criterion_ids(state, identity))
+        if (normalized != row["assignments"] or fingerprint(story_definitions(increment)) != row["storiesDigest"]
+                or fingerprint(increment.get("plan")) != row["planDigest"]):
+            raise RoadmapError("Current story ownership must match the exact unchanged intent and task plan.")
+
+
+def story_progress(state: dict[str, Any], increment: dict[str, Any]) -> list[dict[str, Any]]:
+    """Implementation counts are independent from technical qualification."""
+    tracking = current_story_tracking(state, increment["id"])
+    assignments = (tracking or {}).get("assignments", [])
+    completed = set(increment.get("completedChunks", []))
+    return [{**story, "taskIds": [row["taskId"] for row in assignments if row["storyId"] == story["id"]],
+             "tasksComplete": sum(row["taskId"] in completed for row in assignments if row["storyId"] == story["id"]),
+             "tasksPlanned": sum(row["storyId"] == story["id"] for row in assignments),
+             "trackingAdopted": tracking is not None}
+            for story in increment.get("workPackages", [])]
+
+
+def task_target_context(state: dict[str, Any], increment_id: str, value: Any,
+                        *, require_unfinished: bool = False) -> dict[str, Any]:
+    """Exact optional Work targets, separate from the legacy increment binding."""
+    increment = find_increment(state, require_identifier(increment_id, "task increment"))
+    tracking = current_story_tracking(state, increment_id)
+    if not tracking or (increment.get("plan") or {}).get("outlineOnly"):
+        raise RoadmapError("Task-bound Work requires an adopted formal story/task plan.")
+    targets = require_list(value, "Work task targets", minimum=1)
+    if len(targets) > 64:
+        raise RoadmapError("Work task targets exceed their bounded sixty-four-target contract.")
+    tasks = {task["id"]: task for task in increment["plan"]["chunks"]}
+    owners = {item["taskId"]: item for item in tracking["assignments"]}
+    seen, normalized, criteria, work_criteria = set(), [], set(), set()
+    active_criteria = {criterion["id"] for criterion in increment["acceptanceCriteria"]}
+    for target in targets:
+        target = require_object(target, "Work task target")
+        keys = {"task_id", "story_id", "task_definition_digest", "tracking_digest",
+                "work_criteria", "coverage", "scope", "limitations"}
+        if set(target) != keys:
+            raise RoadmapError("Work task targets require exact identity and definition fields.")
+        identity = require_identifier(target["task_id"], "Work task id")
+        story = require_identifier(target["story_id"], "Work story id")
+        if identity in seen or identity not in tasks or identity not in owners:
+            raise RoadmapError("Work task targets must be unique known planned tasks.")
+        if (owners[identity]["storyId"] != story or target["task_definition_digest"] != fingerprint(tasks[identity])
+                or target["tracking_digest"] != fingerprint(tracking)):
+            raise RoadmapError("Work task targets must bind current exact definitions and story ownership.")
+        if require_unfinished and identity in increment.get("completedChunks", []):
+            raise RoadmapError("Completed tasks require a new corrective task rather than reused implementation identity.")
+        selected = require_list(target["work_criteria"], "target Work criteria", minimum=1)
+        if len(selected) > 64:
+            raise RoadmapError("Task support must select bounded Work criteria.")
+        selected = [work_reference_identifier(value, "target Work criterion") for value in selected]
+        if len(selected) != len(set(selected)) or target["coverage"] not in ("task-outcome", "partial-support"):
+            raise RoadmapError("Task support needs unique Work criteria and an explicit coverage boundary.")
+        scope = require_string(target["scope"], "task Work scope", maximum=500)
+        limits = require_list(target["limitations"], "task Work limitations", minimum=1)
+        if len(limits) > 8:
+            raise RoadmapError("Task Work limitations exceed their bounded contract.")
+        limits = [require_string(limit, "task Work limitation", maximum=500) for limit in limits]
+        seen.add(identity)
+        normalized.append({**target, "work_criteria": selected, "scope": scope, "limitations": limits})
+        criteria.update(set(tasks[identity]["criteriaIds"]) & active_criteria)
+        work_criteria.update(selected)
+    normalized.sort(key=lambda target: next(n for n, task in enumerate(increment["plan"]["chunks"])
+                                            if task["id"] == target["task_id"]))
+    return {"incrementId": increment_id, "trackingDigest": fingerprint(tracking),
+            "storiesDigest": tracking["storiesDigest"], "targets": normalized,
+            "criterionIds": sorted(criteria), "workCriterionIds": sorted(work_criteria)}
+
+
+def validate_task_completion_history(state: dict[str, Any]) -> None:
+    records = [record for record in state.get("chunks", []) if isinstance(record, dict) and "workProof" in record]
+    events = [(index, row) for index, row in enumerate(state.get("history", []))
+              if isinstance(row, dict) and "taskCompletionDigest" in row]
+    if len(records) != len(events):
+        raise RoadmapError("Task Work proofs require their complete completion history.")
+    for record, (index, event) in zip(records, events):
+        if (task_completion_proof(record["workProof"]) != record["workProof"]
+                or event.get("type") != "chunk-recorded" or type(event.get("sequence")) is not int
+                or event["sequence"] != index + 1 or event["taskCompletionDigest"] != fingerprint(record)):
+            raise RoadmapError("Task Work completion proof and its exact history must remain unchanged.")
+
+
 def validate_increment(value: Any, label: str) -> dict[str, Any]:
     item = require_object(value, label)
     reject_unknown(
@@ -719,12 +1157,7 @@ def validate_increment(value: Any, label: str) -> dict[str, Any]:
                 require_list(item.get("dependsOn", []), f"{label}.dependsOn")
             )
         ],
-        "workPackages": [
-            validate_work_package(entry, f"{label}.workPackages[{index}]")
-            for index, entry in enumerate(
-                require_list(item.get("workPackages", []), f"{label}.workPackages")
-            )
-        ],
+        "workPackages": story_definitions(item),
         "deliverables": require_string_list(
             item.get("deliverables"), f"{label}.deliverables", minimum=1
         ),
@@ -1090,6 +1523,8 @@ def handle_increment_plan_recorded(
         raise RoadmapError("Record increment research before its implementation plan.")
     if increment["completedChunks"]:
         raise RoadmapError("Do not replace an implementation plan after chunks complete.")
+    if current_story_tracking(state, increment["id"]):
+        raise RoadmapError("Refine the adopted task plan with its audited story assignments.")
     increment["plan"] = validate_plan(event.get("plan"), increment)
     increment["plan"]["recordedAt"] = now_utc()
     increment["plan"]["fingerprint"] = fingerprint(increment["plan"])
@@ -1098,7 +1533,10 @@ def handle_increment_plan_recorded(
 
 def handle_work_chunks_reconfigured(state: dict[str, Any], event: dict[str, Any]) -> None:
     """Refine tracking without changing scope, execution gates or completed work."""
-    reject_unknown(event, {"type", "incrementId", "expectedPlanDigest", "plan", "authorityRef", "reason"}, "event")
+    reject_unknown(event, {"type", "incrementId", "expectedPlanDigest", "plan", "authorityRef", "reason",
+                           "storyAssignments", "expectedTrackingDigest", "metadataWork"}, "event")
+    if "metadataWork" in event:
+        metadata_work_reference(event["metadataWork"])
     if not approval_is_current(state) or execution_blocked(state):
         raise RoadmapError("Current approval and no unresolved human action are required.")
     target = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
@@ -1147,6 +1585,13 @@ def handle_work_chunks_reconfigured(state: dict[str, Any], event: dict[str, Any]
         "eventFingerprint": fingerprint(event),
     })
     target["plan"] = replacement
+    tracked = current_story_tracking(state, target["id"])
+    if tracked:
+        if "storyAssignments" not in event or "expectedTrackingDigest" not in event:
+            raise RoadmapError("Refined tasks require their complete audited story ownership in the same event.")
+        record_story_tracking(state, target, event, event["storyAssignments"])
+    elif "storyAssignments" in event or "expectedTrackingDigest" in event:
+        raise RoadmapError("Adopt the researched formal task plan before refining story ownership.")
 
 
 def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
@@ -1160,6 +1605,7 @@ def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
             "tests",
             "documentation",
             "feedbackAddressed",
+            "workProof",
         },
         "event",
     )
@@ -1175,6 +1621,9 @@ def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
         raise RoadmapError(f"Chunk {chunk_id} is not in the approved increment plan.")
     if chunk_id in increment["completedChunks"]:
         raise RoadmapError(f"Chunk {chunk_id} has already been recorded.")
+    proof = task_completion_proof(event["workProof"]) if "workProof" in event else None
+    if state.get("evidencePolicy") == "control-plane-v1" and current_story_tracking(state, increment["id"]) and proof is None:
+        raise RoadmapError("Adopted governed tasks require exact task-bound Work completion proof.")
     record = {
         "id": f"{increment['id']}-{chunk_id}",
         "incrementId": increment["id"],
@@ -1199,6 +1648,8 @@ def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
         "completedAt": now_utc(),
     }
     known_feedback = {item["id"] for item in state["feedback"]}
+    if proof is not None:
+        record["workProof"] = proof
     unknown_feedback = sorted(set(record["feedbackAddressed"]) - known_feedback)
     if unknown_feedback:
         raise RoadmapError(
@@ -2301,6 +2752,7 @@ def handle_completion_status_normalized(state: dict[str, Any], event: dict[str, 
 
 
 EVENT_HANDLERS = {
+    "story-tasks-assigned": handle_story_tasks_assigned,
     "discovery-recorded": handle_discovery_recorded,
     "decision-proposed": handle_decision_proposed,
     "decision-approved": handle_decision_approved,
@@ -2370,6 +2822,10 @@ def apply_event(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
                            revisionDigest=fingerprint(updated["technicalAcceptanceRevisions"][-1]))
     if event_type == "work-chunks-reconfigured":
         history_row["chunkPlanRevisionDigest"] = fingerprint(updated["workChunkPlanRevisions"][-1])
+    if event_type == "story-tasks-assigned" or "storyAssignments" in event:
+        history_row["storyTaskRevisionDigest"] = fingerprint(updated["storyTaskTracking"]["revisions"][-1])
+    if event_type == "chunk-recorded" and "workProof" in event:
+        history_row["taskCompletionDigest"] = fingerprint(updated["chunks"][-1])
     updated["history"].append(history_row)
     return updated
 
@@ -2408,8 +2864,11 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "assetRevisedSecurityProofs",
         "blockerReclassifications",
         "workChunkPlanRevisions",
+        "storyTaskTracking",
     }
     reject_unknown(state, allowed, "state")
+    validate_story_tracking(state)
+    validate_task_completion_history(state)
     for revision in require_list(state.get("workChunkPlanRevisions", []), "state.workChunkPlanRevisions"):
         revision = require_object(revision, "chunk plan revision")
         reject_unknown(revision, {"incrementId", "originalPlan", "originalPlanDigest", "replacementPlan",
@@ -2854,7 +3313,7 @@ def render_roadmap(state: dict[str, Any]) -> str:
                 "",
                 increment["objective"],
                 "",
-                "### Work packages",
+                "### Stories" if state.get("storyTaskTracking") else "### Work packages",
                 "",
             ]
         )
@@ -2867,6 +3326,18 @@ def render_roadmap(state: dict[str, Any]) -> str:
             )
         else:
             lines.append("None recorded.")
+        tracking = current_story_tracking(state, increment["id"])
+        if tracking:
+            lines.extend(["", "### Tasks by story", "",
+                          "Task counts show implementation tracking. Technical qualification remains separate.", ""])
+            by_id = {task["id"]: task for task in increment["plan"]["chunks"]}
+            completed = set(increment.get("completedChunks", []))
+            for story in story_progress(state, increment):
+                lines.append(f"- **{markdown(story['title'])}**: {story['tasksComplete']} of {story['tasksPlanned']} tasks complete")
+                for identity in story["taskIds"]:
+                    task = by_id[identity]
+                    status = "complete" if identity in completed else "planned"
+                    lines.append(f"  - {markdown(task['title'])} (`{identity}`): {status}")
         lines.extend(
             [
                 "",
@@ -2959,7 +3430,8 @@ def next_checkpoint(state: dict[str, Any]) -> str:
             "Start the next pending increment, then research and plan it before editing."
         )
     if status == "executing":
-        return "Complete the active planned chunk and update this report."
+        return ("Complete the active planned task and update this report." if state.get("storyTaskTracking")
+                else "Complete the active planned chunk and update this report.")
     if status == "blocked":
         if any("actionOwner" not in b for b in unresolved_work(state)):
             return "Classify the saved unresolved work before execution; no human action is inferred."
@@ -3028,7 +3500,7 @@ def render_report(state: dict[str, Any]) -> str:
     if state["increments"]:
         lines.extend(
             [
-                "| Increment | Status | Chunks | Criteria |",
+                "| Increment | Status | Tasks | Criteria |" if state.get("storyTaskTracking") else "| Increment | Status | Chunks | Criteria |",
                 "| --- | --- | --- | --- |",
             ]
         )
@@ -3062,12 +3534,12 @@ def render_report(state: dict[str, Any]) -> str:
         lines.append(compact_markdown(active["plan"]["summary"]))
         if next_chunk:
             lines.append(
-                f"- Next chunk: **{next_chunk['title']}** "
+                f"- Next {'task' if state.get('storyTaskTracking') else 'chunk'}: **{next_chunk['title']}** "
                 f"(`{next_chunk['id']}`) - "
                 f"{compact_markdown(next_chunk['outcome'], 180)}"
             )
         else:
-            lines.append("- Next chunk: none; complete increment verification.")
+            lines.append(f"- Next {'task' if state.get('storyTaskTracking') else 'chunk'}: none; complete increment verification.")
     elif active and (active.get("plan") or {}).get("outlineOnly"):
         lines.append("A pending chunk outline is available. Complete increment research and record the implementation plan before work.")
     else:
@@ -3326,15 +3798,22 @@ def command_init(args: argparse.Namespace) -> dict[str, Any]:
 def command_apply(args: argparse.Namespace) -> dict[str, Any]:
     repo = resolve_repo(args.repo)
     state_path = safe_relative_path(repo, args.state, "--state")
-    with publication_lock(repo, state_path) as journal:
+    with publication_lock(repo, state_path) as journal, ExitStack() as guards:
         if not args.dry_run:
             recover_publication(repo, journal, state_path)
         _, state = load_state(repo, args.state)
         before = fingerprint(state)
         ensure_documents_match(repo, state)
         event = read_json(Path(args.event_file).resolve(), "event")
+        ownership_change = (event.get("type") == "story-tasks-assigned" or "storyAssignments" in event
+                            or event.get("type") == "work-chunks-reconfigured" and "metadataWork" in event)
+        if not args.dry_run and ownership_change:
+            guards.enter_context(story_publication_guard(repo, state, event.get("metadataWork"), event.get("incrementId")))
         if event.get("type") == "increment-completed":
             require_control_completion(repo, state)
+        elif (event.get("type") == "chunk-recorded" and state.get("evidencePolicy") == "control-plane-v1"
+              and current_story_tracking(state, state.get("currentIncrementId"))):
+            require_task_completion(repo, state, event)
         elif event.get("type") == "increment-qualified":
             target_id = require_identifier(event.get("incrementId"), "event.incrementId")
             work_id = require_identifier(event.get("workId"), "event.workId")
@@ -3347,7 +3826,8 @@ def command_apply(args: argparse.Namespace) -> dict[str, Any]:
             require_control_completion(repo, state, overall=True)
         updated = apply_event(state, event)
         validate_state_shape(repo, updated)
-        content = publication_journal_content(before, updated, state["paths"]["report"])
+        content = publication_journal_content(before, updated, state["paths"]["report"],
+                                              metadata_work=event.get("metadataWork"))
         if not args.dry_run:
             if fingerprint(read_json(repo / state_path, "state", stored=True)) != before:
                 raise RoadmapError("State revision changed before publication; reconcile first.")
@@ -3372,9 +3852,15 @@ def command_validate(args: argparse.Namespace) -> dict[str, Any]:
 def command_render(args: argparse.Namespace) -> dict[str, Any]:
     repo = resolve_repo(args.repo)
     state_path = safe_relative_path(repo, args.state, "--state")
+    metadata_work = None
+    if getattr(args, "metadata_work", None):
+        relative = safe_relative_path(repo, args.metadata_work, "--metadata-work")
+        if not relative.startswith(".local-codex/") or (repo / relative).stat().st_size > 16 * 1024:
+            raise RoadmapError("Select a bounded ignored metadata Work reference.")
+        metadata_work = metadata_work_reference(read_json(repo / relative, "metadata Work reference"))
     with publication_lock(repo, state_path) as journal:
         if not args.dry_run:
-            recover_publication(repo, journal, state_path)
+            recover_publication(repo, journal, state_path, metadata_work=metadata_work)
         _, state = load_state(repo, args.state)
         state_publication_content(state)
         if not args.dry_run:
@@ -3396,6 +3882,9 @@ def command_status(args: argparse.Namespace) -> dict[str, Any]:
         "planned": len((increment.get("plan") or {}).get("chunks", [])),
         "completed": len(increment.get("completedChunks", [])),
     } for increment in state["increments"]]
+    result["storyPlans"] = [{"incrementId": increment["id"],
+                             "trackingDigest": fingerprint(tracking) if (tracking := current_story_tracking(state, increment["id"])) else None,
+                             "stories": story_progress(state, increment)} for increment in state["increments"]]
     return result
 
 
@@ -3429,6 +3918,8 @@ def build_parser() -> argparse.ArgumentParser:
             subparser.add_argument("--dry-run", action="store_true")
         if name == "apply":
             subparser.add_argument("--event-file", required=True)
+        if name == "render":
+            subparser.add_argument("--metadata-work", help="Ignored exact metadata Work reference for guarded ownership recovery.")
         subparser.set_defaults(handler=handler)
     return parser
 

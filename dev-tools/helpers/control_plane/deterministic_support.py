@@ -347,15 +347,16 @@ def _progress_inputs(events, target_id):
     for index, event in enumerate(events):
         _need(isinstance(event, dict), "support.event", "Tracking events must be explicit JSON objects.")
         kind = event.get("type")
-        _need(kind in {"work-chunks-reconfigured", "chunk-recorded"}, "support.event", "Only existing tracking events are supported.")
-        required = {"incrementId": str, "plan": dict, "authorityRef": str, "reason": str} if kind == "work-chunks-reconfigured" else {"chunkId": str, "summary": str, "areas": list}
+        _need(kind in {"work-chunks-reconfigured", "chunk-recorded", "story-tasks-assigned"}, "support.event", "Only bounded task tracking events are supported.")
+        required = ({"incrementId": str, "assignments": list, "authorityRef": str, "reason": str} if kind == "story-tasks-assigned" else
+                    {"incrementId": str, "plan": dict, "authorityRef": str, "reason": str} if kind == "work-chunks-reconfigured" else {"chunkId": str, "summary": str, "areas": list})
         for name, expected in required.items():
             value = event.get(name)
             if not isinstance(value, expected) or not value or isinstance(value, str) and not value.strip():
                 needed.append(f"events[{index}].{name}")
         # A supplied different target remains an ownership refusal, even when
         # descriptive fields are missing. No authority value is inferred here.
-        if kind == "work-chunks-reconfigured" and event.get("incrementId"):
+        if kind in {"work-chunks-reconfigured", "story-tasks-assigned"} and event.get("incrementId"):
             _need(event["incrementId"] == target_id)
         if kind == "work-chunks-reconfigured" and isinstance(event.get("plan"), dict):
             metadata = [name for name in ("recordedAt", "fingerprint", "outlineOnly") if name in event["plan"]]
@@ -389,16 +390,26 @@ def _progress(request, work, reader):
         for submitted in events:
             _need(isinstance(submitted, dict), "support.event", "Tracking events must be explicit JSON objects.")
             event = copy.deepcopy(submitted)
-            _need(event.get("type") in {"work-chunks-reconfigured", "chunk-recorded"}, "support.event", "Only existing tracking events are supported.")
+            _need(event.get("type") in {"work-chunks-reconfigured", "chunk-recorded", "story-tasks-assigned"}, "support.event", "Only bounded task tracking events are supported.")
             target = next(i for i in actual["increments"] if i["id"] == target_id)
-            if event["type"] == "work-chunks-reconfigured":
+            if event["type"] in {"work-chunks-reconfigured", "story-tasks-assigned"}:
                 _need(event.get("incrementId") == target_id)
                 expected = engine.fingerprint(target.get("plan")) if target.get("plan") else None
                 _need("expectedPlanDigest" not in event or event["expectedPlanDigest"] == expected,
                       "support.plan-drift", "Use the whole stored plan digest, not its internal fingerprint field.")
                 event["expectedPlanDigest"] = expected
+                tracking = engine.current_story_tracking(actual, target_id)
+                if tracking or event["type"] == "story-tasks-assigned":
+                    tracking_digest = engine.fingerprint(tracking) if tracking else None
+                    _need("expectedTrackingDigest" not in event or event["expectedTrackingDigest"] == tracking_digest,
+                          "support.story-drift", "Use the current complete story tracking revision digest.")
+                    event["expectedTrackingDigest"] = tracking_digest
+                    if tracking and event["type"] == "work-chunks-reconfigured" and not event.get("storyAssignments"):
+                        return need_input("complete storyAssignments for every replacement task")
             else:
                 _need(actual.get("currentIncrementId") == target_id)
+                if actual.get("evidencePolicy") == "control-plane-v1" and engine.current_story_tracking(actual, target_id) and not event.get("workProof"):
+                    return need_input("exact task-bound workProof; preview supplies no execution or review")
             actual = engine.apply_event(actual, event)
             engine.validate_state_shape(reader.root, actual)
             prepared.append(event)
@@ -418,10 +429,13 @@ def _progress(request, work, reader):
     return {"state_path": binding["state_path"], "state_digest": engine.fingerprint(original), "events": prepared,
             "preview": {"increment_id": target_id, "chunks_complete": len(target["completedChunks"]),
                         "chunks_planned": len(target["plan"]["chunks"]), "status": target["status"],
-                        "criterion_ids": [c["id"] for c in target["acceptanceCriteria"]]},
+                        "criterion_ids": [c["id"] for c in target["acceptanceCriteria"]],
+                        **({"stories": engine.story_progress(actual, target)} if engine.current_story_tracking(actual, target_id) else {})},
             "rendered_roadmap_sha256": hashlib.sha256(engine.render_roadmap(actual).encode()).hexdigest(),
             "references": _refs(reader, request.get("references", [])), "live_state_mutated": False,
-            "advisories": ["Review semantic coverage, component evidence and actual authority; apply approved events only through the canonical roadmap CLI."]}
+            "advisories": ["Review semantic coverage, component evidence and actual authority; apply approved events only through the canonical roadmap CLI."] +
+                          (["This pure preview validates no live Work completion proof and grants no task or parent qualification."]
+                           if engine.current_story_tracking(actual, target_id) else [])}
 
 
 def _handoff(work, records, candidate, plan, reader, request):

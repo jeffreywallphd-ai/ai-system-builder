@@ -1,5 +1,32 @@
 # AI Development Control Plane
 
+Stable stories reuse the approved increment `workPackages`; expandable tasks keep
+the existing chunk IDs, plan and completion ledger. The portable engine's optional
+`storyTaskTracking` is an audited relationship map, not another planning authority.
+It binds complete task ownership to exact story/task/plan definitions and ordered
+history. Adoption preserves approval, evidence, fixed restriction archives and
+completed definitions. Refinement cannot reparent existing tasks or publish
+ownership while an unrelated/source candidate claim is live. Exact governing v1
+metadata Work can retain its own active pre-check claim through explicit
+`metadataWork`, strict target/file scope and current ownership. Acquire the
+roadmap publication lock, then the Records mutation lock, and hold both through
+the state write. Work state reads acquire no roadmap lock. Recovery rechecks the
+guard. Pending Records journals and explicit bootstrap recovery ownership refuse
+until ordinary recovery completes. Work start revalidates authority under Records
+admission without taking the roadmap lock. Read-time inconsistencies fail closed.
+Task/story implementation counts remain separate from technical qualification.
+
+Optional `development-work-v2` task targets separately bind exact task/story and
+definition/tracking hashes while preserving the old increment binding. Work
+acceptance explicitly selects scoped task criteria, outcome/support coverage,
+scope and limitations. Parent criterion links do not require local tasks to
+claim controlled parent qualification. Governed adopted task completion consumes
+a completed current task-bound Work, qualifying receipt and accepted independent
+review; stored proof binds exact completion history. One Work can support several
+tasks without duplicating elapsed time or token attribution. Old v1 Work remains
+immutable and cannot acquire targets. Increment and overall completion retain
+their existing whole-candidate qualification and exclude task-targeted Work.
+
 The browser description adapter is a read-only final projection. It replaces
 criterion prose and headings with independently reviewed, exact-source JSON copy;
 the technical projection/CLI and canonical state are unchanged. Local support

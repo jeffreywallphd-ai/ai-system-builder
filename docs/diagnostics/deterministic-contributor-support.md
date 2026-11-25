@@ -1,5 +1,13 @@
 # Optional deterministic contributor support
 
+Progress previews also accept `story-tasks-assigned` and atomic story-owned task
+refinements. Supply every task owner and actual authority/reason; the helper can
+fill only current plan/tracking digests. Missing owners or exact governed task
+`workProof` are actionable input guidance. Replay uses the canonical engine but
+does not validate live Work proof, release claims or publish state. Use the normal
+roadmap CLI after real verification/review and checkpoint. Legacy unadopted
+preview shapes remain unchanged.
+
 Use the existing [control plane](ai-development-control-plane.md) for claims,
 checks, actual review and completion. Its optional `support` commands replace
 copied bookkeeping scripts with bounded data. Each invocation makes one pass.

@@ -207,6 +207,36 @@ TRAINING_HOST_REVIEW_SOURCES = TRAINING_HOST_REVIEW_CODE + TRAINING_HOST_REVIEW_
     "modules/adapters/persistence/system-builder/README.md",
 )
 
+STORY_TASK_SCOPE = (
+    "dev-tools/helpers/control_plane/candidate.py", "dev-tools/helpers/control_plane/work.py",
+    "dev-tools/helpers/control_plane/deterministic_support.py", "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_story_tasks.py",
+    "dev-tools/helpers/tests/test_control_plane_deterministic_support.py",
+    "dev-tools/helpers/tests/test_control_plane_roadmap.py",
+    "dev-tools/helpers/README.md", "dev-tools/helpers/development_control_plane.py",
+    "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+    "skills/manage-implementation-roadmaps/tests/test_story_task_tracking.py",
+    "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
+    "skills/manage-implementation-roadmaps/SKILL.md",
+    "skills/manage-implementation-roadmaps/references/workflow.md",
+    "skills/manage-implementation-roadmaps/references/events.md",
+    "skills/manage-implementation-roadmaps/references/installation.md",
+    "docs/diagnostics/implementation-roadmap-skill.md", "docs/diagnostics/ai-development-control-plane.md",
+    "docs/diagnostics/deterministic-contributor-support.md", "docs/architecture/ai-development-control-plane.md",
+    "docs/security/ai-development-control-plane-threat-model.md", "docs/context/prompt-routing.md",
+    "docs/context/packs/docs-standards.pack.md", "docs/operations/roadmap-user-descriptions.json",
+)
+STORY_TASK_REQUIRED = (
+    "dev-tools/helpers/control_plane/candidate.py", "dev-tools/helpers/control_plane/work.py",
+    "dev-tools/helpers/control_plane/deterministic_support.py", "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_story_tasks.py",
+    "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+    "skills/manage-implementation-roadmaps/tests/test_story_task_tracking.py",
+    "dev-tools/helpers/tests/test_control_plane_roadmap.py",
+    "dev-tools/helpers/tests/test_control_plane_deterministic_support.py",
+    "dev-tools/helpers/tests/test_control_plane_delivery.py",
+)
+
 ROADMAP_STORAGE_SCOPE = (
     "skills/manage-implementation-roadmaps/SKILL.md",
     "skills/manage-implementation-roadmaps/scripts/roadmap.py",
@@ -573,6 +603,18 @@ DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "story-task-bindings": {
+        "interpreter": "python",
+        "command": ["-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                    "-k", "test_control_plane_story_tasks.", "-k", "test_control_plane_roadmap.",
+                    "-k", "test_control_plane_deterministic_support.", "-k", "test_control_plane_delivery."],
+        "sources": STORY_TASK_SCOPE,
+        "automatic_sources": ("dev-tools/helpers/control_plane/candidate.py", "dev-tools/helpers/control_plane/work.py",
+                              "dev-tools/helpers/control_plane/deterministic_support.py",
+                              "dev-tools/helpers/tests/test_control_plane_story_tasks.py"),
+        "automatic_required_files": STORY_TASK_REQUIRED,
+        "timeout": 300,
+    },
     "roadmap-storage-node": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/roadmap-record-storage.mjs",
@@ -4260,6 +4302,12 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     if "focused-tests" not in required and all(p in declared_sources for p in focused):
         selected = [c for c in selected if c["id"] != "focused-tests"]
     # Only a complete known storage scope can use the related framework suites.
+    # Exact story/task sources have complete related controller coverage. Unknown
+    # paths, missing support and an explicit generic request retain the fallback.
+    story_check = PUBLISHED_FORM_CHECKS["story-task-bindings"]
+    if ("story-task-bindings" in selected_ids and paths and set(paths) <= set(STORY_TASK_SCOPE)
+            and "control-plane" not in explicit_required and _automatic_files_available(root, story_check)):
+        selected = [check for check in selected if check["id"] != "control-plane"]
     # Empty/mixed/unknown scope or missing/nonregular support retains the ordinary
     # complete controller command. The actual argv is bound to plan and receipt.
     storage_files = ROADMAP_STORAGE_SCOPE + ROADMAP_STORAGE_CONTROLLER_TESTS

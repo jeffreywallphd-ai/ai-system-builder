@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import platform
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -17,9 +18,39 @@ from .roadmap_state import read_roadmap_state
 
 
 def validate_spec(spec: dict) -> dict:
-    fields(spec, {"schema_version", "work_id", "title", "kind", "authority_ref", "outcome", "write_scope", "acceptance", "roadmap"}, {"schema_version", "work_id", "title", "kind", "authority_ref", "outcome", "write_scope", "acceptance"})
-    if spec["schema_version"] != "development-work-v1" or spec["kind"] not in {"lightweight", "roadmap"}:
+    fields(spec, {"schema_version", "work_id", "title", "kind", "authority_ref", "outcome", "write_scope", "acceptance", "roadmap", "task_targets"}, {"schema_version", "work_id", "title", "kind", "authority_ref", "outcome", "write_scope", "acceptance"})
+    if spec["schema_version"] not in {"development-work-v1", "development-work-v2"} or spec["kind"] not in {"lightweight", "roadmap"}:
         refuse("work.schema", "Use a supported work kind and schema.")
+    if spec["schema_version"] == "development-work-v1" and "task_targets" in spec:
+        refuse("work.schema", "Legacy Work specifications cannot acquire new task targets.")
+    if spec["schema_version"] == "development-work-v2":
+        targets = spec.get("task_targets")
+        if spec["kind"] != "roadmap" or not isinstance(targets, list) or not 1 <= len(targets) <= 64:
+            refuse("work.task-target", "Versioned task Work requires bounded exact roadmap task targets.")
+        seen_targets = set()
+        for target in targets:
+            target_fields = {"task_id", "story_id", "task_definition_digest", "tracking_digest",
+                             "work_criteria", "coverage", "scope", "limitations"}
+            fields(target, target_fields, target_fields)
+            identifier(target["task_id"]); identifier(target["story_id"])
+            if target["task_id"] in seen_targets:
+                refuse("work.task-target", "Work task targets must have unique identities.")
+            seen_targets.add(target["task_id"])
+            for key in ("task_definition_digest", "tracking_digest"):
+                if not isinstance(target[key], str) or not re.fullmatch(r"[a-f0-9]{64}", target[key]):
+                    refuse("work.task-target", "Work task targets require exact definition and tracking digests.")
+            selected = target["work_criteria"]
+            if (not isinstance(selected, list) or not 1 <= len(selected) <= 64
+                    or any(not isinstance(value, str) for value in selected)
+                    or len(set(selected)) != len(selected)
+                    or target["coverage"] not in ("task-outcome", "partial-support")):
+                refuse("work.task-target", "Task targets require unique scoped Work criteria and explicit outcome/support coverage.")
+            for value in selected: identifier(value)
+            text(target["scope"], limit=500)
+            limits = target["limitations"]
+            if not isinstance(limits, list) or not 1 <= len(limits) <= 8:
+                refuse("work.task-target", "Task targets require bounded explicit scope limitations.")
+            for value in limits: text(value, limit=500)
     identifier(spec["work_id"])
     text(spec["title"], limit=200)
     text(spec["authority_ref"], limit=200)
@@ -50,6 +81,9 @@ def validate_spec(spec: dict) -> dict:
             identifier(check_id)
     if (spec["kind"] == "roadmap") != bool(spec.get("roadmap")):
         refuse("work.authority", "Substantial work must bind its active approved roadmap.")
+    if spec["schema_version"] == "development-work-v2" and any(
+            not set(target["work_criteria"]).issubset(seen) for target in spec["task_targets"]):
+        refuse("work.task-target", "Task targets must name actual scoped Work acceptance criteria.")
     return spec
 
 
@@ -113,10 +147,17 @@ class Work:
         self.root = root.resolve()
         self.records = Records(self.root)
 
+    def authority(self, spec, *, starting=False):
+        if "task_targets" not in spec:
+            return roadmap_authority(self.root, spec.get("roadmap"))
+        return roadmap_authority(self.root, spec.get("roadmap"), task_targets=spec["task_targets"],
+                                 acceptance_ids={criterion["id"] for criterion in spec["acceptance"]},
+                                 require_unfinished=starting)
+
     def start(self, spec, invocation, minutes=120, *, usage_correction_of=None, usage_review_ref=None):
         validate_spec(spec)
         identifier(invocation)
-        authority = roadmap_authority(self.root, spec.get("roadmap"))
+        authority = self.authority(spec, starting=True)
         self.check_completion_phase(spec)
         for scope in spec["write_scope"]:
             confined_path(self.root, scope)
@@ -124,6 +165,12 @@ class Work:
         catalog.plan(self.root, [], sorted({c for a in spec["acceptance"] for c in a["check_ids"]}), baseline["source_digest"])
         claim = {"invocation_id": invocation, "claim_id": str(uuid.uuid4()), "expires_at": expiry(minutes), "fence": 1}
         def transition(s):
+            # Ownership publication takes this same Records lock. Read current
+            # authority again after admission; never acquire the roadmap lock
+            # from Records or persist a claim based on the earlier pre-read.
+            if self.authority(spec, starting=True) != authority:
+                refuse("work.definition-drift", "Approved authority changed before claim admission.")
+            self.check_completion_phase(spec)
             if spec["work_id"] in s["work_items"]:
                 refuse("work.exists", "Work identities are immutable; resume or create a successor.")
             for w in s["work_items"].values():
@@ -153,7 +200,7 @@ class Work:
                 refuse("verification.completion-suite", "Overall qualification must execute the roadmap's configured completion suite.")
 
     def context(self, w):
-        if digest(w["spec"]) != w["spec_digest"] or roadmap_authority(self.root, w["spec"].get("roadmap")) != w["authority_digest"]:
+        if digest(w["spec"]) != w["spec_digest"] or self.authority(w["spec"]) != w["authority_digest"]:
             refuse("work.definition-drift", "Approved scope, acceptance or authority changed.")
         self.check_completion_phase(w["spec"])
         current = snapshot(self.root)

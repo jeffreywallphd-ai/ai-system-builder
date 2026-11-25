@@ -1,5 +1,40 @@
 # AI Development Control Plane Threat Model
 
+Story/task tracking protects approved intent and evidence lineage. Canonical
+work packages remain fixed stories; explicit task assignments bind exact IDs,
+definition/plan hashes, predecessor revisions and original event/history digests.
+Reject unknown, duplicate, incomplete, stale or reparented ownership; preserve
+completed definitions/order and Headless's pinned restriction chain. Actual
+ownership publication refuses unrelated/source candidate claims. An explicit
+exact-target v1 metadata writer may retain its active, unexpired pre-check claim
+only with exact state/roadmap and closed metadata-file scopes, current context
+and no other claim. Receipts/reviews, source/directory scope, foreign ownership
+and drift refuse. Hold Records mutation through publication beneath the roadmap
+lock; claim state reads take no roadmap lock and the guard mutates no Records.
+Interrupted ownership recovery rechecks admission and retains exact history.
+Pending Records journals and explicit bootstrap ownership block publication;
+ordinary recovery remains separate. Work start rechecks current authority under
+Records admission so an earlier task read cannot create a stale claim.
+Dry-run stays data-only.
+Bound tasks, stories, revision counts and existing state/journal bytes; never trim
+history on overflow. Task counts and labels cannot grant scope approval or parent
+qualification. Semantic coverage and actual authority still need independent
+review within the existing cooperative-local trust model.
+
+Task-bound Work uses a versioned optional target contract, not new fields in the
+legacy increment binding. Validate unique known task/story IDs, exact definition
+and ownership digests, selected scoped Work criteria, explicit outcome/support
+coverage, scope/limitations and unfinished implementation
+at start. Drift invalidates the candidate; completed v1 specs cannot be retagged.
+Adopted governed task completion checks exact completed Work/current receipt,
+separate accepted review, contributor exclusion and immutable proof/history.
+Wrong target, stale source, incomplete, rehashed self-review or missing records
+refuse without a task or parent pass. Pure support previews validate no live
+completion proof. Partial support cannot complete a task. Task-targeted Work is
+excluded from whole-increment closure even if acceptance IDs match; pending
+controlled parent evidence is never inferred from local acceptance. Keep numeric
+attribution separate from these evidence links.
+
 The private training-file preparer keeps original ModelRead authority separate
 from a cooperative filesystem observation. It captures host/client/actor/context
 and callback identities and dependency methods, checks them after awaits, and

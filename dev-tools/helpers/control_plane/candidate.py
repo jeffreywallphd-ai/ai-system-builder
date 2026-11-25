@@ -78,8 +78,11 @@ def changed(before: dict, after: dict) -> list[str]:
     return sorted(p for p in before.keys() | after.keys() if before.get(p) != after.get(p))
 
 
-def roadmap_authority(root: Path, binding: dict | None) -> str | None:
+def roadmap_authority(root: Path, binding: dict | None, *, task_targets=None,
+                      acceptance_ids=None, require_unfinished=False) -> str | None:
     if not binding:
+        if task_targets is not None:
+            refuse("authority.task-target", "Task targets require an exact approved roadmap binding.")
         return None
     if set(binding) != {"state_path", "increment_id"}:
         refuse("authority.binding", "Roadmap binding requires state_path and increment_id.")
@@ -100,6 +103,14 @@ def roadmap_authority(root: Path, binding: dict | None) -> str | None:
         approved = module.approval_is_current(state)
         overall_ready = module.implementation_ready_for_overall(state)
         qualification = module.pending_qualification_context(state, binding["increment_id"])
+        task_context = None
+        if task_targets is not None:
+            if binding["increment_id"] == "overall" or qualification is not None:
+                refuse("authority.task-target", "Task targets cannot replace increment or overall qualification.")
+            task_context = module.task_target_context(state, binding["increment_id"], task_targets,
+                                                      require_unfinished=require_unfinished)
+            if acceptance_ids is None or not set(task_context["workCriterionIds"]).issubset(acceptance_ids):
+                refuse("authority.task-coverage", "Task targets must select actual scoped Work acceptance criteria.")
     except Exception:
         refuse("authority.invalid", "The roadmap authority is missing, malformed or stale.")
     finally:
@@ -135,4 +146,6 @@ def roadmap_authority(root: Path, binding: dict | None) -> str | None:
                 refuse("authority.evidence-unavailable", "Target qualification evidence is missing, unsafe, oversized or changing.")
             artifacts[name] = hashlib.sha256(payload).hexdigest()
         return digest({"approval": state["roadmapApproval"]["fingerprint"], "qualification": qualification, "artifacts": artifacts})
+    if task_context is not None:
+        return digest({"approval": state["roadmapApproval"]["fingerprint"], "task_targets": task_context})
     return state["roadmapApproval"]["fingerprint"]

@@ -7,6 +7,24 @@ before writes. No dependency or approval-policy change is required. Keep the
 publication sidecar, direct-runner import and nonzero-collection regression with
 the engine; copying only the script or an older test runner loses this coverage.
 
+Keep `tests/test_story_task_tracking.py` and its fixed direct-runner collection
+bridge/nonzero-collection test with the engine. Story/task adoption adds audited
+relationships without rewriting legacy chunk IDs, approval or restricted plan
+archives. Install strict history/refinement validators and event guidance
+together. Old unadopted records remain readable; a reader that lacks the optional
+tracking schema must not mutate an adopted record. Installation performs no
+adoption and grants no scope or qualification authority. Keep the exact metadata
+writer allowance, claim-phase/scope denial tests, Records/publication lock-order
+tests and guarded interrupted recovery together. A source candidate remains
+denied; the explicit pre-check metadata owner does not need to drop its claim.
+
+Install compatible repository Work/authority adapters before using optional v2
+task targets or consuming governed task `workProof`. Keep the real
+`test_control_plane_story_tasks.py` receipt/review journeys and conservative check
+routing with that adapter. Portable repositories without it remain declarative;
+the engine never executes checks or manufactures a Work record. Existing v1
+specifications and exact increment bindings remain unchanged.
+
 Install the engine, tests and references together. The explicit
 `legacy-acceptance-scope-revised` event archives mixed legacy human acceptance
 without qualifying technical work; it cannot substitute for the governed event.
