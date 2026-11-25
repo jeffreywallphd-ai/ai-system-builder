@@ -455,6 +455,22 @@ TRAINING_OUTPUT_RECEIVER_CONTROLLER_FILTERS = (
     "test_control_plane_training_output_receiver.", "test_control_plane_headless_training_runtime.",
     "test_control_plane_training_output_channel.", "test_control_plane_focused.",
 )
+TRAINING_EXIT_BARRIER_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_training_exit_barrier.py",
+)
+TRAINING_EXIT_BARRIER_OWNER_SCOPE = (
+    "modules/adapters/runtime/python/worker/tasks/original_training_files.py",
+    "modules/adapters/runtime/python/worker/tasks/original_training_exit_barrier.py",
+    "modules/adapters/runtime/python/worker/tests/test_original_training_exit_barrier.py",
+    "dev-tools/helpers/README.md", "docs/diagnostics/ai-development-control-plane.md",
+    "modules/adapters/runtime/python/README.md", "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md", "docs/adr/ADR-0047-headless-system-builder-delegation.md",
+    "docs/security/headless-system-builder-threat-model.md", "docs/context/packs/runtime.pack.md",
+)
+TRAINING_EXIT_BARRIER_CONTROLLER_FILTERS = (
+    "test_control_plane_training_exit_barrier.", "test_control_plane_original_training_files.",
+    "test_control_plane_training_output_channel.", "test_control_plane_focused.",
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -1099,6 +1115,38 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
             "modules/adapters/runtime/python/worker/tests/test_original_training_files.py"),
+    },
+    "headless-training-exit-barrier-unit": {
+        "interpreter": "python", "timeout": 120,
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/tasks/original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/tasks/original_training_files.py",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/worker/tasks/original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/tasks/original_training_files.py",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_files.py",
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tasks/model_serialization.py",
+            "modules/adapters/runtime/python/worker/models.py",
+            "modules/adapters/runtime/python/worker/tasks/__init__.py",
+            "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt",
+            "dev-tools/config/pytest-focused.ini",
+            "modules/adapters/runtime/python/worker/tasks/original_training_output_delivery.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/worker/tasks/original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/tasks/original_training_files.py",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_exit_barrier.py"),
     },
     "headless-training-output-delivery-unit": {
         "interpreter": "python",
@@ -4269,6 +4317,19 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[item for name in TRAINING_OUTPUT_RECEIVER_CONTROLLER_FILTERS for item in ("-k", name)]]
+    exit_support = (TRAINING_EXIT_BARRIER_SCOPE + TRAINING_EXIT_BARRIER_OWNER_SCOPE
+        + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_EXIT_BARRIER_CONTROLLER_FILTERS)
+        + tuple(name for identity in ("headless-training-exit-barrier-unit", "headless-original-training-files-unit",
+            "headless-training-output-channel-unit") for name in PUBLISHED_FORM_CHECKS[identity]["automatic_required_files"]))
+    if (set(TRAINING_EXIT_BARRIER_SCOPE) <= set(paths) <= set(TRAINING_EXIT_BARRIER_SCOPE + TRAINING_EXIT_BARRIER_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": exit_support[index:index+16]})
+                for index in range(0, len(exit_support), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[item for name in TRAINING_EXIT_BARRIER_CONTROLLER_FILTERS for item in ("-k", name)]]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})

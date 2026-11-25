@@ -3429,3 +3429,24 @@ existing remote-settlement-before-worker-retirement protocol is unchanged.
 The default composition supplies no factory. These cooperative checks do not
 prove actual exclusive capacity, Native destination/crash integrity, a complete
 Native producer, all-reader/SDK/worker/Job retirement, Save or real host readiness.
+
+### Original training file barrier before worker exit
+
+The genuine file owner records its exact prepared payload/input/source/Native
+identities before SDK callbacks. A fixed module-owned operation, on the original
+executor after borrow exit, validates the same private registries and full scope
+under nonblocking original locks. It refuses live/partial/unknown operations,
+Native pending calls, replacement, virtual fields, wrong threads and reentry.
+Known unfinished or held-lock observations grant no proof. Once terminal proof
+is inspected, observed uncertainty cannot be revived on the same owner.
+
+The barrier permanently fences local work and mints an opaque associated one-use
+witness; its resolver revalidates the exact owner/source/payload and closed output
+proof. Public status fields and producer-selected callbacks are not authority.
+The operation performs no new Native/file IO or guard close. Model/input handles
+and all accounting remain retained. Output guards have already been closed by
+local output retirement; historical closure is distinct from live destination
+custody. This supports a future distinct exit-ready-v1 protocol, preserving the
+meaning and default behavior of settled-v1. Actual parent IO quiescence, original
+worker/empty-Job/controller retirement, protected destination handoff, capacity,
+complete producer, separate Save and real host qualification remain pending.

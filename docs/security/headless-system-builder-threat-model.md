@@ -3203,3 +3203,21 @@ This source connection grants none of those capabilities or model-quality result
 - Residual scope: no configured default factory, actual measured/exclusive
   capacity, protected Native destination/crash lifecycle, complete producer,
   all-reader/SDK/worker/Job retirement, Model Save or real host qualification.
+
+### Original local file exit witness
+
+- Threats: a mutable closed/ready flag or callback impersonates original local
+  closure; replaced source/payload/Native records, active IO, held locks, reentry,
+  wrong thread, revived uncertainty or copied/replayed tokens admit early exit.
+- Controls: capture actual prepared identities before SDK calls; resolve fixed
+  genuine registries under original nonblocking locks; verify retained Model/input
+  guards and actual closed output IO/handles/accounting. Permanently fence local
+  work before minting an opaque same-owner one-use witness. Revalidate on consume;
+  terminal uncertainty is sticky. Do not invoke expired live guards or request a
+  new business grant for this already-owned cleanup path.
+- Evidence uses finite genuine Native/file software objects with inert OS/SDK
+  edges. No physical Native, actual model, quality scoring or host pass is claimed.
+- Limits: no Native/file effect, guard close, disk credit, deletion, Save, wire
+  activation or settled-v1 reinterpretation. Model/input guards remain retained;
+  output guards were already locally closed. Real parent IO, worker/SDK/Job exit,
+  destination/crash custody, capacity, complete producer and host proof stay pending.

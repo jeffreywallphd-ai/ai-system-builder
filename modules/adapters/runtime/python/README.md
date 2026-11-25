@@ -1280,3 +1280,21 @@ a deadline does not prove IO stopped. Unknown writes/ACKs cannot trigger retry,
 reset, deletion or credit. No default host factory is configured. Actual capacity,
 Native destination protection, producer, SDK/worker/Job retirement, Model Save
 and host qualification remain pending.
+
+### Genuine local file exit barrier
+
+The private file workflow captures its actual prepared payload, input readers,
+source identities, retained Native owners and locks before SDK callbacks. The
+fixed original exit barrier resolves those same registries under nonblocking
+locks after the borrow has ended and local output IO has closed. It permanently
+fences further local work, retains Model/input guards and all accounting, and
+mints one opaque owner-associated token. The fixed resolver consumes it once.
+Status DTOs, booleans, copied tokens and resource callbacks cannot mint proof.
+Observed terminal uncertainty cannot be cleared by resetting a mutable flag.
+
+Output guards were already closed by local output retirement; this barrier does
+not establish live output custody. A future distinct exit-ready protocol must
+still obtain actual parent IO quiescence and exact original worker/Job retirement.
+Existing settled-v1 and default hosts are unchanged; no new wire path is enabled.
+Actual capacity, protected destination/crash lifecycle, full producer, Save and
+host qualification remain pending. The barrier issues no Native or file effects.

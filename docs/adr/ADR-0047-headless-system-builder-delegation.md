@@ -1462,3 +1462,35 @@ not establish actual exclusive capacity, retained allocation accounting, Native
 destination protection/crash integrity, a complete producer, all-reader/SDK/worker/
 Job retirement, Model Save or physical host qualification. Those remain pending;
 no new product, provider, security-policy choice or model quality gate is selected.
+
+### Distinct local file barrier for future exit-ready retirement
+
+The original resource topology may use a distinct optional exit-ready protocol
+before exact original worker/Job retirement. This refines the approved ownership
+direction and does not redefine settled=True. Existing settled-v1 semantics and
+default hosts remain unchanged; this component enables no new wire operation.
+
+The first component is a fixed genuine OriginalTrainingFiles barrier, executed
+on the same original executor after its joint borrow and local output retirement.
+Capture prepared source/input/payload/Native identities before SDK callbacks.
+Under original nonblocking locks, verify exact private registry/owner/source/
+definition/request lineage, retained Model/input handles, actual closed output
+family IO/accounting and no active/unknown Native work. Refuse forged or replaced
+objects, reentry, wrong threads, pending calls and virtual fields. Known unfinished
+work or held locks grants no proof; observed terminal uncertainty stays permanent.
+
+Fence local admission before minting one opaque in-process token associated with
+that actual owner/lease/task/payload/closed proof. A fixed resolver revalidates and
+consumes it once. A callback boolean, ABC instance, status DTO or serialized hash
+cannot mint the witness. Issue no Native/file effects, post-borrow guard close,
+retry, deletion or capacity credit. Model/input guards and accounting stay retained;
+output guards were already locally closed and must not be called live custody.
+
+The witness attests local readiness for termination only. It does not claim all
+SDK readers or background threads exited. Future negotiated private wire/state
+composition must fence parent IO and preserve exact runtime/profile/session/task
+lineage, then obtain the existing original worker/empty-Job/source-retain/controller
+retirement proof. Actual parent IO quiescence, protected destination/crash handoff,
+measured/exclusive both-copy capacity, complete Native producer, Model Save,
+generation and actual host/parent qualification remain pending. No new provider,
+executor, resource policy, model quality gate or public/default activation is added.

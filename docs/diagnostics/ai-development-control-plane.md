@@ -3434,3 +3434,14 @@ and original session bindings. They do not run models, model accuracy or physica
 Native workers. The exact closed owner scope retains complete related controller
 modules and actual feature execution. Incomplete, nonregular, mixed or unknown
 support keeps generic checks; no final roadmap qualification is inferred.
+
+### Original training file exit barrier checks
+
+`headless-training-exit-barrier-unit` runs the whole genuine local exit-witness
+suite with finite Native/file fixtures. Original file-owner and private output
+delivery checks remain independent. The bounded cases verify one-use provenance,
+retained Model/input guards, actual closed output handles, nonblocking locks,
+unknown/pending calls, scope replacement, thread and virtual-field denials.
+This is software component evidence, not physical Native, model quality or host
+qualification. Exact closed scope runs whole related controller modules;
+missing/nonregular/mixed/unknown or explicit generic scope keeps fallback.

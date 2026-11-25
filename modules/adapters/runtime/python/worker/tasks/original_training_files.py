@@ -44,6 +44,41 @@ _DELIVERY_BIND = output_delivery.bind_original_output_delivery
 _owners = WeakKeyDictionary()
 _leases = WeakKeyDictionary()
 _bindings = WeakKeyDictionary()
+_prepared_files = WeakKeyDictionary()
+_file_locks = WeakKeyDictionary()
+_RETAINED_PLAIN=native._assert_plain_output_io_type
+_RETAINED_NATIVE=native.InheritedModelNativeCalls
+_RETAINED_HANDLE=native.Handle
+_RETAINED_SLOT=native.P
+
+
+def _retained_native_snapshot(owner):
+    """Passive original identities only; never re-enter expired live guards."""
+    _need(native._assert_plain_output_io_type is _RETAINED_PLAIN and native.InheritedModelNativeCalls is _RETAINED_NATIVE
+        and native.Handle is _RETAINED_HANDLE and native.P is _RETAINED_SLOT and type(owner) is _RETAINED_NATIVE)
+    for base in type.__getattribute__(type(owner),"__mro__"):
+        descriptor=type.__getattribute__(base,"__dict__").get("__dict__")
+        _need(descriptor is None or type(descriptor) is GetSetDescriptorType)
+    fields=object.__getattribute__(owner,"__dict__")
+    _need(type(fields) is dict)
+    _RETAINED_PLAIN(type(owner),_RETAINED_NATIVE,frozenset(fields))
+    _need(fields.get("unknown") is False and type(fields.get("pending")) is list and not fields["pending"]
+        and type(fields.get("handles")) is list and type(fields.get("buffers")) is list)
+    handles=[]
+    for handle in fields["handles"]:
+        _need(type(handle) is native.Handle)
+        for base in type.__getattribute__(type(handle),"__mro__"):
+            descriptor=type.__getattribute__(base,"__dict__").get("__dict__")
+            _need(descriptor is None or type(descriptor) is GetSetDescriptorType)
+        _RETAINED_PLAIN(type(handle),_RETAINED_HANDLE,
+            frozenset(("owner","slot","role","known","closed","close_attempted","inherited","verified")))
+        data=object.__getattribute__(handle,"__dict__")
+        _need(type(data) is dict and data.get("owner") is owner and type(data.get("slot")) is native.P
+            and type(data.get("role")) is str and type(data.get("known")) is bool
+            and type(data.get("closed")) is bool and type(data.get("close_attempted")) is bool)
+        handles.append((handle,data["slot"],data["slot"].value,data["role"],data["known"],data["closed"],data["close_attempted"],
+            data.get("inherited"),data.get("verified")))
+    return (owner,fields["lock"],fields["handles"],fields["pending"],fields["buffers"],fields["invoke"],fields["kernel"],fields["clock"],tuple(handles))
 
 
 def _need(value):
@@ -228,6 +263,7 @@ class OriginalTrainingFiles:
                 "closed":False,"output_closed":False,"poisoned":False,"input":None,"family":None,"payload":None,
                 "thread":get_ident(),"lock":RLock(),"delivery":delivery}
             _owners[self]=record;_leases[lease]=self
+            _file_locks[self]=record["lock"]
             record["resource"]=_Resource(self);record["admission"]=_Admission(self)
             _bindings[self]=(lease,state,source_record,source,record["resource"],record["admission"],
                 _stamp(definition),_stamp(input_configuration),_stamp(record["output_configuration"]),
@@ -261,6 +297,15 @@ class OriginalTrainingFiles:
             _snapshot(self,record);_admitted(self,record)
             payload=_VALIDATE(data["payload"])
             record["payload"]=_COPY(_SERIALIZE(payload,mode="json"))
+            input_reader=native._training_input_readers.get(graph)
+            sealed=native._sealed_training_inputs.get(graph)
+            _need(input_reader is not None and sealed is not None and sealed["lease_state"] is record["state"])
+            # Capture this original prepared source BEFORE any SDK callback.
+            # No later equal-shaped payload/reader can mint an exit witness.
+            _prepared_files[self]=(record,record["state"],record["source_record"],record["source"],graph,input_reader,sealed,
+                _stamp(record["payload"]),_stamp(record["definition"]),record["state"]["lock"],record["lock"],
+                _retained_native_snapshot(record["state"]["native_owner"]),_retained_native_snapshot(graph.owner),
+                (record["source_record"]["task_id"],record["source_record"]["definition_digest"]))
             record["phase"]="prepared"
             return _VALIDATE(_COPY(record["payload"]))
         except BaseException as error:

@@ -234,3 +234,12 @@ candidate bytes; it runs no model, accuracy trial or physical Native worker.
 The closed receiver/controller scope runs all related routing modules and actual
 feature commands. Missing, nonregular, mixed or unknown support retains the
 generic fallback; explicit generic checks are not suppressed.
+
+### Original training file exit barrier checks
+
+`headless-training-exit-barrier-unit` executes the complete finite file-owner
+barrier suite. It uses genuine registered Native/file software objects with an
+inert kernel; no Windows process, model or scoring is run. Original file-owner
+and private delivery compatibility checks remain selected. The exact closed
+controller scope runs complete related routing modules and actual commands;
+missing, nonregular, mixed, unknown and explicit generic work retains fallback.

@@ -2587,3 +2587,15 @@ not grant task success, readiness, Save, resource credit or global retirement.
 Default Native resources and default parent hosts remain unconfigured. Real
 destination custody/capacity, producer, SDK/worker/Job settlement and host proof
 are separate pending obligations.
+
+### Fixed original file exit witness
+
+After genuine local output retirement, the original executor may request a
+permanent local file exit barrier. The fixed module checks captured source,
+payload, input readers, Native identities, locks, pending calls and actual closed
+output handles. It retains Model/input guards and byte accounting. One opaque
+registered token can be consumed by the same owner; a DTO/callback cannot stand
+in for it. Busy work grants no proof, and observed terminal uncertainty is sticky.
+This is ready-for-termination support only. No worker/SDK/Job exit, protected
+destination, disk credit, Save, default activation or host result is asserted.
+Existing settled-v1 stays unchanged; future wire composition remains separate.
