@@ -31,6 +31,17 @@
   copy in the bounded task companion. Task counts, local Work support and parent
   technical qualification stay separate; installation performs no adoption.
 
+- Scoped planning usage is prospective optional telemetry. `usage enable-scopes`
+  explicitly deploys v3 only after compatible readers; default Work hooks keep
+  v2. Exact task/story lineage, old counters/cursors and unassigned history stay
+  distinct. See `docs/diagnostics/token-usage-tracking.md`; no time is inferred
+  from Work or receipt elapsed duration.
+  Optional `usage activity-import` preserves estimated/unknown closed spans;
+  measured effort requires qualified source/clock evidence, not operator claims.
+  Roadmaps reports are optional read-only scope views; keep pre-review/fixes and
+  unknowns separate, and preserve canonical work on numeric/capacity failure.
+  Read a configured usage-only destination only after same-repository validation;
+  retain owning Work/source records and unavailable/foreign fail-closed behavior.
 - Token phase attribution is prospective optional telemetry. Use `usage phase`
   at review-start/correction-resume boundaries with explicit Work/thread
   association. Legacy and uncertain intervals are not pre-review implementation.

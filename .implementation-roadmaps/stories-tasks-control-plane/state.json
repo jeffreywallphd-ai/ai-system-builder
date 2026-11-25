@@ -199,7 +199,18 @@
     }
   ],
   "evidencePolicy": "control-plane-v1",
-  "feedback": [],
+  "feedback": [
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "root-metrics-research-provenance",
+      "impact": "within-increment",
+      "nextAction": "Use the clarified Root/source provenance in current checks and review. Do not infer historical story attribution or measured implementation time.",
+      "recordedAt": "2026-11-25T20:16:29Z",
+      "summary": "The earlier research statement about an own host without an isolated session reference described the isolated source checkout. It does not describe Root. Root has configured response-usage capture with recent actual selected-thread events; stale threads and unreported agents remain unknown. A live host implementation-time span feed is unavailable. Preserve the original research/history and use this clarification for current integration qualification. This note records no usage migration, task completion or parent pass.",
+      "targetIncrementId": "scoped-time-and-tokens"
+    }
+  ],
   "finalApproval": null,
   "history": [
     {
@@ -325,6 +336,12 @@
       "sequence": 20,
       "storyTaskRevisionDigest": "7de47b4d6de224fbb22c2ac0976faf8b3901e6c327951e87d15abdf933727856",
       "type": "story-tasks-assigned"
+    },
+    {
+      "eventFingerprint": "8d38a6f30093ffc223fbf637e37c72d3fcb0296090e6114ad221f72c2ba71a79",
+      "recordedAt": "2026-11-25T20:16:29Z",
+      "sequence": 21,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -730,5 +747,5 @@
     ],
     "schemaVersion": 1
   },
-  "updatedAt": "2026-11-25T20:05:47Z"
+  "updatedAt": "2026-11-25T20:16:29Z"
 }

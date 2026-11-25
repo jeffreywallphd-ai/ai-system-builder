@@ -77,6 +77,75 @@ function dashboardFixture() {
     storage: { bytes: 3456, maximum_bytes: 4194304, stream_cursors: 2, maximum_stream_cursors: 4096, recent_detail: 3, recent_detail_compacted: 0 },
     trends: { daily: [{ period: "2026-11-24", usage: own }], weekly: [{ period: "2026-11-23", usage: own }], quarterly: [{ period: "2026-Q4", usage: own }] } };
 }
+
+function scopedReportFixture(input = 100) {
+  const pair = (amount = null, milliseconds = null) => {
+    const count = amount === null ? 0 : 1;
+    const tokens = dashboardRollup(amount === null ? {} : { input_tokens: amount, output_tokens: 20, cached_input_tokens: 10, reasoning_output_tokens: 5 });
+    tokens.intervals = count; tokens.purpose_attribution = { declared: count, inferred: 0, unavailable: 0 };
+    tokens.phase_attribution = { declared: count, inferred: 0, unavailable: 0 }; tokens.provenance = count ? ["host-reported"] : [];
+    return { tokens, time: { measured_ms: null, estimated_ms: milliseconds, intervals: count, unavailable_intervals: 0,
+      coarse_intervals: 0, attribution: { declared: count, inferred: 0, unavailable: 0 } } };
+  };
+  const phases = Object.fromEntries(["pre_review", "review_fixes", "post_review_other", "mixed", "unknown", "legacy_unknown"].map(phase => [phase, pair()]));
+  phases.pre_review = pair(input, 800); phases.review_fixes = pair(40, 200);
+  const combined = pair(input + 40, 1000); combined.tokens.measured.output_tokens = 40; combined.tokens.intervals = 2;
+  combined.tokens.measured.cached_input_tokens = 20; combined.tokens.measured.reasoning_output_tokens = 10;
+  combined.tokens.purpose_attribution.declared = combined.tokens.phase_attribution.declared = 2;
+  combined.time.intervals = combined.time.attribution.declared = 2;
+  return { schema_version: "planning-scope-report-v1", status: "recorded", coverage: "partial-or-unavailable", phases,
+    all_purposes: combined, direct_scope: structuredClone(combined), trends: Object.fromEntries([["daily", "2026-11-24"],
+      ["weekly", "2026-11-23"], ["quarterly", "2026-Q4"]].map(([name, period]) => [name, [{ period, implementation: structuredClone(phases.pre_review), review_fixes: structuredClone(phases.review_fixes) }]])) };
+}
+
+test("Roadmaps scoped effort stays small, separates review fixes and preserves disclosures and navigation on optional corruption", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom; let requests = 0, timers = 0;
+  const report = scopedReportFixture();
+  let response = { schema_version: "development-review-v1", repository_id: "scoped-fixture", source_digest: "scoped-one",
+    planning_metrics: { schema_version: "planning-metrics-summary-v1", status: "enabled", coverage: "partial-or-unavailable", time_unit: "agent-effort-ms", live_activity_capture: false,
+      repository_unattributed: structuredClone(report.phases.unknown), all_scoped_usage: structuredClone(report.all_purposes) },
+    roadmaps: [{ id: "owner", title: "Useful roadmap", status: "executing", current_increment: "one", scoped_metrics: structuredClone(report), increments: [{ id: "one", number: 1,
+      title: "Useful increment", objective: "Keep approved outcomes", status: "implementing", scoped_metrics: structuredClone(report), chunks_complete: 0, chunks_planned: 1, story_tracking_digest: "a".repeat(64),
+      chunks: [{ id: "first", chunk_number: 1, title: "Useful task", outcome: "Original task", status: "planned", story_id: "fixed", criteria_ids: ["host"], is_next: true }],
+      stories: [{ id: "fixed", title: "Fixed story", outcome: "A useful outcome", task_ids: ["first"], tasks_complete: 0, tasks_planned: 1, scoped_metrics: structuredClone(report) }],
+      criteria: [{ id: "host", description: "Actual host remains pending", qualification: "controlled-environment", outcome: "pending" }] }] }], work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  response.roadmaps[0].scoped_metrics.direct_scope = structuredClone(report.phases.unknown);
+  response.roadmaps[0].increments[0].scoped_metrics.direct_scope = structuredClone(report.phases.unknown);
+  window.fetch = async () => { requests++; return { ok: true, json: async () => structuredClone(response) }; }; window.setInterval = () => { timers++; return 1; };
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    const headline = window.document.querySelector(".card > .scoped-metrics");
+    assert.match(headline.textContent, /Implementation tokens \(input \/ output\): 100 \/ 20 measured/);
+    assert.match(headline.textContent, /0m 0.8s estimated/);
+    assert.match(headline.textContent, /Post-review implementation fixes/);
+    assert.equal(window.document.querySelectorAll(".planning-unassigned").length, 1);
+    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 1 criteria passed/);
+    headline.querySelector("summary").click(); await pause(); assert.equal(headline.querySelector("details").open, true);
+    window.document.querySelector("#theme-toggle").click(); assert.equal(window.document.documentElement.dataset.theme, "light");
+    response.source_digest = "scoped-two";
+    const next = scopedReportFixture(150), parent = response.roadmaps[0], increment = parent.increments[0];
+    parent.scoped_metrics = structuredClone(next); increment.scoped_metrics = structuredClone(next); increment.stories[0].scoped_metrics = structuredClone(next);
+    parent.scoped_metrics.direct_scope = structuredClone(next.phases.unknown); increment.scoped_metrics.direct_scope = structuredClone(next.phases.unknown);
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(window.document.querySelector(".card > .scoped-metrics details").open, true);
+    assert.match(window.document.querySelector(".card > .scoped-metrics").textContent, /150 \/ 20 measured/);
+    for (const corrupt of [value => { value.phases.pre_review.time.estimated_ms = -1; }, value => { value.phases.pre_review.tokens.measured.input_tokens = "<img src=x onerror=alert(1)>"; },
+      value => { value.trends.daily = Array(8).fill(value.trends.daily[0]); }, value => { value.phases = null; }]) {
+      response.source_digest += "-bad"; response.roadmaps[0].scoped_metrics = scopedReportFixture(); corrupt(response.roadmaps[0].scoped_metrics);
+      window.document.querySelector("#refresh").click(); await pause();
+      assert.equal(window.document.querySelector("#connection").textContent, "Live · JSON connected");
+      assert.match(window.document.querySelector(".card > .scoped-metrics").textContent, /Unavailable/);
+      assert.equal(window.document.querySelectorAll(".work-chunk").length, 1); assert.equal(window.document.querySelectorAll("img").length, 0);
+    }
+    response.source_digest += "-omitted"; response.planning_metrics = { status: "omitted", coverage: "unavailable" };
+    response.diagnostics = [{ code: "projection.optional-metrics-omitted" }];
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(window.document.querySelector("#error").textContent, /Saved work and technical evidence remain unchanged/);
+    assert.doesNotMatch(window.document.querySelector("#error").textContent, /Some records are unavailable/);
+    assert.equal(timers, 1); assert.equal(requests, 7);
+  } finally { window.close(); }
+});
 test("phase dashboard keeps implementation exclusive and filters all bounded periods and agents without new polling", async () => {
   const dom = new JSDOM(readFileSync('dev-tools/review-site/index.html', 'utf8'), { runScripts: 'outside-only', url: 'http://127.0.0.1:8766' });
   const { window } = dom; const value = dashboardFixture(); let requests = 0, timers = 0;
@@ -1074,7 +1143,7 @@ test("roadmap labels distinguish queued pending, in-progress, approval and actua
     const legend = window.document.querySelector(".roadmap-status-legend");
     assert.equal(legend.getAttribute("aria-labelledby"), "roadmap-status-key");
     assert.equal(window.document.querySelector("#items").firstElementChild, legend);
-    assert.equal(legend.nextElementSibling.id, "open-roadmaps");
+    assert.equal(window.document.querySelector(".roadmap-section").id, "open-roadmaps");
     for (const text of ["technical check pending", "Qualification not recorded", "This does not mean its test failed", "Reviewed local support", "the parent roadmap is not thereby qualified", "Paused for approval", "Ready to finalize"])
       assert.ok(legend.textContent.includes(text), text);
     assert.match(window.document.querySelector("#summary").textContent, /1In progress/);
@@ -1291,7 +1360,7 @@ test("increment delivery displays measured sums, pending and unavailable counts 
     const panel = () => window.document.querySelector("details.increment");
     assert.equal(panel().open, false);
     assert.match(panel().querySelector(":scope > .delivery-time").textContent, /^Delivery time: 1h 3m 20s · 2 measured · 1 pending · 1 unavailable\. Summed execution durations may overlap\.$/);
-    assert.match(panel().querySelector(".work-chunk .delivery-time").textContent, /^Delivery time: Not recorded · Execution records do not identify individual tasks\.$/);
+    assert.match(panel().querySelector(".work-chunk .delivery-time").textContent, /^Delivery time: Not recorded · Elapsed work time can include waiting and is not assigned to individual tasks\.$/);
     assert.equal(panel().querySelector(".work-chunk .status").textContent, "completed");
     panel().querySelector("summary").click(); await pause();
     increment.delivery = { elapsed_ms: null, timed_records: 0, pending_records: 2, unavailable_records: 1 }; response.source_digest += "x";

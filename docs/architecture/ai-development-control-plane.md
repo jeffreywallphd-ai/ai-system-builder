@@ -44,7 +44,7 @@ the technical projection/CLI and canonical state are unchanged. Local support
 descriptions bind their exact existing text. It cannot assign action authority,
 change outcome/qualification or complete work. Strict schema, row/text/file bounds,
 joined-text redaction and source freshness apply before display. Missing or invalid
-copy uses neutral agent-owned recovery guidance. The existing2MiB HTTP response
+copy uses neutral agent-owned recovery guidance. The existing 2 MiB HTTP response
 limit and text-only DOM rendering remain. Generated technical narratives are not
 duplicated into a second complete tree in the HTTP response.
 
@@ -236,6 +236,70 @@ strict final closure are unchanged; missing external evidence never passes. Gove
 and unsupported custom paths fail before creation.
 
 ## Evaluation and feedback
+
+Optional scoped usage v3 extends the existing single atomic 4 MiB numeric store.
+Only `usage enable-scopes` opts in; ordinary enable/import/lifecycle writes stay
+v2 until explicitly deployed. All v1/v2 raw totals, periods, cursors, baselines,
+recent classifications and marker digests survive. New known observations enter
+one exclusive leaf keyed by repository, roadmap, increment and optional story
+ancestry. Unassigned values are the componentwise nonnegative raw-minus-known
+remainder; they are never duplicated into every roadmap. Retention stays 400 days,
+156 weeks and40 quarters by default, with older-quarter/lifetime totals and 4096
+replay cursors. Capacity refusal preserves the previous file.
+
+`planning_scopes.py` resolves read-only exact Work/spec/current authority. A v2
+Work targeting tasks in one fixed story maps once to that story; multiple stories
+map only to their increment. Legacy increment Work stays increment-only; overall
+Work maps only to its roadmap; unrelated or unverifiable Work has no planning
+scope. The bounded phase context pins ownership/tasks/approval separately from
+permanent aggregate ancestry, so Work and task IDs do not create unbounded
+rollup dimensions. Token imports revalidate the live context under the existing
+writer lock before assigning new deltas. Crossing responses remain unassigned.
+The v3 schema includes a strictly validated closed activity section, empty by
+default. Enabling it alone collects no time.
+
+`usage_activity.py` imports optional closed numeric spans into that same atomic
+file, with independent bounded activity replay cursors and unchanged token state.
+Public operator imports accept estimates or unknown durations. Measured values
+require a private repository-owned qualified-host adapter capability, consistent
+session-monotonic endpoints and UTC span bounds; JSON and CLI have no capability
+override. No live Codex active-span adapter is installed. Genuine monotonic-clock
+fixtures test the seam without asserting live capture. Own-agent spans must be
+chronological and nonoverlapping across sessions/producers; distinct agents sum
+agent effort, while inclusive reports stay separate. Only spans wholly after an
+exact active planning marker inherit declared time phase/scope. Token fences and
+settled-response state remain independent. Work/check elapsed time is never used.
+
+`planning_metrics.py` is an optional projection, not another store or authority.
+Canonical parsed story/package ancestry supplies transient hash anchors before
+plain user-copy substitution. After page selection, the reader joins only exact
+repository/roadmap/increment/story refs and removes every transient anchor.
+Each sparse leaf folds into at most its story, increment and roadmap once.
+Direct parent observations remain explicit included subsets; unrelated or changed
+ancestry is not reassigned. Raw-minus-known repository unknowns appear once.
+No per-Work/task/finding permanent dimensions or new request/polling contract exist.
+
+Only observed nodes get versioned `planning-scope-report-v1` data. The global
+`planning-metrics-summary-v1` discloses partial coverage. Reports preserve separate
+initial/fix/other/unknown phases and bounded 7/8/8 trends while storage retains
+400/156/40. Construction stops at the existing 2 MiB response budget without a
+partial node prefix. Final admission strips optional fields before any existing
+execution trimming; exact pages keep all canonical rows/counts. Omission uses a
+fixed diagnostic when space permits; at an exact canonical boundary that optional
+diagnostic is omitted too, with unavailable UI. Canonical-only overflow keeps its
+existing fail-closed behavior. Default v2 projection fields remain unchanged.
+Early execution sizing excludes transient anchors and the optional v3 capability
+flag. If canonical content needs its existing execution trimming, compute that
+bare result first; an omission note may use spare bytes but cannot evict another
+record. Exact-boundary real-Work and final-admission regressions cover both paths.
+Reporting resolves one explicit usage-only destination through the existing
+strict local-capture config and common-Git repository validation. This changes
+numeric read location only; canonical roadmap ancestry and Work/source ownership
+remain in the review checkout. Summary readers and Roadmaps share that resolver.
+They never inspect session files, poll capture, create records, write stores or
+follow destination chains. Invalid/foreign/missing destinations fail optional
+reads closed, without stale local fallback. Raw writer acknowledgements retain
+their explicit selected store, avoiding accidental write routing changes.
 
 Numeric usage v2 adds fixed implementation phases, independent of activity,
 measurement and provider assurance. v1 read-time migration preserves numbers,

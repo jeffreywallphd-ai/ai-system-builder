@@ -12,6 +12,16 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Baseline
 
+- Scoped story/increment/roadmap metrics route to the token-usage guide, exact
+  Work task bindings and the control-plane architecture/security sources. The
+  optional `usage enable-scopes` deployment waits for compatible readers;
+  unknown history stays unassigned and default Work hooks do not migrate stores.
+  `usage activity-import` adds closed estimates/unknown effort; measured time
+  requires a qualified source and never follows from Work/check elapsed duration.
+  Optional Roadmaps summaries fold exclusive leaves once; unavailable/oversized
+  metrics must preserve canonical rows, navigation and actual qualification.
+  Reporting may read one validated same-repository usage-only destination;
+  keep Work/source ownership local and never inspect sessions or start capture.
 - Prospective implementation token splits route to the token-usage guide and
   optional `usage phase` review-start/correction-resume protocol. Add
   `docs-standards` and `security` for schema/storage/readout changes. Legacy and

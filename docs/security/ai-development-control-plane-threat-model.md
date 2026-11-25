@@ -288,6 +288,64 @@ when the duplicate later disappears. Canonical records remain unchanged.
 
 ## Trust boundaries and controls
 
+Scoped numeric attribution is security-relevant for integrity and privacy.
+Explicit `usage enable-scopes` is the reader-deployment boundary; generic hooks
+never migrate a shared store. Preserve every old numeric cell, cursor and replay
+hash under the unchanged 4 MiB cap and fail before publication on overflow.
+Validate scope-definition hashes, bounded repository/roadmap ancestry, exact
+Work/spec/authority and ownership/task/approval pins; pending Records recovery
+or stale authority supplies no scope. Only live matching fenced contexts may
+attribute new consumption. Reject negative residuals and malformed time/cursor
+sections. Do not allocate old or mixed usage, copy repository unknowns into
+parents, add inclusive parent reports to child own usage, or expose raw Work,
+session, path, prompt or free-text source data in usage rollups. Optional reader
+failure reports unavailable and cannot alter canonical progress or approval.
+
+Closed activity imports accept a fixed numeric-only schema with 64 spans/128 KiB
+input, opaque producer/agent/session/clock refs and at most 4096 permanent activity
+cursors inside the same 4 MiB file. Latest conflicting sequence, gaps, clock resets,
+own-agent overlap across sessions/producers, malformed refs and invalid durations
+refuse the complete batch before publication. Older sequences never recount.
+Operator JSON has no measured-source override: estimates stay estimated, unknown
+durations stay null, and only a separately qualified repository-owned host adapter
+may use the private measured seam. No such live Codex adapter is installed.
+Milliseconds must fit the closed span (one millisecond measured rounding allowance)
+and measured duration must equal consistent monotonic endpoints. Exact current
+marker refs and whole-after-marker timing govern declared scope/phase; crossing
+or mismatched activity stays unknown. There is no timer, command execution,
+host discovery or use of check/receipt elapsed time. Capacity and interrupted
+publication preserve all token data and previous activity cursors.
+
+Scoped report projection joins only hash anchors derived from canonical JSON,
+before user descriptions replace visible text. Foreign/stale ancestry never
+inherits another story's counters. Each exclusive leaf folds at most three times
+for three distinct level views; views themselves are never summed. Optional
+reports expose only typed numeric facts and existing public hierarchy context,
+with no Work/source/session refs in product copy. Strip transient anchors from
+all views. Keep strict canonical ownership/page joins independent of optional
+numeric parsing. Invalid optional numbers produce unavailable panels, not HTML
+or a canonical refresh rejection. No approval or technical pass follows from data.
+
+Sparse construction and final admission use the existing 2 MiB cap; omit the whole
+optional report rather than a prefix. Strip metrics before existing execution
+trimming and preserve exact canonical page rows/counts. The fixed omission
+diagnostic is also optional if an exact canonical boundary leaves no room for it;
+absence renders unavailable. Preserve input objects on admission failure and all
+stored bytes on reads. No new endpoint, collector, timer, host discovery,
+dependency download, retention/cap increase or live shared-store mutation exists.
+Exclude the optional capability flag from early execution sizing. Compute any
+existing final execution trimming from bare canonical content before considering
+an omission note; optional metadata must never cause an additional eviction.
+For author-worktree reporting, accept only the existing bounded regular local
+config, its exact workspace hash and a lexical regular destination in the same
+common Git repository. Check reparse/directory boundaries before resolving the
+destination. No session/source discovery or content read accompanies reporting.
+Refuse foreign, missing, malformed or timed-out destination checks as unavailable
+without stale fallback; preserve canonical navigation and both stores. Work/
+source/claims/receipts remain owning-checkout records. Explicit writers still use
+their selected target and raw acknowledgement. Real linked-worktree, foreign,
+missing, timeout, byte-preservation and no-session-read fixtures cover this fit.
+
 Prospective phase attribution protects integrity separately from numeric status.
 Use strict v2 contracts, fixed enums, opaque owning-checkout/Work/spec/source/review
 refs and exact selected-thread association. Never guess UUIDs from invocations or

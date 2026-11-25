@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .common import digest, fields, identifier, read_json, safe_text, text
 from .contracts import ControlError
-from .projection import bound_review_projection, project, review_content, review_page
+from .projection import bound_review_projection, finalize_planning_metrics, project, review_content, review_page
 from .storage import confined_path
 
 REFERENCE = 'docs/operations/roadmap-user-descriptions.json'
@@ -302,10 +302,12 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
 def user_project(root: Path, *, page: dict | None = None) -> dict:
     content = review_content(root, paginated=True) if page is not None else project(root)
     content = apply_user_descriptions(root, content)
-    return bound_review_projection(review_page(content, **page) if page is not None else content)
+    content = review_page(content, **page) if page is not None else content
+    return bound_review_projection(finalize_planning_metrics(root, content))
 
 
 def compact_user_project(root: Path, *, page: dict | None = None) -> dict:
     content = review_content(root, compact_work_items=True, paginated=True) if page is not None else project(root, compact_work_items=True)
     content = apply_user_descriptions(root, content)
-    return bound_review_projection(review_page(content, **page) if page is not None else content)
+    content = review_page(content, **page) if page is not None else content
+    return bound_review_projection(finalize_planning_metrics(root, content))

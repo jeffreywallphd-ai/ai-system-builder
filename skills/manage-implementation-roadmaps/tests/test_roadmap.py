@@ -1324,6 +1324,13 @@ class RoadmapEngineTest(unittest.TestCase):
             self.assertIn('legacy_unknown', source)
             self.assertIn('never a review approval gate', source)
 
+    def test_scoped_usage_guidance_keeps_migration_and_capture_optional(self) -> None:
+        for relative in ('SKILL.md', 'references/workflow.md', 'references/installation.md'):
+            source = (MODULE_PATH.parent.parent / relative).read_text(encoding='utf-8')
+            for phrase in ('usage enable-scopes', 'usage scope-summary', 'usage activity-import', 'Roadmaps', 'same-repository', 'optional', 'readers'):
+                self.assertIn(phrase, source, relative)
+            self.assertTrue('never' in source or 'does not' in source, relative)
+
     def test_skill_requires_economically_cohesive_increments(self) -> None:
         skill_root = MODULE_PATH.parent.parent
         skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")

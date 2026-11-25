@@ -9,6 +9,20 @@ unknown; review/tests/bookkeeping remain separate. This optional telemetry adds
 no approval gate or model call and cannot mutate Work during concurrent checks.
 Repositories without that adapter retain their existing workflow.
 
+Where the repository adapter provides `usage enable-scopes`, deploy compatible
+shared-store readers before its explicit opt-in migration. Optional
+`usage scope-summary` follows exact Work task/story ancestry prospectively;
+unassigned history and unavailable implementation time remain unknown. This
+workflow never estimates time from receipt duration or activates capture itself.
+Optional `usage activity-import` preserves estimates and unknown durations;
+measured effort requires a qualified host source. Unsupported live capture stays
+unavailable, and inclusive parent reports never add to child own effort.
+Optional Roadmaps time/token summaries preserve exact exclusive scope and unknowns.
+Read them separately from elapsed Work delivery and actual technical qualification;
+unavailable reports do not delay approved implementation.
+Where configured, reports read one validated same-repository usage-only store;
+Work/source ownership stays local and reporting never reads sessions or captures.
+
 Publication retains the complete JSON state under the existing one-MiB reader
 limit. Small records use indentation; larger records use canonical compact JSON
 with LF/CRLF headroom. The actual complete recovery journal must also fit before

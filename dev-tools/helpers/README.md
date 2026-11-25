@@ -25,6 +25,35 @@ from invocation labels or mutate Work during verification. The v2 reader
 preserves v1 counters/replay and labels old implementation phase unknown.
 Telemetry never grants qualification or approval authority.
 
+Optional planning attribution uses `usage enable-scopes` only after every reader
+of the selected repository store supports v3. Default enable/import/Work hooks
+keep v2. `usage scope-summary` shows known exclusive story, increment-only or
+roadmap-only observations and the repository's unassigned remainder. Exact Work
+task bindings supply prospective lineage; old usage is never assigned by guess.
+The same atomic 4 MiB file retains all original counters, replay cursors and periods.
+See the token guide for the deployment boundary and unavailable coverage.
+
+`usage activity-import --from .local-codex/activity.json` accepts optional closed
+numeric effort spans after that deployment. Operator imports can record explicit
+estimates or unknown durations; a manifest cannot claim measured time. No supported
+live Codex active-span source is currently installed. `usage activity-summary`
+keeps own effort, inclusive/unknown reports and implementation/review-fix phases
+separate. It never substitutes Work duration or token windows for effort.
+
+The read-only Roadmaps view folds exact sparse leaf observations once into story,
+increment and roadmap summaries. Details separate initial implementation, fixes,
+all purposes and direct contributions, with bounded retained trends. Unknowns are
+never shared across every roadmap. Optional report failure or byte overflow leaves
+canonical rows/criteria intact. `scoped-metrics` runs related numeric/projection
+fixtures; `scoped-roadmaps-view` runs existing DOM cases without its duplicate
+whole-controller wrapper, including for an explicit final feature qualification.
+Reporting readers follow one explicitly configured same-repository usage-only
+destination, so an author checkout can display the primary checkout's numeric
+store. They validate config/workspace/common-Git identity without reading sessions
+or starting capture. Invalid, foreign or unavailable destinations show unavailable
+and never fall back to a stale local store. Work/source/claims stay in the author
+checkout. Explicit writer targets and their acknowledgements stay unchanged.
+
 Optional [token tracking](../../docs/diagnostics/token-usage-tracking.md) uses
 `usage enable`, `usage import --from` and `usage summary` through the control
 plane. Authorized numeric exports retain bounded day/week/quarter/lifetime

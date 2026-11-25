@@ -605,6 +605,35 @@ TOKEN_PHASE_SCOPE = TOKEN_LOCAL_SCOPE + (
     "skills/manage-implementation-roadmaps/references/installation.md", "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
 )
 TOKEN_PHASE_REQUIRED = TOKEN_PHASE_SCOPE + TOKEN_LOCAL_REQUIRED
+SCOPED_METRICS_SCOPE = (
+    "dev-tools/helpers/control_plane/planning_metrics.py", "dev-tools/helpers/control_plane/projection.py",
+    "dev-tools/helpers/control_plane/user_presentation.py", "dev-tools/helpers/tests/test_control_plane_scoped_metrics.py",
+    "dev-tools/review-site/app.js", "dev-tools/review-site/style.css", "dev-tools/review-site/README.md",
+    "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+    "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/control_plane/usage_phases.py",
+    "dev-tools/helpers/control_plane/usage_local.py",
+    "dev-tools/helpers/control_plane/usage_scopes.py", "dev-tools/helpers/control_plane/usage_activity.py",
+    "dev-tools/helpers/control_plane/planning_scopes.py", "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/development_control_plane.py",
+    "dev-tools/helpers/tests/test_control_plane_usage_scopes.py",
+    "dev-tools/helpers/tests/test_control_plane_planning_scopes.py",
+    "dev-tools/helpers/tests/test_control_plane_activity.py",
+    "dev-tools/helpers/tests/test_control_plane_usage.py", "dev-tools/helpers/tests/test_control_plane_phases.py",
+    "dev-tools/helpers/README.md", "docs/diagnostics/token-usage-tracking.md",
+    "docs/diagnostics/ai-development-control-plane.md", "docs/architecture/ai-development-control-plane.md",
+    "docs/security/ai-development-control-plane-threat-model.md", "docs/context/packs/docs-standards.pack.md",
+    "docs/context/prompt-routing.md", "skills/manage-implementation-roadmaps/SKILL.md",
+    "skills/manage-implementation-roadmaps/references/workflow.md",
+    "skills/manage-implementation-roadmaps/references/installation.md",
+    "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
+)
+SCOPED_METRICS_MODULES = ("scoped_metrics", "activity", "usage_scopes", "planning_scopes", "usage", "phases", "local_usage", "capture")
+SCOPED_METRICS_REQUIRED = SCOPED_METRICS_SCOPE + tuple(
+    "dev-tools/helpers/tests/test_control_plane_" + name + ".py" for name in SCOPED_METRICS_MODULES
+) + ("dev-tools/helpers/control_plane/usage_local.py", "dev-tools/helpers/control_plane/usage_capture.py",
+     "dev-tools/helpers/control_plane/work.py", "dev-tools/helpers/control_plane/records.py",
+     "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+     "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs")
 DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
     "dev-tools/helpers/control_plane/" + name for name in (
         "__init__.py", "candidate.py", "common.py", "contracts.py", "execution.py",
@@ -619,6 +648,28 @@ DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "scoped-roadmaps-view": {
+        "command": ["--test", "--test-skip-pattern=^contributor control plane passes focused behavioral qualification$",
+                    "--", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"],
+        "sources": SCOPED_METRICS_SCOPE,
+        "automatic_sources": (),
+        "automatic_required_files": ("dev-tools/review-site/app.js", "dev-tools/review-site/style.css",
+                                     "dev-tools/review-site/index.html", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"),
+        "timeout": 120,
+    },
+    "scoped-metrics": {
+        "interpreter": "python",
+        "command": ["-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                    *[item for name in SCOPED_METRICS_MODULES for item in ("-k", "test_control_plane_" + name + ".")]],
+        "sources": SCOPED_METRICS_SCOPE,
+        "automatic_sources": ("dev-tools/helpers/control_plane/usage_scopes.py", "dev-tools/helpers/control_plane/planning_scopes.py",
+                              "dev-tools/helpers/control_plane/planning_metrics.py", "dev-tools/helpers/tests/test_control_plane_scoped_metrics.py",
+                              "dev-tools/helpers/control_plane/usage_activity.py",
+                              "dev-tools/helpers/tests/test_control_plane_usage_scopes.py",
+                              "dev-tools/helpers/tests/test_control_plane_activity.py",
+                              "dev-tools/helpers/tests/test_control_plane_planning_scopes.py"),
+        "timeout": 300,
+    },
     "story-task-view": {
         "interpreter": "python",
         "command": ["-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
@@ -4332,6 +4383,19 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.
+    if ("scoped-metrics" in selected_ids and paths and set(paths) <= set(SCOPED_METRICS_SCOPE) | {
+            ".implementation-roadmaps/stories-tasks-control-plane/state.json", "docs/stories-tasks-control-plane-implementation-roadmap.md",
+            "docs/operations/roadmap-user-task-descriptions.json"}
+            and all(_automatic_files_available(root, {"automatic_required_files": SCOPED_METRICS_REQUIRED[index:index+16]})
+                    for index in range(0, len(SCOPED_METRICS_REQUIRED), 16))):
+        if "control-plane" not in explicit_required:
+            selected = [check for check in selected if check["id"] != "control-plane"]
+        if "focused-tests" not in explicit_required:
+            selected = [check for check in selected if check["id"] != "focused-tests"]
+            browser = next((check for check in selected if check["id"] == "review-site"), None)
+            if browser is not None:
+                browser["argv"] = ["node", "--test", "--test-skip-pattern=^contributor control plane passes focused behavioral qualification$",
+                                   "--", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"]
     story_check = PUBLISHED_FORM_CHECKS["story-task-bindings"]
     if ("story-task-bindings" in selected_ids and paths and set(paths) <= set(STORY_TASK_SCOPE)
             and "control-plane" not in explicit_required and _automatic_files_available(root, story_check)):

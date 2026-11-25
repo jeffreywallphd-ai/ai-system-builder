@@ -9,6 +9,7 @@ import copy
 import json
 import re
 import stat
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -16,8 +17,12 @@ from .common import digest, fields, now, read_json, refuse
 from .contracts import ControlError
 from .storage import atomic_write, confined_path, exclusive_lock
 
+READER_ERRORS = (ControlError, OSError, ValueError, TypeError, KeyError, IndexError, OverflowError,
+                 RecursionError, ImportError, AttributeError, subprocess.SubprocessError)
+
 V1_SCHEMA = "contributor-token-usage-v1"
 SCHEMA = "contributor-token-usage-v2"
+SCOPED_SCHEMA = "contributor-token-usage-v3"  # Explicit opt-in; defaults stay v2.
 IMPORT_SCHEMA = "contributor-token-import-v1"
 IMPORT_V2 = "contributor-token-import-v2"
 MAX_BYTES = 4 * 1024 * 1024
@@ -127,9 +132,11 @@ def _load(root):
         return None
     value = read_json(path, maximum=MAX_BYTES)
     legacy = value.get("schema_version") == V1_SCHEMA
+    scoped = value.get("schema_version") == SCOPED_SCHEMA
     required = (set(_empty(DEFAULT_RETENTION)) - {"active_epochs"} - ({"phase_contexts", "phase_markers"} if legacy else set())) | {"state_digest"}
+    if scoped: required.add("scope_metrics")
     fields(value, required | {"active_epochs"}, required)
-    _need(value["schema_version"] in {SCHEMA, V1_SCHEMA} and value["state_digest"] == digest({k: v for k, v in value.items() if k != "state_digest"}),
+    _need(value["schema_version"] in {SCHEMA, V1_SCHEMA, SCOPED_SCHEMA} and value["state_digest"] == digest({k: v for k, v in value.items() if k != "state_digest"}),
           "usage.integrity", "Usage storage integrity is unavailable; original bytes were preserved.")
     from .usage_phases import validate_state
     if not legacy: validate_state(value)
@@ -188,6 +195,9 @@ def _load(root):
         if not legacy: _need(row["implementation_phase"] in (PHASES if row["purpose"] == "implementation" else {"not_applicable"}))
     if value["last_updated"] is not None: _time(value["last_updated"])
     if legacy: value = _migrate_v1(value)
+    if scoped:
+        from .usage_scopes import validate_state as validate_scopes
+        validate_scopes(value)
     return value
 
 
@@ -196,6 +206,9 @@ def _publish(root, state):
     # Nonnegative lifetime bounds also bound every contained period/agent view.
     for scope in SCOPES:
         _rollup(state["totals"], scope=scope)
+    if state["schema_version"] == SCOPED_SCHEMA:
+        from .usage_scopes import validate_state as validate_scopes
+        validate_scopes(state)
     state.pop("state_digest", None)
     state["state_digest"] = digest(state)
     payload = _encoded(state)
@@ -408,6 +421,8 @@ def import_observations(root: Path, manifest, *, at=None):
             stats = _stats(); stats["intervals"] = 1
             stats["purpose_basis"][("declared", "inferred", "unavailable").index(event["purpose_basis"])] = 1
             from .usage_phases import classify
+            from . import usage_scopes
+            planning_scope = usage_scopes.classify(state, event)  # Before classify settles the first in-flight response.
             phase, phase_basis = classify(state, event)
             stats["phase_basis"][("declared", "inferred", "unavailable").index(phase_basis)] = 1
             stats["coarse"] = int(event["started_at"][:10] != event["ended_at"][:10])
@@ -441,6 +456,7 @@ def import_observations(root: Path, manifest, *, at=None):
             _add(row["totals"], group, stats)
             _add(state["totals"], group, stats)
             _prune(state, floors)
+            usage_scopes.record(state, event, group, stats, planning_scope, floors)
             for period, key in _periods(_time(event["ended_at"])).items():
                 if key >= floors[period]:
                     _add(state[period].setdefault(key, {}), group, stats)
@@ -518,6 +534,7 @@ def _summary(root, period=None, limit=8):
             return "parent-and-child" if row["parent"] else "parent"
         return "child" if row["parent"] else "unclassified"
     return {"status": "enabled", "schema_version": "contributor-token-summary-v2", "coverage": "partial-or-unavailable", "revision": state["revision"],
+            **({"scoped_reporting": True} if state["schema_version"] == SCOPED_SCHEMA else {}),
             "implementation_phases": phases(state["totals"]),
             "last_updated": state["last_updated"], "warnings": warnings, "known_own_subtotal": _rollup(state["totals"]),
             "unaggregated_scopes": {scope: _rollup(state["totals"], scope=scope) for scope in sorted(SCOPES - {"own"})},
@@ -538,5 +555,18 @@ def summary(root: Path, *, period=None, limit=8):
     """Optional diagnostics can never break status, review or contributor work."""
     try:
         return _summary(root.resolve(), period, limit)
-    except (ControlError, OSError, ValueError, TypeError, KeyError, IndexError, OverflowError, RecursionError):
+    except READER_ERRORS:
+        return {"status": "unavailable", "coverage": "unavailable", "warnings": ["usage-storage-unavailable-original-bytes-preserved"]}
+
+
+def reporting_root(root: Path):
+    from .usage_local import reporting_destination
+    return reporting_destination(root.resolve())
+
+
+def report_summary(root: Path, *, period=None, limit=8):
+    """Reporting follows explicit same-repository destination; writes stay local."""
+    try:
+        return _summary(reporting_root(root), period, limit)
+    except READER_ERRORS:
         return {"status": "unavailable", "coverage": "unavailable", "warnings": ["usage-storage-unavailable-original-bytes-preserved"]}

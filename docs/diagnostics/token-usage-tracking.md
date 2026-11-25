@@ -449,6 +449,128 @@ duration/files. Purpose basis counts remain separate from numeric status.
 
 ## Counting and coverage
 
+### Optional planning scopes
+
+After compatible v3 readers are deployed and long-running readers restarted,
+run `usage enable-scopes` against the deliberately selected usage destination.
+This explicit command extends the same atomic 4 MiB file. Generic `usage enable`,
+imports and Work hooks keep their existing v2 schema until then. Preserve a
+bounded pre-migration snapshot when coordinating a real shared-store deployment;
+do not replace the live file with an older snapshot after new observations.
+If the complete migrated file does not fit, it refuses without changing old bytes;
+do not trim replay cursors, drop records or raise the cap to force adoption.
+
+`usage scope-summary --limit 16` reports at most 128 known exclusive scopes. v3
+keeps all original totals, raw classifications, baselines, streams and latest
+replay hashes. Earlier usage is the explicit repository-unassigned remainder,
+computed by subtracting known scoped cells from raw cells. No historical task,
+time or token ownership is inferred. Default 400 daily/156 weekly/40 quarterly
+retention, older-quarter/lifetime aggregates, 128 recent details and 4096permanent
+token cursors remain unchanged. Scope definitions and closed activity cursors
+are also bounded 4096 each within that same file and byte cap.
+
+New phase markers resolve only exact current Work authority from its owning
+checkout. One or more tasks belonging to one story contribute once to that
+story. Tasks in different stories contribute only to the common increment;
+legacy increment Work stays increment-only; overall Work stays roadmap-only.
+Unrelated, stale, invalid or recovery-pending Work remains unassigned. Task and
+assignment hashes are marker pins, separate from stable story ancestry. Imports
+never reinterpret old markers or duplicate responses. The first response after
+a fence can be in flight and remains unassigned; later exact responses may be
+attributed. Review fixes, later work, tests and unknown phases stay separate from
+the exclusively pre-review Implementation metric. This attribution is declared
+context, not an authenticated claim of complete capture or account billing.
+
+The v3 activity section starts empty. Enabling scopes does not measure time or
+start a timer, host, process or collector.
+Unobserved implementation time remains unknown. Work/receipt elapsed duration
+is separate delivery evidence and can include idle time or overlap other Work.
+
+### Closed implementation-time observations
+
+`usage activity-import --from .local-codex/activity.json` accepts an explicit
+ignored `contributor-activity-import-v1` object containing one to 64 `events`,
+within 128 KiB. `usage activity-summary` reads own agent effort, implementation
+phases and separately unaggregated inclusive/unknown reports. Actual supported
+Codex active-span capture is unavailable; no timer or collector is started.
+An ordinary manifest may record `estimated` or `unavailable` time only. A claimed
+`measured` value is refused even if it supplies plausible clocks. The private
+host-adapter seam requires separate source qualification and consistent real
+session-monotonic endpoints; its clock fixtures are not live host qualification.
+
+Each event has only `producer_ref`, `agent_ref`, `session_ref` (opaque 64 hex
+hashes), zero-based contiguous `sequence`, UTC `started_at`/`ended_at` (seconds or
+three decimal milliseconds), `scope` (`own`, `includes-descendants`, `unknown`),
+the existing `purpose`, `measurement`, `duration_ms`, `clock_ref`,
+`monotonic_start_ms`, `monotonic_end_ms`, and `attribution` containing nullable
+`work_ref`/`context_ref`. An estimate has integer nonnegative milliseconds no
+greater than its closed span; unknown duration is null. Both have null clock
+fields. Qualified measured duration equals monotonic endpoint difference and
+fits its UTC span with at most one millisecond rounding allowance. Keep a stable
+clock identity within a session; a reset needs a new session.
+
+Exact v3 `usage phase-status` supplies opaque agent/Work/context refs, planning
+validity and `marked_at`/`time_phase`, without discovering sessions. Only a span
+wholly at or after its exact current active marker may inherit declared phase
+and scope. Missing, crossed, conflicting or activity-mismatched contexts stay
+unknown; implementation time does not depend on a token source fence. The first
+token response still follows its existing mixed/unknown rule.
+
+Retain one activity cursor per producer/agent/session/accounting-scope family.
+Latest same-event replay is a no-op; a conflicting latest sequence or gap refuses;
+older sequences are not recounted or reclassified. Submit own-agent spans in
+chronological order across sessions/producers; overlapping or late earlier spans
+refuse, while half-open adjacent spans are allowed. Parallel distinct agents sum
+**agent effort**, not calendar elapsed duration. Inclusive reports are never
+added to child own effort. UTC end dates determine day/week/quarter buckets;
+multi-day spans stay coarse. Time-only imports preserve every token counter,
+baseline, classification, replay cursor and token freshness timestamp.
+
+### Roadmaps reporting
+
+The Roadmaps page shows implementation time and input/output tokens for each
+story, increment and roadmap. **Implementation** is exclusively own-purpose
+implementation before review; details show review fixes and other/unknown phases
+separately. All-purpose totals include planning/tests/review and are labelled as
+such. Measured and estimated numbers stay separate; missing data is unavailable
+or not recorded, never a fabricated zero. Time is summed agent effort and can
+overlap across different agents. Delivery duration remains a separate elapsed
+Work measure and is not assigned to tasks.
+
+Parent views fold each exact exclusive leaf once. Direct parent observations are
+already included, not an extra amount to add to the parent. No task-count shares,
+equal allocations or historical guesses are made. Unassigned repository usage is
+shown once globally; linked usage on other pages or historical scope remains
+separate. Details show at most 7 daily/8 weekly/8 quarterly UTC-end trend rows.
+The full existing retention and older/lifetime data remain in the same store.
+
+Optional reports use the same read-only endpoint, polling and themes. Malformed
+numeric reports leave navigation and qualification intact. The existing 2 MiB
+response cap bounds report construction and admission; oversized optional data
+is omitted before canonical rows or execution records can be affected. A fixed
+notice explains omission when it fits; if even the optional notice cannot fit at
+an exact canonical boundary, it is omitted and the UI shows unavailable. Restart
+all compatible readers before explicit v3 deployment. No live time feed or
+historical measured activity is inferred by the display.
+
+### Reporting from an author worktree
+
+The review site and CLI `usage summary`, `scope-summary` and `activity-summary`
+follow the owning checkout's single explicit usage-only destination. A server in
+an author worktree can therefore show the primary checkout's canonical numeric
+store. The reader validates the bounded existing config, workspace identity and
+same common Git repository before opening that store. It reads no session files,
+starts no capture and never creates or reroutes Work, claims or receipts.
+Unavailable, foreign, relative or malformed destinations stay unavailable; they
+do not silently fall back to a stale author-local store. No config means the
+existing local-store behavior. Destinations are not followed recursively.
+
+Writer routing stays explicit: enable/import actions and their acknowledgements
+describe the selected checkout's store. For deployment choose the actual numeric
+destination with `--repo <canonical-numeric-checkout> usage enable-scopes`, after
+all its readers are compatible. Work commands remain pointed at their owning
+checkout. Reporting alone never enables, migrates or writes either store.
+
 - A stream is producer/run/agent/epoch. Sequences start at zero. Delta sequences
   must be contiguous; cumulative sequences can skip observations because their
   difference retains consumption. Reimporting the same latest event is a no-op;

@@ -221,6 +221,20 @@ def _config(root):
     return value
 
 
+def reporting_destination(root: Path):
+    """Resolve one configured numeric store read-only; never inspect sessions."""
+    root = Path(root)
+    if not usage_capture._file(root, CONFIG).exists(): return root
+    config = _config(root)
+    workspace, _ = _repository(root)
+    _need(workspace == config["workspace_id"], "local-capture.workspace")
+    destination = Path(config["destination"]) if config["destination"] else root
+    # Validate the lexical destination before resolve so inside-repo aliases
+    # cannot bypass the existing reparse/directory and common-Git checks.
+    _need(_repository(destination)[0] == workspace, "local-capture.destination")
+    return destination.resolve()
+
+
 def _unavailable(code):
     return {"schema_version": "token-capture-status-v1", "adapter_ready": True, "live_capture": False,
             "state": "unavailable", "reason_code": code, "work_may_continue": True,

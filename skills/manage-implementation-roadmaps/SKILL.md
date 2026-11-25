@@ -21,6 +21,21 @@ telemetry, never an approval gate or a reason to delay approved work.
 Portable repositories without that adapter retain their existing workflow.
 These token phases do not rename roadmap increments or add execution stages.
 
+If the repository adapter supports optional scoped usage, keep its
+`usage enable-scopes` deployment explicit until all shared-store readers are
+compatible. `usage scope-summary` may report known story/increment/roadmap
+lineage from exact Work targets; unknown historical usage remains unassigned.
+Installing or executing this portable skill does not migrate a store or start
+time capture. Missing optional metrics never postpone approved implementation.
+Where available, `usage activity-import` accepts closed numeric estimates or
+unknown durations. Measured effort needs a qualified host source; never derive
+it from Work/check elapsed time or claim unsupported live capture.
+Optional Roadmaps time/token summaries are read-only views of exact exclusive
+scope observations. Unknowns and review fixes stay separate; metrics never grant
+technical qualification. Missing or oversized reports cannot remove planned work.
+Reporting may read one validated same-repository usage-only destination; keep
+Work/source ownership local, never inspect sessions and never start capture.
+
 When the target repository provides the development control plane linked from
 `AGENTS.md`, read that guide, start or safely reuse its JSON-backed review site,
 and provide the verified link on workflow work requests. Keep this skill's

@@ -125,6 +125,21 @@ attributed initial work. Installing this portable skill does not install the
 adapter, start a collector or create an approval gate. Repositories without it
 retain their existing workflow; unknown/legacy attribution stays unknown.
 
+Preserve the optional scoped-usage guidance and focused `scoped_usage` test.
+`usage enable-scopes` is the target adapter's explicit shared-store deployment
+boundary after all readers are compatible; `usage scope-summary` does not assign
+old usage or collect time. Installing this skill never migrates that store or
+installs/starts a host collector. Preserve raw counters, cursors and unknowns.
+If the target adapter offers `usage activity-import`, preserve its closed-span
+source/clock/overlap tests. Operator estimates cannot become measured time, and
+unsupported live host capture remains unavailable after installation.
+Where provided, preserve Roadmaps scoped-summary/read-only projection tests and
+its unavailable/overflow behavior. Installing the skill cannot assign historical
+usage, migrate shared telemetry or supply a qualification pass.
+Preserve the same-repository read-only destination resolver tests. Reports must
+leave Work/source ownership local and refuse foreign/unavailable stores without
+stale fallback, session reads, capture or implicit writer routing.
+
 Install `scripts/roadmap_storage.py` beside `scripts/roadmap.py`, plus the shared
 `tests/fixtures/roadmap-storage-vectors.json` and storage/publication tests. Legacy
 plain records need no codec, but encoded `roadmap-record-tree-v1` records refuse

@@ -13,7 +13,7 @@ from .roadmap_state import read_roadmap_state
 from .contracts import ControlError
 from .records import Records
 from .metrics import delivery
-from .usage import summary as usage_summary
+from .usage import report_summary as usage_summary, READER_ERRORS
 from .storage import confined_path
 from .supporting_work import enrich
 from .criterion_presentation import apply_presentations, canonical_blocker_source, apply_blocker_presentations
@@ -187,6 +187,46 @@ def encode_review_projection(value: dict) -> bytes:
     return json.dumps(value, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
+def _planning_copy(value, *, omit=False, strip_marker=False):
+    """Copy only public node containers; never mutate input on failed admission."""
+    def node(row):
+        if not isinstance(row, dict): return row
+        result = {key: item for key, item in row.items() if not (key.startswith("_planning_") or omit and key == "scoped_metrics")}
+        for key in ("increments", "stories", "merged_history"):
+            if isinstance(row.get(key), list): result[key] = [node(item) for item in row[key]]
+        return result
+    result = {**value, "diagnostics": list(value.get("diagnostics", []))}
+    for key in ("roadmaps", "work_item_roadmaps"):
+        if isinstance(value.get(key), list): result[key] = [node(row) for row in value[key]]
+    if strip_marker and isinstance(result.get("token_usage"), dict):
+        result["token_usage"] = {key: item for key, item in result["token_usage"].items() if key != "scoped_reporting"}
+    if omit:
+        result["planning_metrics"] = {"status": "omitted", "coverage": "unavailable"}
+        result["diagnostics"] = [row for row in result["diagnostics"] if row.get("code") != "projection.optional-metrics-omitted"]
+        result["diagnostics"].append({"code": "projection.optional-metrics-omitted"})
+    return result
+
+
+def finalize_planning_metrics(root, value):
+    # Temporary anchors come from canonical JSON before user-copy substitutions.
+    # Copy their containers so optional failure cannot corrupt a prior projection.
+    if "planning_metrics" in value:
+        return _planning_copy(value)
+    if value.get("token_usage", {}).get("scoped_reporting") is not True:
+        return _planning_copy(value)
+    import copy
+    content = {**value, "roadmaps": copy.deepcopy(value["roadmaps"]),
+               "work_item_roadmaps": copy.deepcopy(value.get("work_item_roadmaps", [])),
+               "diagnostics": list(value["diagnostics"])}
+    try:
+        from .planning_metrics import attach
+        return attach(root, content, REVIEW_MAX_BYTES)
+    except READER_ERRORS:
+        content = _planning_copy(content)
+        content["planning_metrics"] = {"status": "unavailable", "coverage": "unavailable"}
+        return content
+
+
 def bound_review_projection(value: dict) -> dict:
     """Bound final display bytes without discarding canonical roadmap detail.
 
@@ -199,9 +239,33 @@ def bound_review_projection(value: dict) -> dict:
                   if k not in {"source_digest", "generated_at", "repository_id"}}
         return {**content, "source_digest": digest(public)}
 
+    value = _planning_copy(value)
     result = stamped(value)
-    if len(encode_review_projection(result)) <= REVIEW_MAX_BYTES:
+    try:
+        fits = len(encode_review_projection(result)) <= REVIEW_MAX_BYTES
+    except ValueError:
+        if "planning_metrics" not in value: raise
+        fits = False
+    if fits:
         return result
+    if "planning_metrics" in value:
+        value = _planning_copy(value, omit=True)
+        result = stamped(value)
+        if len(encode_review_projection(result)) <= REVIEW_MAX_BYTES:
+            return result
+        # At the exact canonical boundary even a fixed omission note may not
+        # fit. Drop that optional note/flag too; absence renders unavailable.
+        # Never trim a canonical row solely to make room for diagnostics.
+        bare = {**value, "diagnostics": [row for row in value["diagnostics"]
+                                        if row.get("code") != "projection.optional-metrics-omitted"]}
+        bare.pop("planning_metrics", None)
+        if isinstance(bare.get("token_usage"), dict):
+            bare["token_usage"] = {key: item for key, item in bare["token_usage"].items() if key != "scoped_reporting"}
+        # Preserve the exact existing canonical trimming result first. A note
+        # may use spare bytes, but can never evict an additional execution.
+        canonical = bound_review_projection(bare)
+        noted = stamped(_planning_copy(canonical, omit=True))
+        return noted if len(encode_review_projection(noted)) <= REVIEW_MAX_BYTES else canonical
     if "pagination" in value:
         # A page is an exact slice; trimming rows would falsify its boundaries.
         raise ValueError("Review projection exceeds its bound.")
@@ -340,6 +404,22 @@ def increment_proposal(increment):
     }
 
 
+def _planning_anchors(state, parent):
+    """Older declarative package shapes remain usable without metric guesses."""
+    packages = [increment.get("workPackages", []) for increment in state["increments"]]
+    if any(not isinstance(rows, list) or any(not isinstance(story, dict)
+            or not all(isinstance(story.get(key), str) for key in ("id", "title", "outcome")) for story in rows)
+            or len({story["id"] for story in rows}) != len(rows) for rows in packages):
+        return
+    parent["_planning_ancestry"] = digest([{"id": row["id"], "stories": stories}
+                                          for row, stories in zip(state["increments"], packages)])
+    for public, stories in zip(parent["increments"], packages):
+        public["_planning_ancestry"] = digest(stories)
+        public["_planning_story_ancestry"] = {story["id"]: digest(story) for story in stories}
+        for story in public.get("stories", []):
+            story["_planning_ancestry"] = public["_planning_story_ancestry"].get(story["id"])
+
+
 def open_blocker_details(state):
     """Only current public obstacle facts, never resolution/audit/authority notes."""
     rows = state.get('blockers', [])
@@ -369,6 +449,7 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
     if type(compact_work_items) is not bool:
         raise ValueError("Choose a supported review representation.")
     roadmaps, diagnostics, blocker_sources, increment_targets, delivery_targets = [], [], {}, {}, {}
+    token_summary = usage_summary(root)
     base = confined_path(root, ".implementation-roadmaps")
     if base.is_dir():
         for path in sorted(base.glob("*/state.json"))[:200]:
@@ -413,6 +494,8 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
                             if (proof := records.get(chunk["id"], {}).get("workProof")) is not None:
                                 chunk["_work_proof"] = proof
                 roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blockers": open_blocker_details(s), "blocker_count": sum(b.get("status") == "open" and b.get("actionOwner") == "human" for b in s.get("blockers", [])), "pending_work_count": sum(b.get("status") == "open" and b.get("actionOwner") == "agent" for b in s.get("blockers", []))})
+                if token_summary.get("scoped_reporting") is True:
+                    _planning_anchors(s, roadmaps[-1])
                 # Count every displayed identity before filtering completed or
                 # otherwise ineligible rows. If the source exceeds the display
                 # bound, uniqueness is unknown: do not infer any activity.
@@ -496,13 +579,13 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
     if not paginated:
         feedback_records = feedback_records[:200]
     feedback = [{"id": safe_text(f["id"], 80), "work_id": safe_text(f["work_id"], 80), "summary": safe_text(f["summary"]), "status": f["status"], "regression": safe_text(f.get("regression", "unlinked"), 160)} for f in feedback_records]
-    content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"], "token_usage": usage_summary(root), "inventory": {"execution_records_total": execution_total, "execution_records_shown": 0, "execution_records_truncated": False}}
+    content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"], "token_usage": token_summary, "inventory": {"execution_records_total": execution_total, "execution_records_shown": 0, "execution_records_truncated": False}}
     if compact_work_items:
         content["work_item_format"] = CHUNK_REFERENCE_FORMAT
     # Keep the existing 2 MiB server bound. Canonical roadmap detail is stored
     # once; newest scoped records also have a byte admission bound, with room
     # for envelope fields and an explicit truncation diagnostic.
-    size = len(json.dumps(content).encode("utf-8"))
+    size = len(json.dumps(_planning_copy(content, strip_marker=True)).encode("utf-8"))
     shown = 0
     for row in executions:
         addition = len(json.dumps(row).encode("utf-8")) + 2
@@ -523,4 +606,5 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
 
 def project(root: Path, *, compact_work_items: bool = False, page: dict | None = None) -> dict:
     content = review_content(root, compact_work_items=compact_work_items, paginated=page is not None)
-    return bound_review_projection(review_page(content, **page) if page is not None else content)
+    content = review_page(content, **page) if page is not None else content
+    return bound_review_projection(finalize_planning_metrics(root, content))

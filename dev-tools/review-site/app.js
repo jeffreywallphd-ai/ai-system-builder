@@ -12,6 +12,9 @@ const pageRequests = Object.fromEntries(Object.keys(pageSizes).map(key => [key, 
 let linkedIncrement = null;
 const incrementKey = (roadmap, increment, history = null) => JSON.stringify([data.repository_id || "", roadmap, history, increment]);
 const storyKey = (roadmap, increment, story, history = null) => JSON.stringify([data.repository_id || "", roadmap, history, increment, "story", story]);
+const metricsKey = base => JSON.stringify(["metrics", base]);
+const roadmapMetricsKey = roadmap => JSON.stringify([data.repository_id || "", roadmap, "roadmap-metrics"]);
+const globalMetricsKey = () => JSON.stringify([data.repository_id || "", "unassigned-metrics"]);
 const names = { roadmaps: "Roadmaps", work_items: "Work items", evaluations: "Evaluations", feedback: "Feedback" };
 const themePreferenceKey = "aisb-review-theme-v1";
 function applyTheme(theme) {
@@ -58,7 +61,86 @@ function incrementDelivery(increment) {
   return el("p", `Delivery time: ${duration ?? "Not recorded"} · ${timing.timed_records} measured · ${timing.pending_records} pending · ${timing.unavailable_records} unavailable.${duration === null ? "" : " Summed execution durations may overlap."}`, "small delivery-time");
 }
 function chunkDelivery() {
-  return el("p", "Delivery time: Not recorded · Execution records do not identify individual tasks.", "small delivery-time");
+  return el("p", "Delivery time: Not recorded · Elapsed work time can include waiting and is not assigned to individual tasks.", "small delivery-time");
+}
+
+function effortPair(value) {
+  usageRollup(value.tokens);
+  const time = value.time;
+  for (const key of ["measured_ms", "estimated_ms"]) if (time[key] !== null) usageNumber(time[key]);
+  for (const key of ["intervals", "unavailable_intervals", "coarse_intervals"]) {
+    if (time[key] === null) throw new Error("effort count"); usageNumber(time[key]);
+  }
+  if (time.unavailable_intervals > time.intervals || time.coarse_intervals > time.intervals) throw new Error("effort coverage");
+  for (const key of ["declared", "inferred", "unavailable"]) {
+    if (time.attribution[key] === null) throw new Error("effort attribution"); usageNumber(time.attribution[key]);
+  }
+  if (Object.values(time.attribution).reduce((sum, n) => sum + n, 0) !== time.intervals) throw new Error("effort attribution");
+  return value;
+}
+function effortTime(pair) {
+  const parts = ["measured", "estimated"].filter(status => pair.time[`${status}_ms`] !== null)
+    .map(status => `${formatDeliveryTime(pair.time[`${status}_ms`])} ${status}`);
+  if (pair.time.unavailable_intervals) parts.push(`${usageNumber(pair.time.unavailable_intervals)} reports with unknown time`);
+  return parts.join(" · ") || "Not recorded";
+}
+function effortTokens(pair) {
+  const number = value => value === null ? "unknown" : usageNumber(value);
+  const parts = ["measured", "estimated"].filter(status => ["input_tokens", "output_tokens"].some(key => pair.tokens[status][key] !== null))
+    .map(status => `${number(pair.tokens[status].input_tokens)} / ${number(pair.tokens[status].output_tokens)} ${status}`);
+  return parts.join(" · ") || (pair.tokens.intervals ? "Unknown" : "Not recorded");
+}
+function scopedMetricsPanel(value, key, level) {
+  const panel = el("div", undefined, "scoped-metrics");
+  const missing = (label = "Not recorded") => {
+    panel.replaceChildren(el("p", `Implementation time: ${label}.`, "small"),
+      el("p", `Implementation tokens (input / output): ${label}.`, "small")); return panel;
+  };
+  if (data.planning_metrics?.status !== "enabled") return missing("Unavailable");
+  if (value === undefined) return missing();
+  try {
+    if (value.schema_version !== "planning-scope-report-v1" || value.status !== "recorded" || value.coverage !== "partial-or-unavailable" ||
+        !value.phases || Object.keys(value.phases).length !== 6 || Object.keys(value.phases).some(phase => !Object.hasOwn(usagePhaseLabels, phase))) throw new Error("scope report");
+    for (const row of Object.values(value.phases)) effortPair(row);
+    effortPair(value.all_purposes); effortPair(value.direct_scope);
+    for (const [period, maximum] of [["daily", 7], ["weekly", 8], ["quarterly", 8]]) {
+      const rows = value.trends[period];
+      if (!Array.isArray(rows) || rows.length > maximum) throw new Error("effort trend");
+      for (const row of rows) {
+        if (typeof row.period !== "string" || !(period === "quarterly" ? /^\d{4}-Q[1-4]$/ : /^\d{4}-\d{2}-\d{2}$/).test(row.period)) throw new Error("effort period");
+        effortPair(row.implementation); effortPair(row.review_fixes);
+      }
+    }
+    const initial = value.phases.pre_review;
+    panel.append(el("p", `Implementation time: ${effortTime(initial)}.`, "small"),
+      el("p", `Implementation tokens (input / output): ${effortTokens(initial)}.`, "small"));
+    const detail = disclosure(key, "scoped-metric-details");
+    detail.append(el("summary", "Time and token details"),
+      el("p", "Implementation means work before review. Review fixes stay separate. Time is summed agent effort; agents working in parallel can overlap. Missing observations remain unknown.", "small"),
+      usageTable("Recorded implementation phases", ["Phase", "Time", "Tokens (input / output)"], Object.entries(value.phases).map(([phase, row]) =>
+        [usagePhaseLabels[phase], effortTime(row), effortTokens(row)])),
+      el("p", `All recorded work, including planning, tests and review: ${effortTime(value.all_purposes)}; tokens ${effortTokens(value.all_purposes)}.`, "small"));
+    if (level !== "story" && (value.direct_scope.tokens.intervals || value.direct_scope.time.intervals))
+      detail.append(el("p", `Recorded directly at this level, already included above: ${effortTime(value.direct_scope)}; tokens ${effortTokens(value.direct_scope)}. No share is guessed for individual stories.`, "small"));
+    for (const [period, title] of [["daily", "Daily"], ["weekly", "Weekly"], ["quarterly", "Quarterly"]])
+      detail.append(usageTable(`${title} recorded trends`, ["Period", "Implementation time", "Implementation tokens", "Review fixes: time; tokens"],
+        value.trends[period].map(row => [row.period, effortTime(row.implementation), effortTokens(row.implementation), `${effortTime(row.review_fixes)}; ${effortTokens(row.review_fixes)}`])));
+    detail.append(el("p", "Trends use each report's UTC end date. Sparse or multi-day reports remain coarse. Cache and reasoning tokens are subsets, available on Token usage. Elapsed delivery time is a separate measure.", "small"));
+    panel.append(detail); return panel;
+  } catch { return missing("Unavailable"); }
+}
+function unassignedMetricsPanel(value) {
+  const missing = () => el("p", "Time and token reporting is unavailable. Missing observations remain unknown.", "small planning-metrics-note");
+  if (value?.status !== "enabled") return missing();
+  try {
+    if (value.schema_version !== "planning-metrics-summary-v1" || value.time_unit !== "agent-effort-ms" || value.live_activity_capture !== false) throw new Error("planning summary");
+    const unassigned = effortPair(value.repository_unattributed); effortPair(value.all_scoped_usage);
+    const detail = disclosure(globalMetricsKey(), "planning-unassigned");
+    detail.append(el("summary", "Usage without a roadmap link"),
+      el("p", `All recorded purposes without a roadmap link: ${effortTime(unassigned)}; tokens (input / output) ${effortTokens(unassigned)}. These values are shown once and are not added to each roadmap.`, "small"),
+      el("p", "Some linked usage may belong to other pages or historical scope. Only exact known story links enter story totals. Live activity capture is unavailable; recorded estimates remain estimates. Missing data grants no technical pass.", "small"));
+    return detail;
+  } catch { return missing(); }
 }
 function tokenUsagePanel(value) {
   const panel = el("details", undefined, "token-usage");
@@ -618,6 +700,7 @@ function appendStories(container, roadmap, increment, history = null) {
   for (const story of increment.stories) {
     const detail = disclosure(storyKey(roadmap, increment.id, story.id, history), "story");
     detail.append(el("summary", `${story.title} · ${story.tasks_complete} / ${story.tasks_planned} tasks`), el("p", story.outcome));
+    detail.append(scopedMetricsPanel(story.scoped_metrics, metricsKey(storyKey(roadmap, increment.id, story.id, history)), "story"));
     for (const text of story.user_scope || []) detail.append(el("p", text, "small"));
     const tasks = increment.chunks.filter(task => task.story_id === story.id);
     if (!tasks.length) detail.append(el("p", "No tasks are assigned to this story yet.", "small"));
@@ -682,10 +765,16 @@ function render() {
   }
   incrementIdentities = new Map();
   const countIdentity = (key, unique = true) => incrementIdentities.set(key, (incrementIdentities.get(key) || 0) + (unique === false ? 2 : 1));
+  countIdentity(globalMetricsKey());
   for (const roadmap of data.roadmaps) {
+    countIdentity(roadmapMetricsKey(roadmap.id), roadmap.disclosure_unique);
     for (const increment of roadmap.increments || []) {
       countIdentity(incrementKey(roadmap.id, increment.id), increment.disclosure_unique);
-      for (const story of increment.stories || []) countIdentity(storyKey(roadmap.id, increment.id, story.id), increment.disclosure_unique);
+      countIdentity(metricsKey(incrementKey(roadmap.id, increment.id)), increment.disclosure_unique);
+      for (const story of increment.stories || []) {
+        countIdentity(storyKey(roadmap.id, increment.id, story.id), increment.disclosure_unique);
+        countIdentity(metricsKey(storyKey(roadmap.id, increment.id, story.id)), increment.disclosure_unique);
+      }
     }
     for (const history of roadmap.merged_history || []) {
       countIdentity(incrementKey(roadmap.id, null, history.id), history.disclosure_unique);
@@ -716,6 +805,7 @@ function render() {
   if (view === "work_items") items.append(tokenUsagePanel(data.token_usage));
   if (data.pagination) items.append(pageControls());
   if (view === "roadmaps") items.append(roadmapStatusLegend());
+  if (view === "roadmaps") items.append(unassignedMetricsPanel(data.planning_metrics));
   const sections = view === "roadmaps" ? roadmapSections(items, selected, query) : null;
   if (view === "work_items" && data.inventory?.execution_records_truncated && Number.isSafeInteger(data.inventory.execution_records_shown) && Number.isSafeInteger(data.inventory.execution_records_total)) items.append(el("p", `Showing the newest ${data.inventory.execution_records_shown} of ${data.inventory.execution_records_total} scoped execution records; the remaining records are outside this bounded display.`, "small inventory-limit"));
   if (!selected.length && !sections) { const empty = el("div", undefined, "empty"); const filtered = data.pagination?.roadmap || data.pagination?.work; empty.append(el("h2", query || filtered ? "No matching work" : `No ${names[view].toLowerCase()} yet`), el("p", filtered ? "No records match this selection. Use Show all to browse saved records." : query ? "Try a different title or outcome." : "New JSON records will appear here as the workflow creates them.")); items.append(empty); }
@@ -729,6 +819,7 @@ function render() {
     appendScope(card, item);
     const obstacles = sections ? blockerDetails(item) : null; if (obstacles) card.append(obstacles);
     if (item.increments) {
+      card.append(scopedMetricsPanel(item.scoped_metrics, roadmapMetricsKey(item.id), "roadmap"));
       card.append(el("p", item.evidence_policy === "control-plane-v1" ? "Receipt-backed completion policy" : "Historical roadmap · declarative evidence", "small"));
       if (item.successor) card.append(el("p", item.successor.summary, "small"), action("View active successor roadmap", () => selectView("roadmaps", item.successor.id)));
       for (const legacy of item.merged_history || []) {
@@ -762,6 +853,7 @@ function render() {
         const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human") ? "status-review-needed" : i.status)); details.append(summary, el("p", i.objective, "objective"));
         appendScope(details, i);
         details.append(incrementDelivery(i));
+        details.append(scopedMetricsPanel(i.scoped_metrics, metricsKey(incrementKey(item.id, i.id)), "increment"));
         const planning = i.chunk_plan_pending_approval ? "Implementation task plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation task plan is created when this increment starts" : null;
         details.append(el("p", `${planning || `${i.chunks_complete} / ${i.chunks_planned} tasks`} · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
         const proposal = proposalDetails(i); if (proposal) details.append(proposal);
@@ -863,7 +955,10 @@ function reviewNotice(diagnostics) {
   if (validLimit) messages.push(`The Work items tab shows the newest ${limit.shown} of ${limit.total} execution records. Older records remain saved. Your action: None.`);
   if (diagnostics.some(row => row?.code === "projection.user-description-unavailable"))
     messages.push("Some descriptions need an update. The agent will update them. Your action: None.");
+  if (diagnostics.some(row => row?.code === "projection.optional-metrics-omitted"))
+    messages.push("Time and token reports are unavailable within this page's display limit. Saved work and technical evidence remain unchanged. Your action: None.");
   if (diagnostics.some(row => row?.code !== "projection.user-description-unavailable"
+    && row?.code !== "projection.optional-metrics-omitted"
     && !(row?.code === "projection.execution-records-truncated" && validLimit)))
     messages.push("Some records are unavailable. The agent will check the saved workflow records and repair the issue. Your action: None.");
   return messages.join(" ");

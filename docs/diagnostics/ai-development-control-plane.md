@@ -1,6 +1,24 @@
 
 ## Numeric capture at coding-session initialization
 
+Planning attribution is separately opt-in: deploy all v3 readers before running
+`usage enable-scopes` for a shared store. Ordinary Work hooks keep v2 until then.
+`usage scope-summary` reads exact prospective story/increment/roadmap scopes and
+the repository-unassigned remainder. It does not reinterpret historical usage,
+infer implementation time from Work duration or change any approval/receipt.
+See [token usage tracking](token-usage-tracking.md) for atomic migration and caps.
+Optional `usage activity-import` accepts closed numeric estimates/unknown effort
+without changing token records. Measured effort requires a qualified host source;
+no supported live Codex active-span adapter is currently installed. Work/check
+elapsed duration never substitutes for implementation effort.
+Roadmaps optionally shows exact story/increment/roadmap summaries, with measured,
+estimated and unknown values and separate review fixes. Each parent folds known
+exclusive leaves once; missing data and oversized reports leave canonical work,
+criteria and qualification intact. The page starts no capture or migration.
+Reporting follows an explicitly configured same-repository usage-only destination
+without changing owning Work/source records or reading sessions. Missing/foreign
+destinations remain unavailable; explicit writer targets stay unchanged.
+
 `usage phase --from` associates exact known threads to the owning checkout,
 Work and spec identity. Work start establishes initial context when configured;
 review handoff uses `review-start`, and author corrections use `correction-resume`

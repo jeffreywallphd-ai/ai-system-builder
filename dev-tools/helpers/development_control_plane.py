@@ -63,7 +63,7 @@ def parser():
     compare = sub.add_parser("compare-trials")
     compare.add_argument("trial_ids", nargs="+")
     usage = sub.add_parser("usage", help="Optional bounded numeric usage import and UTC trends; never gates Work")
-    usage.add_argument("operation", choices=("enable", "import", "summary", "capture", "session-start", "local-enable", "local-poll", "phase", "phase-status"))
+    usage.add_argument("operation", choices=("enable", "enable-scopes", "import", "activity-import", "activity-summary", "summary", "scope-summary", "capture", "session-start", "local-enable", "local-poll", "phase", "phase-status"))
     usage.add_argument("--session")
     usage.add_argument("--thread", action="append", default=[])
     usage.add_argument("--capture-destination")
@@ -115,8 +115,19 @@ def main(argv=None):
                 result = usage_capture.session_start(root, **options) if args.operation == "session-start" else usage_capture.capture(root, source=args.input, **options)
             elif args.operation == "enable":
                 result = usage.enable(root, {"daily": args.daily_days, "weekly": args.weekly_weeks, "quarterly": args.quarterly_quarters})
+            elif args.operation in {"enable-scopes", "scope-summary"}:
+                from control_plane import usage_scopes
+                result = usage_scopes.enable(root) if args.operation == "enable-scopes" else usage_scopes.report_summary(root, limit=args.limit)
             elif args.operation == "summary":
-                result = usage.summary(root, period=args.period, limit=args.limit)
+                result = usage.report_summary(root, period=args.period, limit=args.limit)
+            elif args.operation in {"activity-import", "activity-summary"}:
+                from control_plane import usage_activity
+                if args.operation == "activity-summary":
+                    result = usage_activity.report_summary(root)
+                else:
+                    if not args.input or not args.input.startswith(".local-codex/"):
+                        raise ControlError("activity.private-input", "Select an explicit ignored numeric activity manifest.", {}, [])
+                    result = usage_activity.import_observations(root, read_json(confined_path(root, relative(args.input)), maximum=usage.MAX_INPUT_BYTES))
             else:
                 if not args.input or not args.input.startswith(".local-codex/"):
                     raise ControlError("usage.private-input", "Select an explicit ignored numeric usage manifest.", {}, [])

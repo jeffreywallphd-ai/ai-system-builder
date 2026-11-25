@@ -2,6 +2,34 @@
 
 # Dynamic Development Review
 
+Roadmaps includes small **Implementation time** and input/output token summaries
+at roadmap, increment and story levels. Implementation contains only attributed
+work before review; fixes remain separate in the details. Measured, estimated and
+unknown values remain distinct. Parallel agents contribute summed agent effort,
+not calendar elapsed time. Work delivery duration stays separate and is not
+allocated to individual tasks. Unknown historical usage is never guessed.
+
+The optional v3 reader joins exact canonical ancestry and folds each known leaf
+once into its parents. Direct increment/roadmap observations are included subsets,
+not extra values to add again. Repository-unassigned usage appears once globally;
+other pages or historical scopes are not silently reassigned. Details retain
+seven daily/eight weekly/eight quarterly rows and separate review fixes.
+They use existing requests, polling, themes and read-only controls.
+
+Missing or malformed optional reports show unavailable while canonical task joins
+remain strict. Optional construction uses the existing 2 MiB response bound; an
+oversized report is omitted before any execution trimming or canonical page
+failure. A fixed notice explains omission when it fits. At the exact canonical
+byte boundary, optional diagnostics are also omitted so saved rows remain intact;
+absent reports still render unavailable. The v2 wire gains no scope fields.
+Restart all compatible readers before an explicit shared-store v3 activation.
+There is no supported live Codex active-span adapter; estimates remain estimates.
+When capture has an explicit same-repository usage-only destination, reporting
+reads that canonical numeric store even if the server runs in an author worktree.
+The canonical roadmap and Work remain in the server's owning checkout. Reads
+validate the existing config and common Git identity, never sessions or capture.
+Missing/foreign/unavailable destinations show unavailable without stale fallback.
+
 Roadmaps shows fixed **Stories** with expandable **Tasks** after explicit
 ownership adoption. Counts describe implementation, while parent criteria keep
 their separate qualification. Empty stories are not complete. Legacy unassigned

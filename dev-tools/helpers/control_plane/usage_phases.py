@@ -8,6 +8,7 @@ from . import usage
 from .common import fields, now
 from .contracts import ControlError
 from .storage import exclusive_lock
+from . import usage_scopes
 
 MAX_CONTEXTS = 16
 MAX_MARKERS = 64
@@ -20,7 +21,24 @@ def validate_state(state):
     usage._need(isinstance(contexts, dict) and len(contexts) <= MAX_CONTEXTS)
     usage._need(isinstance(markers, list) and len(markers) <= MAX_MARKERS)
     for agent, context in contexts.items():
-        usage._hash(agent); fields(context, CONTEXT_FIELDS, CONTEXT_FIELDS)
+        usage._hash(agent)
+        allowed = CONTEXT_FIELDS | (usage_scopes.PLANNING_FIELDS if usage_scopes.enabled(state) else set())
+        fields(context, allowed, CONTEXT_FIELDS)
+        planning = usage_scopes.PLANNING_FIELDS.intersection(context)
+        if planning:
+            usage._need(planning == usage_scopes.PLANNING_FIELDS)
+            for key in ("scope_ref", "assignment_ref", "tasks_ref", "approval_ref"):
+                if context[key] is not None: usage._hash(context[key])
+            usage._need(type(context["planning_valid"]) is bool)
+            usage._need(context["time_phase"] in set(usage.PHASES) - {"legacy_unknown"})
+            if context["marked_at"] is not None: usage_scopes.marker_time(context["marked_at"])
+            usage._need((context["assignment_ref"] is None) == (context["tasks_ref"] is None))
+            if context["planning_valid"]:
+                usage._need(context["marked_at"] is not None)
+                usage._need(context["scope_ref"] is None or context["approval_ref"] is not None)
+            else:
+                usage._need(all(context[key] is None for key in ("scope_ref", "assignment_ref", "tasks_ref", "approval_ref", "marked_at"))
+                            and context["time_phase"] == "unknown")
         for key in ("work_ref", "candidate_ref", "review_ref", "ref", "source_ref"):
             if context[key] is not None: usage._hash(context[key])
         usage._need(context["work_ref"] is not None and context["ref"] is not None)
@@ -62,7 +80,8 @@ def classify(state, event):
 
 
 def transition(root, *, work_ref, candidate_ref, marker_id, operation, targets, review_ref=None, activity=None,
-               initial_reviewed=False, expected=None, supersedes=None, external_without_expected=False):
+               initial_reviewed=False, expected=None, supersedes=None, external_without_expected=False,
+               planning_context=None):
     """Atomic marker with observed source fences; ids/refs are already opaque."""
     for value in (work_ref, candidate_ref, marker_id): usage._hash(value)
     if review_ref is not None: usage._hash(review_ref)
@@ -77,10 +96,14 @@ def transition(root, *, work_ref, candidate_ref, marker_id, operation, targets, 
     usage._need(len({target["agent"] for target in targets}) == len(targets))
     body = {"work_ref": work_ref, "candidate_ref": candidate_ref, "operation": operation, "review_ref": review_ref,
             "activity": activity, "agents": [target["agent"] for target in targets], "sources": [target["source_ref"] for target in targets]}
+    if planning_context is not None:
+        usage_scopes.validate_context(planning_context)
+        body["planning_context"] = planning_context
     fingerprint = usage.digest(body)
     usage._directory_clean(root)
     with exclusive_lock(usage._path(root, "writer.lock"), timeout_seconds=0.2):
         state = usage._load(root); usage._need(state is not None, "phase.capture-unavailable")
+        usage._need(planning_context is None or usage_scopes.enabled(state), "phase.scoped-disabled")
         state = copy.deepcopy(state)
         previous = next((value for value in state["phase_markers"] if value["id"] == marker_id), None)
         if previous:
@@ -91,6 +114,7 @@ def transition(root, *, work_ref, candidate_ref, marker_id, operation, targets, 
         usage._need(not external_without_expected or len(state["phase_markers"]) < MAX_MARKERS,
                     "phase.expected-context-required", "Read usage phase-status and refresh expected_contexts; no phase was inferred.")
         expected = expected or {}
+        scope_ref = usage_scopes.register(state, planning_context) if planning_context is not None else None
         for target in targets:
             agent = target["agent"]; old = state["phase_contexts"].get(agent)
             usage._need(expected.get(agent) == (old["ref"] if old else None), "phase.stale-context")
@@ -108,7 +132,8 @@ def transition(root, *, work_ref, candidate_ref, marker_id, operation, targets, 
             elif operation in {"review-start", "review-decision", "later"}: phase = "post_review_other"
             elif operation == "activity": phase = old["phase"] if same else "unknown"
             else: phase = "unknown"
-            if overlap: phase = "mixed"
+            time_phase = old.get("time_phase", phase) if operation == "activity" and same else phase
+            if overlap: phase = time_phase = "mixed"
             valid_cut = target["source_ref"] is not None and target["fence"] is not None
             if not valid_cut: phase = "unknown"
             state["phase_contexts"][agent] = {"work_ref": work_ref, "candidate_ref": candidate_ref, "review_ref": review_ref,
@@ -116,6 +141,14 @@ def transition(root, *, work_ref, candidate_ref, marker_id, operation, targets, 
                 "source_ref": target["source_ref"], "fence": target["fence"], "settled": False,
                 "dirty": bool(old and not old["settled"]), "active": operation != "close", "review_started": bool(reviewed),
                 "activity": activity if activity is not None else old["activity"] if same else None}
+            if usage_scopes.enabled(state):
+                valid = bool(planning_context and planning_context["valid"])
+                state["phase_contexts"][agent].update(scope_ref=scope_ref,
+                    assignment_ref=planning_context["assignment_ref"] if planning_context else None,
+                    tasks_ref=planning_context["tasks_ref"] if planning_context else None,
+                    approval_ref=planning_context["approval_ref"] if planning_context else None,
+                    planning_valid=valid, marked_at=usage_scopes.marker_now() if valid else None,
+                    time_phase=time_phase if valid else "unknown")
         state["phase_markers"].append({"id": marker_id, "digest": fingerprint})
         state["phase_markers"] = state["phase_markers"][-MAX_MARKERS:]
         state["revision"] += 1
@@ -139,6 +172,9 @@ def invalidate(root, work_ref, agents):
                 if context and context["work_ref"] == work_ref:
                     context.update(phase="unknown", basis="unavailable", source_ref=None, fence=None, settled=False,
                                    ref=usage.digest([context["ref"], "unavailable"]))
+                    if usage_scopes.enabled(state) and usage_scopes.PLANNING_FIELDS.intersection(context):
+                        context.update(scope_ref=None, assignment_ref=None, tasks_ref=None, approval_ref=None,
+                                       planning_valid=False, marked_at=None, time_phase="unknown")
                     changed = True
             if changed:
                 state["revision"] += 1; usage._publish(root, state)
@@ -219,9 +255,13 @@ def command(root: Path, request, *, _lifecycle=False):
                 usage._need(source["source_id"] == selected[identity]["source_id"] and source["parent"] == selected[identity]["parent_id"], "phase.source")
                 source_ref, fence = source["source_id"], source["snapshot_end"]
             targets.append({"agent": agent, "source_ref": source_ref, "fence": fence})
+        planning_context = None
+        if usage_scopes.enabled(state):
+            from .planning_scopes import resolve
+            planning_context = resolve(root, work, workspace)
         result = transition(destination, work_ref=reference, candidate_ref=candidate, marker_id=marker_id, operation=operation,
                             targets=targets, review_ref=review_ref, activity=request.get("activity"), initial_reviewed=bool(work["reviews"]), expected=expected, supersedes=supersedes,
-                            external_without_expected=not _lifecycle and declared is None)
+                            external_without_expected=not _lifecycle and declared is None, planning_context=planning_context)
         result["token_capture"] = captured
         return result
     except (ControlError, OSError, ValueError, TypeError, KeyError, IndexError, OverflowError, RecursionError, subprocess.SubprocessError) as error:
@@ -245,7 +285,10 @@ def status(root):
         state = usage._load(destination)
         return {"state": "available", "work_may_continue": True, "contexts": [
             {"agent_alias": "agent-" + agent[:12], "work_ref": context["work_ref"], "context_ref": context["ref"],
-             "phase": context["phase"], "active": context["active"]}
+             "phase": context["phase"], "active": context["active"],
+             **({"agent_ref": agent, "scope_ref": context.get("scope_ref"), "marked_at": context.get("marked_at"),
+                 "time_phase": context.get("time_phase", "unknown"), "planning_valid": context.get("planning_valid", False)}
+                if usage_scopes.enabled(state) else {})}
             for agent, context in sorted((state or {}).get("phase_contexts", {}).items())]}
     except (ControlError, OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError):
         return {"state": "unavailable", "work_may_continue": True, "contexts": []}
