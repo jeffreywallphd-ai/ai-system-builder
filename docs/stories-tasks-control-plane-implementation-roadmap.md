@@ -2,8 +2,8 @@
 
 # Stories, tasks and scoped implementation reporting Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-11-25T22:20:23Z`
+- Status: `roadmap-ready-to-close`
+- Updated: `2026-11-25T22:31:24Z`
 
 ## Objective
 
@@ -54,7 +54,7 @@ No high-level decision has been recorded.
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
 | 1: Stable stories and task progress | Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence. | None | `completed` |
-| 2: Scoped implementation time and token reporting | Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history. | stable-stories-and-tasks | `verifying` |
+| 2: Scoped implementation time and token reporting | Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history. | stable-stories-and-tasks | `completed` |
 
 ## Increment 1: Stable stories and task progress
 
@@ -115,7 +115,7 @@ Keep versioned evidence and restore a compatible reader; never erase migrated hi
 ## Increment 2: Scoped implementation time and token reporting
 
 - Id: `scoped-time-and-tokens`
-- Status: `verifying`
+- Status: `completed`
 - Dependencies: `stable-stories-and-tasks`
 
 Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history.
@@ -147,11 +147,11 @@ Task counts show implementation tracking. Technical qualification remains separa
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `time-observations`: Completed own-agent activity spans validate replay, clock/session, overlap, phase and scope without deriving coding time from Work elapsed. | local | not recorded |
-| `scope-conservation`: Story, increment-only, roadmap-only and unattributed contributions conserve counters without inclusive/child or hierarchy double counting. | local | not recorded |
-| `usage-compatibility`: Old numeric totals, cursors, phases, baselines and day/week/quarter retention are preserved by compatible bounded migration. | local | not recorded |
-| `roadmap-metrics`: Roadmaps show measured, estimated and unknown scope summaries; unavailable metrics do not change qualification or break navigation. | local | not recorded |
-| `security-impact-reviewed`: Strict identities, approval and evidence integrity, bounded storage, inert display and failure paths are verified without new execution authority. | local | not recorded |
+| `time-observations`: Completed own-agent activity spans validate replay, clock/session, overlap, phase and scope without deriving coding time from Work elapsed. | local | passed (test) |
+| `scope-conservation`: Story, increment-only, roadmap-only and unattributed contributions conserve counters without inclusive/child or hierarchy double counting. | local | passed (test) |
+| `usage-compatibility`: Old numeric totals, cursors, phases, baselines and day/week/quarter retention are preserved by compatible bounded migration. | local | passed (test) |
+| `roadmap-metrics`: Roadmaps show measured, estimated and unknown scope summaries; unavailable metrics do not change qualification or break navigation. | local | passed (test) |
+| `security-impact-reviewed`: Strict identities, approval and evidence integrity, bounded storage, inert display and failure paths are verified without new execution authority. | local | passed (review) |
 
 ### Verification
 

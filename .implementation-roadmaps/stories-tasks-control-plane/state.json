@@ -177,7 +177,7 @@
   "completion": null,
   "completionSuite": "standardande2e",
   "createdAt": "2026-11-25T15:03:27Z",
-  "currentIncrementId": "scoped-time-and-tokens",
+  "currentIncrementId": null,
   "decisions": [],
   "discovery": {
     "constraints": [
@@ -281,6 +281,61 @@
       "outcome": "passed",
       "recordedAt": "2026-11-25T18:40:20Z",
       "summary": "Whole-feature source7806104b passed six actual focused checks. Completed Work stories-task-increment-1-qualification receipt83cda083 and accepted separate-invocation review86e38f6f cover this exact criterion. All three tasks are complete. Full state/render replay preserves historical plans, task ownership and evidence. Time/token reporting, live migration, Headless work and native/model qualification remain separate."
+    },
+    {
+      "artifact": "docs/tmp/stories-tasks-increment-two-root-qualification.json",
+      "command": null,
+      "criterionId": "time-observations",
+      "id": "evidence-6",
+      "incrementId": "scoped-time-and-tokens",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T22:31:18Z",
+      "summary": "Actual Root untargeted whole-I2 Work stories-i2-root-increment-qualification passed all eight fixed related checks on source a5b882474dd5216f6bb2365b3cf5083cf648af47e6f613348987d0c8d1f4618c; receipt 5ec1d210c7c09daac2b6a5d267809940b4577e7df08ffbfc77c5ec03b52d2918 and independent accepted review 0ab78697692faa748f148349166d89ca6bff70297fdf04ea00544de3cef977a9 cover this exact local criterion. Preserve unavailable live time, prior failures and separate overall/Headless qualification."
+    },
+    {
+      "artifact": "docs/tmp/stories-tasks-increment-two-root-qualification.json",
+      "command": null,
+      "criterionId": "scope-conservation",
+      "id": "evidence-7",
+      "incrementId": "scoped-time-and-tokens",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T22:31:18Z",
+      "summary": "Actual Root untargeted whole-I2 Work stories-i2-root-increment-qualification passed all eight fixed related checks on source a5b882474dd5216f6bb2365b3cf5083cf648af47e6f613348987d0c8d1f4618c; receipt 5ec1d210c7c09daac2b6a5d267809940b4577e7df08ffbfc77c5ec03b52d2918 and independent accepted review 0ab78697692faa748f148349166d89ca6bff70297fdf04ea00544de3cef977a9 cover this exact local criterion. Preserve unavailable live time, prior failures and separate overall/Headless qualification."
+    },
+    {
+      "artifact": "docs/tmp/stories-tasks-increment-two-root-qualification.json",
+      "command": null,
+      "criterionId": "usage-compatibility",
+      "id": "evidence-8",
+      "incrementId": "scoped-time-and-tokens",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T22:31:18Z",
+      "summary": "Actual Root untargeted whole-I2 Work stories-i2-root-increment-qualification passed all eight fixed related checks on source a5b882474dd5216f6bb2365b3cf5083cf648af47e6f613348987d0c8d1f4618c; receipt 5ec1d210c7c09daac2b6a5d267809940b4577e7df08ffbfc77c5ec03b52d2918 and independent accepted review 0ab78697692faa748f148349166d89ca6bff70297fdf04ea00544de3cef977a9 cover this exact local criterion. Preserve unavailable live time, prior failures and separate overall/Headless qualification."
+    },
+    {
+      "artifact": "docs/tmp/stories-tasks-increment-two-root-qualification.json",
+      "command": null,
+      "criterionId": "roadmap-metrics",
+      "id": "evidence-9",
+      "incrementId": "scoped-time-and-tokens",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T22:31:19Z",
+      "summary": "Actual Root untargeted whole-I2 Work stories-i2-root-increment-qualification passed all eight fixed related checks on source a5b882474dd5216f6bb2365b3cf5083cf648af47e6f613348987d0c8d1f4618c; receipt 5ec1d210c7c09daac2b6a5d267809940b4577e7df08ffbfc77c5ec03b52d2918 and independent accepted review 0ab78697692faa748f148349166d89ca6bff70297fdf04ea00544de3cef977a9 cover this exact local criterion. Preserve unavailable live time, prior failures and separate overall/Headless qualification."
+    },
+    {
+      "artifact": "docs/tmp/stories-tasks-increment-two-root-qualification.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-10",
+      "incrementId": "scoped-time-and-tokens",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T22:31:19Z",
+      "summary": "Actual Root untargeted whole-I2 Work stories-i2-root-increment-qualification passed all eight fixed related checks on source a5b882474dd5216f6bb2365b3cf5083cf648af47e6f613348987d0c8d1f4618c; receipt 5ec1d210c7c09daac2b6a5d267809940b4577e7df08ffbfc77c5ec03b52d2918 and independent accepted review 0ab78697692faa748f148349166d89ca6bff70297fdf04ea00544de3cef977a9 cover this exact local criterion. Preserve unavailable live time, prior failures and separate overall/Headless qualification."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -448,6 +503,42 @@
       "sequence": 24,
       "taskCompletionDigest": "8b010142dabb7ed2ba72a95e5da842d6c83cbf0d4659c08d4736082d78bb3fd5",
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f3dca1b77820d73a5c64c8f6a0fbb9a8a824b8dde118ddb84b9000b9cc0a70cf",
+      "recordedAt": "2026-11-25T22:31:18Z",
+      "sequence": 25,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f2dde1729cbbd887e797384300a8464c4e15b86b8b8190c68cedb22eb8cb4ad3",
+      "recordedAt": "2026-11-25T22:31:18Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "87e16e06a8f14f9d19c5e2596069ae3e8f8879b5ef48892f6c02638154b1d846",
+      "recordedAt": "2026-11-25T22:31:18Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1da51a00cb2692fed197d498abf93c00da451636b097b501db8ac5af79e49147",
+      "recordedAt": "2026-11-25T22:31:19Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ca3a58e82c2c86d2ee00cb53f85ee56e8550af2303d7e73f9b12f886c5b9bc8",
+      "recordedAt": "2026-11-25T22:31:19Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3d771c7c9feed49673d129662bf63e7450937903a8dbaec751425658751496bd",
+      "recordedAt": "2026-11-25T22:31:24Z",
+      "sequence": 30,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -635,12 +726,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-11-25T22:31:24Z",
       "completedChunks": [
         "scoped-usage-store",
         "implementation-time-spans",
         "scoped-roadmaps-report"
       ],
+      "completionSummary": "All three actual Root task outcomes and all five local scoped time/token reporting criteria passed current focused checks and independent review. Stories and tasks are complete; unsupported live time capture stays unavailable. The user-deferred overall campaign, final approval and separate Headless qualification remain pending.",
       "deliverables": [
         "Closed bounded activity spans preserve measured, estimated and unknown time.",
         "One atomic token importer preserves original counters and exclusive leaf ancestry.",
@@ -657,6 +749,7 @@
       "id": "scoped-time-and-tokens",
       "number": 2,
       "objective": "Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Existing user-approved design b09f087503d3a3504f12761e67f5e542048f565070a0d24ef48114e8e1e97572 covers this exact compatibility-first scope.",
@@ -753,7 +846,7 @@
       ],
       "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
       "startedAt": "2026-11-25T20:05:40Z",
-      "status": "verifying",
+      "status": "completed",
       "title": "Scoped implementation time and token reporting",
       "verification": [
         "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
@@ -793,7 +886,7 @@
   },
   "schemaVersion": 1,
   "slug": "stories-tasks-control-plane",
-  "status": "executing",
+  "status": "roadmap-ready-to-close",
   "storyTaskTracking": {
     "revisions": [
       {
@@ -857,5 +950,5 @@
     ],
     "schemaVersion": 1
   },
-  "updatedAt": "2026-11-25T22:20:23Z"
+  "updatedAt": "2026-11-25T22:31:24Z"
 }
