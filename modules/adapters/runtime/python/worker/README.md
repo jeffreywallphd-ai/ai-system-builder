@@ -2296,7 +2296,8 @@ or changed content/bindings fails permanently without partial publication.
 Unknown Native replies retain the original call, buffer, handles and read marker;
 neither retry nor copy retirement follows. A completed byte read does not retire
 the original worker/Job or release retained accounting. Fake-ABI tests qualify
-only this component. Bounded parsing, complete producer/resource/custody, Save
+only this component. Parsing uses the separate in-memory loader. Complete
+producer/resource/custody, Save
 and actual-host qualification remain pending; accepted accuracy is not rerun.
 
 ### Protected training dataset parsing
@@ -2327,3 +2328,30 @@ the SDK changes. Encoded 64 MiB/file and 256 MiB aggregate limits and parser
 chunks are not a decoded-memory guarantee. Full 2 GiB/process and 4 GiB total
 resource ownership, producer/custody, retirement, Save and host evidence remain
 separate. These synthetic tests never load a model or rerun accuracy.
+
+### Compose the protected training stages
+
+`_run_protected_training_pipeline` is an internal staging component. Capture its
+fixed helpers on the original Use before callbacks. Reserve one attempt on the
+original thread, bind the finite original output family, then join original-byte
+loading, safe local model/tokenizer loading, memory-only tokenization, optional
+adapter creation, approved arguments and the protected Trainer/final writer.
+Retain passive proof of dataset wrappers/tables, original model/tokenizer and
+arguments through every stage. Trainer setup must keep the exact selected splits.
+Checkpoint/final exports capture that original proof and repeat only its passive
+snapshot after the final Native writer check, before any write effect.
+Progress has a fixed stage and includes completed-batch updates; it conveys no
+additional permission. Recheck the original binding after the caller observes it.
+
+Reject a missing family before reading inputs or loading a model. Foreign threads
+do not consume the owner's attempt. Reentry, helper/data changes, cancellation,
+exceptions or permission loss fail without ordinary directory/cache/serialization
+writers, fallback, retry, deletion, resource settlement or Save. Return only the
+genuine sealed final graph, with candidate validation still pending. Ordinary
+training and existing default host roots are unchanged. Original producer/hard
+resource ownership, protected output-reader validation/custody, permanent
+retirement, separately approved Save and actual-host qualification remain pending.
+Synthetic SDK and Native ABI tests supply no actual model or quality score.
+The shared SDK fixture prepares only the selected method/output through the
+original Native fixture. It keeps the same guard/retirement assertions without
+first retaining an unused default LoRA graph; test and runtime limits stay intact.

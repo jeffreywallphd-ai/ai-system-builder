@@ -1127,3 +1127,18 @@ extension types are unavailable on this private profile. Ordinary loading stays
 unchanged. Existing 64 MiB/file and 256 MiB encoded limits do not bound decoded
 RAM. Complete resource ownership, producer/custody, retirement, Save and actual
 host qualification remain pending; parser tests load no model or quality scorer.
+
+### Private protected training pipeline
+
+One fixed internal pipeline now joins original-byte dataset loading, in-memory
+tokenization, safe local model loading, optional adapters, approved arguments,
+training, checkpoint snapshots and the protected final writer. It captures its
+helpers before callbacks and binds the original task/view/thread and dataset
+tables through progress and Trainer setup. Missing output custody denies before
+dataset/model reads; changed inputs, reentry or lost permission cannot retry or
+publish a partial result. Ordinary directory writers and automatic Save are unused.
+
+The returned graph is private sealed staging. Its files still require protected
+validation and custody handoff. No default producer or public capability is enabled.
+Synthetic SDK/Native tests are not actual model execution, hard resource ownership,
+permanent retirement, approved Save or host qualification; those remain pending.

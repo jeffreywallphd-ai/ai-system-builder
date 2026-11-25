@@ -267,6 +267,210 @@ def _install_checkpoint_trainer(monkeypatch,steps,*,during=None,catch=False):
     return calls,objects,disk
 
 
+@contextmanager
+def _protected_pipeline_fixture(monkeypatch,*,method="full-finetune",family=True,during=None):
+    # Load the real in-memory Dataset SDK before the inert Torch fixture.
+    import datasets
+    with _checkpoint_schedule_fixture(monkeypatch,method=method,family=family) as facts:
+        actual,original,model,tokenizer,group,control,kernel,Tensor=facts
+        use=train_model_module._ProtectedTrainingUse(original.payload,original.view)
+        sdk=sys.modules["torch"]
+        calls,objects,disk=_install_checkpoint_trainer(monkeypatch,(1,),during=during)
+        transformers=sys.modules["transformers"]
+        original_train=transformers.Trainer.train
+        def training_with_progress(receiver):
+            result=original_train(receiver)
+            receiver.state.epoch=0
+            for callback in receiver.callbacks:
+                callback.on_step_end(receiver.args,receiver.state,SimpleNamespace())
+            return result
+        transformers.Trainer.train=training_with_progress
+        with monkeypatch.context() as args_patch:
+            _checkpoint_arguments_spy(args_patch)
+            argument_type=sys.modules["transformers"].TrainingArguments
+        transformers.TrainingArguments=argument_type
+        # Actual fixed loading helpers and original Use remain in place; these
+        # installed-supplier boundaries return synthetic objects, never a model.
+        def tokenizer_factory(reference,**options):
+            calls.append("tokenizer")
+            assert reference==use.model_reference and options=={
+                "use_fast":True,"local_files_only":True,"trust_remote_code":False,"token":False}
+            return tokenizer
+        def model_factory(reference,**options):
+            calls.append("model")
+            assert reference==use.model_reference and options["use_safetensors"] is True and options["weights_only"] is True
+            assert options["local_files_only"] is True and options["trust_remote_code"] is False and options["token"] is False
+            return model
+        transformers.AutoTokenizer=SimpleNamespace(from_pretrained=tokenizer_factory)
+        transformers.AutoModelForCausalLM=SimpleNamespace(from_pretrained=model_factory)
+        tokenizer.pad_token="<pad>";tokenizer.eos_token="<eos>"
+        def tokenize(self,texts,**options):
+            calls.append(("tokenize",tuple(texts)))
+            return {"input_ids":[[1,2,3] for _ in texts],"attention_mask":[[1,1,1] for _ in texts]}
+        monkeypatch.setattr(type(tokenizer),"__call__",tokenize,raising=False)
+        sdk.cuda=SimpleNamespace(is_available=lambda:method=="qlora")
+        if method=="qlora":
+            monkeypatch.setitem(sys.modules,"bitsandbytes",ModuleType("bitsandbytes"))
+            transformers.BitsAndBytesConfig=lambda **options:SimpleNamespace(**options)
+        peft=sys.modules["peft"];peft.TaskType=SimpleNamespace(CAUSAL_LM="CAUSAL_LM")
+        def adapter(selected,configuration):
+            calls.append("adapter");assert selected is model
+            model.peft_config["default"]=configuration;return model
+        peft.get_peft_model=adapter
+        monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value:value)
+        yield actual,use,model,tokenizer,group,control,kernel,calls,objects,disk
+
+
+@pytest.mark.parametrize("method",["full-finetune","lora","qlora"])
+def test_private_pipeline_connects_original_bytes_to_protected_checkpoint_and_final_output(monkeypatch,method):
+    with _protected_pipeline_fixture(monkeypatch,method=method) as (actual,use,model,tokenizer,family,control,kernel,calls,objects,disk):
+        progress=[]
+        def forbidden(*a,**k):pytest.fail("Private pipeline invoked ordinary filesystem/output behavior")
+        with monkeypatch.context() as no_ordinary_io:
+            no_ordinary_io.setattr(Path,"mkdir",forbidden)
+            no_ordinary_io.setattr(train_model_module.tempfile,"mkdtemp",forbidden)
+            for name in ("save_adapter_pretrained","save_full_model_pretrained","validate_model_output",
+                    "write_serialization_manifest","_write_run_metadata"):
+                no_ordinary_io.setattr(train_model_module,name,forbidden)
+            graph=train_model_module._run_protected_training_pipeline(use,on_progress=progress.append)
+        assert type(graph) is train_model_module._ProtectedTrainingOutputGraph and graph.phase=="sealed"
+        assert use._pipeline_slot["stage"]=="complete" and use._pipeline_slot["graph"] is graph
+        assert use._final_result_slot["graph"] is graph and family.phase=="sealed"
+        assert len(actual._output_family_snapshot(family)["members"])==2 and disk==[] and control.retained==[]
+        assert [entry for entry in calls if type(entry) is str]==(["tokenizer","model","construct","train"] if method=="full-finetune" else
+            ["tokenizer","model","adapter","construct","train"])
+        assert objects[0].train_dataset.to_list()==[{"input_ids":[1,2,3],"attention_mask":[1,1,1],"labels":[1,2,3]}]
+        stages=[row["stage"] for row in progress]
+        assert stages[:4]==["dataset-loading","model-loading","sequence-length","tokenization"]
+        tail=stages[stages.index("training-arguments"):]
+        assert tail[0]=="training-arguments" and tail[-1]=="staged" and set(tail[1:-1])=={"training"}
+        assert any(row.get("batch")==1 and row["stage"]=="training" for row in progress)
+        run=json.loads(bytes(kernel.nodes[graph.physical_path+"\\training-run.json"]["data"]))
+        assert run["runId"]==use._run_identity[0] and run["status"]=="training-complete" and run["candidateValidation"]=="pending"
+        assert use._dataset_slot["stage"]=="complete" and objects[0].args.should_save is False
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use)
+        assert len(kernel.calls)==before and family.phase=="sealed"
+
+
+def test_private_pipeline_requires_original_output_family_before_dataset_or_model_reads(monkeypatch):
+    with _protected_pipeline_fixture(monkeypatch,family=False) as (_,use,_,_,_,control,kernel,calls,_,disk):
+        reads=sum(name=="ReadFile" for name,_ in kernel.calls)
+        with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use)
+        assert calls==[] and disk==[] and control.charges==[]
+        assert sum(name=="ReadFile" for name,_ in kernel.calls)==reads and use._pipeline_slot["stage"]=="failed"
+
+
+def test_private_pipeline_foreign_thread_refuses_without_poisoning_original_attempt(monkeypatch):
+    from threading import Thread
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,control,kernel,calls,_,_):
+        errors=[];before=len(kernel.calls)
+        def foreign():
+            try:train_model_module._run_protected_training_pipeline(use)
+            except ValueError:errors.append("refused")
+        worker=Thread(target=foreign);worker.start();worker.join(5)
+        assert not worker.is_alive() and errors==["refused"] and len(kernel.calls)==before
+        assert use._pipeline_slot is None and calls==[] and control.charges==[] and family.phase=="bound"
+
+
+@pytest.mark.parametrize("change",["permission","cancel","error","reentry","slot"])
+def test_private_pipeline_progress_loss_denies_without_model_work_or_retry(monkeypatch,change):
+    with _protected_pipeline_fixture(monkeypatch) as (actual,use,_,_,family,control,kernel,calls,_,disk):
+        def progress(value):
+            if value["stage"]!="dataset-loading":return
+            if change=="permission":
+                actual._model_leases.get(actual._model_views.get(use.view)[0])["view_lost"]=True
+            elif change=="cancel":raise train_model_module.TrainingCancellationRequested()
+            elif change=="error":raise RuntimeError("synthetic-private-pipeline-details")
+            elif change=="reentry":
+                with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use)
+            else:use._pipeline_slot={"stage":"binding"}
+        with pytest.raises((ValueError,train_model_module.LaunchUnavailable,train_model_module.TrainingCancellationRequested)) as error:
+            train_model_module._run_protected_training_pipeline(use,on_progress=progress)
+        assert "synthetic-private-pipeline-details" not in str(error.value) and calls==[] and disk==[]
+        assert control.charges==[] and control.retained==[] and family.phase=="failed"
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use)
+        assert len(kernel.calls)==before
+
+
+@pytest.mark.parametrize("helper",["_load_dataset","_load_transformers_objects","_run_trainer"])
+def test_private_pipeline_replaced_helpers_cannot_receive_original_use(monkeypatch,helper):
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,_,control,kernel,calls,_,_):
+        replacements=[];before=len(kernel.calls)
+        monkeypatch.setattr(train_model_module,helper,lambda *a,**k:replacements.append(True))
+        with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use)
+        assert replacements==[] and calls==[] and control.charges==[] and len(kernel.calls)==before
+
+
+def test_private_pipeline_passive_stage_checks_never_invoke_virtual_equality(monkeypatch):
+    class Stage(str):
+        callbacks=[]
+        def __eq__(self,other):self.callbacks.append(other);return str.__eq__(self,other)
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,control,_,calls,_,_):
+        def progress(value):
+            if value["stage"]=="dataset-loading":use._pipeline_slot["stage"]=Stage("dataset-loading")
+        with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use,on_progress=progress)
+        assert Stage.callbacks==[] and calls==[] and control.charges==[] and family.phase=="failed"
+
+
+@pytest.mark.parametrize("target",["data","trainer"])
+def test_private_pipeline_rejects_changed_dataset_before_training(monkeypatch,target):
+    from datasets import Dataset
+    replacement=Dataset.from_dict({"input_ids":[[99]],"attention_mask":[[1]],"labels":[[99]]})
+    captured=[];initial=Dataset.__init__
+    def dataset_init(self,*a,**k):initial(self,*a,**k);captured.append(self)
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,control,_,calls,objects,disk):
+        monkeypatch.setattr(Dataset,"__init__",dataset_init)
+        if target=="trainer":
+            trainer=sys.modules["transformers"].Trainer;construct=trainer.__init__
+            def init(receiver,**options):
+                construct(receiver,**options);receiver.train_dataset=replacement
+            monkeypatch.setattr(trainer,"__init__",init)
+        def progress(value):
+            if target=="data" and value["stage"]=="training":
+                result=next(split for split in reversed(captured) if "input_ids" in split.column_names)
+                object.__getattribute__(result,"__dict__")["_data"]=replacement.data
+        with pytest.raises(ValueError):train_model_module._run_protected_training_pipeline(use,on_progress=progress)
+        assert "train" not in calls and disk==[] and family.phase=="failed" and control.charges==[]
+
+
+@pytest.mark.parametrize("export_kind",["checkpoint","final"])
+def test_private_pipeline_data_proof_fences_last_native_callback_before_output_write(monkeypatch,export_kind):
+    from datasets import Dataset
+    replacement=Dataset.from_dict({"input_ids":[[99]],"attention_mask":[[1]],"labels":[[99]]})
+    with _protected_pipeline_fixture(monkeypatch) as (actual,use,_,_,family,control,kernel,_,objects,disk):
+        changed=[]
+        def after(name):
+            if changed:return
+            if export_kind=="checkpoint":
+                training=use._training_slot
+                execution=training.get("checkpoint_execution") if type(training) is dict else None
+                child=execution.get("active") if type(execution) is dict else None
+            else:
+                final=use._final_result_slot
+                child=final.get("export") if type(final) is dict else None
+            output=child._output_slot if child is not None else None
+            graph=output.get("graph") if type(output) is dict else None
+            if graph is None or output["stage"]!="writing":return
+            native=flat=chunk=False;frame=sys._getframe(1)
+            while frame:
+                if frame.f_locals.get("self") is graph:
+                    native |= frame.f_code is actual.OriginalTrainingOutputGraph.guard.__code__
+                    flat |= frame.f_code is actual._OriginalProtectedFlatCopy.guard.__code__
+                    if frame.f_code is actual.OriginalTrainingOutputGraph.prepare.__code__:
+                        chunk |= type(frame.f_locals.get("chunk")) is bytes and frame.f_locals.get("copied")==0
+                frame=frame.f_back
+            if native and not flat and chunk:
+                changed.append(len(kernel.calls))
+                object.__getattribute__(objects[0].train_dataset,"__dict__")["_data"]=replacement.data
+        kernel.after=after
+        with pytest.raises((ValueError,actual.LaunchUnavailable)):
+            train_model_module._run_protected_training_pipeline(use)
+        assert len(changed)==1 and not any(name=="WriteFile" for name,_ in kernel.calls[changed[0]:])
+        assert disk==[] and control.retained==[] and family.phase=="failed" and use._pipeline_slot["stage"]=="failed"
+
+
 @pytest.mark.parametrize("method",["lora","qlora","full-finetune"])
 def test_checkpoint_handler_seals_each_updated_snapshot_without_sdk_path_io(monkeypatch,tmp_path,method):
     from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingTensorStreamTests
@@ -676,13 +880,26 @@ def test_unbound_ordinary_training_arguments_preserve_sdk_saving_behavior(monkey
 
 @contextmanager
 def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_proj",),output=None):
-    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingTensorStreamTests,Control
-    sdk_case=DenseTensorByteAdapterTests(); facts,sdk,Tensor,Device=sdk_case.fixture(); extra=None
+    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import (
+        DenseTensorByteAdapterTests,CombinedTrainingInputViewTests,TrainingOutputCustodyTests,TrainingTensorStreamTests)
+    sdk_case=DenseTensorByteAdapterTests()
+    custody_fixture=TrainingOutputCustodyTests.fixture
+    combined_fixture=CombinedTrainingInputViewTests.fixture
+    def selected_custody(case,method=method):
+        return custody_fixture(case,method=method)
+    def selected_inputs(case,prepare=True,method=method,output=None):
+        return combined_fixture(case,prepare=prepare,method=method,output=selected_output)
+    selected_output=output
+    # Prepare the selected method/output through the original fixture once.
+    # Previously full/quantized/custom-output cases first prepared and retained
+    # an unused LoRA graph, then constructed a second complete native graph.
+    with monkeypatch.context() as setup:
+        setup.setattr(TrainingOutputCustodyTests,"fixture",selected_custody)
+        setup.setattr(CombinedTrainingInputViewTests,"fixture",selected_inputs)
+        facts,sdk,Tensor,Device=sdk_case.fixture()
     owned=[facts[:4]]
     actual,_,lease,_,request,control,*_=facts
-    if method != "lora" or output is not None:
-        extra=CombinedTrainingInputViewTests(); actual,source,lease,inputs,request,_,control,extra_kernel=extra.fixture(method=method,output=output)
-        owned.append((actual,source,lease,inputs))
+    assert request["method"]==method
     payload=TrainModelTaskRequest.model_validate(request); calls=[]
     class PeftType(Enum): LORA="LORA"
     class LoraConfig:
@@ -704,11 +921,7 @@ def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_pr
         def get_input_embeddings(self): return SimpleNamespace(num_embeddings=self.vocab)
         def resize_token_embeddings(self,size): calls.append(("resize",size)); self.vocab=size
     model=Model(); module=ModuleType("peft")
-    if extra is None: model.test_output=facts[6:]
-    else:
-        extra_kernel.node("X:\\private\\outputs",True)
-        model.test_output=(extra_kernel,{"freshParent":"X:\\private\\outputs","freshName":"candidate-output",
-            "maximumCopyBytes":128*1024,"bufferBytes":4096,"preparationMs":30000},None,None,Control())
+    model.test_output=facts[6:]
     def get_peft_model_state_dict(original,*,state_dict,adapter_name,unwrap_compiled,save_embedding_layers):
         assert original is model and adapter_name=="default" and unwrap_compiled is False
         assert type(save_embedding_layers) is bool  # Never the SDK's provider-discovering 'auto'.
@@ -724,7 +937,6 @@ def _protected_tensor_selection_fixture(monkeypatch,method="lora",targets=("q_pr
             use=train_model_module._ProtectedTrainingUse(payload,view)
             yield actual,use,model,module,calls,control,Tensor,TrainingTensorStreamTests()
     finally:
-        if extra is not None: extra.doCleanups()
         sdk_case.doCleanups()
         # Only these in-memory fixture owners are released, after all ordinary
         # retirement assertions. Production deliberately retains unknown custody

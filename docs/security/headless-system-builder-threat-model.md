@@ -2951,3 +2951,25 @@ Synchronous memory-buffer/chunked parsing preserves current encoded byte limits,
 but compressed/decoded expansion still needs the pending original resource owner.
 Synthetic installed-SDK denial tests grant no hard RAM/disk bound, complete
 producer/custody/retirement, Save, model accuracy, Native or host qualification.
+
+### Original protected training pipeline composition
+
+Joining private stages must not restore the ordinary directory/cache/serializer
+path. Capture the original helpers, reserve one attempt and bind a genuine finite
+output family before input/model effects. A weak, privately retained passive proof
+binds the original task/view/thread, dataset wrapper/Arrow identities, model,
+tokenizer, arguments and exact Trainer splits through callbacks and progress.
+Checkpoint/final export closures capture the original proof and resolver before
+callbacks. Check its fixed passive snapshot after the last Native/resource
+observer; no new observer may follow it before the write.
+Foreign callers cannot poison the owner; caught owned reentry or changed helpers,
+data, permission or progress fail the attempt. Do not publish raw exceptions,
+partial results, synthetic success or an automatic Save. Keep original output and
+accounting retained; cancellation/failure does not prove stopped workers or IO.
+
+Only a genuine sealed internal final graph can leave this pipeline. It remains
+unvalidated staging, not a model-use, publication, custody-transfer or release
+grant. Default product roots and normal training remain unchanged. Original
+resource/producer ownership, protected file validation/custody, permanent
+retirement, separately approved Save and real-host qualification remain pending.
+Synthetic SDK/Native feature tests supply no actual model or accuracy result.

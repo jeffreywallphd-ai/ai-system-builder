@@ -76,6 +76,31 @@ _TRAINING_TASK_REQUIRED_PURPOSES = {
     "vision-segmentation": ("label",),
 }
 _CHECKPOINT_EXPORTS = WeakKeyDictionary()
+_TRAINING_PIPELINES = WeakKeyDictionary()
+
+
+class _TrainingPipelineBinding:
+    """Private passive proof, retained by its Use without a global strong cycle."""
+    __slots__ = ("slot", "snapshot", "__weakref__")
+
+    def __init__(self, slot, snapshot):
+        object.__setattr__(self,"slot",slot)
+        object.__setattr__(self,"snapshot",snapshot)
+
+    def __setattr__(self,_name,_value):
+        raise ValueError("The private training pipeline proof is immutable.")
+
+
+def _training_pipeline_proof(use):
+    reference = _TRAINING_PIPELINES.get(use)
+    proof = reference() if reference is not None else None
+    if proof is None:
+        if use._pipeline_slot is not None:
+            raise ValueError("The private training pipeline proof is unavailable.")
+    elif (type(proof) is not _TrainingPipelineBinding or use._pipeline_slot is not proof.slot
+            or proof.slot.get("proof") is not proof):
+        raise ValueError("The private training pipeline proof changed.")
+    return proof
 
 
 class _CheckpointExport:
@@ -371,6 +396,7 @@ class _ProtectedTrainingUse:
         "_embedding_observation_lost","_tensor_selection_slot","_metadata_slot","_output_graph_type","_output_slot","_request_stamp",
         "_run_identity","_training_driver","_training_slot","_thread","_completion_helpers",
         "_dataset_reader","_dataset_loader","_dataset_parquet_reader","_dataset_slot",
+        "_pipeline_driver","_pipeline_helpers","_pipeline_slot",
         "_output_family_type","_output_family_snapshot","_output_family_fail",
         "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
         "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","_final_result_slot","__weakref__")
@@ -384,6 +410,8 @@ class _ProtectedTrainingUse:
         self._dataset_reader, self._dataset_loader = _NATIVE_TRAINING_INPUT_READER, _load_protected_dataset
         self._dataset_parquet_reader = _read_protected_parquet_tables
         self._dataset_slot = None
+        self._pipeline_driver, self._pipeline_helpers = _run_protected_training_pipeline, _PROTECTED_PIPELINE_HELPERS
+        self._pipeline_slot = None
         self._tensor_stream_type = _NATIVE_TENSOR_STREAM
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
@@ -424,6 +452,13 @@ class _ProtectedTrainingUse:
                 or any(original is not current for original,current in zip(self._completion_helpers,
                     (_protected_output_seal_facts,_sealed_training_checkpoint_facts,_finalize_protected_training_result)))):
             raise ValueError("The private training completion helpers changed.")
+        if (self._pipeline_driver is not _run_protected_training_pipeline
+                or self._pipeline_helpers is not _PROTECTED_PIPELINE_HELPERS
+                or self._pipeline_slot is not None and any(original is not current for original,current in zip(self._pipeline_helpers,
+                    (_bind_protected_checkpoint_schedule,_load_dataset,_load_transformers_objects,
+                     _resolve_training_purpose_paths,_resolve_effective_sequence_length,_tokenize_dataset,
+                     _apply_lora,_build_training_args,_run_trainer,_capture_pipeline_dataset_binding)))):
+            raise ValueError("The private training pipeline helpers changed.")
         if (self._resolve_task_id is not _NATIVE_TASK_ID_RESOLVER or self._resolve is not _NATIVE_REFERENCE_RESOLVER
                 or self._dataset_reader is not _NATIVE_TRAINING_INPUT_READER or self._dataset_loader is not _load_protected_dataset
                 or self._dataset_parquet_reader is not _read_protected_parquet_tables
@@ -462,6 +497,7 @@ def _check_protected_use(use, payload=None):
     if type(use) is not _ProtectedTrainingUse or payload is not None and use.payload is not payload:
         raise ValueError("The private protected training inputs are unavailable.")
     export_proof = _checkpoint_export_proof(use)
+    pipeline = _training_pipeline_proof(use)
     if export_proof is not None:
         # Only a registered same-view export can borrow the parent's live proof.
         # Its fixed current operation includes the original Native permission/
@@ -470,6 +506,7 @@ def _check_protected_use(use, payload=None):
         if _checkpoint_export_proof(use) is not export_proof:
             raise ValueError("The private checkpoint export changed.")
         export_proof.snapshot()
+        if pipeline is not None: pipeline.snapshot()
         return
     # Call the fixed class operation; an instance cannot select another guard.
     _ProtectedTrainingUse.assert_current(use)
@@ -482,6 +519,9 @@ def _check_protected_use(use, payload=None):
     if type(checkpoint) is dict and checkpoint.get("family") is not None:
         _NATIVE_CHECKPOINT_FAMILY_GUARD(checkpoint["family"],use,checkpoint)
     _checkpoint_snapshot(use)
+    if _training_pipeline_proof(use) is not pipeline:
+        raise ValueError("The private training pipeline proof changed.")
+    if pipeline is not None: pipeline.snapshot()
 
 
 def _checkpoint_snapshot(use):
@@ -2163,6 +2203,8 @@ def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
     training["checkpoint_execution"] = execution  # One attempt before SDK callbacks.
     retained, retained_seals = [], []
     read_seal_facts = use._completion_helpers[0]
+    pipeline_reader = _training_pipeline_proof
+    pipeline_proof = pipeline_reader(use)
     expected_methods = {}
     export_type = _ProtectedTrainingUse
     select = _capture_protected_training_tensor_stream
@@ -2174,6 +2216,9 @@ def _protected_checkpoint_trainer(base, use, model, tokenizer, args):
         _fail_checkpoint_arguments(use,slot)
 
     def passive():
+        if _training_pipeline_proof is not pipeline_reader or pipeline_reader(use) is not pipeline_proof:
+            raise ValueError("The private checkpoint pipeline proof changed.")
+        if pipeline_proof is not None: pipeline_proof.snapshot()
         if (use._checkpoint_slot is not slot or use._training_slot is not training
                 or training.get("checkpoint_execution") is not execution
                 or execution["stage"] not in ("constructing","training","saving","complete")
@@ -2385,9 +2430,14 @@ def _finalize_protected_training_result(use):
     reservation,admission = record["reservation"],record["admission"]
     export_type,select,metadata,write = (_ProtectedTrainingUse,_capture_protected_training_tensor_stream,
         _capture_protected_training_metadata,_write_protected_training_output)
+    pipeline_reader = _training_pipeline_proof
+    pipeline_proof = pipeline_reader(use)
     child = export_proof = None
 
     def passive():
+        if _training_pipeline_proof is not pipeline_reader or pipeline_reader(use) is not pipeline_proof:
+            raise ValueError("The private final pipeline proof changed.")
+        if pipeline_proof is not None: pipeline_proof.snapshot()
         if (use._final_result_slot is not slot or slot["family"] is not family
                 or slot["owner"] is not use or slot["checkpoint"] is not checkpoint
                 or slot["stage"] not in ("planning","capturing","writing","sealed")
@@ -2720,6 +2770,166 @@ def _run_trainer_impl(
                 checkpoints.append({"path": str(args.output_dir), "step": int(state["step"]), "metric": "loss", "value": float(state["loss"])})
     current()
     return (metrics, checkpoints, checkpoint_facts) if checkpoint_finish is not None else (metrics, checkpoints)
+
+
+def _capture_pipeline_dataset_binding(dataset):
+    """Capture only plain in-memory values, never a Dataset callback or decoder."""
+    from datasets import Dataset, DatasetDict
+    from datasets.table import InMemoryTable
+    from pyarrow import Table
+    if type(dataset) is not DatasetDict or set(dict.keys(dataset)) not in ({"train"},{"train","validation"}):
+        raise ValueError("The private pipeline datasets are unavailable.")
+    def facts(split):
+        if type(split) is not Dataset:
+            raise ValueError("The private pipeline dataset is unavailable.")
+        fields = object.__getattribute__(split,"__dict__")
+        table = fields.get("_data")
+        if (type(table) is not InMemoryTable or fields.get("_indices") is not None
+                or fields.get("_format_type") is not None or fields.get("_format_columns") is not None
+                or type(fields.get("_format_kwargs")) is not dict or fields["_format_kwargs"]
+                or type(fields.get("_indexes")) is not dict or fields["_indexes"]):
+            raise ValueError("The private pipeline dataset format changed.")
+        arrow = object.__getattribute__(table,"__dict__").get("table")
+        if type(arrow) is not Table or arrow.num_rows <= 0:
+            raise ValueError("The private pipeline table is unavailable.")
+        return table,arrow
+    captured = tuple((name,split,*facts(split)) for name,split in dict.items(dataset))
+    def snapshot():
+        if tuple(dict.keys(dataset)) != tuple(row[0] for row in captured):
+            raise ValueError("The private pipeline dataset splits changed.")
+        for name,split,table,arrow in captured:
+            current = facts(split)
+            if dict.__getitem__(dataset,name) is not split or current[0] is not table or current[1] is not arrow:
+                raise ValueError("The private pipeline dataset values changed.")
+    snapshot()
+    return snapshot
+
+
+def _run_protected_training_pipeline(use, *, on_progress=None):
+    """Compose private stages into a sealed internal graph; no Save/host grant."""
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private training pipeline is unavailable.")
+    _ProtectedTrainingUse.assert_snapshot(use)
+    previous = use._pipeline_slot
+    if previous is not None:
+        if type(previous) is dict and (type(previous.get("stage")) is not str or previous["stage"] not in ("complete","failed")):
+            previous["stage"] = "failed"
+            _fail_checkpoint_arguments(use)
+        raise ValueError("The private training pipeline attempt is unavailable.")
+    if (use._checkpoint_export_guard is not None or use._dataset_slot is not None
+            or use._checkpoint_slot is not None or use._training_slot is not None
+            or use._embedding_model is not None or use._final_result_slot is not None):
+        raise ValueError("The private training pipeline inputs are unavailable.")
+    payload,view,identity,helpers = use.payload,use.view,use._run_identity,use._pipeline_helpers
+    (bind_checkpoints,load_data,load_model,purpose_mapping,sequence_length,tokenize,
+        apply_adapter,arguments,train,capture_data) = helpers
+    slot = {"stage":"binding","proof":None,"graph":None}
+    use._pipeline_slot = slot
+    model = tokenizer = loaded = tokenized = train_args = None
+    data_bindings = []
+    proof = None
+    def snapshot():
+        _ProtectedTrainingUse.assert_snapshot(use)
+        if (use._pipeline_slot is not slot or slot["proof"] is not proof
+                or _training_pipeline_proof(use) is not proof or use.payload is not payload
+                or use.view is not view or use._run_identity is not identity or use._pipeline_helpers is not helpers
+                or type(slot.get("stage")) is not str
+                or slot["stage"] not in ("binding","dataset-loading","model-loading","sequence-length",
+                    "tokenization","adapter-configuration","training-arguments","training","complete")):
+            raise ValueError("The private training pipeline changed.")
+        for binding in data_bindings: binding()
+        if tokenizer is not None and use._embedding_tokenizer is not tokenizer:
+            raise ValueError("The private pipeline tokenizer changed.")
+        if model is not None and slot["stage"] != "adapter-configuration" and use._embedding_model is not model:
+            raise ValueError("The private pipeline model changed.")
+        training = use._training_slot
+        if tokenized is not None and type(training) is dict:
+            execution = training.get("checkpoint_execution")
+            receiver = execution.get("trainer") if type(execution) is dict else None
+            if receiver is not None:
+                fields = _sdk_passive_fields(receiver)
+                if (fields.get("train_dataset") is not dict.__getitem__(tokenized,"train")
+                        or fields.get("eval_dataset") is not dict.get(tokenized,"validation")):
+                    raise ValueError("The private pipeline Trainer datasets changed.")
+        if train_args is not None:
+            checkpoint = use._checkpoint_slot
+            if type(checkpoint) is not dict or checkpoint.get("arguments") is not train_args:
+                raise ValueError("The private pipeline training arguments changed.")
+        if slot["stage"] == "complete":
+            final = use._final_result_slot
+            if (type(final) is not dict or type(final.get("stage")) is not str
+                    or final["stage"] != "sealed" or final.get("graph") is not slot["graph"]):
+                raise ValueError("The private pipeline final output changed.")
+    proof = _TrainingPipelineBinding(slot,snapshot)
+    slot["proof"] = proof; _TRAINING_PIPELINES[use] = ref(proof)
+    def current():
+        _check_protected_use(use,payload)
+        snapshot()
+    def progress(value):
+        current()
+        if on_progress is not None: on_progress(value)
+        current()
+    def stage(name,message):
+        slot["stage"] = name
+        progress({"stage":name,"message":message})
+    try:
+        current()
+        bind_checkpoints(use)  # A missing family denies before dataset/model IO.
+        current()
+        purposes = purpose_mapping(payload)
+        current()
+        stage("dataset-loading","Loading the approved training data.")
+        loaded,evaluation = load_data(payload,local_dataset_refs=use.dataset_references,_protected_use=use)
+        data_bindings.append(capture_data(loaded))
+        if evaluation is not dict.get(loaded,"validation"):
+            raise ValueError("The private pipeline validation split changed.")
+        current()
+        stage("model-loading","Loading the selected local model.")
+        seed = _text_training_settings(payload)[0]
+        model,tokenizer = load_model(use.model_reference,payload.method,
+            _to_dict(_to_dict(payload.advancedParameters).get("quantization")),
+            local_files_only=True,_protected_use=use,training_seed=seed)
+        current()
+        stage("sequence-length","Preparing the selected model inputs.")
+        length,_ = sequence_length(model,tokenizer,_to_dict(payload.commonParameters).get("maxSequenceLength"))
+        current()
+        stage("tokenization","Preparing training tokens in memory.")
+        tokenized = tokenize(loaded,tokenizer,length,training_task=_resolve_training_task(payload),
+            purpose_paths=purposes,_protected_use=use)
+        data_bindings.append(capture_data(tokenized))
+        current()
+        if payload.method in ("lora","qlora"):
+            stage("adapter-configuration","Preparing the selected training adapter.")
+            model = apply_adapter(model,payload,_protected_use=use)
+            current()
+        stage("training-arguments","Applying the approved training settings.")
+        train_args = arguments(payload,Path(payload.output["outputDirectory"]),_protected_use=use)
+        current()
+        stage("training","Training the selected model.")
+        def training_progress(value):
+            if type(value) is not dict:
+                raise ValueError("The private training progress is unavailable.")
+            progress({**value,"stage":"training"})
+        train(model,tokenizer,tokenized,dict.get(tokenized,"validation"),train_args,
+            on_progress=training_progress,compare_validation_baseline=False,_protected_use=use)
+        current()
+        final = use._final_result_slot
+        if type(final) is not dict or final.get("stage") != "sealed" or type(final.get("graph")) is not _ProtectedTrainingOutputGraph:
+            raise ValueError("The private pipeline final output is unavailable.")
+        slot["graph"] = final["graph"]
+        slot["stage"] = "complete"
+        progress({"stage":"staged","message":"Training finished. The output files still need checking."})
+        return slot["graph"]
+    except BaseException as error:
+        slot["stage"] = "failed"
+        _fail_checkpoint_arguments(use)
+        if isinstance(error,(TrainingCancellationRequested,LaunchUnavailable,KeyboardInterrupt,SystemExit)):raise
+        raise ValueError("The private training pipeline could not finish.") from None
+
+
+_PROTECTED_PIPELINE_HELPERS = (_bind_protected_checkpoint_schedule,_load_dataset,_load_transformers_objects,
+    _resolve_training_purpose_paths,_resolve_effective_sequence_length,_tokenize_dataset,
+    _apply_lora,_build_training_args,_run_trainer,_capture_pipeline_dataset_binding)
 
 
 def _write_run_metadata(output_path: Path, metadata: dict[str, Any]) -> str:

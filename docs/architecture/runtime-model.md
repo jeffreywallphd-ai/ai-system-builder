@@ -3250,3 +3250,22 @@ extensions remain unavailable on this private profile. Ordinary paths are intact
 Encoded input limits and parser batches do not bound decoded RAM; complete
 resource reservation, producer/custody, retirement, Save and actual host execution
 remain pending. Installed-SDK synthetic tests supply no model-quality result.
+
+### Private protected training stage composition
+
+A fixed private pipeline joins original dataset bytes, memory-only tokenization,
+safe local model loading, optional adapter setup, approved training arguments,
+protected checkpoints, Trainer history and final output staging. Capture helpers
+before callbacks, reserve one original-thread attempt and require the original
+finite output family before dataset/model reads. Retain passive original
+task/view/input-table/model/tokenizer/argument proof through stage and progress
+handoffs. The Trainer must retain the exact prepared splits. Progress reports
+completed batches under a fixed stage, without granting authority.
+
+Reject helper/input drift, owned reentry, cancellation and lost authority without
+ordinary directory/serialization writers, retry, deletion or resource settlement.
+Return only genuine sealed internal output; validation/custody is still pending.
+This composition adds no default producer, public host capability or Save grant.
+Original measured resources, protected output validation/handoff, permanent
+retirement, separate Save approval and actual-host qualification remain required.
+Feature tests use synthetic SDK/Native objects and never score a real model.
