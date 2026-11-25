@@ -2531,3 +2531,20 @@ any later data read, model call or ordinary output effect.
 The original task-session software test uses the real loader and deliberately
 leaves global settlement false. Concrete producer/durable quota, SDK/model/input,
 worker/Job/global retirement, Save and actual host qualification remain pending.
+
+### Private original file orchestration
+
+`tasks/original_training_files.py` binds an actual unentered original Model
+lease to captured definition, copy configurations and original resource/business
+methods. `prepare` creates and verifies the original InputGraph. One `borrow`
+creates its real output family; `run` uses the fixed protected training loader.
+The owner rejects changed helpers or bindings, reentry, cancellation and lost
+authority before effects. Partial or unknown outcomes retain guards and charges
+without retry, adoption, deletion or credit. Output closure is local: input and
+Model guards remain held, and post-borrow input retirement is never inferred.
+`local_status` explicitly reports retained custody and unqualified global
+retirement. It is not a `NativeTrainingProducer` or readiness/settlement profile.
+Existing parent input/output reservation remains mandatory; the source-v1 Model
+ACK covers no additional copies. Synthetic fixtures exercise all three methods.
+Complete producer/quota, SDK/all-readers and original worker/Job settlement,
+separate Save and actual-host qualification remain pending.

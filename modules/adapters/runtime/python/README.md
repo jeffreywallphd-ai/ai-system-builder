@@ -1219,3 +1219,18 @@ An original task-session fixture exercises the real private loader with syntheti
 SDK/Native replies. No default producer or host capability is enabled. Durable
 reservation, complete producer, SDK/model/input/worker/Job/global settlement,
 separate Save and actual-model/host qualification remain pending.
+
+### Original training file owner
+
+The private `OriginalTrainingFiles` composes one genuine unentered Model lease,
+its original staged input graph, one joint borrow and the finite output family.
+It runs the fixed protected loader and permanently closes its own admission and
+local output IO afterward. It retains Model/input guards and all byte charges
+for original worker retirement. Cancellation and uncertain copy or accounting
+outcomes preserve custody and deny retry. Foreign leases and changed bindings
+cannot be adopted. Synthetic tests run all three training methods through it.
+This lower-level owner is not a complete Native resource producer and does not
+make `NativeTrainingResources.settle()` true. The caller still needs actual
+input/output reservation; the source-v1 Model ACK cannot fund those copies.
+Public Roots stay unconfigured. Complete producer/durable quota, SDK/all-reader,
+Model/input/worker/Job/global retirement, separate Save and real-host proof remain.

@@ -157,6 +157,9 @@ def profile_command_timeout(profile, *, regression_test=None):
             regression_test == "modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py"):
         return 90
     if (profile is None and type(regression_test) is str and
+            regression_test == "modules/adapters/runtime/python/worker/tests/test_original_training_files.py"):
+        return 90
+    if (profile is None and type(regression_test) is str and
             regression_test == "modules/adapters/runtime/python/worker/tests/test_protected_training_workflow.py"):
         return 240
     return 270

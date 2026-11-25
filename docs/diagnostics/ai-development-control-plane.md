@@ -3390,3 +3390,13 @@ The closed owner scope includes the existing text-worker test fixture when it
 changes with this workflow. That complete test file remains required. The two
 live-view cases use the real protected family and emitted data-loading callback;
 early rejection from a missing family or replaced loader cannot satisfy them.
+
+`headless-original-training-files-unit` runs the complete original-file-owner
+test file. It uses the real input graph, joint borrow, output family and private
+training loader with synthetic SDK/Native replies for all three methods. The
+child limit is 90 seconds under a 120-second check; production limits do not
+change. Closed owner/routing coverage includes whole related modules and the
+separately required full text regression. Every declared prerequisite must be a
+regular file. Missing support, incomplete or unknown mixed scope, and explicit
+generic coverage retain full discovery. No model scoring or physical Native
+test runs. These receipts do not establish global retirement or parent closure.

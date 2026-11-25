@@ -1780,15 +1780,41 @@ def _input_copy_file(value):
     return parent, name
 
 
+def _capture_training_copy_configuration(configuration):
+    """The shared finite flat-copy bounds; never a reservation or IO grant."""
+    config = exact(_copy_model_json(configuration),
+        ("freshParent","freshName","maximumCopyBytes","bufferBytes","preparationMs"))
+    _input_copy_directory(config["freshParent"]); model_leaf(config["freshName"])
+    integer(config["maximumCopyBytes"], 1, 2**53-1)
+    integer(config["bufferBytes"], 4096, 1024**2); integer(config["preparationMs"], 1, 86400000)
+    return config
+
+
+def _capture_original_training_file_lease(lease):
+    """Original unentered binding only. This supplies no resource readiness."""
+    need(type(lease) is OriginalInheritedModelLease)
+    state = _model_leases.get(lease); need(state is not None)
+    lock = state["lock"]; need(lock.acquire(blocking=False))
+    try:
+        source = state["source"]; record = _verified_model_receivers.get(source)
+        need(_model_leases.get(lease) is state
+             and record is not None and record["bound"] is True and record["lease_issued"] is True
+             and state["entered"] is False and "input_copy_owner" not in state
+             and type(source.phase) is str and source.phase == "bound"
+             and source.owner is record["native_owner"] is state["native_owner"]
+             and type(record["native_owner"]) is InheritedModelNativeCalls
+             and record["native_owner"].unknown is False
+             and type(record["native_owner"].pending) is list and len(record["native_owner"].pending) == 0)
+        return state,record,source,_copy_model_json(record["definition"])
+    finally:lock.release()
+
+
 def _capture_training_input_copy(definition, staged, configuration, definition_digest):
     """Pure manifest correlation; paths/JSON grant neither IO nor custody."""
     approved = _copy_model_json(definition)
     supplied = exact(_copy_model_json(staged), ("payload","recipe","outputDirectory"))
-    config = exact(_copy_model_json(configuration),
-        ("freshParent","freshName","maximumCopyBytes","bufferBytes","preparationMs"))
-    _input_copy_directory(config["freshParent"]); model_leaf(config["freshName"])
-    maximum = integer(config["maximumCopyBytes"], 1, 2**53-1)
-    integer(config["bufferBytes"], 4096, 1024**2); integer(config["preparationMs"], 1, 86400000)
+    config = _capture_training_copy_configuration(configuration)
+    maximum = config["maximumCopyBytes"]
     need(type(approved) is dict and type(approved.get("request")) is dict
          and type(approved.get("inputs")) is list and type(approved.get("dataset")) is dict)
     expected = _copy_model_json(approved["request"])
@@ -2408,12 +2434,18 @@ _TRAINING_OUTPUT_FILES = frozenset(("config.json", "generation_config.json", "to
 
 
 def _capture_training_output_configuration(configuration):
-    config = exact(_copy_model_json(configuration),
-        ("freshParent", "freshName", "maximumCopyBytes", "bufferBytes", "preparationMs"))
-    _input_copy_directory(config["freshParent"]); model_leaf(config["freshName"])
-    integer(config["maximumCopyBytes"], 1, 2**53-1)
-    integer(config["bufferBytes"], 4096, 1024**2); integer(config["preparationMs"], 1, 86400000)
-    return config
+    return _capture_training_copy_configuration(configuration)
+
+
+def _capture_training_output_family_configuration(configuration):
+    raw = exact(_copy_model_json(configuration),("maximumCopyBytes", "outputs"))
+    maximum = integer(raw["maximumCopyBytes"],1,2**53-1)
+    need(type(raw["outputs"]) is list and 1 <= len(raw["outputs"]) <= 16)
+    outputs = tuple(_capture_training_output_configuration(row) for row in raw["outputs"])
+    need(len({row["freshName"].casefold() for row in outputs}) == len(outputs)
+         and len({row["freshParent"].casefold() for row in outputs}) == 1
+         and sum(row["maximumCopyBytes"] for row in outputs) <= maximum)
+    return maximum,outputs
 
 
 def _capture_training_output(request, configuration, files):
@@ -2474,13 +2506,7 @@ class OriginalTrainingOutputFamily:
         binding = _model_views.get(view); need(binding is not None and binding[2] == get_ident())
         lease = binding[0]; state = _model_leases.get(lease); need(state is not None)
         _, inputs = resolve_original_training_references(view, sealed_request); need(inputs is not None)
-        raw = exact(_copy_model_json(configuration),("maximumCopyBytes", "outputs"))
-        maximum = integer(raw["maximumCopyBytes"],1,2**53-1)
-        need(type(raw["outputs"]) is list and 1 <= len(raw["outputs"]) <= 16)
-        outputs = tuple(_capture_training_output_configuration(row) for row in raw["outputs"])
-        need(len({row["freshName"].casefold() for row in outputs}) == len(outputs)
-             and len({row["freshParent"].casefold() for row in outputs}) == 1
-             and sum(row["maximumCopyBytes"] for row in outputs) <= maximum)
+        maximum,outputs = _capture_training_output_family_configuration(configuration)
         lock = state["lock"]; need(lock.acquire(blocking=False))
         try:
             need(_model_views.get(view) is binding and "output_copy_owner" not in state

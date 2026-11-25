@@ -3363,3 +3363,15 @@ quality comparison, automatic Save or new default producer/Root activation is
 introduced. This composes the existing executor/task topology. Actual durable
 reservation, complete producer, SDK/model/input/worker/Job/global settlement,
 real training/resources, separate Save and host qualification remain pending.
+
+The private original file owner composes these existing primitives beneath the
+resource-producer boundary: genuine unentered Model lease, prepared InputGraph,
+one joint borrow, finite OutputFamily and fixed protected training workflow.
+Capture original definitions, configurations and accounting/admission methods
+before callbacks. Freeze own admission after the attempt and close known local
+output IO; retain Model/input guards and charges for original worker exit.
+Local output closure is distinct from all-reader IO settlement and from worker/
+Job retirement under ADR-0047. It cannot satisfy `NativeTrainingResources.settle()`.
+The source-v1 Model reservation ACK does not reserve input/output copies. This
+component supplies no producer/readiness profile, public Root, capacity release,
+Save or host qualification. Those parent obligations remain unchanged.

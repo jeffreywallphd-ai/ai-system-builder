@@ -1315,51 +1315,56 @@ def test_protected_selection_cannot_borrow_another_model_or_method_receiver(monk
         assert calls==[] and Tensor.copies==[] and use._tensor_selection_slot["stage"]=="failed"
 
 
+def _install_protected_training_metadata_objects(monkeypatch,model,method):
+    module=ModuleType("tokenizers"); metadata_calls=[]
+    class AddedToken:
+        def __init__(self,content): self.content=content
+        def __getstate__(self):
+            metadata_calls.append("token-state")
+            return {"content":self.content,"single_word":False,"lstrip":True,"rstrip":False,"normalized":False,"special":True}
+    class Backend:
+        def __init__(self): self.raw='{"version":"1.0","added_tokens":[{"id":10,"content":"<pad>","special":true}],"model":{"type":"WordLevel","vocab":{"sample":0,"<pad>":10}}}'; self.after_export=None
+        def to_str(self,*,pretty):
+            assert pretty is False; metadata_calls.append("backend-json")
+            result=self.raw
+            if self.after_export: self.after_export()
+            return result
+    module.Tokenizer=Backend;module.AddedToken=AddedToken
+    monkeypatch.setitem(sys.modules,"tokenizers",module)
+    class Config:
+        def __init__(self,values): self.values=values;self.after_export=None
+        def to_dict(self):
+            metadata_calls.append("config-dict"); result=dict(self.values)
+            if self.after_export: self.after_export()
+            return result
+    class SyntheticTokenizerFast:
+        def __init__(self):
+            self.backend_tokenizer=Backend(); self.model_max_length=10**30; self.clean_up_tokenization_spaces=False
+            self.padding_side="left"; self.chat_template={"default":"{{ messages }}","alternate":"{{ tools }}"}
+            self.pad=AddedToken("<pad>"); self.special_tokens_map={"pad_token":"<pad>"}
+            self.special_tokens_map_extended={"pad_token":self.pad}; self.extra_special_tokens={"image_token":"<image>"}
+            self.added_tokens_decoder={10:self.pad}; self.init_inputs=("synthetic",)
+            self.init_kwargs={"padding_side":"right","pad_token":self.pad,"custom_token":self.pad,"name_or_path":"X:\\private\\stage",
+                "tokenizer_file":"X:\\private\\stage\\tokenizer.json","nested":{"_name_or_path":"X:\\private\\stage"}}
+            self.vocab_files_names={"vocab_file":"vocab.json","merges_file":"merges.txt","tokenizer_file":"tokenizer.json"}
+            self._auto_class=None; self._auto_map=None; self._processor_class=None
+        def __len__(self): return 12
+        def save_pretrained(self,*args,**kwargs): pytest.fail("Metadata export invoked a path writer")
+    tokenizer=SyntheticTokenizerFast()
+    model.config=Config({"model_type":"synthetic","vocab_size":12,"_name_or_path":"X:\\private\\stage","nested":{"_name_or_path":"X:\\private\\stage","retained":True}})
+    model.generation_config=Config({"max_new_tokens":8,"_name_or_path":"X:\\private\\stage"})
+    if method!="full-finetune":
+        configuration=model.peft_config["default"]
+        def to_dict(obj): return {**vars(obj),"base_model_name_or_path":"X:\\private\\stage","inference_mode":False}
+        monkeypatch.setattr(type(configuration),"to_dict",to_dict,raising=False)
+    return tokenizer,metadata_calls
+
+
 @contextmanager
 def _protected_training_metadata_fixture(monkeypatch,method="lora",output=None,only_one_weight=False,*,capture_weights=True):
     with _protected_tensor_selection_fixture(monkeypatch,method,output=output) as facts:
         actual,use,model,peft,calls,control,Tensor,oracle=facts
-        module=ModuleType("tokenizers"); metadata_calls=[]
-        class AddedToken:
-            def __init__(self,content): self.content=content
-            def __getstate__(self):
-                metadata_calls.append("token-state")
-                return {"content":self.content,"single_word":False,"lstrip":True,"rstrip":False,"normalized":False,"special":True}
-        class Backend:
-            def __init__(self): self.raw='{"version":"1.0","added_tokens":[{"id":10,"content":"<pad>","special":true}],"model":{"type":"WordLevel","vocab":{"sample":0,"<pad>":10}}}'; self.after_export=None
-            def to_str(self,*,pretty):
-                assert pretty is False; metadata_calls.append("backend-json")
-                result=self.raw
-                if self.after_export: self.after_export()
-                return result
-        module.Tokenizer=Backend;module.AddedToken=AddedToken
-        monkeypatch.setitem(sys.modules,"tokenizers",module)
-        class Config:
-            def __init__(self,values): self.values=values;self.after_export=None
-            def to_dict(self):
-                metadata_calls.append("config-dict"); result=dict(self.values)
-                if self.after_export: self.after_export()
-                return result
-        class SyntheticTokenizerFast:
-            def __init__(self):
-                self.backend_tokenizer=Backend(); self.model_max_length=10**30; self.clean_up_tokenization_spaces=False
-                self.padding_side="left"; self.chat_template={"default":"{{ messages }}","alternate":"{{ tools }}"}
-                self.pad=AddedToken("<pad>"); self.special_tokens_map={"pad_token":"<pad>"}
-                self.special_tokens_map_extended={"pad_token":self.pad}; self.extra_special_tokens={"image_token":"<image>"}
-                self.added_tokens_decoder={10:self.pad}; self.init_inputs=("synthetic",)
-                self.init_kwargs={"padding_side":"right","pad_token":self.pad,"custom_token":self.pad,"name_or_path":"X:\\private\\stage",
-                    "tokenizer_file":"X:\\private\\stage\\tokenizer.json","nested":{"_name_or_path":"X:\\private\\stage"}}
-                self.vocab_files_names={"vocab_file":"vocab.json","merges_file":"merges.txt","tokenizer_file":"tokenizer.json"}
-                self._auto_class=None; self._auto_map=None; self._processor_class=None
-            def __len__(self): return 12
-            def save_pretrained(self,*args,**kwargs): pytest.fail("Metadata export invoked a path writer")
-        tokenizer=SyntheticTokenizerFast()
-        model.config=Config({"model_type":"synthetic","vocab_size":12,"_name_or_path":"X:\\private\\stage","nested":{"_name_or_path":"X:\\private\\stage","retained":True}})
-        model.generation_config=Config({"max_new_tokens":8,"_name_or_path":"X:\\private\\stage"})
-        if method!="full-finetune":
-            configuration=model.peft_config["default"]
-            def to_dict(obj): return {**vars(obj),"base_model_name_or_path":"X:\\private\\stage","inference_mode":False}
-            monkeypatch.setattr(type(configuration),"to_dict",to_dict,raising=False)
+        tokenizer,metadata_calls=_install_protected_training_metadata_objects(monkeypatch,model,method)
         train_model_module._synchronize_model_token_embeddings(model,tokenizer,_protected_use=use)
         if only_one_weight: model.state={"base.weight":model.state["base.weight"]}
         stream=(train_model_module._capture_protected_training_tensor_stream(model,use,maximum_bytes=65536,chunk_bytes=4096)

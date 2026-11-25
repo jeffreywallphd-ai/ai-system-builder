@@ -3125,3 +3125,16 @@ Synthetic SDK/Native/task-session fixtures score no real model and grant no
 default producer, Save or readiness. Durable quota, complete producer,
 SDK/model/input/worker/Job/global settlement, actual resources/model execution
 and host/parent qualification remain pending.
+
+The private original file owner now composes the actual input graph and output
+family around one genuine Model/input borrow and the fixed training loader.
+It captures original lease/definition/configuration/method bindings before
+callbacks, rejects foreign or spent leases and virtual metadata, and checks
+resource then business admission before effects. Reentry or cancellation bars
+new work. Partial IO or lost accounting replies preserve known custody and byte
+charges without retry, deletion, adoption or credit. Local output closure never
+releases Model/input guards or proves SDK/all-reader/worker/Job retirement.
+Synthetic tests cover all three methods and failure paths; no real model score
+or physical Native result is asserted. The caller must supply actual input/
+output reservation independently of the source-v1 Model ACK. Complete producer,
+durable quota, global settlement, Save and real-host qualification remain pending.

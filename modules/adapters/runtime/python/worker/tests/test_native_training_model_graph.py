@@ -2082,9 +2082,11 @@ class TrainingTensorStreamTests(unittest.TestCase):
 
 
 class DenseTensorByteAdapterTests(unittest.TestCase):
-    def fixture(self):
-        case=TrainingOutputCustodyTests(); self.addCleanup(case.doCleanups)
-        facts=case.fixture(); actual,source,lease,inputs,request,input_control,kernel,config,contents,files,control=facts
+    def fixture(self,*,sdk_only=False):
+        facts=None
+        if not sdk_only:
+            case=TrainingOutputCustodyTests(); self.addCleanup(case.doCleanups)
+            facts=case.fixture()
         sdk=ModuleType("torch"); sdk.Size=tuple; sdk.strided=object()
         widths={"bool":1,"uint8":1,"int8":1,"int16":2,"int32":4,"int64":8,"float16":2,"bfloat16":2,"float32":4,"float64":8}
         for name in widths: setattr(sdk,name,object())

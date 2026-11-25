@@ -566,6 +566,22 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             if row['id']=='headless-training-output-retirement-unit')['timeout']
         self.assertEqual(outer,120);self.assertEqual(outer-90,30)
 
+    def test_original_file_owner_exact_child_limit_leaves_outer_diagnostic_grace(self):
+        target='modules/adapters/runtime/python/worker/tests/test_original_training_files.py'
+        self.assertEqual(focused.profile_command_timeout(None,regression_test=target),90)
+        for profile,path in ((None,target+'.other'),('functionality-outcomes',target),(None,target.replace('/worker/','/other/'))):
+            self.assertEqual(focused.profile_command_timeout(profile,regression_test=path),270)
+        command=[sys.executable,'-m','unittest']
+        with patch.object(sys,'argv',['focused','--regression-test',target]), \
+                patch.object(focused,'commands',return_value=[command]) as commands, \
+                patch.object(focused.subprocess,'run',return_value=SimpleNamespace(returncode=0)) as run:
+            self.assertEqual(focused.main(),0)
+            commands.assert_called_once_with(Path(focused.__file__).resolve().parents[2],[target],exact=True)
+            self.assertEqual(run.call_args.kwargs['timeout'],90)
+        outer=next(row for row in catalog.definitions(Path(__file__).resolve().parents[3])
+            if row['id']=='headless-original-training-files-unit')['timeout']
+        self.assertEqual(outer,120);self.assertEqual(outer-90,30)
+
     def test_protected_workflow_exact_file_uses_bounded_child_and_outer_grace(self):
         target='modules/adapters/runtime/python/worker/tests/test_protected_training_workflow.py'
         self.assertEqual(focused.profile_command_timeout(None,regression_test=target),240)

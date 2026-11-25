@@ -192,3 +192,12 @@ required check for its changed source; do not duplicate that long command in a
 second routing suite. Incomplete/nonregular support, mixed/unknown scope and
 explicit generic requests keep full controller discovery. This is feature
 evidence only, with no model-quality, physical Native or parent qualification.
+
+The fixed `headless-original-training-files-unit` runs the whole original file
+owner regression, including synthetic training through all three methods. Its
+90-second child and 120-second outer limit leave diagnostic grace. The closed
+owner/routing scope runs whole related routing modules; the existing full text
+regression remains a separate required command. All sixteen runtime prerequisites
+must be regular files. Incomplete support, mixed or unknown scope, and explicit
+generic requests retain full controller discovery. These checks prove local file
+composition only, not physical Native execution or global resource settlement.
