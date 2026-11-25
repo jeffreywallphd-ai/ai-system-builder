@@ -3297,3 +3297,24 @@ This source connection grants none of those capabilities or model-quality result
   producer, exclusive both-copy capacity, protected destination/crash lifecycle,
   actual bounded training, Native/host qualification, separate Save and
   evaluation/generation remain pending. No default Root or new authority is added.
+
+### Cancelled training before loader entry
+
+- Threats: a never-started task holds the execution slot forever; public cancelled
+  flags hide an unknown submit or an earlier SDK borrow; a cancelled Future is
+  treated as Native process exit or as permission to free storage.
+- Controls: private pre-effect dispatch and cancellation latches; exact original
+  cancelled Future or known no-dispatch history; independently latched file-borrow
+  history; fully sealed original input ownership; same original executor and
+  quiet, known Native owners. Permanent fencing precedes one-use proof admission.
+  No file handle or charge is released by this proof. The returned-run branch,
+  parent IO checks and actual original worker/empty-Job/controller proof remain.
+- Evidence: causal cancelled-before-start and queued-cancelled cases; actual closed
+  API route; original-thread, lost-submit/cancel, forged-status, prior-borrow and
+  sticky unknown-IO denials. These are inert-kernel/model-free software checks.
+- Residual scope: failed/unsealed preparation remains pending, along with complete
+  producer/capacity/destination/Save and actual model/Native/host qualification.
+- Thread proof: the unstarted passive check compares exact captured Native thread
+  IDs under original file/lease/Native locks. It keeps the file executor check,
+  never changes a Native thread and rejects thread substitution. Returned work
+  still requires its actual current executor thread after borrow.

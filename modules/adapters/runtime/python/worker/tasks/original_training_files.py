@@ -12,7 +12,7 @@ from importlib import import_module
 from json import dumps as _json_dumps
 from threading import RLock, get_ident
 from types import FunctionType, GetSetDescriptorType, MethodType
-from weakref import ReferenceType, WeakKeyDictionary, ref
+from weakref import ReferenceType, WeakKeyDictionary, WeakSet, ref
 
 from ..models import TrainModelTaskRequest
 from ..native import windows_original_worker_launch as native
@@ -46,6 +46,8 @@ _leases = WeakKeyDictionary()
 _bindings = WeakKeyDictionary()
 _prepared_files = WeakKeyDictionary()
 _file_locks = WeakKeyDictionary()
+_borrow_attempts = WeakSet()
+_original_borrow_attempts = _borrow_attempts
 _RETAINED_PLAIN=native._assert_plain_output_io_type
 _RETAINED_NATIVE=native.InheritedModelNativeCalls
 _RETAINED_HANDLE=native.Handle
@@ -63,7 +65,8 @@ def _retained_native_snapshot(owner):
     _need(type(fields) is dict)
     _RETAINED_PLAIN(type(owner),_RETAINED_NATIVE,frozenset(fields))
     _need(fields.get("unknown") is False and type(fields.get("pending")) is list and not fields["pending"]
-        and type(fields.get("handles")) is list and type(fields.get("buffers")) is list)
+        and type(fields.get("handles")) is list and type(fields.get("buffers")) is list
+        and type(fields.get("thread")) is int and fields["thread"]>0)
     handles=[]
     for handle in fields["handles"]:
         _need(type(handle) is native.Handle)
@@ -78,7 +81,7 @@ def _retained_native_snapshot(owner):
             and type(data.get("closed")) is bool and type(data.get("close_attempted")) is bool)
         handles.append((handle,data["slot"],data["slot"].value,data["role"],data["known"],data["closed"],data["close_attempted"],
             data.get("inherited"),data.get("verified")))
-    return (owner,fields["lock"],fields["handles"],fields["pending"],fields["buffers"],fields["invoke"],fields["kernel"],fields["clock"],tuple(handles))
+    return (owner,fields["lock"],fields["handles"],fields["pending"],fields["buffers"],fields["invoke"],fields["kernel"],fields["clock"],tuple(handles),fields["thread"])
 
 
 def _need(value):
@@ -317,8 +320,12 @@ class OriginalTrainingFiles:
         record=_record(self)
         with record["lock"]:
             _snapshot(self,record)
+            _need(_borrow_attempts is _original_borrow_attempts)
             if record["phase"] in ("preparing","borrowing","running"):record["poisoned"]=True
             _need(record["phase"]=="prepared" and not record["cancelled"] and not record["closed"] and not record["poisoned"])
+            # Independent original history, before any authority callback or SDK
+            # borrow. Mutable phase/entered flags cannot erase this attempt.
+            _borrow_attempts.add(self)
             record["phase"]="borrowing"
         try:
             _admitted(self,record)

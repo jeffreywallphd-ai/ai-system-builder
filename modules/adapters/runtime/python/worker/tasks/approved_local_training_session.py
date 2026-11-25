@@ -534,6 +534,7 @@ class OriginalTrainingSession:
         _need(self._current())
         with self.lock:
             _need(self.phase == "ready" and not self.issue_attempted and not self.settled and not self.cancelled)
+            _session_exit.dispatch_attempted(self)
             self.issue_attempted = True; self.phase = "issuing"; self.operations += 1
         try:
             # submit is the existing executor's trusted original-record binding.
@@ -606,23 +607,32 @@ class OriginalTrainingSession:
         with self.lock:
             if self.settled or self.cancel_attempted:
                 return self.cancel_result
+            _session_exit.cancel_started(self)
             self.cancel_attempted = True
             self.operations += 1
             self.cancelled = True
             if not self.issue_attempted:
                 self.known_not_run = True
+            not_issued = not self.issue_attempted
             future = self.future
+        cancel_succeeded = False
         try:
             if future is not None and future.cancel():
                 with self.lock:
                     self.known_not_run = True
+                self.publish(status="cancelled", data=None)
+            elif not_issued:
                 self.publish(status="cancelled", data=None)
             try:
                 _abort_output(self)
             finally:
                 # Native cancellation still runs if queue abortion is uncertain.
                 # Neither operation proves stopped IO or grants resource credit.
-                if self.native is not None:self.native_cancel()
+                if self.native is not None:
+                    result = self.native_cancel()
+                    if _session_exit.enabled(self):
+                        _need(result is None)  # A pending/invalid reply proves no ACK.
+            cancel_succeeded = True
             self.cancel_result = True
             return True
         except Exception:
@@ -630,6 +640,10 @@ class OriginalTrainingSession:
             return False
         finally:
             with self.lock:
+                # The resource callback may change public fields or fail after
+                # an effect. Only this local normal-return latch is an ACK.
+                self.cancel_result = cancel_succeeded
+                _session_exit.cancel_returned(self,cancel_succeeded)
                 self.operations -= 1
 
     def settle(self):

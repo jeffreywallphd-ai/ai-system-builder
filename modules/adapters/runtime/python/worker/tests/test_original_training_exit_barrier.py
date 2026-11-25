@@ -51,6 +51,53 @@ class OriginalTrainingExitBarrierTests(unittest.TestCase):
         self.assertEqual(source.phase,"spent");self.assertIsNotNone(barrier.prepare_original_training_file_exit(owner))
         self.assertGreaterEqual(len(kernel.calls),before)
 
+    def test_cancelled_prepared_unstarted_proof_retains_guards_and_does_not_claim_output_close(self):
+        row,_=self.fixture(borrow=False);owner,source,lease,_,_,_,control,kernel,_,_=row
+        owner.request_cancel(); before=len(kernel.calls); charged=list(control.charges)
+        token=barrier.prepare_unstarted_original_training_file_exit(owner)
+        self.assertIsNotNone(token)
+        proof=barrier.consume_original_training_file_exit(owner,token)
+        self.assertEqual(proof["localAdmission"],"permanently-fenced")
+        self.assertEqual(proof["workerRetirement"],"not-qualified")
+        self.assertEqual(proof["outputCustody"],"not-qualified")
+        self.assertFalse(files._owners[owner]["output_closed"])
+        self.assertFalse(native._model_leases[lease]["entered"])
+        self.assertTrue(all(not handle.closed for handle in source.guards))
+        self.assertEqual(control.charges,charged); self.assertEqual(len(kernel.calls),before)
+        with self.assertRaises(ValueError):
+            with owner.borrow(): self.fail("Cancelled original file owner borrowed")
+        with self.assertRaises(barrier.OriginalTrainingExitUnavailable):
+            barrier.consume_original_training_file_exit(owner,token)
+
+    def test_original_borrow_history_survives_reset_public_file_flags(self):
+        row,_=self.fixture();owner,source,lease,*_=row
+        record=files._owners[owner];state=native._model_leases[lease]
+        record.update(phase="prepared",closed=False,output_closed=False,family=None,cancelled=True)
+        state.update(entered=False,borrowed_input=None,output_copy_owner=None);source.phase="bound"
+        before=len(row[7].calls)
+        self.assertIsNone(barrier.prepare_unstarted_original_training_file_exit(owner))
+        self.assertEqual(len(row[7].calls),before)
+
+    def test_unstarted_unknown_native_observation_cannot_heal_after_flag_reset(self):
+        for which in (11,12):
+            with self.subTest(native_owner=which):
+                row,_=self.fixture(borrow=False);owner=row[0];owner.request_cancel()
+                native_owner=files._prepared_files[owner][which][0];native_owner.pending.append({"returned":False})
+                before=len(row[7].calls)
+                self.assertIsNone(barrier.prepare_unstarted_original_training_file_exit(owner))
+                native_owner.pending.clear()
+                self.assertIsNone(barrier.prepare_unstarted_original_training_file_exit(owner))
+                self.assertEqual(len(row[7].calls),before)
+
+    def test_unstarted_proof_requires_actual_cancelled_file_owner_and_original_thread(self):
+        row,_=self.fixture(borrow=False);owner=row[0];before=len(row[7].calls)
+        seen=[]
+        thread=Thread(target=lambda:seen.append(barrier.prepare_unstarted_original_training_file_exit(owner)))
+        thread.start();thread.join(5);self.assertFalse(thread.is_alive());self.assertEqual(seen,[None])
+        owner.request_cancel()
+        self.assertIsNotNone(barrier.prepare_unstarted_original_training_file_exit(owner))
+        self.assertEqual(len(row[7].calls),before)
+
     def test_held_original_locks_are_nonconsuming_then_exact_owner_can_proceed(self):
         for index in range(4):
             with self.subTest(lock=index):

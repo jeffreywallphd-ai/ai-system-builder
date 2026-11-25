@@ -1,5 +1,5 @@
 """Genuine finite session/file readiness; inert kernel/loader, no model or OS."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
 from threading import Event, get_ident
@@ -16,11 +16,20 @@ from modules.adapters.runtime.python.worker.tests import test_original_training_
 
 
 class OriginalTrainingSessionExitTests(unittest.TestCase):
-    def fixture(self, method="lora", *, before_run=None, resource_type=None, original_files_hook=None):
+    def fixture(self, method="lora", *, before_run=None, resource_type=None, original_files_hook=None,
+                bootstrap_on_main=False):
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="original-training-inert")
         self.addCleanup(executor.shutdown, wait=True)
         case = fixture.OriginalTrainingFilesTests(); self.addCleanup(case.doCleanups)
-        row = executor.submit(case.fixture, method=method).result(timeout=10)
+        if bootstrap_on_main:
+            row=case.fixture(method=method,bind=False)
+            _,_,lease,_,inputs,outputs,control,*_=row
+            file_owner=executor.submit(files.OriginalTrainingFiles,lease,inputs,outputs,control,control).result(timeout=10)
+            case.addCleanup(lambda:files._owners.pop(file_owner,None))
+            case.addCleanup(lambda:files._bindings.pop(file_owner,None))
+            row=(file_owner,*row[1:])
+        else:
+            row = executor.submit(case.fixture, method=method).result(timeout=10)
         file_owner, source, lease, staged, _, _, control, kernel, _, _ = row
         defined = deepcopy(files._owners[file_owner]["definition"])
         threads = []
@@ -64,6 +73,109 @@ class OriginalTrainingSessionExitTests(unittest.TestCase):
         with patch.object(owner, "loader", return_value=TrainModelTaskResult(runId="inert", status="succeeded")):
             self.assertEqual(owner.start()["kind"], "accepted")
             owner.future.result(timeout=10)
+
+    def test_cancelled_before_dispatch_can_fence_prepared_files_without_running_loader(self):
+        owner, executor, row, _, current, *_ = self.ready()
+        with patch.object(owner, "loader", side_effect=AssertionError("Cancelled loader ran")):
+            self.assertTrue(owner.cancel()); current[0] = False
+            before = len(row[7].calls); charged = list(row[6].charges)
+            self.assertEqual(owner.begin_exit_ready(), "queued")
+            self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10), "ready")
+        self.assertFalse(owner.run_entered); self.assertFalse(owner.run_returned)
+        self.assertEqual(len(row[7].calls), before); self.assertEqual(row[6].charges, charged)
+        self.assertTrue(all(not handle.closed for handle in row[1].guards))
+        self.assertFalse(owner.settle()); self.assertTrue(owner.blocks_recovery)
+        with self.assertRaises(session.TrainingSessionError): owner.start()
+
+    def test_cancelled_original_queued_future_proves_no_loader_entry(self):
+        owner, executor, row, updates, _, *_ = self.ready()
+        entered, release = Event(), Event()
+        def hold(): entered.set(); self.assertTrue(release.wait(10))
+        blocker = executor.submit(hold)
+        try:
+            self.assertTrue(entered.wait(5))
+            with patch.object(owner, "loader", side_effect=AssertionError("Cancelled loader ran")):
+                self.assertEqual(owner.start()["kind"], "accepted"); original = owner.future
+                self.assertTrue(owner.cancel()); self.assertTrue(original.cancelled())
+                self.assertEqual(owner.begin_exit_ready(), "queued")
+                release.set(); blocker.result(timeout=10)
+                before = len(row[7].calls)
+                self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10), "ready")
+            self.assertIs(owner.future, original); self.assertFalse(owner.run_entered)
+            self.assertEqual(updates[-1]["status"], "cancelled")
+            self.assertEqual(len(row[7].calls), before); self.assertFalse(owner.settled)
+        finally: release.set()
+
+    def test_public_nonstart_flags_cannot_substitute_for_original_cancellation(self):
+        owner, _, row, *_ = self.ready()
+        owner.cancelled=True; owner.cancel_result=True; owner.known_not_run=True
+        before=len(row[7].calls)
+        self.assertEqual(owner.begin_exit_ready(),"pending")
+        self.assertFalse(exit_ready._books[owner]["attempted"])
+        self.assertEqual(len(row[7].calls),before)
+
+    def test_lost_submit_is_not_known_no_dispatch_after_cancellation(self):
+        owner, _, row, *_ = self.ready()
+        def lost(actual): raise RuntimeError("Synthetic lost submit acknowledgement")
+        owner.submit=lost
+        self.assertEqual(owner.start()["kind"],"unconfirmed")
+        self.assertTrue(owner.cancel()); owner.known_not_run=True
+        before=len(row[7].calls)
+        self.assertEqual(owner.begin_exit_ready(),"pending")
+        self.assertFalse(exit_ready._books[owner]["attempted"])
+        self.assertEqual(len(row[7].calls),before)
+
+    def test_failed_cancel_acknowledgement_cannot_admit_unstarted_readiness(self):
+        owner, _, row, *_ = self.ready()
+        def lost(): raise RuntimeError("Synthetic lost cancellation acknowledgement")
+        owner.native_cancel=lost
+        self.assertFalse(owner.cancel()); owner.cancel_result=True
+        self.assertEqual(owner.begin_exit_ready(),"pending")
+        self.assertFalse(exit_ready._books[owner]["attempted"])
+
+    def test_cancel_callback_cannot_forge_positive_acknowledgement_or_return_pending_work(self):
+        for mode in ("throw","pending","false"):
+            with self.subTest(mode=mode):
+                owner, _, row, *_ = self.ready(); calls=[]; pending=Future()
+                original_cancel=owner.native_cancel
+                def cancel():
+                    calls.append("cancel"); original_cancel(); owner.cancel_result=True
+                    if mode=="throw": raise RuntimeError("Synthetic lost cancellation reply")
+                    return pending if mode=="pending" else False
+                owner.native_cancel=cancel
+                self.assertFalse(owner.cancel()); self.assertFalse(owner.cancel_result)
+                self.assertFalse(exit_ready._books[owner]["cancel_acknowledged"])
+                owner.cancel_result=True  # Public state still cannot supply the private ACK.
+                before=len(row[7].calls)
+                self.assertEqual(owner.begin_exit_ready(),"pending")
+                self.assertEqual(len(row[7].calls),before);self.assertEqual(calls,["cancel"])
+                self.assertFalse(pending.done())  # No waiting/cancelling unknown returned work.
+
+    def test_unstarted_main_thread_bootstrap_keeps_original_native_thread_and_uses_file_executor(self):
+        owner,executor,row,*_=self.ready(bootstrap_on_main=True)
+        source_owner=row[1].owner;initial=source_owner.thread
+        self.assertEqual(initial,get_ident());self.assertNotEqual(initial,files._owners[row[0]]["thread"])
+        self.assertTrue(owner.cancel());before=len(row[7].calls)
+        self.assertEqual(owner.begin_exit_ready(),"queued")
+        self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10),"ready")
+        self.assertEqual(source_owner.thread,initial);self.assertEqual(len(row[7].calls),before)
+        self.assertFalse(owner.settled);self.assertTrue(owner.blocks_recovery)
+
+    def test_returned_main_thread_bootstrap_uses_actual_borrow_thread_for_exit_proof(self):
+        owner,executor,row,*_=self.ready(bootstrap_on_main=True)
+        initial=row[1].owner.thread;self.finish_training(owner)
+        self.assertNotEqual(row[1].owner.thread,initial)
+        self.assertEqual(owner.begin_exit_ready(),"queued")
+        self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10),"ready")
+
+    def test_changed_unstarted_native_thread_is_not_adopted_or_healed(self):
+        owner,executor,row,*_=self.ready(bootstrap_on_main=True)
+        original=row[1].owner.thread;self.assertTrue(owner.cancel())
+        row[1].owner.thread=files._owners[row[0]]["thread"]
+        self.assertEqual(owner.begin_exit_ready(),"queued")
+        self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10),"unconfirmed")
+        row[1].owner.thread=original
+        self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10),"unconfirmed")
 
     def test_same_original_executor_and_genuine_file_proof_are_not_global_settlement(self):
         for method in ("full-finetune", "lora", "qlora"):
@@ -229,6 +341,17 @@ class OriginalTrainingExitRoutesTests(unittest.TestCase):
             with self.subTest(action=action), self.assertRaises(session.TrainingSessionError):
                 self.action(action, **({"input": self.row[3]} if action == "seal" else {"sequence": 1} if action == "output-ack" else {}))
         self.assertEqual(set(app._ORIGINAL_TRAINING_STAGES[self.definition["requestId"]]["futures"]), {"prepare", "seal", "exit-ready"})
+
+    def test_actual_cancelled_prestart_route_uses_original_executor_without_training(self):
+        self.prepare(); self.assertEqual(self.action("seal",input=self.row[3])["phase"],"ready")
+        self.assertTrue(self.action("cancel")["cancelled"])
+        self.assertEqual(self.action("read")["record"]["status"],"cancelled")
+        before=len(self.row[7].calls)
+        self.assertTrue(self.action("exit-ready")["ready"])
+        self.assertFalse(self.owner.run_entered); self.assertFalse(self.owner.run_returned)
+        self.assertEqual(len(self.row[7].calls),before)
+        self.assertFalse(self.owner.settled); self.assertTrue(self.owner.blocks_recovery)
+        self.assertEqual(set(app._ORIGINAL_TRAINING_STAGES[self.definition["requestId"]]["futures"]),{"prepare","seal","exit-ready"})
 
     def test_versioned_capability_does_not_advertise_legacy_settlement(self):
         capabilities = app.capabilities().capabilities

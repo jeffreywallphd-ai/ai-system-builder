@@ -3533,3 +3533,27 @@ not the physical Native/host lifecycle. A pre-start preparation lacking actual
 barrier proof stays pending. Complete producer, real exclusive capacity of both
 copies, protected destination/crash custody, actual bounded training, separately
 approved Save, evaluation/generation and whole-host qualification remain pending.
+
+### Original training cancellation before loader entry
+
+The existing private `original-exit-ready-v1` protocol has two local proof paths.
+A returned run retains its original post-borrow proof. A cancelled unstarted run
+requires positive privately recorded cancellation and either no original dispatch
+attempt or the exact original Future in a cancelled state. A raised submit is
+never no-dispatch proof. Both paths use the same captured executor and one-use
+readiness latch; the wire schema and default `settled-v1` behavior are unchanged.
+
+The unstarted file proof requires genuine fully prepared inputs, no original
+file-borrow attempt, no active/unknown Native IO and the original retained guards.
+It permanently fences file/session admission without claiming output IO closure,
+training success, SDK/process exit or storage credit. Actual parent IO and original
+worker/empty-Job/controller retirement remain separate mandatory checks. Cancel
+before issue reports the task as cancelled without inventing a training result.
+Partial or failed input preparation still has no qualified barrier. Complete
+producer, real capacity, protected destination/crash custody, bounded training,
+Save and host qualification remain pending. Focused software fixtures are not
+physical Native or model qualification.
+Native owner thread IDs are captured with the genuine prepared file snapshot.
+The passive unstarted proof requires those exact unchanged values under all
+original locks; it does not move a startup-thread owner. A returned run still
+requires the current file executor thread after the genuine borrow handoff.

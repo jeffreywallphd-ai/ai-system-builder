@@ -1562,3 +1562,19 @@ host qualification remain separate. Pre-start custody without a qualified file
 barrier remains pending rather than granting termination from a status DTO.
 Latch the execution release before its original callback. A thrown, asynchronous
 or invalid acknowledgement retains uncertainty and cannot repeat that callback.
+
+### Unstarted cancellation within original-owner exit readiness
+
+The approved original-worker retirement topology also admits a distinct local
+proof for cancelled, fully sealed training inputs before loader entry. The owning
+session records dispatch and cancellation privately, before external callbacks.
+Only original no-dispatch history or the exact cancelled original Future can
+select this proof. The original file owner separately retains a borrow-attempt
+latch and checks quiet Native ownership on its captured executor before permanent
+fencing. Mutable phase flags, lost submit/cancellation replies and partial input
+preparation cannot substitute. The existing returned-run path and wire capability
+remain unchanged. This adds no worker, executor, retry, budget or cleanup policy.
+
+Local unstarted readiness claims no output closure, training result, process exit
+or disk credit. The existing parent/Native worker retirement checks and all
+retained capacity/destination/producer/actual-host obligations remain mandatory.

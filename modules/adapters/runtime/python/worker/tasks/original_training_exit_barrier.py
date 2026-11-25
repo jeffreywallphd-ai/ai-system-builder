@@ -20,6 +20,7 @@ _OWNERS=files._owners
 _LEASES=files._leases
 _BINDINGS=files._bindings
 _LOCKS=files._file_locks
+_BORROWS=files._borrow_attempts
 _MODEL_LEASES=native._model_leases
 _MODEL_SOURCES=native._verified_model_receivers
 _INPUTS=native._sealed_training_inputs
@@ -60,6 +61,7 @@ def _api():
     _need(files._record is _RECORD and files._snapshot is _SNAPSHOT and files._stamp is _STAMP
         and files._retained_native_snapshot is _NATIVE_SNAPSHOT and files._prepared_files is _PREPARED
         and files._owners is _OWNERS and files._leases is _LEASES and files._bindings is _BINDINGS and files._file_locks is _LOCKS
+        and files._borrow_attempts is _BORROWS and files._original_borrow_attempts is _BORROWS
         and native._model_leases is _MODEL_LEASES and native._verified_model_receivers is _MODEL_SOURCES
         and native._sealed_training_inputs is _INPUTS and native._training_input_readers is _INPUT_READERS
         and native._training_output_readers is _OUTPUT_READERS and native._training_output_families is _OUTPUT_FAMILIES
@@ -71,15 +73,18 @@ def _api():
     _PLAIN(_TOKEN_CLASS,_TOKEN_CLASS,frozenset())
 
 
-def _native_matches(original):
+def _native_matches(original,*,unstarted=False):
     current=_NATIVE_SNAPSHOT(original[0])
-    _need(len(current)==len(original) and all(a is b for a,b in zip(current[:8],original[:8]))
+    _need(len(current)==len(original)==10 and all(a is b for a,b in zip(current[:8],original[:8]))
         and len(current[8])==len(original[8]))
     for actual,expected in zip(current[8],original[8]):
         _need(actual[0] is expected[0] and actual[1] is expected[1]
             and all(type(a) is type(b) and a==b for a,b in zip(actual[2:],expected[2:])))
-    fields=object.__getattribute__(original[0],"__dict__")
-    _need(type(fields.get("thread")) is int and fields["thread"]==get_ident())
+    # An unborrowed Model may still belong to the startup thread. This passive
+    # check holds its original lease/Native locks and preserves that exact thread;
+    # it transfers no Native capability. A real borrow legitimately moved owners
+    # to the executor and still requires the current executor thread instead.
+    _need(type(original[9]) is int and current[9]==(original[9] if unstarted else get_ident()))
 
 
 def _plain_object(value,expected):
@@ -94,7 +99,7 @@ def _plain_object(value,expected):
     _PLAIN(type(value),expected,frozenset(fields))
 
 
-def _source(owner,record,prepared,*,fenced):
+def _source(owner,record,prepared,*,fenced,unstarted=False):
     _api();_SNAPSHOT(owner,record)
     _need(_PREPARED.get(owner) is prepared and type(prepared) is tuple and len(prepared)==14)
     state,source_record,source,graph,reader,sealed=prepared[1:7]
@@ -116,16 +121,28 @@ def _source(owner,record,prepared,*,fenced):
     _need(type(source) is native.OriginalModelBootstrapReceiver)
     _PLAIN(type(source),native.OriginalModelBootstrapReceiver,frozenset(("phase","owner","lock")))
     _need(source.owner is state["native_owner"] and source.lock is prepared[9]
-        and type(source.phase) is str and source.phase==("exit-ready" if fenced else "spent")
-        and state["entered"] is True and state.get("borrowed_input") is sealed and sealed["active"] is False
-        and record["closed"] is True and record["output_closed"] is True
-        and record["phase"]==("exit-ready" if fenced else "local-output-closed"))
+        and type(source.phase) is str)
+    if unstarted:
+        _need(owner not in _BORROWS and state["entered"] is False
+            and state.get("borrowed_input") is None and state.get("output_copy_owner") is None
+            and record["family"] is None and record["cancelled"] is True
+            and record["output_closed"] is False and record["closed"] is fenced
+            and record["phase"]==("exit-ready" if fenced else "prepared")
+            and source.phase==("exit-ready" if fenced else "bound"))
+    else:
+        _need(source.phase==("exit-ready" if fenced else "spent")
+            and state["entered"] is True and state.get("borrowed_input") is sealed
+            and record["closed"] is True and record["output_closed"] is True
+            and record["phase"]==("exit-ready" if fenced else "local-output-closed"))
     # Admit original Native/Handle namespaces BEFORE a reused helper reads
     # their attributes. Passive metadata primitives precede truth/equality too.
-    _native_matches(prepared[11]);_native_matches(prepared[12])
+    _native_matches(prepared[11],unstarted=unstarted);_native_matches(prepared[12],unstarted=unstarted)
     _need(type(reader) is dict and reader.get("sealed") is True and type(reader.get("preparing")) is bool
         and type(reader.get("read_state")) is str and reader["read_state"] in ("unread","complete"))
     _INPUT_BINDING(graph,reader)
+    if unstarted:
+        _need(reader["read_state"]=="unread")
+        return source,graph,reader,sealed
     family=record["family"];_need(type(family) is native.OriginalTrainingOutputFamily)
     _plain_object(family,native.OriginalTrainingOutputFamily)
     original_book=_OUTPUT_FAMILIES.get(family)
@@ -173,6 +190,19 @@ def prepare_original_training_file_exit(owner):
     This proves no complete process/SDK retirement. Model/input handles and all
     output accounting stay retained; output guards were already locally closed.
     """
+    return _prepare_file_exit(owner,unstarted=False)
+
+
+def prepare_unstarted_original_training_file_exit(owner):
+    """Fence cancelled, fully prepared files whose original borrow never began.
+
+    This distinct local proof does not claim that output IO ran or closed.
+    Preparation failures and unknown/active Native IO still grant no witness.
+    """
+    return _prepare_file_exit(owner,unstarted=True)
+
+
+def _prepare_file_exit(owner,*,unstarted):
     acquired=[];attempt=None
     try:
         _api();record=_RECORD(owner);prepared=_PREPARED.get(owner)
@@ -180,18 +210,19 @@ def prepare_original_training_file_exit(owner):
         _need(record["lock"] is _LOCKS.get(owner) is prepared[10] and prepared[9] is record["state"]["lock"])
         acquired=_acquire(record,prepared)
         _SNAPSHOT(owner,record)
-        if record["phase"] in ("bound","prepared","preparing","borrowing","running"):
+        if record["phase"] in (("bound","preparing","borrowing","running") if unstarted
+                              else ("bound","prepared","preparing","borrowing","running")):
             return None  # Known unfinished work is a non-consuming observation.
         # Once original terminal evidence is inspected, uncertainty is sticky.
         # Resetting a mutable unknown flag cannot revive this same owner.
-        attempt={"record":record,"prepared":prepared,"closed":None,"phase":"checking","token":None}
+        attempt={"record":record,"prepared":prepared,"closed":None,"phase":"checking","token":None,"unstarted":unstarted}
         _barriers[owner]=attempt
-        closed=_source(owner,record,prepared,fenced=False)
+        closed=_source(owner,record,prepared,fenced=False,unstarted=unstarted)
         attempt["closed"]=closed;attempt["phase"]="fencing"
         # Pure original fields, no callback, await, file effect or guard close.
         record["closed"]=True;record["cancelled"]=True;record["phase"]="exit-ready"
         object.__getattribute__(record["source"],"__dict__")["phase"]="exit-ready"
-        _source(owner,record,prepared,fenced=True)
+        _source(owner,record,prepared,fenced=True,unstarted=unstarted)
         token=_OriginalTrainingFileExit();attempt["token"]=token;attempt["phase"]="ready"
         _tokens[token]=(owner,attempt)
         return token
@@ -214,7 +245,8 @@ def consume_original_training_file_exit(owner,token):
     acquired=_acquire(record,attempt["prepared"])
     try:
         attempt["phase"]="consuming"
-        closed=_source(owner,record,attempt["prepared"],fenced=True)
+        _need(type(attempt["unstarted"]) is bool)
+        closed=_source(owner,record,attempt["prepared"],fenced=True,unstarted=attempt["unstarted"])
         _need(all(a is b for a,b in zip(closed,attempt["closed"])))
         attempt["phase"]="consumed"
         return {"taskId":record["source_record"]["task_id"],"definitionDigest":record["source_record"]["definition_digest"],

@@ -26,6 +26,7 @@ _STAMP = files._stamp
 _FILE_API = files._api
 _BARRIER_API = barrier._api
 _PREPARE_EXIT = barrier.prepare_original_training_file_exit
+_PREPARE_UNSTARTED_EXIT = barrier.prepare_unstarted_original_training_file_exit
 _CONSUME_EXIT = barrier.consume_original_training_file_exit
 _SCOPE = sessions._scope_digest
 _THREAD = get_ident
@@ -50,6 +51,7 @@ def _file_api():
     _need(files._record is _RECORD and files._prepared_files is _PREPARED and files._stamp is _STAMP
           and files._api is _FILE_API and barrier._api is _BARRIER_API
           and barrier.prepare_original_training_file_exit is _PREPARE_EXIT
+          and barrier.prepare_unstarted_original_training_file_exit is _PREPARE_UNSTARTED_EXIT
           and barrier.consume_original_training_file_exit is _CONSUME_EXIT
           and sessions._scope_digest is _SCOPE)
     _FILE_API(); _BARRIER_API()
@@ -86,7 +88,9 @@ def initialize(owner, protocol):
         "resource_api": None, "resource_class": None, "resource_mro": None,
         "thread": None, "lock": None, "file": None, "file_record": None,
         "file_attempted": False, "payload": None, "source_digest": None, "future": None,
-        "entered": False, "returned": False, "attempted": False, "unknown": False,
+        "entered": False, "returned": False, "dispatch_attempted": False,
+        "cancel_started": False, "cancel_returned": False, "cancel_acknowledged": False,
+        "exit_mode": None, "attempted": False, "unknown": False,
         "phase": "bound"}
 
 
@@ -209,6 +213,48 @@ def capture_future(owner, future):
         book["future"] = future
 
 
+def dispatch_attempted(owner):
+    """Latch before submit: a lost reply can never become known no-dispatch."""
+    book = _book(owner)
+    if book is not None:
+        _fields(owner,book)
+        _need(not book["dispatch_attempted"] and not book["attempted"] and not book["unknown"])
+        book["dispatch_attempted"] = True
+
+
+def cancel_started(owner):
+    book=_book(owner)
+    if book is not None:
+        _fields(owner,book)
+        _need(not book["attempted"] and not book["cancel_started"])
+        book["cancel_started"]=True
+
+
+def cancel_returned(owner,result):
+    book=_book(owner)
+    if book is not None:
+        _fields(owner,book)
+        _need(type(result) is bool and book["cancel_started"] and not book["cancel_returned"])
+        book["cancel_returned"]=True
+        book["cancel_acknowledged"]=result
+
+
+def _unstarted(book,value):
+    if (book["entered"] or book["returned"] or book["payload"] is None
+            or not book["cancel_returned"] or not book["cancel_acknowledged"]
+            or value.get("cancelled") is not True or value.get("cancel_result") is not True
+            or value.get("known_not_run") is not True or value.get("run_entered") is not False
+            or value.get("run_returned") is not False):
+        return False
+    future=book["future"]
+    if not book["dispatch_attempted"]:
+        return future is None and value.get("future") is None and value.get("issue_attempted") is False
+    if type(future) is not _FUTURE or value.get("future") is not future or value.get("issue_attempted") is not True:
+        return False  # Raised/unknown submit has no positive no-start proof.
+    fields=object.__getattribute__(future,"__dict__")
+    return type(fields.get("_state")) is str and fields["_state"] in ("CANCELLED","CANCELLED_AND_NOTIFIED")
+
+
 def run_entered(owner):
     book = _book(owner)
     if book is not None:
@@ -233,14 +279,20 @@ def begin(owner):
         if book["unknown"] or book["attempted"]:
             return "unconfirmed"
         future = book["future"]
-        # The same executor must have returned the actual run. Mutable public
-        # session flags and a Future result alone do not provide file proof.
-        if not book["returned"] or value.get("operations") != 0 or value.get("run_returned") is not True:
+        if value.get("operations") != 0:
             return "pending"
-        _need(type(future) is _FUTURE and value.get("future") is future)
-        future_fields = object.__getattribute__(future, "__dict__")
-        if type(future_fields.get("_state")) is not str or future_fields["_state"] != "FINISHED":
-            return "pending"
+        if _unstarted(book,value):
+            book["exit_mode"]="unstarted"
+        else:
+            # Returned training still needs its original completed run and file
+            # proof. Public flags cannot substitute for private entry history.
+            if not book["returned"] or value.get("run_returned") is not True:
+                return "pending"
+            _need(type(future) is _FUTURE and value.get("future") is future)
+            future_fields = object.__getattribute__(future, "__dict__")
+            if type(future_fields.get("_state")) is not str or future_fields["_state"] != "FINISHED":
+                return "pending"
+            book["exit_mode"]="returned"
         book["attempted"] = True; book["phase"] = "queued"
         return "queued"
 
@@ -257,10 +309,12 @@ def finish(owner):
         assert_thread(owner); _resource_current(owner, book); _file_api()
         value = _fields(owner, book)
         _need(book["attempted"] and book["phase"] == "queued" and not book["unknown"]
-              and book["returned"] and value["operations"] == 0)
+              and value["operations"] == 0)
+        unstarted=book["exit_mode"]=="unstarted"
+        _need(_unstarted(book,value) if unstarted else book["exit_mode"]=="returned" and book["returned"])
         book["phase"] = "checking"  # Before the fixed proof resolver.
         _need(_RECORD(book["file"]) is book["file_record"] and _PREPARED[book["file"]][7] == book["payload"])
-        token = _PREPARE_EXIT(book["file"])
+        token = (_PREPARE_UNSTARTED_EXIT if unstarted else _PREPARE_EXIT)(book["file"])
         _need(token is not None and not book["unknown"])
         proof = _CONSUME_EXIT(book["file"], token)
         _resource_current(owner, book)

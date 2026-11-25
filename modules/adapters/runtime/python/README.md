@@ -1368,3 +1368,19 @@ An unfinished preparation without a qualifying file/run barrier stays pending.
 Complete producer, exclusive both-copy capacity, protected destination/crash
 custody, actual bounded training, original Native/host qualification and separate
 Save/evaluation/generation remain pending. Default Roots are not enabled.
+
+### Cancellation before the original training loader starts
+
+The opt-in exit-ready mode also handles cancelled, fully sealed inputs when the
+loader never started. Original private dispatch/cancellation history and the exact
+cancelled Future distinguish this case from an unknown submission. A separate
+file-owner borrow latch prevents mutable status flags from erasing earlier work.
+The same original executor verifies quiet Native owners and retained input/Model
+guards, then permanently fences the original files. It does not claim that output
+IO ran or closed. The parent still needs actual original worker/Job/controller
+retirement before releasing its execution slot; all storage charges remain held.
+Unsealed/failed preparation, lost cancellation/submit acknowledgement, active or
+unknown IO and missing genuine ownership stay pending. No default host is enabled.
+The passive unstarted proof preserves each captured Native thread ID under the
+original locks. The Model can still belong to the startup thread. Returned runs
+retain the current executor-thread check after their actual borrow handoff.
