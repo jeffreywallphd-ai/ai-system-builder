@@ -224,3 +224,13 @@ complete regular prerequisites. Unknown, mixed, incomplete and explicit generic
 scopes retain broad fallback. Existing runtime-worker commands/limits remain;
 unchanged text-worker source is not added to this feature's required checks.
 No model, provider, physical Native or full-software qualification follows.
+
+### Private training output receiver checks
+
+`headless-training-runtime-unit` now also runs the complete private output receiver,
+HTTP client and HTTP protocol files. Its strict companion compiles the receiver
+and actual filesystem consumer. The test uses finite synthetic checkpoint and
+candidate bytes; it runs no model, accuracy trial or physical Native worker.
+The closed receiver/controller scope runs all related routing modules and actual
+feature commands. Missing, nonregular, mixed or unknown support retains the
+generic fallback; explicit generic checks are not suppressed.

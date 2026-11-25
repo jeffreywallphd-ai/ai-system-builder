@@ -2575,3 +2575,15 @@ undelivered streams cannot report training success. ACKs remain provisional.
 Actual parent receiving/storage custody, measured capacity, the real Native
 producer, all-reader/worker/Job retirement, Save and real host proof remain pending.
 This source connection grants none of those capabilities or model-quality results.
+
+### Original parent receiving
+
+The optional Node receiver uses the same original-session bearer/process/binding
+checks for `output-read` and `output-ack`. ACK bodies are exactly binding plus
+sequence. One data frame waits for consumption, and a file EOF waits for actual
+verified parent publication. The file iterable ends before EOF ACK, avoiding a
+publisher/worker deadlock. Final streams-complete remains provisional; it does
+not grant task success, readiness, Save, resource credit or global retirement.
+Default Native resources and default parent hosts remain unconfigured. Real
+destination custody/capacity, producer, SDK/worker/Job settlement and host proof
+are separate pending obligations.

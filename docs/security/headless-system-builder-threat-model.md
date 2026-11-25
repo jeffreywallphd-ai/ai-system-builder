@@ -3182,3 +3182,24 @@ undelivered streams cannot report training success. ACKs remain provisional.
 Actual parent receiving/storage custody, measured capacity, the real Native
 producer, all-reader/worker/Job retirement, Save and real host proof remain pending.
 This source connection grants none of those capabilities or model-quality results.
+
+### Private original-training parent receiver
+
+- Threats: forged or rebound output, escaped names, unbounded manifests/segments,
+  duplicate or reordered data, premature EOF ACK, async reentry, lost accepted
+  publication and false retirement after cancellation or timeout.
+- Controls: capture trusted storage methods and matching immutable actor/workspace
+  context before startup; retain the original owner/channel/binding; allow only
+  private output read/ACK actions. Closed bounded schemas enforce exact task,
+  sequence, files/groups/roles, names, offsets, canonical base64, hashes and totals.
+  The publisher verifies actual streamed bytes and publishes exclusively before
+  file EOF ACK. One flight and one iterator prevent duplicate advancing consumers.
+- Cancellation locally fences before permission/remote waits. Pending or unknown
+  IO/ACK outcomes retain reservation and published data; no retry, reset, reopen,
+  compensating delete or capacity credit. A deadline is not IO retirement proof.
+- Evidence: actual small filesystem publication and whole original session/HTTP
+  feature tests, including the real 8 KiB segment boundary and failure paths.
+  No real model, quality scoring or physical Native execution is claimed.
+- Residual scope: no configured default factory, actual measured/exclusive
+  capacity, protected Native destination/crash lifecycle, complete producer,
+  all-reader/SDK/worker/Job retirement, Model Save or real host qualification.

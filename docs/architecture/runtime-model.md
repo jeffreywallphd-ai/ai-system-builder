@@ -3402,3 +3402,30 @@ undelivered streams cannot report training success. ACKs remain provisional.
 Actual parent receiving/storage custody, measured capacity, the real Native
 producer, all-reader/worker/Job retirement, Save and real host proof remain pending.
 This source connection grants none of those capabilities or model-quality results.
+
+### Private original training output receiving
+
+The original training session can capture one trusted synchronous output-storage
+factory before any startup or HTTP await. The session is already retained by its
+owner before this callback. Composition supplies the existing application byte
+port, matching immutable actor/workspace context, publication identity and finite
+file/count/byte/duration declarations; requests cannot select a transport or Root.
+After exact start acceptance, one latched asynchronous receive flight uses the
+same captured channel and exact runtime/profile/task/workspace/session binding.
+
+The private versioned parser validates ordered checkpoint/final-candidate groups,
+safe totals, approved leaf names, sequence/offset, canonical base64 and EOF. It
+streams at most 8 KiB per segment into verified byte publication. Consumption
+precedes data ACK; hash/size/EOF verification, fsync and exclusive publication
+precede file EOF ACK. The iterable terminates before publication waits for ACK.
+Final streams-complete confirms only provisional transfer. No public task/MCP
+payload contains these bytes. Only output replies admit 128 KiB envelopes; old
+owned operations and generic metadata retain their narrower bounds.
+
+Local abort precedes cancellation permission/waits. Unknown or pending transfer
+fences the session and retains its reservation and published data; timeouts prove
+no IO cessation. No reset/retry/reopen/compensating deletion/credit occurs. The
+existing remote-settlement-before-worker-retirement protocol is unchanged.
+The default composition supplies no factory. These cooperative checks do not
+prove actual exclusive capacity, Native destination/crash integrity, a complete
+Native producer, all-reader/SDK/worker/Job retirement, Save or real host readiness.

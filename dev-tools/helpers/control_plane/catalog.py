@@ -437,6 +437,24 @@ TRAINING_OUTPUT_CHANNEL_CONTROLLER_FILTERS = (
     "test_control_plane_training_output_delivery.",
     "test_control_plane_focused.",
 )
+TRAINING_OUTPUT_RECEIVER_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_training_output_receiver.py",
+)
+TRAINING_OUTPUT_RECEIVER_OWNER_SCOPE = (
+    "modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts",
+    "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
+    "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+    "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
+    "dev-tools/helpers/README.md", "docs/diagnostics/ai-development-control-plane.md",
+    "modules/adapters/runtime/python/README.md", "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md", "docs/adr/ADR-0047-headless-system-builder-delegation.md",
+    "docs/security/headless-system-builder-threat-model.md", "docs/context/packs/runtime.pack.md",
+)
+TRAINING_OUTPUT_RECEIVER_CONTROLLER_FILTERS = (
+    "test_control_plane_training_output_receiver.", "test_control_plane_headless_training_runtime.",
+    "test_control_plane_training_output_channel.", "test_control_plane_focused.",
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -589,12 +607,20 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-training-runtime-unit": {
         "automatic_sources": (
+            "modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
             "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
             "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/supervisor/windowsOriginalWorkerLaunch.ts",
         ),
         "automatic_required_files": (
+            "modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeHttpClient.unit.test.ts",
+            "modules/adapters/runtime/python/tests/pythonRuntimeHttpProtocol.unit.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter.ts",
+            "modules/application/ports/model/training-result-file-byte-storage.port.ts",
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
             "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
             "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
@@ -607,6 +633,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
         ),
         "sources": (
+            "modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
             "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
             "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
@@ -615,8 +643,12 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
             "modules/adapters/runtime/python/supervisor/windowsOriginalWorkerLaunch.ts",
             "modules/adapters/runtime/python/README.md",
+            "modules/adapters/runtime/python/worker/README.md",
         ),
         "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
+            "modules/adapters/runtime/python/tests/createPythonRuntimeHttpClient.unit.test.ts",
+            "modules/adapters/runtime/python/tests/pythonRuntimeHttpProtocol.unit.test.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
             "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts",
             "modules/adapters/runtime/python/tests/model-source-task-session.unit.test.ts",
@@ -625,6 +657,8 @@ PUBLISHED_FORM_CHECKS = {
     "headless-training-runtime-types": {
         "companion_to": "headless-training-runtime-unit",
         "sources": (
+            "modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
             "modules/adapters/runtime/python/client/originalTrainingModelSource.ts",
             "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
@@ -636,6 +670,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
             "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
             "modules/adapters/runtime/python/createPythonRuntimePort.ts",
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
@@ -4221,6 +4256,19 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[item for name in TRAINING_OUTPUT_CHANNEL_CONTROLLER_FILTERS for item in ("-k", name)]]
+    receiver_support = (TRAINING_OUTPUT_RECEIVER_SCOPE + TRAINING_OUTPUT_RECEIVER_OWNER_SCOPE
+        + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_OUTPUT_RECEIVER_CONTROLLER_FILTERS)
+        + tuple(name for identity in ("headless-training-runtime-unit", "headless-training-output-channel-unit")
+            for name in PUBLISHED_FORM_CHECKS[identity]["automatic_required_files"]))
+    if (set(TRAINING_OUTPUT_RECEIVER_SCOPE) <= set(paths) <= set(TRAINING_OUTPUT_RECEIVER_SCOPE + TRAINING_OUTPUT_RECEIVER_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": receiver_support[index:index+16]})
+                for index in range(0, len(receiver_support), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[item for name in TRAINING_OUTPUT_RECEIVER_CONTROLLER_FILTERS for item in ("-k", name)]]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})

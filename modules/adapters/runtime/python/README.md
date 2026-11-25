@@ -1261,3 +1261,22 @@ undelivered streams cannot report training success. ACKs remain provisional.
 Actual parent receiving/storage custody, measured capacity, the real Native
 producer, all-reader/worker/Job retirement, Save and real host proof remain pending.
 This source connection grants none of those capabilities or model-quality results.
+
+### Private parent output receiver
+
+`createOriginalTrainingPort` has an optional trusted synchronous storage factory.
+The returned session owns retirement before this factory runs; storage methods,
+actor/workspace context and explicit bounds are captured before startup awaits.
+After the exact start acknowledgement, one serial receiver consumes only the
+original authenticated output read/ACK channel. Files are streamed to the private
+byte-storage port without a complete-file buffer. Data ACK follows consumption;
+EOF ACK follows verified exclusive publication. Final transfer stays provisional.
+
+Output replies alone have a 128 KiB envelope; old operations retain 64 KiB and
+generic metadata retains its 2 KiB scalar limit. A separate closed private parser
+admits canonical 8 KiB segments. Cancellation locally fences before permission
+or remote waits. Pending or unknown receiving prevents settlement and release;
+a deadline does not prove IO stopped. Unknown writes/ACKs cannot trigger retry,
+reset, deletion or credit. No default host factory is configured. Actual capacity,
+Native destination protection, producer, SDK/worker/Job retirement, Model Save
+and host qualification remain pending.

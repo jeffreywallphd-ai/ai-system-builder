@@ -1431,3 +1431,34 @@ undelivered streams cannot report training success. ACKs remain provisional.
 Actual parent receiving/storage custody, measured capacity, the real Native
 producer, all-reader/worker/Job retirement, Save and real host proof remain pending.
 This source connection grants none of those capabilities or model-quality results.
+
+### Private parent receive composition for original training output
+
+The existing original-session topology may compose its bounded private worker
+channel with the application training byte-storage port. A trusted synchronous
+factory is captured by `createOriginalTrainingPort`, then invoked in prepare
+before startup awaits, after the caller already retains the session owner.
+Capture real storage methods, immutable matching owner/workspace context and
+explicit finite bounds; do not accept JSON-selected callbacks, Root or transport.
+Default absence retains the old behavior and does not activate a producer.
+
+Latch one receive flight after exact accepted start. Reuse authenticated original
+runtime/profile/session binding for output read/ACK. Closed frames enforce global
+file/group/role order, allowed leaves, safe counts/totals/offsets, canonical bounded
+base64, hash and EOF. Stream bytes through the private verified publisher. End the
+per-file iterable at EOF before awaiting publication; ACK EOF only after verified
+fsync/exclusive publication. Data ACK follows consumption. Final transfer remains
+provisional. Full model files are never buffered, exposed by MCP or catalogued.
+
+Only output envelopes use 128 KiB; older operations retain 64 KiB and ordinary
+metadata retains 2 KiB scalars. The private parser supports 8 KiB raw segments.
+Abort locally before permission/cancel awaits; unknown/pending receive work must
+prevent session settlement or release. Deadline expiry does not prove IO stopped.
+Never retry unknown writes/ACKs, reset a stream, delete published data or grant
+capacity credit. Preserve existing remote-settled then original-worker retirement.
+
+Finite filesystem/channel tests qualify this component only. Explicit bounds do
+not establish actual exclusive capacity, retained allocation accounting, Native
+destination protection/crash integrity, a complete producer, all-reader/SDK/worker/
+Job retirement, Model Save or physical host qualification. Those remain pending;
+no new product, provider, security-policy choice or model quality gate is selected.

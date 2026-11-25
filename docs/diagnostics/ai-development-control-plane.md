@@ -3423,3 +3423,14 @@ complete regular prerequisites. Unknown, mixed, incomplete and explicit generic
 scopes retain broad fallback. Existing runtime-worker commands/limits remain;
 unchanged text-worker source is not added to this feature's required checks.
 No model, provider, physical Native or full-software qualification follows.
+
+### Private training output receiver checks
+
+`headless-training-runtime-unit` includes the entire output receiver, HTTP client
+and protocol test files, with strict receiver/consumer compilation in its type
+companion. Tests publish real small synthetic files, including full 8 KiB wire
+segments, and exercise malformed output, cancellation, pending IO, lost replies
+and original session bindings. They do not run models, model accuracy or physical
+Native workers. The exact closed owner scope retains complete related controller
+modules and actual feature execution. Incomplete, nonregular, mixed or unknown
+support keeps generic checks; no final roadmap qualification is inferred.

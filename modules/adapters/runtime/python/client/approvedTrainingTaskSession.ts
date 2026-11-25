@@ -8,6 +8,7 @@ import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import {capturePassiveModelData} from "./modelDownloadManifest";
 import {mapTaskStatusResponse} from "../protocol/pythonRuntimeHttpProtocol";
 import {types} from "node:util";
+import {createOriginalTrainingOutputReceiver, type OriginalTrainingOutputStorage} from "./originalTrainingOutputReceiver";
 
 export const ORIGINAL_TRAINING_CAPABILITY = "train-model.original-session-v1";
 export interface OriginalTrainingProfile {readonly profileId: string; readonly profileFingerprint: string}
@@ -71,8 +72,13 @@ export function captureTrainingProfile(raw: OriginalTrainingProfile): OriginalTr
 export function createOriginalTrainingPort(options: {
   captureChannel: (original: OriginalTrainingCapture) => Promise<OriginalTrainingOwnedChannel>;
   reserve: (original: OriginalTrainingCapture) => (() => void) | undefined;
+  /** Trusted private composition only; no default host or wire-supplied storage. */
+  createOutputStorage?: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
 }): ApprovedLocalModelTrainingPort {
-  const capture = options.captureChannel, reserve = options.reserve;
+  need(!types.isProxy(options));
+  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage"]);
+  const capture = options.captureChannel, reserve = options.reserve, outputFactory = capturedOptions.createOutputStorage;
+  need(outputFactory === undefined || typeof outputFactory === "function" && !types.isProxy(outputFactory));
   return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl,
     rawSource?: ApprovedLocalTrainingModelReader) {
     const definition = copy(raw), isCurrent = rawControl.isCurrent, allowed = rawControl.stillAllowed;
@@ -128,12 +134,21 @@ export function createOriginalTrainingPort(options: {
     let operations = 0, cancelAttempted = false, closeAttempted = false, closing = false;
     let remoteRetired = false, retireWorker: (() => Promise<boolean>) | undefined, releaseUnusedWorker: (() => void) | undefined;
     let cached: RuntimeTaskRecord | undefined, cancellation: boolean | undefined;
+    let output: ReturnType<typeof createOriginalTrainingOutputReceiver> | undefined;
+    let outputSetupUnknown = false, outputStarted = false, outputAborted = false;
+    const abortOutput = () => {if (outputFactory) {outputAborted = true; output?.abort();}};
     const send = async (action: string, input?: unknown, dispatch?: () => void) => {
       need(!!channel && !!binding && phase !== "settled");
-      const reply = exact(await channel!.send("/training/original/" + definition.requestId + "/" + action,
-        {binding, ...(input === undefined ? {} : {input})}, dispatch),
-        ["binding", ...(action === "read" ? ["record"] : action === "start" ? ["kind", "requestId", "workspaceId", "status"] :
-          action === "cancel" ? ["cancelled"] : action === "settle" ? ["settled", "retirement"] : ["phase"])]);
+      const rawReply = await channel!.send("/training/original/" + definition.requestId + "/" + action,
+        {binding, ...(input === undefined ? {} : action === "output-ack" ? {sequence: input} : {input})}, dispatch);
+      need(!!rawReply && typeof rawReply === "object" && !types.isProxy(rawReply));
+      const keys = ["binding", ...(action === "read" ? ["record"] : action === "start" ? ["kind", "requestId", "workspaceId", "status"] :
+          action === "cancel" ? ["cancelled"] : action === "settle" ? ["settled", "retirement"] :
+            action === "output-read" ? ["output"] : action === "output-ack" ? ["acknowledged"] : ["phase"])];
+      // The concrete private receiver validates bounded wire bytes itself;
+      // ordinary metadata keeps its existing 2 KiB scalar copier unchanged.
+      const reply = action === "output-read" ? readStrictPassiveRecord(rawReply, keys) : exact(rawReply, keys);
+      need(Object.keys(reply).length === keys.length);
       const original = exact(reply.binding, Object.keys(binding!));
       need(Object.keys(binding!).every(key => original[key] === binding![key]));
       return reply;
@@ -142,6 +157,18 @@ export function createOriginalTrainingPort(options: {
       async prepare() {
         need(phase === "bound"); phase = "preparing"; source.stage = "preparing"; operations++;
         try {
+          if (outputFactory) {
+            // The returned session already owns retirement before composition can reenter.
+            outputSetupUnknown = true; need(!outputAborted);
+            const configuration = Reflect.apply(outputFactory as Function, options, [originalCapture]);
+            if (types.isPromise(configuration)) void Promise.prototype.then.call(configuration, undefined, () => {});
+            need(!types.isPromise(configuration) && !outputAborted && phase === "preparing");
+            output = createOriginalTrainingOutputReceiver({configuration, definition,
+              assertCurrent() {current(); need(!outputAborted && !!channel); channel!.assertCurrent();}, assertAllowed: permission,
+              read: async () => (await send("output-read")).output,
+              acknowledge: async sequence => (await send("output-ack", sequence)).acknowledged});
+            need(!outputAborted); current(); outputSetupUnknown = false;
+          }
           await permission(); const original = await capture.call(options, originalCapture); current();
           const identity = copy(original.identity), assertCurrent = original.assertCurrent, sendOriginal = original.send;
           const retireOriginalWorker = original.retireOriginalWorker, releaseOriginalUnused = original.releaseUnusedWorker;
@@ -183,6 +210,7 @@ export function createOriginalTrainingPort(options: {
           need(reply.kind === "accepted" && reply.requestId === definition.requestId && reply.workspaceId === definition.workspaceId &&
             (reply.status === "queued" || reply.status === "running"));
           phase = "accepted";
+          if (output) {outputStarted = true; output.start();}
           return {kind: "accepted" as const, requestId: definition.requestId, workspaceId: definition.workspaceId,
             status: reply.status as "queued" | "running"};
         } catch {phase = "unconfirmed"; return {kind: "unconfirmed" as const};}
@@ -204,6 +232,8 @@ export function createOriginalTrainingPort(options: {
         } finally {operations--;}
       },
       async cancel() {
+        // Local fencing requires no current business permission and proves no IO settlement.
+        abortOutput();
         await permission();
         if (phase === "settled" || remoteRetired) return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};
         need(!closing);
@@ -217,6 +247,7 @@ export function createOriginalTrainingPort(options: {
       },
       async settle() {
         if (phase === "settled") return true;
+        if (outputSetupUnknown || outputStarted && !output?.isComplete()) return false;
         if (operations || (!remoteRetired && closeAttempted) || closing) return false;
         if (phase === "bound") {phase = "settled"; release(); return true;}
         if (!binding) return false; // Lost preparation cannot adopt a record by ID.

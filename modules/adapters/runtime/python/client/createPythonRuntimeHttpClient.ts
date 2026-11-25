@@ -362,6 +362,7 @@ export function createPythonRuntimeHttpClient(
     init: RequestInit,
     requiredOwnership?: () => void,
     beforeDispatch?: () => void,
+    maximumOwnedResponseBytes = 64 * 1024,
   ): Promise<{ response: Response; payload: unknown; assertOwnedProcess: () => void }> => {
     const owned = captureOwnership?.() ?? (() => {});
     const assertOwnedProcess = () => {owned(); requiredOwnership?.();};
@@ -401,7 +402,7 @@ export function createPythonRuntimeHttpClient(
             assertOwnedProcess(); const next = await reader.read(); assertOwnedProcess();
             if (next.done) break;
             bytes += next.value.byteLength;
-            if (bytes > 64 * 1024) throw new Error("The model receiver identity could not be confirmed.");
+            if (bytes > maximumOwnedResponseBytes) throw new Error("The model receiver identity could not be confirmed.");
             chunks.push(new Uint8Array(next.value));
           }
           payload = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(Buffer.concat(chunks)));
@@ -444,11 +445,12 @@ export function createPythonRuntimeHttpClient(
         throw new Error("Original training runtime is unavailable.");
       const identity = Object.freeze({...runtime, ...profile});
       return Object.freeze({identity, assertCurrent: current, async send(endpoint: string, body: unknown, dispatch?: () => void) {
-        if (!/^\/training\/original\/(?:prepare|[a-f0-9-]{36}\/(?:seal|start|read|cancel|settle))$/.test(endpoint))
+        if (!/^\/training\/original\/(?:prepare|[a-f0-9-]{36}\/(?:seal|start|read|cancel|settle|output-read|output-ack))$/.test(endpoint))
           throw new Error("Original training operation is unavailable.");
         const captured = captureManifestPayloadForTraining(body);
         current(); const result = await authenticatedFetch(endpoint, "/training/original/:operation",
-          {method: "POST", headers: {"content-type": "application/json"}, body: captured}, current, dispatch);
+          {method: "POST", headers: {"content-type": "application/json"}, body: captured}, current, dispatch,
+          endpoint.endsWith("/output-read") || endpoint.endsWith("/output-ack") ? 128 * 1024 : 64 * 1024);
         current(); result.assertOwnedProcess();
         if (!result.response.ok) throw new Error("Original training operation could not be confirmed.");
         return result.payload;
