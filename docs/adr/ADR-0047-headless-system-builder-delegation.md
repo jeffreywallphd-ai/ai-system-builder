@@ -1578,3 +1578,19 @@ remain unchanged. This adds no worker, executor, retry, budget or cleanup policy
 Local unstarted readiness claims no output closure, training result, process exit
 or disk credit. The existing parent/Native worker retirement checks and all
 retained capacity/destination/producer/actual-host obligations remain mandatory.
+
+### Separate original training storage purposes
+
+Within the approved original-owner topology, a private parent binding separates
+Model, input, worker-output, parent-output and overhead accounting under one
+explicit declared ceiling. It consumes an already measured exclusive reservation;
+configuration, callback acknowledgements and its opaque token cannot establish
+physical capacity or Native custody. Real capacity/producer qualification remains
+mandatory and default hosts stay unchanged.
+
+Bind the exact genuine request/Model observation, preserve captured callbacks and
+reauthorize new charges. Precharge non-Model purposes before the Model launch. Its
+adapter is usable only in that launch's private original context. Retain known
+charges after withdrawal without capacity credit. Unknown/reentrant/deadline
+outcomes never retry or heal when a late callback returns. This changes no wire
+format, resource value, worker, public operation or recovery policy.

@@ -5,6 +5,7 @@ import {constants} from "node:fs";
 import {lstat, open, opendir, realpath} from "node:fs/promises";
 import path from "node:path";
 import {types} from "node:util";
+import type {ApprovedLocalTrainingModelSelection} from "../../../../application/ports/model";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import {captureOriginalTrainingModelReader, type OriginalTrainingCapture} from "./approvedTrainingTaskSession";
 import {capturePassiveModelData} from "./modelDownloadManifest";
@@ -83,6 +84,8 @@ function readCount(raw: unknown, buffer: Buffer, minimum: number, maximum: numbe
 type Owned = {raw: unknown; close?: () => Promise<unknown>; read?: (...args: any[]) => Promise<any>;
   stat?: (...args: any[]) => Promise<any>; closeAttempted: boolean; closed: boolean};
 const observationContext = new AsyncLocalStorage<object>();
+const reservationContext = new AsyncLocalStorage<{original: OriginalTrainingCapture; observed: ObservedOriginalTrainingModelSource;
+  purpose: "effect" | "retain"}>();
 const observedOwners = new WeakMap<ObservedOriginalTrainingModelSource, {original: OriginalTrainingCapture; owner: OriginalTrainingModelObservation}>();
 
 /** Trusted host configuration and an ALREADY measured exclusive reservation.
@@ -93,6 +96,155 @@ export interface OriginalTrainingSourceReservation {
   assertCurrent(): void;
   chargeSourceCopy(bytes: number): Promise<void>;
   retainSourceCopy(bytes: number): Promise<void>;
+}
+
+function sourceCopyConfiguration(raw: unknown): OriginalTrainingSourceReservation["configuration"] {
+  const config = data(raw, ["freshParent", "freshName", "maximumCopyBytes", "bufferBytes", "preparationMs"]);
+  need(local(config.freshParent) && typeof config.freshName === "string" && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}$/.test(config.freshName) &&
+    !/[.]$/.test(config.freshName) && !/^(?:CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)/i.test(config.freshName));
+  for (const [key, low, high] of [["maximumCopyBytes", 1, Number.MAX_SAFE_INTEGER], ["bufferBytes", 4096, 1_048_576],
+      ["preparationMs", 1, 86_400_000]] as const) need(Number.isSafeInteger(config[key]) && (config[key] as number) >= low && (config[key] as number) <= high);
+  return Object.freeze(config) as unknown as OriginalTrainingSourceReservation["configuration"];
+}
+
+export type OriginalTrainingStorageRole = "model" | "inputs" | "worker-output" | "parent-output" | "overhead";
+/** Explicit declared subdivisions of an ALREADY measured, exclusive reservation.
+ * This binder creates no global quota, Native custody, file or production Root. */
+export interface OriginalTrainingCopyPolicy {
+  readonly modelCopy: OriginalTrainingSourceReservation["configuration"];
+  readonly maximumInputCopyBytes: number;
+  readonly maximumWorkerOutputBytes: number;
+  readonly maximumParentOutputBytes: number;
+  readonly storageOverheadBytes: number;
+  readonly maximumReservedBytes: number;
+}
+export interface OriginalTrainingCopyReservationOwner {
+  assertCurrent(): void;
+  chargeCopy(role: OriginalTrainingStorageRole, bytes: number, scopeDigest: string): Promise<void>;
+  retainCopy(role: OriginalTrainingStorageRole, bytes: number, scopeDigest: string): Promise<void>;
+}
+declare const copyReservationsBrand: unique symbol;
+export interface OriginalTrainingCopyReservations {readonly [copyReservationsBrand]: true}
+type CopyPhase = "bound" | "charging" | "charged" | "retaining" | "retained" | "unknown";
+type Copies = {original: OriginalTrainingCapture; observed: ObservedOriginalTrainingModelSource;
+  configuration: OriginalTrainingSourceReservation["configuration"]; scopeDigest: string;
+  limits: Readonly<Record<OriginalTrainingStorageRole, number>>; states: Record<OriginalTrainingStorageRole, CopyPhase>;
+  current(): void; allowed(): Promise<void>; readModel(): Promise<ApprovedLocalTrainingModelSelection>;
+  resource(): unknown; charge(...args: any[]): any; retain(...args: any[]): any;
+  prepared: boolean; preparationAttempted: boolean; modelClaimed: boolean; lost: boolean; flight?: Promise<void>};
+const copyReservations = new WeakMap<OriginalTrainingCopyReservations, Copies>();
+const usedCopyOwners = new WeakSet<object>(), usedCopySources = new WeakSet<OriginalTrainingCapture>();
+const otherCopyRoles = ["overhead", "inputs", "worker-output", "parent-output"] as const;
+const storageUnavailable = () => new Error("The original training storage reservation is unavailable.");
+function storageNeed(value: unknown): asserts value {if (value !== true) throw storageUnavailable();}
+function copyRecord(token: OriginalTrainingCopyReservations): Copies {
+  const record = token && typeof token === "object" && !types.isProxy(token) ? copyReservations.get(token) : undefined;
+  storageNeed(!!record); return record;
+}
+function resourceCurrent(record: Copies) {
+  storageNeed(!record.lost);
+  const result = record.resource();
+  if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
+  storageNeed(result === undefined && !record.lost);
+}
+async function copyPermit(record: Copies) {
+  record.current(); resourceCurrent(record); await record.allowed(); record.current(); resourceCurrent(record);
+  const model = await record.readModel(); record.current(); resourceCurrent(record);
+  storageNeed(model.modelRecordId === record.observed.modelRecordId && model.modelUpdatedAt === record.observed.modelUpdatedAt &&
+    model.localModelReference === record.observed.logicalPath);
+}
+/** The actual pending callback remains held after an outward deadline. No retry,
+ * cancellation, cleanup, accounting credit or settled-IO claim follows. */
+function copyOperation(record: Copies, operation: () => Promise<void>): Promise<void> {
+  if (record.flight) {record.lost = true; return Promise.reject(storageUnavailable());}
+  if (record.lost) return Promise.reject(storageUnavailable());
+  const original = Promise.resolve().then(operation).then(() => {
+    // A callback can queue reentry before the awaited continuation resumes.
+    // Validate the private fence without another callback before final success.
+    storageNeed(!record.lost);
+  }); record.flight = original;
+  let timer: ReturnType<typeof setTimeout>;
+  const expired = new Promise<never>((_resolve, reject) => {timer = setTimeout(() => {record.lost = true; reject(storageUnavailable());}, record.configuration.preparationMs);});
+  void original.then(() => {record.flight = undefined; clearTimeout(timer);}, () => {record.flight = undefined; clearTimeout(timer);});
+  return Promise.race([original, expired]).catch(() => {
+    record.lost = true;
+    for (const role of Object.keys(record.states) as OriginalTrainingStorageRole[])
+      if (record.states[role] === "charging" || record.states[role] === "retaining") record.states[role] = "unknown";
+    throw storageUnavailable();
+  });
+}
+async function chargeCopy(record: Copies, role: OriginalTrainingStorageRole) {
+  storageNeed(record.states[role] === "bound"); await copyPermit(record);
+  storageNeed(!record.lost && record.states[role] === "bound"); record.states[role] = "charging";
+  const result = record.charge(role, record.limits[role], record.scopeDigest);
+  storageNeed(types.isPromise(result)); storageNeed(await result === undefined);
+  await copyPermit(record); storageNeed(record.states[role] === "charging"); record.states[role] = "charged";
+}
+async function retainCopy(record: Copies, role: OriginalTrainingStorageRole) {
+  storageNeed(record.states[role] === "charged"); resourceCurrent(record); record.states[role] = "retaining";
+  const result = record.retain(role, record.limits[role], record.scopeDigest);
+  storageNeed(types.isPromise(result)); storageNeed(await result === undefined);
+  resourceCurrent(record); storageNeed(record.states[role] === "retaining"); record.states[role] = "retained";
+}
+export function bindOriginalTrainingCopyReservations(original: OriginalTrainingCapture, observed: ObservedOriginalTrainingModelSource,
+  policy: OriginalTrainingCopyPolicy, owner: OriginalTrainingCopyReservationOwner): OriginalTrainingCopyReservations {
+  try {
+    assertOriginalTrainingModelObservation(original, observed);
+    const raw = data(policy, ["modelCopy", "maximumInputCopyBytes", "maximumWorkerOutputBytes", "maximumParentOutputBytes", "storageOverheadBytes", "maximumReservedBytes"]);
+    const configuration = sourceCopyConfiguration(raw.modelCopy);
+    const integer = (name: string) => {storageNeed(Number.isSafeInteger(raw[name]) && (raw[name] as number) > 0); return raw[name] as number;};
+    const limits = Object.freeze({model: configuration.maximumCopyBytes, inputs: integer("maximumInputCopyBytes"),
+      "worker-output": integer("maximumWorkerOutputBytes"), "parent-output": integer("maximumParentOutputBytes"), overhead: integer("storageOverheadBytes")});
+    const total = Object.values(limits).reduce((sum, value) => sum + value, 0), maximum = integer("maximumReservedBytes");
+    storageNeed(Number.isSafeInteger(total) && total <= maximum && limits["parent-output"] >= limits["worker-output"]);
+    storageNeed(observed.files.reduce((sum, row) => sum + row.sizeBytes, 0) <= limits.model &&
+      original.definition.inputs.reduce((sum, row) => sum + row.sizeBytes, original.definition.recipeSizeBytes) <= limits.inputs);
+    storageNeed(!!owner && typeof owner === "object" && !types.isProxy(owner) && !usedCopyOwners.has(owner) && !usedCopySources.has(original));
+    const resource = method(owner, "assertCurrent"), charge = method(owner, "chargeCopy"), retain = method(owner, "retainCopy");
+    const reader = captureOriginalTrainingModelReader(original); storageNeed(!!reader);
+    const scopeDigest = "sha256:" + createHash("sha256").update(JSON.stringify({definition: original.definition,
+      observed, configuration, limits, maximum})).digest("hex");
+    const record: Copies = {original, observed, configuration, scopeDigest, limits,
+      states: {model: "bound", inputs: "bound", "worker-output": "bound", "parent-output": "bound", overhead: "bound"},
+      current: original.assertCurrent.bind(original), allowed: original.assertAllowed.bind(original), readModel: reader.readModelSelection.bind(reader),
+      resource, charge, retain, prepared: false, preparationAttempted: false, modelClaimed: false, lost: false};
+    const token = Object.freeze({}) as OriginalTrainingCopyReservations;
+    usedCopyOwners.add(owner); usedCopySources.add(original); copyReservations.set(token, record); return token;
+  } catch {throw storageUnavailable();}
+}
+/** Reserve overhead and both output copies as well as inputs BEFORE Model copy.
+ * These are original accounting acknowledgements, not proof of physical capacity. */
+export function prepareOriginalTrainingCopyReservations(token: OriginalTrainingCopyReservations): Promise<void> {
+  const record = copyRecord(token);
+  if (record.preparationAttempted) {if (record.flight) record.lost = true; return Promise.reject(storageUnavailable());}
+  record.preparationAttempted = true;
+  return copyOperation(record, async () => {
+    for (const role of otherCopyRoles) await chargeCopy(record, role);
+    resourceCurrent(record); record.prepared = true;
+  });
+}
+/** Retain known non-Model charges after business withdrawal. The original source
+ * channel alone owns Model retention. Neither path releases bytes or capacity. */
+export function retainOriginalTrainingCopyReservations(token: OriginalTrainingCopyReservations): Promise<void> {
+  const record = copyRecord(token);
+  return copyOperation(record, async () => {
+    for (const role of otherCopyRoles) if (record.states[role] === "charged") await retainCopy(record, role);
+  });
+}
+/** Adapter for the existing original source launch, not an independent grant. */
+export function originalTrainingModelCopyReservation(token: OriginalTrainingCopyReservations): OriginalTrainingSourceReservation {
+  const record = copyRecord(token); storageNeed(!record.modelClaimed && !record.lost); record.modelClaimed = true;
+  const matching = (purpose?: "effect" | "retain") => {
+    const context = reservationContext.getStore();
+    storageNeed(!!context && context.original === record.original && context.observed === record.observed &&
+      (purpose === undefined || context.purpose === purpose));
+    resourceCurrent(record); storageNeed(record.prepared && otherCopyRoles.every(role => record.states[role] === "charged" ||
+      context.purpose === "retain" && record.states[role] === "retained"));
+  };
+  return Object.freeze({configuration: record.configuration,
+    assertCurrent() {matching();},
+    chargeSourceCopy(bytes: number) {matching("effect"); storageNeed(bytes === record.limits.model); return copyOperation(record, () => chargeCopy(record, "model"));},
+    retainSourceCopy(bytes: number) {matching("retain"); storageNeed(bytes === record.limits.model); return copyOperation(record, () => retainCopy(record, "model"));}});
 }
 declare const sourceLaunchBrand: unique symbol;
 export interface OriginalTrainingSourceLaunch {readonly [sourceLaunchBrand]: true}
@@ -118,16 +270,12 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
     definition.request.baseModel.localPath === observed.logicalPath);
   need(!!reservation && typeof reservation === "object" && !types.isProxy(reservation));
   const property = Object.getOwnPropertyDescriptor(reservation, "configuration"); need(!!property && "value" in property);
-  const config = data(property.value, ["freshParent", "freshName", "maximumCopyBytes", "bufferBytes", "preparationMs"]);
-  need(local(config.freshParent) && typeof config.freshName === "string" && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}$/.test(config.freshName) &&
-    !/[.]$/.test(config.freshName) && !/^(?:CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)/i.test(config.freshName));
-  for (const [key, low, high] of [["maximumCopyBytes", 1, Number.MAX_SAFE_INTEGER], ["bufferBytes", 4096, 1_048_576],
-      ["preparationMs", 1, 86_400_000]] as const) need(Number.isSafeInteger(config[key]) && (config[key] as number) >= low && (config[key] as number) <= high);
-  const maximum = config.maximumCopyBytes as number;
+  const config = sourceCopyConfiguration(property.value), maximum = config.maximumCopyBytes;
   need(observed.files.reduce((sum, row) => sum + row.sizeBytes, 0) <= maximum);
   const assertReservation = method(reservation, "assertCurrent"), charge = method(reservation, "chargeSourceCopy"), retain = method(reservation, "retainSourceCopy");
-  const reservationCurrent = () => {
-    const value = assertReservation();
+  const effectContext = {original, observed, purpose: "effect" as const}, retainContext = {original, observed, purpose: "retain" as const};
+  const reservationCurrent = (accounting = false) => {
+    const value = reservationContext.run(accounting ? retainContext : effectContext, assertReservation);
     if (types.isPromise(value)) void Promise.prototype.then.call(value, undefined, () => {});
     need(value === undefined);
   };
@@ -170,13 +318,13 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
         // Accounting survives requester withdrawal. It grants no new copy,
         // dispatch, deletion or disk credit. Unknown acknowledgement never retries.
         need(state === "charged" || state === "allocated" || state === "sealed" || state === "created" || state === "dispatched"); state = "retaining";
-        reservationCurrent(); const result = retain(maximum); need(types.isPromise(result));
-        need(await result === undefined); reservationCurrent(); state = "retained"; return;
+        reservationCurrent(true); const result = reservationContext.run(retainContext, () => retain(maximum)); need(types.isPromise(result));
+        need(await result === undefined); reservationCurrent(true); state = "retained"; return;
       }
       await permit();
       if (phase === "charge") {
         need(state === "bound" && (!owner.bootstrapRequired || definitionComplete)); state = "charging";
-        const result = charge(maximum); need(types.isPromise(result)); need(await result === undefined);
+        const result = reservationContext.run(effectContext, () => charge(maximum)); need(types.isPromise(result)); need(await result === undefined);
         await permit(); state = "charged";
       } else if (phase === "allocate") {need(state === "charged"); state = "allocated";}
       else if (phase === "copy") {need(state === "allocated" && copies < observed.files.length); copies++;}

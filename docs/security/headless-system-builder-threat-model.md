@@ -3318,3 +3318,23 @@ This source connection grants none of those capabilities or model-quality result
   IDs under original file/lease/Native locks. It keeps the file executor check,
   never changes a Native thread and rejects thread substitution. Returned work
   still requires its actual current executor thread after borrow.
+
+### Original training storage-purpose delegation
+
+- Threats: the Model-only reservation funds unrelated input/output copies; a
+  copied adapter charges another task; mutable policy or callback replacement
+  expands limits; timeout or lost acknowledgement retries or frees storage.
+- Controls: genuine original request and completed observation, one captured
+  per-session reservation owner, immutable closed purpose bounds and checked
+  aggregate arithmetic. Parent output covers worker output. Precharge non-Model
+  purposes; the actual Model launch supplies its private asynchronous context.
+  Charge repeats source/business admission; owned retention grants no new copy.
+  Capture original methods and require void Promise acknowledgements once per
+  purpose. Hold pending callbacks after outward timeout; uncertainty stays fenced.
+- Evidence: actual synthetic source-file/launch integration and focused malformed,
+  accessor/proxy, foreign/copied adapter, mutation, drift, reentry, deadline and
+  invalid acknowledgement cases, with existing source/runtime regressions.
+- Residual scope: the owner must independently supply measured exclusive global
+  storage reservation and Native protection. This binder creates neither. Worker
+  resource transport, concrete producer, destination/crash integrity, actual
+  training, Save and host qualification remain pending; defaults are unchanged.

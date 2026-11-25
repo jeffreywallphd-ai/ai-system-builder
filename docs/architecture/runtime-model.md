@@ -3557,3 +3557,31 @@ Native owner thread IDs are captured with the genuine prepared file snapshot.
 The passive unstarted proof requires those exact unchanged values under all
 original locks; it does not move a startup-thread owner. A returned run still
 requires the current file executor thread after the genuine borrow handoff.
+
+### Original parent storage-purpose binding
+
+The private Node source owner can subdivide one already-reserved training budget
+into five closed purposes: Model, inputs, worker output, parent output and storage
+overhead. All values and the aggregate ceiling are explicit configuration. The
+parent-output bound covers the worker-output bound. Safe-integer totals and known
+Model/input sizes are checked before accounting callbacks or source effects.
+
+The binding requires the genuine original request and its completed Model
+observation. It captures immutable policy, original callback receivers and a scope
+digest; a per-session owner and original source cannot be rebound. Non-Model
+purposes are charged before the existing Model source channel can proceed. The
+Model adapter checks that channel's private asynchronous original-request context,
+so copying its methods cannot redirect a grant to another source. The existing
+source descriptor and Native protocol retain their exact Model-only meaning.
+
+Charge repeats current business/source admission; owned retention does not need
+new business permission. Each purpose has one acknowledged charge and retention.
+Reentry, missing/invalid acknowledgements, source drift and deadlines retain
+uncertain accounting and deny further effects. The existing preparation interval
+bounds outward waiting; the original pending callback remains held until it
+actually returns. Timeout grants no stopped-IO proof, retry, release or credit.
+
+This is a correlation/delegation boundary for an ALREADY measured exclusive
+reservation, not its concrete global capacity implementation or Native proof.
+Real durable capacity, worker resource transport, full producer and protected
+result lifecycle remain pending before actual training and host qualification.

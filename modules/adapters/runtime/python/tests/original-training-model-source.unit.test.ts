@@ -11,6 +11,9 @@ import {createOriginalTrainingModelSourceFactory, assertOriginalTrainingModelObs
   bindOriginalTrainingSourceLaunch, captureOriginalTrainingSourceLaunch, type OriginalTrainingSourceReservation,
   type OriginalTrainingModelObservation, type ObservedOriginalTrainingModelSource,
   type OriginalTrainingModelObservationPolicy} from "../client/originalTrainingModelSource";
+import {bindOriginalTrainingCopyReservations, prepareOriginalTrainingCopyReservations, retainOriginalTrainingCopyReservations,
+  originalTrainingModelCopyReservation, type OriginalTrainingCopyPolicy, type OriginalTrainingCopyReservationOwner,
+  type OriginalTrainingStorageRole} from "../client/originalTrainingModelSource";
 
 type IO = NonNullable<Parameters<typeof createOriginalTrainingModelSourceFactory>[1]>;
 const realIO: IO = {lstat, open, opendir, realpath};
@@ -94,6 +97,165 @@ async function launchFixture(t: TestContext, loseCharge = false) {
   const token = bindOriginalTrainingSourceLaunch(f.original!, f.observed!, reservation);
   return {...f, calls, hooks, reservation, token, loseReservation() {live = false;}};
 }
+
+async function copyBudgetFixture(t: TestContext, preparationMs = 5000) {
+  let signal!: () => void, release!: () => void;
+  const observed = new Promise<void>(resolve => {signal = resolve;}), held = new Promise<void>(resolve => {release = resolve;});
+  let preparing: Promise<unknown> | undefined;
+  t.after(async () => {release(); await preparing;});
+  const f = await fixture(t, {onObserved: async () => {signal(); await held;}});
+  preparing = f.session!.prepare(); await Promise.race([observed, preparing.then(() => {throw Error("Source binding was not reached");})]);
+  const calls: {action: string; role: OriginalTrainingStorageRole; bytes: number; scope: string}[] = [];
+  const hooks: {charge?: (role: OriginalTrainingStorageRole) => Promise<void>; retain?: () => Promise<void>} = {};
+  const state = {live: true};
+  const policy: OriginalTrainingCopyPolicy = {modelCopy: {freshParent: f.root, freshName: "copy-budget-model", maximumCopyBytes: 65_536,
+    bufferBytes: 4096, preparationMs}, maximumInputCopyBytes: 65_536, maximumWorkerOutputBytes: 131_072,
+    maximumParentOutputBytes: 131_072, storageOverheadBytes: 4096, maximumReservedBytes: 524_288};
+  const reservation: OriginalTrainingCopyReservationOwner = {
+    assertCurrent() {assert.equal(this, reservation); assert.equal(state.live, true);},
+    async chargeCopy(role, bytes, scope) {assert.equal(this, reservation); calls.push({action: "charge", role, bytes, scope}); await hooks.charge?.(role);},
+    async retainCopy(role, bytes, scope) {assert.equal(this, reservation); calls.push({action: "retain", role, bytes, scope}); await hooks.retain?.();},
+  };
+  const bind = (raw = policy, owner = reservation) => bindOriginalTrainingCopyReservations(f.original!, f.observed!, raw, owner);
+  return {...f, calls, hooks, policy, reservation, reservationState: state, bind};
+}
+
+test("training copy roles precharge the complete declared plan and use the actual Model launch owner", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind(), adapter = originalTrainingModelCopyReservation(budget);
+  assert.equal(f.calls.length, 0); await prepareOriginalTrainingCopyReservations(budget);
+  assert.deepEqual(f.calls.map(x => [x.role, x.bytes]), [["overhead",4096],["inputs",65536],["worker-output",131072],["parent-output",131072]]);
+  const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!,f.observed!,adapter));
+  await source.acknowledge("charge",65536); await source.acknowledge("allocate",65536);
+  for (const _ of f.observed!.files) await source.acknowledge("copy",65536);
+  await source.acknowledge("seal",65536); await source.acknowledge("create",65536); await source.acknowledge("dispatch",65536);
+  assert.equal(f.calls[4].role,"model"); assert.equal(new Set(f.calls.map(x => x.scope)).size,1);
+  assert.match(f.calls[0].scope,/^sha256:[a-f0-9]{64}$/);
+  f.state.current=false; f.state.allowed=false; f.state.modelRead=false;
+  await source.acknowledge("retain",65536); await retainOriginalTrainingCopyReservations(budget);
+  assert.equal(f.calls.filter(x => x.action === "retain").length,5);
+  await retainOriginalTrainingCopyReservations(budget); assert.equal(f.calls.length,10);
+  await assert.rejects(() => source.acknowledge("retain",65536)); assert.equal(f.calls.length,10);
+});
+
+test("training copy Model adapter requires all other roles and refuses direct or foreign-source use", async t => {
+  const f=await copyBudgetFixture(t), budget=f.bind(), adapter=originalTrainingModelCopyReservation(budget);
+  assert.throws(() => adapter.assertCurrent());
+  const source=captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!,f.observed!,adapter));
+  await assert.rejects(() => source.acknowledge("charge",65536)); assert.equal(f.calls.length,0);
+  const a=await copyBudgetFixture(t), b=await copyBudgetFixture(t), other=a.bind();
+  await prepareOriginalTrainingCopyReservations(other);
+  const copiedAdapter={...originalTrainingModelCopyReservation(other)};
+  const wrong=captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(b.original!,b.observed!,copiedAdapter));
+  await assert.rejects(() => wrong.acknowledge("charge",65536)); assert.equal(a.calls.length,4); assert.equal(b.calls.length,0);
+});
+
+test("training copy binding rejects fake observations, owner reuse and invalid or overflowing budgets before effects", async t => {
+  const f=await copyBudgetFixture(t);
+  assert.throws(() => bindOriginalTrainingCopyReservations({...f.original!},f.observed!,f.policy,f.reservation));
+  assert.throws(() => bindOriginalTrainingCopyReservations(f.original!,{...f.observed!},f.policy,f.reservation));
+  for (const update of [{maximumReservedBytes:1},{maximumInputCopyBytes:1},{maximumParentOutputBytes:1},
+    {storageOverheadBytes:0},{maximumWorkerOutputBytes:Number.MAX_SAFE_INTEGER,maximumParentOutputBytes:Number.MAX_SAFE_INTEGER},
+    {extra:"unsupported"},{maximumInputCopyBytes:NaN}]) assert.throws(() => f.bind({...f.policy,...update}));
+  assert.equal(f.calls.length,0); const budget=f.bind();
+  assert.throws(() => f.bind()); assert.throws(() => originalTrainingModelCopyReservation({} as never));
+  originalTrainingModelCopyReservation(budget); assert.throws(() => originalTrainingModelCopyReservation(budget));
+});
+
+test("training copy binding captures immutable policy and original method receivers", async t => {
+  const f=await copyBudgetFixture(t), budget=f.bind();
+  (f.policy as {maximumInputCopyBytes:number}).maximumInputCopyBytes=1;
+  (f.policy.modelCopy as {maximumCopyBytes:number}).maximumCopyBytes=1;
+  f.reservation.chargeCopy=async () => {throw Error("Replacement charge must not run");};
+  f.reservation.retainCopy=async () => {throw Error("Replacement retain must not run");};
+  await prepareOriginalTrainingCopyReservations(budget); assert.equal(f.calls[1].bytes,65536);
+  await retainOriginalTrainingCopyReservations(budget); assert.equal(f.calls.length,8);
+});
+
+test("training copy permission drift and a lost charge retain the original attempt and never retry", async t => {
+  for (const mode of ["permission","revision","lost"] as const) {
+    const f=await copyBudgetFixture(t), budget=f.bind();
+    f.hooks.charge=async () => {
+      if(mode==="permission") f.state.allowed=false;
+      else if(mode==="revision") f.state.selection={...f.state.selection,modelUpdatedAt:"2030-01-01T00:00:00.000Z"};
+      else throw Error("Synthetic unknown charge");
+    };
+    await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));
+    await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));
+    await assert.rejects(() => retainOriginalTrainingCopyReservations(budget));
+    assert.equal(f.calls.length,1);
+  }
+});
+
+test("training copy reentry cannot heal the original charge even if its callback catches the denial", async t => {
+  const f=await copyBudgetFixture(t), budget=f.bind();
+  f.hooks.charge=async () => {await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));};
+  await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));
+  assert.equal(f.calls.length,1);
+});
+
+for (const mode of ["before-charge", "final-retain"] as const)
+  test(`training copy queued reentry ${mode} denies the next effect or final success`, async t => {
+    const f = await copyBudgetFixture(t);
+    let checks = 0, retained = 0, armed = false, retry: Promise<void> | undefined;
+    let budget: ReturnType<typeof f.bind>;
+    f.hooks.retain = async () => {retained++;};
+    f.reservation.assertCurrent = function () {
+      assert.equal(this, f.reservation); assert.equal(f.reservationState.live, true);
+      checks++;
+      if (!armed && (mode === "before-charge" ? checks === 3 : retained === 4)) {
+        armed = true;
+        queueMicrotask(() => {
+          retry = assert.rejects(() => mode === "before-charge" ?
+            prepareOriginalTrainingCopyReservations(budget) : retainOriginalTrainingCopyReservations(budget));
+        });
+      }
+    };
+    budget = f.bind();
+    if (mode === "before-charge") {
+      await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));
+      assert.equal(f.calls.length, 0, "No charge may follow a denied queued reentry");
+    } else {
+      await prepareOriginalTrainingCopyReservations(budget);
+      await assert.rejects(() => retainOriginalTrainingCopyReservations(budget));
+      assert.equal(f.calls.filter(x => x.action === "retain").length, 4);
+    }
+    assert.equal(armed, true); assert.ok(retry); await retry;
+    const calls = f.calls.length;
+    await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));
+    await assert.rejects(() => retainOriginalTrainingCopyReservations(budget));
+    assert.equal(f.calls.length, calls);
+  });
+
+test("training copy deadline retains the actual held accounting operation and denies late progress", async t => {
+  const f=await copyBudgetFixture(t,100), budget=f.bind();let release!:()=>void,entered!:()=>void;
+  const held=new Promise<void>(resolve=>{release=resolve;}), started=new Promise<void>(resolve=>{entered=resolve;});
+  f.hooks.charge=async()=>{entered();await held;}; t.after(release);
+  const pending=prepareOriginalTrainingCopyReservations(budget); const denied=assert.rejects(()=>pending); await started; await denied;
+  await assert.rejects(()=>prepareOriginalTrainingCopyReservations(budget)); assert.equal(f.calls.length,1);
+  release(); await new Promise(resolve=>setImmediate(resolve)); assert.equal(f.calls.length,1);
+  await assert.rejects(()=>retainOriginalTrainingCopyReservations(budget));
+});
+
+test("training copy binding rejects policy and owner accessors without invoking them",async t=>{
+  const f=await copyBudgetFixture(t);let getters=0;
+  const invalid={...f.policy};Object.defineProperty(invalid,"maximumReservedBytes",{enumerable:true,get(){getters++;return 524288;}});
+  assert.throws(()=>f.bind(invalid));
+  const invalidOwner={...f.reservation};Object.defineProperty(invalidOwner,"chargeCopy",{enumerable:true,get(){getters++;return f.reservation.chargeCopy;}});
+  assert.throws(()=>f.bind(f.policy,invalidOwner));
+  assert.throws(()=>f.bind(f.policy,new Proxy(f.reservation,{})));
+  assert.equal(getters,0);assert.equal(f.calls.length,0);
+});
+
+test("training copy accounting requires known void promise acknowledgements",async t=>{
+  for(const mode of ["sync","false","async-current"] as const){
+    const f=await copyBudgetFixture(t);
+    if(mode==="async-current") f.reservation.assertCurrent=async()=>{};
+    else f.reservation.chargeCopy=(() => mode==="sync" ? undefined : Promise.resolve(false)) as unknown as typeof f.reservation.chargeCopy;
+    const budget=f.bind();await assert.rejects(()=>prepareOriginalTrainingCopyReservations(budget));
+    await assert.rejects(()=>prepareOriginalTrainingCopyReservations(budget));
+    assert.equal(f.calls.length,0);
+  }
+});
 
 test("source bootstrap transfers exact original definition bytes before any charged effect", async t => {
   const f = await launchFixture(t), source = captureOriginalTrainingSourceLaunch(f.token, true);

@@ -1384,3 +1384,23 @@ unknown IO and missing genuine ownership stay pending. No default host is enable
 The passive unstarted proof preserves each captured Native thread ID under the
 original locks. The Model can still belong to the startup thread. Returned runs
 retain the current executor-thread check after their actual borrow handoff.
+
+### Original training storage purposes
+
+`bindOriginalTrainingCopyReservations` consumes an already measured exclusive
+parent reservation. It binds the genuine original request and completed Model
+observation to explicit Model, input, worker-output, parent-output and overhead
+bounds under one declared total. It creates no quota or Native custody. The
+original parent must still supply a qualified reservation implementation.
+
+Prepare non-Model purposes before the source launch. The Model adapter works only
+inside that launch's exact original asynchronous context, including after method
+copying. It cannot fund another request. Captured callbacks acknowledge each
+purpose once. Retention performs accounting after business withdrawal and grants
+no deletion, capacity credit or new copy. An outward preparation deadline retains
+the actual pending callback; late completion cannot heal an uncertain purpose.
+
+The existing Model-only wire format and default hosts are unchanged. Input/output
+worker transport, real protected capacity, complete producer, actual bounded
+training, destination/crash integrity, separate Save and host qualification remain
+pending. Declared bounds and callback acknowledgements supply none of those passes.
