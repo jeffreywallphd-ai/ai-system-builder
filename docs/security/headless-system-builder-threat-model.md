@@ -3338,3 +3338,14 @@ This source connection grants none of those capabilities or model-quality result
   storage reservation and Native protection. This binder creates neither. Worker
   resource transport, concrete producer, destination/crash integrity, actual
   training, Save and host qualification remain pending; defaults are unchanged.
+
+The actual foundation consumes the genuine adapter through the unchanged source
+factory. Only exact private source-definition/source-charge contexts admit initial
+metadata. Later allocation/copy/create/dispatch contexts require known precharges.
+One existing charge flight prepares non-Model purposes and the Model before ACK;
+legacy Model-only owners and wire semantics stay unchanged. Reentry, revocation,
+drift, late completion and partial charge failure cannot issue that ACK, retry,
+credit or classify the reservation as unused. Hold the entire original budget
+and actual pending operation even if the Model itself never charged. Foundation
+fixtures use small real source files and an inert controller; actual global quota,
+Native/controller execution, full training and host qualification remain pending.

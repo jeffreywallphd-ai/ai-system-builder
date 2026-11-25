@@ -1594,3 +1594,13 @@ adapter is usable only in that launch's private original context. Retain known
 charges after withdrawal without capacity credit. Unknown/reentrant/deadline
 outcomes never retry or heal when a late callback returns. This changes no wire
 format, resource value, worker, public operation or recovery policy.
+
+The existing original controller starts before its definition/charge exchange.
+Keep that topology: private source-definition/source-charge contexts allow only
+original metadata preparation before charges. The genuine Model charge precharges
+non-Model purposes, then the Model, in one existing flight and deadline before
+its ACK permits copying or Job/worker creation. Known manual precharges are not
+repeated. No new runtime option, source-owner method, process or wire schema is
+introduced. Any partial, lost or delayed charge retains the complete reserved
+owner and actual pending operation; Model-not-charged does not prove unused
+resources. Default hosts and all physical/full-producer obligations remain.

@@ -13,6 +13,7 @@ import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput} 
 import {TaskType} from "../../../../contracts/runtime";
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import type {OriginalTrainingSourceReservationFactory, OriginalTrainingSourceReservation} from "../client/originalTrainingModelSource";
+import {bindOriginalTrainingCopyReservations, originalTrainingModelCopyReservation} from "../client/originalTrainingModelSource";
 import type {OriginalTrainingExitConfiguration} from "../client/approvedTrainingTaskSession";
 import {createFilesystemTrainingResultFileByteStorageAdapter} from "../../../storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
 import type {OrganizationId} from "../../../../contracts/organization";
@@ -526,6 +527,69 @@ test("foundation source launch carries actual observation and retains charged co
   assert.deepEqual(f.controller.sourcePhases, ["definition", "charge", "allocate", "copy", "copy", "copy", "seal", "create", "dispatch", "retain"]);
   assert.equal(f.controller.stops, 1);
 });
+
+for (const mode of ["success", "permission-loss", "unknown-charge", "late-role-failure", "model-charge-failure", "timeout"] as const)
+  test(`foundation copy-role preparation ${mode} gates Model copy and worker creation`, async t => {
+    const f = await observationFoundation(t, mode !== "success"), calls: string[] = [];
+    let caller = true, entered!: () => void, release!: () => void;
+    const reached = new Promise<void>(resolve => {entered = resolve;});
+    const held = new Promise<void>(resolve => {release = resolve;});
+    t.after(release);
+    const factory: OriginalTrainingSourceReservationFactory = (original, observed) => {
+      assert.equal(f.controller.starts, 0);
+      const token = bindOriginalTrainingCopyReservations(original, observed, {
+        modelCopy: {freshParent: path.dirname(f.model), freshName: "role-startup", maximumCopyBytes: 65_536,
+          // Exercise the copy deadline before the inert controller's 30 ms guard.
+          bufferBytes: 4096, preparationMs: mode === "timeout" ? 5 : 5000},
+        maximumInputCopyBytes: 65_536, maximumWorkerOutputBytes: 131_072,
+        maximumParentOutputBytes: 131_072, storageOverheadBytes: 4096, maximumReservedBytes: 524_288,
+      }, {
+        assertCurrent() {},
+        async chargeCopy(role) {
+          calls.push("charge:" + role);
+          if (role === "overhead") {entered(); await held; if (mode === "unknown-charge") throw Error("Synthetic lost charge acknowledgement");}
+          assert.equal(f.controller.starts, 1);
+          if (mode === "late-role-failure" && role === "worker-output" || mode === "model-charge-failure" && role === "model")
+            throw Error("Synthetic lost later charge acknowledgement");
+        },
+        async retainCopy(role) {calls.push("retain:" + role);},
+      });
+      return originalTrainingModelCopyReservation(token);
+    };
+    const port = f.foundation.createApprovedTrainingPort(profile, {
+      allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024, maximumDurationMs: 5000, bufferBytes: 8,
+    }, factory);
+    const session = port.createSession(f.selected, {isCurrent: () => caller, stillAllowed: async () => caller}, f.reader)!;
+    const preparing = session.prepare();
+    try {
+      await Promise.race([reached, preparing.then(() => {throw Error("Startup ended before original role precharges were reached");})]);
+      assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 0); assert.deepEqual(f.calls, []);
+        assert.equal(f.controller.sourcePhases.some(x => ["allocate", "copy", "seal", "create", "dispatch"].includes(x)), false);
+      assert.deepEqual(calls, ["charge:overhead"]);
+      if (mode === "permission-loss") caller = false;
+      if (mode !== "timeout") release();
+      assert.equal(await preparing, mode === "success" ? "unavailable" : "unconfirmed");
+      if (mode === "success") {
+        assert.deepEqual(calls, ["charge:overhead", "charge:inputs", "charge:worker-output", "charge:parent-output", "charge:model"]);
+        assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1);
+        // Source launch is real software wiring; the inert peer supplies no producer/training pass.
+        assert.equal(f.calls.filter(x => x === "/training/original/prepare").length, 1);
+        caller = false;
+        const stopped = f.foundation.supervisor.stop(); await new Promise(resolve => setImmediate(resolve));
+        f.controller.closeWithProof(); await stopped;
+        assert.equal(calls[calls.length - 1], "retain:model");
+      } else {
+        assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 0); assert.deepEqual(f.calls, []);
+        assert.equal(f.controller.sourcePhases.some(x => ["allocate", "copy", "seal", "create", "dispatch"].includes(x)), false);
+        const expected = mode === "late-role-failure" ? ["charge:overhead", "charge:inputs", "charge:worker-output"] :
+          mode === "model-charge-failure" ? ["charge:overhead", "charge:inputs", "charge:worker-output", "charge:parent-output", "charge:model"] : ["charge:overhead"];
+        assert.deepEqual(calls, expected); assert.equal(await session.settle(), false);
+        assert.equal(port.createSession({...f.selected, requestId: workspace}, {isCurrent: () => true, stillAllowed: async () => true}, f.reader), undefined);
+        release(); await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(calls, expected); assert.equal(f.controller.starts, 1);
+      }
+    } finally {release(); await preparing;}
+  });
 
 test("source-bound startup cannot adopt an existing source-free worker", async t => {
   const f = await observationFoundation(t);

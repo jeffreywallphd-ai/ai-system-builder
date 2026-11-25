@@ -1393,7 +1393,12 @@ observation to explicit Model, input, worker-output, parent-output and overhead
 bounds under one declared total. It creates no quota or Native custody. The
 original parent must still supply a qualified reservation implementation.
 
-Prepare non-Model purposes before the source launch. The Model adapter works only
+The original controller may exchange definition metadata before charging. Its
+genuine Model adapter precharges overhead, inputs and both output copies, then
+the Model, in one original flight/deadline before acknowledging Model copying.
+Manual precharges remain supported. Partial or unknown accounting retains the
+complete already-reserved budget; an uncharged Model never proves unused custody.
+The Model adapter works only
 inside that launch's exact original asynchronous context, including after method
 copying. It cannot fund another request. Captured callbacks acknowledge each
 purpose once. Retention performs accounting after business withdrawal and grants

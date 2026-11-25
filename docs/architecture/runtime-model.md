@@ -3569,7 +3569,14 @@ Model/input sizes are checked before accounting callbacks or source effects.
 The binding requires the genuine original request and its completed Model
 observation. It captures immutable policy, original callback receivers and a scope
 digest; a per-session owner and original source cannot be rebound. Non-Model
-purposes are charged before the existing Model source channel can proceed. The
+purposes are charged before the existing Model copy charge is acknowledged.
+The original controller and definition metadata can precede charging. Private
+source-definition/source-charge contexts permit no allocation or worker effect.
+The genuine Model charge lazily precharges all non-Model purposes and then the
+Model within one flight/deadline, skipping only already-known manual precharges.
+Native file inspection, allocation, Job/worker creation and dispatch remain after
+the original charge ACK. Partial or unknown charges retain the entire reserved
+owner and actual pending operations; Model-not-charged is not an unused proof. The
 Model adapter checks that channel's private asynchronous original-request context,
 so copying its methods cannot redirect a grant to another source. The existing
 source descriptor and Native protocol retain their exact Model-only meaning.

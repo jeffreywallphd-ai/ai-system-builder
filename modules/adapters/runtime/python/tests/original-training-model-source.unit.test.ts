@@ -137,17 +137,57 @@ test("training copy roles precharge the complete declared plan and use the actua
   await assert.rejects(() => source.acknowledge("retain",65536)); assert.equal(f.calls.length,10);
 });
 
-test("training copy Model adapter requires all other roles and refuses direct or foreign-source use", async t => {
+test("training copy Model adapter lazily precharges roles and refuses direct or foreign-source use", async t => {
   const f=await copyBudgetFixture(t), budget=f.bind(), adapter=originalTrainingModelCopyReservation(budget);
   assert.throws(() => adapter.assertCurrent());
   const source=captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!,f.observed!,adapter));
-  await assert.rejects(() => source.acknowledge("charge",65536)); assert.equal(f.calls.length,0);
+  await source.acknowledge("charge",65536);
+  assert.deepEqual(f.calls.map(x => x.role),["overhead","inputs","worker-output","parent-output","model"]);
   const a=await copyBudgetFixture(t), b=await copyBudgetFixture(t), other=a.bind();
   await prepareOriginalTrainingCopyReservations(other);
   const copiedAdapter={...originalTrainingModelCopyReservation(other)};
   const wrong=captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(b.original!,b.observed!,copiedAdapter));
   await assert.rejects(() => wrong.acknowledge("charge",65536)); assert.equal(a.calls.length,4); assert.equal(b.calls.length,0);
 });
+
+test("original source definition metadata grants no copy before lazy role charges", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind();
+  const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!, f.observed!,
+    originalTrainingModelCopyReservation(budget)), true);
+  const part = await source.readDefinition(0); assert.equal(part.final, true); assert.equal(f.calls.length, 0);
+  await source.acknowledge("charge", 65_536);
+  assert.deepEqual(f.calls.map(x => x.role), ["overhead", "inputs", "worker-output", "parent-output", "model"]);
+  const early = await copyBudgetFixture(t);
+  const premature = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(early.original!, early.observed!,
+    originalTrainingModelCopyReservation(early.bind())));
+  await assert.rejects(() => premature.acknowledge("allocate", 65_536));
+  await assert.rejects(() => premature.acknowledge("charge", 65_536)); assert.equal(early.calls.length, 0);
+});
+
+test("lazy original charge keeps caught preparation reentry sticky without a nested flight", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind();
+  const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!, f.observed!,
+    originalTrainingModelCopyReservation(budget)));
+  f.hooks.charge = async role => {if (role === "overhead") await assert.rejects(() => prepareOriginalTrainingCopyReservations(budget));};
+  await assert.rejects(() => source.acknowledge("charge", 65_536));
+  await assert.rejects(() => source.acknowledge("allocate", 65_536));
+  await assert.rejects(() => source.acknowledge("retain", 65_536)); assert.equal(f.calls.length, 1);
+});
+
+for (const failed of ["worker-output", "model"] as const)
+  test(`lazy original ${failed} charge failure never acknowledges Model copying or credits partial roles`, async t => {
+    const f = await copyBudgetFixture(t);
+    const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!, f.observed!,
+      originalTrainingModelCopyReservation(f.bind())));
+    f.hooks.charge = async role => {if (role === failed) throw Error("Synthetic lost later acknowledgement");};
+    await assert.rejects(() => source.acknowledge("charge", 65_536));
+    const roles = f.calls.map(x => x.role);
+    assert.deepEqual(roles, failed === "worker-output" ? ["overhead", "inputs", "worker-output"] :
+      ["overhead", "inputs", "worker-output", "parent-output", "model"]);
+    for (const phase of ["allocate", "create", "dispatch", "retain"] as const)
+      await assert.rejects(() => source.acknowledge(phase, 65_536));
+    assert.deepEqual(f.calls.map(x => x.role), roles);
+  });
 
 test("training copy binding rejects fake observations, owner reuse and invalid or overflowing budgets before effects", async t => {
   const f=await copyBudgetFixture(t);
