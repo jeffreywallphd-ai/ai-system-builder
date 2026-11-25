@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import math
 import re
+import struct
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,6 +14,178 @@ RECURRENT_KEY_PATTERNS = ("recurrent", "gru", "lstm")
 MAX_SAFETENSORS_INDEX_BYTES = 8 * 1024 * 1024
 MAX_SAFETENSORS_INDEX_MEMBERS = 100_000
 WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
+
+_PROTECTED_RESULT_NAMES = frozenset(("config.json", "generation_config.json", "tokenizer.json",
+    "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt",
+    "model.safetensors", "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"))
+_PROTECTED_TENSOR_WIDTHS = {"BOOL":1,"U8":1,"I8":1,"I16":2,"I32":4,"I64":8,
+    "F16":2,"BF16":2,"F32":4,"F64":8}
+
+
+def _result_need(value: bool) -> None:
+    if value is not True:
+        raise ValueError("The protected training result structure is unavailable.")
+
+
+def _result_json(raw: bytes) -> dict:
+    def pairs(rows):
+        result = {}
+        for key,value in rows:
+            _result_need(key not in result); result[key] = value
+        return result
+    def constant(_): raise ValueError("Invalid JSON constant")
+    def number(raw):
+        value = float(raw); _result_need(math.isfinite(value)); return value
+    value = json.loads(raw.decode("utf8"),object_pairs_hook=pairs,parse_constant=constant,parse_float=number)
+    _result_need(type(value) is dict)
+    return value
+
+
+def _protected_tensor_header(raw: bytes, size: int) -> dict[str, list[int]]:
+    _result_need(len(raw) >= 8)
+    length = struct.unpack("<Q",raw[:8])[0]
+    _result_need(0 < length <= 1024**2 and length % 8 == 0 and len(raw) == 8+length <= size
+        and raw[8:9] == b"{")
+    header = _result_json(raw[8:]); metadata = header.pop("__metadata__",None)
+    _result_need(metadata == {"format":"pt"} and 1 <= len(header) <= 4096)
+    shapes,intervals = {},[]
+    for name,row in header.items():
+        _result_need(type(name) is str and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,511}",name) is not None
+            and type(row) is dict and set(row) == {"dtype","shape","data_offsets"})
+        dtype,shape,offsets = row["dtype"],row["shape"],row["data_offsets"]
+        _result_need(type(dtype) is str and dtype in _PROTECTED_TENSOR_WIDTHS
+            and type(shape) is list and len(shape) <= 32 and type(offsets) is list and len(offsets) == 2
+            and all(type(n) is int and 0 <= n <= size for n in offsets))
+        width = _PROTECTED_TENSOR_WIDTHS[dtype]; count,stride = 1,width*8
+        for dimension in shape:
+            _result_need(type(dimension) is int and 0 <= dimension <= 2**53-1)
+            if dimension:
+                _result_need(stride <= (2**64-1)//dimension); stride *= dimension
+            count *= dimension
+        start,end = offsets
+        _result_need(start <= end and end-start == count*width)
+        intervals.append((start,end)); shapes[name] = shape
+    following = 0
+    for start,end in sorted(intervals):
+        _result_need(start == following); following = end
+    _result_need(following == size-len(raw))
+    return shapes
+
+
+def _protected_code_declarations(value) -> None:
+    if type(value) is dict:
+        for key,item in value.items():
+            if key in ("auto_map","auto_mapping","_auto_class","custom_pipelines"):
+                _result_need(item is None or type(item) is dict and not item)
+            elif key == "trust_remote_code":
+                _result_need(item is None or item is False)
+            _protected_code_declarations(item)
+    elif type(value) is list:
+        for item in value:_protected_code_declarations(item)
+
+
+def validate_protected_training_output_chunks(chunks, files, *, method: str,
+        maximum_copy_bytes: int, maximum_metadata_bytes: int, chunk_bytes: int) -> dict[str, Any]:
+    """Pure structural data checks, never Native custody or task/Save authority.
+
+    The original producer must separately bind the genuine one-use Native stream,
+    descriptors and live authority. Caller-supplied bytes cannot supply that proof.
+    This helper opens no paths, runs no model/SDK and retains no tensor body.
+    """
+    try:
+        _result_need(type(method) is str and method in ("full-finetune","lora","qlora")
+            and type(maximum_copy_bytes) is int and 1 <= maximum_copy_bytes <= 2**53-1
+            and type(maximum_metadata_bytes) is int and 1 <= maximum_metadata_bytes <= min(maximum_copy_bytes,64*1024**2)
+            and type(chunk_bytes) is int and 4096 <= chunk_bytes <= 1024**2
+            and type(files) is tuple and 1 <= len(files) <= len(_PROTECTED_RESULT_NAMES))
+        names,total = set(),0
+        for row in files:
+            _result_need(type(row) is tuple and len(row) == 3)
+            name,size,sha = row
+            _result_need(type(name) is str and name in _PROTECTED_RESULT_NAMES and name not in names
+                and type(size) is int and 1 <= size <= maximum_copy_bytes
+                and type(sha) is str and re.fullmatch(r"[a-f0-9]{64}",sha) is not None)
+            names.add(name); total += size
+        _result_need(total <= maximum_copy_bytes and "tokenizer.json" in names)
+        adapter = method != "full-finetune"
+        weight = "adapter_model.safetensors" if adapter else "model.safetensors"
+        config = "adapter_config.json" if adapter else "config.json"
+        _result_need({weight,config} <= names and not names &
+            ({"model.safetensors","config.json","generation_config.json"} if adapter else {"adapter_model.safetensors","adapter_config.json"}))
+        records = {"training-run.json","serialization_manifest.json"}
+        _result_need("training-run.json" in names)
+        _result_need(all(size <= 128*1024 for name,size,_ in files if name in records))
+        index,offset,metadata_size = 0,0,0
+        digest = hashlib.sha256(); metadata,header = {},bytearray(); header_goal = None
+        shapes = None; current_metadata = bytearray()
+        for event in chunks:
+            _result_need(type(event) is tuple and len(event) == 3 and index < len(files))
+            name,position,raw = event; expected,size,sha = files[index]
+            _result_need(type(name) is str and name == expected and type(position) is int and position == offset
+                and type(raw) is bytes and len(raw) <= chunk_bytes)
+            if not raw:
+                _result_need(offset == size and digest.hexdigest() == sha)
+                if name == weight: shapes = _protected_tensor_header(bytes(header),size)
+                else:
+                    metadata[name] = (current_metadata.decode("utf8") if name == "merges.txt"
+                        else _result_json(bytes(current_metadata)))
+                index += 1; offset = 0; digest = hashlib.sha256(); current_metadata = bytearray()
+                continue
+            _result_need(offset+len(raw) <= size)
+            digest.update(raw); offset += len(raw)
+            if name == weight:
+                remaining = raw
+                if len(header) < 8:
+                    take = min(8-len(header),len(remaining)); header.extend(remaining[:take]); remaining = remaining[take:]
+                if len(header) == 8 and header_goal is None:
+                    length = struct.unpack("<Q",header)[0]
+                    _result_need(0 < length <= 1024**2 and length % 8 == 0 and 8+length <= size)
+                    header_goal = 8+length
+                if header_goal is not None and len(header) < header_goal:
+                    header.extend(remaining[:header_goal-len(header)])
+            else:
+                if name not in records:
+                    metadata_size += len(raw); _result_need(metadata_size <= maximum_metadata_bytes)
+                current_metadata.extend(raw)
+        # Exhaust the source even after its last file marker. A genuine Native
+        # stream performs its final all-file/root/authority check on that next().
+        _result_need(index == len(files) and offset == 0 and shapes is not None)
+        # The producer applies these restrictions recursively to configuration
+        # exports. Vocabulary/token data keys must not be mistaken for code flags.
+        for name in ("config.json","adapter_config.json","generation_config.json","tokenizer_config.json"):
+            if name in metadata:_protected_code_declarations(metadata[name])
+        tokenizer = metadata["tokenizer.json"]
+        _protected_code_declarations({key:tokenizer[key] for key in
+            ("auto_map","auto_mapping","_auto_class","custom_pipelines","trust_remote_code") if key in tokenizer})
+        _result_need(type(tokenizer.get("model")) is dict and type(tokenizer["model"].get("type")) is str
+            and tokenizer["model"]["type"] in ("BPE","WordPiece","WordLevel","Unigram"))
+        if adapter: _result_need(metadata[config].get("peft_type") == "LORA")
+        else: _result_need(type(metadata[config].get("model_type")) is str and bool(metadata[config]["model_type"]))
+        run = metadata["training-run.json"];run_id = run.get("runId")
+        _result_need(type(run_id) is str and re.fullmatch(r"[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}",run_id) is not None
+            and run.get("method") == method and run.get("candidateValidation") == "pending"
+            and type(run.get("startedAt")) is str and 0 < len(run["startedAt"]) <= 128)
+        if "serialization_manifest.json" in names:
+            manifest = metadata["serialization_manifest.json"];task = run.get("trainingTask")
+            _result_need(run.get("status") == "training-complete" and manifest.get("runId") == run_id
+                and manifest.get("method") == method and type(task) is str
+                and re.fullmatch(r"[a-z][a-z0-9-]{0,119}",task) is not None
+                and type(manifest.get("trainingTask")) is str and manifest["trainingTask"] == task
+                and type(run.get("serializationManifestPath")) is str
+                and run["serializationManifestPath"] == "serialization_manifest.json"
+                and type(manifest.get("serialization")) is dict)
+            serialization = manifest["serialization"]
+            _result_need(serialization.get("safetensorsFiles") == [weight]
+                and serialization.get("serializationFormat") == ("adapter-safetensors" if adapter else "safetensors"))
+        else:
+            _result_need(set(run) == {"runId","startedAt","method","status","trainingStatus","checkpointStep","candidateValidation"}
+                and run["status"] == "checkpoint-snapshot" and run["trainingStatus"] == "running"
+                and type(run["checkpointStep"]) is int and 1 <= run["checkpointStep"] <= 2**53-1)
+        return {"serializationFormat":"adapter-safetensors" if adapter else "safetensors",
+            "tensorShapeSummary":shapes,"metadata":metadata,"files":files,
+            "profile":"candidate" if records <= names else "checkpoint"}
+    except Exception:
+        raise ValueError("The protected training result structure is unavailable.") from None
 
 
 def _detect_format(output_dir: Path) -> str:

@@ -1141,6 +1141,26 @@ Static class checks keep reader bindings free of virtual field/lookup callbacks.
 Structural validation, producer/resource handoff, retirement and actual training
 and host qualification remain pending. Fake Native ABI tests are local evidence.
 
+### Validate protected result structures
+
+`validate_protected_training_output_chunks` checks the current finite result
+profile without reopening paths or loading model tensors. It checks ordered
+chunks, declared size/hash/EOF, bounded JSON and safetensors headers, tensor shapes
+and contiguous byte offsets, and the producer's checkpoint/final-record shapes.
+Final records must agree on the manifest filename and training task. Tensor
+bodies are hashed and discarded. Ordinary path-based validation is unchanged.
+These internal data facts grant no Native custody, task completion or Save.
+The original producer must still bind the genuine stream, authority and lineage.
+Resource ownership, retirement, actual training and host qualification remain open.
+The fixed `headless-training-result-validation-unit` control-plane check executes
+the exact model-validation regression file, including producer/reader integration
+with synthetic SDK/Native fixtures; it does not discover all runtime tests.
+For the known parser and check-routing change scope, the controller uses the
+existing scoped-check mechanism. It runs complete related routing and execution
+suites, including the unchanged training and Native commands. Unknown or mixed
+scope, missing support files, or an explicit generic check retains full discovery.
+Limits stay unchanged. This feature receipt is not final combined qualification.
+
 ### Private protected training pipeline
 
 One fixed internal pipeline now joins original-byte dataset loading, in-memory

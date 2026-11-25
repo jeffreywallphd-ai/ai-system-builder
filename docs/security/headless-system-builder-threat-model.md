@@ -2952,6 +2952,44 @@ but compressed/decoded expansion still needs the pending original resource owner
 Synthetic installed-SDK denial tests grant no hard RAM/disk bound, complete
 producer/custody/retirement, Save, model accuracy, Native or host qualification.
 
+### Protected result structure validation
+
+Treat result chunks, descriptors and declared history as untrusted data. Require
+exact primitive types, finite current filenames/methods, explicit original byte
+bounds, ordered offsets and every size/hash/EOF. Exhaust the source even after the
+last marker; later original authority loss must prevent a report. Refuse duplicate
+or nonfinite JSON, unsafe code declarations, malformed/oversized safetensors headers,
+unsupported dtypes, invalid shapes/checked strides, gaps/overlap/trailing tensor
+bytes and inconsistent full/adapter or final-record links. Require the existing
+single running checkpoint record or the complete final pair; verify the declared
+manifest filename and matching task. Never downgrade an incomplete final record.
+Apply the existing nonempty `auto_mapping` restriction to configuration data,
+without reclassifying vocabulary tokens as executable declarations. Accumulate only the
+existing bounded metadata/header profile; discard weight bodies. Decoded JSON RAM
+still requires the original measured resource owner and process limits.
+
+Never open a result path, select executable objects/code/providers, run a model/SDK
+or write a validation report from this pure helper. Structural facts are mutable
+internal data. They grant no Native identity, actor permission, checkpoint proof,
+task completion, resource credit, retirement or Save. The future fixed producer
+must compose original custody and exact task lineage before publishing a candidate.
+Real native/resource/producer/retirement, training, Save and host gaps remain open.
+
+Use a fixed check that executes the exact model-validation file, including a
+synthetic fixed-producer/original-reader integration. Declare those fixture inputs
+and retain their existing checks when they change. Test missing or
+nonregular coverage inputs, unknown/explicit broader paths and real fixed-command
+execution. Do not accept caller-selected commands or suppress other coverage.
+Synthetic parser tests and tiny installed-format serialization supply no model
+quality or physical Native proof. Preserve an unavailable ordinary symlink test
+as a platform gap; do not manufacture its pass.
+For the known parser/routing scope, reuse the existing closed-scope controller
+selection. Bind the actual related-suite argv to the receipt and retain complete
+model/Native command execution with unchanged limits. Require every supporting
+file to be regular and present. Unknown, mixed or incomplete scope and explicitly
+requested generic coverage must retain broad discovery. Do not present a focused
+feature receipt as final comprehensive qualification.
+
 ### Original sealed-output byte consumption
 
 Freeze output inventory/configuration and original live Native dispatch before

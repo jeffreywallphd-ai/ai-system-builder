@@ -2356,7 +2356,54 @@ Focused tests use synthetic bytes and Native ABI fixtures, without actual models
 Their teardown removes only exact fixture-owned registry entries after the
 original retirement assertions. Production custody and all check limits stay intact.
 
+### Validate protected result structures
+
+`validate_protected_training_output_chunks` is a pure data validator. Require
+explicit copy, metadata and chunk bounds. Consume every ordered file and its
+verified end marker, then exhaust the source so a genuine Native stream can finish
+its final authority check. Check hashes independently; reject missing, duplicate,
+reordered, short or trailing input. Parse JSON without duplicate keys/nonfinite
+numbers. Check the current single safetensors header within its existing one-MiB
+limit, finite tensor count/dtypes/shapes, checked strides and contiguous offsets.
+Discard tensor bodies. Model metadata keeps its existing 64-MiB package limit;
+the two final history/manifest records each retain their separate 128-KiB limit.
+JSON decoding still needs the original measured process/resource controls; this
+helper supplies no decoded-RAM or hardware qualification.
+
+Require the original training record. Checkpoints have the producer's single
+`checkpoint-snapshot` record, a running training status and a positive step. Final
+candidates require both records, matching run/method/task and the exact manifest
+filename. An incomplete final record cannot be downgraded to a checkpoint.
+Refuse the producer's nonempty `auto_mapping`/`auto_map`/`_auto_class` declarations
+within configuration exports. Keep vocabulary words separate from code flags.
+Validate full/adapter file roles and declared final-record links. Do not execute
+output-selected code, open paths, invoke a model/SDK or write reports. The internal
+report is mutable data, not an authority token: supplied bytes/descriptors and
+declared history cannot prove Native identity, checkpoint custody, live permission,
+task success, retirement or Save. The fixed original producer must bind all those
+facts before a candidate is offered. That composition and actual-host tests remain
+pending. Ordinary `validate_model_output` behavior is preserved.
+
+The control plane runs the exact model-validation regression file in
+`headless-training-result-validation-unit`. Its fixed producer and Native fixture
+inputs are declared, and their own existing checks still run when those inputs
+change. The prerequisites include both existing checks' required-file closure;
+missing inherited inputs leave generic coverage available. Missing/nonregular inputs and unknown
+or explicitly requested broader sources keep their existing coverage. Routing tests
+execute the actual fixed regression command with ambient pytest options disabled.
+Tests include all three synthetic pipeline methods, both real producer record
+shapes and the actual original-handle reader, plus tiny installed-format bytes.
+These tests execute no real model and report no accuracy score. An existing
+Windows symlink test remains skipped when the
+host denies creating that test link; do not describe that path check as passed.
+
 ### Compose the protected training stages
+
+Result-parser and check-routing edits use a closed source-owned controller scope
+with the complete related suites. This includes execution of the unchanged model,
+Native and result-parser commands. Missing or nonregular support, unknown mixed
+edits and an explicit generic check retain full controller discovery. No timeout
+changes or partial-suite pass is implied; final combined qualification is separate.
 
 `_run_protected_training_pipeline` is an internal staging component. Capture its
 fixed helpers on the original Use before callbacks. Reserve one attempt on the

@@ -3253,6 +3253,27 @@ remain pending. Installed-SDK synthetic tests supply no model-quality result.
 
 ### Private protected training stage composition
 
+Pure protected-result structure validation belongs to the common model-validation
+module. It consumes bounded ordered data, not paths or a Native capability. The
+fixed producer must separately bind genuine original stream/descriptors, live
+authority, task lineage and retained custody. Hash/EOF and JSON/header checks
+produce internal structural facts only. Check finite full/adapter profiles and
+the existing checkpoint record and final history/manifest/task links. Refuse
+nonempty executable mapping declarations in configuration, without treating token
+vocabulary as code. Retain bounded metadata/headers and discard
+weight bodies. No output-selected code, SDK model load, ordinary writer, task
+completion, retirement or Save follows from the report. Existing process/resource
+guards and later actual-host qualification remain necessary. Ordinary path-based
+validation stays unchanged. A fixed source-owned regression check runs this module
+without unrelated runtime discovery or changes to execution limits. Its synthetic
+integration exercises the fixed producer and original reader; their own checks
+remain selected for changes, and no real model/Native qualification is supplied.
+The existing closed-scope controller selection also covers this parser/routing
+change. Complete related suites execute their original fixed commands and limits.
+All selected support files must remain regular and present. Empty, partial,
+unknown mixed scope or explicit generic coverage keeps broad discovery. A focused
+feature receipt grants no final combined-suite qualification.
+
 The private sealed-output byte reader is separate from producer serialization and
 later format validation. It binds inventory, original hashes/identities and held
 handles during graph construction/preparation. Only the same registered live

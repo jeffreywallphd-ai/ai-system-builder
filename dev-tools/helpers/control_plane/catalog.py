@@ -290,6 +290,31 @@ MODEL_TRAINING_BOUND_REQUIRED = MODEL_TRAINING_BOUND_SCOPE + (
     "modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts",
     "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
 )
+TRAINING_RESULT_ROUTING_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_training_result_validation.py",
+)
+TRAINING_RESULT_OWNER_SCOPE = (
+    "modules/adapters/runtime/python/worker/tasks/model_validation.py",
+    "modules/adapters/runtime/python/worker/tests/test_model_validation.py",
+    "modules/adapters/runtime/python/README.md",
+    "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md",
+    "docs/security/headless-system-builder-threat-model.md",
+)
+TRAINING_RESULT_CONTROLLER_FILTERS = (
+    "test_control_plane_training_result_validation.",
+    "test_control_plane_focused.",
+    "test_control_plane_published_form_feature_checks.",
+    "test_control_plane_model_training_worker.",
+    "test_control_plane_headless_native_model_graph.",
+    "test_control_plane_headless_training_runtime.",
+    "test_control_plane_delivery.CatalogTests.",
+)
+TRAINING_RESULT_CONTROLLER_TESTS = tuple(
+    "dev-tools/helpers/tests/" + name.split(".")[0] + ".py"
+    for name in TRAINING_RESULT_CONTROLLER_FILTERS
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -768,6 +793,45 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
             "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"),
+    },
+    "headless-training-result-validation-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/tasks/model_validation.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_validation.py",
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/worker/tasks/model_validation.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_validation.py",
+            # Declared Native coverage must retain the original Native check
+            # even when one of its inherited prerequisites is unavailable.
+            "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/app.py",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
+            "dev-tools/helpers/run_focused_checks.py",
+        ),
+        "sources": (
+            "modules/adapters/runtime/python/README.md",
+            "modules/adapters/runtime/python/worker/README.md",
+            "modules/adapters/runtime/python/worker/tasks/model_validation.py",
+            "modules/adapters/runtime/python/worker/tests/test_model_validation.py",
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "modules/adapters/runtime/python/worker/tests/test_model_validation.py"),
     },
     "headless-approved-training-owner-unit": {
         "automatic_sources": (
@@ -3745,6 +3809,22 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   "-k", "test_control_plane_model_training_worker.",
                                   "-k", "test_control_plane_focused."]
+    result_support = (TRAINING_RESULT_ROUTING_SCOPE + TRAINING_RESULT_OWNER_SCOPE + TRAINING_RESULT_CONTROLLER_TESTS
+                      + PUBLISHED_FORM_CHECKS["headless-training-result-validation-unit"]["automatic_required_files"])
+    if (set(TRAINING_RESULT_ROUTING_SCOPE) <= set(paths) <= set(TRAINING_RESULT_ROUTING_SCOPE + TRAINING_RESULT_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": result_support[index:index+16]})
+                for index in range(0, len(result_support), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            # Reuse the closed-scope mechanism for the result parser and its
+            # routing. Run complete related suites, including actual fixed
+            # model/Native commands, under the unchanged controller limit.
+            # Unknown, mixed, incomplete or explicitly generic work retains
+            # full controller discovery; this is not final suite qualification.
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                                  "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                                  *[item for name in TRAINING_RESULT_CONTROLLER_FILTERS for item in ("-k", name)]]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})
