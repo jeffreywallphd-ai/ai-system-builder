@@ -1650,6 +1650,232 @@
           "This record gives no permission for another test run, retry, data transfer, cleanup or publication."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7cb14f493bad6866e8d4d025de1a81f4876ef3a65fc3276ee090607a649a1fea",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent tested the exact saved model and dataset choices, training settings and permission list.",
+          "The existing popup and chat views support both approval methods.",
+          "These software checks do not start a training task."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "35805158bdec0cf44e7ba44f206759ee82a1b644bbf06752f0101286e801b921",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must finish approval storage, task execution and public host integration.",
+          "This private preview is off by default.",
+          "This record does not qualify the current software or close the increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee9c88cf2e2657fad1acbd8868b3ada79f3ec7eb35fcc26183400ab66a63f2c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model quality tests stay outside this increment.",
+          "This record permits no new app test, native test, model download, supplier change, retry, cleanup or publication."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d449adbc9df88ee215332d5bf4f63842341cdcaa4719a0f24630d557f156bf4c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The private receiver checked and stored small test training result files. Its local checks and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d50b659831b1cae00838af5c6aa0d3a839b772ff0a218c39a45e328bbc7dd881",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This reviewed local work applies only to the recorded software version. Required parent checks remain separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "73eb396ac783ac128fa112e995f25dd0e7d9f037bfb914da32b0a1773b3e73dc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Real resource limits, protected result storage, complete training and shutdown, separate model saving, generation and actual app checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bdfa398f5d62a05906bb65d12d51cd0d7372950760f611f295dc575b40cd2b12",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No real model, model quality, physical platform enforcement or complete software suite was tested. This record does not authorize activation or new actions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "267dbcb7bf5053599651a755e0907d29a43b7845e8b889b3434cdbcc9cc7b0f1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The original file owner can stop new local work and issue a receipt usable once after checking retained files and closing local output operations. Local checks and separate review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4f6c4886c0cfae53d361a6a87d6f67c2d465edf54779b0f1e6a2bec06ea0d380",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This reviewed local work applies only to the recorded software version. Required parent checks remain separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "154f2ec14534d58b3fe118b1626ec3ba935862a2d18bc463f9cc73bf60a7dd57",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model and input protections and all byte accounting remain in place. Full runtime and worker shutdown, protected result ownership, real resource limits and complete native training remain unqualified."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "de00bef7e74f814bbbf3d3929c6b84c2659878e7924562624c2404f4fc788e64",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Shutdown wiring, parent input/output tracking, separate saving, generation and real app checks remain pending. This record grants no new actions and claims no physical platform, model-quality or full-suite pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e303059966a6f9a31c5f4b472dac68f47cb8344c3b1337418132b645e0f8b3d0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "File and transfer operations stay tracked when a task stops or times out.",
+          "Focused tests and independent review passed for this component."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dca8b310140e0b713601a1f85457c36a3ef22f3a3812e003f6c6fe6f85fccd93",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover this recorded change only.",
+          "The complete feature and the current combined version still need their own tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7b62d0553e6ab13851cb62940ed280c9ab667f91eff05fe0bfa9d7d747751d7b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Uncertain file writes stay recorded. All files continue to count toward used disk space.",
+          "This change does not retry writes, delete files, free disk space or shut down workers."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3f355b5356d9cc971d7de27d8251c26a55d7b09b6aeadebd0f071da085fd55f0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, training control, system protection, resource limits, protected storage, complete training, saving, generation and app tests were still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4d9a4c2191d7c67a9d7e6e66e0f0e12e7df7bb5ffff885691fae8c8cefb858c5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Training preparation and file checks use the same worker.",
+          "A one-use file check reports readiness for shutdown. It does not prove that the worker has stopped.",
+          "Focused tests and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee4fc0e45643a86d714eb1f81860f65fc784fedb341b93153b4de6f382813b6d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, full shutdown wiring, system protection, resource limits, protected storage, complete training, saving, generation and tests in the running apps were still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f91c2e6e7b04c1d431d00ed4e712348cc46055676ac908031615ab4e1a934d3e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The optional training controller waits for file operations to stop, checks worker readiness and confirms worker shutdown.",
+          "The default behavior is unchanged. Focused tests and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "75641952385c8edecae825609ea41b6a4f22ff9614292c29fb739770bc39f0ba",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover this recorded change only.",
+          "The complete feature and the current combined version still need their own tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "16134102d771f0bc59b3d6c09b0371538189489359cb0898b9015817ecd54c77",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All files and reserved disk space stay recorded, including uncertain results.",
+          "This change does not retry work, delete files, release disk space or save a model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a3160a9afba8f642db0c2b815aa66997d23623daf08e85ba2cc57499a445eea7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training adapter still needs to be completed.",
+          "Storage limits, protected storage, recovery after a crash and an actual training run remain pending.",
+          "System protection and the complete apps also need tests."
+        ]
+      }
     }
-  ,{"kind":"support-scope","source_text_sha256":"7cb14f493bad6866e8d4d025de1a81f4876ef3a65fc3276ee090607a649a1fea","user_description":{"owner":"agent","sentences":["The agent tested the exact saved model and dataset choices, training settings and permission list.","The existing popup and chat views support both approval methods.","These software checks do not start a training task."]}},{"kind":"support-limitation","source_text_sha256":"35805158bdec0cf44e7ba44f206759ee82a1b644bbf06752f0101286e801b921","user_description":{"owner":"agent","sentences":["No action needed.","The agent must finish approval storage, task execution and public host integration.","This private preview is off by default.","This record does not qualify the current software or close the increment."]}},{"kind":"support-limitation","source_text_sha256":"ee9c88cf2e2657fad1acbd8868b3ada79f3ec7eb35fcc26183400ab66a63f2c4","user_description":{"owner":"agent","sentences":["Model quality tests stay outside this increment.","This record permits no new app test, native test, model download, supplier change, retry, cleanup or publication."]}}]
+  ]
 }

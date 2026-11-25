@@ -1,0 +1,1157 @@
+{
+  "schema_version": "roadmap-user-task-descriptions-v1",
+  "records": [
+    {
+      "record_type": "story",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "record_id": "stable-outcomes",
+      "source_definition_digest": "42ea747c1c685359923ec6d49fd3cb5caa9940920ec9813d850ec111b29a1f77",
+      "user_description": {
+        "title": "Keep approved story outcomes",
+        "purpose": "Keep each approved story focused on its original outcome.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "record_id": "task-evidence",
+      "source_definition_digest": "c03d282a1fcc0709ff0874da05e8f06e0dd377ba5b1cab2b06975b7e9032e97b",
+      "user_description": {
+        "title": "Track task evidence",
+        "purpose": "Connect each task to its exact checks and independent review.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "record_id": "readable-progress",
+      "source_definition_digest": "e387d054e8eeb6489b333449cc577ae60b84da2480b446a5a2891510c276b459",
+      "user_description": {
+        "title": "Show story and task progress",
+        "purpose": "Show completed and planned tasks beneath their story, with required technical checks kept visible.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "record_id": "story-model",
+      "source_definition_digest": "6c5f7121bc5744e5431d0be33d80eed2b582651df65768f389df3637b71ae8f7",
+      "user_description": {
+        "title": "Keep stories stable",
+        "purpose": "Keep the approved stories unchanged while assigning each existing task to one story.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "record_id": "task-work-binding",
+      "source_definition_digest": "0e83060e283d836d6baa2c753e3b8cb02f01567699a79539d0544e87ba3e1c78",
+      "user_description": {
+        "title": "Connect tasks to reviewed work",
+        "purpose": "Use exact task identities to connect implementation checks and independent review to the work they prove.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "record_id": "story-progress-ui",
+      "source_definition_digest": "6d05ec67808c2c75fd2fcc2451ae2de569aa7fd48a56f7fd37ed8b393b4c0b16",
+      "user_description": {
+        "title": "Show stories and tasks",
+        "purpose": "Group tasks beneath their stories and show clear progress without treating it as a qualification pass.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "record_id": "honest-time",
+      "source_definition_digest": "0b287a1de0bf4e87db7089aaac28a4b0e4ca4c35089fb0bcacbcc7900be04b95",
+      "user_description": {
+        "title": "Record implementation time",
+        "purpose": "Record observed implementation effort, with measured, estimated and unknown values kept separate.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "record_id": "scoped-tokens",
+      "source_definition_digest": "776812d984bf1fce9c1cb28a3c41eede321cf89722d9b8731d85af585a81e152",
+      "user_description": {
+        "title": "Attribute token usage",
+        "purpose": "Connect known token observations to their exact story, increment or roadmap without counting the same usage twice.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "record_id": "simple-reporting",
+      "source_definition_digest": "c036aaa35355052465c3e71da328ee42e8dfb4b962e43c6cb0d76894704651d1",
+      "user_description": {
+        "title": "Show time and token reports",
+        "purpose": "Show recorded implementation time and token usage on Roadmaps, with clear coverage gaps.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "models",
+      "source_definition_digest": "e1d6f1bb9d95b1dfe74f69572b5ead2f63c7902f9e973e8962b0e284e20e7ac2",
+      "user_description": {
+        "title": "Discover and acquire supported models",
+        "purpose": "Search or inspect configured providers, resolve exact model/revision, estimate local resources, and use the existing bounded download and registry tasks.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "train-evaluate",
+      "source_definition_digest": "7cc3db4bb95ccf82a4dc6d388cee71d9dbf611181ae52c2dec9a297c522afa53",
+      "user_description": {
+        "title": "Fine-tune and evaluate",
+        "purpose": "Select a compatible base, dataset version, training method and hardware budgets. Track training progress, saved checkpoints, resulting model and clearly scoped evaluation results.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "generate-and-reveal",
+      "source_definition_digest": "332b324b9d60578d737a5aa27a169922da9a2e7c61833704195dfbc73daf7cc2",
+      "user_description": {
+        "title": "Generate and show results",
+        "purpose": "Use existing approved text/image workflows, manage supported tasks and reveal exact model inventory, downloads, training jobs and generated artifacts.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "inspect-installed-models",
+      "source_definition_digest": "6fef3643d1f8ab2b6cbaf68f0e9d1393d2d560e4fd88a6ab238277146eff788e",
+      "user_description": {
+        "title": "Inspect installed models",
+        "purpose": "List already-saved models and open the exact selected record. Keep result pages bounded and apply the current user and workspace permissions. Listing must not scan model folders or start a runtime.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-pinned-model-source",
+      "source_definition_digest": "0d7944f454fb9cb03a14edf3c095bd9987592bbc6b198f5ddaa6a912b041fa3f",
+      "user_description": {
+        "title": "Inspect the exact model source",
+        "purpose": "Show the exact provider version, files, sizes, format and license before download approval. Keep keys and local file locations private. Source metadata alone does not approve a transfer or prove model readiness.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "execute-approved-model-download",
+      "source_definition_digest": "b9c958fdeec83fb7a89ea5eb7c945730329673c8a366df5beac5b93d8ca398c7",
+      "user_description": {
+        "title": "Execute an exact approved download",
+        "purpose": "Implement the approved download through the existing Model owner. Retries must not start it twice. Keep track of started or uncertain work if chat closes or permission changes. Controlled tests check this code; real provider and app qualification remain separate.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "monitor-and-cancel-model-download",
+      "source_definition_digest": "236331c5e6371d409e54ec29954cd27267ca5b23b88d9232f1ae2a7d7ee6c5a9",
+      "user_description": {
+        "title": "Connect downloads and owned task controls",
+        "purpose": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant’s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-and-save-downloaded-model",
+      "source_definition_digest": "31d1ed77f06607b0527a551bdb8b9f88c50c48293f07cf5ddad6051806b355b8",
+      "user_description": {
+        "title": "Review and save the completed model",
+        "purpose": "Show the completed download for review. Add the exact result to saved models only after separate approval and a current permission check. Save the record atomically, prevent duplicates on retry, and preserve the downloaded result if approval ends.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-fine-tuning-inputs-and-settings",
+      "source_definition_digest": "7ae2872bf9231084cc480267ce78405d97f0252466bb24994316c6de7f726609",
+      "user_description": {
+        "title": "Review fine-tuning inputs and settings",
+        "purpose": "Review one exact saved Model revision and immutable Dataset version with supported training settings. Freeze a minimized proposal digest under current original authority. Keep file, compatibility, runtime, resource, rights and fresh quality checks pending, with new training and result-save approval required. This preparation starts no task and enables no public operation.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "prepare-local-training-files-and-load-policy",
+      "source_definition_digest": "debf03f463abd9b5513dfc1cde941552e945ada6dde1ec8f29fb8598fe470d89",
+      "user_description": {
+        "title": "Prepare training data and local loading controls",
+        "purpose": "Use only the saved training and validation files and verify Dataset and recipe bytes. Keep held-out data out of training and reuse copied images without collisions. Prepare the private local model loader with explicit loading restrictions. Actual training execution, model-file custody, resource checks and real host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "inspect-local-training-model-files",
+      "source_definition_digest": "928b4711ce95a4e2328f129924d847b46cc120a489fb0b2eca1e71e2c11ea1cf",
+      "user_description": {
+        "title": "Inspect the selected local model files",
+        "purpose": "Prepare the exact saved Model selection with a bounded configured-folder safe-file inspection. Recheck original permissions and selection after asynchronous work. This read-only component does not check model content, native file protection, resources or readiness, and does not start training. Run-time admission and real host tests remain in the original chunks.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "prepare-fixed-validation-comparison",
+      "source_definition_digest": "3578770b93b116204f54b3eff1d7f3f50074ff0571473becdaa31dd2fb8f0219",
+      "user_description": {
+        "title": "Prepare a fixed before-and-after comparison",
+        "purpose": "Implement and feature-test the private opt-in comparison on one fixed subset of at most 32 validation rows before and after training. Record finite measured losses and sample count in private run/candidate history separately from output accuracy or a quality pass. This component does not evaluate a real trained candidate, complete model/data/recipe/hardware provenance, start public Headless training or qualify a host; those original obligations remain.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-exact-training-permissions",
+      "source_definition_digest": "6abd70744ad1221cc755eda36eb51590757da0f9e23ad5eb18b4287729da4b4e",
+      "user_description": {
+        "title": "Build the shared training permission views",
+        "purpose": "Show the exact saved model, dataset version and training settings in the shared popup and chat views. List allowed local work, checks still required and separate approval to save a trained result. Support whole-plan and per-change approval. This component starts no task and does not enable the app or browser connection.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "persist-exact-training-approval",
+      "source_definition_digest": "45fee5cfe443cac4f00a212100fc5f4b88a1823ec4c9b387d88d00f0468f4617",
+      "user_description": {
+        "title": "Store the exact training approval",
+        "purpose": "Bind the original user, workspace, client and chosen inputs to the private approval record. Support both approval methods, later reads and withdrawal of approval. Keep files, prompts and private input contents out of the record and reply. Preserve older record versions. Starting training and enabling app or browser connections remain separate work.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "retain-original-training-task",
+      "source_definition_digest": "0b5a0413755180483fd07c4593811e42df83a201f8c9add42b22afad9f1aa61d",
+      "user_description": {
+        "title": "Store one original training task record",
+        "purpose": "Keep one saved task record for each training step. Read the saved attempt state after a missing reply. If the start is uncertain, do not start another task. This private component does not start training or read its live status. Training execution, progress, cancellation, file protection, memory limits and app/server tests remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "guard-private-training-session",
+      "source_definition_digest": "aefc4c4a96360545d55f8f1fbc85b1a864f2108398430b38faa52d93c560c20c",
+      "user_description": {
+        "title": "Protect the original private training task",
+        "purpose": "Add application safeguards for one approved training task. Keep its input copies, controls and cleanup with the original owner. Check permission before reads and stops. Keep uncertain starts and files for recovery. Tests use controlled runtime replies. Real training, result saving and app/server qualification remain pending until their adapters are connected and tested.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "admit-exact-training-step",
+      "source_definition_digest": "485c78d9b5b047f504fc8e40334138ce271baf25340f7c2bc3b21608f8e169eb",
+      "user_description": {
+        "title": "Protect the approved training step",
+        "purpose": "Bind one training task to the exact approved plan and saved inputs. Keep lost replies from starting a second task. Check current permissions and preserve earlier ordinary workflows. Tests use controlled records; real training, result saving and host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-private-training-task",
+      "source_definition_digest": "da600e4f67717d8a5acf6c6c04037e08dbdec2e57532fec309ff24d521a60b04",
+      "user_description": {
+        "title": "Connect the original private training task",
+        "purpose": "Connect the approved step to the private application task. Copy and verify its inputs, keep the original task after the caller ends, and check permission before sending its receipt. Tests use controlled sessions. The native adapter, public routes, result saving and real host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "retain-original-training-runtime",
+      "source_definition_digest": "50980baf1ff99ba83de32c0fb4a9e193e6811a54424c00b3220e52f119bd17ca",
+      "user_description": {
+        "title": "Keep the original training runtime",
+        "purpose": "Keep the training task on its original installed runtime. Prevent replacement or another start when a reply is missing. Controlled tests cover task status, cancellation and retirement. The native resource owner, real training, result saving and real host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "observe-original-training-task",
+      "source_definition_digest": "10b950f7088f2a78bd82e2af5aecb7917278a51f1d82f79432a3c53a917c55b6",
+      "user_description": {
+        "title": "See training progress and request Stop",
+        "purpose": "Keep the original approved training task. Show its progress and request Stop under current permissions. Preserve an uncertain reply without another start or cancellation. Controlled tests qualify these software controls; real training, resource retirement, result saving and host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-saved-training-plans",
+      "source_definition_digest": "fb09252c73ee249954dfb66e902f187b05488ccdab4affe6869fe6e5b48674e1",
+      "user_description": {
+        "title": "Review and approve saved training plans",
+        "purpose": "Prepare training proposals from the exact saved Model and Dataset facts in Desktop and Server. Recheck permissions and changed facts for popup/chat approvals in both modes. Controlled tests qualify these software components. Running training, native resource controls, result saving and actual-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "run-approved-training-in-hosts",
+      "source_definition_digest": "9ec55967d4745532fe15a4b232eea3719c54b5fd46d72f856cb9c91cba61b421",
+      "user_description": {
+        "title": "Run and monitor the approved training step",
+        "purpose": "Connect an approved saved training step to its original task in Desktop and Server. Show periodic progress and request Stop once. Controlled tests prove permissions, changed-fact checks, safe replay and retained uncertain outcomes. Native resources, public connections, result saving and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "retain-original-training-worker-until-close",
+      "source_definition_digest": "9ee9b99b0e67c274b0e166b45dc58ee71e1d5ff494e75170e8b229a7559d5f12",
+      "user_description": {
+        "title": "Confirm original worker closure before releasing resources",
+        "purpose": "Keep the training reservation until both training cleanup and the exact original worker closure are confirmed. Share one Stop attempt, retain uncertain outcomes, prevent conflicting model unload and release an unused claim safely. Simulated-process tests qualify this software boundary; native resource enforcement and real-host tests remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bound-original-training-worker-startup",
+      "source_definition_digest": "e163230958dbed54a74f4864e23a7d560f1687393dc71f23d0cf58ac5d023ec2",
+      "user_description": {
+        "title": "Bound training worker startup and shutdown",
+        "purpose": "Add an optional original-worker startup owner with explicit Windows resource settings. Keep Stop, worker cleanup and controller closure separate. Tests check startup hooks, permissions, stop races, final output and resource ownership using simulated APIs. Actual Windows enforcement, protected Model/input/output files, retained output accounting, complete training setup, saving and host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "preserve-approved-training-settings",
+      "source_definition_digest": "ffe438e89c7ffd5042818f7bbb077bf4b9767ef982f5a8a2072a847e6d80beb4",
+      "user_description": {
+        "title": "Protect approved training settings",
+        "purpose": "Keep the approved model, settings, ordered data and recipe unchanged while staging and sealing training inputs. Reject changed or malformed values, lost permission and cancellation before loading. The actual application producer and Python consumer share a realistic synthetic test fixture. Native file protection, retained output accounting, complete training setup, Save and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-original-training-completion",
+      "source_definition_digest": "dc36111eb49a6e88cca57b436030198cf02f881742070c4e39a1568af6ba762b",
+      "user_description": {
+        "title": "Review completed training history",
+        "purpose": "Read settled cached training results through the original private task. Preserve approved Model, Dataset, recipe and proposal history. Enforce current original permissions, copy replies before waits and exclude private paths, logs and training data. Stored report numbers remain measurement-only. Native output protection/accounting, complete training setup, separate Save, public integration and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-original-training-completion-hosts",
+      "source_definition_digest": "2b36d07a3183da0418ce6074c650a85899b1f283993d084c740b08ccc005b032",
+      "user_description": {
+        "title": "Read completed training results in both hosts",
+        "purpose": "Connect the original cached result reader in private Desktop and Managed composition. Require current read permission, original client/workspace/task identity and an active host registration. Return only recorded completion details. Missing configuration stays unavailable. Native protection, complete training setup, separate Save, public broker access and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "read-original-training-progress-through-broker",
+      "source_definition_digest": "602e8f1a7a7f13d99f8a0e05279b1290c2e34bd6dfb7ab88644c8e90fe13ea6e",
+      "user_description": {
+        "title": "Read training progress through the chatbot tool",
+        "purpose": "Use the existing chatbot tool to poll numeric progress for an original accepted training task on configured Desktop and Managed hosts. Require current original client, workspace, host and Model read permission. Retain observed grant checks across waits and independently match every reply to its request. Keep prompts, samples, paths, logs and loss private. This source integration starts no new task; native custody, complete training setup, candidate saving and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "protect-original-training-source-copy",
+      "source_definition_digest": "18efe70fe231b19d4febf5f4f3780899ba2d770f557b1640df836848d4d9759b",
+      "user_description": {
+        "title": "Protect the private model copy used for training",
+        "purpose": "Create a fresh verified model copy with protected Windows permissions and read-only handles before app startup. Stop before further writes when permission, capacity or time checks fail. Retain copy storage charges after shutdown. The source component passed controlled software tests and review. Connecting the original app channel and worker lease, completing the training producer and testing actual Windows behavior remain pending. Accepted model accuracy stays closed.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "validate-recorded-training-completion",
+      "source_definition_digest": "b94e856a74e80672d488fbb672e1be6b642efb2fc9e4cb475668743705ab81f7",
+      "user_description": {
+        "title": "Validate training result replies for chatbot tools",
+        "purpose": "A shared request and reply format checks the exact task or plan step and workspace before returning copied training history. The original task owner supplies the accepted plan reference. Reply checks reject extra or private fields, mismatched targets and false readiness, quality or saving claims. An unavailable cache returns source-not-ready without observing training. This adds portable reply validation to the existing private cached-review capability. Focused software checks and independent review passed; Native, actual-model, real-host and parent qualification remain separate.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "review-recorded-training-through-broker",
+      "source_definition_digest": "4ec1b07cc6b40ae4cb60a7de34e5c40018e47ba15dcb63087d9f5b9f74376938",
+      "user_description": {
+        "title": "Read training results through chatbot connections",
+        "purpose": "Configured Desktop and Managed connections and the existing chatbot workflow tool can request recorded results by original task or plan step. Each connection checks permissions and exact task, plan and workspace before disclosure. Existing numeric comparisons remain historical measurements. Source, download, progress and cancellation tools stay compatible. Focused host and protocol checks and independent review passed. Production Root activation, Native execution, output saving and real-host qualification remain separate.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bind-training-startup-to-original-request",
+      "source_definition_digest": "a87ae371200e895896dbe31d041f7c00b440929ec87c0104ee3e14b979001596",
+      "user_description": {
+        "title": "Keep worker startup bound to its approved request",
+        "purpose": "The private training session reserves its exact copied request and original permission checks before startup. Installed verification, launch preparation and native Node preflight recheck permission; withdrawal after suspension prevents resume. Competing startup requests cannot join the original flight, and callback replacement cannot restore observed loss. Failed or uncertain preparation retains custody. Six selected feature checks and independent review passed; the source is committed. Protected Model source handoff, complete native resources, actual host execution and parent qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "observe-approved-training-model-files",
+      "source_definition_digest": "a55fa8b5d4bbe4bb4c44cb873297bb5e5aa4788c4c438bde99ee8897802ccbda",
+      "user_description": {
+        "title": "Check the approved model files before worker startup",
+        "purpose": "The original authorized preparation-only Model reader reaches the exact original runtime capture and reserved IO owner. Complete bounded flat-file observation uses two streamed SHA256 passes and a final saved Model check after all original IO closes. Missing, changed, unsafe or uncertain sources refuse startup. All12 focused checks and separate review passed; commit406e090. Native copying, inherited bootstrap/borrow, full resources, actual hosts and parent qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "launch-protected-training-model-source",
+      "source_definition_digest": "0d4fbd7ea2598031b5939461724602ee1d20f1ac4c69d1379cecf1e7c1355604",
+      "user_description": {
+        "title": "Carry the approved model into protected worker launch",
+        "purpose": "Carry the original observed model and a separate disk reservation through the same worker launcher. Recheck the saved model before copying and dispatch. Copy, check and protect the files before startup, and keep their disk charge after shutdown. Controlled source tests qualify this component; worker file access, full training and real-host qualification stay pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "consume-protected-training-model",
+      "source_definition_digest": "748339535283a5c1bc7c8b6e1e06bf3d8aaaf94e54e48597ade4aeec32ef87c4",
+      "user_description": {
+        "title": "Let the worker use the protected model",
+        "purpose": "Pass the exact approved model definition and protected read-only files into the original worker. Validate the files and give the fixed loader one live view without changing approved settings. Retain uncertain IO and copied-file charges. Controlled component tests qualify this handoff; full training, durable accounting and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "protect-approved-training-input-files",
+      "source_definition_digest": "79fd69b4056e96696961436ae9ae45df3029c97641e786c2dfdbe587c47242e6",
+      "user_description": {
+        "title": "Protect the approved datasets and recipe",
+        "purpose": "Bind the original Model lease to the exact approved dataset files and recipe. Copy, hash, check and seal the complete inventory within the original reservation. Support actual request-thread handoff, refuse overlapping borrowing and keep uncertain IO and disk charges. Controlled source tests qualify this component; full producer, output/cache, durable accounting and real-host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "load-protected-training-inputs",
+      "source_definition_digest": "da67514d3f94337e6666a13c3ea151d93916ca5639bde6cf7c384fcf37e82e75",
+      "user_description": {
+        "title": "Load protected inputs with the approved settings",
+        "purpose": "Give the fixed loader one live combined Model and input view from the actual sealed graph. Use private protected file references without changing logical settings or lineage. Recheck after owned callbacks and before SDK effects; observed custody loss stays lost. Controlled source/data tests qualify these boundaries, not full native production, outputs/cache, durable quotas, SDK retirement or real hosts.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "protect-generated-training-files",
+      "source_definition_digest": "aee85aa0ebbdb98176ab5f5cd49138df96de191cc23ff51f65221a167cbb432b",
+      "user_description": {
+        "title": "Protect generated training files",
+        "purpose": "Stream a finite declared output inventory into one fresh Native-protected namespace tied to the genuine approved Model/input view. Check rounded allocation, exact bytes, hashes, readback, complete inventory and retained read-only guards. Recheck original custody after all callbacks; uncertain results keep their original slots and charges. This component does not qualify the fixed serializer, model validity, Save, durable quota, full producer or real hosts.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "stream-model-weights-to-protected-files",
+      "source_definition_digest": "bcf1c64577acaa014ea15670b7f0775d01093bac719ac45ee8748fdf87f10d71",
+      "user_description": {
+        "title": "Stream model weights into protected files",
+        "purpose": "Turn the selected weight tensors into exact-size safetensors streams. Copy only a small CPU buffer at a time through the fixed loaded Torch methods and feed the protected writer. Recheck live authority, tensor metadata and returned slices before copying; retain uncertain calls. Controlled fixtures qualify the byte codec and SDK adapter, not model/PEFT selection, configuration export, installed readers, real hardware, full producer, Save or actual hosts.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "select-trained-model-weights",
+      "source_definition_digest": "88dc964801d90cf9b415f4e3cfa16b4846b211cbb194be410ae698ff7c269d56",
+      "user_description": {
+        "title": "Select the exact trained model weights",
+        "purpose": "Select full-model or LoRA/QLoRA weights from the same protected training objects. Preserve resized and targeted embeddings. Reject incomplete synchronization, changed adapter settings or replaced configuration before export. Use explicit local SDK behavior without provider lookup. Controlled software checks do not qualify installed SDKs, complete output export, native execution, Save or actual hosts.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "export-training-configuration-and-tokenizer",
+      "source_definition_digest": "db8c30f7607d883e11add6d77d252b50c6b9df5d4f56d04689adc66afb3b359f",
+      "user_description": {
+        "title": "Export model settings and tokenizer data",
+        "purpose": "Capture the same protected model and tokenizer settings as bounded immutable files. Preserve generation options, added/special token behavior and chat templates without SDK path writes or provider lookup. Remove private input locations and reject changed SDK receivers. Controlled writer fixtures verify software composition; installed readers, the complete producer, durable quotas, Save and actual hosts remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "write-protected-trained-candidate",
+      "source_definition_digest": "13c9ed97e8e28a3cefb7b35530c4d9bd73a8ea573363a44ee2f17e4817a42e6c",
+      "user_description": {
+        "title": "Write the protected trained candidate",
+        "purpose": "Combine the original selected weights and settings into a protected candidate with exact files, bounded writes and separate Save authority. Keep resource checks after observer callbacks and use passive SDK field checks last. Honor supported single-file shard settings and refuse unsupported splits. Controlled fixtures prove this serializer software; actual training integration, full producer, durable reservations, installed readers, retirement, Save and host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "preserve-original-training-run-history",
+      "source_definition_digest": "2756e79591cbfe7e690de8ed2c7a7ae1308e62d089b4e41dbf78716ef7d5e56c",
+      "user_description": {
+        "title": "Preserve the original training run history",
+        "purpose": "Retain one actual trainer attempt and bounded immutable numeric completion history. Export private run and serialization records through the original protected writer. Use the captured original SDK operations across callbacks; leave validation and checkpoint-file proof pending. This component grants no full training, Native producer, Save or host qualification.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bound-original-checkpoint-output-folders",
+      "source_definition_digest": "7f0677336bcf5e57673efd1716f68c17c89c90fa32a11c7d59d89de3649ccadb",
+      "user_description": {
+        "title": "Keep checkpoint outputs in separate protected folders",
+        "purpose": "Bind a finite set of fresh output folders and a total byte cap to the original training request and file owner. Require each complete Native seal before the next folder. Keep failed or uncertain files and charges; accounting does not grant cleanup or another attempt. Actual SDK checkpoints and full producer qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "serialize-original-family-model-output",
+      "source_definition_digest": "811f8a29990a54cc0d923855faf00656b548ee901fe66a83ea9e928c1e1474cc",
+      "user_description": {
+        "title": "Write trained bytes into the protected output folders",
+        "purpose": "Connect the actual fixed weight and metadata serializer to the original bounded output family. Keep exact original view, request, namespace and controls; a failure freezes only its own group. This source component does not execute SDK checkpoints or qualify a complete training/Save/host workflow.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "honor-approved-text-training-settings",
+      "source_definition_digest": "f6ceb848efb0f6514f2ba35ec2076545605b415ee1f0aa0aa6603a743b96c4aa",
+      "user_description": {
+        "title": "Apply selected training settings",
+        "purpose": "Apply an explicit seed before model setup, pass the selected scheduler and enable requested interval evaluation only with validation data. Preserve safe loading and defaults; no model quality score or hardware determinism is claimed.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "verify-protected-model-file-consumers",
+      "source_definition_digest": "641a4610c56362b26c860eda985fc78abc1d38a46cbeb52efdfa91b822d4e6cb",
+      "user_description": {
+        "title": "Read protected model files with supported libraries",
+        "purpose": "Check exact synthetic weight and tokenizer formats with installed safe readers. Preserve standard model label/pruned-head IDs and prove a controlled local configuration/tokenizer reload. Reject ambiguous keys and retain actual model/training/native/host qualification gaps.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bind-protected-checkpoint-schedule",
+      "source_definition_digest": "c8b5234abf6172c19f4441d7be15616f09345c48d9c335fa01dbe0e752f10561",
+      "user_description": {
+        "title": "Preserve the approved checkpoint schedule",
+        "purpose": "Bind the exact finite step schedule, retention and output count to the original protected training owner. Preserve scheduled saves and the final step. Disable ordinary SDK disk saving and refuse training until the fixed writer is connected. Actual execution, resources, saving and host qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "write-approved-protected-checkpoints",
+      "source_definition_digest": "b50587c334dea99fd6956494aacf840dfe4d67cd4d334a50da73e8dfe1bd11f5",
+      "user_description": {
+        "title": "Save each requested model snapshot",
+        "purpose": "Save every requested training snapshot, including the final update, with the original model and permissions. Keep each completed snapshot unchanged. Stop if a save fails, is missing or loses permission. Keep a separate slot for the final trained result. Actual training, result validation, resource accounting, saving and app/server checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "seal-final-trained-output",
+      "source_definition_digest": "85e898b1f573b555c7a39bf4e981ca708f6e730b05914ea7b46f9f53d35cf77a",
+      "user_description": {
+        "title": "Seal the final trained model result",
+        "purpose": "After training and every required snapshot finish, write the final weights, settings, tokenizer data and original run history. Keep file sizes and hashes tied to verified writes. Refuse changed controls, lost permission and interrupted exports. Full producer/data-cache, protected validation/custody, retirement, Save and real-host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bind-original-training-task-identity",
+      "source_definition_digest": "f9df6f0e5393b8d6122e500e3267dc77a10925094aec57b36cbce156b7740778",
+      "user_description": {
+        "title": "Keep training output tied to the accepted task",
+        "purpose": "Use the original accepted task ID for protected training run, checkpoint and final-result records. Refuse missing or changed identities before loading or writing. Ordinary training naming stays compatible. This correlation grants no approval, execution, file or Save permission; full producer, data loading, resource, cleanup and host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "tokenize-protected-inputs-in-memory",
+      "source_definition_digest": "6135bfe98d282d251f70e7182e581f50fa629879195623d0e7d9f59680730f18",
+      "user_description": {
+        "title": "Prepare training tokens without extra files",
+        "purpose": "Prepare train and validation tokens in memory, without SDK cache files or callback serialization. Keep original data, token IDs, masks, labels and row counts. Stop changed sources or permission before processing another row. Treat feature paths as data instead of opening files. Complete protected input reading, total resource ownership, producer, cleanup, Save and host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "read-original-dataset-bytes",
+      "source_definition_digest": "7208abeb3f8897279271c3d61e56431ea445478a1a84c9448e3bb672eebcab4b",
+      "user_description": {
+        "title": "Read the exact dataset files safely",
+        "purpose": "Read original protected dataset files without reopening paths or reading the recipe. Verify every file before returning all bytes together. Stop if permission, content or original bindings change; retain uncertain reads instead of retrying. In-memory parsing, complete producer/resource ownership, custody, cleanup, Save and host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "parse-original-datasets-in-memory",
+      "source_definition_digest": "9be867e0a3e9512a4dc4f81f07ae5ac77d7e9db5fb42151eba39cba27ce37e10",
+      "user_description": {
+        "title": "Load the approved training data without extra files",
+        "purpose": "Parse the verified original JSON, JSONL, CSV or self-contained Parquet bytes into in-memory training and validation data. Keep original permission and file order. Refuse malformed data, changed helpers, reentry, external file references and custom decoders without caches or partial results. Complete training, resource ownership, output validation, retirement, Save and host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "compose-protected-training-stages",
+      "source_definition_digest": "71e4249154a525c65125a24e7bfb97bd483404ed6f7a81172ff2affa1b8dda85",
+      "user_description": {
+        "title": "Connect approved data, training and protected files",
+        "purpose": "Connect the approved data, local model and selected settings. Show progress, create checkpoints and prepare the final files. Stop if permission or selected data changes. Output file checks, resource limits, worker cleanup, a separate Save approval and app testing remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "read-protected-training-results",
+      "source_definition_digest": "320c02f718cf1d69bf2049c5ada475aa56daa272aa870e07d90eaf9cd5c202d0",
+      "user_description": {
+        "title": "Read saved training files safely",
+        "purpose": "Read the saved training files in small chunks through their original protected handles. Check each file and stop if permission, resource limits or protection changes. File format checks, complete worker cleanup, a separate Save approval and app testing remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "validate-protected-training-result-formats",
+      "source_definition_digest": "798c480e3a8deb60beea422f88f2d3dcd0e0ef4adc174b8e275aca26e75650a1",
+      "user_description": {
+        "title": "Check saved training file formats",
+        "purpose": "Check training file hashes, complete reads, metadata and tensor headers without loading whole model files. Reject damaged files and unsafe settings. Binding the checks to the original training run, complete worker cleanup, Save approval and app tests remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bind-original-training-result-checks",
+      "source_definition_digest": "fadbfb077cc79f75f7a268146b0ceb2e3eb19155196b568b5726db7db081b697",
+      "user_description": {
+        "title": "Link saved results to the training run",
+        "purpose": "Check that all saved results belong to the same training run and checkpoint schedule. Check the exact final records and original permission before accepting file summaries. Complete worker cleanup, the resource owner, a separate Save approval and real app tests remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "retire-original-training-output-io",
+      "source_definition_digest": "814573254b1ccdf562611a11fc115480a38e9cbb59d649da4787cacaa0ea034c",
+      "user_description": {
+        "title": "Close saved-result files safely",
+        "purpose": "Stop reading saved results, close only the original owned file handles and keep their disk use recorded. Reject changed ownership or uncertain replies without retry. Complete training resources, model and worker cleanup, separate Save approval and real app qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-original-protected-training-result",
+      "source_definition_digest": "0cc1cc3d3bf0897399102bafa4ed640139ed00ea5a60c5fbb76069313e8a5296",
+      "user_description": {
+        "title": "Connect training to checked and closed output",
+        "purpose": "Run the private training pipeline, check its saved files and return the original result after closing the owned output files and checking permission. Preserve ordinary training. Full resource ownership, model and worker cleanup, separate Save approval and actual app checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-original-training-file-owner",
+      "source_definition_digest": "26ca70f2f7692e2a60c910c0401b1290eeb5731653827ffa670ef779dabc003f",
+      "user_description": {
+        "title": "Connect the original training file owner",
+        "purpose": "Prepare the original training inputs, run one protected training workflow and close its output files. Keep Model and input guards and disk charges until later cleanup. Complete resource reservation, producer integration, model and worker cleanup, separate Save and actual app checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "stage-private-training-result-bytes",
+      "source_definition_digest": "0387679a0bf85c8ed20c52ac5932b44f8b5431a31a8bbddcc8d250732184ea30",
+      "user_description": {
+        "title": "Store private training result files",
+        "purpose": "Copy result files into private storage and check their size and hash. Limit each publication to its declared files and bytes. Keep model registration and Save separate. Source transfer, real resource reservation, complete cleanup and app checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "deliver-training-output-in-one-pass",
+      "source_definition_digest": "11c00eba4750ca9a84b4cabd91a715d532275cc84e21c1af4e69d0ed5a71d334",
+      "user_description": {
+        "title": "Deliver protected training files in one pass",
+        "purpose": "Check saved files while sending bounded output frames to a private receiver. Wait for each acknowledgement and stop on cancellation or changed ownership. Keep result bytes private. Worker connection, actual resource reservation, complete cleanup, Save and real app checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-private-training-output-channel",
+      "source_definition_digest": "5d118e1abbbb84c621c42f97713ab1633494d8b363b047a8507c345d81ecbffe",
+      "user_description": {
+        "title": "Connect training files to the private worker session",
+        "purpose": "Send bounded training-file messages through the private worker connection. Check the original request and owner before each read or receipt confirmation. Stop on cancellation. Parent receiving, real resource reservation, complete cleanup, Save and real app checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "receive-private-training-output-in-storage",
+      "source_definition_digest": "f18d4218ef0ce20ed39999eb0178799fb4df241b652c75427cc7cca6e807e629",
+      "user_description": {
+        "title": "Receive training files in verified private storage",
+        "purpose": "Receive ordered checkpoint and candidate files through the original private session. Verify and store each file before confirming receipt. Stop new work on cancellation, and retain uncertain writes. Actual protected storage, resource reservation, full cleanup, Save and app qualification remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "fence-original-training-files-for-worker-exit",
+      "source_definition_digest": "03617b3b8b50ee3b71f0adfe8d289ccd50364160da843bc5748ac32bd67fcf7c",
+      "user_description": {
+        "title": "Fence original training files before worker exit",
+        "purpose": "Use the original prepared files to prove that local work has stopped. Keep Model and input protection in place, preserve all byte accounting, and issue one receipt that the same file owner can use once. Complete shutdown wiring, actual worker exit, resource reservation and protected result storage remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "track-original-parent-training-io",
+      "source_definition_digest": "8d599a1f75a4c0034f49fe2b92274e77d2bacb03fbeeb4732c3b33a9adccc943",
+      "user_description": {
+        "title": "Track original training operations through cancellation",
+        "purpose": "Track the original file, network and stream operations through cancellation or a timeout. Confirm local closure only when those operations return and the original file handles close. Keep uncertain results and byte reservations. Worker shutdown, complete runtime wiring and host checks remain pending.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "run-approved-fine-tuning",
+      "source_definition_digest": "923ebfce5f7b973cd73067d412166e6362f4ca29f41cb6a775e40f948311175c",
+      "user_description": {
+        "title": "Run a bounded fine-tuning task",
+        "purpose": "Use the approved dataset version, exact base model and supported training settings. Show progress, checkpoints and output history. Keep hardware limits, clearly refuse unsupported or low-resource requests, and require separate approval to save the trained result.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "evaluate-trained-model-candidate",
+      "source_definition_digest": "58ba023a45d8abf199a916220d5b2fad2ad4dbefffaab2dffc6ed0195ac0bbd9",
+      "user_description": {
+        "title": "Evaluate and review the trained candidate",
+        "purpose": "Compare the trained candidate with the declared fixed baseline. Record model, data, recipe, hardware and task history. Separate readiness from output quality and review before saving. Do not repeat ordinary model accuracy checks already accepted by the user.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "generate-and-import-model-output",
+      "source_definition_digest": "397eea28a6cc428007a44775cad97003fadee5f99acb7bc4640af669c7454fce",
+      "user_description": {
+        "title": "Generate and import supported outputs",
+        "purpose": "Generate supported text and images and import outputs for review through existing tasks. Apply current permissions and resource limits. Keep prompts private, preserve exact output history and save only approved results.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "qualify-model-workflows-on-hosts",
+      "source_definition_digest": "b897e4a36d70f187c46106ecce9609cba8f5bc87054656ba9af4d1688b0860c9",
+      "user_description": {
+        "title": "Show and qualify exact model outcomes",
+        "purpose": "Test real approved model downloads, training and generated outputs on Desktop and Managed browser through MCP and paired app views. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Verify evaluation software with controlled metrics without scoring real model quality. Simulated results cannot pass real execution checks.",
+        "scope": [
+          "Implementation progress and required parent technical checks remain separate."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "stage-original-training-and-exit-on-one-executor",
+      "source_definition_digest": "e8a0173143571801c3673ba10c5a4b833b7fb64d9cffa0eef70780ca1bb376d7",
+      "user_description": {
+        "title": "Keep training and file checks on one worker",
+        "purpose": "The same worker prepares the files, runs training and checks that its file operations have stopped.",
+        "scope": [
+          "These local tests cover the worker component.",
+          "File protection and disk charges remain in place.",
+          "The full training run, storage limits, saving and tests in the running apps are still pending."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "coordinate-original-parent-and-worker-retirement",
+      "source_definition_digest": "b9bff54d137c40974a462415df30d482759fa0cca40e85dc933315933defc3e0",
+      "user_description": {
+        "title": "Close training files before worker shutdown",
+        "purpose": "The training controller waits for file operations to stop and for the original worker to close before releasing the task's execution slot.",
+        "scope": [
+          "Stored files and their reserved disk space stay in place.",
+          "An uncertain reply does not allow another shutdown or release attempt.",
+          "The complete training adapter, storage protection, an actual training run, saving and app tests remain pending."
+        ]
+      }
+    }
+  ]
+}

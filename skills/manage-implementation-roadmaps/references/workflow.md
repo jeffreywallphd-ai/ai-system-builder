@@ -107,6 +107,8 @@ the mapping. The CLI refuses unrelated/source candidate claims. Its own exact
 metadata writer may publish before checks/review with explicit `metadataWork`
 ownership. Exact target state/roadmap paths, a closed metadata-only file scope,
 current spec/context and unexpired claim are required. No other claim may exist.
+The closed metadata-file list includes the fixed task-description companion;
+it never permits an operations directory or an arbitrary new file.
 The Records mutation lock stays held through publication. Lock order is roadmap
 publication then Records; Work state reads never acquire the publication lock,
 and this guard calls no recursive Records mutation. Dry-run and deterministic

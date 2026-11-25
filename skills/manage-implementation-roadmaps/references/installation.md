@@ -24,6 +24,13 @@ task targets or consuming governed task `workProof`. Keep the real
 routing with that adapter. Portable repositories without it remain declarative;
 the engine never executes checks or manufactures a Work record. Existing v1
 specifications and exact increment bindings remain unchanged.
+When installing the review view, include strict adopted-plan projection, exact
+paged story/task joins, source-bound task-description companion and inert DOM
+tests together. Legacy wire fields stay readable; task counts and reviewed local
+Work snapshots never qualify the parent. Installation performs no live adoption.
+Keep the real positive metadata-owner/task-companion fixture with the exact
+closed-file allowance. State/roadmap remain required; source, directory and
+arbitrary-file scopes remain denied, with journal/bootstrap guards unchanged.
 
 Install the engine, tests and references together. The explicit
 `legacy-acceptance-scope-revised` event archives mixed legacy human acceptance

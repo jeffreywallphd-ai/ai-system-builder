@@ -35,6 +35,17 @@ excluded from whole-increment closure even if acceptance IDs match; pending
 controlled parent evidence is never inferred from local acceptance. Keep numeric
 attribution separate from these evidence links.
 
+The story view validates the full adopted relationship chain before projection.
+Task references are unique and join only same-reply owning tasks; selected Work
+pages explicitly distinguish visible references from original story totals.
+The browser refuses corrupt ownership/counts before refresh adoption. Story task
+counts never reuse the whole-increment qualification result. Missing old Work
+proof remains an explicit legacy record; unavailable references remain unverified.
+The fixed task-copy companion has the existing1MiB/1000-row and text bounds,
+strict hashes/identity, duplicate refusal and joined-text redaction. It cannot
+create ownership, alter status or supply approval; unsafe or stale copy has no
+technical prose fallback. Inert DOM, paging and2MiB response admission remain.
+
 The private training-file preparer keeps original ModelRead authority separate
 from a cooperative filesystem observation. It captures host/client/actor/context
 and callback identities and dependency methods, checks them after awaits, and

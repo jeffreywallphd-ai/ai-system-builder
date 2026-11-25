@@ -16,6 +16,17 @@ until ordinary recovery completes. Work start revalidates authority under Record
 admission without taking the roadmap lock. Read-time inconsistencies fail closed.
 Task/story implementation counts remain separate from technical qualification.
 
+The review projection validates adopted ownership through the canonical engine.
+Complete tasks remain single records; stories hold exact task references and
+implementation counts. Paged Work views narrow only visible task references,
+mark that view partial and retain explicitly original story totals. Missing or
+tampered ownership never becomes a guessed relationship. Completed task proofs
+can show reviewed local Work snapshots, with no current parent qualification.
+The browser rejects incomplete/duplicate/foreign joins before replacing a view.
+Plain story/task copy uses the fixed bounded task-description companion; exact
+definition hashes and existing joined-text redaction apply. Missing/stale copy
+shows neutral maintenance guidance. Legacy unadopted wire fields stay compatible.
+
 Optional `development-work-v2` task targets separately bind exact task/story and
 definition/tracking hashes while preserving the old increment binding. Work
 acceptance explicitly selects scoped task criteria, outcome/support coverage,

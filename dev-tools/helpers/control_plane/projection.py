@@ -17,6 +17,7 @@ from .usage import summary as usage_summary
 from .storage import confined_path
 from .supporting_work import enrich
 from .criterion_presentation import apply_presentations, canonical_blocker_source, apply_blocker_presentations
+from .story_views import adopted_plans, attach_task_support
 
 REVIEW_MAX_BYTES = 2 * 1024 * 1024
 CHUNK_REFERENCE_FORMAT = "roadmap-chunk-refs-v1"
@@ -54,9 +55,13 @@ def review_page(value: dict, *, view: str, page: int, roadmap: str = "", increme
     identities = Counter()
     for parent in value["roadmaps"]:
         identities.update((parent["id"], None, item["id"]) for item in parent["increments"])
+        identities.update((parent["id"], None, item["id"], "story", story["id"])
+                          for item in parent["increments"] for story in item.get("stories", []))
         for history in parent.get("merged_history", []):
             identities[parent["id"], history["id"], None] += 1
             identities.update((parent["id"], history["id"], item["id"]) for item in history["increments"])
+            identities.update((parent["id"], history["id"], item["id"], "story", story["id"])
+                              for item in history["increments"] for story in item.get("stories", []))
 
     def disclosed(parent, owner=None):
         owner_id, history_id = (parent["id"], None) if owner is None else (owner, parent["id"])
@@ -80,7 +85,13 @@ def review_page(value: dict, *, view: str, page: int, roadmap: str = "", increme
             for item in parent["increments"]:
                 chunks = [chunk for chunk in item["chunks"] if (parent["id"], item["id"], chunk["id"]) in wanted]
                 if chunks:
-                    increments.append({**item, "chunks": chunks})
+                    narrowed = {**item, "chunks": chunks}
+                    if "stories" in item:
+                        wanted_ids = {chunk["id"] for chunk in chunks}
+                        narrowed.update(partial_task_view=True, stories=[{**story,
+                            "task_ids": [identity for identity in story["task_ids"] if identity in wanted_ids]}
+                            for story in item["stories"] if wanted_ids.intersection(story["task_ids"])])
+                    increments.append(narrowed)
             if increments:
                 # Exact selected chunks and complete owning criteria/support.
                 # Merged history stays on its full roadmap page.
@@ -364,6 +375,7 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
             try:
                 relative_path = path.relative_to(root).as_posix()
                 s = read_roadmap_state(root, relative_path)
+                story_plans = adopted_plans(root, s)
                 if s.get("schemaVersion") != 1 or not isinstance(s.get("increments"), list):
                     raise ValueError("schema")
                 blocker_sources[s["slug"]] = canonical_blocker_source(s)
@@ -393,6 +405,13 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
                         record = records.get(c["id"], {})
                         chunks.append({"id": safe_text(c["id"], 80), "chunk_number": number, "title": safe_text(c["title"]), "outcome": safe_text(c["outcome"], 1400), "created_at": chunk_created, "status": "completed" if c["id"] in completed else "planned", "is_next": s.get("currentIncrementId") == i["id"] and c["id"] == next_id, "criteria_ids": [safe_text(k, 80) for k in c.get("criteriaIds", [])[:100] if k not in transferred_ids], "completed_at": safe_text(record.get("completedAt", ""), 80), "summary": safe_text(record.get("summary", ""), 1000), "tests": [safe_text(t, 400) for t in record.get("tests", [])[:12]]})
                     increments.append({"id": safe_text(i["id"], 80), "number": i["number"], "title": safe_text(i["title"]), "objective": safe_text(i["objective"], 1600), "status": safe_text(i["status"]), "proposal": increment_proposal(i), "chunk_plan_pending_approval": s.get("status") == "roadmap-review" and not s.get("roadmapApproval") and i.get("status") == "pending" and not i.get("plan") and not chunks, "chunk_plan_pending_start": bool(s.get("roadmapApproval")) and i.get("status") == "pending" and not i.get("plan") and not chunks, "criteria": criteria, "offline_acceptance": offline, "chunks_complete": sum(c["status"] == "completed" for c in chunks), "chunks_planned": len(chunks), "chunks": chunks})
+                    if (story_plan := story_plans.get(i["id"])) is not None:
+                        increments[-1].update(stories=story_plan["stories"], story_tracking_digest=story_plan["tracking_digest"])
+                        for chunk in chunks:
+                            chunk.update(story_id=story_plan["owners"][chunk["id"]],
+                                         definition_digest=story_plan["task_digests"][chunk["id"]])
+                            if (proof := records.get(chunk["id"], {}).get("workProof")) is not None:
+                                chunk["_work_proof"] = proof
                 roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blockers": open_blocker_details(s), "blocker_count": sum(b.get("status") == "open" and b.get("actionOwner") == "human" for b in s.get("blockers", [])), "pending_work_count": sum(b.get("status") == "open" and b.get("actionOwner") == "agent" for b in s.get("blockers", []))})
                 # Count every displayed identity before filtering completed or
                 # otherwise ineligible rows. If the source exceeds the display
@@ -422,6 +441,7 @@ def review_content(root: Path, *, compact_work_items: bool = False, paginated: b
         state = Records.empty()
         diagnostics.append({"code": "projection.local-state-unavailable"})
     add_increment_delivery(delivery_targets, state["work_items"])
+    attach_task_support(roadmaps, state["work_items"])
     current_time = creation_time(now())
     bindings = [binding for work in state["work_items"].values()
                 if (binding := active_increment_binding(work, current_time)) is not None]

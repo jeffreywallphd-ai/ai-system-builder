@@ -18,6 +18,46 @@ test("contributor control plane passes focused behavioral qualification", () => 
 });
 
 const pause = () => new Promise(resolve => setImmediate(resolve));
+test("fixed stories group exact tasks without parent qualification and reject corrupt ownership on refresh", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const chunks = ["first", "second"].map((id, index) => ({ id, chunk_number: index + 1, title: `${id} task`,
+    outcome: index ? "<img src=x onerror=alert(1)>" : "A bounded local outcome", status: index ? "planned" : "completed",
+    story_id: "stable", criteria_ids: ["host-check"], is_next: Boolean(index), work_support: { status: index ? "not-recorded" : "legacy-record" } }));
+  let response = { schema_version: "development-review-v1", source_digest: "story-one", repository_id: "story-fixture",
+    roadmaps: [{ id: "owner", title: "Useful roadmap", objective: "A stable outcome", status: "executing", evidence_policy: "control-plane-v1", current_increment: "one",
+      increments: [{ id: "one", number: 1, title: "Useful increment", objective: "Deliver the approved stories", status: "implementing",
+        chunks_complete: 1, chunks_planned: 2, chunks, story_tracking_digest: "a".repeat(64),
+        stories: [{ id: "stable", title: "Fixed story", outcome: "Keep its original outcome", task_ids: ["first", "second"], tasks_complete: 1, tasks_planned: 2 },
+          { id: "empty", title: "Future story", outcome: "Keep another fixed outcome", task_ids: [], tasks_complete: 0, tasks_planned: 0 }],
+        criteria: [{ id: "host-check", description: "Actual host still needs qualification", outcome: "pending", qualification: "controlled-environment" }] }] }],
+    work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.equal(window.document.querySelectorAll(".story").length, 2);
+    assert.equal(window.document.querySelectorAll(".story .work-chunk").length, 2);
+    assert.match(window.document.querySelector(".story summary").textContent, /Fixed story · 1 \/ 2 tasks/);
+    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 2 stories have all planned tasks recorded complete/);
+    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 1 criteria passed/);
+    assert.equal(window.document.querySelectorAll("img").length, 0);
+    window.document.querySelector(".story summary").click(); await pause();
+    assert.equal(window.document.querySelector(".story").open, true);
+    response.source_digest = "story-two"; response.roadmaps[0].increments[0].chunks[1].title = "Expanded task detail";
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(window.document.querySelector(".story").open, true);
+    assert.match(window.document.querySelector(".story").textContent, /Expanded task detail/);
+    for (const mutate of [i => { i.stories[0].task_ids.push("first"); }, i => { i.chunks[0].story_id = "empty"; },
+      i => { i.stories[0].tasks_complete = 2; }, i => { i.stories[0].task_ids = ["foreign"]; }, i => { i.stories = null; }]) {
+      const invalid = structuredClone(response); mutate(invalid.roadmaps[0].increments[0]); invalid.source_digest = "corrupt-story";
+      window.fetch = async () => ({ ok: true, json: async () => invalid });
+      window.document.querySelector("#refresh").click(); await pause();
+      assert.equal(window.document.querySelector("#connection").textContent, "Connection interrupted");
+      assert.match(window.document.querySelector(".story").textContent, /Expanded task detail/);
+      assert.equal(window.document.querySelectorAll("img").length, 0);
+    }
+  } finally { window.close(); }
+});
 const dashboardRollup = (measured = {}, estimated = {}) => ({
   measured: { input_tokens: null, output_tokens: null, cached_input_tokens: null, reasoning_output_tokens: null, ...measured },
   estimated: { input_tokens: null, output_tokens: null, cached_input_tokens: null, reasoning_output_tokens: null, ...estimated },
@@ -676,7 +716,7 @@ test("review support stays separate from qualification and navigates safely", as
       [...window.document.querySelectorAll(".criteria > li > .status")].map(e => e.textContent),
       ["technical check pending", "qualification not recorded", "failed"],
     );
-    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 1 work chunks · 0 \/ 3 criteria passed/);
+    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 1 tasks · 0 \/ 3 criteria passed/);
     assert.match(window.document.querySelector(".increment").textContent, /1 \/ 3 criteria have reviewed local implementation support/);
     assert.equal(window.document.querySelector(".work-chunk summary .status").textContent, "planned");
     assert.match(window.document.querySelector(".local-support > summary").textContent, /^1 reviewed local work records/);
@@ -929,7 +969,7 @@ test("review requirement bullets retain shared context, one qualification and ca
     assert.match(blockers.textContent, /Your action: Configure the private test repository/);
     assert.equal(blockers.querySelectorAll(".status,details").length, 0);
     assert.ok(window.document.querySelector(".criterion-requirement-body").compareDocumentPosition(blockers) & window.Node.DOCUMENT_POSITION_FOLLOWING);
-    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 0 work chunks · 0 \/ 1 criteria passed/);
+    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 0 tasks · 0 \/ 1 criteria passed/);
     response = structuredClone(response);
     response.source_digest = "requirements-fallback";
     response.roadmaps[0].increments[0].criteria[0].requirements = [{ text: "Silently omit resource requirements." }];
@@ -972,8 +1012,8 @@ test("review shows full proposal details and honest preapproval or queued chunk 
     window.eval(readFileSync("dev-tools/review-site/app.js", "utf8"));
     await pause();
     const body = () => window.document.querySelector(".increment").textContent;
-    assert.match(body(), /Implementation chunk plan is created after roadmap approval/);
-    assert.doesNotMatch(body(), /0 \/ 0 work chunks|No chunk plan recorded/);
+    assert.match(body(), /Implementation task plan is created after roadmap approval/);
+    assert.doesNotMatch(body(), /0 \/ 0 tasks|No task plan recorded/);
     assert.match(body(), /Create actual UI tests/);
     assert.match(body(), /Depends on increments/);
     assert.match(body(), /prior-daily-journeys/);
@@ -989,15 +1029,15 @@ test("review shows full proposal details and honest preapproval or queued chunk 
     response.roadmaps[0].increments[0].chunk_plan_pending_start = true;
     window.document.querySelector("#refresh").click();
     await pause();
-    assert.match(body(), /Implementation chunk plan is created when this increment starts/);
-    assert.doesNotMatch(body(), /after roadmap approval|0 \/ 0 work chunks/);
+    assert.match(body(), /Implementation task plan is created when this increment starts/);
+    assert.doesNotMatch(body(), /after roadmap approval|0 \/ 0 tasks/);
     assert.match(body(), /0 \/ 1 criteria passed/);
     response.source_digest = "active-missing-plan";
     response.roadmaps[0].increments[0].status = "verifying";
     response.roadmaps[0].increments[0].chunk_plan_pending_start = false;
     window.document.querySelector("#refresh").click();
     await pause();
-    assert.match(body(), /No chunk plan recorded for this increment/);
+    assert.match(body(), /No task plan recorded for this increment/);
   } finally { window.close(); }
 });
 
@@ -1251,7 +1291,7 @@ test("increment delivery displays measured sums, pending and unavailable counts 
     const panel = () => window.document.querySelector("details.increment");
     assert.equal(panel().open, false);
     assert.match(panel().querySelector(":scope > .delivery-time").textContent, /^Delivery time: 1h 3m 20s · 2 measured · 1 pending · 1 unavailable\. Summed execution durations may overlap\.$/);
-    assert.match(panel().querySelector(".work-chunk .delivery-time").textContent, /^Delivery time: Not recorded · Execution records do not identify individual chunks\.$/);
+    assert.match(panel().querySelector(".work-chunk .delivery-time").textContent, /^Delivery time: Not recorded · Execution records do not identify individual tasks\.$/);
     assert.equal(panel().querySelector(".work-chunk .status").textContent, "completed");
     panel().querySelector("summary").click(); await pause();
     increment.delivery = { elapsed_ms: null, timed_records: 0, pending_records: 2, unavailable_records: 1 }; response.source_digest += "x";

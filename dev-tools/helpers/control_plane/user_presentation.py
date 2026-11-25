@@ -12,6 +12,7 @@ from .storage import confined_path
 
 REFERENCE = 'docs/operations/roadmap-user-descriptions.json'
 SUPPORT_REFERENCE = 'docs/operations/roadmap-user-support-descriptions.json'
+TASK_REFERENCE = 'docs/operations/roadmap-user-task-descriptions.json'
 REFERENCE_MAX_BYTES = 1024 * 1024
 REFERENCE_MAX_ROWS = 1000
 UNAVAILABLE = 'The agent must update this description. The technical requirements and recorded result remain unchanged.'
@@ -159,6 +160,66 @@ def _read_support_companion(root: Path, diagnostics: set[str]) -> list:
         return []
 
 
+def _apply_task_descriptions(root: Path, roadmaps: list, warnings: set[str]) -> None:
+    known, admitted = {}, {}
+    for roadmap in roadmaps:
+        for increment in roadmap['increments']:
+            if 'stories' not in increment:
+                continue
+            for family, rows in (('story', increment['stories']), ('task', increment['chunks'])):
+                for row in rows:
+                    known[(family, roadmap['id'], increment['id'], row['id'])] = row
+    if not known:
+        return
+    try:
+        document = read_json(confined_path(root, TASK_REFERENCE), maximum=REFERENCE_MAX_BYTES)
+        fields(document, {'schema_version', 'records'}, {'schema_version', 'records'})
+        if (document['schema_version'] != 'roadmap-user-task-descriptions-v1' or
+                not isinstance(document['records'], list) or len(document['records']) > REFERENCE_MAX_ROWS):
+            raise ValueError('bounded story/task descriptions required')
+        seen = set()
+        for row in document['records']:
+            key = None
+            try:
+                keys = {'record_type', 'roadmap_id', 'increment_id', 'record_id', 'source_definition_digest', 'user_description'}
+                fields(row, keys, keys)
+                if row['record_type'] not in {'story', 'task'}: raise ValueError('unsupported task copy')
+                key = (row['record_type'], *(identifier(row[name]) for name in ('roadmap_id', 'increment_id', 'record_id')))
+                if key in seen:
+                    admitted.pop(key, None)
+                    raise ValueError('duplicate task copy')
+                seen.add(key)
+                _hash_field(row['source_definition_digest'])
+                copy = _copy(row['user_description'], 'headings')
+                # A bounded companion may prospectively describe another page
+                # or an unadopted plan. It never creates a display relationship.
+                if key in known:
+                    if known[key]['definition_digest'] != row['source_definition_digest']:
+                        raise ValueError('stale task definition')
+                    admitted[key] = copy
+            except (ControlError, ValueError, KeyError, TypeError):
+                warnings.add('projection.user-description-unavailable')
+                if key is not None: admitted.pop(key, None)
+    except (ControlError, ValueError, KeyError, TypeError, OSError):
+        warnings.add('projection.user-description-unavailable')
+    for key, row in known.items():
+        copy = admitted.get(key)
+        row['title'] = copy['title'] if copy else 'Description update needed'
+        row['outcome'] = copy['purpose'] if copy else UNAVAILABLE
+        row['user_scope'] = copy['scope'] if copy else []
+        if key[0] == 'task':
+            row['verification_recorded'] = bool(row.pop('tests', []))
+            row.pop('summary', None)
+        if not copy: warnings.add('projection.user-description-unavailable')
+    for roadmap in roadmaps:
+        for increment in roadmap['increments']:
+            if 'stories' in increment:
+                index = {row['id']: row for row in increment['stories']}
+                for row in increment.get('proposal', {}).get('work_packages', []):
+                    if row['id'] in index:
+                        row.update(title=index[row['id']]['title'], outcome=index[row['id']]['outcome'])
+
+
 def apply_user_descriptions(root: Path, value: dict) -> dict:
     """Replace display prose only; canonical source and technical CLI stay intact."""
     roadmaps = list(_roadmaps(value))
@@ -173,6 +234,7 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
                     support.add(('support-scope', _hash(row['scope'])))
                     support.update(('support-limitation', _hash(item)) for item in row['limitations'])
     warnings = set()
+    _apply_task_descriptions(root, roadmaps, warnings)
     try:
         sources = _sources(root, roadmaps)
         known = {'criteria': criteria, 'headings': headings, 'support': support}
@@ -225,6 +287,12 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
             increment = headings.get(('increment', item['roadmap_id'], item['increment_id']))
             if parent: item['roadmap_title'] = parent['title']
             if increment: item['increment_title'] = increment['title']
+            if increment and 'stories' in increment:
+                task = next((row for row in increment['chunks'] if row['id'] == item['chunk_id']), None)
+                if task:
+                    for field in ('title', 'outcome', 'user_scope', 'verification_recorded'):
+                        item[field] = task[field]
+                    item.pop('summary', None); item.pop('tests', None)
     value['diagnostics'].extend({'code': code} for code in sorted(warnings))
     value['presentation_view'] = 'user-v1'
     value['source_digest'] = digest({k: v for k, v in value.items() if k not in {'source_digest', 'generated_at', 'repository_id'}})

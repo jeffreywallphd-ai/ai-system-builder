@@ -236,6 +236,22 @@ STORY_TASK_REQUIRED = (
     "dev-tools/helpers/tests/test_control_plane_deterministic_support.py",
     "dev-tools/helpers/tests/test_control_plane_delivery.py",
 )
+STORY_VIEW_SCOPE = STORY_TASK_SCOPE + (
+    "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/story_views.py",
+    "dev-tools/helpers/control_plane/user_presentation.py", "dev-tools/helpers/tests/test_control_plane_story_view.py",
+    "dev-tools/helpers/tests/test_control_plane_user_presentation.py", "dev-tools/helpers/tests/test_control_plane_review_wire.py",
+    "dev-tools/review-site/app.js", "dev-tools/review-site/style.css", "dev-tools/review-site/README.md",
+    "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs", "docs/operations/roadmap-user-task-descriptions.json",
+    "docs/operations/roadmap-user-support-descriptions.json",
+)
+STORY_VIEW_REQUIRED = (
+    "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/story_views.py",
+    "dev-tools/helpers/control_plane/user_presentation.py", "dev-tools/helpers/tests/test_control_plane_story_view.py",
+    "dev-tools/helpers/tests/test_control_plane_user_presentation.py", "dev-tools/helpers/tests/test_control_plane_review_wire.py",
+    "dev-tools/helpers/tests/test_control_plane_story_tasks.py", "dev-tools/helpers/tests/test_control_plane_delivery.py",
+    "skills/manage-implementation-roadmaps/scripts/roadmap.py", "dev-tools/review-site/app.js",
+    "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+)
 
 ROADMAP_STORAGE_SCOPE = (
     "skills/manage-implementation-roadmaps/SKILL.md",
@@ -603,6 +619,18 @@ DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "story-task-view": {
+        "interpreter": "python",
+        "command": ["-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                    "-k", "test_control_plane_story_view.", "-k", "test_control_plane_user_presentation.",
+                    "-k", "test_control_plane_review_wire."],
+        "sources": STORY_VIEW_SCOPE,
+        "automatic_sources": ("dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/story_views.py",
+                              "dev-tools/helpers/control_plane/user_presentation.py", "dev-tools/helpers/tests/test_control_plane_story_view.py",
+                              "dev-tools/review-site/app.js", "docs/operations/roadmap-user-task-descriptions.json"),
+        "automatic_required_files": STORY_VIEW_REQUIRED,
+        "timeout": 300,
+    },
     "story-task-bindings": {
         "interpreter": "python",
         "command": ["-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
@@ -4308,6 +4336,19 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     if ("story-task-bindings" in selected_ids and paths and set(paths) <= set(STORY_TASK_SCOPE)
             and "control-plane" not in explicit_required and _automatic_files_available(root, story_check)):
         selected = [check for check in selected if check["id"] != "control-plane"]
+    view_check = PUBLISHED_FORM_CHECKS["story-task-view"]
+    if ("story-task-view" in selected_ids and paths and set(paths) <= set(STORY_VIEW_SCOPE)
+            and _automatic_files_available(root, view_check)):
+        if "control-plane" not in explicit_required:
+            selected = [check for check in selected if check["id"] != "control-plane"]
+        if "focused-tests" not in explicit_required:
+            selected = [check for check in selected if check["id"] != "focused-tests"]
+            browser = next((check for check in selected if check["id"] == "review-site"), None)
+            if browser is not None:
+                # Related real Python suites run separately. Keep every DOM
+                # case, skipping only its duplicate complete-controller wrapper.
+                browser["argv"] = ["node", "--test", "--test-skip-pattern=^contributor control plane passes focused behavioral qualification$",
+                                   "--", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"]
     # Empty/mixed/unknown scope or missing/nonregular support retains the ordinary
     # complete controller command. The actual argv is bound to plan and receipt.
     storage_files = ROADMAP_STORAGE_SCOPE + ROADMAP_STORAGE_CONTROLLER_TESTS

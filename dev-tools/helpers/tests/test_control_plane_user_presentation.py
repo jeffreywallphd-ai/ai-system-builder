@@ -340,6 +340,14 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
                     for key in ('title', 'objective', 'user_scope'):
                         heading.pop(key, None)
                 for increment in roadmap['increments']:
+                    if 'stories' in increment:
+                        for story in increment['stories']:
+                            for key in ('title', 'outcome', 'user_scope'): story.pop(key, None)
+                        for task in increment['chunks']:
+                            for key in ('title', 'outcome', 'summary', 'tests', 'user_scope', 'verification_recorded'):
+                                task.pop(key, None)
+                        for package in increment.get('proposal', {}).get('work_packages', []):
+                            package.pop('title', None); package.pop('outcome', None)
                     for criterion in increment['criteria']:
                         for key in ('description', 'requirements', 'user_instructions', 'evidence_summary', 'evidence_recorded'):
                             criterion.pop(key, None)
@@ -353,6 +361,9 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
             for row in result['work_items']:
                 row.pop('roadmap_title', None)
                 row.pop('increment_title', None)
+                if row.get('source') == 'roadmap-chunk' and 'story_id' in row:
+                    for key in ('title', 'outcome', 'summary', 'tests', 'user_scope', 'verification_recorded'):
+                        row.pop(key, None)
             return result
 
         self.assertEqual(canonical_facts(user), canonical_facts(technical))

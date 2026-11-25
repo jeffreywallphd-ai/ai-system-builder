@@ -27,6 +27,9 @@
   checkpoint. Keep completed history, approval and technical qualification;
   refinement updates ownership atomically and records no pass. Unassigned legacy
   history stays explicit. See the skill's event and installation references.
+  Adopted review views group exact tasks beneath stories, with source-bound plain
+  copy in the bounded task companion. Task counts, local Work support and parent
+  technical qualification stay separate; installation performs no adoption.
 
 - Token phase attribution is prospective optional telemetry. Use `usage phase`
   at review-start/correction-resume boundaries with explicit Work/thread

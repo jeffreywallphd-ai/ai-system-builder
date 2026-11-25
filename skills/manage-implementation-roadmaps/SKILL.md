@@ -288,6 +288,10 @@ receipt and separate review are complete. Never retag old v1 Work or reuse
 completed task IDs. Several tasks may share one Work without duplicating effort
 or tokens; task-targeted Work cannot qualify the whole increment. Increment and
 overall qualification still need their own exact scope.
+Install compatible story projection, plain-copy and UI readers before live
+ownership adoption. Source installation performs no migration. The exact
+pre-check metadata writer may include the fixed task-description companion with
+state/roadmap paths; arbitrary files, source and directory scopes remain denied.
 
 Use a chunk for one coherent outcome that can be implemented, feature-tested,
 independently reviewed and committed before the entire increment closes. Include

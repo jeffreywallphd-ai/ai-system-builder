@@ -11,6 +11,7 @@ const pageSizes = { roadmaps: 3, work_items: 25, evaluations: 25, feedback: 25 }
 const pageRequests = Object.fromEntries(Object.keys(pageSizes).map(key => [key, { page: 1, roadmap: "", increment: "", work: "" }]));
 let linkedIncrement = null;
 const incrementKey = (roadmap, increment, history = null) => JSON.stringify([data.repository_id || "", roadmap, history, increment]);
+const storyKey = (roadmap, increment, story, history = null) => JSON.stringify([data.repository_id || "", roadmap, history, increment, "story", story]);
 const names = { roadmaps: "Roadmaps", work_items: "Work items", evaluations: "Evaluations", feedback: "Feedback" };
 const themePreferenceKey = "aisb-review-theme-v1";
 function applyTheme(theme) {
@@ -57,7 +58,7 @@ function incrementDelivery(increment) {
   return el("p", `Delivery time: ${duration ?? "Not recorded"} · ${timing.timed_records} measured · ${timing.pending_records} pending · ${timing.unavailable_records} unavailable.${duration === null ? "" : " Summed execution durations may overlap."}`, "small delivery-time");
 }
 function chunkDelivery() {
-  return el("p", "Delivery time: Not recorded · Execution records do not identify individual chunks.", "small delivery-time");
+  return el("p", "Delivery time: Not recorded · Execution records do not identify individual tasks.", "small delivery-time");
 }
 function tokenUsagePanel(value) {
   const panel = el("details", undefined, "token-usage");
@@ -380,7 +381,7 @@ function roadmapStatusLegend() {
   for (const [title, description] of [
     ["Discovery / roadmap drafting / decision options", "The agent is investigating scope, drafting the plan or preparing decision options. These states do not authorize implementation."],
     ["Pending increment", "This increment has not started. Its parent roadmap records whether approval has been supplied."],
-    ["Researching / planning", "An increment is being researched or its implementation chunks are being planned."],
+    ["Researching / planning", "An increment is being researched or its implementation tasks are being planned."],
     ["Implementing / verifying", "Planned work is being built or checked. Verification in progress does not itself mean blocked or passed."],
     ["Paused for approval", "An increment is paused for required renewed scope or decision approval."],
     ["Ready to finalize", "Increments are recorded complete; final evidence review and overall roadmap closure remain."],
@@ -471,9 +472,9 @@ function proposalDetails(increment) {
   const detail = el("details", undefined, "proposal-detail");
   detail.open = Boolean(increment.chunk_plan_pending_approval || increment.chunk_plan_pending_start);
   detail.append(el("summary", "Increment proposal details"),
-    el("p", "Planned scope and verification. These are not executed work chunks or qualification results.", "small"));
+    el("p", "Planned scope and verification. These are not executed tasks or qualification results.", "small"));
   if (packages.length) {
-    detail.append(el("h4", "Planned work packages"));
+    detail.append(el("h4", "Planned stories"));
     const list = el("ul", undefined, "proposal-packages");
     for (const row of packages) {
       if (!row || typeof row !== "object" || typeof row.title !== "string" || typeof row.outcome !== "string") continue;
@@ -559,7 +560,7 @@ function criteriaList(criteria, chunks = []) {
     detail.append(el("p", c.id, "record-id"));
     if (c.evaluation_mode) detail.append(el("p", `Agent-executable technical check${c.qualification === "controlled-environment" ? " · requires its declared environment" : ""}. Human acceptance is offline.`, "small"));
     const linked = chunks.filter(chunk => chunk.criteria_ids.includes(c.id));
-    if (linked.length) detail.append(el("p", `Work chunks: ${linked.map(chunk => `${chunk.title} (${readable(chunk.status)})`).join("; ")}`, "small"));
+    if (linked.length) detail.append(el("p", `Tasks: ${linked.map(chunk => `${chunk.title} (${readable(chunk.status)})`).join("; ")}`, "small"));
     if (c.evidence_summary) detail.append(el("p", c.evidence_summary, "small"));
     if (c.evidence_recorded) detail.append(el("p", "Evidence is recorded. The status shows whether the required check has passed.", "small"));
     const support = c.supporting_work || [];
@@ -584,8 +585,17 @@ function chunkBody(chunk, criteria) {
   const body = el("div", undefined, "chunk-body");
   const linked = criteria.filter(c => chunk.criteria_ids.includes(c.id));
   body.append(el("p", chunk.outcome, "objective"), chunkDelivery());
-  body.append(el("p", `${linked.filter(c => c.outcome === "passed").length} / ${chunk.criteria_ids.length} linked criteria passed${chunk.is_next ? " · Next planned chunk" : ""}${chunk.completed_at ? ` · Recorded complete ${new Date(chunk.completed_at).toLocaleString()}` : ""}`, "small"));
+  body.append(el("p", `${linked.filter(c => c.outcome === "passed").length} / ${chunk.criteria_ids.length} linked criteria passed${chunk.is_next ? " · Next planned task" : ""}${chunk.completed_at ? ` · Recorded complete ${new Date(chunk.completed_at).toLocaleString()}` : ""}`, "small"));
   if (chunk.summary) body.append(el("p", chunk.summary, "objective"));
+  if (chunk.verification_recorded) body.append(el("p", "Local verification is recorded. Required parent checks remain separate.", "small"));
+  if (chunk.work_support) {
+    const support = chunk.work_support;
+    const labels = { "reviewed-local-snapshot": "The task outcome has a separately reviewed Work record.",
+      "legacy-record": "Implementation was recorded before task-specific Work evidence was required.",
+      "not-recorded": "Task-specific Work evidence is not recorded.", "unverified-support": "The task's referenced Work evidence is unavailable or unverified." };
+    body.append(el("p", `${labels[support.status] || labels["unverified-support"]} Parent qualification remains separate.`, "small"));
+    if (typeof support.work_id === "string") body.append(action("View task Work", () => selectView("work_items", "", null, support.work_id)));
+  }
   const coverage = el("ul", undefined, "chunk-criteria");
   for (const id of chunk.criteria_ids) { const criterion = linked.find(c => c.id === id); const li = el("li"); li.append(qualificationBadge(criterion), el("span", id)); coverage.append(li); }
   body.append(coverage);
@@ -594,6 +604,25 @@ function chunkBody(chunk, criteria) {
     const tests = el("ul"); chunk.tests.forEach(value => tests.append(el("li", value))); evidence.append(tests); body.append(evidence);
   }
   return body;
+}
+function appendTasks(container, chunks, criteria) {
+  for (const chunk of chunks) {
+    const work = el("details", undefined, "work-chunk");
+    const heading = el("summary"); heading.append(el("span", `${chunk.chunk_number}. ${chunk.title}`), badge(chunk.status));
+    work.append(heading, chunkBody(chunk, criteria)); container.append(work);
+  }
+}
+function appendStories(container, roadmap, increment, history = null) {
+  const complete = increment.stories.filter(row => row.tasks_planned > 0 && row.tasks_complete === row.tasks_planned).length;
+  container.append(el("h4", "Stories"), el("p", `${complete} / ${increment.stories.length} stories have all planned tasks recorded complete. Technical qualification remains separate.`, "small"));
+  for (const story of increment.stories) {
+    const detail = disclosure(storyKey(roadmap, increment.id, story.id, history), "story");
+    detail.append(el("summary", `${story.title} · ${story.tasks_complete} / ${story.tasks_planned} tasks`), el("p", story.outcome));
+    for (const text of story.user_scope || []) detail.append(el("p", text, "small"));
+    const tasks = increment.chunks.filter(task => task.story_id === story.id);
+    if (!tasks.length) detail.append(el("p", "No tasks are assigned to this story yet.", "small"));
+    appendTasks(detail, tasks, increment.criteria); container.append(detail);
+  }
 }
 function linkedWorkCriteria(item) {
   const increment = (data.pagination ? data.work_item_roadmaps : data.roadmaps).find(roadmap => roadmap.id === item.roadmap_id)
@@ -654,10 +683,16 @@ function render() {
   incrementIdentities = new Map();
   const countIdentity = (key, unique = true) => incrementIdentities.set(key, (incrementIdentities.get(key) || 0) + (unique === false ? 2 : 1));
   for (const roadmap of data.roadmaps) {
-    for (const increment of roadmap.increments || []) countIdentity(incrementKey(roadmap.id, increment.id), increment.disclosure_unique);
+    for (const increment of roadmap.increments || []) {
+      countIdentity(incrementKey(roadmap.id, increment.id), increment.disclosure_unique);
+      for (const story of increment.stories || []) countIdentity(storyKey(roadmap.id, increment.id, story.id), increment.disclosure_unique);
+    }
     for (const history of roadmap.merged_history || []) {
       countIdentity(incrementKey(roadmap.id, null, history.id), history.disclosure_unique);
-      for (const increment of history.increments || []) countIdentity(incrementKey(roadmap.id, increment.id, history.id), increment.disclosure_unique);
+      for (const increment of history.increments || []) {
+        countIdentity(incrementKey(roadmap.id, increment.id, history.id), increment.disclosure_unique);
+        for (const story of increment.stories || []) countIdentity(storyKey(roadmap.id, increment.id, story.id, history.id), increment.disclosure_unique);
+      }
     }
   }
   // Use the complete incoming view, before search or section filtering. An
@@ -708,7 +743,8 @@ function render() {
           if (data.presentation_view) detail.append(el("p", increment.objective));
           appendScope(detail, increment);
           const proposal = proposalDetails(increment); if (proposal) detail.append(proposal); detail.append(criteriaList(increment.criteria || []));
-          for (const chunk of increment.chunks || []) detail.append(el("p", `${chunk.title}: ${readable(chunk.status)}${chunk.summary ? ` · ${chunk.summary}` : ""}`, "small"), chunkDelivery());
+          if (increment.stories) appendStories(detail, item.id, increment, legacy.id);
+          else for (const task of increment.chunks || []) detail.append(el("p", `${task.title}: ${readable(task.status)}${task.summary ? ` · ${task.summary}` : ""}`, "small"), chunkDelivery());
           for (const owner of (legacy.criterion_owners || []).filter(row => row.increment_id === increment.id)) {
             detail.append(el("p", `${owner.criterion_id} → ${owner.owner_increment_id}/${owner.owner_criterion_id}. ${owner.summary}`, "small"),
               action("View owning increment", () => selectView("roadmaps", item.id, owner.owner_increment_id)));
@@ -726,18 +762,17 @@ function render() {
         const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human") ? "status-review-needed" : i.status)); details.append(summary, el("p", i.objective, "objective"));
         appendScope(details, i);
         details.append(incrementDelivery(i));
-        const planning = i.chunk_plan_pending_approval ? "Implementation chunk plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation chunk plan is created when this increment starts" : null;
-        details.append(el("p", `${planning || `${i.chunks_complete} / ${i.chunks_planned} work chunks`} · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
+        const planning = i.chunk_plan_pending_approval ? "Implementation task plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation task plan is created when this increment starts" : null;
+        details.append(el("p", `${planning || `${i.chunks_complete} / ${i.chunks_planned} tasks`} · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
         const proposal = proposalDetails(i); if (proposal) details.append(proposal);
         const supported = i.criteria.filter(c => c.supporting_work?.some(s => s.status === "reviewed-local-snapshot")).length;
-        if (supported) details.append(el("p", `${supported} / ${i.criteria.length} criteria have reviewed local implementation support. Planned chunks and parent qualification are tracked separately.`, "small"));
-        details.append(el("h4", planning ? "Implementation planning" : "Work chunks"));
+        if (supported) details.append(el("p", `${supported} / ${i.criteria.length} criteria have reviewed local implementation support. Planned tasks and parent qualification are tracked separately.`, "small"));
         const chunks = i.chunks || [];
-        if (!chunks.length) details.append(el("p", planning || "No chunk plan recorded for this increment.", "small"));
-        for (const chunk of chunks) {
-          const work = el("details", undefined, "work-chunk");
-          const heading = el("summary"); heading.append(el("span", `${chunk.chunk_number}. ${chunk.title}`), badge(chunk.status));
-          work.append(heading, chunkBody(chunk, i.criteria)); details.append(work);
+        if (i.stories) appendStories(details, item.id, i);
+        else {
+          details.append(el("h4", planning ? "Implementation planning" : "Tasks"));
+          if (!chunks.length) details.append(el("p", planning || "No task plan recorded for this increment.", "small"));
+          appendTasks(details, chunks, i.criteria);
         }
         if (chunks.length) details.append(action("View these work items", () => selectView("work_items", `${item.id}/${i.id}/`)));
         details.append(el("h4", "Acceptance criteria"), criteriaList(i.criteria, chunks));
@@ -748,7 +783,7 @@ function render() {
         card.append(details);
       }
     } else if (item.source === "roadmap-chunk") {
-      card.append(el("p", `Roadmap chunk · ${item.roadmap_title} › ${item.increment_title}`, "small"));
+      card.append(el("p", `Roadmap task · ${item.roadmap_title} › ${item.increment_title}`, "small"));
       card.append(el("p", item.evidence_policy === "control-plane-v1" ? "Governed roadmap record" : "Historical roadmap declaration", "small"));
       const linkedCriteria = linkedWorkCriteria(item);
       card.append(chunkBody(item, linkedCriteria), action("View parent increment", () => selectView("roadmaps", item.roadmap_id, item.increment_id)));
@@ -833,6 +868,39 @@ function reviewNotice(diagnostics) {
     messages.push("Some records are unavailable. The agent will check the saved workflow records and repair the issue. Your action: None.");
   return messages.join(" ");
 }
+function validateStories(value) {
+  const inspect = (roadmap, partial = false) => {
+    for (const increment of roadmap.increments || []) {
+      if (!Object.hasOwn(increment, "stories")) continue;
+      if (!Array.isArray(increment.stories) || !increment.stories.length || increment.stories.length > 40 ||
+          !Array.isArray(increment.chunks) || increment.chunks.length > 100 ||
+          typeof increment.story_tracking_digest !== "string" || !/^[a-f0-9]{64}$/.test(increment.story_tracking_digest) ||
+          Boolean(increment.partial_task_view) !== partial) throw new Error("story plan");
+      const tasks = new Map(increment.chunks.map(task => [task.id, task]));
+      if (tasks.size !== increment.chunks.length) throw new Error("story tasks");
+      const stories = new Set(), assigned = new Set();
+      for (const story of increment.stories) {
+        if (!story || typeof story.id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(story.id) || stories.has(story.id) ||
+            typeof story.title !== "string" || typeof story.outcome !== "string" || !Array.isArray(story.task_ids) || story.task_ids.length > 100 ||
+            !Number.isInteger(story.tasks_planned) || story.tasks_planned < 0 || story.tasks_planned > 100 ||
+            !Number.isInteger(story.tasks_complete) || story.tasks_complete < 0 || story.tasks_complete > story.tasks_planned ||
+            (partial ? story.task_ids.length > story.tasks_planned : story.task_ids.length !== story.tasks_planned)) throw new Error("story row");
+        stories.add(story.id);
+        let complete = 0;
+        for (const id of story.task_ids) {
+          const task = tasks.get(id);
+          if (!task || assigned.has(id) || task.story_id !== story.id) throw new Error("story ownership");
+          assigned.add(id); complete += Number(task.status === "completed");
+        }
+        if (!partial && complete !== story.tasks_complete) throw new Error("story counts");
+      }
+      if (assigned.size !== tasks.size) throw new Error("story completeness");
+    }
+    for (const history of roadmap.merged_history || []) inspect(history);
+  };
+  for (const roadmap of value.roadmaps || []) inspect(roadmap);
+  for (const roadmap of value.work_item_roadmaps || []) inspect(roadmap, true);
+}
 function expandedReviewWorkItems(value) {
   if (!Array.isArray(value.work_items)) throw new Error("work items");
   if (!Object.hasOwn(value, "work_item_format")) return value.work_items;
@@ -885,6 +953,7 @@ async function refresh() {
     const next = await response.json();
     if (next.schema_version !== "development-review-v1") throw new Error("schema");
     validatePage(next, requestedView, requested);
+    validateStories(next);
     const workItems = expandedReviewWorkItems(next);
     observeDisclosureIdentity(next);
     if (url !== pageUrl()) { refreshQueued = true; return; }

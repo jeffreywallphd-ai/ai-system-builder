@@ -317,6 +317,18 @@ class StoryTaskWorkTests(Fixture):
         with self.assertRaises(roadmap.RoadmapError): self.apply_metadata(event)
         self.assertEqual((self.root / self.engine.state["paths"]["state"]).read_bytes(), before)
 
+    def test_exact_metadata_writer_can_include_the_fixed_task_description_companion(self):
+        companion = "docs/operations/roadmap-user-task-descriptions.json"
+        spec, claim, event = self.unadopted_metadata(scopes=[self.engine.state["paths"]["state"],
+                                                          self.engine.state["paths"]["roadmap"], companion])
+        self.put(companion, json.dumps({"schema_version": "roadmap-user-task-descriptions-v1", "records": []}))
+        approval = copy.deepcopy(self.engine.state["roadmapApproval"])
+        self.apply_metadata(event)
+        _, state = roadmap.load_state(self.root, self.engine.state["paths"]["state"])
+        self.assertEqual(state["roadmapApproval"], approval)
+        self.assertEqual(len(state["storyTaskTracking"]["revisions"]), 1)
+        self.assertEqual(self.work.records.load()["work_items"][spec["work_id"]]["claim"]["claim_id"], claim)
+
     def test_pending_records_journal_refuses_before_metadata_claim_inspection(self):
         spec, claim, event = self.unadopted_metadata()
         with self.assertRaises(OSError):

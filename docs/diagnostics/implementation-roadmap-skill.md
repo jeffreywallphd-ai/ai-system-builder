@@ -11,6 +11,10 @@ explicit owner for every task. Read the skill's event reference for exact plan
 and tracking digests. Task refinement updates ownership atomically, keeps
 completed definitions/order and supplies no qualification pass. A scope change
 still needs actual governed approval. Unadopted historical tasks stay unassigned.
+The read-only Roadmaps view groups adopted tasks beneath stories and shows
+implementation counts separately from technical checks. Install compatible
+projection/copy/UI readers before a governed live adoption; source installation
+alone performs no migration. Plain story/task copy uses a fixed bounded companion.
 
 The canonical cross-agent workflow is
 `skills/manage-implementation-roadmaps/SKILL.md`. It prepares, approves,

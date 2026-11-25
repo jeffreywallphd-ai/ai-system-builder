@@ -11,6 +11,13 @@ through `workProof`; local task completion never qualifies its parent. The exact
 generic fallback for missing, mixed or explicitly generic impact. See the
 [control-plane guide](../../docs/diagnostics/ai-development-control-plane.md).
 
+The review view groups exact adopted tasks beneath fixed stories. It retains
+legacy wire fields, exact paged task joins, original story counts and separate
+parent qualification. The bounded task-copy companion supplies reviewed plain
+descriptions without changing ownership. `story-task-view` runs the actual
+projection/copy/wire cases and the existing DOM suite; unknown impact retains
+generic coverage. No installation step adopts another roadmap automatically.
+
 Optional [token phases](../../docs/diagnostics/token-usage-tracking.md) use
 `usage phase --from` at existing review handoff/correction boundaries. Work start
 associates the calling known thread; source-bound markers never guess host UUIDs

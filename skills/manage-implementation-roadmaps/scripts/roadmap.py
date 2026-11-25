@@ -572,7 +572,8 @@ def story_publication_guard(repo: Path, state: dict[str, Any], reference: Any, i
                 allowed = {state["paths"]["state"], state["paths"]["roadmap"],
                            "docs/operations/roadmap-supporting-work.json",
                            "docs/operations/roadmap-user-descriptions.json",
-                           "docs/operations/roadmap-user-support-descriptions.json"}
+                           "docs/operations/roadmap-user-support-descriptions.json",
+                           "docs/operations/roadmap-user-task-descriptions.json"}
                 scopes = set(spec["write_scope"])
                 required = {state["paths"]["state"], state["paths"]["roadmap"]}
                 if (spec["schema_version"] != "development-work-v1" or spec["work_id"] != reference["workId"]

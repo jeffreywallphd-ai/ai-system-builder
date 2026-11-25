@@ -429,8 +429,10 @@ The established governed metadata workflow may retain its own claim. Supply
 optional `metadataWork: {workId, invocationId, claimId}` with the exact current
 v1 Work/owner/claim. This allows only an active writer before any verification
 receipt or review, with exact target state and generated-roadmap file scopes and
-optional fixed operations presentation/support JSON files. Directory scopes,
-source files, another target, drift, expired/foreign claims and any other claim
+optional fixed operations presentation/support JSON files. The exact fixed
+`docs/operations/roadmap-user-task-descriptions.json` companion is permitted
+alongside the existing primary/support copy files. Directory scopes, arbitrary
+files, source files, another target, drift, expired/foreign claims and any other claim
 refuse. A roadmap-bound metadata Work must name this exact increment. The guard
 holds the Records mutation lock through publication, under the roadmap lock;
 read-only Work state lookup does not take the roadmap lock. This grants no new

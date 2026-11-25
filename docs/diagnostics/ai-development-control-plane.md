@@ -276,6 +276,21 @@ can replace generic controller discovery. Unknown paths, missing support and an
 explicit generic request retain the conservative check. This is contributor
 framework evidence; it starts no model or product host and grants no parent pass.
 
+Roadmaps groups adopted tasks beneath their fixed stories. Counts describe local
+implementation only; parent criteria and controlled qualification remain visible
+separately. An empty story is not complete. Unadopted legacy tasks retain their
+existing data and stay unassigned. The user-facing labels say stories and tasks;
+execution Work remains a separate record. Task links show reviewed local snapshots
+or explicit legacy/unavailable evidence, never a fresh parent pass.
+The fixed `roadmap-user-task-descriptions.json` companion binds plain copy to
+exact story/task definitions with existing1MiB/1000-row bounds. It supports
+prospective copy without adopting a plan. Missing or stale descriptions need an
+agent update. Work pages retain exact selected task joins and original story totals.
+The `story-task-view` check runs actual projection/copy/wire fixtures; its exact
+known scope runs every DOM case while omitting only the wrapper's duplicate
+complete Python discovery. Unknown, missing or explicitly generic impact retains
+the conservative fallback. Installing readers never adopts live Headless state.
+
 Optional [contributor token tracking](token-usage-tracking.md) imports authorized
 numeric host exports and shows bounded daily, weekly and quarterly trends. It
 has a dedicated **Token usage** dashboard plus the compact Work disclosure. Reported

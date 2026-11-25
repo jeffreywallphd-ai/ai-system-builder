@@ -2,6 +2,18 @@
 
 # Dynamic Development Review
 
+Roadmaps shows fixed **Stories** with expandable **Tasks** after explicit
+ownership adoption. Counts describe implementation, while parent criteria keep
+their separate qualification. Empty stories are not complete. Legacy unassigned
+tasks retain compatible data. Exact task references survive paging and compact
+joins; corrupt ownership/counts reject a refresh. Story panel choices survive
+ordinary polling and navigation. Execution Work stays distinct from planned tasks.
+The fixed `docs/operations/roadmap-user-task-descriptions.json` companion supplies
+source-bound plain descriptions with the existing1MiB/1000-row and text bounds.
+Missing/stale/unsafe descriptions show agent maintenance guidance. Old task
+completion remains explicitly legacy; task Work links show recorded local review,
+never current whole-increment qualification. No browser action adopts a roadmap.
+
 The phase table gives **Implementation** only attributed pre-review counts.
 Review fixes, other later work, mixed, unknown and legacy unknown stay separate.
 The local phase filter covers daily/weekly/quarterly and bounded agent rows
