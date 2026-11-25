@@ -3550,3 +3550,14 @@ the established local fixture environment, preserve the failed/interrupted
 evidence and do not skip the check. No real model, physical Native lifecycle,
 accuracy or full-software suite is part of this profile. Local readiness cannot
 qualify the complete producer, parent release, capacity, Save or real host.
+
+
+Checkpoint-copy feature work uses the fixed `checkpoint-copy-unit` and companion
+strict type check. They execute the real checkpoint-resolver filesystem cases,
+without the separate physical Native integration/build tests in the same adapter
+family. Required regular source/test support must be present. Only the complete
+closed checkpoint-copy/controller scope narrows controller coverage to its actual
+routing tests plus the existing focused-runner tests. Unknown/mixed paths, missing
+support and explicitly requested generic focused checks retain conservative fallback.
+The fixed command does not accept caller-supplied commands or qualify Native
+identity, capacity, model loading, Headless execution or any parent criterion.

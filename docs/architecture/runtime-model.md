@@ -3618,3 +3618,15 @@ retirement remain separate. Default producer absence and all actual capacity,
 resource transport, protected parent output, bounded training, Save/generation and
 real host qualification remain pending. Synthetic fixtures qualify this bridge,
 not Native effects, model output quality or whole-host execution.
+
+
+### Image checkpoint synchronization collisions
+
+The existing shared ComfyUI checkpoint resolver uses exclusive file creation
+when synchronizing a selected checkpoint. A target created after the preliminary
+lookup is preserved; EEXIST advances through the existing twenty-attempt suffix
+bound. Other failures propagate without a retry. Existing cache-hit/model
+selection behavior stays intact. This fixes the former overwrite race without
+adding an engine, runtime start, model download or ownership policy. Cooperative
+cache presence/copy is not Native immutable identity or capacity proof, and does
+not activate pending Headless generation/Save or host qualification.

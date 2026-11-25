@@ -1,3 +1,4 @@
+import { constants } from "node:fs";
 import { copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 
@@ -49,7 +50,7 @@ async function ensureComfyUiVisibleCheckpoint(input: {
   let attempt = 0;
   while (attempt < 20) {
     try {
-      await copyFile(input.sourceFilePath, targetPath);
+      await copyFile(input.sourceFilePath, targetPath, constants.COPYFILE_EXCL);
       input.log?.({ event: "image-generation.model-checkpoint-resolution.sync.completed", sourcePath: input.sourceFilePath, targetPath, targetName });
       return targetName;
     } catch (error) {

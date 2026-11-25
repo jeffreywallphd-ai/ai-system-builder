@@ -3378,3 +3378,12 @@ constructor admission. Validate exact primitive state types and closed phases
 before equality or truth tests; run the genuine passive file snapshot before
 comparing its record fields. Replaced hash/equality/truth hooks must not execute
 or turn malformed state into local readiness.
+
+
+The shared image checkpoint resolver's exclusive copy prevents a concurrent
+cache entry from being overwritten after a lookup. Only EEXIST can advance its
+existing bounded suffix sequence; other errors stop. Synthetic real-file cases
+cover collision preservation, exhaustion, ordinary failure and cache-hit
+compatibility, with exact test-owned fixture cleanup. Existing cache-hit semantics
+remain cooperative and do not establish selected-byte immutability, Native
+identity/custody, resource reservation or Headless execution/Save authority.

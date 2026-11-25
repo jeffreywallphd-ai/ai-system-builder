@@ -30,3 +30,11 @@ These are cooperative file-containment checks. They do not prove native source
 custody, physical volume type, immutable bytes or process memory bounds. They
 grant no reveal/delete authority, change no ACLs and never adopt retained
 offload data. Existing native authority and offload guards remain unchanged.
+
+
+The shared ComfyUI checkpoint resolver creates synchronized cache files with
+exclusive copy semantics. If a file appears after the initial cache lookup, it
+preserves that file and tries the existing bounded suffix sequence. Other copy
+errors are not retried. Existing cache-hit and model-selection behavior is
+unchanged. This cooperative cache operation supplies no Native file identity,
+immutable source, reservation or Headless execution authority.

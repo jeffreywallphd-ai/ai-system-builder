@@ -647,7 +647,47 @@ DETERMINISTIC_SUPPORT_REQUIRED = DETERMINISTIC_SUPPORT_SCOPE + tuple(
     "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
 )
 
+CHECKPOINT_COPY_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_checkpoint_copy.py",
+    "dev-tools/helpers/README.md",
+    "docs/diagnostics/ai-development-control-plane.md",
+)
+CHECKPOINT_COPY_OWNER_SCOPE = (
+    "modules/adapters/model/local/createLocalModelCheckpointResolverAdapter.ts",
+    "modules/adapters/model/local/tests/createLocalModelCheckpointResolverAdapter.unit.test.ts",
+    "modules/adapters/model/local/README.md",
+    "docs/architecture/runtime-model.md",
+    "docs/context/packs/runtime.pack.md",
+    "docs/security/headless-system-builder-threat-model.md",
+)
+CHECKPOINT_COPY_REQUIRED = (
+    *CHECKPOINT_COPY_SCOPE,
+    *CHECKPOINT_COPY_OWNER_SCOPE,
+    "modules/testing/node-test.ts",
+    "modules/application/ports/model/model-registry.port.ts",
+    "modules/application/ports/model/index.ts",
+    "dev-tools/helpers/tests/test_control_plane_focused.py",
+    "dev-tools/helpers/run_focused_checks.py",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "checkpoint-copy-unit": {
+        "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
+            CHECKPOINT_COPY_OWNER_SCOPE[1]),
+        "timeout": 120,
+        "sources": CHECKPOINT_COPY_SCOPE + CHECKPOINT_COPY_OWNER_SCOPE,
+        "automatic_sources": (CHECKPOINT_COPY_OWNER_SCOPE[0], CHECKPOINT_COPY_OWNER_SCOPE[1], CHECKPOINT_COPY_SCOPE[1]),
+        "automatic_required_files": CHECKPOINT_COPY_REQUIRED,
+    },
+    "checkpoint-copy-types": {
+        "companion_to": "checkpoint-copy-unit",
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
+            "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node",
+            "--esModuleInterop", "--lib", "ES2021,DOM", CHECKPOINT_COPY_OWNER_SCOPE[1]),
+        "timeout": 120,
+        "sources": CHECKPOINT_COPY_SCOPE + CHECKPOINT_COPY_OWNER_SCOPE,
+    },
     "scoped-roadmaps-view": {
         "command": ["--test", "--test-skip-pattern=^contributor control plane passes focused behavioral qualification$",
                     "--", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"],
@@ -4380,6 +4420,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     focused = [p for p, matches in covered.items() if "focused-tests" in matches]
     if "focused-tests" not in required and all(p in declared_sources for p in focused):
         selected = [c for c in selected if c["id"] != "focused-tests"]
+    if (set(CHECKPOINT_COPY_SCOPE) <= set(paths) <= set(CHECKPOINT_COPY_SCOPE + CHECKPOINT_COPY_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": CHECKPOINT_COPY_REQUIRED})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            # Keep the actual feature unit/types separate from the exact routing
+            # suites; never admit unrelated physical Native integration tests.
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_checkpoint_copy.", "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

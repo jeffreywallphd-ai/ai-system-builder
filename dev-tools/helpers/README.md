@@ -309,3 +309,14 @@ no model, physical Native lifecycle or accuracy run. Related original file,
 exit-barrier, output and HTTP/types checks remain independently selected. Only
 the complete known scope gets focused controller routing; unknown, mixed,
 incomplete, nonregular or explicitly generic work retains existing fallback.
+
+
+Checkpoint-copy feature work uses the fixed `checkpoint-copy-unit` and companion
+strict type check. They execute the real checkpoint-resolver filesystem cases,
+without the separate physical Native integration/build tests in the same adapter
+family. Required regular source/test support must be present. Only the complete
+closed checkpoint-copy/controller scope narrows controller coverage to its actual
+routing tests plus the existing focused-runner tests. Unknown/mixed paths, missing
+support and explicitly requested generic focused checks retain conservative fallback.
+The fixed command does not accept caller-supplied commands or qualify Native
+identity, capacity, model loading, Headless execution or any parent criterion.
