@@ -56,8 +56,12 @@ class OriginalTrainingSessionExitTests(unittest.TestCase):
             def profile(self): return session.NativeTrainingProfile("synthetic-software-only", "sha256:"+"e"*64, 30)
             def capture(self, value): assert value == defined; return resource
 
+        producer = (executor.submit(session.OriginalTrainingFileProducer, resource,
+                    session.NativeTrainingProfile("synthetic-software-only", "sha256:"+"e"*64, 30)).result(timeout=10)
+                    if fixed_file_resources else Producer())
+
         updates = []; current = [True]
-        owner = session.OriginalTrainingSession(defined, Producer(), lambda: current[0],
+        owner = session.OriginalTrainingSession(defined, producer, lambda: current[0],
             lambda **value: updates.append(value), lambda actual: executor.submit(actual.run),
             retirement_protocol=exit_ready.PROTOCOL)
         self.addCleanup(lambda: exit_ready._books.pop(owner, None))
@@ -77,6 +81,7 @@ class OriginalTrainingSessionExitTests(unittest.TestCase):
 
     def test_fixed_file_resources_use_the_same_executor_files_and_local_exit_proof(self):
         owner, executor, row, updates, _, _, resource = self.ready(fixed_file_resources=True)
+        self.assertIs(type(owner.producer), session.OriginalTrainingFileProducer)
         file_owner = row[0]
         self.assertIs(resource.original_files(), file_owner)
         self.assertIsNone(resource.output_delivery())
@@ -88,6 +93,17 @@ class OriginalTrainingSessionExitTests(unittest.TestCase):
         self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10), "ready")
         self.assertEqual(len(row[7].calls), before)
         self.assertFalse(resource.settle())
+        self.assertFalse(owner.settle())
+        self.assertTrue(owner.blocks_recovery)
+        self.assertTrue(all(not handle.closed for handle in row[1].guards))
+
+    def test_fixed_producer_keeps_main_thread_bootstrap_and_original_executor(self):
+        owner, executor, row, _, _, _, resource = self.ready(bootstrap_on_main=True, fixed_file_resources=True)
+        self.assertIs(type(owner.producer), session.OriginalTrainingFileProducer)
+        self.assertIs(resource.original_files(), row[0])
+        self.finish_training(owner)
+        self.assertEqual(owner.begin_exit_ready(), "queued")
+        self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10), "ready")
         self.assertFalse(owner.settle())
         self.assertTrue(owner.blocks_recovery)
         self.assertTrue(all(not handle.closed for handle in row[1].guards))

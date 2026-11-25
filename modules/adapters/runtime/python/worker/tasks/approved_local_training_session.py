@@ -855,3 +855,116 @@ _FILE_RESOURCE_API = tuple((base, name, type.__getattribute__(base, "__dict__").
     for base in _FILE_RESOURCE_MRO
     for name in ("__getattribute__", "__getattr__", "__hash__", "__eq__", "__dict__", "__init__",
         "prepare", "seal_inputs", "borrow", "request_cancel", "settle", "original_files", "output_delivery"))
+
+
+_FILE_PRODUCER_RESOURCE_STATE = _file_resource_state
+_FILE_PRODUCER_RESOURCE_BOUND = _file_resource_bound
+_FILE_PRODUCER_DEFINITION = capture_definition
+_FILE_PRODUCER_DIGEST = _scope_digest
+_FILE_PRODUCER_PROFILE_TYPE = NativeTrainingProfile
+_FILE_PRODUCER_PROFILE_MRO = type.__getattribute__(NativeTrainingProfile, "__mro__")
+_FILE_PRODUCER_PROFILE_API = tuple((base, name, type.__getattribute__(base, "__dict__").get(name))
+    for base in _FILE_PRODUCER_PROFILE_MRO
+    for name in ("__getattribute__", "__getattr__", "__dict__", "__new__", "__init__", "__post_init__",
+        "profile_id", "fingerprint", "maximum_duration_seconds"))
+_file_producers = WeakKeyDictionary()
+_file_producer_resources = WeakKeyDictionary()
+
+
+def _file_producer_api(owner):
+    _need(type(owner) is OriginalTrainingFileProducer)
+    bases = type.__getattribute__(OriginalTrainingFileProducer, "__mro__")
+    _need(len(bases) == len(_FILE_PRODUCER_MRO) and all(a is b for a, b in zip(bases, _FILE_PRODUCER_MRO)))
+    _need(all(type.__getattribute__(base, "__dict__").get(name) is original
+              for base, name, original in _FILE_PRODUCER_API))
+    _need(_file_resource_state is _FILE_PRODUCER_RESOURCE_STATE
+          and _file_resource_bound is _FILE_PRODUCER_RESOURCE_BOUND
+          and capture_definition is _FILE_PRODUCER_DEFINITION
+          and _scope_digest is _FILE_PRODUCER_DIGEST
+          and NativeTrainingProfile is _FILE_PRODUCER_PROFILE_TYPE)
+    current = type.__getattribute__(NativeTrainingProfile, "__mro__")
+    _need(len(current) == len(_FILE_PRODUCER_PROFILE_MRO)
+          and all(a is b for a, b in zip(current, _FILE_PRODUCER_PROFILE_MRO)))
+    _need(all(type.__getattribute__(base, "__dict__").get(name) is original
+              for base, name, original in _FILE_PRODUCER_PROFILE_API))
+
+
+def _file_producer_record(owner):
+    _file_producer_api(owner)  # Refuse replaced hash/getter APIs before lookup.
+    book = _file_producers.get(owner)
+    _need(type(book) is dict and type(book.get("phase")) is str
+          and book["phase"] in ("bound", "capturing", "captured", "unconfirmed")
+          and type(book.get("thread")) is int and book["thread"] > 0
+          and type(book.get("definition")) is str
+          and re.fullmatch(r"[a-f0-9]{64}", book["definition"]) is not None
+          and type(book.get("profile")) is tuple and len(book["profile"]) == 3)
+    resource_book = _FILE_PRODUCER_RESOURCE_STATE(book["resource"])
+    _need(resource_book is book["resource_book"] and resource_book["binding"] is book["binding"]
+          and resource_book["lock"] is book["lock"] and resource_book["thread"] == book["thread"]
+          and _file_producer_resources.get(book["resource"]) is owner)
+    _need(_FILE_PRODUCER_DIGEST(resource_book["record"]["definition"]) == book["definition"])
+    profile_id, fingerprint, duration = book["profile"]
+    _text(profile_id, 120)
+    _need(type(fingerprint) is str and re.fullmatch(r"sha256:[a-f0-9]{64}", fingerprint) is not None
+          and type(duration) is int and 1 <= duration <= 86400)
+    return book
+
+
+class OriginalTrainingFileProducer(NativeTrainingProducer):
+    """One exact original file resource; not physical readiness or activation.
+
+    Trusted host composition must still qualify the explicit profile, capacity,
+    installed runtime and original controller/worker transport. This local
+    producer invokes no authority callback, file IO or loader during capture.
+    """
+    def __init__(self, resource, profile):
+        _file_producer_api(self)
+        _need(type(profile) is _FILE_PRODUCER_PROFILE_TYPE)
+        values = _copy(object.__getattribute__(profile, "__dict__"))
+        _record(values, ("profile_id", "fingerprint", "maximum_duration_seconds"))
+        # Validate and copy values, never retain a caller-mutable profile record.
+        captured = _FILE_PRODUCER_PROFILE_TYPE(**values)
+        resource_book = _FILE_PRODUCER_RESOURCE_STATE(resource)
+        with resource_book["lock"]:
+            _FILE_PRODUCER_RESOURCE_BOUND(resource_book)
+            _need(resource_book["phase"] == "bound" and self not in _file_producers
+                  and resource not in _file_producer_resources)
+            definition = _FILE_PRODUCER_DEFINITION(resource_book["record"]["definition"])
+            book = {"resource": resource, "resource_book": resource_book,
+                "binding": resource_book["binding"], "lock": resource_book["lock"],
+                "thread": resource_book["thread"], "phase": "bound",
+                "definition": _FILE_PRODUCER_DIGEST(definition),
+                "profile": (captured.profile_id, captured.fingerprint, captured.maximum_duration_seconds)}
+            _file_producers[self] = book
+            _file_producer_resources[resource] = self
+            _file_producer_record(self)
+
+    @property
+    def profile(self):
+        book = _file_producer_record(self)
+        return _FILE_PRODUCER_PROFILE_TYPE(*book["profile"])
+
+    def capture(self, definition):
+        book = _file_producer_record(self)
+        _need(get_ident() == book["thread"])
+        supplied = _FILE_PRODUCER_DEFINITION(definition)
+        _need(_FILE_PRODUCER_DIGEST(supplied) == book["definition"])
+        with book["lock"]:
+            _need(book["phase"] == "bound")
+            book["phase"] = "capturing"  # Consume the exact attempt before binding.
+            try:
+                _need(_file_producer_record(self) is book)
+                _FILE_PRODUCER_RESOURCE_BOUND(book["resource_book"])
+                _need(book["resource_book"]["phase"] == "bound")
+                book["phase"] = "captured"
+                return book["resource"]
+            except BaseException:
+                book["phase"] = "unconfirmed"
+                raise
+
+
+_FILE_PRODUCER_MRO = type.__getattribute__(OriginalTrainingFileProducer, "__mro__")
+_FILE_PRODUCER_API = tuple((base, name, type.__getattribute__(base, "__dict__").get(name))
+    for base in _FILE_PRODUCER_MRO
+    for name in ("__getattribute__", "__getattr__", "__hash__", "__eq__", "__dict__",
+        "__init__", "profile", "capture"))

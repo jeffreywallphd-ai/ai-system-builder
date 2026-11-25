@@ -2635,3 +2635,20 @@ Both retirement protocols still return false from the resource settle method;
 only the existing exact local exit witness and original parent/worker/Job owners
 can establish their respective proofs. This bridge neither creates nor qualifies
 capacity, a complete producer, public activation, Save or an actual-host run.
+
+
+## Fixed producer for original protected files
+
+The private `OriginalTrainingFileProducer` reuses an already registered
+`OriginalTrainingFileResources`. It copies the explicit profile values, binds the
+original complete training definition and admits one capture on the same file
+executor. Wrong definitions or threads cannot consume the legitimate capture.
+Changed original bindings, reused resources or replaced passive APIs are refused.
+Profile construction is also covered by the passive API checks. The producer
+calls no admission callback, file IO or loader during binding/capture.
+
+The genuine session/exit fixture uses this composition with inert Native replies
+and a controlled loader. These checks do not qualify physical readiness. Default
+producer configuration stays absent. Real measured capacity, original resource
+transport, protected parent/crash custody, exact worker/Job retirement, Save and
+actual host qualification remain pending; no model accuracy is rerun.

@@ -1616,3 +1616,19 @@ original authority, without a renewed business grant. Neither protocol accepts
 resource settle as true. This adds no producer activation, capacity value, Native
 ABI, retry, topology, Save or recovery policy. Physical/global producer and host
 requirements remain mandatory and pending.
+
+
+### Fixed original file-producer composition
+
+Within the existing approved topology, a private one-use producer may compose an
+already genuine file resource with the exact original definition and copied
+explicit profile. Keep all binding/capture passive and on the file executor;
+select no arbitrary resource factory, callback, loader or executor. Preserve
+original resource/output ownership, local exit readiness and retained charges.
+
+This local composition is not installed or configured by default. Its profile
+and genuine file identities cannot substitute for the trusted boot contract's
+qualified physical capacity, installed readiness, original purpose/configuration
+transport, protected parent/crash custody or process/Job retirement. Keep those
+obligations, separate Save and actual host qualification pending. No new policy
+value, capability, transport, retry or lifecycle guarantee is introduced.

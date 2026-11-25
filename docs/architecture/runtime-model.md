@@ -3630,3 +3630,29 @@ selection behavior stays intact. This fixes the former overwrite race without
 adding an engine, runtime start, model download or ownership policy. Cooperative
 cache presence/copy is not Native immutable identity or capacity proof, and does
 not activate pending Headless generation/Save or host qualification.
+
+
+### One-use original file-producer composition
+
+`OriginalTrainingFileProducer` implements the private producer seam using only an
+already genuine `OriginalTrainingFileResources` and an explicit value snapshot
+of `NativeTrainingProfile`. Capture compares the complete original definition,
+checks the retained resource/file binding and original executor, then supplies
+that same resource once. Binding is passive: no factory, admission callback, new
+file, loader or executor is selected. Duplicate, changed, foreign and uncertain
+bindings cannot establish a fresh attempt. A wrong caller scope/thread is refused
+before consuming the legitimate capture.
+
+The profile accessor returns a copied descriptive value. Passive class API checks
+include profile construction, preventing a replaced constructor/getter from
+becoming an effect during observation. The existing file/session workflow still
+owns exact sealing, joint borrow, cancellation, output delivery and local exit
+readiness. Neither that readiness nor this producer proves global settlement.
+
+This composition is not configured by any default or boot path. The trusted
+`configure_original_training` contract still requires separately qualified
+installed readiness, actual measured shared/durable capacity and original
+controller/worker purpose/configuration transport. Local synthetic component
+checks do not satisfy that contract. Protected parent destination/crash custody,
+original SDK/process/Job retirement, separately authorized Save and real host
+qualification remain pending. There is no model-quality test or parent pass.

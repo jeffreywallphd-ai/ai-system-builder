@@ -9,6 +9,8 @@ import ctypes
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import tempfile
 import sys
 from pathlib import Path
@@ -936,6 +938,146 @@ class OriginalTrainingFileResourcesTests(unittest.TestCase):
             book["phase"] = "caller-ready"
             with self.assertRaises(session.TrainingSessionError): resource.prepare()
         finally: book["phase"] = original
+
+
+
+
+class OriginalTrainingFileProducerTests(unittest.TestCase):
+    def fixture(self):
+        case = OriginalTrainingFileResourcesTests()
+        self.addCleanup(case.doCleanups)
+        resource, row = case.fixture()
+        definition = deepcopy(session._file_resources[resource]["record"]["definition"])
+        profile = session.NativeTrainingProfile("synthetic-software-only", DIGEST, 30)
+        producer = session.OriginalTrainingFileProducer(resource, profile)
+        return producer, resource, row, definition, profile
+
+    def test_exact_capture_is_passive_and_can_supply_only_the_original_resource_once(self):
+        producer, resource, row, definition, _ = self.fixture()
+        calls = []
+        row[6].hook = lambda: calls.append("admission")
+        before = len(row[7].calls)
+        self.assertIs(producer.capture(deepcopy(definition)), resource)
+        self.assertEqual(calls, [])
+        self.assertEqual(len(row[7].calls), before)
+        self.assertEqual(row[6].charges, [])
+        self.assertEqual(session._file_resources[resource]["phase"], "bound")
+        with self.assertRaises(session.TrainingSessionError): producer.capture(definition)
+        self.assertIs(resource.original_files(), row[0])
+        self.assertFalse(resource.settle())
+
+    def test_profile_is_an_explicit_value_snapshot_and_not_readiness(self):
+        producer, resource, _, definition, supplied = self.fixture()
+        object.__setattr__(supplied, "maximum_duration_seconds", 900)
+        observed = producer.profile
+        self.assertEqual(observed.maximum_duration_seconds, 30)
+        object.__setattr__(observed, "profile_id", "caller-changed")
+        self.assertEqual(producer.profile.profile_id, "synthetic-software-only")
+        self.assertIs(producer.capture(definition), resource)
+        self.assertFalse(resource.settle())
+
+    def test_wrong_definition_does_not_consume_the_exact_original_capture(self):
+        producer, resource, row, definition, _ = self.fixture()
+        before = len(row[7].calls)
+        for field, value in (("requestId", WORKSPACE), ("proposalDigest", "sha256:" + "f" * 64)):
+            wrong = deepcopy(definition)
+            wrong[field] = value
+            with self.assertRaises(session.TrainingSessionError): producer.capture(wrong)
+        self.assertEqual(len(row[7].calls), before)
+        self.assertIs(producer.capture(definition), resource)
+
+    def test_foreign_and_duplicate_resource_cannot_create_another_producer(self):
+        producer, resource, row, _, profile = self.fixture()
+        calls = []
+        class Foreign:
+            @property
+            def prepare(self): calls.append("getter"); raise AssertionError("Foreign getter ran")
+        before = len(row[7].calls)
+        for supplied in (resource, Foreign(), {}, object()):
+            with self.assertRaises(session.TrainingSessionError):
+                session.OriginalTrainingFileProducer(supplied, profile)
+        self.assertEqual(calls, [])
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_wrong_thread_cannot_capture_or_poison_the_original_resource(self):
+        producer, resource, row, definition, _ = self.fixture()
+        results = []
+        def capture():
+            try: producer.capture(definition)
+            except BaseException as error: results.append(error)
+        before = len(row[7].calls)
+        thread = Thread(target=capture)
+        thread.start(); thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(len(results), 1)
+        self.assertIs(type(results[0]), session.TrainingSessionError)
+        self.assertEqual(len(row[7].calls), before)
+        self.assertIs(producer.capture(definition), resource)
+
+    def test_consumed_resource_cannot_be_healed_by_restoring_its_visible_phase(self):
+        producer, resource, row, definition, _ = self.fixture()
+        self.assertEqual(resource.prepare(), "ready")
+        before = len(row[7].calls)
+        with self.assertRaises(session.TrainingSessionError): producer.capture(definition)
+        session._file_resources[resource]["phase"] = "bound"
+        with self.assertRaises(session.TrainingSessionError): producer.capture(definition)
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_replaced_producer_hash_is_refused_before_weak_key_effects(self):
+        producer, _, row, definition, _ = self.fixture()
+        calls = []
+        def changed_hash(owner): calls.append("hash"); return 1
+        before = len(row[7].calls)
+        with patch.object(session.OriginalTrainingFileProducer, "__hash__", changed_hash):
+            with self.assertRaises(session.TrainingSessionError): producer.capture(definition)
+            with self.assertRaises(session.TrainingSessionError): _ = producer.profile
+        self.assertEqual(calls, [])
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_replaced_profile_property_is_not_executed(self):
+        producer, _, row, definition, _ = self.fixture()
+        calls = []
+        def getter(owner): calls.append("getter"); return 30
+        before = len(row[7].calls)
+        with patch.object(session.NativeTrainingProfile, "maximum_duration_seconds", property(getter), create=True):
+            with self.assertRaises(session.TrainingSessionError): producer.capture(definition)
+            with self.assertRaises(session.TrainingSessionError): _ = producer.profile
+        self.assertEqual(calls, [])
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_replaced_profile_constructor_is_refused_before_any_callback(self):
+        # CPython caches type-allocation slots after __new__ replacement. Keep
+        # that deliberate class mutation outside the other fixtures' process.
+        probe = '''
+import sys
+from unittest.mock import patch
+sys.path.insert(0, sys.argv[1])
+from modules.adapters.runtime.python.worker.tests import test_approved_local_training_session as tests
+case = tests.OriginalTrainingFileProducerTests()
+try:
+    producer, resource, row, definition, profile = case.fixture()
+    calls = []
+    def changed_new(cls, *args, **kwargs):
+        calls.append("new")
+        return object.__new__(cls)
+    before = len(row[7].calls)
+    with patch.object(tests.session.NativeTrainingProfile, "__new__", staticmethod(changed_new)):
+        with case.assertRaises(tests.session.TrainingSessionError): _ = producer.profile
+        with case.assertRaises(tests.session.TrainingSessionError): producer.capture(definition)
+        with case.assertRaises(tests.session.TrainingSessionError):
+            tests.session.OriginalTrainingFileProducer(resource, profile)
+    case.assertEqual(calls, [])
+    case.assertEqual(len(row[7].calls), before)
+finally:
+    case.doCleanups()
+'''
+        root = Path(__file__).resolve().parents[6]
+        environment = {key: value for key, value in os.environ.items()
+                       if key.upper() in {"SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"}}
+        environment.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", PYTHONUTF8="1")
+        result = subprocess.run([sys.executable, "-I", "-B", "-c", probe, str(root)],
+                                cwd=root, env=environment, capture_output=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr[-8192:].decode(errors="replace"))
 
 
 if __name__ == "__main__": unittest.main()

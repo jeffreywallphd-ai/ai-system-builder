@@ -3387,3 +3387,24 @@ cover collision preservation, exhaustion, ordinary failure and cache-hit
 compatibility, with exact test-owned fixture cleanup. Existing cache-hit semantics
 remain cooperative and do not establish selected-byte immutability, Native
 identity/custody, resource reservation or Headless execution/Save authority.
+
+
+### Local original file-producer binding
+
+Protected assets are original Model/input/output/task identity, one-use file
+ownership and retained charges. The fixed private producer accepts only the
+registered file-resource component and an explicit copied profile. It checks
+complete original scope, executor and retained bindings before supplying the
+same resource once. Wrong scope/thread cannot consume the legitimate attempt;
+a changed or consumed binding cannot be healed by restoring a visible phase.
+Passive API checks cover profile construction and refuse replaced getters or
+hash functions before invoking them. Capture performs no file IO or admission.
+
+Trusted boot composition must independently qualify installed readiness, real
+shared/durable capacity, original controller/worker purpose/configuration
+transport and protected parent/crash custody. No default configuration uses this
+local producer. Descriptive profile values and local fixture success cannot
+supply those missing proofs, permanent process/Job retirement or Save authority.
+Synthetic focused cases use inert Native replies and loader only. All physical,
+actual-host and complete training qualifications remain pending; no model
+accuracy, byte credit, new policy limit or public activation is inferred.

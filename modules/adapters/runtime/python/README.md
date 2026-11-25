@@ -1421,3 +1421,18 @@ Native controls. Session.run remains the only loader call. Cancellation reaches
 the same retained file owner after business withdrawal. Local closure never makes
 settle true or releases any charge. The outer producer must independently supply
 qualified capacity and its measured profile; no default producer is configured.
+
+
+### Exact private file-producer binding
+
+`OriginalTrainingFileProducer` composes one already genuine file resource with
+one exact approved definition and an explicit copied `NativeTrainingProfile`.
+Construction and capture are passive. Only the original file executor can claim
+the resource, once. Its existing session/file operations still own sealing,
+loading, cancellation and local exit readiness. No resource factory is selected.
+
+This local composition is unused by default. Its profile is descriptive, not
+installed readiness or measured capacity. Do not pass it to the trusted boot
+configuration based on these component tests alone. Qualified outer capacity,
+controller/worker purpose and configuration transport, protected result/crash
+custody, original process/Job retirement and separate Save remain mandatory.
