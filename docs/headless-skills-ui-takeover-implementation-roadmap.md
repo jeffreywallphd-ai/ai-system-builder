@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-25T18:47:56Z`
+- Updated: `2026-11-25T23:20:18Z`
 
 ## Objective
 
@@ -450,7 +450,7 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Execute an exact approved download (`execute-approved-model-download`): complete
   - Connect downloads and owned task controls (`monitor-and-cancel-model-download`): complete
   - Review and save the completed model (`review-and-save-downloaded-model`): complete
-- **Fine-tune and evaluate**: 61 of 63 tasks complete
+- **Fine-tune and evaluate**: 61 of 68 tasks complete
   - Review fine-tuning inputs and settings (`review-fine-tuning-inputs-and-settings`): complete
   - Prepare training data and local loading controls (`prepare-local-training-files-and-load-policy`): complete
   - Inspect the selected local model files (`inspect-local-training-model-files`): complete
@@ -512,6 +512,11 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Track original training operations through cancellation (`track-original-parent-training-io`): complete
   - Use one original task executor for training and local exit proof (`stage-original-training-and-exit-on-one-executor`): complete
   - Coordinate training file closure and original worker shutdown (`coordinate-original-parent-and-worker-retirement`): complete
+  - Reserve shared storage for training (`reserve-shared-training-storage`): planned
+  - Connect the protected training worker (`compose-original-training-producer`): planned
+  - Protect training results through shutdown (`retain-protected-training-results-through-exit`): planned
+  - Connect candidate review and evaluation history (`connect-training-candidate-review-and-history`): planned
+  - Save a separately approved trained model (`save-approved-trained-model`): planned
   - Run a bounded fine-tuning task (`run-approved-fine-tuning`): planned
   - Evaluate and review the trained candidate (`evaluate-trained-model-candidate`): planned
 - **Generate and show results**: 0 of 2 tasks complete

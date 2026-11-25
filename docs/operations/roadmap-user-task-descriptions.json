@@ -1194,6 +1194,81 @@
           "Capture is optional. Missing observations never become zero or a qualification pass."
         ]
       }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "reserve-shared-training-storage",
+      "source_definition_digest": "6f3428fc93742d6dac19c62927a2cd23e11a07abdd460a936d1492f1ca5af687",
+      "user_description": {
+        "title": "Reserve shared storage for training",
+        "purpose": "Reserve real shared storage for all training copies and results, and keep its use recorded through interruption.",
+        "scope": [
+          "Use the existing limits. Refuse low space or conflicting reservations.",
+          "Release storage only after the original owner proves cleanup."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "compose-original-training-producer",
+      "source_definition_digest": "e14e36a8fbd734c9fa87ca07a0894eef9f9c2eed36b06b61e73ab0085be61df0",
+      "user_description": {
+        "title": "Connect the protected training worker",
+        "purpose": "Connect approved settings and storage allocations to the original worker and complete the trusted training setup.",
+        "scope": [
+          "Reuse the completed file protection and session components.",
+          "Keep missing or changed configuration unavailable."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "retain-protected-training-results-through-exit",
+      "source_definition_digest": "9a855bdd3163ed6d52bd40164bb41be843b1da57afc773cc6756223568e1c23b",
+      "user_description": {
+        "title": "Protect training results through shutdown",
+        "purpose": "Keep checkpoint and candidate files protected when the run stops, a reply is lost or the app recovers.",
+        "scope": [
+          "Confirm the original file operations and worker have stopped.",
+          "Keep result files and storage charges after the worker stops. Cleanup needs separate proof from the original owner."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-training-candidate-review-and-history",
+      "source_definition_digest": "d1dbeb6590a726f623774c373720ab9ea51f642636bf87d298d184774a404ec8",
+      "user_description": {
+        "title": "Connect candidate review and evaluation history",
+        "purpose": "Show the exact trained candidate with its model, data, settings, device, task and evaluation history.",
+        "scope": [
+          "Reuse the existing result readers and evaluation software.",
+          "Test with controlled metrics. Keep accepted accuracy tests closed."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "save-approved-trained-model",
+      "source_definition_digest": "65534567710c3ec0b48f48225f301c1e0199fae2bd110200dd6970d334398757",
+      "user_description": {
+        "title": "Save a separately approved trained model",
+        "purpose": "Register the exact reviewed candidate only after the user gives separate approval to save it.",
+        "scope": [
+          "Check current permission and the selected result before saving.",
+          "Handle lost replies without saving the same result twice."
+        ]
+      }
     }
   ]
 }
