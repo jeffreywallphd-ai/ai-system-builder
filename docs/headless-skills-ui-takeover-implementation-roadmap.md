@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-25T17:35:57Z`
+- Updated: `2026-11-25T18:47:56Z`
 
 ## Objective
 
@@ -153,7 +153,7 @@ The user selected both approval modes, available in chat and in the app. The hos
 
 Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control.
 
-### Work packages
+### Stories
 
 - **Connect to the running host** (`shared-host-connector`): Extract narrow lazy providers used by IPC and an authenticated loopback connector; a typed stdio MCP adapter discovers the same host and finite delegated capabilities.
 - **Author through shared services** (`semantic-tools-and-receipts`): Workspace/template/system discovery, create/rename/clone, preview/apply semantic batches, supported workflow preparation/invocation and task status use application authorization, immutable revisions and durable scoped receipts.
@@ -208,7 +208,7 @@ Disable connector discovery/admission, revoke its delegated client credentials a
 
 Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue.
 
-### Work packages
+### Stories
 
 - **Reserve and activate exact authority** (`exact-window-authority`): Host/UI/agent incarnations, bounded requests, acceptance attempts, terminal leases and readiness transitions enforce one controller per window with distinct interactive authority.
 - **Control the window and preserve human work** (`shell-gate-and-handoff`): Persistent accept/decline/activate/revoke shell controls, save-or-cancel dirty-draft handoff and a local fence restore human control before network work.
@@ -262,7 +262,7 @@ Disable new takeover requests, synchronously close all local presentation/contex
 
 Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay.
 
-### Work packages
+### Stories
 
 - **Use the existing managed authority** (`managed-api-and-browser`): Stdio MCP forwarding and finite API routes use existing bearer/OIDC membership and application policy; shared browser takeover and synchronization clients preserve identical semantics.
 - **Recover and deliver committed state** (`postgres-replay-and-workers`): PostgreSQL receipt/outbox coordination and authenticated header-capable stream/polling clients recover across reconnect and dispatch failure; bounded two-worker fixtures prove subscriber reach without an external broker.
@@ -312,7 +312,7 @@ Disable new agent/control/change-stream route admission and revoke affected dele
 
 Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions.
 
-### Work packages
+### Stories
 
 - **Discover what is available** (`discover-capabilities`): Read host, workspace and task capabilities, allowed effects, readiness requirements, exact resource IDs and compatible templates.
 - **Plan, approve and resume** (`plan-execute-resume`): Let the user choose scoped plan approval or explicit approval for each change. Offer either choice and each approval in authenticated chat or in an app popup, using the same app-owned record.
@@ -354,7 +354,7 @@ Disable new capability discovery and plan execution, end presentation leases, an
 
 Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context.
 
-### Work packages
+### Stories
 
 - **Find and import source data** (`acquire-data`): Use approved file selections, supported provider browsing, bounded ingestion, scan normalization/OCR where available, and existing status/cancel surfaces.
 - **Prepare and validate datasets** (`prepare-review-data`): Inspect schemas, choose recipes and splits, preview mappings, produce artifacts and review the output. Track immutable versions and lineage.
@@ -395,7 +395,7 @@ Disable new import and dataset tool routes. Preserve source artifacts, lineage, 
 
 Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results.
 
-### Work packages
+### Stories
 
 - **Prepare sources and index settings** (`prepare-context`): Select exact source revisions and an available embedding model. Preview extraction, chunking, metadata scopes and resource estimates.
 - **Build, query and evaluate** (`build-evaluate-context`): Create an immutable manifest, inspect lineage, run bounded queries and compare recall/citations and latency to declared fixtures. Rebuild through the existing versioned workflow.
@@ -434,11 +434,89 @@ Disable agent Context admission and revoke related presentation. Retain saved an
 
 Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits.
 
-### Work packages
+### Stories
 
 - **Discover and acquire supported models** (`models`): Search or inspect configured providers, resolve exact model/revision, estimate local resources, and use the existing bounded download and registry tasks.
 - **Fine-tune and evaluate** (`train-evaluate`): Select a compatible base, dataset version, training method and hardware budgets. Track training progress, saved checkpoints, resulting model and clearly scoped evaluation results.
 - **Generate and show results** (`generate-and-reveal`): Use existing approved text/image workflows, manage supported tasks and reveal exact model inventory, downloads, training jobs and generated artifacts.
+
+### Tasks by story
+
+Task counts show implementation tracking. Technical qualification remains separate.
+
+- **Discover and acquire supported models**: 5 of 5 tasks complete
+  - Inspect installed models (`inspect-installed-models`): complete
+  - Inspect the exact model source (`review-pinned-model-source`): complete
+  - Execute an exact approved download (`execute-approved-model-download`): complete
+  - Connect downloads and owned task controls (`monitor-and-cancel-model-download`): complete
+  - Review and save the completed model (`review-and-save-downloaded-model`): complete
+- **Fine-tune and evaluate**: 61 of 63 tasks complete
+  - Review fine-tuning inputs and settings (`review-fine-tuning-inputs-and-settings`): complete
+  - Prepare training data and local loading controls (`prepare-local-training-files-and-load-policy`): complete
+  - Inspect the selected local model files (`inspect-local-training-model-files`): complete
+  - Prepare a fixed before-and-after comparison (`prepare-fixed-validation-comparison`): complete
+  - Build the shared training permission views (`review-exact-training-permissions`): complete
+  - Store the exact training approval (`persist-exact-training-approval`): complete
+  - Store one original training task record (`retain-original-training-task`): complete
+  - Protect the original private training task (`guard-private-training-session`): complete
+  - Protect the approved training step (`admit-exact-training-step`): complete
+  - Connect the original private training task (`connect-private-training-task`): complete
+  - Keep the original training runtime (`retain-original-training-runtime`): complete
+  - See training progress and request Stop (`observe-original-training-task`): complete
+  - Review and approve saved training plans (`review-saved-training-plans`): complete
+  - Run and monitor the approved training step (`run-approved-training-in-hosts`): complete
+  - Confirm original worker closure before releasing resources (`retain-original-training-worker-until-close`): complete
+  - Bound training worker startup and shutdown (`bound-original-training-worker-startup`): complete
+  - Protect approved training settings (`preserve-approved-training-settings`): complete
+  - Review completed training history (`review-original-training-completion`): complete
+  - Read completed training results in both hosts (`connect-original-training-completion-hosts`): complete
+  - Read training progress through the chatbot tool (`read-original-training-progress-through-broker`): complete
+  - Protect the private model copy used for training (`protect-original-training-source-copy`): complete
+  - Validate training result replies for chatbot tools (`validate-recorded-training-completion`): complete
+  - Read training results through chatbot connections (`review-recorded-training-through-broker`): complete
+  - Keep worker startup bound to its approved request (`bind-training-startup-to-original-request`): complete
+  - Check the approved model files before worker startup (`observe-approved-training-model-files`): complete
+  - Carry the approved model into protected worker launch (`launch-protected-training-model-source`): complete
+  - Let the worker use the protected model (`consume-protected-training-model`): complete
+  - Protect the approved datasets and recipe (`protect-approved-training-input-files`): complete
+  - Load protected inputs with the approved settings (`load-protected-training-inputs`): complete
+  - Protect generated training files (`protect-generated-training-files`): complete
+  - Stream model weights into protected files (`stream-model-weights-to-protected-files`): complete
+  - Select the exact trained model weights (`select-trained-model-weights`): complete
+  - Export model settings and tokenizer data (`export-training-configuration-and-tokenizer`): complete
+  - Write the protected trained candidate (`write-protected-trained-candidate`): complete
+  - Preserve the original training run history (`preserve-original-training-run-history`): complete
+  - Keep checkpoint outputs in separate protected folders (`bound-original-checkpoint-output-folders`): complete
+  - Write trained bytes into the protected output folders (`serialize-original-family-model-output`): complete
+  - Apply selected training settings (`honor-approved-text-training-settings`): complete
+  - Read protected model files with supported libraries (`verify-protected-model-file-consumers`): complete
+  - Preserve the approved checkpoint schedule (`bind-protected-checkpoint-schedule`): complete
+  - Save each requested model snapshot (`write-approved-protected-checkpoints`): complete
+  - Seal the final trained model result (`seal-final-trained-output`): complete
+  - Keep training output tied to the accepted task (`bind-original-training-task-identity`): complete
+  - Prepare training tokens without extra files (`tokenize-protected-inputs-in-memory`): complete
+  - Read the exact dataset files safely (`read-original-dataset-bytes`): complete
+  - Load the approved training data without extra files (`parse-original-datasets-in-memory`): complete
+  - Connect approved data, training and protected files (`compose-protected-training-stages`): complete
+  - Read saved training files safely (`read-protected-training-results`): complete
+  - Check saved training file formats (`validate-protected-training-result-formats`): complete
+  - Link saved results to the training run (`bind-original-training-result-checks`): complete
+  - Close saved-result files safely (`retire-original-training-output-io`): complete
+  - Connect training to checked and closed output (`connect-original-protected-training-result`): complete
+  - Connect the original training file owner (`connect-original-training-file-owner`): complete
+  - Store private training result files (`stage-private-training-result-bytes`): complete
+  - Deliver protected training files in one pass (`deliver-training-output-in-one-pass`): complete
+  - Connect training files to the private worker session (`connect-private-training-output-channel`): complete
+  - Receive training files in verified private storage (`receive-private-training-output-in-storage`): complete
+  - Fence original training files before worker exit (`fence-original-training-files-for-worker-exit`): complete
+  - Track original training operations through cancellation (`track-original-parent-training-io`): complete
+  - Use one original task executor for training and local exit proof (`stage-original-training-and-exit-on-one-executor`): complete
+  - Coordinate training file closure and original worker shutdown (`coordinate-original-parent-and-worker-retirement`): complete
+  - Run a bounded fine-tuning task (`run-approved-fine-tuning`): planned
+  - Evaluate and review the trained candidate (`evaluate-trained-model-candidate`): planned
+- **Generate and show results**: 0 of 2 tasks complete
+  - Generate and import supported outputs (`generate-and-import-model-output`): planned
+  - Show and qualify exact model outcomes (`qualify-model-workflows-on-hosts`): planned
 
 ### Deliverables
 
@@ -482,7 +560,7 @@ Turn off model and generation delegation, end related presentation and preserve 
 
 Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component.
 
-### Work packages
+### Stories
 
 - **Select assets and check fit** (`select-plan`): Search exact released definitions, dependencies, placements, ports and capabilities. Preview a compatible composition and explain substitutions.
 - **Create custom assets in a reviewable draft** (`create-custom`): Use existing declarative and layered customization contracts, immutable base/source references, proposal/review, package inspection and approved promotion.
@@ -523,7 +601,7 @@ Withdraw tool families and presentation actions while retaining reviewed proposa
 
 Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle.
 
-### Work packages
+### Stories
 
 - **Build the system design** (`compose-systems`): Apply reviewed semantic edits and exact bindings in supported Canvas/Form workflows. Validate behavior, version selected resources and preserve human drafts.
 - **Build and test an immutable candidate** (`build-and-test`): Start the existing deterministic build/isolated test, read logs and bounded evidence, inspect test failures and require suitable environment readiness.
@@ -564,7 +642,7 @@ Disable new delegated lifecycle entry points and end their presentation. Retain 
 
 Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests.
 
-### Work packages
+### Stories
 
 - **Cover workspace, settings and activity** (`workspace-and-settings`): Inspect authorized workspace and capability, support separately approved workspace actions, show safe effective settings, health and task notifications, and send an authorized user to exact setup, secret, identity or security UI when needed.
 - **Account for every major feature** (`capability-matrix`): Map feature, supported hosts, agent intent, typed operation, authority, takeover reveal, task behavior, test and explicit human-only outcomes to each relevant app surface.
