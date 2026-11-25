@@ -471,6 +471,26 @@ TRAINING_EXIT_BARRIER_CONTROLLER_FILTERS = (
     "test_control_plane_training_exit_barrier.", "test_control_plane_original_training_files.",
     "test_control_plane_training_output_channel.", "test_control_plane_focused.",
 )
+TRAINING_IO_RETIREMENT_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_training_io_retirement.py",
+)
+TRAINING_IO_RETIREMENT_OWNER_SCOPE = (
+    "modules/adapters/filesystem-security/containedFilesystem.ts",
+    "modules/application/ports/model/training-result-file-byte-storage.port.ts",
+    "modules/adapters/storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter.ts",
+    "modules/adapters/storage/filesystem/artifact-store/tests/training-result-file-byte-storage.integration.test.ts",
+    "modules/adapters/storage/filesystem/artifact-store/tests/contained-stream-retirement.integration.test.ts",
+    "modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts",
+    "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts",
+    "dev-tools/helpers/README.md", "docs/diagnostics/ai-development-control-plane.md",
+    "modules/adapters/storage/filesystem/README.md", "modules/adapters/runtime/python/README.md",
+    "docs/architecture/runtime-model.md", "docs/adr/ADR-0047-headless-system-builder-delegation.md",
+    "docs/security/headless-system-builder-threat-model.md", "docs/context/packs/runtime.pack.md",
+)
+TRAINING_IO_RETIREMENT_CONTROLLER_FILTERS = (
+    "test_control_plane_training_io_retirement.", "test_control_plane_training_output_receiver.",
+    "test_control_plane_headless_training_runtime.", "test_control_plane_focused.",
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -620,6 +640,32 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
             "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
             "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts"),
+    },
+    "headless-training-io-retirement-unit": {
+        "automatic_sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7],
+        "automatic_required_files": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7] + (
+            "modules/adapters/storage/filesystem/artifact-store/verifiedPublicationStream.ts",
+            "modules/adapters/filesystem-security/index.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/filesystem-artifact-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+        ),
+        "sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE,
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            "modules/adapters/storage/filesystem/artifact-store/tests/contained-stream-retirement.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/training-result-file-byte-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/filesystem-artifact-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts"),
+    },
+    "headless-training-io-retirement-types": {
+        "companion_to": "headless-training-io-retirement-unit",
+        "sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7],
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
+            "modules/adapters/storage/filesystem/artifact-store/tests/contained-stream-retirement.integration.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/training-result-file-byte-storage.integration.test.ts",
+            "modules/adapters/runtime/python/tests/original-training-output-receiver.integration.test.ts"),
     },
     "headless-training-runtime-unit": {
         "automatic_sources": (
@@ -4330,6 +4376,19 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[item for name in TRAINING_EXIT_BARRIER_CONTROLLER_FILTERS for item in ("-k", name)]]
+    io_support = (TRAINING_IO_RETIREMENT_SCOPE + TRAINING_IO_RETIREMENT_OWNER_SCOPE
+        + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_IO_RETIREMENT_CONTROLLER_FILTERS)
+        + tuple(name for identity in ("headless-training-io-retirement-unit", "headless-training-runtime-unit")
+            for name in PUBLISHED_FORM_CHECKS[identity]["automatic_required_files"]))
+    if (set(TRAINING_IO_RETIREMENT_SCOPE) <= set(paths) <= set(TRAINING_IO_RETIREMENT_SCOPE + TRAINING_IO_RETIREMENT_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": io_support[index:index+16]})
+                for index in range(0, len(io_support), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[item for name in TRAINING_IO_RETIREMENT_CONTROLLER_FILTERS for item in ("-k", name)]]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})

@@ -243,3 +243,13 @@ inert kernel; no Windows process, model or scoring is run. Original file-owner
 and private delivery compatibility checks remain selected. The exact closed
 controller scope runs complete related routing modules and actual commands;
 missing, nonregular, mixed, unknown and explicit generic work retains fallback.
+
+### Training parent IO retirement checks
+
+`headless-training-io-retirement-unit` executes the whole contained streaming
+writer, training publication, ordinary artifact, Context and ingestion storage
+suites. Its strict companion includes the receiver consumer. The existing
+training runtime profile retains whole receiver/session/HTTP compatibility.
+Exact closed routing runs whole related controller modules; missing, nonregular,
+unknown, mixed or explicitly generic scope keeps the broad fallback. These tests
+use small owned files and controlled promises, without models or Native execution.

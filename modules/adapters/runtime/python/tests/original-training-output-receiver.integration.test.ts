@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {createHash} from "node:crypto";
+import {execFileSync} from "node:child_process";
 import {mkdtemp, readFile, rm, readdir} from "node:fs/promises";
 import path from "node:path";
 import {tmpdir} from "node:os";
@@ -42,9 +43,9 @@ function frames(large = false) {
   add("streams-complete", {fileCount: files.length, totalBytes: bytes.reduce((n, data) => n + data.length, 0), provisional: true});
   return {rows, bytes, files};
 }
-async function fixture(large = false) {
+async function fixture(large = false, trackIoRetirement = false) {
   const root = await mkdtemp(path.join(tmpdir(), "training-receive-"));
-  const original = createFilesystemTrainingResultFileByteStorageAdapter({rootDirectory: root, publicationId, maximumFiles: 8, maximumFileBytes: 32768, maximumTotalBytes: 131072});
+  const original = createFilesystemTrainingResultFileByteStorageAdapter({rootDirectory: root, publicationId, maximumFiles: 8, maximumFileBytes: 32768, maximumTotalBytes: 131072, trackIoRetirement});
   const input = frames(large), calls: string[] = [], acks: number[] = [];
   let current = true, permission = true, releases = 0, published = 0, ack = 0, completed = false;
   const f = {root, original, input, calls, acks, publications: [] as number[], factoryCalls: 0,
@@ -58,6 +59,7 @@ async function fixture(large = false) {
     const result = await original.publishResultFile(file, context);
     if (result.ok) published++; return result;
   }};
+  if (trackIoRetirement) storage.captureIoRetirement = (input, context) => original.captureIoRetirement!(input, context);
   const configuration: OriginalTrainingOutputStorage = {storage, context: {requestId: id, workspaceId: workspace, organizationId: "org" as OrganizationId, principalId: "actor"},
     publicationId, maximumFiles: 8, maximumFileBytes: 32768, maximumTotalBytes: 131072, maximumDurationMs: 10000};
   const channel: OriginalTrainingOwnedChannel = {identity, assertCurrent() {assert.ok(current);}, async retireOriginalWorker() {return true;}, releaseUnusedWorker() {},
@@ -277,6 +279,145 @@ test("finite deadline fences a still-pending read without claiming IO retirement
     assert.deepEqual(f.publications, []); assert.equal(await f.session.settle(), false);
   } finally {gate.resolve(undefined); await f.close();}
 });
+function directReceiver(f: Awaited<ReturnType<typeof fixture>>, hooks: {
+  read?: () => Promise<unknown>; acknowledge?: (sequence: number) => Promise<unknown>;
+  assertAllowed?: () => Promise<void>;
+} = {}) {
+  let ack = 0;
+  return createOriginalTrainingOutputReceiver({configuration: f.configuration, definition: definition(),
+    assertCurrent() {}, assertAllowed: hooks.assertAllowed ?? (async () => {}),
+    read: hooks.read ?? (async () => ({phase: "active", acknowledged: ack, frame: f.input.rows[ack]})),
+    acknowledge: hooks.acknowledge ?? (async sequence => {assert.equal(sequence, ack + 1); ack++; return true;})});
+}
+
+test("tracked real publication closes locally only after its permanent fence; methods were captured", async () => {
+  const f = await fixture(true, true);
+  try {
+    const receiver = directReceiver(f); f.storage.captureIoRetirement = () => {throw Error("replaced capture");};
+    receiver.start(); await until(() => receiver.isComplete());
+    assert.equal(f.published, 4); assert.equal(receiver.inspectIoRetirement().phase, "open");
+    receiver.abort(); const row = receiver.inspectIoRetirement();
+    assert.equal(row.phase, "closed"); assert.equal(row.pendingOperations, 0);
+    assert.equal(row.issuedOperations, row.returnedOperations); assert.ok(row.issuedOperations > 8);
+    assert.equal(row.publicationUnconfirmed, false); assert.throws(() => receiver.start());
+    assert.equal(f.releases, 0, "local IO proof cannot release the original reservation");
+  } finally {await f.close();}
+});
+
+test("legacy two-method storage remains compatible and supplies no failure-path retirement proof", async () => {
+  const f = await fixture();
+  try {const receiver = directReceiver(f); receiver.start(); await until(() => receiver.isComplete()); receiver.abort();
+    assert.equal(receiver.inspectIoRetirement().phase, "unconfirmed");
+    assert.equal(receiver.inspectIoRetirement().storagePhase, "unavailable"); assert.equal(f.published, 4);
+  } finally {await f.close();}
+});
+
+for (const action of ["read", "acknowledge", "permission"] as const)
+  test(`deadline does not retire the actual pending ${action}; late return closes without another effect`, async () => {
+    const f = await fixture(false, true), gate = deferred<any>(), entered = deferred(); let calls = 0;
+    try {
+      (f.configuration as any).maximumDurationMs = 20;
+      const hook = () => {calls++; entered.resolve(); return gate.promise;};
+      // Permission has no effect deadline of its own: abort and let its actual
+      // promise remain pending until return, without requiring new permission.
+      const receiver = directReceiver(f, action === "permission" ? {assertAllowed: hook} : {[action]: hook});
+      receiver.start(); await entered.promise; receiver.abort(); await new Promise(resolve => setTimeout(resolve, 45));
+      const pending = receiver.inspectIoRetirement(); assert.equal(pending.phase, "pending"); assert.ok(pending.pendingOperations > 0);
+      if (action !== "permission") assert.equal(pending.drainFinished, true);
+      gate.resolve(action === "acknowledge" ? true : action === "read" ? {phase: "active", acknowledged: 0, frame: f.input.rows[0]} : undefined);
+      await until(() => receiver.inspectIoRetirement().phase === "closed");
+      assert.equal(calls, 1); assert.equal(f.published, 0); assert.equal(f.releases, 0);
+    } finally {gate.resolve(undefined); await tick(); await f.close();}
+  });
+
+test("a publisher returning while an iterator is still advancing cannot erase read or iterator operations", async () => {
+  const f = await fixture(false, true), gate = deferred<unknown>(), entered = deferred(); let reads = 0;
+  try {
+    (f.configuration as any).maximumDurationMs = 25;
+    f.storage.publishResultFile = async file => {
+      const pending = file.content[Symbol.asyncIterator]().next(); void pending.catch(() => {});
+      await entered.promise; throw Error("publisher returned before iterator");
+    };
+    const receiver = directReceiver(f, {read() {if (++reads === 1) return Promise.resolve({phase: "active", acknowledged: 0, frame: f.input.rows[0]});
+      entered.resolve(); return gate.promise;}});
+    receiver.start(); await entered.promise; await new Promise(resolve => setTimeout(resolve, 40));
+    const pending = receiver.inspectIoRetirement(); assert.equal(pending.drainFinished, true); assert.equal(pending.phase, "pending");
+    assert.ok(pending.pendingOperations > 0); gate.resolve({phase: "active", acknowledged: 1, frame: f.input.rows[1]});
+    await until(() => receiver.inspectIoRetirement().phase === "closed"); assert.equal(reads, 2); assert.equal(f.published, 0);
+  } finally {gate.resolve(undefined); await tick(); await f.close();}
+});
+
+test("a late publication wrapper remains pending after timeout even though its real file has closed", async () => {
+  const f = await fixture(false, true), gate = deferred(), entered = deferred();
+  try {
+    (f.configuration as any).maximumDurationMs = 25; const publish = f.storage.publishResultFile;
+    f.storage.publishResultFile = async (file, context) => {const result = await publish(file, context); entered.resolve(); await gate.promise; return result;};
+    const receiver = directReceiver(f); receiver.start(); await entered.promise; await new Promise(resolve => setTimeout(resolve, 45));
+    const row = receiver.inspectIoRetirement(); assert.equal(row.drainFinished, true); assert.equal(row.phase, "pending");
+    assert.equal(row.storagePhase, "closed"); assert.equal(row.pendingOperations, 1); assert.equal(f.published, 1);
+    gate.resolve(); await until(() => receiver.inspectIoRetirement().phase === "closed");
+    assert.equal(f.published, 1); assert.equal(f.releases, 0);
+  } finally {gate.resolve(); await tick(); await f.close();}
+});
+
+for (const mode of ["throw", "thenable"])
+  test(`an accepted ${mode} without an original promise leaves a permanent unknown operation`, async () => {
+    const f = await fixture(false, true);
+    try {let calls = 0; const receiver = directReceiver(f, {read: (() => {calls++; if (mode === "throw") throw Error("unknown dispatch"); return {then() {throw Error("must not assimilate");}};}) as never});
+      receiver.start(); await tick(); await tick(); receiver.abort();
+      const row = receiver.inspectIoRetirement(); assert.equal(row.phase, "unconfirmed"); assert.equal(row.pendingOperations, 1);
+      assert.equal(row.drainFinished, true); assert.equal(calls, 1); assert.equal(f.published, 0);
+    } finally {await f.close();}
+  });
+
+test("retirement capability getters and unknown port fields are denied without running them", async () => {
+  const f = await fixture(); let getters = 0;
+  try {
+    Object.defineProperty(f.storage, "captureIoRetirement", {configurable: true, enumerable: true, get() {getters++; throw Error("getter ran");}});
+    assert.throws(() => directReceiver(f)); assert.equal(getters, 0);
+    Object.defineProperty(f.storage, "captureIoRetirement", {value: () => ({fencePublication() {}, get inspect() {getters++; throw Error("getter ran");}})});
+    assert.throws(() => directReceiver(f)); assert.equal(getters, 0);
+  } finally {await f.close();}
+});
+
+test("async retirement capabilities cannot claim synchronous closure or leak rejected promises", () => {
+  // A separate bounded Node process observes unhandled rejections without
+  // weakening the test runner's own unhandled-rejection failure behavior.
+  const program = `
+    const {createOriginalTrainingOutputReceiver:create}=require('./modules/adapters/runtime/python/client/originalTrainingOutputReceiver.ts');
+    const {createFilesystemTrainingResultFileByteStorageAdapter:storageFactory}=require('./modules/adapters/storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter.ts');
+    const definition=${JSON.stringify(definition())}, publicationId=${JSON.stringify(publicationId)};
+    let unhandled=0, thenCalls=0; process.on('unhandledRejection',()=>{unhandled++}); const rows=[],fenceAttempts=[];
+    for(const mode of ['capture-reject','capture-thenable','fence-pending','fence-resolve','fence-reject','inspect-reject']) {
+      const storage=storageFactory({rootDirectory:'synthetic-no-io',publicationId,maximumFiles:8,maximumFileBytes:32768,maximumTotalBytes:131072,trackIoRetirement:true});
+      const capture=storage.captureIoRetirement;
+      storage.captureIoRetirement=(input,context)=>{
+        if(mode==='capture-reject')return Promise.reject(Error('synthetic capture rejection'));
+        if(mode==='capture-thenable')return {get then(){thenCalls++;throw Error('must not assimilate')}};
+        const cap=capture(input,context);
+        return {fencePublication(){fenceAttempts.push(mode);cap.fencePublication();
+          if(mode==='fence-pending')return new Promise(()=>{});
+          if(mode==='fence-resolve')return Promise.resolve();
+          if(mode==='fence-reject')return Promise.reject(Error('synthetic fence rejection'));
+        },inspect(){if(mode==='inspect-reject')return Promise.reject(Error('synthetic inspection rejection'));return cap.inspect();}};
+      };
+      try {
+        const receiver=create({configuration:{storage,context:{requestId:definition.requestId,workspaceId:definition.workspaceId,organizationId:'org',principalId:'actor'},publicationId,maximumFiles:8,maximumFileBytes:32768,maximumTotalBytes:131072,maximumDurationMs:1000},definition,
+          assertCurrent(){},async assertAllowed(){},async read(){throw Error('must not read')},async acknowledge(){throw Error('must not ACK')}});
+        receiver.abort();receiver.abort();rows.push({mode,phase:receiver.inspectIoRetirement().phase,fenceCalls:fenceAttempts.filter(value=>value===mode).length});
+      }catch{rows.push({mode,phase:'denied'});}
+    }
+    setTimeout(()=>process.stdout.write(JSON.stringify({rows,unhandled,thenCalls})),30);
+  `;
+  const result = JSON.parse(execFileSync(process.execPath, ["--import", "tsx", "--eval", program],
+    {encoding: "utf8", timeout: 5000, maxBuffer: 65536}));
+  assert.deepEqual(result.rows, [
+    {mode: "capture-reject", phase: "denied"}, {mode: "capture-thenable", phase: "denied"},
+    ...["fence-pending", "fence-resolve", "fence-reject", "inspect-reject"].map(mode => ({mode, phase: "unconfirmed", fenceCalls: 1})),
+  ]);
+  assert.equal(result.unhandled, 0); assert.equal(result.thenCalls, 0);
+});
+
 test("original HTTP output-only body limit is 128 KiB; existing actions stay at 64 KiB", async () => {
   let bodyBytes = 70 * 1024; const requests: string[] = [];
   const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111", authorizationToken: "synthetic-token-".padEnd(40, "x"),

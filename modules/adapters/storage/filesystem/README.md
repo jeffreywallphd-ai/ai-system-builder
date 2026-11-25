@@ -23,3 +23,14 @@ Boundary rules:
 - streamed artifact finalization and ingestion checkpoint chunks use contained
   temporary files plus atomic publication, exact byte ceilings, and digest
   verification so failed writes do not expose partial final artifacts.
+
+The contained streaming writer optionally records its genuine original handle
+and operations through one module-owned lifetime. The training byte adapter can
+capture one matching publication/context retirement capability before writing.
+Its permanent fence denies new files; inspection needs no fresh business grant.
+Only known original operation returns and acknowledged close establish local IO
+closure. A lost open/close acknowledgement stays uncertain, even after fixture
+cleanup. Live sets are bounded, with no per-frame history. Default callers retain
+their existing behavior and the training adapter's original two-method surface.
+Closed IO does not clear uncertain publication or byte accounting, prove Native
+custody/capacity, or authorize retry, delete, credit, Save or worker retirement.

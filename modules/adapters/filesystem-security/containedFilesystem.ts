@@ -13,6 +13,76 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import {types} from "node:util";
+
+declare const streamLifetimeBrand: unique symbol;
+/** Optional private instrumentation. Possession grants no filesystem authority. */
+export interface ContainedFileStreamLifetime {readonly [streamLifetimeBrand]: true}
+type StreamLifetimeRecord = {
+  started: boolean; finished: boolean; unknown: boolean; pending: Set<object>;
+  issued: number; returned: number; openAttempted: boolean; handleAcquired: boolean;
+  closeAttempted: boolean; closeAcknowledged: boolean;
+  publication: "none" | "published" | "unconfirmed";
+  binding?: Readonly<{rootDirectory: string; key: string; maximumBytes: number; overwrite: boolean}>;
+  handle?: unknown;
+};
+const streamLifetimes = new WeakMap<ContainedFileStreamLifetime, StreamLifetimeRecord>();
+const lifetimeUnavailable = () => new Error("The original file operation lifetime is unavailable.");
+function streamLifetime(owner: ContainedFileStreamLifetime): StreamLifetimeRecord {
+  if (!owner || typeof owner !== "object" || types.isProxy(owner)) throw lifetimeUnavailable();
+  const record = streamLifetimes.get(owner); if (!record) throw lifetimeUnavailable(); return record;
+}
+export function createContainedFileStreamLifetime(): ContainedFileStreamLifetime {
+  const owner = Object.freeze(Object.create(null)) as ContainedFileStreamLifetime;
+  streamLifetimes.set(owner, {started: false, finished: false, unknown: false, pending: new Set(), issued: 0, returned: 0,
+    openAttempted: false, handleAcquired: false, closeAttempted: false, closeAcknowledged: false, publication: "none"});
+  return owner;
+}
+/** Local IO only. Unknown publication/accounting is independent of closure. */
+export function inspectContainedFileStreamLifetime(owner: ContainedFileStreamLifetime) {
+  const record = streamLifetime(owner);
+  const closed = record.started && record.finished && record.pending.size === 0 && !record.unknown &&
+    (!record.openAttempted || record.handleAcquired && record.closeAcknowledged);
+  return Object.freeze({schema: "contained-file-stream-lifetime-v1" as const,
+    phase: closed ? "closed" as const : record.unknown || record.finished ? "unconfirmed" as const : record.started ? "active" as const : "unused" as const,
+    pendingOperations: record.pending.size, issuedOperations: record.issued, returnedOperations: record.returned,
+    invocationFinished: record.finished, handleAcquired: record.handleAcquired, closeAttempted: record.closeAttempted,
+    closeAcknowledged: record.closeAcknowledged, publication: record.publication});
+}
+async function streamEffect<T>(record: StreamLifetimeRecord | undefined, kind: string, action: () => Promise<T>): Promise<T> {
+  if (!record) return action();
+  if (record.finished || record.pending.size >= 8 || record.issued === Number.MAX_SAFE_INTEGER) {
+    record.unknown = true; throw lifetimeUnavailable();
+  }
+  const operation = Object.freeze({kind}); record.pending.add(operation); record.issued++;
+  let pending: Promise<T>;
+  try {
+    pending = action();
+    if (!types.isPromise(pending)) throw lifetimeUnavailable();
+  } catch (error) {record.unknown = true; throw error;} // No retained outcome: never manufacture zero IO.
+  return new Promise<T>((resolve, reject) => {
+    void Promise.prototype.then.call(pending, (value: T) => {
+      record.pending.delete(operation); record.returned++; resolve(value);
+    }, (error: unknown) => {
+      record.pending.delete(operation); record.returned++;
+      if (kind === "open" || kind === "close") record.unknown = true;
+      reject(error);
+    });
+  });
+}
+function streamHandleMethod(handle: unknown, name: string): (...args: any[]) => Promise<any> {
+  if (!handle || typeof handle !== "object" || types.isProxy(handle)) throw lifetimeUnavailable();
+  let object: object | null = handle;
+  for (let depth = 0; object && depth < 8; depth++, object = Object.getPrototypeOf(object)) {
+    if (types.isProxy(object)) throw lifetimeUnavailable();
+    const property = Object.getOwnPropertyDescriptor(object, name);
+    if (property) {
+      if (!("value" in property) || typeof property.value !== "function" || types.isProxy(property.value)) throw lifetimeUnavailable();
+      const method = property.value; return (...args: any[]) => Reflect.apply(method, handle, args);
+    }
+  }
+  throw lifetimeUnavailable();
+}
 
 const WINDOWS_RESERVED_BASENAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 const WINDOWS_UNSAFE_SEGMENT = /[<>:"|?*\u0000-\u001f]/;
@@ -231,17 +301,32 @@ export async function writeContainedFileStream(input: {
   content: AsyncIterable<Uint8Array>;
   maximumBytes: number;
   overwrite: boolean;
-}): Promise<{ key: string; absolutePath: string; sizeBytes: number }> {
+}, lifetime?: ContainedFileStreamLifetime): Promise<{ key: string; absolutePath: string; sizeBytes: number }> {
+  const record = lifetime === undefined ? undefined : streamLifetime(lifetime);
+  if (record) {
+    if (record.started || !input || typeof input !== "object" || types.isProxy(input)) throw lifetimeUnavailable();
+    const fields = Object.getOwnPropertyDescriptors(input), keys = Object.keys(fields);
+    if (Reflect.ownKeys(input).length !== 5 || keys.length !== 5 ||
+        keys.some(key => !["rootDirectory", "key", "content", "maximumBytes", "overwrite"].includes(key) ||
+          !("value" in fields[key]!) || fields[key]!.enumerable !== true)) throw lifetimeUnavailable();
+    input = Object.freeze(Object.fromEntries(keys.map(key => [key, fields[key]!.value]))) as typeof input;
+    if (typeof input.rootDirectory !== "string" || typeof input.key !== "string" || typeof input.overwrite !== "boolean" ||
+        !Number.isSafeInteger(input.maximumBytes) || input.maximumBytes < 0) throw lifetimeUnavailable();
+    record.binding = Object.freeze({rootDirectory: input.rootDirectory, key: input.key,
+      maximumBytes: input.maximumBytes, overwrite: input.overwrite});
+    record.started = true; // Before containment, open, iterator or any other await.
+  }
+  try {
   if (!Number.isSafeInteger(input.maximumBytes) || input.maximumBytes < 0) {
     throw new FilesystemContainmentError("Streamed artifact maximum bytes must be a non-negative safe integer.");
   }
-  const resolved = await resolveContainedParent(input.rootDirectory, input.key, true);
+  const resolved = await streamEffect(record, "containment", () => resolveContainedParent(input.rootDirectory, input.key, true));
   const noFollow = constants.O_NOFOLLOW ?? 0;
   if (input.overwrite) {
     try {
-      const existing = await lstat(resolved.absolutePath);
+      const existing = await streamEffect(record, "inspect", () => lstat(resolved.absolutePath));
       assertRegularFile(existing, "Artifact stream overwrite");
-      if (!isInside(resolved.root, await realpath(resolved.absolutePath))) {
+      if (!isInside(resolved.root, await streamEffect(record, "inspect", () => realpath(resolved.absolutePath)))) {
         throw new FilesystemContainmentError("Artifact stream overwrite rejected a file outside the configured root.");
       }
     } catch (error) {
@@ -249,7 +334,17 @@ export async function writeContainedFileStream(input: {
     }
   }
   const temporaryPath = path.join(path.dirname(resolved.absolutePath), `.${path.basename(resolved.absolutePath)}.${randomUUID()}.stream.tmp`);
-  const handle = await open(temporaryPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600);
+  if (record) record.openAttempted = true;
+  const handle = await streamEffect(record, "open", () => open(temporaryPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600));
+  if (record) {record.handle = handle; record.handleAcquired = true;}
+  const write = record ? streamHandleMethod(handle, "write") : (buffer: Uint8Array, offset: number, length: number) => handle.write(buffer, offset, length);
+  const sync = record ? streamHandleMethod(handle, "sync") : () => handle.sync();
+  const originalClose = record ? streamHandleMethod(handle, "close") : () => handle.close();
+  const close = async () => {
+    if (record) {if (record.closeAttempted) {record.unknown = true; throw lifetimeUnavailable();} record.closeAttempted = true;}
+    await streamEffect(record, "close", () => originalClose());
+    if (record) record.closeAcknowledged = true;
+  };
   let sizeBytes = 0;
   try {
     for await (const chunk of input.content) {
@@ -257,31 +352,36 @@ export async function writeContainedFileStream(input: {
       if (sizeBytes + chunk.byteLength > input.maximumBytes) throw new FilesystemContainmentError("Streamed artifact exceeds the permitted byte limit.");
       let offset = 0;
       while (offset < chunk.byteLength) {
-        const result = await handle.write(chunk, offset, chunk.byteLength - offset);
+        const result = await streamEffect(record, "write", () => write(chunk, offset, chunk.byteLength - offset));
         if (result.bytesWritten < 1) throw new FilesystemContainmentError("Streamed artifact write made no progress.");
         offset += result.bytesWritten;
       }
       sizeBytes += chunk.byteLength;
     }
-    await handle.sync();
+    await streamEffect(record, "sync", () => sync());
   } catch (error) {
-    await handle.close().catch(() => undefined);
-    await unlink(temporaryPath).catch(() => undefined);
+    await close().catch(() => undefined);
+    await streamEffect(record, "unlink", () => unlink(temporaryPath)).catch(() => undefined);
     throw error;
   }
-  await handle.close();
+  await close();
   try {
     if (input.overwrite) {
-      await rename(temporaryPath, resolved.absolutePath);
+      await streamEffect(record, "rename", () => rename(temporaryPath, resolved.absolutePath));
     } else {
-      await link(temporaryPath, resolved.absolutePath);
-      await unlink(temporaryPath);
+      await streamEffect(record, "link", () => link(temporaryPath, resolved.absolutePath));
+      await streamEffect(record, "unlink", () => unlink(temporaryPath));
     }
   } catch (error) {
-    await unlink(temporaryPath).catch(() => undefined);
+    await streamEffect(record, "unlink", () => unlink(temporaryPath)).catch(() => undefined);
     throw error;
   }
+  if (record) record.publication = "published";
   return { key: resolved.key, absolutePath: resolved.absolutePath, sizeBytes };
+  } catch (error) {
+    if (record) record.publication = "unconfirmed";
+    throw error;
+  } finally {if (record) record.finished = true;}
 }
 
 export async function readContainedFile(input: {

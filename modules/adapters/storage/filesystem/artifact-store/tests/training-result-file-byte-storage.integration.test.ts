@@ -30,6 +30,56 @@ async function fixture(run: (root: string, storage: ReturnType<typeof create>) =
 }
 const safe = (result: unknown) => assert.doesNotMatch(JSON.stringify(result), /training-private-bytes|private-synthetic|RangeError|byteLength|[A-Z]:\\/);
 
+test("optional actual writer retirement is captured once and fences only the same private publication", async () => fixture(async root => {
+  const storage = create({...configuration(root), trackIoRetirement: true});
+  assert.equal(typeof storage.captureIoRetirement, "function");
+  assert.throws(() => storage.captureIoRetirement!({publicationId: "b".repeat(32)}, context));
+  const retirement = storage.captureIoRetirement!({publicationId}, context);
+  assert.throws(() => storage.captureIoRetirement!({publicationId}, context));
+  assert.equal(retirement.inspect().phase, "open");
+  assert.equal((await storage.publishResultFile(input(), context)).ok, true);
+  retirement.fencePublication();
+  const observed = retirement.inspect(); assert.equal(observed.phase, "closed"); assert.equal(observed.fileCount, 1);
+  assert.equal(observed.pendingOperations, 0); assert.equal(observed.publicationUnconfirmed, false); assert.equal(observed.declaredPayloadBytes, 3);
+  assert.equal((await storage.publishResultFile(input(1), context)).ok, false);
+  assert.deepEqual(retirement.inspect(), observed); safe(observed);
+}));
+test("pending real private publication remains pending after permanent publication fencing", async () => fixture(async root => {
+  const storage = create({...configuration(root), trackIoRetirement: true}), retirement = storage.captureIoRetirement!({publicationId}, context);
+  let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => {release = resolve;}), started = new Promise<void>(resolve => {entered = resolve;});
+  const content = async function* () {entered(); await gate; yield new Uint8Array([1, 2, 3]);};
+  const pending = storage.publishResultFile({...input(), content: content()}, context);
+  try {await started; retirement.fencePublication(); assert.equal(retirement.inspect().phase, "pending");
+    assert.equal((await storage.publishResultFile(input(1), context)).ok, false); release();
+    assert.equal((await pending).ok, true); assert.equal(retirement.inspect().phase, "closed");
+  } finally {release(); await pending;}
+}));
+test("known failed-file IO closure does not clear uncertain publication or its byte charge", async () => fixture(async root => {
+  const storage = create({...configuration(root), trackIoRetirement: true}), retirement = storage.captureIoRetirement!({publicationId}, context);
+  const request = {...input(), expectedSha256: "sha256:" + "0".repeat(64)};
+  const result = await storage.publishResultFile(request, context); assert.equal(result.ok, false);
+  retirement.fencePublication();
+  const observed = retirement.inspect(); assert.equal(observed.phase, "closed"); assert.equal(observed.publicationUnconfirmed, true);
+  assert.equal(observed.declaredPayloadBytes, 3); assert.equal(storage.inspectPublication().phase, "unconfirmed");
+  assert.equal((await storage.publishResultFile(input(), context)).ok, false); assert.deepEqual(retirement.inspect(), observed); safe(observed);
+}));
+test("captured retirement scope is immutable and rejects getters or a later different actor", async () => fixture(async root => {
+  const storage = create({...configuration(root), trackIoRetirement: true}); let getters = 0;
+  assert.throws(() => storage.captureIoRetirement!({publicationId}, {get workspaceId() {getters++; return "workspace-a";}}));
+  assert.equal(getters, 0);
+  const originalContext = {...context, principalId: "original-actor"}, retirement = storage.captureIoRetirement!({publicationId}, originalContext);
+  originalContext.principalId = "changed-actor";
+  assert.equal((await storage.publishResultFile(input(), originalContext)).ok, false);
+  assert.equal((await storage.publishResultFile(input(), {...context, principalId: "original-actor"})).ok, true);
+  retirement.fencePublication(); assert.equal(retirement.inspect().phase, "closed");
+}));
+test("retirement cannot be retroactively captured after an accepted write", async () => fixture(async root => {
+  const storage = create({...configuration(root), trackIoRetirement: true});
+  assert.equal((await storage.publishResultFile(input(), context)).ok, true);
+  assert.throws(() => storage.captureIoRetirement!({publicationId}, context));
+}));
+
 test("training publication writes several exact private files without catalog or model registration", async () => fixture(async (root, storage) => {
   for (const [fileIndex, mediaType, bytes] of [[0, "application/json", new TextEncoder().encode('{"synthetic":true}')],
     [1, "application/octet-stream", new Uint8Array([4, 5, 6])]] as const) {

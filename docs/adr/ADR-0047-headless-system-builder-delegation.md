@@ -1494,3 +1494,22 @@ retirement proof. Actual parent IO quiescence, protected destination/crash hando
 measured/exclusive both-copy capacity, complete Native producer, Model Save,
 generation and actual host/parent qualification remain pending. No new provider,
 executor, resource policy, model quality gate or public/default activation is added.
+
+### Additive original parent IO observation
+
+Compose one optional genuine lifetime inside the existing contained writer and
+one captured application-port retirement capability in the existing training byte
+adapter. Preserve the older two-method port and default caller behavior. Capture
+scope and methods before awaits; latch close once and retain actual pending
+promises independently of deadline/abort observers. A bounded receiver operation
+set includes original read/ACK/publish/permission/iterator advances, without a
+per-frame ledger. Cleanup inspection needs no renewed business authorization.
+
+Only permanent fencing, a finished drain, no pending/unknown original operation
+and known storage IO closure establish local quiescence. Unknown accepted open
+or close stays uncertain; known late returns can be observed without replay.
+Publication uncertainty and accounting remain distinct and retained. This adds
+no release, delete, retry, credit, Save, new executor or default activation. The
+distinct exit-ready/session protocol, original Native worker/empty-Job proof,
+capacity, protected destination/crash handoff, complete producer and real host
+qualification remain pending. It does not reinterpret settled-v1.

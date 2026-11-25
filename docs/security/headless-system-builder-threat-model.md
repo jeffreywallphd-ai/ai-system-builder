@@ -3221,3 +3221,26 @@ This source connection grants none of those capabilities or model-quality result
   activation or settled-v1 reinterpretation. Model/input guards remain retained;
   output guards were already locally closed. Real parent IO, worker/SDK/Job exit,
   destination/crash custody, capacity, complete producer and host proof stay pending.
+
+### Original parent IO lifetime evidence
+
+- Threats: a timeout, rejected observer, iterator return, copied status or mutable
+  flag hides still-running IO; a lost close reply becomes false cleanup proof;
+  changed context or methods redirect publication; per-frame history grows.
+- Controls: genuine one-use lifetime inside the same contained writer, captured
+  handle/methods/scope before callbacks, close latched once, bounded active sets
+  and counters. Capture one exact publication/context capability before writes.
+  Permanently fence new work on abort/failure; inspect without fresh business
+  permission. Original read/ACK/publish/permission/iterator promises remain pending
+  until their actual returns. Sync dispatch without a retained promise and unknown
+  accepted open/close acknowledgements stay uncertain. A finished drain alone
+  cannot establish closure. Capture/fence/inspection must be synchronous; async
+  results deny proof, native rejection is consumed and arbitrary thenables are
+  not assimilated. Legacy ports provide no failure-path proof.
+- Evidence: real small contained files, original pending write/close, late read,
+  ACK/publish/permission/iterator returns, scope/getter/forgery denial and whole
+  related storage/session/HTTP tests. No model or physical Native execution.
+- Limits: local IO closure is not publication success or storage credit. Preserve
+  bytes/declarations, unknown outcomes, default hosts and settled-v1. No new
+  close/write/ACK, compensating delete, retry, Save, worker/Job release, capacity,
+  protected destination, producer or host pass is granted.

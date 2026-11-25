@@ -6,7 +6,8 @@ import {isOrganizationId} from "../../../../contracts/organization";
 import {createContractError, readStrictPassiveRecord} from "../../../../contracts/shared";
 import {createStoreArtifactFailureResult, createStoreArtifactSuccessResult} from "../../../../contracts/storage";
 import {createWorkspaceId} from "../../../../contracts/workspace";
-import {writeContainedFileStream} from "../../../filesystem-security";
+import {writeContainedFileStream, createContainedFileStreamLifetime, inspectContainedFileStreamLifetime,
+  type ContainedFileStreamLifetime} from "../../../filesystem-security";
 import {resolveOrganizationStorageKey} from "../organizationStorageScope";
 import {verifiedPublicationStream} from "./verifiedPublicationStream";
 
@@ -49,18 +50,45 @@ export function createFilesystemTrainingResultFileByteStorageAdapter(options: {
   readonly maximumTotalBytes: number;
   readonly maximumFiles: number;
   readonly organizationContextProvider?: OrganizationRequestContextProviderPort;
+  readonly trackIoRetirement?: boolean;
 }): TrainingResultFileByteStoragePort {
-  const {rootDirectory, publicationId, maximumFileBytes, maximumTotalBytes, maximumFiles, organizationContextProvider} = options;
+  const {rootDirectory, publicationId, maximumFileBytes, maximumTotalBytes, maximumFiles, organizationContextProvider, trackIoRetirement} = options;
   need(typeof rootDirectory === "string" && rootDirectory.length > 0 &&
     typeof publicationId === "string" && /^[a-f0-9]{32}$/.test(publicationId) &&
     positive(maximumFileBytes) && positive(maximumTotalBytes) && maximumFileBytes <= maximumTotalBytes &&
-    positive(maximumFiles) && maximumFiles <= 256);
+    positive(maximumFiles) && maximumFiles <= 256 && (trackIoRetirement === undefined || typeof trackIoRetirement === "boolean"));
   const getOrganization = organizationContextProvider?.getCurrentOrganizationContext.bind(organizationContextProvider);
   let phase: "open" | "checking" | "writing" | "unconfirmed" = "open";
   let scope: {workspaceId: string; organizationId: string | undefined} | undefined;
   let declaredPayloadBytes = 0, acknowledgedFileCount = 0;
   const attempted = new Set<number>();
+  const lifetimes: ContainedFileStreamLifetime[] = [];
+  let publicationFenced = false, retirementCaptured = false;
+  let retirementScope: Readonly<ApplicationRequestContext> | undefined;
+  const captureContext = (supplied: ApplicationRequestContext) => {
+    need(!!supplied && !types.isProxy(supplied));
+    const context = readStrictPassiveRecord(supplied, ["requestId", "correlationId", "organizationId", "principalId", "workspaceId"]);
+    need(Object.values(context).every(value => value === undefined || typeof value === "string" && value.length > 0 && value.length <= 256));
+    createWorkspaceId(context.workspaceId as string);
+    need(context.organizationId === undefined || isOrganizationId(context.organizationId));
+    return Object.freeze(context) as Readonly<ApplicationRequestContext>;
+  };
   return {
+    ...(trackIoRetirement === true ? {captureIoRetirement(input: {readonly publicationId: string}, supplied: ApplicationRequestContext) {
+      need(!types.isProxy(input)); const request = readStrictPassiveRecord(input, ["publicationId"]);
+      need(Object.keys(request).length === 1 && request.publicationId === publicationId &&
+        !retirementCaptured && !publicationFenced && phase === "open" && attempted.size === 0);
+      const captured = captureContext(supplied); retirementCaptured = true; retirementScope = captured;
+      return Object.freeze({fencePublication() {publicationFenced = true;}, inspect() {
+        const observations = lifetimes.map(owner => inspectContainedFileStreamLifetime(owner));
+        const pendingOperations = observations.reduce((sum, row) => sum + row.pendingOperations, 0);
+        const pending = phase === "checking" || phase === "writing" || observations.some(row => row.phase === "active");
+        const unknown = observations.some(row => row.phase === "unconfirmed" || row.phase === "unused");
+        return Object.freeze({schema: "training-result-file-io-retirement-v1" as const, publicationId,
+          publicationFenced, phase: !publicationFenced ? "open" as const : pending ? "pending" as const : unknown ? "unconfirmed" as const : "closed" as const,
+          fileCount: lifetimes.length, pendingOperations, publicationUnconfirmed: phase === "unconfirmed", declaredPayloadBytes});
+      }});
+    }} : {}),
     inspectPublication() {return {phase, attemptedFileCount: attempted.size, acknowledgedFileCount, declaredPayloadBytes};},
     async publishResultFile(input, supplied) {
       let context: ApplicationRequestContext = {}, checking = false, issued = false;
@@ -74,14 +102,17 @@ export function createFilesystemTrainingResultFileByteStorageAdapter(options: {
           (mediaType === "application/json" || mediaType === "application/octet-stream") &&
           positive(expectedSizeBytes) && expectedSizeBytes <= maximumFileBytes &&
           typeof expectedSha256 === "string" && /^sha256:[a-f0-9]{64}$/.test(expectedSha256));
-        need(phase === "open" && !attempted.has(fileIndex) && expectedSizeBytes <= maximumTotalBytes - declaredPayloadBytes);
+        need(!publicationFenced && phase === "open" && !attempted.has(fileIndex) && expectedSizeBytes <= maximumTotalBytes - declaredPayloadBytes);
         phase = "checking"; checking = true;
         const source = captureStream(content);
-        context = {...supplied};
+        context = trackIoRetirement === true ? captureContext(supplied) : {...supplied};
+        need(!retirementScope || ["workspaceId", "organizationId", "principalId", "requestId", "correlationId"].every(key =>
+          context[key as keyof ApplicationRequestContext] === retirementScope![key as keyof ApplicationRequestContext]));
         const workspaceId = createWorkspaceId(context.workspaceId!);
         // Freeze caller/provider scope and request scalars before any stream or
         // writer await. Later mutations cannot redirect this private copy.
         const organization = getOrganization ? captureOrganization(getOrganization()) : undefined;
+        need(!publicationFenced); // A captured provider callback can request cleanup.
         need(context.organizationId === undefined || isOrganizationId(context.organizationId));
         need(!getOrganization || organization!.organizationId === context.organizationId);
         const organizationId = organization?.organizationId ?? context.organizationId;
@@ -93,8 +124,10 @@ export function createFilesystemTrainingResultFileByteStorageAdapter(options: {
         scope ??= {workspaceId, organizationId};
         attempted.add(fileIndex); declaredPayloadBytes += expectedSizeBytes;
         phase = "writing"; issued = true;
+        const lifetime = trackIoRetirement === true ? createContainedFileStreamLifetime() : undefined;
+        if (lifetime) lifetimes.push(lifetime); // Retain before the first writer await.
         const written = await writeContainedFileStream({rootDirectory, key: scopedKey, content: verified.content,
-          maximumBytes: expectedSizeBytes, overwrite: false});
+          maximumBytes: expectedSizeBytes, overwrite: false}, lifetime);
         const verifiedResult = verified.result();
         need(written.key === scopedKey && written.sizeBytes === verifiedResult.sizeBytes);
         const result = createStoreArtifactSuccessResult({key, mediaType, sizeBytes: verifiedResult.sizeBytes,

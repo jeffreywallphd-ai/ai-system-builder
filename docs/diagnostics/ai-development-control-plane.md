@@ -3445,3 +3445,14 @@ unknown/pending calls, scope replacement, thread and virtual-field denials.
 This is software component evidence, not physical Native, model quality or host
 qualification. Exact closed scope runs whole related controller modules;
 missing/nonregular/mixed/unknown or explicit generic scope keeps fallback.
+
+### Training parent IO retirement checks
+
+The focused `headless-training-io-retirement-unit` and its strict types companion
+cover the actual contained writer, training byte adapter and receiver consumer.
+Whole ordinary artifact, Context and ingestion storage suites protect existing
+callers. Whole receiver/session/HTTP tests remain in the runtime profile. Closed
+controller routing keeps complete related suites and actual commands; incomplete,
+nonregular, mixed, unknown or explicit generic scope retains broad discovery.
+Evidence establishes local IO lifetime only. It does not qualify real Native
+worker retirement, capacity, Save, model quality or whole-host operation.

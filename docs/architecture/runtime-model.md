@@ -3450,3 +3450,28 @@ custody. This supports a future distinct exit-ready-v1 protocol, preserving the
 meaning and default behavior of settled-v1. Actual parent IO quiescence, original
 worker/empty-Job/controller retirement, protected destination handoff, capacity,
 complete producer, separate Save and real host qualification remain pending.
+
+### Original parent IO retirement observation
+
+The same contained writer optionally owns a one-use private lifetime, with
+captured root/key/bounds/mode and original handle methods before source callbacks.
+Bounded active operations retain original promises through outer timeout/abort.
+Close is latched once; unknown accepted open or close acknowledgement cannot be
+converted to closure by a wrapper result, mutable flag or test cleanup.
+
+The training byte port adds only an optional captured local retirement capability.
+Its original publication/context is fixed before writes. Permanent fencing stops
+new publications; passive inspection needs no current business permission. The
+receiver captures that capability before startup and tracks its original read,
+ACK, publish, permission and iterator advances before callbacks. A local closed
+observation requires a fenced receiver, finished drain, no pending/unknown actual
+operation and known storage IO closure. No per-frame records accumulate. Older
+two-method storage ports remain compatible, without this failure-path proof.
+
+This is local component evidence, not a wire or Native settlement grant. Published
+bytes and all declarations remain retained when publication is uncertain. No new
+cleanup effect, retry, delete, capacity credit, source reopening or Save follows.
+The optional future exit-ready protocol must still compose this evidence with
+the exact original worker/empty-Job/controller and protected destination/capacity
+proof. Defaults and settled-v1 remain unchanged; no complete producer or host
+qualification is asserted.

@@ -1295,6 +1295,23 @@ Observed terminal uncertainty cannot be cleared by resetting a mutable flag.
 Output guards were already closed by local output retirement; this barrier does
 not establish live output custody. A future distinct exit-ready protocol must
 still obtain actual parent IO quiescence and exact original worker/Job retirement.
+
+### Private parent IO lifetime
+
+The optional training storage retirement capability is captured once with the
+original publication/context before startup awaits. The receiver permanently
+fences new work on abort/failure. A bounded active set tracks original read, ACK,
+publish, permission and iterator promises independently of deadline races.
+`inspectIoRetirement` observes the same receiver and captured storage owner, with
+no new permission, IO or retry. A finished drain alone is insufficient. Unknown
+dispatch/open/close outcomes stay unconfirmed. The fence attempt is latched before
+its callback and is never repeated. Capture, fence and inspection must
+be synchronous; Promise results deny closure and native rejections are consumed
+without assimilating arbitrary thenables. Known late returns may establish
+local closure while bytes/accounting remain retained. Older two-method storage
+ports still work but supply no failure-path IO proof. Default hosts, settled-v1,
+worker/Job retirement, capacity, protected destination, producer, Save and host
+qualification are unchanged and remain separate work.
 Existing settled-v1 and default hosts are unchanged; no new wire path is enabled.
 Actual capacity, protected destination/crash lifecycle, full producer, Save and
 host qualification remain pending. The barrier issues no Native or file effects.
