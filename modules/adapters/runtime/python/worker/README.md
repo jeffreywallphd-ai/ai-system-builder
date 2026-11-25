@@ -2454,3 +2454,42 @@ permanent IO/worker retirement and actual host qualification remain necessary.
 The shared SDK fixture prepares only the selected method/output through the
 original Native fixture. It keeps the same guard/retirement assertions without
 first retaining an unused default LoRA graph; test and runtime limits stay intact.
+
+### Permanent original saved-output IO barrier
+
+The original output graph records every native-created handle, slot, role,
+acknowledged number and positive close in a private ledger. Each handle needs
+its original successful `NtCreateFile` or `OpenProcessToken` call. Capture the
+destination-slot number before the Native error reader. Bookkeeping or inherited
+observation cannot grant close authority. Freeze creation when preparation
+returns, including failure. Deny later Native calls after retirement. Capture native
+dispatch, operation lock and original reservation/retain method before supplier
+callbacks. Track the actual charge attempt and acknowledgement independently of
+mutable graph flags. Retirement uses the original graph and thread, serializes
+with writing and the sealed stream, and permanently prevents later reads. A
+paused stream is retained without running generator or SDK cleanup callbacks.
+Close only known original handles once; skip only ledger-proven prior closes.
+Then require the original retain acknowledgement for the captured maximum bytes.
+For family members, capture the genuine family record, accounting methods and
+owners before supplier callbacks. Reject replaced wrapper fields before any
+close. Compare passive bindings after each captured resource and retain callback.
+An unchanged outer wrapper cannot adopt a replacement accounting method.
+Validate family flags as exact booleans against separately retained charge/ACK
+facts. Compare exact integer capacity with the captured immutable maximum before
+closure and after callbacks; mutable metadata must never invoke truth/equality
+hooks. Reuse only a positively recorded original retain ACK, never a repeated call.
+Do not reopen paths, change ACLs, delete staging or return capacity.
+
+Foreign graphs/threads and busy IO do not consume the owner attempt. Changed
+native bindings, virtual owner/handle access, unknown calls, partial closure,
+owned reentry or failed accounting cannot qualify or retry. Preserve original
+handles, call buffers, staging and charges for uncertain recovery. Local cleanup
+does not depend on the old SDK/preparation/business guard and remains possible
+after borrow expiry. This is only this copy's permanent IO barrier; SDK/model,
+input, worker/Job/global settlement, producer activation, Save and actual-host
+qualification still require their own proofs. The exact
+`test_original_training_output_retirement.py` fixture uses finite in-memory ABI
+replies, with no actual model, process launch or quality measurement.
+The existing unknown-write fixture keeps all its assertions and now loses the
+reply through the fake Native error-reader seam. It no longer replaces the
+original dispatcher, which is itself a denied ownership change.

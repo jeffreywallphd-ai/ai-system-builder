@@ -3366,3 +3366,13 @@ sandbox can refuse link creation with EPERM. Preserve that failure and run the
 same focused check in the permitted test environment rather than skipping the
 case or changing source guards. These checks load no model or Native controller
 and supply no resource reservation, native custody or parent qualification.
+
+The exact saved-output retirement regression is registered separately as
+`headless-training-output-retirement-unit`. Run its whole file with the fixed
+90-second child/120-second outer limits. It uses in-memory Native replies and
+never starts the physical controller or loads a model. The known closed
+retirement/check-routing owner scope runs complete related routing modules and
+their original Native/session/parser commands under the unchanged controller
+limit. All support must be regular and present; partial, unknown mixed or
+explicit generic scope keeps full controller discovery. These feature receipts
+do not grant producer activation, resource settlement, Save or parent completion.

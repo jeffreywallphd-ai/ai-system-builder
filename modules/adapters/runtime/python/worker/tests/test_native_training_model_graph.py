@@ -74,6 +74,7 @@ class Kernel:
     def invoke(self, name, args, record):
         self.calls.append((name, args)); value, error = self.result(name, args)
         record.update(value=value, value_returned=True)
+        n._capture_output_io_native_return(record,value)
         if self.after: self.after(name)
         if name == self.error_after_return: raise RuntimeError("synthetic lost error-reader result")
         return value, error
@@ -618,6 +619,7 @@ class TrainingInputCopyTests(unittest.TestCase):
             # this is not a production retirement/credit path.
             for output,record in list(native_module._training_output_readers.items()):
                 if record["lease"] is lease:
+                    native_module._output_io_owners.pop(record["owner"],None)
                     if record["stream"] is not None:native_module._training_output_streams.pop(record["stream"],None)
                     native_module._training_output_readers.pop(output,None)
             for family,record in list(native_module._training_output_families.items()):
@@ -1825,12 +1827,10 @@ class TrainingOutputCustodyTests(unittest.TestCase):
     def test_native_unknown_write_preserves_original_slots_and_disallows_further_calls(self):
         actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
         with lease.borrow(request) as view:
-            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control); invoke=graph.owner.invoke
-            def lost(name,args,row):
-                result=invoke(name,args,row)
-                if name=="WriteFile": raise RuntimeError("synthetic lost write acknowledgement")
-                return result
-            graph.owner.invoke=lost
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            # Preserve the original dispatcher; lose the reply at the existing
+            # fake Native error-reader seam after the real result is retained.
+            kernel.error_after_return="WriteFile"
             with self.assertRaises(actual.LaunchUnavailable): graph.prepare({name:(raw,) for name,raw in contents.items()})
             self.assertTrue(graph.owner.unknown); self.assertTrue(graph.owner.pending)
             self.assertTrue(graph.owner.pending[-1]["value_returned"]); before=len(kernel.calls)

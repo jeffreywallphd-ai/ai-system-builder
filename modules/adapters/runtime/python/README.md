@@ -1183,3 +1183,18 @@ and retain the original files and accounting. Custody handoff is still separate.
 No default producer or public capability is enabled.
 Synthetic SDK/Native tests are not actual model execution, hard resource ownership,
 permanent retirement, approved Save or host qualification; those remain pending.
+
+### Retire original saved-output IO
+
+`OriginalTrainingOutputGraph.retire_copy_io()` stops this copy's IO on its
+original thread. It uses native handle identities and dispatch captured by the
+original owner before supplier callbacks. It returns false while writes/reads
+are active, permanently stops later reads and closes only those original known
+handles. The original accounting owner must acknowledge retained disk usage.
+Files stay in place and no disk credit is returned. Cleanup can run after the
+borrow or business permission expires; it does not call those old observers.
+Uncertain calls, changed bindings, partial closure or lost accounting replies
+keep original custody and prevent another attempt. A foreign thread cannot
+consume the owner's attempt. Focused in-memory ABI tests cover this local IO
+barrier. SDK/model/input/worker/Job retirement, complete producer integration,
+approved Save and actual-host qualification remain separate pending work.

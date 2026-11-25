@@ -550,6 +550,22 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             self.assertEqual(focused.main(),1)
             self.assertEqual(stderr.getvalue(),'Focused verification exceeded its fixed child limit (TimeoutExpired).\n')
 
+    def test_output_retirement_exact_child_limit_leaves_outer_diagnostic_grace(self):
+        target='modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py'
+        self.assertEqual(focused.profile_command_timeout(None,regression_test=target),90)
+        for profile,path in ((None,target+'.other'),('functionality-outcomes',target),(None,target.replace('/worker/','/other/'))):
+            self.assertEqual(focused.profile_command_timeout(profile,regression_test=path),270)
+        command=[sys.executable,'-m','unittest']
+        with patch.object(sys,'argv',['focused','--regression-test',target]), \
+                patch.object(focused,'commands',return_value=[command]) as commands, \
+                patch.object(focused.subprocess,'run',return_value=SimpleNamespace(returncode=0)) as run:
+            self.assertEqual(focused.main(),0)
+            commands.assert_called_once_with(Path(focused.__file__).resolve().parents[2],[target],exact=True)
+            self.assertEqual(run.call_args.kwargs['timeout'],90)
+        outer=next(row for row in catalog.definitions(Path(__file__).resolve().parents[3])
+            if row['id']=='headless-training-output-retirement-unit')['timeout']
+        self.assertEqual(outer,120);self.assertEqual(outer-90,30)
+
     def test_review_site_python_binding_keeps_failure_exit_and_timeouts(self):
         for code in (1, 5):
             with self.subTest(code=code), patch.object(sys, 'argv', ['focused', '--profile', 'review-site']), patch.object(focused, 'profile_commands', return_value=[['node', '--test', '--', 'fixed.unit.test.mjs']]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=code)) as run:

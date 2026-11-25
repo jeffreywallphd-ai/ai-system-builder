@@ -27,7 +27,7 @@ import struct
 import sys
 from threading import Event, Lock, RLock, Thread, get_ident
 from types import BuiltinMethodType, FunctionType, GetSetDescriptorType, MethodType, ModuleType
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, ref
 import time
 
 P, U32, I32 = C.c_void_p, C.c_uint32, C.c_int32
@@ -277,6 +277,14 @@ class Handle:
         self.known = self.close_attempted = self.closed = False
 
 
+def _capture_output_io_native_return(record,value):
+    """Capture the original output slot before any error-reader observer."""
+    created = record.get("output_creation")
+    if created is None:return
+    need(type(created) is dict and type(created["slot"]) is P and created["returned"] is False)
+    created.update(number=created["slot"].value,native_value=value,returned=True)
+
+
 class WindowsKernel:
     """Real finite Win32 API table. Construction is explicit, not import-time."""
     def __init__(self):
@@ -339,9 +347,10 @@ class WindowsKernel:
             self.functions[name] = function
         self.error = C.get_last_error
 
-    def invoke(self, name, args, record):
+    def invoke(self, name, args, record, *, _capture=_capture_output_io_native_return):
         value = self.functions[name](*args)
         record.update(value=value, value_returned=True)  # Before the error reader.
+        _capture(record,value)
         return value, self.error()
 
 
@@ -492,6 +501,10 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
         self.assert_reservation = reservation.assert_current
         self.charge = reservation.charge_source_copy
         self.retain = reservation.retain_source_copy
+        output_record = _output_io_owners.get(owner) if type(owner) is InheritedModelNativeCalls else None
+        if output_record is not None:
+            need(_training_output_readers.get(self) is output_record)
+            output_record["io"].update(reservation=reservation,retain=self.retain)
         self.current = admission.assert_current
         self.stage_check = getattr(admission, "checkpoint", None)
         need(self.stage_check is None or callable(self.stage_check))
@@ -823,6 +836,184 @@ class OriginalModelBootstrapWriter:
             self.owner.unknown = True; self.outcome = "unknown"
 
 
+_output_io_owners = WeakKeyDictionary()
+_output_accounting_owners = WeakKeyDictionary()
+
+
+def _assert_plain_output_io_type(cls, expected, fields):
+    need(cls is expected and type(cls) is type)
+    for base in type.__getattribute__(cls,"__mro__"):
+        namespace = type.__getattribute__(base,"__dict__")
+        need(not fields.intersection(namespace) and "__getattr__" not in namespace)
+        for name,original in (("__getattribute__",object.__getattribute__),
+                ("__setattr__",object.__setattr__),("__hash__",object.__hash__),("__eq__",object.__eq__)):
+            need(name not in namespace or namespace[name] is original)
+
+
+def _output_io_current(record, *, pending_call=None):
+    """Original Native dispatch only; no SDK, business or resource observer."""
+    owner,io = record["owner"],record["io"]
+    invoke,kernel,clock,lock,pending,handles = record["native"]
+    _assert_plain_output_io_type(type(owner),InheritedModelNativeCalls,
+        frozenset(("invoke","kernel","clock","lock","pending","handles","buffers","unknown","thread")))
+    need(type(owner) is InheritedModelNativeCalls and get_ident() == record["thread"]
+         and _output_io_owners.get(owner) is record and owner.invoke is invoke and owner.kernel is kernel
+         and owner.clock is clock and owner.lock is lock and owner.pending is pending and owner.handles is handles
+         and owner.buffers is io["buffers"] and owner.unknown is False and type(owner.pending) is list
+         and (not owner.pending if pending_call is None else len(owner.pending) == 1 and owner.pending[0] is pending_call)
+         and type(owner.thread) is int and owner.thread == record["thread"])
+    fields = object.__getattribute__(owner,"__dict__")
+    namespace = type.__getattribute__(type(owner),"__dict__")
+    need(all(name not in fields and namespace.get(name) is original for name,original in io["dispatch"]))
+    need(type(handles) is list and len(handles) == len(io["handles"])
+         and all(handle is row["handle"] for handle,row in zip(handles,io["handles"])))
+
+
+def _output_io_row(record,handle):
+    rows = [row for row in record["io"]["handles"] if row["handle"] is handle]
+    need(len(rows) == 1)
+    row = rows[0]
+    _assert_plain_output_io_type(type(handle),Handle,
+        frozenset(("owner","slot","role","known","closed","close_attempted")))
+    need(type(handle) is Handle and handle.owner is record["owner"] and type(handle.slot) is P
+         and handle.slot is row["slot"] and type(handle.role) is str and handle.role == row["role"]
+         and type(handle.known) is bool and type(handle.closed) is bool and type(handle.close_attempted) is bool)
+    return row
+
+
+def _output_io_handle_created(owner,handle):
+    record = _output_io_owners.get(owner) if type(owner) is InheritedModelNativeCalls else None
+    if record is None:return
+    io = record["io"]
+    try:
+        need(type(io["stage"]) is str and io["stage"] == "active" and len(io["handles"]) < 256
+             and io["creation_open"] is True and io["operation_lock"].locked()
+             and type(handle) is Handle and handle.owner is owner and type(handle.slot) is P
+             and handle.known is False and handle.closed is False and handle.close_attempted is False
+             and type(handle.role) is str and handle.role in ("model-copy-token","model-copy","model-read")
+             and len(owner.handles) == len(io["handles"])+1 and owner.handles[-1] is handle)
+        io["handles"].append({"handle":handle,"slot":handle.slot,"role":handle.role,
+            "number":None,"closed":False,"close_attempt":None,"creation_call":None,"creation_number":None})
+        _output_io_current(record)
+    except BaseException:
+        io["stage"] = "failed";raise
+
+
+def _output_io_native_started(owner,name,args,keep,call):
+    record = _output_io_owners.get(owner) if type(owner) is InheritedModelNativeCalls else None
+    if record is None:return None
+    io = record["io"]
+    try:
+        need(type(name) is str and type(io["stage"]) is str
+             and (io["stage"] == "active" or io["stage"] == "retiring" and name == "CloseHandle"))
+        if name not in ("NtCreateFile","OpenProcessToken"):return None
+        _output_io_current(record)
+        need(io["stage"] == "active" and io["creation_open"] is True and io["operation_lock"].locked()
+             and type(keep) is tuple and bool(keep))
+        handle = keep[0];row = _output_io_row(record,handle)
+        need(row["creation_call"] is None and row["number"] is None and handle.known is False
+             and handle.closed is False and handle.close_attempted is False
+             and "inherited" not in object.__getattribute__(handle,"__dict__")
+             and "verified" not in object.__getattribute__(handle,"__dict__"))
+        pointer = args[2] if name == "OpenProcessToken" else args[0]
+        need(type(pointer) is type(C.byref(P())) and pointer._obj is row["slot"]
+             and (row["role"] == "model-copy-token" if name == "OpenProcessToken" else row["role"] in ("model-copy","model-read")))
+        created = {"slot":row["slot"],"returned":False,"number":None,"native_value":None}
+        call["output_creation"] = created;row["creation_call"] = call
+        return record,row,created
+    except BaseException:
+        io["stage"] = "failed";raise
+
+
+def _output_io_native_completed(creation,call,name,value):
+    if creation is None:return
+    record,row,created = creation;io = record["io"]
+    try:
+        _output_io_current(record,pending_call=call)
+        need(io["stage"] == "active" and io["creation_open"] is True
+             and row["creation_call"] is call and call["output_creation"] is created
+             and created["returned"] is True and type(value) is int and type(created["native_value"]) is int
+             and value == created["native_value"] == (1 if name == "OpenProcessToken" else 0)
+             and created["slot"] is row["slot"] and type(created["number"]) is int
+             and 0 < created["number"] < C.c_void_p(-1).value and created["number"] == row["slot"].value)
+        row["creation_number"] = created["number"]
+    except BaseException:
+        io["stage"] = "failed";raise
+
+
+def _output_io_handle_acknowledged(owner,handle,value):
+    record = _output_io_owners.get(owner) if type(owner) is InheritedModelNativeCalls else None
+    if record is None:return
+    io = record["io"]
+    try:
+        _output_io_current(record);row = _output_io_row(record,handle)
+        need(io["stage"] == "active" and row["number"] is None and row["close_attempt"] is None
+             and io["creation_open"] is True and row["creation_call"] is not None
+             and type(row["creation_number"]) is int and value == row["creation_number"]
+             and "inherited" not in object.__getattribute__(handle,"__dict__")
+             and "verified" not in object.__getattribute__(handle,"__dict__")
+             and type(value) is int and 0 < value < C.c_void_p(-1).value and handle.slot.value == value
+             and handle.known is True and handle.closed is False and handle.close_attempted is False)
+        row["number"] = value
+    except BaseException:
+        io["stage"] = "failed";raise
+
+
+def _output_io_close_attempt(owner,handle,value):
+    record = _output_io_owners.get(owner) if type(owner) is InheritedModelNativeCalls else None
+    if record is None:return None
+    io = record["io"]
+    try:
+        _output_io_current(record);row = _output_io_row(record,handle)
+        need(type(io["stage"]) is str and io["stage"] in ("active","retiring")
+             and type(row["number"]) is int and type(value) is int and value == row["number"] == handle.slot.value
+             and row["close_attempt"] is None and row["closed"] is False
+             and handle.known is True and handle.closed is False and handle.close_attempted is False)
+        token = object();row["close_attempt"] = token
+        return token
+    except BaseException:
+        io["stage"] = "failed";raise
+
+
+def _output_io_close_completed(owner,handle,value,token):
+    record = _output_io_owners.get(owner) if type(owner) is InheritedModelNativeCalls else None
+    if record is None:return
+    io = record["io"]
+    try:
+        _output_io_current(record);row = _output_io_row(record,handle)
+        need(token is not None and row["close_attempt"] is token and row["closed"] is False
+             and type(value) is int and row["number"] == value == handle.slot.value
+             and handle.known is True and handle.closed is True and handle.close_attempted is True)
+        row["closed"] = True
+    except BaseException:
+        io["stage"] = "failed";raise
+
+
+def _output_io_accounting_current(record):
+    """Passive original family accounting, independent of business lifetime."""
+    proof = record["io"]["family_accounting"]
+    if proof is None:return
+    controls,family,book,member,methods,captured,reservation,admission,configuration,reference = proof
+    _assert_plain_output_io_type(type(controls),_OriginalOutputFamilyControls,
+        frozenset(("family","member","resource","business","charge","retain","checking")))
+    data = object.__getattribute__(controls,"__dict__")
+    _assert_plain_output_io_type(type(family),OriginalTrainingOutputFamily,frozenset())
+    need(_output_accounting_owners.get(controls) is reference and reference() is record["io"]["graph"]
+         and _training_output_families.get(family) is book and book["reservation"] is reservation
+         and book["admission"] is admission and book["methods"] is methods
+         and len(methods) == len(captured) and all(methods.get(key) is method for key,method in captured)
+         and any(row is member for row in book["members"]) and member["graph"] is record["io"]["graph"]
+         and member["configuration"] is configuration and data.get("family") is family and data.get("member") is member
+         and data.get("checking") is False
+         and all(data.get(key) is method for key,method in captured))
+    io = record["io"]
+    need(type(configuration["maximumCopyBytes"]) is int and type(io["maximum"]) is int
+         and configuration["maximumCopyBytes"] == io["maximum"])
+    for key,expected in (("charge_attempted",io["copy_charge_attempted"]),("charged",io["copy_charged"]),
+            ("retain_attempted",io["family_retain_attempted"]),("retained",io["family_retained"])):
+        need(type(expected) is bool and type(member.get(key)) is bool and member[key] is expected)
+
+
 class OriginalWorker:
     """One actual worker/Job owner. Unknown native calls retain all their buffers."""
     def __init__(self, boot, *, kernel=None, executable=None, worker_root=None, clock=time.monotonic):
@@ -855,14 +1046,17 @@ class OriginalWorker:
     def _main(self):
         need(get_ident() == self.thread)
 
-    def call(self, name, *args, valid=lambda value: type(value) is int and value != 0, keep=()):
+    def call(self, name, *args, valid=lambda value: type(value) is int and value != 0, keep=(),
+             _output_started=_output_io_native_started, _output_completed=_output_io_native_completed):
         row = {"name": name, "args": args, "keep": keep, "thread": get_ident(), "returned": False}
+        creation = _output_started(self,name,args,keep,row)
         with self.lock:
             self.pending.append(row)
         try:
             value, error = self.invoke(name, args, row)
             row.update(value=value, error=error, returned=True)
             need(type(error) is int and 0 <= error <= 0xffffffff and valid(value) is True)
+            _output_completed(creation,row,name,value)
             with self.lock:
                 self.pending.remove(row)
             return value, error
@@ -870,23 +1064,30 @@ class OriginalWorker:
             self.unknown = True; self.phase = "uncertain"
             raise LaunchUnavailable() from None
 
-    def handle(self, role):
-        handle = Handle(self, role); self.handles.append(handle); return handle
+    def handle(self, role, *, _output_created=_output_io_handle_created):
+        handle = Handle(self, role); self.handles.append(handle)
+        _output_created(self,handle)
+        return handle
 
-    def acknowledge(self, handle, value):
+    def acknowledge(self, handle, value, *, _output_acknowledged=_output_io_handle_acknowledged):
         need(handle.owner is self and handle in self.handles and not handle.known
              and type(value) is int and 0 < value < C.c_void_p(-1).value
              and all(h is handle or not h.known or h.closed or h.slot.value != value for h in self.handles))
-        handle.slot.value = value; handle.known = True; return handle
+        handle.slot.value = value; handle.known = True
+        _output_acknowledged(self,handle,value)
+        return handle
 
     def number(self, handle):
         need(type(handle) is Handle and handle.owner is self and handle in self.handles and handle.known
              and not handle.close_attempted and not handle.closed)
         return handle.slot.value
 
-    def close(self, handle):
-        self._main(); value = self.number(handle); handle.close_attempted = True
+    def close(self, handle, *, _output_attempt=_output_io_close_attempt, _output_completed=_output_io_close_completed):
+        self._main(); value = self.number(handle)
+        token = _output_attempt(self,handle,value)
+        handle.close_attempted = True
         self.call("CloseHandle", value, keep=(handle, handle.slot)); handle.closed = True
+        _output_completed(self,handle,value,token)
 
     def limits(self):
         limits = ExtendedLimits(); self.buffers.append(limits)
@@ -2418,17 +2619,37 @@ class _OriginalOutputFamilyControls:
     def retain_source_copy(self, amount):
         # Accounting survives revoked business permission and expired borrow.
         # It grants no new IO, retry, deletion, credit or family revival.
-        record = _output_family_record(self.family); member = self.member
+        _assert_plain_output_io_type(type(self),_OriginalOutputFamilyControls,
+            frozenset(("family","member","resource","business","charge","retain","checking")))
+        reference = _output_accounting_owners.get(self)
+        need(reference is not None)
+        graph = reference();_assert_plain_output_graph_type(type(graph))
+        reader = _training_output_readers.get(graph)
+        need(reader is not None)
+        proof = reader["io"]["family_accounting"]
+        need(type(proof) is tuple and proof[0] is self)
+        record,member = proof[2],proof[3]
         need(get_ident() == record["thread"])
+        _output_io_accounting_current(reader)
+        methods = dict(proof[5]);resource,retain = methods["resource"],methods["retain"]
+        stage = reader["io"]["stage"]
+        need(type(stage) is str and stage in ("active","retiring"))
+        def current():
+            _output_io_accounting_current(reader)
+            need(type(reader["io"]["stage"]) is str and reader["io"]["stage"] == stage
+                 and member["retain_attempted"] is True and member["retained"] is False)
         try:
             need(any(row is member for row in record["members"]) and member["charge_attempted"]
                  and not member["retain_attempted"] and type(amount) is int
                  and amount == member["configuration"]["maximumCopyBytes"])
             member["retain_attempted"] = True
-            need(self.resource() is True and self.retain(amount) is True)
-            member["retained"] = True; return True
+            reader["io"]["family_retain_attempted"] = True
+            need(resource() is True);current()
+            need(retain(amount) is True);current()
+            member["retained"] = True;reader["io"]["family_retained"] = True
+            return True
         except BaseException:
-            _fail_output_family(self.family); raise LaunchUnavailable() from None
+            _fail_output_family(proof[1]); raise LaunchUnavailable() from None
 
 
 class _OriginalOutputAdmission:
@@ -2732,9 +2953,26 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
             source_record=_verified_model_receivers.get(state["source"]),inputs=original_inputs,
             model_guard=state["guard"],input_guard=original_inputs["guard"],
             native=(owner.invoke,owner.kernel,owner.clock,owner.lock,owner.pending,owner.handles))
+        namespace = type.__getattribute__(type(owner),"__dict__")
+        reader["io"] = {"stage":"binding","handles":[],"buffers":owner.buffers,"graph":self,
+            "operation_lock":self._operation_lock,"owned_handles":None,"reservation":None,"retain":None,
+            "dispatch":tuple((name,namespace[name]) for name in ("call","number","_main","handle","acknowledge","close")),
+            "close":OriginalWorker.close,
+            "copy_charge_attempted":False,"copy_charged":False,"charge_attempted":False,"retained":False,
+            "creation_open":False,"family_accounting":None,
+            "maximum":dict(reader["configuration"])["maximumCopyBytes"],
+            "family_retain_attempted":False,"family_retained":False}
         _training_output_readers[self] = reader  # Before supplier method access.
+        need(owner not in _output_io_owners)
+        _output_io_owners[owner] = reader
         try:
             controls = _OriginalOutputFamilyControls(_family,self._output_member) if _family is not None else None
+            if controls is not None:
+                family_record = _output_family_record(_family)
+                reference = ref(self);_output_accounting_owners[controls] = reference
+                reader["io"]["family_accounting"] = (controls,_family,family_record,self._output_member,
+                    family_record["methods"],tuple(family_record["methods"].items()),reservation,admission,
+                    self._output_member["configuration"],reference)
             self._output_admission = _OriginalOutputAdmission(self, controls if controls is not None else admission)
             if controls is not None:
                 reader["resource"],reader["business"] = controls.resource,controls.business
@@ -2744,11 +2982,17 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
             if self._output_member is not None:
                 record = _output_family_record(_family); need(record["phase"] == "bound")
                 self._output_member["stage"] = "bound"
+            io = reader["io"]
+            need(io["stage"] == "binding" and callable(io["retain"]))
+            io["owned_handles"] = self.owned_handles
+            io["stage"] = "active"
         except BaseException:
+            reader["io"]["stage"] = "failed"
             _fail_output_family(_family); raise
 
     def guard(self):
         try:
+            need(_training_output_readers[self]["io"]["stage"] == "active")
             need(not self._output_guard_active)
             self._output_guard_active = True
             _OriginalProtectedFlatCopy.guard(self)
@@ -2781,11 +3025,14 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
     def prepare(self, contents):
         with self._output_call():
             need(self.phase == "bound"); self.phase = "preparing"; self.started = self.owner.clock()
+            io = _training_output_readers[self]["io"];io["creation_open"] = True
             try:
                 self.guard()
                 need(type(contents) is dict and set(contents) == {row["name"] for row in self.descriptor["files"]})
-                self.charge_attempted = True
-                need(self.charge(self.descriptor["maximumCopyBytes"]) is True); self.charged = True
+                io = _training_output_readers[self]["io"]
+                io["copy_charge_attempted"] = True;self.charge_attempted = True
+                need(self.charge(self.descriptor["maximumCopyBytes"]) is True)
+                io["copy_charged"] = True;self.charged = True
                 self.guard(); self.principal = self.private_principal()
                 parent = self.path(self.descriptor["freshParent"])
                 allocation_plan = self.allocation_plan(parent)
@@ -2847,6 +3094,7 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                 self.phase = "failed"
                 _fail_output_family(self._output_family)
                 raise LaunchUnavailable() from None
+            finally:io["creation_open"] = False
 
     def assert_sealed(self):
         with self._output_call():
@@ -2855,6 +3103,97 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                 self.phase = "failed"
                 _fail_output_family(self._output_family)
                 raise LaunchUnavailable() from None
+
+    def retire_copy_io(self):
+        """Retire this original copy's IO once; keep bytes and their charge.
+
+        This is not SDK/model/input/worker/Job/global retirement or Save. No
+        business callback, path reopen, ACL change, deletion or credit follows.
+        """
+        try:
+            _assert_plain_output_graph_type(type(self))
+            record = _training_output_readers.get(self)
+            if record is None or get_ident() != record["thread"]:return False
+            io = record["io"]
+            if type(io["stage"]) is not str:return False
+            if io["stage"] == "complete":return True
+            if io["stage"] == "retiring":
+                io["stage"] = "failed"
+                object.__getattribute__(self,"__dict__")["phase"] = "failed"
+                return False
+            if type(io["stage"]) is not str or io["stage"] != "active":return False
+            operation = io["operation_lock"]
+            if not operation.acquire(blocking=False):return False
+        except (LaunchUnavailable,AttributeError,KeyError,TypeError):return False
+        read_lock = record.get("read_lock");read_locked = False
+        try:
+            if read_lock is not None:
+                read_locked = read_lock.acquire(blocking=False)
+                if not read_locked:return False
+            owner = record["owner"]
+            data = object.__getattribute__(self,"__dict__")
+            reservation,retain = io["reservation"],io["retain"]
+            rows = tuple(io["handles"])
+            maximum = io["maximum"]
+            def snapshot():
+                _assert_plain_output_graph_type(type(self))
+                _output_io_current(record)
+                _output_io_accounting_current(record)
+                need(_training_output_readers.get(self) is record and type(self) is record["graph_type"]
+                     and object.__getattribute__(self,"__dict__") is data
+                     and data.get("owner") is owner and data.get("_native_owner") is owner
+                     and data.get("_operation_lock") is operation and data.get("_operation_active") is False
+                     and data.get("reservation") is reservation and data.get("retain") is retain
+                     and data.get("owned_handles") is io["owned_handles"] and type(io["owned_handles"]) is list
+                     and len(io["owned_handles"]) == len(rows)
+                     and all(handle is row["handle"] for handle,row in zip(io["owned_handles"],rows)))
+                need(type(data.get("phase")) is str and data["phase"] in ("bound","sealed","failed")
+                     and data.get("retired") is False and type(data.get("charge_attempted")) is bool
+                     and type(data.get("charged")) is bool
+                     and data["charge_attempted"] is io["copy_charge_attempted"]
+                     and data["charged"] is io["copy_charged"]
+                     and (not io["copy_charge_attempted"] or io["copy_charged"] is True)
+                     and type(data.get("retirement_attempted")) is bool
+                     and data["retirement_attempted"] is (io["stage"] == "retiring")
+                     and type(io["stage"]) is str and io["stage"] in ("active","retiring"))
+                need(len(io["handles"]) == len(rows) and all(a is b for a,b in zip(io["handles"],rows)))
+                for row in rows:
+                    handle = row["handle"]
+                    need(_output_io_row(record,handle) is row and type(row["number"]) is int
+                         and handle.known is True and handle.slot.value == row["number"] == row["creation_number"]
+                         and row["creation_call"] is not None
+                         and "inherited" not in object.__getattribute__(handle,"__dict__")
+                         and "verified" not in object.__getattribute__(handle,"__dict__")
+                         and type(row["closed"]) is bool and handle.closed is row["closed"]
+                         and handle.close_attempted is row["closed"]
+                         and ((row["close_attempt"] is not None) is row["closed"]))
+            snapshot()
+            io["stage"] = "retiring";data["retirement_attempted"] = True
+            if record["read_state"] != "complete":record["read_state"] = "closed"
+            # The native stream cannot advance after this permanent state. Do
+            # not run generator/SDK cleanup hooks or discard uncertain buffers.
+            snapshot()
+            for row in reversed(rows):
+                if not row["closed"]:
+                    io["close"](owner,row["handle"])
+                    snapshot()
+            need(all(row["closed"] is True for row in rows))
+            if io["copy_charged"] and io["family_retained"] is not True:
+                io["charge_attempted"] = True
+                need(retain(maximum) is True)
+                snapshot()
+                io["retained"] = True
+            snapshot()
+            data.update(retired=True,phase="retired")
+            io["stage"] = "complete"
+            return True
+        except BaseException:
+            io["stage"] = "failed"
+            object.__getattribute__(self,"__dict__")["phase"] = "failed"
+            return False
+        finally:
+            if read_locked:read_lock.release()
+            operation.release()
 
 
 class OriginalSourceExchange:

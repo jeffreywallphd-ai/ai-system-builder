@@ -3058,3 +3058,36 @@ grant. Default product roots and normal training remain unchanged. Original
 resource/producer ownership, protected file validation/custody, permanent
 retirement, separately approved Save and real-host qualification remain pending.
 Synthetic SDK/Native feature tests supply no actual model or accuracy result.
+
+### Original saved-output IO retirement
+
+Security-relevant assets are original native handles, retained staging and its
+disk charge. Supplier callbacks and mutable result metadata must not select a
+close target or manufacture completion. Before those callbacks, retain the
+original native owner/dispatch, each actual-created handle/slot/acknowledged
+number, positive close result and original accounting method. Keep original
+charge-attempt/acknowledgement facts separate from mutable graph flags.
+Tie the acknowledged number to the successful original `NtCreateFile` or
+`OpenProcessToken` call and its destination slot captured before the error reader.
+Bookkeeping, inherited observation and post-preparation additions confer no close
+authority. For family members, bind the genuine original accounting record,
+methods and owners. Reject changed wrapper fields before closure and compare
+passive bindings after each captured accounting callback, including its last ACK.
+Validate exact boolean flags against original private charge/retain facts and
+exact integer capacity against the captured maximum before closure and after
+callbacks. Virtual metadata must never execute truth/equality hooks. A prior
+positive original retain ACK may be reused without repeating accounting.
+
+Only the genuine graph and original thread can retire this copy. Serialize with
+writing/reading, latch the retirement before effects and permanently deny further
+stream advancement. Close only original known IO; skip only a ledger-proven
+positive close. Check passive bindings after each close and the retained-charge
+reply. Reject virtual owner/handle access before invoking it. Do not depend on
+expired business or SDK observers to clean up already-owned IO.
+
+Wrong graphs/threads or busy IO do not consume the attempt. Unknown native calls,
+changed bindings, partial close, owned reentry or lost accounting replies retain
+all recovery custody and prevent another attempt. Do not reopen, adopt, move,
+delete, change ACLs or refund bytes. In-memory ABI denial tests cover this local
+barrier only. No public producer, Save, SDK/model/input/worker/Job/global
+settlement or actual-host qualification is granted; those gaps remain pending.

@@ -317,6 +317,30 @@ TRAINING_RESULT_CONTROLLER_TESTS = tuple(
     "dev-tools/helpers/tests/" + name.split(".")[0] + ".py"
     for name in TRAINING_RESULT_CONTROLLER_FILTERS
 )
+TRAINING_OUTPUT_RETIREMENT_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_training_output_retirement.py",
+)
+TRAINING_OUTPUT_RETIREMENT_OWNER_SCOPE = (
+    "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+    "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+    "modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py",
+    "dev-tools/helpers/run_focused_checks.py",
+    "dev-tools/helpers/tests/test_control_plane_focused.py",
+    "dev-tools/helpers/README.md",
+    "docs/diagnostics/ai-development-control-plane.md",
+    "modules/adapters/runtime/python/README.md",
+    "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md",
+    "docs/security/headless-system-builder-threat-model.md",
+)
+TRAINING_OUTPUT_RETIREMENT_CONTROLLER_FILTERS = (
+    "test_control_plane_training_output_retirement.",
+    "test_control_plane_focused.",
+    "test_control_plane_headless_training_runtime.",
+    "test_control_plane_headless_native_model_graph.",
+    "test_control_plane_training_result_validation.",
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -834,6 +858,31 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
             "modules/adapters/runtime/python/worker/tests/test_model_validation.py"),
+    },
+    "headless-training-output-retirement-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py",
+        ),
+        "automatic_required_files": (
+            "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
+            "modules/adapters/runtime/python/worker/app.py",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
+            "dev-tools/helpers/run_focused_checks.py",
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py",
+        ),
+        "sources": TRAINING_OUTPUT_RETIREMENT_OWNER_SCOPE[:3] + (
+            "modules/adapters/runtime/python/README.md",
+            "modules/adapters/runtime/python/worker/README.md",
+        ),
+        "command": ("dev-tools/helpers/run_focused_checks.py", "--regression-test",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py"),
     },
     "headless-approved-training-owner-unit": {
         "automatic_sources": (
@@ -3831,6 +3880,23 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   *[item for name in TRAINING_RESULT_CONTROLLER_FILTERS for item in ("-k", name)]]
+    retirement_support = (TRAINING_OUTPUT_RETIREMENT_SCOPE + TRAINING_OUTPUT_RETIREMENT_OWNER_SCOPE
+        + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_OUTPUT_RETIREMENT_CONTROLLER_FILTERS)
+        + PUBLISHED_FORM_CHECKS["headless-training-runtime-unit"]["automatic_required_files"]
+        + PUBLISHED_FORM_CHECKS["headless-training-runtime-worker-unit"]["automatic_required_files"]
+        + PUBLISHED_FORM_CHECKS["headless-training-result-validation-unit"]["automatic_required_files"]
+        + PUBLISHED_FORM_CHECKS["headless-training-output-retirement-unit"]["automatic_required_files"])
+    if (set(TRAINING_OUTPUT_RETIREMENT_SCOPE) <= set(paths) <= set(TRAINING_OUTPUT_RETIREMENT_SCOPE + TRAINING_OUTPUT_RETIREMENT_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": retirement_support[index:index+16]})
+                for index in range(0, len(retirement_support), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            # Whole related routing modules retain actual Native/session/parser
+            # execution. This closed owner scope is no final suite qualification.
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[item for name in TRAINING_OUTPUT_RETIREMENT_CONTROLLER_FILTERS for item in ("-k", name)]]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})

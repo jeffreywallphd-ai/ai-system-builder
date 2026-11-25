@@ -170,3 +170,13 @@ JSON whitespace. State formatting can use the bounded compact fallback above;
 parsed-value digests keep their canonical encoding.
 This prevents nested journal indentation from making a valid state unreadable.
 It changes no workflow, qualification, approval or history-retention policy.
+
+The fixed `headless-training-output-retirement-unit` check executes the complete
+saved-output retirement regression file. Its measured in-memory ABI batch uses a
+90-second child limit and the existing 120-second outer check, leaving diagnostic
+grace. Other regression and runtime limits are unchanged. The closed retirement
+owner/check-routing scope runs whole related routing modules, including their
+actual Native/session/parser commands. Missing or nonregular support, partial,
+unknown mixed scope or explicit generic coverage keeps complete controller
+discovery. This feature check grants no physical/model execution, retry authority,
+resource settlement, Save or final combined-suite qualification.

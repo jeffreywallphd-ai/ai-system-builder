@@ -3324,3 +3324,21 @@ This composition adds no default producer, public host capability or Save grant.
 Original measured resources, protected output validation/handoff, permanent
 retirement, separate Save approval and actual-host qualification remain required.
 Feature tests use synthetic SDK/Native objects and never score a real model.
+
+The original saved-output copy now has its own permanent IO retirement barrier.
+Its native owner captures original call dispatch, actual-created handle tokens,
+slots/numbers and positive closes, plus the original accounting retain method,
+before supplier callbacks. Each close target needs a successful original Native
+creation and its destination-slot number captured before the error reader.
+Bookkeeping and inherited observations cannot supply that proof. Creation ends
+permanently with preparation. Genuine family accounting methods/owners remain
+bound before and after callbacks; changed inner wrappers cannot supply an ACK.
+The original thread serializes retirement against
+writing and stream advancement. Known handles close once; positive retained-byte
+accounting follows. Files and charges remain. Paused streams stay held but cannot
+advance. Cleanup avoids stale SDK/business/preparation observers and uses passive
+original bindings after every effect and accounting callback. Unknown native
+effects, changed ownership or uncertain accounting stay retained without retry.
+This local barrier composes with the existing application/runtime retirement
+owner; it adds no second executor and does not prove global resource settlement,
+SDK/model/input/worker/Job retirement, approved Save or real-host qualification.
