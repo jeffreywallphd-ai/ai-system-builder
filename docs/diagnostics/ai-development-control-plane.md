@@ -3376,3 +3376,17 @@ their original Native/session/parser commands under the unchanged controller
 limit. All support must be regular and present; partial, unknown mixed or
 explicit generic scope keeps full controller discovery. These feature receipts
 do not grant producer activation, resource settlement, Save or parent completion.
+
+The fixed `headless-protected-training-workflow-unit` executes the entire private
+workflow regression file under a 240-second child/270-second outer limit. It
+uses synthetic SDK data and finite Native replies, never a physical controller,
+model-quality run or model download. Its closed source/check-routing scope runs
+whole related suites. Existing text-worker regression remains separately
+selected and required for changed training source; it is not repeated in a
+second routing module. Missing/nonregular prerequisites, incomplete or unknown
+mixed scope, and explicit generic coverage preserve full controller discovery.
+No production limit, retry authority or final qualification rule changes.
+The closed owner scope includes the existing text-worker test fixture when it
+changes with this workflow. That complete test file remains required. The two
+live-view cases use the real protected family and emitted data-loading callback;
+early rejection from a missing family or replaced loader cannot satisfy them.

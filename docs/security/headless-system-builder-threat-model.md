@@ -3091,3 +3091,37 @@ all recovery custody and prevent another attempt. Do not reopen, adopt, move,
 delete, change ACLs or refund bytes. In-memory ABI denial tests cover this local
 barrier only. No public producer, Save, SDK/model/input/worker/Job/global
 settlement or actual-host qualification is granted; those gaps remain pending.
+
+### Original private training task completion
+
+The protected original-view loader must branch before ordinary mkdir, temporary
+allocation, SDK serializers or cancellation deletion. Run only its fixed
+pipeline and original result checks. Bind the genuine task/view/thread, fixed
+helpers and the complete original Use/checkpoint-slot/snapshot claim before SDK
+callbacks. Failed or foreign claims cannot select another owner's cleanup.
+
+Retirement captures the finite family's original members separately from mutable
+member metadata. Refuse busy IO before consuming the attempt. Once entered,
+permanently deny new members, close only original registered copies through their
+fixed barriers and keep all byte accounting. Unknown, partial or reentrant
+outcomes cannot retry, delete or return credit. Cleanup does not call stale
+SDK/business guards or trust a mutable status field as its effect latch.
+
+Prepare a bounded candidate/result before output IO closes. Preserve the old
+live proof semantics; use a separate passive closed-family proof afterward.
+Original Model/input currentness precedes captured resource and business checks.
+Business is the final observer. Compare only passive original claim, helper,
+schema and closed result data before disclosure. Refuse changed/virtual values,
+lost permission and repeated attempts without a success response.
+
+The schema snapshot includes every descriptor the passive result reader uses:
+the instance dictionary and both Pydantic extra/private slots. Check the original
+definition in each base class before any field access. Bypassing an overridden
+`__getattribute__` alone does not prevent a replacement property from running.
+Tests replace each Pydantic slot in the final business callback and require
+refusal without invoking its getter, after the original output closes.
+
+Synthetic SDK/Native/task-session fixtures score no real model and grant no
+default producer, Save or readiness. Durable quota, complete producer,
+SDK/model/input/worker/Job/global settlement, actual resources/model execution
+and host/parent qualification remain pending.

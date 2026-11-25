@@ -2493,3 +2493,41 @@ replies, with no actual model, process launch or quality measurement.
 The existing unknown-write fixture keeps all its assertions and now loses the
 reply through the fake Native error-reader seam. It no longer replaces the
 original dispatcher, which is itself a denied ownership change.
+
+### Compose the private training task and output closure
+
+The original-view branch leaves the ordinary `_train_model` path before any
+temporary folder, mkdir, serializer or deletion handler. It calls the fixed
+protected pipeline and structural result validator, prepares bounded result
+data, retires the original output family and checks current permission before
+return. Plain local-file training without that view keeps its existing behavior.
+Real quality comparisons are refused on this private workflow; structural file
+checks and observed training numbers do not claim readiness or accuracy.
+
+Capture the complete original `(Use, checkpoint slot, snapshot)` claim immediately
+after Native admission and before SDK callbacks. Retain it independently of
+mutable tracking fields. Failure/cancellation can clean only that original claim;
+a failed foreign claim cannot close another run. Latch cleanup before invoking
+it, and never let a mutable status field authorize retry or suppress cleanup.
+
+The finite Native family records its actual original member identities when
+claimed. Serialize family retirement with claim/copy/read activity. Busy IO
+returns false before an attempt is consumed. Once entered, permanently deny
+further members and call only the captured per-copy IO barrier. Unknown or
+partial outcomes keep files, handles and charges without retry or credit.
+
+Prepare the result before closure. Later live checkpoint, seal and SDK snapshots
+must not be called or relaxed to treat retired output as live. Use the separate
+passive closed-family proof. Recheck original Model/input currentness, then
+captured resource and business admission in that order, with business last.
+Only passive original claim/helper/result/schema comparisons follow before
+return. Changed metadata or virtual access cannot supply a result.
+Snapshot the dictionary and Pydantic extra/private slot descriptors in every
+result base class before accessing those fields. A late property replacement
+must be rejected before its getter can run, including in the last permission
+callback. The live-view regression uses the real protected family and the
+`dataset-loading` callback; it checks actual permission/settings denial before
+any later data read, model call or ordinary output effect.
+The original task-session software test uses the real loader and deliberately
+leaves global settlement false. Concrete producer/durable quota, SDK/model/input,
+worker/Job/global retirement, Save and actual host qualification remain pending.

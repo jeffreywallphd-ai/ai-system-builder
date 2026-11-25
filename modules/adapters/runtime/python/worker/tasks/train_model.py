@@ -22,6 +22,7 @@ from ..native.windows_original_worker_launch import (LaunchUnavailable, Original
     OriginalTrainingOutputFamily, OriginalTrainingOutputGraph, _fail_output_family, _output_family_snapshot,
     _resolve_output_family_for_training, _claim_output_family_training, _guard_output_family_training,
     _output_family_training_binding,
+    retire_original_training_output_family, admit_retired_training_output_family, _copy_model_json,
     resolve_original_training_references, resolve_original_training_task_id,
     read_original_training_input_bytes, read_original_training_output_chunks)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
@@ -64,6 +65,16 @@ _NATIVE_CHECKPOINT_FAMILY_RESOLVE = _resolve_output_family_for_training
 _NATIVE_CHECKPOINT_FAMILY_CLAIM = _claim_output_family_training
 _NATIVE_CHECKPOINT_FAMILY_GUARD = _guard_output_family_training
 _NATIVE_CHECKPOINT_FAMILY_OWNER = _output_family_training_binding
+_NATIVE_OUTPUT_FAMILY_RETIRE = retire_original_training_output_family
+_NATIVE_RETIRED_FAMILY_ADMIT = admit_retired_training_output_family
+_NATIVE_RESULT_COPY = _copy_model_json
+_RESULT_FACTORY = TrainModelTaskResult.__pydantic_validator__.validate_python
+_RESULT_CLASS = TrainModelTaskResult
+_RESULT_API = tuple((base,name,type.__getattribute__(base,"__dict__").get(name))
+    for base in type.__getattribute__(_RESULT_CLASS,"__mro__")
+    for name in ("__getattribute__","__getattr__","__init__","model_post_init","model_dump",
+        "__dict__","__pydantic_extra__","__pydantic_private__",
+        "__pydantic_serializer__","__pydantic_validator__"))
 _SDK_ATTRIBUTE_MISSING = object()
 _PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _TRAINING_TASK_REQUIRED_PURPOSES = {
@@ -79,6 +90,28 @@ _TRAINING_TASK_REQUIRED_PURPOSES = {
 }
 _CHECKPOINT_EXPORTS = WeakKeyDictionary()
 _TRAINING_PIPELINES = WeakKeyDictionary()
+_TRAINING_WORKFLOWS = WeakKeyDictionary()
+
+
+class _TrainingWorkflowBinding:
+    __slots__ = ("slot","claim","__weakref__")
+    def __init__(self,slot,claim):
+        object.__setattr__(self,"slot",slot);object.__setattr__(self,"claim",claim)
+    def __setattr__(self,_name,_value):raise ValueError("The private workflow proof is immutable.")
+
+
+def _record_workflow_training_claim(use,family,slot,snapshot):
+    reference = _TRAINING_WORKFLOWS.get(use)
+    proof = reference() if reference is not None else None
+    if proof is None:
+        if use._workflow_slot is not None:raise ValueError("The private workflow owner is unavailable.")
+        return
+    if (type(proof) is not _TrainingWorkflowBinding or use._workflow_slot is not proof.slot
+            or proof.slot.get("proof") is not proof):raise ValueError("The private workflow owner changed.")
+    claim = _NATIVE_CHECKPOINT_FAMILY_OWNER(family)
+    if (type(claim) is not tuple or len(claim) != 3 or claim[0] is not use or claim[1] is not slot
+            or claim[2] is not snapshot):raise ValueError("The private workflow claim is unavailable.")
+    proof.claim(family,claim)
 
 
 class _TrainingPipelineBinding:
@@ -400,6 +433,7 @@ class _ProtectedTrainingUse:
         "_dataset_reader","_dataset_loader","_dataset_parquet_reader","_dataset_slot",
         "_pipeline_driver","_pipeline_helpers","_pipeline_slot",
         "_result_validation_driver","_result_validation_helpers","_result_validation_slot",
+        "_workflow_driver","_workflow_helpers","_workflow_slot",
         "_output_family_type","_output_family_snapshot","_output_family_fail",
         "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
         "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","_final_result_slot","__weakref__")
@@ -418,6 +452,7 @@ class _ProtectedTrainingUse:
         self._result_validation_driver = _validate_protected_training_results
         self._result_validation_helpers = _PROTECTED_RESULT_VALIDATION_HELPERS
         self._result_validation_slot = None
+        self._workflow_driver,self._workflow_helpers,self._workflow_slot = _run_protected_training_workflow,_PROTECTED_WORKFLOW_HELPERS,None
         self._tensor_stream_type = _NATIVE_TENSOR_STREAM
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
@@ -465,6 +500,8 @@ class _ProtectedTrainingUse:
                     (_NATIVE_TRAINING_OUTPUT_READER,validate_protected_training_output_chunks,_protected_output_seal_facts,
                      _resolve_training_task,_training_result_summary)))):
             raise ValueError("The private result validation helpers changed.")
+        if getattr(self,"_workflow_slot",None) is not None or _TRAINING_WORKFLOWS.get(self) is not None:
+            _ProtectedTrainingUse.assert_workflow_helpers(self)
         if (self._pipeline_driver is not _run_protected_training_pipeline
                 or self._pipeline_helpers is not _PROTECTED_PIPELINE_HELPERS
                 or self._pipeline_slot is not None and any(original is not current for original,current in zip(self._pipeline_helpers,
@@ -487,6 +524,17 @@ class _ProtectedTrainingUse:
             # a Native observer in the passive post-resource comparison.
             raise LaunchUnavailable()
         return request
+
+    def assert_workflow_helpers(self):
+        if (getattr(self,"_workflow_driver",None) is not _run_protected_training_workflow
+                or getattr(self,"_workflow_helpers",None) is not _PROTECTED_WORKFLOW_HELPERS
+                or type(self._workflow_helpers) is not tuple or len(self._workflow_helpers) != 12
+                or any(original is not current for original,current in zip(self._workflow_helpers,
+                    (_run_protected_training_pipeline,_validate_protected_training_results,_NATIVE_OUTPUT_FAMILY_RETIRE,
+                     _NATIVE_RETIRED_FAMILY_ADMIT,_prepare_protected_workflow_result,_passive_workflow_result,
+                     _record_workflow_training_claim,_RESULT_FACTORY,_NATIVE_RESULT_COPY,
+                     _NATIVE_CHECKPOINT_FAMILY_OWNER,_training_task_tags,_RESULT_API)))):
+            raise ValueError("The private workflow helpers changed.")
 
     def assert_current(self):
         request = _ProtectedTrainingUse.assert_snapshot(self)
@@ -613,6 +661,8 @@ def _bind_protected_checkpoint_schedule(use):
         claim(selected,use,slot,snapshot)
         # Failure authority starts only after the original one-use claim succeeds.
         family = selected; slot["family"] = family
+        if _TRAINING_WORKFLOWS.get(use) is not None:
+            _record_workflow_training_claim(use,family,slot,snapshot)
         record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
         # Freeze the method already held by the genuine Native family before
         # SDK/model callbacks. Never reacquire an observer with getattr later.
@@ -3087,6 +3137,147 @@ _PROTECTED_RESULT_VALIDATION_HELPERS = (_NATIVE_TRAINING_OUTPUT_READER,
     validate_protected_training_output_chunks,_protected_output_seal_facts,_resolve_training_task,_training_result_summary)
 
 
+def _passive_workflow_result(result,copy,api):
+    """Closed data only; no model dump, SDK getter or virtual comparison."""
+    if any(type.__getattribute__(base,"__dict__").get(name) is not original for base,name,original in api):
+        raise ValueError("The private result schema changed.")
+    if result is None:return None
+    if type(result) is not _RESULT_CLASS:raise ValueError("The private workflow result changed.")
+    fields = object.__getattribute__(result,"__dict__")
+    if (type(fields) is not dict or object.__getattribute__(result,"__pydantic_extra__") is not None
+            or object.__getattribute__(result,"__pydantic_private__") is not None):
+        raise ValueError("The private workflow result fields changed.")
+    return copy(fields)
+
+
+def _prepare_protected_workflow_result(use,facts,configurations,copy,tags):
+    request = _ProtectedTrainingUse.assert_snapshot(use)
+    history = use._training_slot
+    if (type(facts) is not tuple or not facts or type(history) is not dict
+            or type(history.get("metrics")) is not tuple or type(history.get("history")) is not tuple):
+        raise ValueError("The private workflow history is unavailable.")
+    method = request["method"];task = _resolve_training_task(use.payload)
+    directories = tuple(dict(row)["freshParent"]+"\\"+dict(row)["freshName"] for row in configurations)
+    output = directories[-1];adapter = method in ("lora","qlora")
+    serialization = "adapter-safetensors" if adapter else "safetensors"
+    checkpoints = [{"step":fact[1],"path":directories[index],"files":[
+        {"name":name,"sizeBytes":size,"sha256":sha} for name,size,sha in fact[3]]}
+        for index,fact in enumerate(facts[:-1])]
+    metadata = {"runtimeTask":"train-model","trainingTask":task,
+        "runMetadataPath":output+"\\training-run.json",
+        "serialization":{"serializationFormat":serialization},
+        "validation":{"status":"valid","scope":"structural","serializationFormat":serialization},
+        "modelReadiness":"not-qualified","modelQuality":"not-measured",
+        "files":[{"name":name,"sizeBytes":size,"sha256":sha} for name,size,sha in facts[-1][3]],
+        "history":[{"step":step,"loss":loss} for step,loss in history["history"]]}
+    base = request["baseModel"]
+    return copy({"runId":use._run_identity[0],"status":"succeeded","outputDirectory":output,
+        "outputModelName":request["output"]["outputModelName"],"checkpoints":checkpoints,
+        "metrics":dict(history["metrics"]),"logs":[],"warnings":[],
+        "generatedModelCandidate":{"displayName":request["output"]["outputModelName"],"modelId":None,
+            "localPath":output,"artifactForm":"adapter" if adapter else "full-model",
+            "inferenceMode":base.get("inferenceMode"),"taskTags":tags(task),
+            "baseModelId":base.get("modelId"),"adapterOfModelId":base.get("modelId") if adapter else None,
+            "generatedFromRunId":use._run_identity[0],"serializationFormat":serialization,"metadata":metadata}})
+
+
+def _run_protected_training_workflow(use,*,on_progress=None):
+    """Original private task path; output staging is not Save or readiness."""
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private training workflow is unavailable.")
+    _ProtectedTrainingUse.assert_snapshot(use)
+    _ProtectedTrainingUse.assert_workflow_helpers(use)
+    if use._workflow_slot is not None:
+        previous = use._workflow_slot
+        if type(previous) is dict and type(previous.get("stage")) is str and previous["stage"] not in ("complete","failed"):
+            previous["stage"] = "failed"
+        raise ValueError("The private workflow attempt is unavailable.")
+    helpers,view,payload,identity = use._workflow_helpers,use.view,use.payload,use._run_identity
+    run,validate,retire,admit,prepare,passive,record_claim,factory,copy,owner_reader,tags,api = helpers
+    slot = {"stage":"running","proof":None,"claim":None,"result":None,"facts":None,"cleanup":None}
+    use._workflow_slot = slot
+    ownership = result = frozen = facts = cleanup = None
+    cleanup_attempted = False
+    proof = None
+    def snapshot():
+        _ProtectedTrainingUse.assert_snapshot(use)
+        if (use._workflow_slot is not slot or slot["proof"] is not proof or use._workflow_helpers is not helpers
+                or use.view is not view or use.payload is not payload or use._run_identity is not identity
+                or type(slot["stage"]) is not str or slot["stage"] not in ("running","closing","admitting")
+                or slot["claim"] is not ownership or slot["result"] is not result or slot["facts"] is not facts
+                or slot["cleanup"] is not cleanup):
+            raise ValueError("The private training workflow changed.")
+        if ownership is not None and owner_reader(ownership[0]) is not ownership[1]:
+            raise ValueError("The private workflow claim changed.")
+        if ownership is not None:
+            binding = ownership[1][1]
+            if (use._checkpoint_slot is not binding or binding.get("owner") is not use
+                    or binding.get("family") is not ownership[0] or binding.get("snapshot") is not ownership[1][2]
+                    or type(binding.get("stage")) is not str
+                    or binding["stage"] not in ("binding","ready","arguments-constructing","arguments-ready")):
+                raise ValueError("The private workflow checkpoint owner changed.")
+        if result is not None and passive(result,copy,api) != frozen:
+            raise ValueError("The private workflow result changed.")
+    def claim_original(family,claim):
+        nonlocal ownership
+        snapshot()
+        if ownership is not None:raise ValueError("The private workflow claim is repeated.")
+        ownership = (family,claim);slot["claim"] = ownership
+        snapshot()
+    proof = _TrainingWorkflowBinding(slot,claim_original);slot["proof"] = proof
+    _TRAINING_WORKFLOWS[use] = ref(proof)
+    def progress(value):
+        snapshot()
+        if on_progress is not None:on_progress(value)
+        snapshot()
+    try:
+        snapshot();passive(None,copy,api)
+        run(use,on_progress=progress)
+        snapshot()
+        facts = validate(use);slot["facts"] = facts
+        snapshot()
+        if ownership is None:raise ValueError("The private workflow output owner is missing.")
+        book = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(ownership[0])
+        configurations = tuple(tuple(row.items()) for row in book["outputs"])
+        data = prepare(use,facts,configurations,copy,tags)
+        snapshot();passive(None,copy,api)
+        result = factory(data);slot["result"] = result
+        frozen = passive(result,copy,api)
+        snapshot();_check_protected_use(use);snapshot()
+        progress({"stage":"closing-output","message":"Closing the saved training result files."})
+        slot["stage"] = "closing"
+        cleanup_attempted = True
+        cleanup = retire(ownership[0]);slot["cleanup"] = cleanup
+        if cleanup is not True:raise ValueError("The private output IO did not retire.")
+        snapshot()
+        slot["stage"] = "admitting"
+        progress({"stage":"completed","message":"Training output checks and local file closure finished."})
+        _ProtectedTrainingUse.assert_current(use);snapshot()
+        if admit(ownership[0],use,ownership[1][1]) is not True:
+            raise ValueError("The private workflow permission is unavailable.")
+        snapshot()  # Passive only after the final business admission.
+        slot["stage"] = "complete"
+        return result
+    except BaseException as error:
+        slot["stage"] = "failed"
+        if isinstance(error,(TrainingCancellationRequested,KeyboardInterrupt,SystemExit)):raise
+        raise ValueError("The private training workflow could not finish.") from None
+    finally:
+        # This exact tuple was captured immediately after the genuine claim,
+        # before SDK callbacks. Failed/foreign claims grant no cleanup authority.
+        if ownership is not None and not cleanup_attempted:
+            try:
+                if owner_reader(ownership[0]) is ownership[1]:
+                    cleanup_attempted = True;cleanup = retire(ownership[0]);slot["cleanup"] = cleanup
+            except BaseException:slot["cleanup"] = False
+
+
+_PROTECTED_WORKFLOW_HELPERS = (_run_protected_training_pipeline,_validate_protected_training_results,
+    _NATIVE_OUTPUT_FAMILY_RETIRE,_NATIVE_RETIRED_FAMILY_ADMIT,_prepare_protected_workflow_result,
+    _passive_workflow_result,_record_workflow_training_claim,_RESULT_FACTORY,_NATIVE_RESULT_COPY,
+    _NATIVE_CHECKPOINT_FAMILY_OWNER,_training_task_tags,_RESULT_API)
+
+
 def _write_run_metadata(output_path: Path, metadata: dict[str, Any]) -> str:
     run_metadata_path = output_path / "training-run.json"
     run_metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -3150,6 +3341,9 @@ def _train_model(
         raise ValueError("The private protected training inputs are unavailable.")
     if type(compare_validation_baseline) is not bool or compare_validation_baseline and local_model_ref is None:
         raise ValueError("The private local validation comparison is unavailable.")
+    if _protected_use is not None:
+        if compare_validation_baseline:raise ValueError("Model-quality scoring is not part of this private workflow.")
+        return _run_protected_training_workflow(_protected_use,on_progress=on_progress)
     if local_dataset_refs is not None:
         if (_protected_use is None or local_model_ref is None
                 or _resolve_training_task(payload) not in TEXT_CAUSAL_TRAINING_TASKS):

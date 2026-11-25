@@ -1198,3 +1198,24 @@ keep original custody and prevent another attempt. A foreign thread cannot
 consume the owner's attempt. Focused in-memory ABI tests cover this local IO
 barrier. SDK/model/input/worker/Job retirement, complete producer integration,
 approved Save and actual-host qualification remain separate pending work.
+
+### Private training task completion
+
+A genuine original Model/input view now selects the protected pipeline in
+`train_model_from_local_files`. This branch runs before ordinary temporary
+folders, serializers and cancellation deletion. It trains through the existing
+private stages, checks every original checkpoint/final file, prepares a bounded
+result and closes that original output family's local IO. It returns staging and
+candidate facts only after current original resource and permission checks.
+The result identifies structural validation separately from unqualified model
+readiness and unmeasured quality. This path does not run model-quality scoring.
+
+Family cleanup keeps original member/creation/accounting proofs and uses the
+fixed per-copy barrier. Active IO defers the attempt; changed ownership, partial
+or uncertain closure cannot retry. Failed/cancelled runs clean only the exact
+original claim captured before SDK callbacks. After closure, a separate passive
+proof replaces live sealed-file/SDK snapshots; it never makes retired IO live.
+An original task-session fixture exercises the real private loader with synthetic
+SDK/Native replies. No default producer or host capability is enabled. Durable
+reservation, complete producer, SDK/model/input/worker/Job/global settlement,
+separate Save and actual-model/host qualification remain pending.

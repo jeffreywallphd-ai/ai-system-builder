@@ -566,6 +566,22 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             if row['id']=='headless-training-output-retirement-unit')['timeout']
         self.assertEqual(outer,120);self.assertEqual(outer-90,30)
 
+    def test_protected_workflow_exact_file_uses_bounded_child_and_outer_grace(self):
+        target='modules/adapters/runtime/python/worker/tests/test_protected_training_workflow.py'
+        self.assertEqual(focused.profile_command_timeout(None,regression_test=target),240)
+        for profile,path in ((None,target+'.other'),('functionality-outcomes',target),(None,target.replace('/worker/','/other/'))):
+            self.assertEqual(focused.profile_command_timeout(profile,regression_test=path),270)
+        command=[sys.executable,'-m','unittest']
+        with patch.object(sys,'argv',['focused','--regression-test',target]), \
+                patch.object(focused,'commands',return_value=[command]) as commands, \
+                patch.object(focused.subprocess,'run',return_value=SimpleNamespace(returncode=0)) as run:
+            self.assertEqual(focused.main(),0)
+            commands.assert_called_once_with(Path(focused.__file__).resolve().parents[2],[target],exact=True)
+            self.assertEqual(run.call_args.kwargs['timeout'],240)
+        outer=next(row for row in catalog.definitions(Path(__file__).resolve().parents[3])
+            if row['id']=='headless-protected-training-workflow-unit')['timeout']
+        self.assertEqual(outer,270);self.assertEqual(outer-240,30)
+
     def test_review_site_python_binding_keeps_failure_exit_and_timeouts(self):
         for code in (1, 5):
             with self.subTest(code=code), patch.object(sys, 'argv', ['focused', '--profile', 'review-site']), patch.object(focused, 'profile_commands', return_value=[['node', '--test', '--', 'fixed.unit.test.mjs']]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=code)) as run:

@@ -2158,32 +2158,21 @@ def test_private_dataset_reader_uses_protected_references_and_keeps_logical_path
 
 @pytest.mark.parametrize("change",["permission","settings"])
 def test_live_view_is_rechecked_after_progress_before_actual_dataset_use(monkeypatch,change):
-    from modules.adapters.runtime.python.worker.native import windows_original_worker_launch as native
-    from modules.adapters.runtime.python.worker.tests.test_native_training_model_graph import TrainingInputCopyTests
-    case=TrainingInputCopyTests()
-    source,lease,staged,config,control,kernel,*_=case.fixture(count=2,native_module=native)
-    graph=native.OriginalTrainingInputGraph(lease,staged,config,control,control); effects=[]
-    class OutputPath(PureWindowsPath):
-        def mkdir(self,*args,**options): effects.append("output-before-callback")
-    payload=TrainModelTaskRequest.model_validate(staged["payload"])
-    def progress(value):
-        if value.get("stage")=="initializing":
-            if change=="permission": control.current=False
-            else: payload.commonParameters["maxSteps"]=9876
-    def dataset(*args,**options):
-        effects.append("dataset-IO")
-        raise RuntimeError("Controlled stop before any model supplier")
-    monkeypatch.setattr(train_model_module,"Path",OutputPath)
-    monkeypatch.setattr(train_model_module,"_local_training_model_reference",lambda value:value)
-    monkeypatch.setattr(train_model_module,"_load_dataset",dataset)
-    monkeypatch.setattr(train_model_module,"_load_transformers_objects",lambda *a,**k: pytest.fail("No model may load"))
-    try:
-        graph.prepare()
-        with lease.borrow(payload.model_dump(mode="json")) as view:
-            try: train_model_module.train_model_from_local_files(payload,on_progress=progress,_model_view=view)
-            except native.LaunchUnavailable: pass
-            assert "dataset-IO" not in effects
-    finally: case.doCleanups()
+    # Keep the original denial at an actual emitted stage and use the fixed
+    # pipeline. A replaced loader or absent family would refuse too early.
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,control,kernel,calls,_,disk):
+        observed=[];after_callback=[]
+        def progress(value):
+            if value["stage"]=="dataset-loading":
+                observed.append(value["stage"])
+                after_callback.append(len(kernel.calls))
+                if change=="permission":control.current=False
+                else:use.payload.commonParameters["maxSteps"]=9876
+        with pytest.raises(ValueError):
+            train_model_module.train_model_from_local_files(use.payload,on_progress=progress,_model_view=use.view)
+        assert observed==["dataset-loading"] and calls==disk==[]
+        assert not any(name in ("ReadFile","WriteFile","NtCreateFile") for name,_ in kernel.calls[after_callback[0]:])
+        assert family.phase=="retired" and control.charges==control.retained==[]
 
 
 @pytest.mark.parametrize("refs",[[],(),("relative.jsonl",),("https://example.invalid/data.jsonl",),("\\\\host\\share\\data.jsonl",),(True,)])

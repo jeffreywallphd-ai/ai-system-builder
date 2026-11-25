@@ -180,3 +180,15 @@ actual Native/session/parser commands. Missing or nonregular support, partial,
 unknown mixed scope or explicit generic coverage keeps complete controller
 discovery. This feature check grants no physical/model execution, retry authority,
 resource settlement, Save or final combined-suite qualification.
+
+The exact `headless-protected-training-workflow-unit` file tests protected
+pipeline/task-session integration and finite family IO closure with synthetic
+SDK/Native replies. Its measured 22-case batch took 104.96 seconds before later
+denial cases; use a bounded 240-second child under a 270-second outer ceiling.
+Other developer/profile and all production limits remain unchanged. The closed
+workflow/routing scope executes whole related routing modules and their fixed
+feature commands. The full existing text regression stays a separate selected
+required check for its changed source; do not duplicate that long command in a
+second routing suite. Incomplete/nonregular support, mixed/unknown scope and
+explicit generic requests keep full controller discovery. This is feature
+evidence only, with no model-quality, physical Native or parent qualification.

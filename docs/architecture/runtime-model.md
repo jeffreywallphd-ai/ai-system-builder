@@ -3342,3 +3342,24 @@ effects, changed ownership or uncertain accounting stay retained without retry.
 This local barrier composes with the existing application/runtime retirement
 owner; it adds no second executor and does not prove global resource settlement,
 SDK/model/input/worker/Job retirement, approved Save or real-host qualification.
+
+The genuine original-view loader now composes the protected pipeline, all saved
+file checks and the original output-family IO barrier. Enter this branch before
+ordinary directory allocation, serialization and cancellation deletion. The
+ordinary unbound path stays unchanged. Reserve one original-thread workflow and
+capture its full Native training claim before SDK callbacks. Keep the original
+claim and cleanup attempt independent of mutable progress/tracking fields.
+
+Family retirement uses its separately captured original members and fixed
+per-copy barrier. Nonblocking busy refusal consumes no attempt. Entered cleanup
+permanently bars new members; partial/unknown outcomes retain custody without
+retry or credit. Prepare bounded candidate/staging facts before IO closes.
+Afterward use a separate passive closed-family proof, never a relaxed live
+checkpoint/SDK snapshot. Original Model/input checks precede captured resource
+then business admission; only passive claim/helper/result checks follow.
+
+Results distinguish structural format validation, readiness and quality. No
+quality comparison, automatic Save or new default producer/Root activation is
+introduced. This composes the existing executor/task topology. Actual durable
+reservation, complete producer, SDK/model/input/worker/Job/global settlement,
+real training/resources, separate Save and host qualification remain pending.

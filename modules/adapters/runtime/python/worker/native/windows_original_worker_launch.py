@@ -10,6 +10,7 @@ qualification actor, effect grant or budget is imported or widened here.
 """
 from __future__ import annotations
 
+from _thread import LockType
 import ctypes as C
 import base64
 import hashlib
@@ -2444,6 +2445,7 @@ def _output_family_record(family):
 def _output_family_snapshot(family, member=None):
     record = _output_family_record(family)
     need(get_ident() == record["thread"] and record["phase"] in ("bound", "sealed")
+         and record["io"]["stage"] == "active"
          and _model_views.get(record["view"]) is record["binding"]
          and _model_leases.get(record["lease"]) is record["lease_state"]
          and record["lease_state"].get("output_copy_owner") is family
@@ -2487,6 +2489,11 @@ class OriginalTrainingOutputFamily:
                 "thread":get_ident(), "request":_copy_model_json(sealed_request), "outputs":outputs,
                 "maximum":maximum, "charged":0, "phase":"binding", "members":[],
                 "reservation":reservation, "admission":admission, "methods":{}, "lock":Lock()}
+            record["io"] = {"book":record,"stage":"binding","admission":"ready","members":[],
+                "member_book":record["members"],"outputs":outputs,
+                "configurations":tuple(tuple(row.items()) for row in outputs),"maximum":maximum,
+                "methods":record["methods"],"captured":None,"reservation":reservation,"business":admission,
+                "lock":record["lock"],"retire":_ORIGINAL_OUTPUT_GRAPH_RETIRE}
             _training_output_families[self] = record
             state["output_copy_owner"] = self  # Before any external attribute/receiver access.
             need(record["lock"].acquire(blocking=False))
@@ -2497,9 +2504,12 @@ class OriginalTrainingOutputFamily:
                     need(type(method) in (MethodType,BuiltinMethodType) and method.__self__ is owner)
                     record["methods"][key] = method
                 need(record["phase"] == "binding")
+                record["io"]["captured"] = tuple(record["methods"].items())
+                record["io"]["stage"] = "active"
                 record["phase"] = "bound"
                 _output_family_snapshot(self)
             except BaseException:
+                record["io"]["stage"] = "failed"
                 record["phase"] = "failed"; raise LaunchUnavailable() from None
             finally: record["lock"].release()
         finally: lock.release()
@@ -2575,6 +2585,7 @@ def _claim_output_family(family, graph, view, request, configuration, reservatio
         member = {"graph":graph, "configuration":planned, "stage":"constructing", "charge_attempted":False,
             "charged":False, "retain_attempted":False, "retained":False}
         record["members"].append(member)  # Before any per-member supplier call.
+        record["io"]["members"].append((member,graph,planned))
         return member
     except BaseException:
         record["phase"] = "failed"; raise LaunchUnavailable() from None
@@ -2923,6 +2934,11 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
         _assert_plain_output_graph_type(type(self))
         self._output_family, self._output_member = _family, None
         need(_family is None or type(_family) is OriginalTrainingOutputFamily)
+        if _family is not None:
+            _assert_plain_output_io_type(type(_family),OriginalTrainingOutputFamily,frozenset())
+            family_record = _output_family_record(_family)
+            need(type(family_record["io"]["stage"]) is str and family_record["io"]["stage"] == "active"
+                 and type(family_record["phase"]) is str and family_record["phase"] in ("bound","sealed"))
         need(type(view) is _OriginalModelView)
         binding = _model_views.get(view); need(binding is not None)
         lease, _, thread = binding; need(thread == get_ident())
@@ -3194,6 +3210,112 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
         finally:
             if read_locked:read_lock.release()
             operation.release()
+
+
+_ORIGINAL_OUTPUT_GRAPH_RETIRE = OriginalTrainingOutputGraph.retire_copy_io
+
+
+def _original_output_family_io(family):
+    _assert_plain_output_io_type(type(family),OriginalTrainingOutputFamily,frozenset())
+    book = _training_output_families.get(family)
+    need(book is not None and get_ident() == book["thread"])
+    io = book["io"]
+    need(type(io) is dict and io["book"] is book and type(io["stage"]) is str)
+    return book,io
+
+
+def _output_family_io_snapshot(family,book,io,rows,expected):
+    current,current_io = _original_output_family_io(family)
+    need(current is book and current_io is io and book["lock"] is io["lock"]
+         and type(io["lock"]) is LockType and book["members"] is io["member_book"]
+         and type(book["members"]) is list and len(book["members"]) == len(rows)
+         and type(io["members"]) is list and len(io["members"]) == len(rows)
+         and all(a is b for a,b in zip(io["members"],rows))
+         and book["outputs"] is io["outputs"] and book["reservation"] is io["reservation"]
+         and book["admission"] is io["business"] and book["methods"] is io["methods"]
+         and io["retire"] is _ORIGINAL_OUTPUT_GRAPH_RETIRE
+         and type(book["maximum"]) is int and type(io["maximum"]) is int and book["maximum"] == io["maximum"]
+         and type(book["phase"]) is str and book["phase"] in ("bound","sealed","failed","retiring","retired")
+         and type(io["captured"]) is tuple and len(book["methods"]) == len(io["captured"])
+         and all(book["methods"].get(key) is method for key,method in io["captured"]))
+    for configuration,captured in zip(io["outputs"],io["configurations"]):
+        need(type(configuration) is dict and len(configuration) == len(captured)
+             and all(type(configuration.get(key)) is type(value) and configuration[key] == value for key,value in captured))
+    for index,(member,graph,configuration) in enumerate(rows):
+        _assert_plain_output_graph_type(type(graph))
+        reader = _training_output_readers.get(graph)
+        need(type(member) is dict and book["members"][index] is member and member.get("graph") is graph
+             and member.get("configuration") is configuration and configuration is io["outputs"][index]
+             and reader is not None and reader["family"] is family and reader["member"] is member
+             and type(reader["io"]["stage"]) is str and reader["io"]["stage"] == expected[index])
+        _output_io_current(reader);_output_io_accounting_current(reader)
+
+
+def retire_original_training_output_family(family):
+    """One original family's local IO only; no global settlement or Save."""
+    try:
+        book,io = _original_output_family_io(family)
+        if io["stage"] == "complete":return True
+        if io["stage"] == "retiring":
+            io["stage"] = "failed";book["phase"] = "failed";return False
+        if io["stage"] != "active" or type(io["lock"]) is not LockType:return False
+        if not io["lock"].acquire(blocking=False):return False
+    except (LaunchUnavailable,AttributeError,KeyError,TypeError):return False
+    try:
+        rows = tuple(io["members"])
+        expected = []
+        for member,graph,configuration in rows:
+            _assert_plain_output_graph_type(type(graph))
+            reader = _training_output_readers.get(graph)
+            need(reader is not None)
+            operation,reading = reader["io"]["operation_lock"],reader.get("read_lock")
+            need(type(operation) is LockType and (reading is None or type(reading) is LockType))
+            if operation.locked() or reading is not None and reading.locked():return False
+            state = reader["io"]["stage"]
+            need(type(state) is str and state in ("active","complete"))
+            expected.append(state)
+        _output_family_io_snapshot(family,book,io,rows,expected)
+        io["stage"] = "retiring";book["phase"] = "retiring"
+        for index,(_,graph,_) in enumerate(rows):
+            need(io["stage"] == "retiring" and io["retire"](graph) is True)
+            expected[index] = "complete"
+            _output_family_io_snapshot(family,book,io,rows,expected)
+            need(io["stage"] == "retiring" and book["phase"] == "retiring")
+        io["closed"] = (rows,tuple(expected))
+        io["stage"] = "complete";book["phase"] = "retired"
+        return True
+    except BaseException:
+        io["stage"] = "failed";book["phase"] = "failed"
+        return False
+    finally:io["lock"].release()
+
+
+def admit_retired_training_output_family(family,owner,binding):
+    """Current original resource/permission after local IO; no SDK observer."""
+    book,io = _original_output_family_io(family)
+    proof = book.get("training_owner")
+    need(type(proof) is tuple and len(proof) == 3 and proof[0] is owner and proof[1] is binding)
+    need(io["stage"] == "complete" and type(io["admission"]) is str)
+    if io["admission"] == "checking":
+        io["admission"] = "failed";raise LaunchUnavailable()
+    need(io["admission"] == "ready")
+    rows,expected = io["closed"]
+    methods = dict(io["captured"])
+    io["admission"] = "checking"
+    try:
+        def snapshot():
+            _output_family_io_snapshot(family,book,io,rows,expected)
+            need(io["stage"] == "complete" and book["phase"] == "retired"
+                 and type(io["admission"]) is str and io["admission"] == "checking"
+                 and book.get("training_owner") is proof)
+        snapshot()
+        need(methods["resource"]() is True);snapshot()
+        need(methods["business"]() is True);snapshot()
+        io["admission"] = "complete"
+        return True
+    except BaseException:
+        io["admission"] = "failed"
+        raise LaunchUnavailable() from None
 
 
 class OriginalSourceExchange:
