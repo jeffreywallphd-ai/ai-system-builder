@@ -3349,3 +3349,32 @@ credit or classify the reservation as unused. Hold the entire original budget
 and actual pending operation even if the Model itself never charged. Foundation
 fixtures use small real source files and an inert controller; actual global quota,
 Native/controller execution, full training and host qualification remain pending.
+
+
+### Private original-file/session adapter
+
+- Protected assets: the original Model, Dataset/recipe, candidate/checkpoint
+  bytes, Native guards, retained accounting and exact task/output identity.
+- Authority: only trusted composition can bind the genuine registered file owner
+  once. An independently qualified outer producer still owns measured capacity,
+  profile and business admission. No request record or local ready flag creates it.
+- Controls: capture the exact file record/binding/lock/thread/queue and fixed
+  operations; reject substitutes, duplicates, changed helpers and foreign owners.
+  Passive prepare invokes no observer. Actual file preparation latches before
+  resource/business callbacks and Native effects. One seal/borrow attempt remains
+  retained through failure; direct resource cancellation can still use the original
+  owner after permission withdrawal and cannot retry an unknown acknowledgement.
+- Proof limits: local output closure or cancellation never proves SDK/worker/Job
+  exit, capacity credit or Save. Resource settle stays false. Default producer
+  absence and actual capacity, resource transport, protected parent custody,
+  bounded training and host qualification remain pending.
+- Verification: actual finite file/session/exit components with inert Native and
+  loader fixtures cover admission denial, owner/thread/helper substitution, unknown
+  copy, same output queue, one-use borrowing and retained cancellation/local exit.
+  They do not load or score a model or qualify physical effects.
+
+Validate the original resource API/MRO before any weak-key lookup, including
+constructor admission. Validate exact primitive state types and closed phases
+before equality or truth tests; run the genuine passive file snapshot before
+comparing its record fields. Replaced hash/equality/truth hooks must not execute
+or turn malformed state into local readiness.

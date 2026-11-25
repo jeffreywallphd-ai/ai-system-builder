@@ -14,7 +14,7 @@ import json
 import hashlib
 import os
 import re
-from threading import RLock
+from threading import RLock, get_ident
 from time import monotonic
 from types import FunctionType, MethodType
 from typing import Callable
@@ -697,3 +697,161 @@ class OriginalTrainingSession:
 # The fixed helper captures the actual class after its methods exist. It adds
 # no producer, executor, model, process or default host activation.
 from . import original_training_session_exit as _session_exit
+
+
+# Load only after the session/exit classes have captured their original APIs.
+# This is private composition; it never installs or configures a producer.
+from . import original_training_files as _training_files
+
+_FILE_RECORD = _training_files._record
+_FILE_SNAPSHOT = _training_files._snapshot
+_FILE_BINDINGS = _training_files._bindings
+_FILE_LOCKS = _training_files._file_locks
+_FILE_TYPE = _training_files.OriginalTrainingFiles
+_FILE_PREPARE = _FILE_TYPE.prepare
+_FILE_BORROW = _FILE_TYPE.borrow
+_FILE_CANCEL = _FILE_TYPE.request_cancel
+_file_resources = WeakKeyDictionary()
+_file_resource_files = WeakKeyDictionary()
+
+
+def _file_resource_api(owner):
+    _need(type(owner) is OriginalTrainingFileResources)
+    bases = type.__getattribute__(OriginalTrainingFileResources, "__mro__")
+    _need(len(bases) == len(_FILE_RESOURCE_MRO) and all(a is b for a, b in zip(bases, _FILE_RESOURCE_MRO)))
+    _need(all(
+        type.__getattribute__(base, "__dict__").get(name) is original
+        for base, name, original in _FILE_RESOURCE_API))
+    _need(_training_files._record is _FILE_RECORD and _training_files._snapshot is _FILE_SNAPSHOT
+          and _training_files._bindings is _FILE_BINDINGS and _training_files._file_locks is _FILE_LOCKS
+          and _training_files.OriginalTrainingFiles is _FILE_TYPE
+          and _FILE_TYPE.prepare is _FILE_PREPARE and _FILE_TYPE.borrow is _FILE_BORROW
+          and _FILE_TYPE.request_cancel is _FILE_CANCEL)
+
+
+def _file_resource_state(owner):
+    _file_resource_api(owner)  # Before any weak-key hash/equality operation.
+    book = _file_resources.get(owner)
+    _need(type(book) is dict and type(book.get("file")) is _FILE_TYPE
+          and type(book.get("thread")) is int and book["thread"] > 0
+          and type(book.get("phase")) is str
+          and book["phase"] in ("bound", "prepared", "sealing", "sealed", "borrow-issued", "unconfirmed")
+          and type(book.get("cancel_attempted")) is bool
+          and type(book.get("cancel_acknowledged")) is bool
+          and (not book["cancel_acknowledged"] or book["cancel_attempted"]))
+    try:
+        record = _FILE_RECORD(book["file"])
+        _need(record is book["record"])
+        # This fixed passive snapshot validates the original record's exact
+        # primitive types before we compare or test any of its fields.
+        _FILE_SNAPSHOT(book["file"], record)
+        _need(_file_resource_files.get(book["file"]) is owner
+              and _FILE_BINDINGS.get(book["file"]) is book["binding"]
+              and _FILE_LOCKS.get(book["file"]) is book["lock"]
+              and record["lock"] is book["lock"]
+              and record["thread"] == book["thread"]
+              and record["delivery"] is book["delivery"])
+    except Exception:
+        raise TrainingSessionError() from None
+    return book
+
+
+def _file_resource_bound(book):
+    record = book["record"]
+    _need(get_ident() == book["thread"] and not book["cancel_attempted"]
+          and record["phase"] == "bound" and not record["cancelled"]
+          and not record["closed"] and not record["poisoned"])
+
+
+class OriginalTrainingFileResources(NativeTrainingResources):
+    """Fixed local file/session bridge, not a complete readiness producer.
+
+    The outer trusted producer must independently own qualified capacity and
+    profile/admission. Local prepare performs passive binding checks only. All
+    copy/borrow effects still pass the genuine file owner's existing controls.
+    Retained files, charges and global settlement remain separately owned.
+    """
+    def __init__(self, original_files):
+        _file_resource_api(self)
+        _need(type(original_files) is _FILE_TYPE)
+        try:
+            record = _FILE_RECORD(original_files)
+            _FILE_SNAPSHOT(original_files, record)
+            _need(original_files not in _file_resource_files and self not in _file_resources)
+            book = {"file": original_files, "record": record,
+                "binding": _FILE_BINDINGS.get(original_files), "lock": _FILE_LOCKS.get(original_files),
+                "thread": record["thread"], "delivery": record["delivery"], "phase": "bound",
+                "cancel_attempted": False, "cancel_acknowledged": False}
+            _need(book["lock"] is record["lock"] and get_ident() == book["thread"])
+            _file_resource_bound(book)
+            _file_resources[self] = book
+            _file_resource_files[original_files] = self
+            _file_resource_state(self)
+        except Exception:
+            raise TrainingSessionError() from None
+
+    def prepare(self):
+        book = _file_resource_state(self)
+        with book["lock"]:
+            _file_resource_bound(book)
+            _need(book["phase"] == "bound")
+            # No _admitted callback while Files is bound: a caught direct
+            # prepare reentry must not consume its original effect attempt.
+            book["phase"] = "prepared"
+        return "ready"  # Local staging only, not physical resource readiness.
+
+    def seal_inputs(self, staged):
+        book = _file_resource_state(self)
+        with book["lock"]:
+            _file_resource_bound(book)
+            _need(book["phase"] == "prepared")
+            book["phase"] = "sealing"  # Own the original attempt before effects.
+        try:
+            payload = _FILE_PREPARE(book["file"], staged)
+            _need(_file_resource_state(self) is book)
+            with book["lock"]:
+                _need(book["phase"] == "sealing" and not book["cancel_attempted"]
+                      and book["record"]["phase"] == "prepared" and type(payload) is TrainModelTaskRequest)
+                book["phase"] = "sealed"
+            return payload
+        except BaseException:
+            book["phase"] = "unconfirmed"
+            raise
+
+    def borrow(self):
+        book = _file_resource_state(self)
+        with book["lock"]:
+            _need(get_ident() == book["thread"] and book["phase"] == "sealed"
+                  and not book["cancel_attempted"] and book["record"]["phase"] == "prepared")
+            book["phase"] = "borrow-issued"
+        # The genuine one-use context owns the joint borrow and output closure.
+        # Session.run, not Files.run, remains the only fixed loader invocation.
+        return _FILE_BORROW(book["file"])
+
+    def request_cancel(self):
+        book = _file_resource_state(self)
+        with book["lock"]:
+            if book["cancel_attempted"]:
+                _need(book["cancel_acknowledged"])
+                return
+            book["cancel_attempted"] = True
+        # Original retained cleanup needs no new business grant or thread handoff.
+        _need(_FILE_CANCEL(book["file"]) is None)
+        _need(_file_resource_state(self) is book)
+        book["cancel_acknowledged"] = True
+
+    def settle(self):
+        return False  # File/output IO closure is never SDK/worker/Job settlement.
+
+    def original_files(self):
+        return _file_resource_state(self)["file"]
+
+    def output_delivery(self):
+        return _file_resource_state(self)["delivery"]
+
+
+_FILE_RESOURCE_MRO = type.__getattribute__(OriginalTrainingFileResources, "__mro__")
+_FILE_RESOURCE_API = tuple((base, name, type.__getattribute__(base, "__dict__").get(name))
+    for base in _FILE_RESOURCE_MRO
+    for name in ("__getattribute__", "__getattr__", "__hash__", "__eq__", "__dict__", "__init__",
+        "prepare", "seal_inputs", "borrow", "request_cancel", "settle", "original_files", "output_delivery"))

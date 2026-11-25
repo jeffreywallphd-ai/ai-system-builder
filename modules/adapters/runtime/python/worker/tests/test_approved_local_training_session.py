@@ -755,4 +755,187 @@ class NativeLaunchSourceTests(unittest.TestCase):
         with self.assertRaises(native_launch.LaunchUnavailable): native_launch.parse_frame(b'{"nonce":"a","nonce":"b"}')
 
 
+class OriginalTrainingFileResourcesTests(unittest.TestCase):
+    def fixture(self, *, control=None, delivery=None):
+        from . import test_original_training_files as fixture
+        case = fixture.OriginalTrainingFilesTests()
+        self.addCleanup(case.doCleanups)
+        row = case.fixture(control=control, delivery=delivery)
+        resource = session.OriginalTrainingFileResources(row[0])
+        return resource, row
+
+    def test_prepare_is_passive_and_seal_rechecks_original_admission_before_any_copy(self):
+        from . import test_original_training_files as fixture
+        control = fixture.Current()
+        resource, row = self.fixture(control=control)
+        calls = []
+        control.hook = lambda: calls.append("admission")
+        before = len(row[7].calls)
+        self.assertEqual(resource.prepare(), "ready")
+        self.assertEqual(calls, [])
+        self.assertEqual(len(row[7].calls), before)
+        self.assertEqual(control.charges, [])
+        control.current = False
+        with self.assertRaises(ValueError): resource.seal_inputs(row[3])
+        self.assertEqual(calls, ["admission"])
+        self.assertEqual(len(row[7].calls), before)
+        self.assertEqual(control.charges, [])
+        with self.assertRaises(session.TrainingSessionError): resource.seal_inputs(row[3])
+        self.assertFalse(resource.settle())
+
+    def test_only_the_genuine_once_bound_file_owner_is_accepted_without_getters(self):
+        resource, row = self.fixture()
+        before = len(row[7].calls)
+        class Fake:
+            @property
+            def prepare(self): raise AssertionError("A substitute getter was evaluated")
+        for value in (Fake(), {}, object(), row[0]):
+            with self.subTest(kind=type(value).__name__):
+                with self.assertRaises(session.TrainingSessionError): session.OriginalTrainingFileResources(value)
+        self.assertIs(resource.original_files(), row[0])
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_wrong_thread_cannot_prepare_or_seal_the_original_file_owner(self):
+        resource, row = self.fixture()
+        failures = []
+        def wrong_thread():
+            for action in (resource.prepare, lambda: resource.seal_inputs(row[3])):
+                try: action()
+                except session.TrainingSessionError: failures.append(True)
+        thread = Thread(target=wrong_thread)
+        before = len(row[7].calls)
+        thread.start(); thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(failures, [True, True])
+        self.assertEqual(len(row[7].calls), before)
+        self.assertEqual(resource.prepare(), "ready")
+
+    def test_single_seal_and_joint_borrow_keep_original_output_and_guards(self):
+        from . import test_original_training_files as fixture
+        from ..tasks import original_training_files as files
+        from ..tasks import original_training_output_delivery as delivery
+        from time import monotonic
+        case = fixture.OriginalTrainingFilesTests(); self.addCleanup(case.doCleanups)
+        row = case.fixture(bind=False)
+        queue = delivery.OriginalTrainingOutputDelivery(
+            model_native._verified_model_receivers[row[1]]["task_id"],
+            maximum_files=64, maximum_payload_bytes=256 * 1024, deadline=monotonic() + 30)
+        file_owner = files.OriginalTrainingFiles(row[2], row[4], row[5], row[6], row[6], delivery=queue)
+        self.addCleanup(lambda: files._owners.pop(file_owner, None))
+        self.addCleanup(lambda: files._bindings.pop(file_owner, None))
+        resource = session.OriginalTrainingFileResources(file_owner)
+        self.assertIs(resource.output_delivery(), queue)
+        with self.assertRaises(session.TrainingSessionError): resource.borrow()
+        self.assertEqual(resource.prepare(), "ready")
+        with self.assertRaises(session.TrainingSessionError): resource.prepare()
+        payload = resource.seal_inputs(row[3])
+        with self.assertRaises(session.TrainingSessionError): resource.seal_inputs(row[3])
+        with resource.borrow() as view:
+            self.assertIs(delivery.capture_original_output_delivery(view, payload.model_dump(mode="json")), queue)
+            self.assertIs(resource.original_files(), file_owner)
+        self.assertTrue(files._owners[file_owner]["output_closed"])
+        self.assertTrue(all(not handle.closed for handle in row[1].guards))
+        self.assertIs(resource.output_delivery(), queue)
+        with self.assertRaises(session.TrainingSessionError): resource.borrow()
+        self.assertFalse(resource.settle())
+
+    def test_failed_copy_retains_original_attempt_and_cannot_retry_or_borrow(self):
+        resource, row = self.fixture()
+        self.assertEqual(resource.prepare(), "ready")
+        row[7].short_write = True
+        with self.assertRaises(ValueError): resource.seal_inputs(row[3])
+        before = len(row[7].calls)
+        self.assertEqual(row[6].charges, [row[4]["maximumCopyBytes"]])
+        with self.assertRaises(session.TrainingSessionError): resource.seal_inputs(row[3])
+        with self.assertRaises(session.TrainingSessionError): resource.borrow()
+        self.assertEqual(len(row[7].calls), before)
+        self.assertIs(resource.original_files(), row[0])
+        self.assertFalse(resource.settle())
+
+    def test_replaced_original_file_helper_is_refused_before_new_io_or_observer(self):
+        from ..tasks import original_training_files as files
+        resource, row = self.fixture()
+        before = len(row[7].calls)
+        with patch.object(files.OriginalTrainingFiles, "prepare", side_effect=AssertionError("Replacement ran")) as changed:
+            with self.assertRaises(session.TrainingSessionError): resource.prepare()
+            changed.assert_not_called()
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_retained_original_file_binding_cannot_be_replaced_by_another_owner(self):
+        from ..tasks import original_training_files as files
+        resource, row = self.fixture()
+        other, foreign = self.fixture()
+        before = len(row[7].calls)
+        original = files._bindings[row[0]]
+        try:
+            files._bindings[row[0]] = files._bindings[foreign[0]]
+            with self.assertRaises(session.TrainingSessionError): resource.prepare()
+        finally: files._bindings[row[0]] = original
+        self.assertEqual(len(row[7].calls), before)
+        self.assertIs(resource.original_files(), row[0])
+        self.assertIs(other.original_files(), foreign[0])
+
+    def test_cancellation_after_borrow_issue_still_stops_the_original_context_before_io(self):
+        resource, row = self.fixture()
+        self.assertEqual(resource.prepare(), "ready")
+        resource.seal_inputs(row[3])
+        original_context = resource.borrow()
+        before = len(row[7].calls)
+        charged = list(row[6].charges)
+        row[6].current = False
+        self.assertIsNone(resource.request_cancel())
+        self.assertIsNone(resource.request_cancel())
+        with self.assertRaises(ValueError):
+            with original_context: self.fail("A cancelled original borrow entered")
+        self.assertEqual(len(row[7].calls), before)
+        self.assertEqual(row[6].charges, charged)
+        self.assertTrue(all(not handle.closed for handle in row[1].guards))
+        self.assertFalse(resource.settle())
+
+    def test_constructor_rejects_replaced_resource_hash_before_any_weak_key_observer(self):
+        from . import test_original_training_files as fixture
+        case = fixture.OriginalTrainingFilesTests(); self.addCleanup(case.doCleanups)
+        row = case.fixture()
+        calls = []
+        def changed_hash(owner):
+            calls.append("hash")
+            return object.__hash__(owner)
+        before = len(row[7].calls)
+        with patch.object(session.OriginalTrainingFileResources, "__hash__", changed_hash):
+            with self.assertRaises(session.TrainingSessionError): session.OriginalTrainingFileResources(row[0])
+        self.assertEqual(calls, [])
+        self.assertEqual(len(row[7].calls), before)
+
+    def test_primitive_or_foreign_book_replacements_are_denied_without_virtual_observers(self):
+        from ..tasks import original_training_files as files
+        calls = []
+        class Virtual:
+            def __eq__(self, other): calls.append("equality"); return True
+            def __bool__(self): calls.append("truth"); return False
+            def __hash__(self): calls.append("hash"); return object.__hash__(self)
+        for field in ("phase", "thread", "cancel_attempted", "cancel_acknowledged", "file", "file-thread"):
+            with self.subTest(field=field):
+                resource, row = self.fixture()
+                book = session._file_resources[resource]
+                target = files._owners[row[0]] if field == "file-thread" else book
+                key = "thread" if field == "file-thread" else field
+                original = target[key]
+                before = len(row[7].calls)
+                try:
+                    target[key] = Virtual()
+                    with self.assertRaises(session.TrainingSessionError): resource.prepare()
+                finally: target[key] = original
+                self.assertEqual(calls, [])
+                self.assertEqual(len(row[7].calls), before)
+
+    def test_unknown_resource_phase_is_not_local_readiness(self):
+        resource, row = self.fixture()
+        book = session._file_resources[resource]
+        original = book["phase"]
+        try:
+            book["phase"] = "caller-ready"
+            with self.assertRaises(session.TrainingSessionError): resource.prepare()
+        finally: book["phase"] = original
+
+
 if __name__ == "__main__": unittest.main()

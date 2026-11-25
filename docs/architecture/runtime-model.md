@@ -3592,3 +3592,29 @@ This is a correlation/delegation boundary for an ALREADY measured exclusive
 reservation, not its concrete global capacity implementation or Native proof.
 Real durable capacity, worker resource transport, full producer and protected
 result lifecycle remain pending before actual training and host qualification.
+
+
+### Fixed original-file resource composition
+
+The private session's `OriginalTrainingFileResources` is a concrete local adapter
+for one genuine registered `OriginalTrainingFiles`. It retains the exact original
+record, binding, lock, executor thread and optional delivery queue. Duplicate
+wrappers, substitutes, changed helpers or foreign bindings cannot admit work.
+Local prepare performs passive binding checks only: resource/business admission
+remains inside the genuine file preparation after its own effect latch.
+
+Sealing delegates once to that original file preparation. Borrow returns that
+one original joint context; the session invokes the fixed loader once and the
+file context owns local output closure. Failed or uncertain attempts cannot retry
+or borrow again. The original cancellation is retained before invocation, runs
+without renewed business authority and cannot repeat a lost acknowledgement.
+Original files/queue remain the same retained owners through local completion.
+
+This adapter does not supply a NativeTrainingProducer or physical readiness. Its
+local ready value admits staging only; qualified measured capacity/admission and
+profile remain mandatory outer composition. Resource settle is always false in
+both protocols. Existing local exit-ready and exact original parent/worker/Job
+retirement remain separate. Default producer absence and all actual capacity,
+resource transport, protected parent output, bounded training, Save/generation and
+real host qualification remain pending. Synthetic fixtures qualify this bridge,
+not Native effects, model output quality or whole-host execution.

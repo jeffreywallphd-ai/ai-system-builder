@@ -1409,3 +1409,15 @@ The existing Model-only wire format and default hosts are unchanged. Input/outpu
 worker transport, real protected capacity, complete producer, actual bounded
 training, destination/crash integrity, separate Save and host qualification remain
 pending. Declared bounds and callback acknowledgements supply none of those passes.
+
+
+### Original protected files in private training sessions
+
+`OriginalTrainingFileResources` connects the genuine `OriginalTrainingFiles` to
+the existing private session. It retains one file owner and its original output
+queue. Local preparation checks only passive ownership and the original thread;
+sealing and borrowing still use the file owner's original admission, copy and
+Native controls. Session.run remains the only loader call. Cancellation reaches
+the same retained file owner after business withdrawal. Local closure never makes
+settle true or releases any charge. The outer producer must independently supply
+qualified capacity and its measured profile; no default producer is configured.

@@ -17,7 +17,7 @@ from modules.adapters.runtime.python.worker.tests import test_original_training_
 
 class OriginalTrainingSessionExitTests(unittest.TestCase):
     def fixture(self, method="lora", *, before_run=None, resource_type=None, original_files_hook=None,
-                bootstrap_on_main=False):
+                bootstrap_on_main=False, fixed_file_resources=False):
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="original-training-inert")
         self.addCleanup(executor.shutdown, wait=True)
         case = fixture.OriginalTrainingFilesTests(); self.addCleanup(case.doCleanups)
@@ -48,7 +48,8 @@ class OriginalTrainingSessionExitTests(unittest.TestCase):
                 if original_files_hook: original_files_hook()
                 return file_owner
 
-        resource = (resource_type or Resources)()
+        resource = (executor.submit(session.OriginalTrainingFileResources, file_owner).result(timeout=10)
+                    if fixed_file_resources else (resource_type or Resources)())
 
         class Producer(session.NativeTrainingProducer):
             @property
@@ -73,6 +74,39 @@ class OriginalTrainingSessionExitTests(unittest.TestCase):
         with patch.object(owner, "loader", return_value=TrainModelTaskResult(runId="inert", status="succeeded")):
             self.assertEqual(owner.start()["kind"], "accepted")
             owner.future.result(timeout=10)
+
+    def test_fixed_file_resources_use_the_same_executor_files_and_local_exit_proof(self):
+        owner, executor, row, updates, _, _, resource = self.ready(fixed_file_resources=True)
+        file_owner = row[0]
+        self.assertIs(resource.original_files(), file_owner)
+        self.assertIsNone(resource.output_delivery())
+        self.finish_training(owner)
+        self.assertEqual(updates[-1]["status"], "succeeded")
+        self.assertTrue(files._owners[file_owner]["output_closed"])
+        self.assertEqual(owner.begin_exit_ready(), "queued")
+        before = len(row[7].calls)
+        self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10), "ready")
+        self.assertEqual(len(row[7].calls), before)
+        self.assertFalse(resource.settle())
+        self.assertFalse(owner.settle())
+        self.assertTrue(owner.blocks_recovery)
+        self.assertTrue(all(not handle.closed for handle in row[1].guards))
+
+    def test_fixed_file_resources_cancel_after_permission_withdrawal_without_loader_or_credit(self):
+        owner, executor, row, _, current, _, resource = self.ready(fixed_file_resources=True)
+        current[0] = False
+        row[6].current = False
+        before = len(row[7].calls)
+        charged = list(row[6].charges)
+        with patch.object(owner, "loader", side_effect=AssertionError("Cancelled loader ran")):
+            self.assertTrue(owner.cancel())
+            self.assertIsNone(resource.request_cancel())
+            self.assertEqual(owner.begin_exit_ready(), "queued")
+            self.assertEqual(executor.submit(owner.finish_exit_ready).result(timeout=10), "ready")
+        self.assertEqual(len(row[7].calls), before)
+        self.assertEqual(row[6].charges, charged)
+        self.assertFalse(resource.settle())
+        self.assertFalse(owner.run_entered)
 
     def test_cancelled_before_dispatch_can_fence_prepared_files_without_running_loader(self):
         owner, executor, row, _, current, *_ = self.ready()

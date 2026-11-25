@@ -2617,3 +2617,21 @@ it consumes the genuine local file witness once and never returns settled=True.
 After the readiness latch, new work is fenced. Model/input guards, result bytes
 and all accounting remain retained. No parent resource release, SDK/process/Job
 exit, complete producer, capacity/destination/crash or real host pass is added.
+
+
+## Fixed original-file training resources
+
+The private session includes a fixed `OriginalTrainingFileResources` adapter.
+Trusted composition can bind one already registered, unentered file owner on its
+original executor. Its local prepare is passive; it must not call admission while
+Files remains bound, because a callback could consume a direct preparation
+attempt. Actual seal delegates to Files.prepare, whose existing latch precedes
+all admission and Native effects. Borrow delegates to the same original context,
+not Files.run, and retains the original output-delivery queue.
+
+The adapter permits no second seal/borrow attempt. Cancellation is one-use and
+requires no renewed business permission. A lost acknowledgement remains unknown.
+Both retirement protocols still return false from the resource settle method;
+only the existing exact local exit witness and original parent/worker/Job owners
+can establish their respective proofs. This bridge neither creates nor qualifies
+capacity, a complete producer, public activation, Save or an actual-host run.

@@ -1604,3 +1604,15 @@ repeated. No new runtime option, source-owner method, process or wire schema is
 introduced. Any partial, lost or delayed charge retains the complete reserved
 owner and actual pending operation; Model-not-charged does not prove unused
 resources. Default hosts and all physical/full-producer obligations remain.
+
+
+The fixed private `OriginalTrainingFileResources` bridges the existing genuine
+file owner and session. Local prepare is a passive original-binding/thread check,
+not a resource grant. Keep all admission callbacks inside genuine Files.prepare
+after its original latch; do not add a ready callback or mutate file phases.
+Delegate one seal and one joint borrow to the retained file owner, preserve its
+output queue and let Session.run call the loader. Cancellation uses retained
+original authority, without a renewed business grant. Neither protocol accepts
+resource settle as true. This adds no producer activation, capacity value, Native
+ABI, retry, topology, Save or recovery policy. Physical/global producer and host
+requirements remain mandatory and pending.
