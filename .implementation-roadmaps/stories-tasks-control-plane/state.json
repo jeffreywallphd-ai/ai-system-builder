@@ -87,6 +87,91 @@
         "reviewDigest": "b3e63c6227ba56a9edf66455a945665f10ac0bfa9fd4220c5ae2f49a2f4ceaa9",
         "workId": "stories-task-ui-integration"
       }
+    },
+    {
+      "areas": [
+        "Atomic scoped numeric storage and exact Work ancestry"
+      ],
+      "chunkId": "scoped-usage-store",
+      "completedAt": "2026-11-25T22:20:10Z",
+      "criteriaIds": [
+        "scope-conservation",
+        "usage-compatibility",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Installed Root numeric, reporting, architecture/security and portable workflow documentation passed current documentation and agent-support gates."
+      ],
+      "feedbackAddressed": [],
+      "id": "scoped-time-and-tokens-scoped-usage-store",
+      "incrementId": "scoped-time-and-tokens",
+      "summary": "Validated the installed exact scoped token store and Work ancestry on the current Root candidate; original numeric counters, cursors, phases, baselines and retention remain preserved.",
+      "tests": [
+        "Actual current Root v2 task-bound Work passed all eight fixed related metrics, DOM, story/view/binding, documentation, agent-support, roadmap and architecture checks; separate review accepted all five selected criteria and this full task outcome."
+      ],
+      "title": "Preserve exact scoped token accounting",
+      "workProof": {
+        "receiptDigest": "ea6ab8d4b133d5e2c3a620f8666209594628a43300eb5be2049a48e4d943cbbe",
+        "reviewDigest": "e06cffd3b05c27614e6ed16d485beecf57e319386791eb6fbc52c519f8d27919",
+        "workId": "stories-i2-root-task-outcomes"
+      }
+    },
+    {
+      "areas": [
+        "Closed bounded activity observations"
+      ],
+      "chunkId": "implementation-time-spans",
+      "completedAt": "2026-11-25T22:20:16Z",
+      "criteriaIds": [
+        "time-observations",
+        "scope-conservation",
+        "usage-compatibility",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Installed Root numeric, reporting, architecture/security and portable workflow documentation passed current documentation and agent-support gates."
+      ],
+      "feedbackAddressed": [],
+      "id": "scoped-time-and-tokens-implementation-time-spans",
+      "incrementId": "scoped-time-and-tokens",
+      "summary": "Validated closed activity replay, clock/session, overlap, phase and exact scope on the current Root candidate. Unsupported live coding-time capture remains unavailable; Work elapsed time is never substituted.",
+      "tests": [
+        "Actual current Root v2 task-bound Work passed all eight fixed related metrics, DOM, story/view/binding, documentation, agent-support, roadmap and architecture checks; separate review accepted all five selected criteria and this full task outcome."
+      ],
+      "title": "Record closed implementation-effort observations",
+      "workProof": {
+        "receiptDigest": "ea6ab8d4b133d5e2c3a620f8666209594628a43300eb5be2049a48e4d943cbbe",
+        "reviewDigest": "e06cffd3b05c27614e6ed16d485beecf57e319386791eb6fbc52c519f8d27919",
+        "workId": "stories-i2-root-task-outcomes"
+      }
+    },
+    {
+      "areas": [
+        "Read-only scoped Roadmaps reporting"
+      ],
+      "chunkId": "scoped-roadmaps-report",
+      "completedAt": "2026-11-25T22:20:23Z",
+      "criteriaIds": [
+        "roadmap-metrics",
+        "scope-conservation",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Installed Root numeric, reporting, architecture/security and portable workflow documentation passed current documentation and agent-support gates."
+      ],
+      "feedbackAddressed": [],
+      "id": "scoped-time-and-tokens-scoped-roadmaps-report",
+      "incrementId": "scoped-time-and-tokens",
+      "summary": "Validated the installed Roadmaps scope summaries, strict shared numeric destination and optional report admission on the current Root candidate. Unknown time stays unknown and canonical navigation and qualification remain intact.",
+      "tests": [
+        "Actual current Root v2 task-bound Work passed all eight fixed related metrics, DOM, story/view/binding, documentation, agent-support, roadmap and architecture checks; separate review accepted all five selected criteria and this full task outcome."
+      ],
+      "title": "Show recorded time and tokens on Roadmaps",
+      "workProof": {
+        "receiptDigest": "ea6ab8d4b133d5e2c3a620f8666209594628a43300eb5be2049a48e4d943cbbe",
+        "reviewDigest": "e06cffd3b05c27614e6ed16d485beecf57e319386791eb6fbc52c519f8d27919",
+        "workId": "stories-i2-root-task-outcomes"
+      }
     }
   ],
   "completion": null,
@@ -342,6 +427,27 @@
       "recordedAt": "2026-11-25T20:16:29Z",
       "sequence": 21,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "25470a882bbf8ede494aacaf8d66641ea789bc1df1371d5687924311c0f05013",
+      "recordedAt": "2026-11-25T22:20:10Z",
+      "sequence": 22,
+      "taskCompletionDigest": "941d78c5959aba95624a3407c0aa57a55d54ec985d5a879625161372b7eaff8c",
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ea4d7966e13a7ce4c827ba9508873dcaf1fea048f24d4c61a0d7df6049d642b6",
+      "recordedAt": "2026-11-25T22:20:16Z",
+      "sequence": 23,
+      "taskCompletionDigest": "f54f1f75a9482bcf44812165a088a9ed6015f287479ca4dc953ade0ce77a26ae",
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "5078efca60e99d10f865fc2bce7555007f4af1070bc237a1b354f09c9be99c0f",
+      "recordedAt": "2026-11-25T22:20:23Z",
+      "sequence": 24,
+      "taskCompletionDigest": "8b010142dabb7ed2ba72a95e5da842d6c83cbf0d4659c08d4736082d78bb3fd5",
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -530,7 +636,11 @@
       ],
       "allowPendingQualification": false,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "scoped-usage-store",
+        "implementation-time-spans",
+        "scoped-roadmaps-report"
+      ],
       "deliverables": [
         "Closed bounded activity spans preserve measured, estimated and unknown time.",
         "One atomic token importer preserves original counters and exclusive leaf ancestry.",
@@ -643,7 +753,7 @@
       ],
       "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
       "startedAt": "2026-11-25T20:05:40Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "Scoped implementation time and token reporting",
       "verification": [
         "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
@@ -747,5 +857,5 @@
     ],
     "schemaVersion": 1
   },
-  "updatedAt": "2026-11-25T20:16:29Z"
+  "updatedAt": "2026-11-25T22:20:23Z"
 }
