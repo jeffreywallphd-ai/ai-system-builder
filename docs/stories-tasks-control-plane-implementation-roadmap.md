@@ -2,8 +2,8 @@
 
 # Stories, tasks and scoped implementation reporting Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-11-25T18:22:35Z`
+- Status: `ready`
+- Updated: `2026-11-25T18:40:26Z`
 
 ## Objective
 
@@ -53,13 +53,13 @@ No high-level decision has been recorded.
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Stable stories and task progress | Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence. | None | `verifying` |
+| 1: Stable stories and task progress | Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence. | None | `completed` |
 | 2: Scoped implementation time and token reporting | Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history. | stable-stories-and-tasks | `pending` |
 
 ## Increment 1: Stable stories and task progress
 
 - Id: `stable-stories-and-tasks`
-- Status: `verifying`
+- Status: `completed`
 - Dependencies: None
 
 Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence.
@@ -91,11 +91,11 @@ Task counts show implementation tracking. Technical qualification remains separa
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `story-ownership`: Story adoption and refinement validate exact definitions, unique ownership and complete criterion coverage. | local | not recorded |
-| `legacy-history`: Legacy and Headless restricted plan history, approved scope and completed task definitions/order remain unchanged. | local | not recorded |
-| `task-currentness`: Optional Work task targets detect changed or foreign task definitions without altering legacy Work bindings. | local | not recorded |
-| `review-progress`: JSON projection, exact compact joins and inert UI show stories and tasks separately from execution Work. | local | not recorded |
-| `security-impact-reviewed`: Strict identities, approval and evidence integrity, bounded storage, inert display and failure paths are verified without new execution authority. | local | not recorded |
+| `story-ownership`: Story adoption and refinement validate exact definitions, unique ownership and complete criterion coverage. | local | passed (review) |
+| `legacy-history`: Legacy and Headless restricted plan history, approved scope and completed task definitions/order remain unchanged. | local | passed (review) |
+| `task-currentness`: Optional Work task targets detect changed or foreign task definitions without altering legacy Work bindings. | local | passed (review) |
+| `review-progress`: JSON projection, exact compact joins and inert UI show stories and tasks separately from execution Work. | local | passed (review) |
+| `security-impact-reviewed`: Strict identities, approval and evidence integrity, bounded storage, inert display and failure paths are verified without new execution authority. | local | passed (review) |
 
 ### Verification
 

@@ -92,7 +92,7 @@
   "completion": null,
   "completionSuite": "standardande2e",
   "createdAt": "2026-11-25T15:03:27Z",
-  "currentIncrementId": "stable-stories-and-tasks",
+  "currentIncrementId": null,
   "decisions": [],
   "discovery": {
     "constraints": [
@@ -141,7 +141,63 @@
     ],
     "summary": "Implement approved compatibility-first design b09f087503d3a3504f12761e67f5e542048f565070a0d24ef48114e8e1e97572 in an isolated checkout. Existing workPackages are approved intent; chunk IDs, evidence and fixed restriction archives remain unchanged."
   },
-  "evidence": [],
+  "evidence": [
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/stories-task-increment-1-qualification-independent-review-packet-r1.json",
+      "command": null,
+      "criterionId": "story-ownership",
+      "id": "evidence-1",
+      "incrementId": "stable-stories-and-tasks",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T18:40:19Z",
+      "summary": "Whole-feature source7806104b passed six actual focused checks. Completed Work stories-task-increment-1-qualification receipt83cda083 and accepted separate-invocation review86e38f6f cover this exact criterion. All three tasks are complete. Full state/render replay preserves historical plans, task ownership and evidence. Time/token reporting, live migration, Headless work and native/model qualification remain separate."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/stories-task-increment-1-qualification-independent-review-packet-r1.json",
+      "command": null,
+      "criterionId": "legacy-history",
+      "id": "evidence-2",
+      "incrementId": "stable-stories-and-tasks",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "summary": "Whole-feature source7806104b passed six actual focused checks. Completed Work stories-task-increment-1-qualification receipt83cda083 and accepted separate-invocation review86e38f6f cover this exact criterion. All three tasks are complete. Full state/render replay preserves historical plans, task ownership and evidence. Time/token reporting, live migration, Headless work and native/model qualification remain separate."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/stories-task-increment-1-qualification-independent-review-packet-r1.json",
+      "command": null,
+      "criterionId": "task-currentness",
+      "id": "evidence-3",
+      "incrementId": "stable-stories-and-tasks",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "summary": "Whole-feature source7806104b passed six actual focused checks. Completed Work stories-task-increment-1-qualification receipt83cda083 and accepted separate-invocation review86e38f6f cover this exact criterion. All three tasks are complete. Full state/render replay preserves historical plans, task ownership and evidence. Time/token reporting, live migration, Headless work and native/model qualification remain separate."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/stories-task-increment-1-qualification-independent-review-packet-r1.json",
+      "command": null,
+      "criterionId": "review-progress",
+      "id": "evidence-4",
+      "incrementId": "stable-stories-and-tasks",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "summary": "Whole-feature source7806104b passed six actual focused checks. Completed Work stories-task-increment-1-qualification receipt83cda083 and accepted separate-invocation review86e38f6f cover this exact criterion. All three tasks are complete. Full state/render replay preserves historical plans, task ownership and evidence. Time/token reporting, live migration, Headless work and native/model qualification remain separate."
+    },
+    {
+      "artifact": ".local-codex/headless-provider-import-20261117/stories-task-increment-1-qualification-independent-review-packet-r1.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-5",
+      "incrementId": "stable-stories-and-tasks",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "summary": "Whole-feature source7806104b passed six actual focused checks. Completed Work stories-task-increment-1-qualification receipt83cda083 and accepted separate-invocation review86e38f6f cover this exact criterion. All three tasks are complete. Full state/render replay preserves historical plans, task ownership and evidence. Time/token reporting, live migration, Headless work and native/model qualification remain separate."
+    }
+  ],
   "evidencePolicy": "control-plane-v1",
   "feedback": [],
   "finalApproval": null,
@@ -208,6 +264,42 @@
       "sequence": 10,
       "taskCompletionDigest": "9fe5c4617df110a58111556ec80981f0f8b9f8f93a81e31b9964cd0b15ca6544",
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "c36a236c22fd6315b65e236f0b4cf23537832d13179f51f693372926113c855a",
+      "recordedAt": "2026-11-25T18:40:19Z",
+      "sequence": 11,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c100533fb9f6dcb0e4e79308dd63886d1851925dc5e27bcd9c8fb0e0b771eea5",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cf803a89c1db08dd839c950101289e5d828db31798ceb76626b478275a4398cd",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1353c0a7cf4e8e043625969d2f2a8392cf8f2b6fafd43cd1556916133aff900b",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c936a86dd9f7b71415224ccda2160e00c3385a580ecfb84ee2358ecf384639c8",
+      "recordedAt": "2026-11-25T18:40:20Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a56690d19bcbca27d8ad2d61028085e55069db982bd487cbd77c3fbc3811ffbb",
+      "recordedAt": "2026-11-25T18:40:26Z",
+      "sequence": 16,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -240,12 +332,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-11-25T18:40:26Z",
       "completedChunks": [
         "story-model",
         "task-work-binding",
         "story-progress-ui"
       ],
+      "completionSummary": "All three stable-story/task outcomes and all five criteria passed current integrated-source focused checks and separate-invocation review. Normal typed completion consumes the exact whole-increment Work stories-task-increment-1-qualification. Scoped time/token reporting remains pending; no full software, runtime, native or model-quality test is claimed.",
       "deliverables": [
         "Existing approved work packages remain fixed story intent.",
         "Every adopted task has one story owner and exact optional Work evidence references.",
@@ -260,6 +353,7 @@
       "id": "stable-stories-and-tasks",
       "number": 1,
       "objective": "Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "No live Headless migration or shared usage writes occur."
@@ -340,7 +434,7 @@
       ],
       "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
       "startedAt": "2026-11-25T15:06:15Z",
-      "status": "verifying",
+      "status": "completed",
       "title": "Stable stories and task progress",
       "verification": [
         "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
@@ -455,7 +549,7 @@
   },
   "schemaVersion": 1,
   "slug": "stories-tasks-control-plane",
-  "status": "executing",
+  "status": "ready",
   "storyTaskTracking": {
     "revisions": [
       {
@@ -490,5 +584,5 @@
     ],
     "schemaVersion": 1
   },
-  "updatedAt": "2026-11-25T18:22:35Z"
+  "updatedAt": "2026-11-25T18:40:26Z"
 }
