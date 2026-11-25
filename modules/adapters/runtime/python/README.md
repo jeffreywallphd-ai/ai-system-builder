@@ -1128,6 +1128,19 @@ unchanged. Existing 64 MiB/file and 256 MiB encoded limits do not bound decoded
 RAM. Complete resource ownership, producer/custody, retirement, Save and actual
 host qualification remain pending; parser tests load no model or quality scorer.
 
+### Read sealed training results
+
+The internal `read_original_training_output_chunks` reader consumes sealed
+training results through their original held handles. It returns bounded
+provisional chunks and a verified end marker for each file. The caller must
+consume the whole stream before treating byte verification as complete. It never
+reopens a path, copies a whole weight file into memory or approves Save. Original
+permission, resource and native custody checks remain live; old producer tensor
+snapshots and copy-preparation deadlines do not govern later sealed-file reads.
+Static class checks keep reader bindings free of virtual field/lookup callbacks.
+Structural validation, producer/resource handoff, retirement and actual training
+and host qualification remain pending. Fake Native ABI tests are local evidence.
+
 ### Private protected training pipeline
 
 One fixed internal pipeline now joins original-byte dataset loading, in-memory

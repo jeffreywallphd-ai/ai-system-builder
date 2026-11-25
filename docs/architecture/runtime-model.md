@@ -3253,6 +3253,19 @@ remain pending. Installed-SDK synthetic tests supply no model-quality result.
 
 ### Private protected training stage composition
 
+The private sealed-output byte reader is separate from producer serialization and
+later format validation. It binds inventory, original hashes/identities and held
+handles during graph construction/preparation. Only the same registered live
+view/request/thread can reserve its single stream. Chunks stay within existing
+buffer/copy limits and remain provisional until file hash/EOF markers and final
+all-file/root/authority checks complete. It never reopens paths or accumulates a
+whole model. Original Native dispatch, resource and business authority remain live;
+static class checks prevent virtual field/lookup callbacks in passive bindings.
+sealed-file reads do not depend on obsolete producer SDK tensors or preparation
+timers. No reader result grants retirement, settlement, custody transfer or Save.
+Actual resources, producer composition, format validation and host tests remain
+pending; synthetic Native ABI evidence qualifies only this byte-reader component.
+
 A fixed private pipeline joins original dataset bytes, memory-only tokenization,
 safe local model loading, optional adapter setup, approved training arguments,
 protected checkpoints, Trainer history and final output staging. Capture helpers

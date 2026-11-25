@@ -2329,6 +2329,33 @@ chunks are not a decoded-memory guarantee. Full 2 GiB/process and 4 GiB total
 resource ownership, producer/custody, retirement, Save and host evidence remain
 separate. These synthetic tests never load a model or rerun accuracy.
 
+### Read sealed training results
+
+`read_original_training_output_chunks` is an original-view-only, one-use byte
+reader. Output construction freezes the approved inventory and live Native
+dispatch before supplier callbacks. Preparation captures original file hashes,
+identities and held handle numbers before later inspections. It also captures the
+sealed root. Reader creation cannot adopt replacement graph metadata or handles.
+Static class namespaces must preserve ordinary field access, hashing and equality.
+Recheck them before passive reads, so a subclass getter cannot run after admission.
+The stream emits `(name, offset, bytes)` within the existing buffer limit. An empty
+chunk marks a file only after original size, SHA-256 and actual EOF pass. All files,
+root inventory, protection and final authority must pass before iterator completion.
+Earlier chunks remain provisional. Abandonment grants neither completion nor retry.
+
+The reader uses fixed Native inspections and dispatch. Check the original Model
+and input custody, resources and business permission, in that order, with passive
+bindings after the last callback. It does not call the producer's SDK snapshot or
+expired copy-preparation guard. Original task/resource lifetime remains required.
+Foreign request/view/thread mistakes do not consume the owner's read. Caught owned
+reentry, content/protection drift or lost authority permanently deny completion.
+Uncertain Native calls retain their buffers, handles and attempted stream. No
+reader path retires IO, returns resource credit, deletes files or authorizes Save.
+This byte proof is not format validity, a completed producer or host qualification.
+Focused tests use synthetic bytes and Native ABI fixtures, without actual models.
+Their teardown removes only exact fixture-owned registry entries after the
+original retirement assertions. Production custody and all check limits stay intact.
+
 ### Compose the protected training stages
 
 `_run_protected_training_pipeline` is an internal staging component. Capture its

@@ -2952,6 +2952,33 @@ but compressed/decoded expansion still needs the pending original resource owner
 Synthetic installed-SDK denial tests grant no hard RAM/disk bound, complete
 producer/custody/retirement, Save, model accuracy, Native or host qualification.
 
+### Original sealed-output byte consumption
+
+Freeze output inventory/configuration and original live Native dispatch before
+supplier callbacks. Bind each sealed file's original hash, identity and held
+handle number, then the sealed root, before later observers can replace graph
+metadata. The reader must not adopt mutable records as its source of authority.
+Validate static graph class namespaces before registry lookup or passive field
+reads. Refuse virtual field descriptors and custom attribute/hash/equality hooks;
+ordinary protected SDK subclasses remain supported while this property holds.
+Reserve a single registered stream on the original view/request/thread before IO.
+Wrong callers do not poison the owner; caught owned reentry fails permanently.
+
+Use fixed Native inspections and call-ledger mechanics. Check file/root identity,
+sealed ACLs and finite inventory; recheck original Model/input custody and resource
+authority. Original business admission is the last callback before seek/read or
+publication, followed only by passive bindings. Never call an old producer tensor
+snapshot or copy-preparation guard to validate sealed checkpoint reads. Original
+task/resource lifetime and permission still apply. Bounded chunks are provisional:
+verify each file's original size/hash and actual EOF before its empty marker, and
+every file/root/authority again before stream completion. Abandonment is no pass.
+
+On unknown Native outcomes retain the attempted stream, pending buffers, original
+handles and accounting. Do not retry, reopen paths, close IO, delete, return credit
+or infer Save/format validity. Fake ABI/content denial tests cover this component;
+real native ownership, structural validation, producer/resource handoff, permanent
+retirement, actual fine-tuning, Save and host qualification remain pending.
+
 ### Original protected training pipeline composition
 
 Joining private stages must not restore the ordinary directory/cache/serializer

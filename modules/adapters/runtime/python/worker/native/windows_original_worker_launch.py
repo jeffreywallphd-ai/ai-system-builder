@@ -26,7 +26,7 @@ import subprocess
 import struct
 import sys
 from threading import Event, Lock, RLock, Thread, get_ident
-from types import BuiltinMethodType, FunctionType, MethodType, ModuleType
+from types import BuiltinMethodType, FunctionType, GetSetDescriptorType, MethodType, ModuleType
 from weakref import WeakKeyDictionary
 import time
 
@@ -1122,6 +1122,8 @@ _verified_model_receivers = WeakKeyDictionary()
 _sealed_training_inputs = WeakKeyDictionary()
 _training_input_readers = WeakKeyDictionary()
 _training_output_families = WeakKeyDictionary()
+_training_output_readers = WeakKeyDictionary()
+_training_output_streams = WeakKeyDictionary()
 
 
 def _retain_training_input_read_handle(graph, handle, row, identity, *, _number=OriginalWorker.number):
@@ -2452,6 +2454,243 @@ class _OriginalOutputAdmission:
         return True
 
 
+_OUTPUT_READER_FIELDS = frozenset(("owner","_native_owner","phase","retired","retirement_attempted",
+    "charged","charge_attempted","attempted","principal","view","_view_binding","lease","_lease_state",
+    "_output_family","_output_member","_request","descriptor","guards","records"))
+
+
+def _assert_plain_output_graph_type(cls):
+    """Static namespaces only: no virtual access/hash/equality in passive proof."""
+    need(type(cls) is type)
+    bases = type.__getattribute__(cls,"__mro__")
+    need(OriginalTrainingOutputGraph in bases)
+    for base in bases:
+        namespace = type.__getattribute__(base,"__dict__")
+        need(not _OUTPUT_READER_FIELDS.intersection(namespace) and "__getattr__" not in namespace)
+        for name,expected in (("__getattribute__",object.__getattribute__),
+                ("__hash__",object.__hash__),("__eq__",object.__eq__)):
+            need(name not in namespace or namespace[name] is expected)
+        descriptor = namespace.get("__dict__")
+        need(descriptor is None or type(descriptor) is GetSetDescriptorType)
+
+
+def _retain_training_output_read_handle(graph, handle, row, identity, *, _number=OriginalWorker.number):
+    _assert_plain_output_graph_type(type(graph))
+    record = _training_output_readers.get(graph)
+    need(record is not None and record["sealed"] is False and record["read_state"] == "unread"
+         and graph.owner is record["owner"] and type(identity) is bytes and len(identity) == 24)
+    number = _number(record["owner"],handle)
+    if record["principal"] is None:
+        need(type(graph.principal) is bytes and len(graph.principal) > 0)
+        record["principal"] = graph.principal
+    need(type(graph.principal) is bytes and graph.principal == record["principal"])
+    if row is None:
+        need(record["root"] is None and len(record["handles"]) == len(record["files"]))
+        record["root"] = (handle,identity,number)
+    else:
+        index = len(record["handles"])
+        need(type(row) is tuple and len(row) == 3 and index < len(record["files"]))
+        name,size,sha = row
+        need(type(name) is str and type(size) is int and (name,size) == record["files"][index]
+             and type(sha) is str and re.fullmatch(r"[a-f0-9]{64}",sha) is not None)
+        record["handles"].append((handle,identity,number,name,size,sha))
+
+
+def _assert_training_output_read_binding(graph, record, *, preparing=False, _number=OriginalWorker.number):
+    """Passive original associations, independent of producer/preparation lifetime."""
+    _assert_plain_output_graph_type(type(graph))
+    need(type(graph) is record["graph_type"])
+    need(_training_output_readers.get(graph) is record and graph.owner is record["owner"]
+         and graph._native_owner is record["owner"] and type(record["owner"]) is InheritedModelNativeCalls
+         and type(graph.phase) is str and graph.phase == "sealed" and graph.retired is False
+         and graph.retirement_attempted is False and graph.charged is True and graph.charge_attempted is True
+         and graph.attempted is True and (record["sealed"] is True or preparing)
+         and type(graph.principal) is bytes and graph.principal == record["principal"]
+         and graph.view is record["view"] and graph._view_binding is record["binding"]
+         and graph.lease is record["lease"] and graph._lease_state is record["state"]
+         and graph._output_family is record["family"] and graph._output_member is record["member"]
+         and type(graph._request) is dict and _same_model_json(graph._request,record["request"]))
+    descriptor = graph.descriptor
+    need(type(descriptor) is dict and set(descriptor) == {k for k,_ in record["configuration"]}|{"files"})
+    for key,value in record["configuration"]:
+        need(type(descriptor[key]) is type(value) and descriptor[key] == value)
+    files,handles,root = descriptor["files"],record["handles"],record["root"]
+    need(type(files) is tuple and len(files) == len(record["files"]) == len(handles)
+         and type(graph.guards) is list and len(graph.guards) == len(files)+1
+         and type(graph.records) is list and len(graph.records) == len(files) and root is not None)
+    for i,(handle,identity,number,name,size,sha) in enumerate(handles):
+        declared,observed = files[i],graph.records[i]
+        need(type(declared) is dict and set(declared) == {"name","sizeBytes"}
+             and type(observed) is dict and set(observed) == {"name","sizeBytes","sha256","identity"})
+        for row in (declared,observed):
+            need(type(row["name"]) is str and row["name"] == name
+                 and type(row["sizeBytes"]) is int and row["sizeBytes"] == size)
+        need(type(observed["sha256"]) is str and observed["sha256"] == sha
+             and type(observed["identity"]) is bytes and observed["identity"] == identity
+             and graph.guards[i] is handle and type(handle) is Handle and type(handle.slot) is P
+             and _number(record["owner"],handle) == number)
+    need(graph.guards[-1] is root[0] and type(root[0]) is Handle and type(root[0].slot) is P
+         and _number(record["owner"],root[0]) == root[2])
+
+
+class _OriginalOutputReadCalls:
+    """Inspection adapter: captured Native dispatch, never graph/SDK methods."""
+    def __init__(self, owner, bound, *, _call=OriginalWorker.call, _number=OriginalWorker.number):
+        self.buffers, self._owner, self._bound = owner.buffers,owner,bound
+        self._call,self._number = _call,_number
+
+    def number(self, handle): return self._number(self._owner,handle)
+
+    def call(self, name, *args, **kwargs):
+        self._bound()
+        result = self._call(self._owner,name,*args,**kwargs)
+        self._bound()
+        return result
+
+
+class _OriginalTrainingOutputStream:
+    """Opaque provisional byte stream; direct construction confers no authority."""
+    __slots__ = ("__weakref__",)
+    def __iter__(self): return self
+    def __next__(self):
+        need(type(self) is _OriginalTrainingOutputStream)
+        operation = _training_output_streams.get(self)
+        need(operation is not None)
+        record,advance = operation
+        need(get_ident() == record["thread"])  # Foreign mistakes never poison its owner.
+        if record["read_state"] == "complete": raise StopIteration
+        if not record["read_lock"].acquire(blocking=False):
+            record["read_state"] = "failed"; record["state"]["view_lost"] = True
+            raise LaunchUnavailable()
+        try:
+            need(record["read_state"] == "reading")
+            return next(advance)
+        except StopIteration: raise
+        except BaseException:
+            record["read_state"] = "failed"; record["state"]["view_lost"] = True
+            raise LaunchUnavailable() from None
+        finally: record["read_lock"].release()
+
+
+def read_original_training_output_chunks(graph, view, sealed_request):
+    """Read every original sealed result once. Empty chunks mark verified EOF.
+
+    Chunks are provisional until all file markers and iterator completion. This
+    proves byte custody, not format validity, retirement, Save or task success.
+    """
+    _assert_plain_output_graph_type(type(graph))
+    record = _training_output_readers.get(graph)
+    need(record is not None and type(view) is _OriginalModelView and view is record["view"]
+         and get_ident() == record["thread"] and _same_model_json(record["request"],_copy_model_json(sealed_request)))
+    if record["read_state"] == "reading":
+        record["read_state"] = "failed"; record["state"]["view_lost"] = True
+        raise LaunchUnavailable()
+    need(record["sealed"] is True and record["read_state"] == "unread")
+    record["read_state"] = "reading"; record["read_lock"] = Lock()  # Before any observer/IO.
+    token = _OriginalTrainingOutputStream(); record["stream"] = token
+    try:
+        owner,state,lease,binding = record["owner"],record["state"],record["lease"],record["binding"]
+        source,model_owner,source_record = record["source"],record["model_owner"],record["source_record"]
+        inputs = record["inputs"]; need(inputs is not None)
+        model_guard,input_guard = record["model_guard"],record["input_guard"]
+        resource,business = record["resource"],record["business"]
+        files,handles,root = record["files"],tuple(record["handles"]),record["root"]
+        config,principal = record["configuration"],record["principal"]
+        family,member = record["family"],record["member"]
+        family_record = None if family is None else _output_family_record(family)
+        buffers = owner.buffers
+        assert_binding = _assert_training_output_read_binding
+        plain_type = _assert_plain_output_graph_type
+
+        def bound():
+            plain_type(type(graph))
+            need(_training_output_readers.get(graph) is record and record["stream"] is token
+                 and type(record["read_state"]) is str and record["read_state"] == "reading"
+                 and _model_views.get(view) is binding and _model_leases.get(lease) is state
+                 and _same_model_json(binding[1],record["request"])
+                 and state["source"] is source and source.owner is model_owner
+                 and state["native_owner"] is model_owner
+                 and _verified_model_receivers.get(source) is source_record
+                 and type(source.phase) is str and source.phase == "borrowed"
+                 and state["entered"] is True and state["view_lost"] is False
+                 and state.get("borrowed_input") is inputs and inputs["active"] is True and inputs["lost"] is False
+                 and _sealed_training_inputs.get(state.get("input_copy_owner")) is inputs
+                 and state["guard"] is model_guard and inputs["guard"] is input_guard
+                 and record["resource"] is resource and record["business"] is business
+                 and record["files"] is files and record["configuration"] is config
+                 and record["root"] is root and record["principal"] is principal
+                 and type(record["handles"]) is list and len(record["handles"]) == len(handles)
+                 and all(a is b for a,b in zip(record["handles"],handles))
+                 and owner.buffers is buffers and owner.unknown is False and type(owner.pending) is list and not owner.pending
+                 and model_owner.unknown is False and type(model_owner.pending) is list and not model_owner.pending)
+            invoke,kernel,clock,lock,pending,native_handles = record["native"]
+            need(owner.invoke is invoke and owner.kernel is kernel and owner.clock is clock
+                 and owner.lock is lock and owner.pending is pending and owner.handles is native_handles
+                 and type(owner.handles) is list and all(type(h) is Handle for h in owner.handles))
+            if family is None: need(state.get("output_copy_owner") is graph)
+            else:
+                need(_training_output_families.get(family) is family_record
+                     and state.get("output_copy_owner") is family and family_record["lease_state"] is state
+                     and family_record["binding"] is binding and type(family_record["phase"]) is str
+                     and family_record["phase"] in ("bound","sealed")
+                     and family_record["methods"]["resource"] is resource and family_record["methods"]["business"] is business
+                     and any(row is member for row in family_record["members"])
+                     and member["graph"] is graph and type(member["stage"]) is str
+                     and member["stage"] == "sealed" and member["charged"] is True)
+            assert_binding(graph,record)
+
+        def guard():
+            bound(); model_guard(); bound(); input_guard(); bound(); model_guard(); bound()
+            need(resource() is True); bound()
+            need(business() is True); bound()  # Last callback before the effect.
+
+        inspection = NativeModelInspection()
+        inspection.owner = _OriginalOutputReadCalls(owner,bound)
+        inspection.descriptor = dict(config)
+        native_call = OriginalWorker.call.__get__(owner)
+        buffer_size = dict(config)["bufferBytes"]
+        acl = (model_acl(principal,sealed=True),0x1004,principal)
+
+        def all_current():
+            guard()
+            for handle,identity,_,_,size,_ in handles:
+                need(NativeModelInspection.facts(inspection,handle)[0:2] == (identity,size)
+                     and NativeModelInspection.permissions(inspection,handle) == acl)
+            need(NativeModelInspection.identity(inspection,root[0]) == root[1]
+                 and NativeModelInspection.permissions(inspection,root[0]) == acl)
+            NativeModelInspection.graph_matches(inspection,root[0],
+                tuple({"name":name,"identity":identity,"sizeBytes":size} for _,identity,_,name,size,_ in handles))
+            guard()
+
+        def advance():
+            OriginalWorker._main(owner); all_current()
+            buffer = C.create_string_buffer(buffer_size)
+            for handle,_,number,name,size,sha in handles:
+                position = C.c_int64(); guard()
+                native_call("SetFilePointerEx",number,0,C.byref(position),0,keep=(handle,position))
+                guard(); need(position.value == 0)
+                offset,digest = 0,hashlib.sha256()
+                while offset < size:
+                    all_current(); capacity = min(buffer_size,size-offset); count = U32()
+                    native_call("ReadFile",number,buffer,capacity,C.byref(count),None,keep=(handle,buffer,count))
+                    guard(); need(0 < count.value <= capacity)
+                    chunk = buffer.raw[:count.value]; digest.update(chunk)
+                    start = offset; offset += len(chunk)
+                    yield (name,start,chunk)
+                all_current(); count = U32()
+                native_call("ReadFile",number,buffer,1,C.byref(count),None,keep=(handle,buffer,count))
+                guard(); need(count.value == 0 and digest.hexdigest() == sha)
+                yield (name,offset,b"")
+            all_current(); record["read_state"] = "complete"
+
+        _training_output_streams[token] = (record,advance())
+        bound()
+        return token
+    except BaseException:
+        record["read_state"] = "failed"; record["state"]["view_lost"] = True
+        raise LaunchUnavailable() from None
+
+
 class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
     """One streamed output graph in the original live training view.
 
@@ -2460,6 +2699,7 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
     retirement or durable reservation. No existing path is adopted or removed.
     """
     def __init__(self, view, sealed_request, configuration, files, reservation, admission, *, _family=None):
+        _assert_plain_output_graph_type(type(self))
         self._output_family, self._output_member = _family, None
         need(_family is None or type(_family) is OriginalTrainingOutputFamily)
         need(type(view) is _OriginalModelView)
@@ -2482,9 +2722,24 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
         self._operation_lock, self._operation_active, self._output_guard_active = Lock(), False, False
         owner = InheritedModelNativeCalls(state["native_owner"].kernel, clock=state["native_owner"].clock)
         self.owner = self._native_owner = owner
+        reader = {"graph_type":type(self),"owner":owner,"view":view,"binding":binding,"state":state,"lease":lease,
+            "request":_copy_model_json(self._request),"thread":thread,"family":_family,"member":self._output_member,
+            "files":tuple((row["name"],row["sizeBytes"]) for row in descriptor["files"]),
+            "configuration":tuple((key,value) for key,value in descriptor.items() if key != "files"),
+            "handles":[],"root":None,"principal":None,"sealed":False,"read_state":"unread","stream":None}
+        original_inputs = state.get("borrowed_input"); need(original_inputs is not None)
+        reader.update(source=state["source"],model_owner=state["native_owner"],
+            source_record=_verified_model_receivers.get(state["source"]),inputs=original_inputs,
+            model_guard=state["guard"],input_guard=original_inputs["guard"],
+            native=(owner.invoke,owner.kernel,owner.clock,owner.lock,owner.pending,owner.handles))
+        _training_output_readers[self] = reader  # Before supplier method access.
         try:
             controls = _OriginalOutputFamilyControls(_family,self._output_member) if _family is not None else None
             self._output_admission = _OriginalOutputAdmission(self, controls if controls is not None else admission)
+            if controls is not None:
+                reader["resource"],reader["business"] = controls.resource,controls.business
+            else:
+                reader["resource"],reader["business"] = reservation.assert_current,self._output_admission.current
             self._bind_copy(owner, descriptor, controls if controls is not None else reservation, self._output_admission)
             if self._output_member is not None:
                 record = _output_family_record(_family); need(record["phase"] == "bound")
@@ -2567,6 +2822,7 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                     self.guard(); need(self.seal(writer) == identity)
                     self.owner.close(writer)
                     read = self.open(self.fresh, row["name"], 0x20089, directory=False)
+                    _retain_training_output_read_handle(self,read,(row["name"],copied,digest.hexdigest()),identity)
                     self.guards.append(read)
                     record = {**row, "sha256": digest.hexdigest(), "identity": identity}
                     need(self.facts(read) == (identity, copied, allocation))
@@ -2575,6 +2831,7 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                 self.graph_matches(self.fresh, self.records); self.checkpoint("seal")
                 root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
                 root = self.open(parent, self.descriptor["freshName"], 0x200a1, directory=True)
+                _retain_training_output_read_handle(self,root,None,root_identity)
                 need(self.identity(root) == root_identity); self.guards.append(root)
                 for handle in self.guards:
                     need(self.permissions(handle) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
@@ -2583,6 +2840,9 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                     self._output_member["stage"] = "sealed"
                     record = _output_family_record(self._output_family)
                     if len(record["members"]) == len(record["outputs"]): record["phase"] = "sealed"
+                reader = _training_output_readers[self]
+                _assert_training_output_read_binding(self,reader,preparing=True)
+                reader["sealed"] = True
             except BaseException:
                 self.phase = "failed"
                 _fail_output_family(self._output_family)

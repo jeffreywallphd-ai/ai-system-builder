@@ -611,6 +611,23 @@ class TrainingInputCopyTests(unittest.TestCase):
             for thread in owner.readers: thread.join(1)
             self.assertTrue(owner.observe_retirement())
             self.assertEqual(model_control.retained,[descriptor()["maximumCopyBytes"]])
+            # Inert ABI fixtures deliberately model permanently retained native
+            # custody. Their self-referential registries otherwise keep every
+            # synthetic Kernel call buffer alive across the whole test module.
+            # Remove only this fixture after its unchanged retirement assertions;
+            # this is not a production retirement/credit path.
+            for output,record in list(native_module._training_output_readers.items()):
+                if record["lease"] is lease:
+                    if record["stream"] is not None:native_module._training_output_streams.pop(record["stream"],None)
+                    native_module._training_output_readers.pop(output,None)
+            for family,record in list(native_module._training_output_families.items()):
+                if record["lease"] is lease:native_module._training_output_families.pop(family,None)
+            for graph in list(native_module._training_input_readers):
+                if graph.lease is lease:
+                    native_module._training_input_readers.pop(graph,None)
+                    native_module._sealed_training_inputs.pop(graph,None)
+            native_module._model_leases.pop(lease,None)
+            native_module._verified_model_receivers.pop(source,None)
         self.addCleanup(finish_model_only)
         return source,lease,staged,config,control,child,content,recipe
 
@@ -1384,6 +1401,266 @@ class TrainingOutputFamilyTests(unittest.TestCase):
                         with self.assertRaises(actual.LaunchUnavailable):actual.OriginalTrainingOutputGraph(view,selected_request,supplied,files,selected_reservation,business,_family=family)
                     self.assertEqual(reservation.charges,[])
                     self.assertNotIn("X:\\private\\outputs\\checkpoint-1",kernel.nodes)
+
+
+class TrainingOutputReaderTests(unittest.TestCase):
+    def fixture(self, method="lora", large=False):
+        case=TrainingOutputCustodyTests(); facts=case.fixture(method); self.addCleanup(case.doCleanups)
+        actual,source,lease,inputs,request,_,kernel,config,contents,files,control=facts
+        if large:
+            name="model.safetensors" if method=="full-finetune" else "adapter_model.safetensors"
+            contents[name]=bytes(range(256))*35
+            files[:]=[{"name":name,"sizeBytes":len(raw)} for name,raw in contents.items()]
+        return facts
+
+    def graph(self, actual,view,request,config,files,control,contents):
+        graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+        graph.prepare({name:tuple(raw[i:i+config["bufferBytes"]] for i in range(0,len(raw),config["bufferBytes"]))
+            for name,raw in contents.items()})
+        return graph
+
+    def test_original_output_reader_streams_all_profiles_with_verified_eof_without_reopening(self):
+        for method in ("lora","qlora","full-finetune"):
+            with self.subTest(method=method):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture(method,large=True)
+                with lease.borrow(request) as view:
+                    graph=self.graph(actual,view,request,config,files,control,contents)
+                    before=len(kernel.calls);stream=actual.read_original_training_output_chunks(graph,view,request)
+                    self.assertEqual(len(kernel.calls),before)  # Opaque reservation precedes IO.
+                    result={};markers=[]
+                    for name,offset,chunk in stream:
+                        self.assertIs(type(chunk),bytes);self.assertLessEqual(len(chunk),config["bufferBytes"])
+                        if chunk:
+                            self.assertEqual(offset,len(result.get(name,b"")));result[name]=result.get(name,b"")+chunk
+                        else:markers.append((name,offset))
+                    self.assertEqual(result,contents);self.assertEqual(markers,[(name,len(raw)) for name,raw in contents.items()])
+                    self.assertEqual(actual._training_output_readers[graph]["read_state"],"complete")
+                    self.assertFalse(any(name in ("NtCreateFile","WriteFile","CloseHandle") for name,_ in kernel.calls[before:]))
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_output_chunks(graph,view,request)
+                    with self.assertRaises(StopIteration):next(stream)
+                    self.assertEqual(len(kernel.calls),before);self.assertFalse(actual._model_leases[lease]["view_lost"])
+                    self.assertEqual(control.retained,[])
+
+    def test_original_output_reader_foreign_request_view_and_thread_do_not_consume_or_poison(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=self.graph(actual,view,request,config,files,control,contents);before=len(kernel.calls)
+            changed=copy.deepcopy(request);changed["commonParameters"]["maxSteps"]=999
+            for other_view,other_request in ((object(),request),(view,changed)):
+                with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_output_chunks(graph,other_view,other_request)
+            denied=[]
+            def foreign_factory():
+                try:actual.read_original_training_output_chunks(graph,view,request)
+                except actual.LaunchUnavailable:denied.append(True)
+            worker=Thread(target=foreign_factory);worker.start();worker.join(3)
+            self.assertFalse(worker.is_alive());self.assertEqual(denied,[True]);self.assertEqual(len(kernel.calls),before)
+            stream=actual.read_original_training_output_chunks(graph,view,request)
+            def foreign_next():
+                try:next(stream)
+                except actual.LaunchUnavailable:denied.append(True)
+            worker=Thread(target=foreign_next);worker.start();worker.join(3)
+            self.assertFalse(worker.is_alive());self.assertEqual(denied,[True,True])
+            self.assertEqual(len(list(stream)),2*len(files));self.assertFalse(actual._model_leases[lease]["view_lost"])
+
+    def test_original_output_reader_rejects_corrupt_short_trailing_and_protection_changes(self):
+        for mode in ("corrupt","short","trailing","identity","acl","extra"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=self.graph(actual,view,request,config,files,control,contents)
+                    node=kernel.nodes[graph.physical_path+"\\"+files[0]["name"]]
+                    if mode=="corrupt":node["data"][0]^=1
+                    elif mode=="short":del node["data"][-1:]
+                    elif mode=="trailing":node["data"].append(1)
+                    elif mode=="identity":node["id"]+=999
+                    elif mode=="acl":node["acl"]=b"changed"
+                    else:kernel.node(graph.physical_path+"\\foreign.json",False,b"x")
+                    stream=actual.read_original_training_output_chunks(graph,view,request);markers=[]
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        for row in stream:
+                            if not row[2]:markers.append(row)
+                    self.assertEqual(markers,[]);self.assertEqual(actual._training_output_readers[graph]["read_state"],"failed")
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_output_chunks(graph,view,request)
+                    self.assertEqual(len(kernel.calls),before);self.assertTrue(all(not h.closed for h in graph.guards))
+                    self.assertEqual(control.retained,[])
+
+    def test_original_output_reader_original_inventory_cannot_be_replaced_before_or_after_reservation(self):
+        for when in ("before","after"):
+            for mode in ("records","descriptor","handle","number","root","request"):
+                with self.subTest(when=when,mode=mode):
+                    actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                    with lease.borrow(request) as view:
+                        graph=self.graph(actual,view,request,config,files,control,contents)
+                        stream=None if when=="before" else actual.read_original_training_output_chunks(graph,view,request)
+                        if mode=="records":graph.records[0]["sha256"]="a"*64
+                        elif mode=="descriptor":graph.descriptor["files"][0]["sizeBytes"]+=1
+                        elif mode=="handle":graph.guards[0]=graph.guards[1]
+                        elif mode=="number":graph.guards[0].slot.value=graph.guards[1].slot.value
+                        elif mode=="root":graph.guards[-1]=graph.guards[0]
+                        else:graph._request["commonParameters"]["maxSteps"]=999
+                        before=len(kernel.calls)
+                        with self.assertRaises(actual.LaunchUnavailable):
+                            if stream is None:stream=actual.read_original_training_output_chunks(graph,view,request)
+                            list(stream)
+                        self.assertEqual(len(kernel.calls),before)
+
+    def test_original_output_reader_caught_factory_or_iterator_reentry_denies_outer_operation(self):
+        for mode in ("factory","iterator"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=self.graph(actual,view,request,config,files,control,contents)
+                    stream=actual.read_original_training_output_chunks(graph,view,request);entered=[];denied=[]
+                    def reenter(name):
+                        if name=="ReadFile" and not entered:
+                            entered.append(True)
+                            try:
+                                if mode=="factory":actual.read_original_training_output_chunks(graph,view,request)
+                                else:next(stream)
+                            except actual.LaunchUnavailable:denied.append(True)
+                    kernel.after=reenter
+                    with self.assertRaises(actual.LaunchUnavailable):next(stream)
+                    self.assertEqual(entered,[True]);self.assertEqual(denied,[True]);self.assertEqual(control.retained,[])
+
+    def test_original_output_reader_unknown_read_retains_buffers_handles_and_attempt(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=self.graph(actual,view,request,config,files,control,contents)
+            stream=actual.read_original_training_output_chunks(graph,view,request)
+            kernel.error_after_return="ReadFile"
+            with self.assertRaises(actual.LaunchUnavailable):next(stream)
+            self.assertTrue(graph.owner.unknown);self.assertTrue(graph.owner.pending)
+            pending=graph.owner.pending[-1];self.assertEqual(pending["name"],"ReadFile")
+            self.assertTrue(pending["value_returned"]);self.assertEqual(len(pending["keep"]),3)
+            before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):next(stream)
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_output_chunks(graph,view,request)
+            self.assertEqual(len(kernel.calls),before);self.assertIs(actual._training_output_readers[graph]["stream"],stream)
+            self.assertTrue(all(not h.closed for h in graph.guards));self.assertEqual(control.retained,[])
+
+    def test_original_output_reader_permission_loss_on_bytes_or_eof_publishes_no_marker(self):
+        for at in (1,2):
+            with self.subTest(at=at):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=self.graph(actual,view,request,config,files,control,contents);seen=[];markers=[]
+                    def revoke(name):
+                        if name=="ReadFile":
+                            seen.append(True)
+                            if len(seen)==at:control.current=False
+                    kernel.after=revoke;stream=actual.read_original_training_output_chunks(graph,view,request)
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        for row in stream:
+                            if not row[2]:markers.append(row)
+                    self.assertEqual(markers,[]);self.assertEqual(len(seen),at)
+
+    def test_original_output_reader_denies_short_overcount_and_nonempty_eof_replies(self):
+        for mode in ("short","overcount","eof"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=self.graph(actual,view,request,config,files,control,contents);reads=[];markers=[]
+                    def alter_count(name):
+                        if name=="ReadFile":
+                            reads.append(True);args=kernel.calls[-1][1]
+                            if len(reads)==1 and mode!="eof":args[3]._obj.value=0 if mode=="short" else args[2]+1
+                            elif len(reads)==2 and mode=="eof":args[3]._obj.value=1
+                    kernel.after=alter_count
+                    stream=actual.read_original_training_output_chunks(graph,view,request)
+                    with self.assertRaises(actual.LaunchUnavailable):
+                        for row in stream:
+                            if not row[2]:markers.append(row)
+                    self.assertEqual(markers,[]);self.assertEqual(control.retained,[])
+
+    def test_original_output_reader_abandonment_never_completes_or_allows_fresh_read(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture(large=True)
+        with lease.borrow(request) as view:
+            graph=self.graph(actual,view,request,config,files,control,contents)
+            stream=actual.read_original_training_output_chunks(graph,view,request);next(stream)
+            self.assertEqual(actual._training_output_readers[graph]["read_state"],"reading")
+            before=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):actual.read_original_training_output_chunks(graph,view,request)
+            with self.assertRaises(actual.LaunchUnavailable):next(stream)
+            self.assertEqual(len(kernel.calls),before);self.assertEqual(control.retained,[])
+
+    def test_original_output_reader_avoids_producer_guards_preparation_deadline_and_replaceable_number(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=self.graph(actual,view,request,config,files,control,contents)
+            graph.started=-10**9
+            graph.guard=lambda:self.fail("Expired producer proof was invoked")
+            graph.assert_sealed=lambda:self.fail("Producer snapshot was invoked")
+            graph.owner.number=lambda handle:self.fail("Replaceable native number was invoked")
+            self.assertEqual(len(list(actual.read_original_training_output_chunks(graph,view,request))),2*len(files))
+
+    def test_original_output_reader_family_keeps_live_resources_without_reusing_tensor_snapshot(self):
+        for mode in ("current","resource","business"):
+            with self.subTest(mode=mode):
+                actual,_,lease,_,request,_,kernel,config,contents,files,reservation=self.fixture()
+                business=Control()
+                with lease.borrow(request) as view:
+                    family=actual.OriginalTrainingOutputFamily(view,request,
+                        {"maximumCopyBytes":config["maximumCopyBytes"],"outputs":[config]},reservation,business)
+                    actual._claim_output_family_training(family,object(),{},lambda:self.fail("Old SDK tensor snapshot was invoked"))
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,reservation,business,_family=family)
+                    graph.prepare({name:iter((raw,)) for name,raw in contents.items()})
+                    graph.started=-10**9
+                    if mode!="current":(reservation if mode=="resource" else business).current=False
+                    stream=actual.read_original_training_output_chunks(graph,view,request)
+                    if mode=="current":self.assertEqual(len(list(stream)),2*len(files))
+                    else:
+                        before=len(kernel.calls)
+                        with self.assertRaises(actual.LaunchUnavailable):next(stream)
+                        self.assertFalse(any(name in ("ReadFile","SetFilePointerEx") for name,_ in kernel.calls[before:]))
+                    self.assertEqual(reservation.retained,[])
+
+    def test_original_output_reader_freezes_native_and_live_guard_dispatch_before_read_callbacks(self):
+        for mode in ("native","model-guard","input-guard"):
+            with self.subTest(mode=mode):
+                actual,_,lease,inputs,request,_,kernel,config,contents,files,control=self.fixture()
+                with lease.borrow(request) as view:
+                    graph=self.graph(actual,view,request,config,files,control,contents)
+                    if mode=="native":graph.owner.invoke=lambda *args:self.fail("Changed Native dispatch was invoked")
+                    elif mode=="model-guard":actual._model_leases[lease]["guard"]=lambda:self.fail("Changed Model guard was invoked")
+                    else:actual._sealed_training_inputs[inputs]["guard"]=lambda:self.fail("Changed input guard was invoked")
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):list(actual.read_original_training_output_chunks(graph,view,request))
+                    self.assertEqual(len(kernel.calls),before)
+
+    def test_original_output_reader_refuses_virtual_field_and_lookup_classes_before_callbacks(self):
+        for name in ("phase","owner","__getattribute__","__getattr__","__hash__","__eq__"):
+            with self.subTest(name=name):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture();called=[]
+                def observer(*args):called.append(True);raise AssertionError("Virtual reader binding must not run")
+                value=property(observer) if name in ("phase","owner") else observer
+                cls=type("UnsupportedOutputGraph",(actual.OriginalTrainingOutputGraph,),{name:value})
+                with lease.borrow(request) as view:
+                    before=len(kernel.calls)
+                    with self.assertRaises(actual.LaunchUnavailable):cls(view,request,config,files,control,control)
+                    self.assertEqual(called,[]);self.assertEqual(len(kernel.calls),before);self.assertEqual(control.charges,[])
+
+    def test_original_output_reader_checks_subclass_namespace_before_post_admission_fields(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture();called=[]
+        class PlainOutputGraph(actual.OriginalTrainingOutputGraph):pass
+        class Admission(Control):
+            armed=False
+            boundary=None
+            def assert_current(self):
+                if self.armed and self.boundary is None:
+                    self.boundary=len(kernel.calls)
+                    PlainOutputGraph.phase=property(lambda self:called.append(True))
+                return self.current
+        admission=Admission()
+        with lease.borrow(request) as view:
+            graph=PlainOutputGraph(view,request,config,files,control,admission)
+            graph.prepare({name:iter((raw,)) for name,raw in contents.items()})
+            stream=actual.read_original_training_output_chunks(graph,view,request)
+            admission.armed=True
+            with self.assertRaises(actual.LaunchUnavailable):next(stream)
+            self.assertIsNotNone(admission.boundary)
+            self.assertEqual(called,[]);self.assertEqual(len(kernel.calls),admission.boundary)
 
 
 class TrainingOutputCustodyTests(unittest.TestCase):
