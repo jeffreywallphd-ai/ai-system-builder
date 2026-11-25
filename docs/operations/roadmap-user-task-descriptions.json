@@ -1152,6 +1152,48 @@
           "The complete training adapter, storage protection, an actual training run, saving and app tests remain pending."
         ]
       }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "record_id": "scoped-usage-store",
+      "source_definition_digest": "bab8e8b599a74440624c48428fd4c384b7cd4dbb395c689b7e44b53ce3a607af",
+      "user_description": {
+        "title": "Keep scoped token usage exact",
+        "purpose": "Keep known token totals connected to their story, increment or roadmap without guessing history or counting usage twice.",
+        "scope": [
+          "Capture is optional. Missing observations never become zero or a qualification pass."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "record_id": "implementation-time-spans",
+      "source_definition_digest": "403802c9f1fc936b11917533f084c91a8187f1f0e2da7a954e360e37044de6ac",
+      "user_description": {
+        "title": "Record implementation effort",
+        "purpose": "Record closed observed work intervals as measured, estimated or unknown, with duplicate and overlap checks.",
+        "scope": [
+          "Capture is optional. Missing observations never become zero or a qualification pass."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "record_id": "scoped-roadmaps-report",
+      "source_definition_digest": "801c9e93481fdfd7ca1cb9b6bb6a6a8ca0cf74139150edd83fa623fd843572a9",
+      "user_description": {
+        "title": "Show recorded time and tokens",
+        "purpose": "Show recorded effort and token usage at story, increment and roadmap levels, with short period reports and clear coverage gaps.",
+        "scope": [
+          "Capture is optional. Missing observations never become zero or a qualification pass."
+        ]
+      }
     }
   ]
 }

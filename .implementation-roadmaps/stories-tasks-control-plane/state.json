@@ -92,7 +92,7 @@
   "completion": null,
   "completionSuite": "standardande2e",
   "createdAt": "2026-11-25T15:03:27Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "scoped-time-and-tokens",
   "decisions": [],
   "discovery": {
     "constraints": [
@@ -300,6 +300,31 @@
       "recordedAt": "2026-11-25T18:40:26Z",
       "sequence": 16,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "b9ad2d42e8801760adbce81dca600e7adec4525b2ce5fb283dab9dcbf375329d",
+      "recordedAt": "2026-11-25T20:05:40Z",
+      "sequence": 17,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "c6b7256b1f28c8390f261dd641250c08ae55e76ecfa11c3a5cabee31f7f15bba",
+      "recordedAt": "2026-11-25T20:05:40Z",
+      "sequence": 18,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "e08136aa832850574cc32f8bb779fae4526d8b83ab27b08fadcf7f863b6aac86",
+      "recordedAt": "2026-11-25T20:05:40Z",
+      "sequence": 19,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "880a590cdb1ed37051638d45454ffdab401f7bff45be3b0e155aeae543e658ca",
+      "recordedAt": "2026-11-25T20:05:47Z",
+      "sequence": 20,
+      "storyTaskRevisionDigest": "7de47b4d6de224fbb22c2ac0976faf8b3901e6c327951e87d15abdf933727856",
+      "type": "story-tasks-assigned"
     }
   ],
   "increments": [
@@ -505,11 +530,103 @@
       "id": "scoped-time-and-tokens",
       "number": 2,
       "objective": "Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "Existing user-approved design b09f087503d3a3504f12761e67f5e542048f565070a0d24ef48114e8e1e97572 covers this exact compatibility-first scope.",
+          "No new retention/budget/sharding/resource policy is introduced; if existing atomic capacity cannot admit data, preserve bytes and report optional metrics unavailable.",
+          "No isolated host activity/counter attribution is invented or bound to the parent session."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "scope-conservation",
+              "usage-compatibility",
+              "security-impact-reviewed"
+            ],
+            "id": "scoped-usage-store",
+            "outcome": "Explicitly enable compatible scoped storage only after readers are ready. Derive known Work scope without task/parent duplication and atomically preserve all original token totals, cursors, baselines, phase classifications and retention under the unchanged4MiB cap.",
+            "title": "Preserve exact scoped token accounting"
+          },
+          {
+            "criteriaIds": [
+              "time-observations",
+              "scope-conservation",
+              "usage-compatibility",
+              "security-impact-reviewed"
+            ],
+            "id": "implementation-time-spans",
+            "outcome": "Accept optional closed numeric own-agent activity spans with consistent measured clocks or explicit estimates; preserve unknown duration/context, refuse replay conflicts and overlaps, and aggregate agent effort separately from Work elapsed and token windows.",
+            "title": "Record closed implementation-effort observations"
+          },
+          {
+            "criteriaIds": [
+              "roadmap-metrics",
+              "scope-conservation",
+              "security-impact-reviewed"
+            ],
+            "id": "scoped-roadmaps-report",
+            "outcome": "Show simple recorded implementation effort and measured/estimated own token totals at story, increment and roadmap scope, with explicit unassigned/unknown coverage and bounded day/week/quarter disclosures. Missing, malformed or oversized optional reports leave canonical navigation and qualification intact.",
+            "title": "Show recorded time and tokens on Roadmaps"
+          }
+        ],
+        "completionTests": [
+          "After all tasks in this increment are implemented, run only related numeric store/phase/capture/projection/UI checks plus documentation and agent-support gates.",
+          "The overall configured aggregate remains a separate required boundary; this run remains subject to the user restriction against broad application/system/model/native/accuracy suites."
+        ],
+        "documentation": [
+          "Update numeric usage setup/migration/limitations, helper/review README, architecture/security, context routing and portable installation references.",
+          "Keep defaults v2, explicit v3 activation after compatible readers restart, no live shared-store writes from this checkout and no historical metric guesses."
+        ],
+        "fingerprint": "26523b10eba61cb54f90dbb04b15a0b6a33b5944d36ec63d63a23200615b6df5",
+        "focusedTests": [
+          "Exact Work/task scope mapping, two tasks/one story, multiple stories/increment-only, parent-inclusive/child-own conservation and unknown/crossed source intervals.",
+          "Real isolated v1/v2 activation and raw data/cursor/phase identity, duplicate imports, retention/older-quarter folding, full-store and interrupted-write preservation.",
+          "Closed measured/estimated/unknown time, replay, same-agent cross-session overlap, invalid clocks and separate review-fix attribution.",
+          "Optional Roadmaps reports, exact paging/canonical facts, byte-cap omission, inert malformed data and background desktop/narrow browser views using synthetic isolated stores."
+        ],
+        "recordedAt": "2026-11-25T20:05:40Z",
+        "rollback": "Keep explicit scoped activation disabled. Revert source through a reviewed successor; preserve existing stores, original counters/cursors and all metadata/evidence. Do not downgrade or discard an enabled v3 file through an old writer.",
+        "steps": [
+          "Implement the compatible explicit scoped-store activation and exact Work-to-scope context; preserve every raw replay/classification value and prove exclusive conservation.",
+          "Implement optional closed implementation-time spans with measured/estimated/unknown states, own-session replay and overlap denial, plus bounded phase/period rollups.",
+          "Project simple story/increment/roadmap summaries and bounded trends; keep Work elapsed separate and optional failures inert. Run focused migration/security/DOM/background browser evidence and independent reviews before each coherent source checkpoint."
+        ],
+        "summary": "Add opt-in exact scope accounting, closed implementation-effort observations and simple Roadmaps reports with compatible readers and unchanged bounds."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-25T20:05:40Z",
+          "risks": [
+            "Unknown or crossed Work/session intervals could be attributed to the wrong story. Require exact known source-bound context and retain unknown/mixed states.",
+            "Raw old totals/cursors/phases must survive optional v3 activation. Capacity and interrupted publication must preserve all old bytes and fail closed without gating Work.",
+            "Parent-inclusive counters, task aliases and overlapping own time spans must not be added twice. Keep exclusive leaf groups and separate own/inclusive/unknown views.",
+            "Implementation effort cannot be inferred from Work wall-clock, check duration or token windows. Accept closed numeric host spans or explicit estimates only.",
+            "Optional metrics must never break canonical paging/navigation or invent coverage; omit only optional reports when their bytes cannot fit the existing response bound."
+          ],
+          "sources": [
+            {
+              "title": "Atomic numeric usage and existing retention",
+              "url": "dev-tools/helpers/control_plane/usage.py"
+            },
+            {
+              "title": "Work/phase fences and selected capture",
+              "url": "dev-tools/helpers/control_plane/usage_phases.py"
+            },
+            {
+              "title": "Existing elapsed delivery and review projection",
+              "url": "dev-tools/helpers/control_plane/projection.py"
+            },
+            {
+              "title": "Numeric-only usage source/setup semantics",
+              "url": "docs/diagnostics/token-usage-tracking.md"
+            }
+          ],
+          "summary": "Inspect the existing single-file numeric usage importer, v1/v2 integrity/replay migrations, phase fencing, selected local capture, Work delivery aggregates and read-only Roadmaps projection. Reuse the unchanged4MiB atomic store and400/156/40retention. Prototype preserves raw numeric groups while exclusive scope contributions fold exactly once; absent host activity capture remains unknown. The current own host has no isolated session reference, so no historical or unrelated session attribution is permitted."
+        }
+      ],
       "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-25T20:05:40Z",
+      "status": "implementing",
       "title": "Scoped implementation time and token reporting",
       "verification": [
         "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
@@ -549,7 +666,7 @@
   },
   "schemaVersion": 1,
   "slug": "stories-tasks-control-plane",
-  "status": "ready",
+  "status": "executing",
   "storyTaskTracking": {
     "revisions": [
       {
@@ -580,9 +697,38 @@
         "recordedAt": "2026-11-25T15:32:34Z",
         "revision": 1,
         "storiesDigest": "ab2e3df0227af95a44a7e3fbb5ed809603d8eea3ce5653eab02b055cb286c588"
+      },
+      {
+        "approvedScopeDigest": "9601effbc103b3f8b8ae9be1aeb07204bbf95d5c88a0a516c0c01c1a446f828c",
+        "assignments": [
+          {
+            "storyId": "scoped-tokens",
+            "taskDefinitionDigest": "bab8e8b599a74440624c48428fd4c384b7cd4dbb395c689b7e44b53ce3a607af",
+            "taskId": "scoped-usage-store"
+          },
+          {
+            "storyId": "honest-time",
+            "taskDefinitionDigest": "403802c9f1fc936b11917533f084c91a8187f1f0e2da7a954e360e37044de6ac",
+            "taskId": "implementation-time-spans"
+          },
+          {
+            "storyId": "simple-reporting",
+            "taskDefinitionDigest": "801c9e93481fdfd7ca1cb9b6bb6a6a8ca0cf74139150edd83fa623fd843572a9",
+            "taskId": "scoped-roadmaps-report"
+          }
+        ],
+        "authorityRef": "user-approved-stories-tasks-b09f0875",
+        "eventFingerprint": "880a590cdb1ed37051638d45454ffdab401f7bff45be3b0e155aeae543e658ca",
+        "incrementId": "scoped-time-and-tokens",
+        "planDigest": "397798fa181f4b057bf660e642dc0a6430d6c69ba5f3cfb5146407195d082296",
+        "priorDigest": null,
+        "reason": "Adopt the three tasks under the existing approved fixed stories; preserve all prior history, I1 qualification and pending I2 evidence.",
+        "recordedAt": "2026-11-25T20:05:47Z",
+        "revision": 1,
+        "storiesDigest": "5f7e57019a5ee2eab53831224de7e70c55ce1c2708f0c3c85c6b32da49b7b0a1"
       }
     ],
     "schemaVersion": 1
   },
-  "updatedAt": "2026-11-25T18:40:26Z"
+  "updatedAt": "2026-11-25T20:05:47Z"
 }

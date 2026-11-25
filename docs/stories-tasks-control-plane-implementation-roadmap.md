@@ -2,8 +2,8 @@
 
 # Stories, tasks and scoped implementation reporting Implementation Roadmap
 
-- Status: `ready`
-- Updated: `2026-11-25T18:40:26Z`
+- Status: `executing`
+- Updated: `2026-11-25T20:05:47Z`
 
 ## Objective
 
@@ -54,7 +54,7 @@ No high-level decision has been recorded.
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
 | 1: Stable stories and task progress | Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence. | None | `completed` |
-| 2: Scoped implementation time and token reporting | Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history. | stable-stories-and-tasks | `pending` |
+| 2: Scoped implementation time and token reporting | Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history. | stable-stories-and-tasks | `implementing` |
 
 ## Increment 1: Stable stories and task progress
 
@@ -115,7 +115,7 @@ Keep versioned evidence and restore a compatible reader; never erase migrated hi
 ## Increment 2: Scoped implementation time and token reporting
 
 - Id: `scoped-time-and-tokens`
-- Status: `pending`
+- Status: `implementing`
 - Dependencies: `stable-stories-and-tasks`
 
 Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history.
@@ -125,6 +125,17 @@ Report optional numeric time and token observations at exact story, increment an
 - **Record implementation effort** (`honest-time`): Closed bounded activity spans preserve measured, estimated and unknown time.
 - **Attribute token observations** (`scoped-tokens`): One atomic token importer preserves original counters and exclusive leaf ancestry.
 - **Show scoped metrics** (`simple-reporting`): Roadmaps show simple time/token summaries and bounded period trends with explicit coverage gaps.
+
+### Tasks by story
+
+Task counts show implementation tracking. Technical qualification remains separate.
+
+- **Record implementation effort**: 0 of 1 tasks complete
+  - Record closed implementation-effort observations (`implementation-time-spans`): planned
+- **Attribute token observations**: 0 of 1 tasks complete
+  - Preserve exact scoped token accounting (`scoped-usage-store`): planned
+- **Show scoped metrics**: 0 of 1 tasks complete
+  - Show recorded time and tokens on Roadmaps (`scoped-roadmaps-report`): planned
 
 ### Deliverables
 
