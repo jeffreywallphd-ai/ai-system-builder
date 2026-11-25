@@ -1387,3 +1387,20 @@ measurement-only reports do not verify current files, hardware, runtime
 readiness, model quality or Save permission. Missing cache has no observation or
 runtime/file/provider fallback. No production Root activation, Native/model
 execution grant or parent qualification follows from this configured integration.
+
+### Private parent-side training byte component
+
+Reuse existing application/storage seams for a dedicated private training-result
+byte publisher. It accepts only internally owned streams, an explicitly bounded
+publication and exact size/SHA/container metadata. Capture scope before waits,
+serialize finite one-use indices and fence unknown accepted outcomes. Store bytes
+without a catalog, binding, Model registration or automatic Save. Preserve the
+existing contained writer's temporary handling and other adapters' behavior.
+
+This component supplies no Native ownership witness, actual aggregate capacity,
+readiness profile, producer, complete worker transfer or final settlement.
+Source guards, both copies' real reservation, destination integrity/lifecycle and
+exact transfer/result lineage remain necessary. Do not reinterpret legacy
+`settled=True`, claim physical/crash qualification or enable a default Root from
+these cooperative file tests. Later protocol/producer integration must document
+its distinct original-worker and final parent proof; separate Save stays required.

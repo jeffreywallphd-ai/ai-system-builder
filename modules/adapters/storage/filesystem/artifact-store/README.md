@@ -87,3 +87,23 @@ file facts are checked again at EOF. No filesystem discovery, write, deletion or
 adoption is available. The reader closes its handle when the consumer finishes,
 fails or stops. The owning use case must not accept its directory or handle from
 a client, and native parent-substitution/crash qualification remains separate.
+
+`createFilesystemTrainingResultFileByteStorageAdapter` is a separate internal,
+per-publication training byte publisher. Explicit file/count/total payload bounds
+have no defaults and do not prove measured disk capacity. It captures its
+publication identity and first valid workspace/organization scope. Files use
+private `artifacts/training-results/<publication>/<index>` keys, two finite
+container media types, exact nonempty size/SHA and the existing verified stream
+and exclusive contained writer. Copies are serial; each accepted index is one
+use. Invalid scope, malformed data, duplicate, concurrent and over-budget calls
+consume no source. An accepted uncertain write fences the whole publication and
+retains declarations; it cannot overwrite/adopt or compensate a published target.
+
+This component writes no catalog, binding or Model record and offers no read,
+delete, recovery or Save capability. It keeps the contained writer's existing
+pre-publication temporary-file handling. Declarations and acknowledgements are
+local software facts, not complete Native custody, physical allocation, hostile
+race/crash proof or global settlement. The owning coordinator still needs actual
+reserved capacity for both copies, original source guards and transfer lineage,
+fresh permission, separate Save and final worker/host qualification. No production
+producer or public Root is configured by this component.

@@ -3138,3 +3138,20 @@ Synthetic tests cover all three methods and failure paths; no real model score
 or physical Native result is asserted. The caller must supply actual input/
 output reservation independently of the source-v1 Model ACK. Complete producer,
 durable quota, global settlement, Save and real-host qualification remain pending.
+
+The private training-result byte publisher derives keys from a captured bounded
+publication, workspace/organization and numeric file index. It accepts only exact
+size/SHA and finite container media types, copies chunks before hashing/writing
+and requires EOF verification before exclusive publication. Request accessors,
+malformed streams, foreign scope, duplicate/concurrent or over-budget declarations
+deny before source consumption. Provider/request mutation cannot redirect writes.
+An accepted uncertain outcome fences later attempts and retains all declarations;
+no existing target is adopted or overwritten and no published target is deleted.
+Errors disclose no filesystem, producer or payload details.
+
+No metadata is registered and no Save/read/delete/recovery capability is supplied.
+Numeric declaration accounting is not real reserved capacity. The existing
+contained writer's pre-publication temporary handling remains. Complete source
+guard/transfer, parent destination integrity/lifecycle, actual capacity for both
+copies, Native race/crash, producer, process and host qualification remain pending;
+this component cannot enable a public Root or qualify final settlement.

@@ -136,7 +136,7 @@
 - Include `asset-kernel` when storage/resource work affects reusable assets or Asset Registry resource-backed views.
 - Resource-backed views are computed, descriptor-only, sanitized read models over safe seams.
 - Providers must not scan storage, read bytes, call provider clients, call runtimes, inspect model/dataset/image contents, or persist durable mappings during reads.
-- Generated outputs become reusable only after explicit finalization/registration.
+- Generated outputs become reusable only after explicit finalization/registration; private training byte publication grants no Model, capacity, Native, transfer, Save or host qualification.
 - External repository objects remain external until explicit import/localization/registration.
 - `system.foundation@1.0.0` activation is reference-only and must not copy/install pack definitions into workspace storage.
 

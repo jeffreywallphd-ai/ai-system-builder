@@ -744,3 +744,21 @@ finite metadata. It asserts no byte readiness or task-control authority.
 Version-1 private receipts remain internally replayable without a public index;
 no scan or adoption backfills them. New index conflicts roll back metadata
 activation without deleting or adopting previously written bytes.
+
+### Private training result byte publication
+
+The internal `TrainingResultFileByteStoragePort` stores private generated file
+bytes before any Model or artifact metadata registration. Its filesystem adapter
+reuses verified streaming and exclusive contained publication. A configured
+publication has explicit finite file/count/total payload bounds, one captured
+workspace/organization namespace, serial writes and one attempt per accepted
+index. Unknown accepted outcomes retain declarations and fence further copies;
+no overwrite, adoption or published-target compensation follows.
+
+The adapter does not publish a catalog/binding/Model, implement Save or confer
+source authority. Numeric declarations are not actual capacity reservation or
+complete ownership proof. Existing temporary-file semantics remain unchanged.
+The later training coordinator must own both copies' actual resource reservation,
+original protected source and exact transfer/result lineage, destination
+integrity/lifecycle and final retirement. Native races, crash recovery, complete
+producer wiring and actual host qualification remain separate and pending.

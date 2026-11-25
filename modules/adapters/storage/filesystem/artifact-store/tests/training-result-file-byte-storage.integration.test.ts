@@ -1,0 +1,255 @@
+import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
+import fs, {lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile} from "node:fs/promises";
+import {syncBuiltinESMExports} from "node:module";
+import {tmpdir} from "node:os";
+import path from "node:path";
+import {mock, test} from "node:test";
+import {createOrganizationId} from "../../../../../contracts/organization";
+import type {OrganizationRequestContext} from "../../../../../contracts/organization";
+import {createFilesystemTrainingResultFileByteStorageAdapter as create} from "../createFilesystemTrainingResultFileByteStorageAdapter";
+
+const publicationId = "a".repeat(32), context = {workspaceId: "workspace-a"};
+const key = (index = 0) => `workspaces/workspace-a/artifacts/training-results/${publicationId}/${index}`;
+const digest = (bytes: Uint8Array) => `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+const stream = async function* (bytes: Uint8Array) {yield bytes;};
+const input = (fileIndex = 0, bytes = new Uint8Array([1, 2, 3])) => ({fileIndex,
+  mediaType: "application/octet-stream" as const, expectedSizeBytes: bytes.length, expectedSha256: digest(bytes), content: stream(bytes)});
+const configuration = (rootDirectory: string) => ({rootDirectory, publicationId, maximumFileBytes: 32, maximumTotalBytes: 64, maximumFiles: 4});
+async function fixture(run: (root: string, storage: ReturnType<typeof create>) => Promise<void>) {
+  const parent = await realpath(tmpdir()), root = await realpath(await mkdtemp(path.join(parent, "training-private-bytes-")));
+  const original = await lstat(root, {bigint: true});
+  try {await run(root, create(configuration(root)));}
+  finally {
+    const current = await lstat(root, {bigint: true});
+    assert.ok(current.isDirectory() && !current.isSymbolicLink());
+    assert.equal(current.dev, original.dev); assert.equal(current.ino, original.ino);
+    assert.equal(await realpath(root), root); assert.equal(path.dirname(root), parent);
+    await rm(root, {recursive: true});
+  }
+}
+const safe = (result: unknown) => assert.doesNotMatch(JSON.stringify(result), /training-private-bytes|private-synthetic|RangeError|byteLength|[A-Z]:\\/);
+
+test("training publication writes several exact private files without catalog or model registration", async () => fixture(async (root, storage) => {
+  for (const [fileIndex, mediaType, bytes] of [[0, "application/json", new TextEncoder().encode('{"synthetic":true}')],
+    [1, "application/octet-stream", new Uint8Array([4, 5, 6])]] as const) {
+    const request = {...input(fileIndex, bytes), mediaType};
+    const result = await storage.publishResultFile(request, context);
+    assert.equal(result.ok, true); if (result.ok) assert.deepEqual(result.value,
+      {key: key(fileIndex), mediaType, sizeBytes: bytes.length, checksum: {algorithm: "sha256", value: request.expectedSha256.slice(7)}});
+    assert.deepEqual(new Uint8Array(await readFile(path.join(root, key(fileIndex)))), bytes);
+  }
+  assert.deepEqual(await readdir(root), ["workspaces"]);
+  assert.deepEqual(storage.inspectPublication(), {phase: "open", attemptedFileCount: 2, acknowledgedFileCount: 2, declaredPayloadBytes: 21});
+  assert.deepEqual(Object.keys(storage).sort(), ["inspectPublication", "publishResultFile"]);
+}));
+
+test("training publication requires explicit finite configuration before any IO", async () => fixture(async (root) => {
+  for (const patch of [{publicationId: "../escape"}, {publicationId: "A".repeat(32)}, {maximumFileBytes: 0},
+    {maximumTotalBytes: 0}, {maximumTotalBytes: 1}, {maximumFiles: 0}, {maximumFiles: 257},
+    {maximumFileBytes: Infinity}, {maximumTotalBytes: Number.MAX_SAFE_INTEGER + 1}, {maximumFiles: 1.5}])
+    assert.throws(() => create({...configuration(root), ...patch}));
+  assert.deepEqual(await readdir(root), []);
+}));
+
+test("malformed file metadata and stream descriptors have no effects or consumed indices", async () => fixture(async (root, storage) => {
+  for (const patch of [{fileIndex: -1}, {fileIndex: 4}, {fileIndex: 0.5}, {expectedSizeBytes: 0}, {expectedSizeBytes: 33},
+    {expectedSizeBytes: NaN}, {expectedSha256: "invalid"}, {expectedSha256: `sha256:${"B".repeat(64)}`},
+    {mediaType: "text/plain"}, {mediaType: "application/json;private=true"}, {content: undefined}, {content: null},
+    {content: {}}, {unknown: "private-synthetic"}]) {
+    let reads = 0;
+    const request = {...input(), content: (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})(), ...patch};
+    const result = await storage.publishResultFile(request as ReturnType<typeof input>, context);
+    assert.equal(result.ok, false); assert.equal(reads, 0); safe(result);
+  }
+  let getters = 0;
+  const request = input(); Object.defineProperty(request, "expectedSizeBytes", {enumerable: true, get() {getters++; return 3;}});
+  assert.equal((await storage.publishResultFile(request, context)).ok, false);
+  const badStream = Object.defineProperty({}, Symbol.asyncIterator, {get() {getters++; return () => stream(new Uint8Array([1]));}});
+  assert.equal((await storage.publishResultFile({...input(), content: badStream as AsyncIterable<Uint8Array>}, context)).ok, false);
+  const proxy = new Proxy(input(), {getPrototypeOf() {getters++; return Object.prototype;}});
+  assert.equal((await storage.publishResultFile(proxy, context)).ok, false);
+  assert.equal(getters, 0); assert.deepEqual(await readdir(root), []);
+  assert.deepEqual(storage.inspectPublication(), {phase: "open", attemptedFileCount: 0, acknowledgedFileCount: 0, declaredPayloadBytes: 0});
+  assert.equal((await storage.publishResultFile(input(), context)).ok, true);
+}));
+
+test("finite cumulative declarations and indices refuse before consuming a source", async () => fixture(async (root) => {
+  const storage = create({...configuration(root), maximumFileBytes: 4, maximumTotalBytes: 6, maximumFiles: 2});
+  assert.equal((await storage.publishResultFile(input(0, new Uint8Array(4)), context)).ok, true);
+  let reads = 0;
+  const source = (async function* () {reads++; yield new Uint8Array(4);})();
+  assert.equal((await storage.publishResultFile({...input(1, new Uint8Array(4)), content: source}, context)).ok, false);
+  assert.equal((await storage.publishResultFile({...input(2), content: source}, context)).ok, false);
+  assert.equal((await storage.publishResultFile({...input(0), content: source}, context)).ok, false);
+  assert.equal(reads, 0); assert.equal(storage.inspectPublication().declaredPayloadBytes, 4);
+  assert.equal((await storage.publishResultFile(input(1, new Uint8Array(2)), context)).ok, true);
+  assert.equal(storage.inspectPublication().declaredPayloadBytes, 6);
+}));
+
+test("foreign or missing caller scope cannot bind, consume or redirect a publication", async () => fixture(async (root, storage) => {
+  let reads = 0; const content = (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})();
+  assert.equal((await storage.publishResultFile({...input(), content}, {})).ok, false);
+  assert.equal(reads, 0); assert.deepEqual(await readdir(root), []);
+  assert.equal((await storage.publishResultFile(input(), context)).ok, true);
+  for (const foreign of [{workspaceId: "workspace-b"}, {...context, organizationId: createOrganizationId("foreign")}])
+    assert.equal((await storage.publishResultFile({...input(1), content}, foreign)).ok, false);
+  assert.equal(reads, 0);
+  assert.equal((await storage.publishResultFile(input(1), context)).ok, true);
+}));
+
+test("organization caller and provider facts and request scalars are captured before waits", async () => fixture(async (root) => {
+  const organizationId = createOrganizationId("organization-a"), observed = {organizationId, principalId: "principal-a"};
+  const provider = {getCurrentOrganizationContext: () => observed};
+  const options = {...configuration(root), organizationContextProvider: provider};
+  const storage = create(options), supplied = {...context, organizationId}, request = input();
+  request.content = (async function* () {
+    observed.organizationId = createOrganizationId("organization-b"); supplied.workspaceId = "workspace-b";
+    supplied.organizationId = createOrganizationId("organization-c"); request.fileIndex = 3; request.expectedSizeBytes = 30;
+    options.publicationId = "b".repeat(32); options.rootDirectory = "private-synthetic-never-used";
+    yield new Uint8Array([1, 2, 3]);
+  })();
+  assert.equal((await storage.publishResultFile(request, supplied)).ok, true);
+  assert.deepEqual(new Uint8Array(await readFile(path.join(root, "organizations", organizationId, key()))), new Uint8Array([1, 2, 3]));
+  assert.deepEqual(await readdir(path.join(root, "organizations")), [organizationId]);
+}));
+
+test("missing or wrong organization denies before reading bytes or writing a target", async () => fixture(async (root) => {
+  const organizationId = createOrganizationId("organization-a");
+  for (const actual of [undefined, {organizationId, principalId: "principal-a"}]) {
+    const storage = create({...configuration(root), organizationContextProvider: {getCurrentOrganizationContext: () => actual}});
+    let reads = 0;
+    for (const supplied of [context, {...context, organizationId: createOrganizationId("organization-b")}]) {
+      const result = await storage.publishResultFile({...input(), content: (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})()}, supplied);
+      assert.equal(result.ok, false); safe(result);
+    }
+    assert.equal(reads, 0); assert.deepEqual(await readdir(root), []);
+  }
+}));
+
+test("a configured provider cannot publish under an absent or malformed organization identity", async () => fixture(async (root) => {
+  for (const organizationId of [undefined, null, "", " organization-a ", "../escape", "token_private"]) {
+    const record = {organizationId, principalId: "principal-a"} as unknown as OrganizationRequestContext;
+    const storage = create({...configuration(root), organizationContextProvider: {getCurrentOrganizationContext: () => record}});
+    let reads = 0;
+    const supplied = {...context, ...(organizationId === undefined ? {} : {organizationId})} as Parameters<typeof storage.publishResultFile>[1];
+    const result = await storage.publishResultFile({...input(), content: (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})()}, supplied);
+    assert.equal(result.ok, false); assert.equal(reads, 0); safe(result);
+    assert.equal(storage.inspectPublication().attemptedFileCount, 0);
+    assert.deepEqual(await readdir(root), []);
+  }
+}));
+
+test("a changing provider organization accessor is refused before getter execution or namespace selection", async () => fixture(async (root) => {
+  const organizationId = createOrganizationId("organization-a"); let getters = 0, reads = 0;
+  const record = {principalId: "principal-a"};
+  Object.defineProperty(record, "organizationId", {enumerable: true, get() {
+    getters++; return getters === 1 ? organizationId : createOrganizationId("organization-b");
+  }});
+  const storage = create({...configuration(root), organizationContextProvider: {getCurrentOrganizationContext: () => record as OrganizationRequestContext}});
+  const result = await storage.publishResultFile({...input(), content: (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})()}, {...context, organizationId});
+  assert.equal(result.ok, false); assert.equal(getters, 0); assert.equal(reads, 0); safe(result);
+  assert.deepEqual(await readdir(root), []);
+}));
+
+test("provider identity must be original data without principal getters or proxy traps", async () => fixture(async (root) => {
+  const organizationId = createOrganizationId("organization-a"); let getters = 0, reads = 0;
+  const withGetter = {organizationId};
+  Object.defineProperty(withGetter, "principalId", {get() {getters++; return "principal-a";}});
+  const proxy = new Proxy({organizationId, principalId: "principal-a"}, {
+    getOwnPropertyDescriptor() {getters++; throw new Error("private-synthetic-proxy");},
+  });
+  for (const value of [{organizationId}, {organizationId, principalId: null}, {organizationId, principalId: ""}, withGetter, proxy]) {
+    const storage = create({...configuration(root), organizationContextProvider: {getCurrentOrganizationContext: () => value as OrganizationRequestContext}});
+    const result = await storage.publishResultFile({...input(), content: (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})()}, {...context, organizationId});
+    assert.equal(result.ok, false); safe(result); assert.equal(storage.inspectPublication().attemptedFileCount, 0);
+  }
+  assert.equal(getters, 0); assert.equal(reads, 0); assert.deepEqual(await readdir(root), []);
+}));
+
+for (const failure of ["digest", "short", "long", "late-extra", "producer-error", "non-bytes"] as const) {
+  test(`an accepted ${failure} failure fences all further copies without a retry or metadata`, async () => fixture(async (root, storage) => {
+    const request = input();
+    if (failure === "digest") request.expectedSha256 = `sha256:${"b".repeat(64)}`;
+    if (failure === "short") request.content = stream(new Uint8Array([1]));
+    if (failure === "long") request.content = stream(new Uint8Array([1, 2, 3, 4]));
+    if (failure === "late-extra") request.content = (async function* () {yield new Uint8Array([1, 2, 3]); yield new Uint8Array([4]);})();
+    if (failure === "producer-error") request.content = (async function* () {yield new Uint8Array([1]); throw new Error("private-synthetic");})();
+    if (failure === "non-bytes") request.content = (async function* () {yield "private-synthetic" as unknown as Uint8Array;})();
+    const result = await storage.publishResultFile(request, context); assert.equal(result.ok, false); safe(result);
+    const status = storage.inspectPublication();
+    assert.deepEqual(status, {phase: "unconfirmed", attemptedFileCount: 1, acknowledgedFileCount: 0, declaredPayloadBytes: 3});
+    let reads = 0; const retry = (async function* () {reads++; yield new Uint8Array([1, 2, 3]);})();
+    assert.equal((await storage.publishResultFile({...input(), content: retry}, context)).ok, false);
+    assert.equal((await storage.publishResultFile({...input(1), content: retry}, context)).ok, false);
+    assert.equal(reads, 0); assert.deepEqual(storage.inspectPublication(), status);
+    await assert.rejects(readFile(path.join(root, key())), {code: "ENOENT"});
+  }));
+}
+
+test("a conflicting final target is preserved and never adopted or retried", async () => fixture(async (root, storage) => {
+  await mkdir(path.dirname(path.join(root, key())), {recursive: true});
+  await writeFile(path.join(root, key()), "foreign-sentinel");
+  assert.equal((await storage.publishResultFile(input(), context)).ok, false);
+  assert.equal(await readFile(path.join(root, key()), "utf8"), "foreign-sentinel");
+  assert.equal(storage.inspectPublication().phase, "unconfirmed");
+  let reads = 0;
+  assert.equal((await storage.publishResultFile({...input(), content: (async function* () {reads++; yield new Uint8Array([1]);})()}, context)).ok, false);
+  assert.equal(reads, 0);
+}));
+
+test("concurrent and source-reentrant calls do not reset or replace the original live copy", async () => fixture(async (root, storage) => {
+  let enter!: () => void, release!: () => void;
+  const entered = new Promise<void>(resolve => {enter = resolve;}), gate = new Promise<void>(resolve => {release = resolve;});
+  const request = input();
+  request.content = (async function* () {
+    enter(); await gate;
+    assert.equal((await storage.publishResultFile(input(2), context)).ok, false);
+    yield new Uint8Array([1, 2, 3]);
+  })();
+  const running = storage.publishResultFile(request, context); await entered;
+  let otherReads = 0;
+  try {
+    assert.equal(storage.inspectPublication().phase, "writing");
+    assert.equal((await storage.publishResultFile({...input(1), content: (async function* () {otherReads++; yield new Uint8Array([1]);})()}, context)).ok, false);
+  } finally {release();}
+  assert.equal((await running).ok, true); assert.equal(otherReads, 0);
+  assert.equal((await storage.publishResultFile(input(1), context)).ok, true);
+  assert.equal(storage.inspectPublication().acknowledgedFileCount, 2);
+}));
+
+test("provider reentry cannot take the checking slot or consume another stream", async () => fixture(async (root) => {
+  const organizationId = createOrganizationId("organization-a"), supplied = {...context, organizationId};
+  let storage!: ReturnType<typeof create>, nested: Promise<unknown> | undefined, reads = 0;
+  storage = create({...configuration(root), organizationContextProvider: {getCurrentOrganizationContext() {
+    nested = storage.publishResultFile({...input(1), content: (async function* () {reads++; yield new Uint8Array([1]);})()}, supplied);
+    return {organizationId, principalId: "principal-a"};
+  }}});
+  assert.equal((await storage.publishResultFile(input(), supplied)).ok, true);
+  assert.equal((await nested as {ok: boolean}).ok, false); assert.equal(reads, 0);
+  assert.equal(storage.inspectPublication().acknowledgedFileCount, 1);
+}));
+
+test("intrinsic chunk admission copies original bytes and ignores false instance lengths", async () => fixture(async (root, storage) => {
+  const bytes = new Uint8Array([7, 8, 9]), request = input(0, bytes); let getters = 0;
+  Object.defineProperty(bytes, "byteLength", {get() {getters++; return 0;}});
+  request.content = (async function* () {yield bytes; bytes.fill(0);})();
+  assert.equal((await storage.publishResultFile(request, context)).ok, true);
+  assert.equal(getters, 0); assert.deepEqual(new Uint8Array(await readFile(path.join(root, key()))), new Uint8Array([7, 8, 9]));
+}));
+
+test("a real final link followed by a lost acknowledgement retains bytes and fences the publication", async () => fixture(async (root, storage) => {
+  const original = fs.link; let calls = 0;
+  const patched = mock.method(fs, "link", async (...args: Parameters<typeof fs.link>) => {
+    calls++; await original(...args); throw new Error("private-synthetic-lost-link-ack");
+  });
+  syncBuiltinESMExports();
+  try {
+    const result = await storage.publishResultFile(input(), context); assert.equal(result.ok, false); safe(result);
+    assert.equal(calls, 1);
+  } finally {patched.mock.restore(); syncBuiltinESMExports();}
+  assert.deepEqual(new Uint8Array(await readFile(path.join(root, key()))), new Uint8Array([1, 2, 3]));
+  assert.equal(storage.inspectPublication().phase, "unconfirmed");
+  assert.equal((await storage.publishResultFile(input(), context)).ok, false);
+  assert.deepEqual(new Uint8Array(await readFile(path.join(root, key()))), new Uint8Array([1, 2, 3]));
+}));

@@ -1,6 +1,6 @@
 import type {ApplicationRequestContext} from "../application-request-context";
 import type {ContextSavedArtifactReference, ContextArtifactMediaType} from "../../../contracts/context-management";
-import type {HeadlessContextTaskReview} from "../../../contracts/headless/headless-context-task";
+import type {HeadlessContextTaskReview} from "../../../contracts/headless";
 
 /** Pure private owner metadata, after accepted task and actor proof. */
 export interface PreparedContextResultReview {
