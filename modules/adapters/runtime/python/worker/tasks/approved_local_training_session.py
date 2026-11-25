@@ -11,20 +11,42 @@ from contextlib import AbstractContextManager
 from concurrent.futures import Future
 from dataclasses import dataclass
 import json
+import hashlib
 import os
 import re
 from threading import RLock
 from time import monotonic
+from types import FunctionType, MethodType
 from typing import Callable
 from uuid import UUID
+from weakref import WeakKeyDictionary
 
 from ..models import TrainModelTaskRequest, TrainModelBaseModelInput, TrainModelDatasetInput
 from ..native.windows_original_worker_launch import resolve_original_model_view
+from ..native import windows_original_worker_launch as native
 from .train_model import TrainingCancellationRequested, train_model_from_local_files
+from . import original_training_output_delivery as output_delivery
 
 CAPABILITY = "train-model.original-session-v1"
 MAX_BODY_BYTES = 128 * 1024
 MAX_SESSIONS = 256
+_OUTPUT_RECORD = output_delivery._record
+_OUTPUT_READ = output_delivery.OriginalTrainingOutputDelivery.read
+_OUTPUT_ACK = output_delivery.OriginalTrainingOutputDelivery.acknowledge
+_OUTPUT_ABORT = output_delivery.abort_original_output_delivery
+_output_sessions = WeakKeyDictionary()
+_original_scopes = WeakKeyDictionary()
+_MODEL_LEASES = native._model_leases
+_MODEL_SOURCES = native._verified_model_receivers
+_MODEL_VIEWS = native._model_views
+_OUTPUT_FAMILIES = native._training_output_families
+_FAMILY_RECORD = native._output_family_record
+_SCOPE_TYPES = tuple((cls,type.__getattribute__(cls,"__mro__")) for cls in (
+    native.OriginalTrainingOutputFamily,native.OriginalInheritedModelLease,
+    native.OriginalModelBootstrapReceiver,native._OriginalModelView))
+_SCOPE_API = tuple((base,name,type.__getattribute__(base,"__dict__").get(name))
+    for _,bases in _SCOPE_TYPES for base in bases
+    for name in ("__getattribute__","__getattr__","__hash__","__eq__"))
 
 
 class TrainingSessionError(RuntimeError):
@@ -72,6 +94,11 @@ def _copy(value):
     result = visit(value)
     _need(len(json.dumps(result, allow_nan=False).encode()) <= MAX_BODY_BYTES)
     return result
+
+
+def _scope_digest(value):
+    return hashlib.sha256(json.dumps(_copy(value),sort_keys=True,allow_nan=False,
+        separators=(",", ":")).encode("utf8")).hexdigest()
 
 
 def capture_definition(raw):
@@ -218,6 +245,121 @@ class NativeTrainingResources(ABC):
     @abstractmethod
     def settle(self) -> bool: ...
 
+    def output_delivery(self):
+        """Optional original queue. JSON and default resources cannot supply it."""
+        return None
+
+
+_DEFAULT_OUTPUT_DELIVERY = NativeTrainingResources.output_delivery
+
+
+def _capture_output_delivery(session, resource):
+    # Retain resources before any optional callback; never invoke a property.
+    _need(session.native is resource)
+    selected = None
+    bases = type.__getattribute__(type(resource), "__mro__")
+    _need(len(bases) <= 8)
+    for base in bases:
+        value = type.__getattribute__(base, "__dict__").get("output_delivery")
+        if value is not None:
+            _need(type(value) is FunctionType)
+            selected = MethodType(value, resource)
+            break
+    _need(selected is not None)
+    if selected.__func__ is _DEFAULT_OUTPUT_DELIVERY:
+        return  # Preserve the existing default path without another observer.
+    original_scope = _original_scopes.get(session)
+    _need(type(original_scope) is str and _scope_digest(session._sealed_definition)==original_scope)
+    queue = selected()
+    _need(session.native is resource and session._current())
+    if queue is None:return
+    record = _OUTPUT_RECORD(queue)
+    with record["condition"]:
+        _need(record["phase"] == "unbound" and record["family"] is None
+              and record["task_id"] == session.task_id == session._sealed_definition["requestId"])
+    with session.lock:
+        _need(session not in _output_sessions and session.native is resource
+              and _scope_digest(session._sealed_definition)==original_scope)
+        _output_sessions[session] = {"resource": resource, "queue": queue, "record": record,
+            "task_id": session.task_id, "request": None, "uncertain": False,
+            "scope_digest": original_scope, "scope_owner": None}
+        admitted = not session.cancelled and not session.settled and session.phase == "preparing"
+    if not admitted:
+        _abort_output(session)
+        raise TrainingSessionError()
+
+
+def _original_output_scope(record, binding):
+    """Passive genuine lineage, never a live Native admission/IO proof on HTTP."""
+    for cls,bases in _SCOPE_TYPES:
+        current = type.__getattribute__(cls,"__mro__")
+        _need(len(current)==len(bases) and all(a is b for a,b in zip(current,bases)))
+    _need(all(type.__getattribute__(base,"__dict__").get(name) is original
+              for base,name,original in _SCOPE_API))
+    _need(native._model_leases is _MODEL_LEASES and native._verified_model_receivers is _MODEL_SOURCES
+          and native._model_views is _MODEL_VIEWS and native._training_output_families is _OUTPUT_FAMILIES
+          and native._output_family_record is _FAMILY_RECORD)
+    family,book,view,model_binding = record["family"],record["book"],record["view"],record["binding"]
+    _need(type(family) is _SCOPE_TYPES[0][0] and _FAMILY_RECORD(family) is book
+          and type(book) is dict and type(model_binding) is tuple and len(model_binding)==3)
+    lease = model_binding[0];_need(type(lease) is _SCOPE_TYPES[1][0])
+    state = _MODEL_LEASES.get(lease);_need(type(state) is dict)
+    source = state["source"];_need(type(source) is _SCOPE_TYPES[2][0])
+    original = _MODEL_SOURCES.get(source);_need(type(original) is dict)
+    _need(book["view"] is view and type(view) is _SCOPE_TYPES[3][0]
+          and book["binding"] is model_binding and book["lease"] is lease and book["lease_state"] is state
+          and state.get("output_copy_owner") is family
+          and original["bound"] is True and original["lease_issued"] is True
+          and original["native_owner"] is state["native_owner"]
+          and original["task_id"] == binding["task_id"]
+          and _same(book["request"],record["request"]))
+    active = _MODEL_VIEWS.get(view)
+    if record["phase"] in ("bound","active"):_need(active is model_binding)
+    else:_need(active is None or active is model_binding)  # Terminal lineage survives borrow exit.
+    definition = original["definition"]
+    _need(_scope_digest(definition)==binding["scope_digest"])
+    return family,book,view,model_binding,lease,state,source,original,definition
+
+
+def _output_snapshot(session):
+    _need(session._current())  # Do not hold a session/queue lock around callbacks.
+    with session.lock:
+        binding = _output_sessions.get(session)
+        _need(binding is not None and not session.settled and not session.cancelled
+              and binding["resource"] is session.native and not binding["uncertain"]
+              and binding["task_id"] == session.task_id == session._sealed_definition["requestId"])
+        _need(_original_scopes.get(session) is binding["scope_digest"]
+              and _scope_digest(session._sealed_definition)==binding["scope_digest"])
+    record = _OUTPUT_RECORD(binding["queue"])
+    _need(record is binding["record"])
+    with record["condition"]:
+        _need(record["task_id"] == binding["task_id"])
+        if record["request"] is not None:
+            _need(binding["request"] is not None and _same(record["request"], binding["request"]))
+            scope_owner = _original_output_scope(record,binding)
+        else:
+            _need(record["phase"] in ("unbound", "failed") and record["pending"] is None)
+            scope_owner = None
+    with session.lock:
+        _need(_output_sessions.get(session) is binding and binding["resource"] is session.native
+              and not session.settled and not session.cancelled and not binding["uncertain"])
+        previous = binding["scope_owner"]
+        if previous is None:
+            if scope_owner is not None:binding["scope_owner"] = scope_owner
+        else:
+            _need(scope_owner is not None and len(previous)==len(scope_owner)
+                  and all(a is b for a,b in zip(previous,scope_owner)))
+    return binding
+
+
+def _abort_output(session):
+    binding = _output_sessions.get(session)
+    if binding is not None:
+        try:_OUTPUT_ABORT(binding["queue"])
+        except Exception:
+            binding["uncertain"] = True
+            raise
+
 
 class NativeTrainingProducer(ABC):
     @property
@@ -233,6 +375,7 @@ class OriginalTrainingSession:
         self.loader = train_model_from_local_files
         self.definition = capture_definition(definition)
         self._sealed_definition = _copy(self.definition)
+        _original_scopes[self] = _scope_digest(self._sealed_definition)
         # Capture the actual schemas before any producer/profile callback. A
         # typed instance alone, or its replaceable dump method, is not a proof.
         self._request_validator = TrainModelTaskRequest.__pydantic_validator__.validate_python
@@ -302,9 +445,12 @@ class OriginalTrainingSession:
                     self.phase = "unavailable"; self.known_not_run = True; self.settled = True
                 return "unavailable"
             _need(isinstance(owner, NativeTrainingResources))
+            self.native = owner  # Retain before optional callbacks or preparation IO.
             self.native_prepare, self.native_seal = owner.prepare, owner.seal_inputs
             self.native_borrow, self.native_cancel, self.native_settle = owner.borrow, owner.request_cancel, owner.settle
-            self.native = owner  # Original methods/retirement owner BEFORE prepare IO.
+            _capture_output_delivery(self, owner)
+            with self.lock:
+                _need(not self.cancelled and not self.settled and self.phase == "preparing")
             ready = self.native_prepare()
             _need(type(ready) is str and ready in ("ready", "unavailable", "unconfirmed"))
             current = self._current()
@@ -340,6 +486,10 @@ class OriginalTrainingSession:
             _need(self._current())
             with self.lock:
                 _need(self.phase == "sealing" and not self.cancelled and not self.settled)
+                binding = _output_sessions.get(self)
+                if binding is not None:
+                    _need(binding["resource"] is self.native and binding["request"] is None)
+                    binding["request"] = _copy(self._request_serializer(payload, mode="json"))
                 self.payload = payload; self.phase = "ready"
             return "ready"
         except Exception:
@@ -382,6 +532,7 @@ class OriginalTrainingSession:
             if not self._current() or self.cancelled or monotonic() - self.started_at > self.profile.maximum_duration_seconds:
                 raise TrainingCancellationRequested()
             self.publish(progress=_copy(value))
+        successful = False
         try:
             progress({"stage": "starting"})
             self.publish(status="running")
@@ -394,15 +545,23 @@ class OriginalTrainingSession:
                 # a real validation baseline through this workflow protocol.
                 result = self.loader(self._request_copy(payload, deep=True), on_progress=progress,
                     compare_validation_baseline=False, _model_view=model_view)
+            if result.status == "succeeded" and _output_sessions.get(self) is not None:
+                binding = _output_snapshot(self)
+                _need(_OUTPUT_READ(binding["queue"])["phase"] == "complete")
+                _output_snapshot(self)
             data = result.model_dump(mode="json", exclude_none=True)
             data["runId"] = self.task_id
             _need(result.status in ("succeeded", "failed", "cancelled"))
             self.publish(status="cancelled" if self.cancelled else result.status, data=None if self.cancelled else data)
+            successful = result.status == "succeeded" and not self.cancelled
         except TrainingCancellationRequested:
             self.publish(status="cancelled", data=None)
         except Exception:
             self.publish(status="failed", data=None, error={"code": "private_training_failed", "message": "The private training task could not finish."})
         finally:
+            if not successful:
+                try:_abort_output(self)
+                except Exception:pass  # Unknown retains resources and denies settlement.
             with self.lock:
                 self.run_returned = True; self.operations -= 1
                 if self.phase != "settled":
@@ -423,9 +582,12 @@ class OriginalTrainingSession:
                 with self.lock:
                     self.known_not_run = True
                 self.publish(status="cancelled", data=None)
-            # Native cancellation is a request, never proof of stopped IO.
-            if self.native is not None:
-                self.native_cancel()
+            try:
+                _abort_output(self)
+            finally:
+                # Native cancellation still runs if queue abortion is uncertain.
+                # Neither operation proves stopped IO or grants resource credit.
+                if self.native is not None:self.native_cancel()
             self.cancel_result = True
             return True
         except Exception:
@@ -436,6 +598,12 @@ class OriginalTrainingSession:
                 self.operations -= 1
 
     def settle(self):
+        binding = _output_sessions.get(self)
+        if binding is not None:
+            try:
+                _need(not binding["uncertain"] and _OUTPUT_RECORD(binding["queue"]) is binding["record"]
+                      and _OUTPUT_READ(binding["queue"])["phase"] in ("complete", "failed"))
+            except Exception:return False
         with self.lock:
             if self.settled:
                 return True
@@ -451,3 +619,16 @@ class OriginalTrainingSession:
             with self.lock:
                 self.phase = "unconfirmed"
             return False
+
+    def read_output(self):
+        binding = _output_snapshot(self)
+        result = _copy(_OUTPUT_READ(binding["queue"]))
+        _need(_output_snapshot(self) is binding)
+        return result
+
+    def acknowledge_output(self, sequence):
+        _need(type(sequence) is int and 1 <= sequence <= 2**53 - 1)
+        binding = _output_snapshot(self)
+        result = _OUTPUT_ACK(binding["queue"], sequence)
+        _need(result is True and _output_snapshot(self) is binding)
+        return True

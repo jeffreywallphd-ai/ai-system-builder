@@ -916,7 +916,8 @@ def _prepare_original_training(body):
 
 
 def _operate_original_training(task_id, action, body):
-    if type(body) is not dict or set(body) != ({"binding", "input"} if action == "seal" else {"binding"}):
+    expected_keys = {"binding", "input"} if action == "seal" else {"binding", "sequence"} if action == "output-ack" else {"binding"}
+    if type(body) is not dict or set(body) != expected_keys:
         raise TrainingSessionError()
     with TASK_REGISTRY_LOCK:
         record = TASK_REGISTRY.get(task_id)
@@ -942,9 +943,17 @@ def _operate_original_training(task_id, action, body):
             if TASK_REGISTRY.get(task_id) is not record:
                 raise TrainingSessionError()
             result = {"record": _build_task_status_result(record).model_dump(mode="json", exclude_none=True)}
+    elif action == "output-read":
+        result = {"output": owner.read_output()}
+    elif action == "output-ack":
+        result = {"acknowledged": owner.acknowledge_output(body["sequence"])}
     else:
         raise TrainingSessionError()
-    return {"binding": record["_trainingBinding"], **result}
+    response = {"binding": record["_trainingBinding"], **result}
+    if action in ("output-read", "output-ack"):
+        if len(json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf8")) > TRAINING_BODY_LIMIT:
+            raise TrainingSessionError()
+    return response
 
 
 @app.post("/training/original/prepare")

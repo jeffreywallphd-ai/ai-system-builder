@@ -2560,3 +2560,18 @@ Default hosts remain unconfigured. Actual parent transport, protected destinatio
 custody, measured capacity for both copies, original worker/Job exit, resource
 settlement, separate Save approval and real host journeys remain pending. Finite
 Native/inert SDK tests cover software behavior, never model accuracy.
+
+The private original-session `output-read` and `output-ack` actions use the
+existing bearer authentication, runtime incarnation and exact session binding.
+Trusted resources may supply one registered unbound task queue before preparation;
+request JSON cannot configure it. After binding, the genuine Native lease/source
+identity and complete original definition (workspace, owner, proposal, data and model
+revision) must match the captured session scope, as must the sealed request.
+Terminal recorded lineage is distinct from a live Native view or IO guard. Read/ACK stay on the existing HTTP threadpool,
+so they cannot wait behind training on the sole task executor. Complete response
+envelopes retain the existing 128 KiB bound. Default resources provide no queue.
+Cancellation fences the queue even if Native cancellation fails; configured but
+undelivered streams cannot report training success. ACKs remain provisional.
+Actual parent receiving/storage custody, measured capacity, the real Native
+producer, all-reader/worker/Job retirement, Save and real host proof remain pending.
+This source connection grants none of those capabilities or model-quality results.

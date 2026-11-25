@@ -213,3 +213,14 @@ required. Unknown, mixed, missing or explicit generic scopes retain broad
 fallback. The full existing text-worker check remains separately selected for
 worker/fixture changes. No limit, full-suite command, real model test or parent
 qualification is enabled by this profile.
+
+
+`headless-training-output-channel-unit` executes the complete private output HTTP
+feature file through the existing focused runner (270-second child, 300-second
+outer ceiling). Actual TestClient authentication and finite Native fixtures test
+exact payload/owner/binding, replay, failure and cancellation. Its closed
+controller scope runs whole related runtime, delivery and routing modules, with
+complete regular prerequisites. Unknown, mixed, incomplete and explicit generic
+scopes retain broad fallback. Existing runtime-worker commands/limits remain;
+unchanged text-worker source is not added to this feature's required checks.
+No model, provider, physical Native or full-software qualification follows.
