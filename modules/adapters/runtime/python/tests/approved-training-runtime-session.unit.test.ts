@@ -18,6 +18,46 @@ const id = "11111111-1111-4111-8111-111111111111", workspace = "22222222-2222-42
 const profile = {profileId: "inert-only", profileFingerprint: "sha256:" + "a".repeat(64)};
 const runtime = {runtimeId: "inert-runtime", workerStartedAt: "2026-11-23T00:00:00Z"};
 const identity = {...runtime, ...profile}, binding = {...identity, requestId: id, workspaceId: workspace, sessionId: "b".repeat(64)};
+
+function exitReadyClient(capabilities: string[]) {
+  const calls: string[] = [];
+  const client = createPythonRuntimeHttpClient({baseUrl: "http://127.0.0.1:43111",
+    authorizationToken: "synthetic-training-token".padEnd(40, "x"), captureProcessOwnership: () => () => {},
+    fetchImplementation: (async (url, options) => {
+      const endpoint = new URL(String(url)).pathname; calls.push(endpoint);
+      assert.ok(new Headers(options?.headers).get("authorization")?.startsWith("Bearer "));
+      if (endpoint === "/health") return Response.json({healthy: true, status: {...runtime, status: "ready"}});
+      if (endpoint === "/capabilities") return Response.json({runtimeId: runtime.runtimeId, capabilities});
+      return Response.json({binding, schema: "original-training-exit-ready-v1", ready: true, retirement: "ready"});
+    }) as typeof fetch});
+  return {client, calls};
+}
+
+test("explicit exit-ready capture requires its separate capability and never dispatches legacy settlement", async () => {
+  const f = exitReadyClient(["train-model.original-exit-ready-v1"]);
+  await assert.rejects(() => f.client.captureOriginalTrainingChannel(profile));
+  const channel = await f.client.captureOriginalTrainingChannel(profile, "original-exit-ready-v1");
+  const reply = await channel.send(`/training/original/${id}/exit-ready`, {binding}) as any;
+  assert.equal(reply.schema, "original-training-exit-ready-v1"); assert.equal(reply.ready, true);
+  const count = f.calls.length;
+  await assert.rejects(() => channel.send(`/training/original/${id}/settle`, {binding}));
+  await assert.rejects(() => channel.send(`/training/original/${id}/exit-ready/extra`, {binding}));
+  assert.equal(f.calls.length, count);
+});
+
+test("a legacy capability cannot satisfy exit-ready capture or dispatch its new operation", async () => {
+  const f = exitReadyClient([ORIGINAL_TRAINING_CAPABILITY]);
+  await assert.rejects(() => f.client.captureOriginalTrainingChannel(profile, "original-exit-ready-v1"));
+  const channel = await f.client.captureOriginalTrainingChannel(profile), count = f.calls.length;
+  await assert.rejects(() => channel.send(`/training/original/${id}/exit-ready`, {binding}));
+  assert.equal(f.calls.length, count);
+});
+
+test("an unknown retirement mode is denied before ownership or HTTP discovery", async () => {
+  const f = exitReadyClient([ORIGINAL_TRAINING_CAPABILITY]);
+  await assert.rejects(() => f.client.captureOriginalTrainingChannel(profile, "unknown" as never));
+  assert.deepEqual(f.calls, []);
+});
 function definition(): ApprovedLocalTrainingDefinition {
   return {requestId: id, workspaceId: workspace, owner: {organizationId: "org", principalId: "actor", clientId: id, hostIncarnationId: workspace},
     request: {workspaceId: workspace, trainingTask: "llm-instruction", baseModel: {modelRecordId: "base"},

@@ -491,6 +491,26 @@ TRAINING_IO_RETIREMENT_CONTROLLER_FILTERS = (
     "test_control_plane_training_io_retirement.", "test_control_plane_training_output_receiver.",
     "test_control_plane_headless_training_runtime.", "test_control_plane_focused.",
 )
+TRAINING_SESSION_EXIT_SCOPE = (
+    "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_training_session_exit.py",
+)
+TRAINING_SESSION_EXIT_OWNER_SCOPE = (
+    "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
+    "modules/adapters/runtime/python/worker/tasks/original_training_session_exit.py",
+    "modules/adapters/runtime/python/worker/app.py",
+    "modules/adapters/runtime/python/worker/tests/test_original_training_session_exit.py",
+    "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py",
+    "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts",
+    "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
+    "dev-tools/helpers/README.md", "docs/diagnostics/ai-development-control-plane.md",
+    "modules/adapters/runtime/python/README.md", "modules/adapters/runtime/python/worker/README.md",
+    "docs/architecture/runtime-model.md", "docs/adr/ADR-0047-headless-system-builder-delegation.md",
+    "docs/security/headless-system-builder-threat-model.md", "docs/context/packs/runtime.pack.md",
+)
+TRAINING_SESSION_EXIT_CONTROLLER_FILTERS = (
+    "test_control_plane_training_session_exit.", "test_control_plane_headless_training_runtime.",
+    "test_control_plane_training_exit_barrier.", "test_control_plane_focused.",
+)
 TOKEN_USAGE_SCOPE = (
     "dev-tools/helpers/control_plane/usage.py", "dev-tools/helpers/development_control_plane.py",
     "dev-tools/helpers/control_plane/projection.py", "dev-tools/helpers/control_plane/catalog.py",
@@ -738,6 +758,30 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/runtime/python/tests/approved-training-runtime-session.unit.test.ts",
             "modules/adapters/runtime/python/tests/original-training-model-source.unit.test.ts",
             "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts"),
+    },
+    "headless-training-session-exit-ready-unit": {
+        "interpreter": "python",
+        "automatic_sources": (
+            "modules/adapters/runtime/python/worker/tasks/original_training_session_exit.py",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_session_exit.py",
+            "modules/adapters/runtime/python/worker/tasks/approved_local_training_session.py",
+        ),
+        "automatic_required_files": TRAINING_SESSION_EXIT_OWNER_SCOPE[:5] + (
+            "modules/adapters/runtime/python/worker/tasks/original_training_files.py",
+            "modules/adapters/runtime/python/worker/tasks/original_training_exit_barrier.py",
+            "modules/adapters/runtime/python/worker/native/windows_original_worker_launch.py",
+            "modules/adapters/runtime/python/worker/tasks/original_training_output_delivery.py",
+            "modules/adapters/runtime/python/worker/tasks/train_model.py",
+            "modules/adapters/runtime/python/worker/models.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/approved_training_staged_input.json",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_files.py",
+            "modules/adapters/runtime/python/worker/tests/test_native_training_model_graph.py",
+            "modules/adapters/runtime/python/worker/tests/fixtures/native_training_model_graph.json",
+        ),
+        "sources": TRAINING_SESSION_EXIT_OWNER_SCOPE,
+        "command": ("-m", "unittest", "-v",
+            "modules/adapters/runtime/python/worker/tests/test_original_training_session_exit.py",
+            "modules/adapters/runtime/python/worker/tests/test_approved_local_training_session.py"),
     },
     "headless-training-runtime-worker-unit": {
         "interpreter": "python",
@@ -4389,6 +4433,20 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[item for name in TRAINING_IO_RETIREMENT_CONTROLLER_FILTERS for item in ("-k", name)]]
+    session_exit_support = (TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE
+        + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS)
+        + tuple(name for identity in ("headless-training-session-exit-ready-unit", "headless-training-runtime-unit",
+            "headless-training-runtime-worker-unit", "headless-training-exit-barrier-unit")
+            for name in PUBLISHED_FORM_CHECKS[identity]["automatic_required_files"]))
+    if (set(TRAINING_SESSION_EXIT_SCOPE) <= set(paths) <= set(TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE)
+            and "focused-tests" not in explicit_required and
+            all(_automatic_files_available(root, {"automatic_required_files": session_exit_support[index:index+16]})
+                for index in range(0, len(session_exit_support), 16))):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[item for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS for item in ("-k", name)]]
     if ("focused-tests" not in explicit_required and any(
             set(paths) == set(scope) and all(
                 _automatic_files_available(root, {"automatic_required_files": support[index:index+16]})

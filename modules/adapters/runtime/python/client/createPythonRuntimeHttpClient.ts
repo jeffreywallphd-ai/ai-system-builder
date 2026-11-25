@@ -36,7 +36,8 @@ import {ORIGINAL_TRAINING_CAPABILITY, captureTrainingProfile, type OriginalTrain
   type OriginalTrainingProfile} from "./approvedTrainingTaskSession";
 
 export interface PythonRuntimeHttpClient {
-  captureOriginalTrainingChannel(profile: OriginalTrainingProfile): Promise<OriginalTrainingChannel>;
+  captureOriginalTrainingChannel(profile: OriginalTrainingProfile,
+    retirementProtocol?: "original-exit-ready-v1"): Promise<OriginalTrainingChannel>;
   /** Private read-only metadata session; requires an already captured owned launch. */
   captureModelSourceIdentityProbe(): Promise<ModelSourceIdentityProbe>;
   /** Private captured receiver transport; generic JSON Model requests cannot invoke it. */
@@ -426,8 +427,10 @@ export function createPythonRuntimeHttpClient(
   };
 
   return {
-    async captureOriginalTrainingChannel(rawProfile) {
+    async captureOriginalTrainingChannel(rawProfile, retirementProtocol) {
       const receiver = this, originalHealth = this.getHealthStatus, originalCapabilities = this.getCapabilities;
+      if (retirementProtocol !== undefined && retirementProtocol !== "original-exit-ready-v1")
+        throw new Error("Original training retirement protocol is unavailable.");
       const profile = captureTrainingProfile(rawProfile);
       if (!captureOwnership) throw new Error("Original training process ownership is unavailable.");
       const original = captureOwnership();
@@ -441,11 +444,16 @@ export function createPythonRuntimeHttpClient(
       if (!health.healthy || health.status.status !== "ready") throw new Error("Original training runtime is unavailable.");
       const runtime = captureModelSourceRuntime({runtimeId: health.status.runtimeId, workerStartedAt: health.status.workerStartedAt});
       const capabilities = await originalCapabilities.call(receiver); current();
-      if (capabilities.runtimeId !== runtime.runtimeId || !capabilities.capabilities.includes(ORIGINAL_TRAINING_CAPABILITY))
+      const requiredCapability = retirementProtocol === "original-exit-ready-v1"
+        ? "train-model.original-exit-ready-v1" : ORIGINAL_TRAINING_CAPABILITY;
+      if (capabilities.runtimeId !== runtime.runtimeId || !capabilities.capabilities.includes(requiredCapability))
         throw new Error("Original training runtime is unavailable.");
       const identity = Object.freeze({...runtime, ...profile});
       return Object.freeze({identity, assertCurrent: current, async send(endpoint: string, body: unknown, dispatch?: () => void) {
         if (!/^\/training\/original\/(?:prepare|[a-f0-9-]{36}\/(?:seal|start|read|cancel|settle|output-read|output-ack))$/.test(endpoint))
+          if (!(retirementProtocol === "original-exit-ready-v1" && /^\/training\/original\/[a-f0-9-]{36}\/exit-ready$/.test(endpoint)))
+            throw new Error("Original training operation is unavailable.");
+        if (retirementProtocol === "original-exit-ready-v1" && endpoint.endsWith("/settle"))
           throw new Error("Original training operation is unavailable.");
         const captured = captureManifestPayloadForTraining(body);
         current(); const result = await authenticatedFetch(endpoint, "/training/original/:operation",

@@ -3475,3 +3475,30 @@ The optional future exit-ready protocol must still compose this evidence with
 the exact original worker/empty-Job/controller and protected destination/capacity
 proof. Defaults and settled-v1 remain unchanged; no complete producer or host
 qualification is asserted.
+
+### Versioned original-session local exit readiness
+
+The optional `original-exit-ready-v1` worker mode uses the existing single task
+executor for original preparation, sealing, run and local exit proof. Trusted
+boot configuration selects it; request JSON cannot select a producer, callback,
+executor or mode. Default `settled-v1` behavior remains unchanged. Each owned
+stage latches before the captured submit call and retains its original Future
+through timeout; no wait holds the task registry lock.
+
+The session captures its actual resource's genuine file owner before SDK use,
+then binds exact prepared payload, semantic scope, raw Native transfer digest,
+original lock and actual task return. These digests identify distinct
+representations and must not be substituted for each other. The original
+executor consumes the fixed file barrier's opaque same-owner witness once.
+Pending work provides no proof. An accepted or unknown readiness attempt fences
+new work permanently. Cleanup relies on retained ownership, not a new business
+grant; it does not close retained guards or release accounting.
+
+The worker advertises `train-model.original-exit-ready-v1` separately from the
+legacy capability. Its authenticated `exit-ready` route returns only
+`original-training-exit-ready-v1` local readiness; no `settled` field or Native
+token crosses the wire. The HTTP client requires explicit matching capture and
+denies legacy settle on that channel. The existing Node session coordinator
+remains v1. Complete parent orchestration, original worker/SDK/empty-Job proof,
+real capacity, protected destination/crash custody, producer, Save/generation
+and real host qualification remain pending. Local readiness cannot replace them.

@@ -3244,3 +3244,30 @@ This source connection grants none of those capabilities or model-quality result
   bytes/declarations, unknown outcomes, default hosts and settled-v1. No new
   close/write/ACK, compensating delete, retry, Save, worker/Job release, capacity,
   protected destination, producer or host pass is granted.
+
+### Original session local readiness and executor binding
+
+- Threats: HTTP pool threads violate original file ownership; queued stage
+  retries create duplicate IO; callback/DTO readiness bypasses actual files;
+  replaced scope, lock, resource, executor or methods redirect work; local proof
+  is misrepresented as worker/SDK/Job settlement or storage credit.
+- Controls: explicit trusted separate protocol; original captured single
+  executor; closed fixed stage methods and one dispatch latch per stage; original
+  Futures retained across timeout with no registry lock held while waiting.
+  Capture genuine session/resource/file, exact prepared payload and original
+  lock before SDK use. Keep raw transfer and semantic digests distinct. Validate
+  fixed types/methods before virtual or weak-key access. Fixed file proof is
+  consumed once on its original thread. Pending/unknown outcome denies proof;
+  accepted readiness permanently fences new work and cannot grant a retry.
+- Protocol: separately advertised capability and authenticated exact-session
+  route; closed local-readiness schema with no settled field or Native token.
+  Old peers/defaults remain v1, and a new-mode client cannot dispatch old settle.
+  Cleanup uses already-retained ownership without a new business grant.
+- Evidence: inert-kernel genuine file/session cases, real local TestClient
+  authorization and scope denials, original executor replacement/lost-reply
+  cases, legacy compatibility, client/type and focused routing tests. No model,
+  accuracy, physical Native or whole-host qualification is claimed.
+- Residual scope: parent release coordinator, original SDK/process/Job exit,
+  capacity and protected destination/crash custody, complete producer,
+  Save/generation and actual host qualification. All bytes/guards/accounting
+  remain retained; local readiness grants no resource release or parent pass.

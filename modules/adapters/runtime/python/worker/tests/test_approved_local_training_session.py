@@ -173,6 +173,18 @@ class OriginalSessionTests(unittest.TestCase):
         return self.instance
     def ready(self, submit=None):
         owner = self.owner(submit); self.assertEqual(owner.prepare(), "prepared"); self.assertEqual(owner.seal(staged()), "ready"); return owner
+    def test_legacy_session_never_looks_up_the_optional_original_file_owner(self):
+        calls = []
+        def getter(resource): calls.append("getter"); raise AssertionError("Optional v2 method must not run")
+        with patch.object(Resources, "original_files", property(getter)):
+            owner = self.ready(); owner.start(); self.executor.run(); self.assertTrue(owner.settle())
+        self.assertEqual(calls, [])
+    def test_native_preparation_cancellation_cannot_publish_prepared(self):
+        owner = self.owner(); original = self.resources.prepare
+        def cancelling():
+            result = original(); owner.cancel(); return result
+        self.resources.prepare = cancelling
+        self.assertEqual(owner.prepare(), "unconfirmed"); self.assertTrue(owner.cancelled)
     def test_configured_original_loader_and_permanent_retirement(self):
         owner = self.owner()
         with patch.object(session, "train_model_from_local_files", return_value=TrainModelTaskResult(runId="inert", status="succeeded")) as loader:
@@ -401,6 +413,11 @@ class OriginalRoutesTests(unittest.TestCase):
     def action(self, name, **extra): return app._operate_original_training(TASK, name, {"binding": self.reply["binding"], **extra})
     def retire_training(self):
         self.prepare(); self.action("cancel"); self.assertTrue(self.action("settle")["settled"])
+    def test_legacy_protocol_does_not_advertise_or_dispatch_local_exit_readiness(self):
+        self.prepare()
+        self.assertIn(session.CAPABILITY, app.capabilities().capabilities)
+        self.assertNotIn("train-model.original-exit-ready-v1", app.capabilities().capabilities)
+        with self.assertRaises(session.TrainingSessionError): self.action("exit-ready")
     def test_remote_retirement_keeps_worker_admission_fenced(self):
         self.retire_training()
         self.assertTrue(app.TASK_REGISTRY[TASK]["_originalTrainingOwner"].blocks_recovery)

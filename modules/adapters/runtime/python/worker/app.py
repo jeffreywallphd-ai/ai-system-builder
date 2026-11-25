@@ -74,7 +74,9 @@ from .tasks.approved_local_training_session import (
     CAPABILITY as ORIGINAL_TRAINING_CAPABILITY, MAX_BODY_BYTES as TRAINING_BODY_LIMIT,
     MAX_SESSIONS as TRAINING_SESSION_LIMIT, NativeTrainingProducer, NativeTrainingProfile,
     OriginalTrainingSession, TrainingSessionError, capture_definition,
+    _copy as _capture_training_stage_input,
 )
+from .tasks import original_training_session_exit as _training_exit_ready
 from .tasks.model_source_task import (
     CAPABILITY as MODEL_SOURCE_TASK_CAPABILITY, SESSION_CAPABILITY as MODEL_SOURCE_SESSION_CAPABILITY,
     ModelSourceTaskError, ModelSourceTaskOwner,
@@ -827,15 +829,19 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
 
 _ORIGINAL_TRAINING_PRODUCER = None
 _ORIGINAL_TRAINING_PROFILE = None
+_ORIGINAL_TRAINING_PROTOCOL = "settled-v1"
+_ORIGINAL_TRAINING_STAGES = {}
 
 
-def configure_original_training(producer: NativeTrainingProducer):
+def configure_original_training(producer: NativeTrainingProducer, *, retirement_protocol="settled-v1"):
     """Trusted boot composition only. No request/env flag can supply custody.
 
     Actual host composition must provide the independently qualified native
     producer/profile. This source mechanism deliberately supplies no producer.
     """
-    global _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE
+    global _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE, _ORIGINAL_TRAINING_PROTOCOL
+    if type(retirement_protocol) is not str or retirement_protocol not in ("settled-v1", _training_exit_ready.PROTOCOL):
+        raise TrainingSessionError()
     if not isinstance(producer, NativeTrainingProducer):
         raise TrainingSessionError()
     profile = producer.profile
@@ -845,6 +851,38 @@ def configure_original_training(producer: NativeTrainingProducer):
         if _ORIGINAL_TRAINING_PRODUCER is not None or TASK_REGISTRY:
             raise TrainingSessionError()
         _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE = producer, profile
+        _ORIGINAL_TRAINING_PROTOCOL = retirement_protocol
+
+
+def _capture_original_training_stages(owner, record, submit_original, current, timeout):
+    """Closed operations on the same captured executor, never HTTP callbacks."""
+    methods = {"prepare": OriginalTrainingSession.prepare, "seal": OriginalTrainingSession.seal,
+               "exit-ready": OriginalTrainingSession.finish_exit_ready}
+    direct = {"start": OriginalTrainingSession.start, "cancel": OriginalTrainingSession.cancel,
+              "settle": OriginalTrainingSession.settle, "output-read": OriginalTrainingSession.read_output,
+              "output-ack": OriginalTrainingSession.acknowledge_output,
+              "begin": OriginalTrainingSession.begin_exit_ready, "lost": OriginalTrainingSession.mark_exit_ready_lost}
+    futures = {}
+    def invoke(action, supplied=None):
+        if action not in methods:
+            raise TrainingSessionError()
+        selected = methods[action]
+        captured = _capture_training_stage_input(supplied) if action == "seal" else None
+        with TASK_REGISTRY_LOCK:
+            # No wait or callback while holding the registry's nonreentrant lock.
+            if TASK_REGISTRY.get(record["requestId"]) is not record or record.get("_originalTrainingOwner") is not owner or action in futures:
+                raise TrainingSessionError()
+            futures[action] = None  # Latch before submit, including a lost reply.
+        def perform():
+            if not current():
+                raise TrainingSessionError()
+            return selected(owner, captured) if action == "seal" else selected(owner)
+        future = submit_original(perform)
+        if type(future) is not Future:
+            raise TrainingSessionError()
+        futures[action] = future  # Retain original pending work across wait timeout.
+        return future.result(timeout=timeout)
+    return {"owner": owner, "record": record, "invoke": invoke, "futures": futures, "direct": direct}
 
 
 def _training_identity():
@@ -900,16 +938,25 @@ def _prepare_original_training(body):
                 return True
         # Capture this executor/method/receiver now, not after awaited preparation.
         submit_original = TASK_EXECUTOR.submit
+        run_original = OriginalTrainingSession.run
         def submit(session):
             if session is not owner or not current():
                 raise TrainingSessionError()
-            future = submit_original(owner.run)
+            future = submit_original((lambda: run_original(owner)) if protocol == _training_exit_ready.PROTOCOL else owner.run)
             publish(future=future)
             return future
-        owner = OriginalTrainingSession(definition, _ORIGINAL_TRAINING_PRODUCER, current, publish, submit, _ORIGINAL_TRAINING_PROFILE)
+        protocol = _ORIGINAL_TRAINING_PROTOCOL
+        owner = OriginalTrainingSession(definition, _ORIGINAL_TRAINING_PRODUCER, current, publish, submit, _ORIGINAL_TRAINING_PROFILE,
+            retirement_protocol=protocol)
         record.update(_originalTrainingOwner=owner, _trainingBinding=binding, _trainingIncarnation=incarnation)
+        if protocol == _training_exit_ready.PROTOCOL:
+            if len(_ORIGINAL_TRAINING_STAGES) >= TRAINING_SESSION_LIMIT:
+                raise TrainingSessionError()
+            _ORIGINAL_TRAINING_STAGES[task_id] = _capture_original_training_stages(owner, record, submit_original,
+                current, _ORIGINAL_TRAINING_PROFILE.maximum_duration_seconds)
         TASK_REGISTRY[task_id] = record  # Reserve original record BEFORE native IO.
-    phase = owner.prepare()
+    stage = _ORIGINAL_TRAINING_STAGES.get(task_id) if protocol == _training_exit_ready.PROTOCOL else None
+    phase = stage["invoke"]("prepare") if stage else owner.prepare()
     if phase == "unconfirmed" and owner.known_not_run and owner.settle():
         phase = "unavailable"
     return {"binding": binding, "phase": "ready" if phase == "prepared" else phase}
@@ -927,14 +974,18 @@ def _operate_original_training(task_id, action, body):
         if (body["binding"] != record["_trainingBinding"] or
                 record["_trainingIncarnation"] != (RUNTIME_ID, WORKER_STARTED_AT)):
             raise TrainingSessionError()
+    _training_exit_ready.assert_wire(owner, action)
+    stages = _ORIGINAL_TRAINING_STAGES.get(task_id)
+    if stages is not None and (stages["owner"] is not owner or stages["record"] is not record):
+        raise TrainingSessionError()
     if action == "seal":
-        result = {"phase": owner.seal(body["input"])}
+        result = {"phase": stages["invoke"]("seal", body["input"]) if stages else owner.seal(body["input"])}
     elif action == "start":
-        result = owner.start()
+        result = stages["direct"]["start"](owner) if stages else owner.start()
     elif action == "cancel":
-        result = {"cancelled": owner.cancel()}
+        result = {"cancelled": stages["direct"]["cancel"](owner) if stages else owner.cancel()}
     elif action == "settle":
-        settled = owner.settle()
+        settled = stages["direct"]["settle"](owner) if stages else owner.settle()
         with owner.lock:
             result = {"settled": settled, "retirement": "settled" if settled else "unconfirmed" if owner.close_attempted else "pending"}
     elif action == "read":
@@ -944,9 +995,18 @@ def _operate_original_training(task_id, action, body):
                 raise TrainingSessionError()
             result = {"record": _build_task_status_result(record).model_dump(mode="json", exclude_none=True)}
     elif action == "output-read":
-        result = {"output": owner.read_output()}
+        result = {"output": stages["direct"]["output-read"](owner) if stages else owner.read_output()}
     elif action == "output-ack":
-        result = {"acknowledged": owner.acknowledge_output(body["sequence"])}
+        result = {"acknowledged": stages["direct"]["output-ack"](owner, body["sequence"]) if stages else owner.acknowledge_output(body["sequence"])}
+    elif action == "exit-ready":
+        if stages is None or not _training_exit_ready.enabled(owner):
+            raise TrainingSessionError()
+        readiness = stages["direct"]["begin"](owner)
+        if readiness == "queued":
+            try: readiness = stages["invoke"]("exit-ready")
+            except Exception:
+                stages["direct"]["lost"](owner); readiness = "unconfirmed"
+        result = {"schema": "original-training-exit-ready-v1", "ready": readiness == "ready", "retirement": readiness}
     else:
         raise TrainingSessionError()
     response = {"binding": record["_trainingBinding"], **result}
@@ -1007,7 +1067,8 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         # Protocol support only; no engine/process/language probe at startup.
         supported.append(OCR_TASK_CAPABILITY)
     if _ORIGINAL_TRAINING_PRODUCER is not None:
-        supported.append(ORIGINAL_TRAINING_CAPABILITY)
+        supported.append(_training_exit_ready.CAPABILITY if _ORIGINAL_TRAINING_PROTOCOL == _training_exit_ready.PROTOCOL
+                         else ORIGINAL_TRAINING_CAPABILITY)
     return PythonRuntimeCapabilitiesResult(
         runtimeId=RUNTIME_ID, capabilities=supported,
         totalAcceleratorMemoryBytes=read_local_accelerator_memory_bytes() if decoder_available else None,

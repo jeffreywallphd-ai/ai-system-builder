@@ -1312,6 +1312,29 @@ local closure while bytes/accounting remain retained. Older two-method storage
 ports still work but supply no failure-path IO proof. Default hosts, settled-v1,
 worker/Job retirement, capacity, protected destination, producer, Save and host
 qualification are unchanged and remain separate work.
+
+### Optional original-session exit-ready protocol
+
+Trusted worker boot composition may select `original-exit-ready-v1` explicitly.
+The default stays `settled-v1`. The optional worker advertises only the distinct
+`train-model.original-exit-ready-v1` capability; an old peer cannot mistake it
+for permanent settlement. The HTTP client must explicitly capture that mode;
+the new channel permits `exit-ready` and denies legacy `settle` dispatch.
+
+Preparation, sealing, the original run and the fixed file exit proof use the
+same captured task executor. Only closed owned operations are queued, once per
+stage; pending Futures survive a timeout. No wait holds the registry lock. The
+session binds its actual resource and genuine file owner before SDK use, keeps
+the sealed semantic scope and raw Native transfer digest distinct, and consumes
+the original same-owner file witness once. A queued/unknown readiness attempt
+permanently fences new work. Cleanup needs no renewed business grant.
+
+`exit-ready` returns a separate closed local-readiness envelope, never
+`settled=True`. It retains Model/input guards, all result bytes and accounting.
+The existing Node session settlement coordinator is still v1; this change adds
+no default producer or host activation. Full parent exit-ready orchestration,
+actual worker/SDK/Job retirement, capacity/destination/crash custody, complete
+producer, Save/generation and actual host qualification remain pending.
 Existing settled-v1 and default hosts are unchanged; no new wire path is enabled.
 Actual capacity, protected destination/crash lifecycle, full producer, Save and
 host qualification remain pending. The barrier issues no Native or file effects.

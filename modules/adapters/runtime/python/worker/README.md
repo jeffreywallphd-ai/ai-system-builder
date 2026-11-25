@@ -2598,4 +2598,22 @@ registered token can be consumed by the same owner; a DTO/callback cannot stand
 in for it. Busy work grants no proof, and observed terminal uncertainty is sticky.
 This is ready-for-termination support only. No worker/SDK/Job exit, protected
 destination, disk credit, Save, default activation or host result is asserted.
-Existing settled-v1 stays unchanged; future wire composition remains separate.
+Existing settled-v1 stays unchanged; full parent wire orchestration remains separate.
+
+### Separate original-session readiness mode
+
+`configure_original_training(..., retirement_protocol="original-exit-ready-v1")`
+is an explicit trusted boot choice within the approved original topology. It
+requires a resource's actual `original_files()` owner, captured before SDK use.
+Getters, async factories, replaced scope/locks/owners and unfinished or unknown
+original IO cannot provide proof. Default resources and settled-v1 keep their
+existing behavior; the optional callback is not looked up on that path.
+
+The same captured single task executor owns prepare, seal, run and exit proof.
+Closed stage selection, one dispatch per stage and retained original Futures
+prevent timeout/reentry from issuing work twice. Waiting occurs outside registry
+locks. `exit-ready` is authenticated and bound to the exact original session;
+it consumes the genuine local file witness once and never returns settled=True.
+After the readiness latch, new work is fenced. Model/input guards, result bytes
+and all accounting remain retained. No parent resource release, SDK/process/Job
+exit, complete producer, capacity/destination/crash or real host pass is added.

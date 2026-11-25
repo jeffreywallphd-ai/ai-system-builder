@@ -1513,3 +1513,26 @@ no release, delete, retry, credit, Save, new executor or default activation. The
 distinct exit-ready/session protocol, original Native worker/empty-Job proof,
 capacity, protected destination/crash handoff, complete producer and real host
 qualification remain pending. It does not reinterpret settled-v1.
+
+### Explicit worker exit-ready protocol and original executor
+
+Implement local readiness as the separate trusted opt-in
+`original-exit-ready-v1`, preserving default settled-v1. Queue only fixed owned
+prepare/seal/exit operations on the same captured task executor that runs
+training. Retain original Futures across timeout and never wait under registry
+locks. Bind actual session/resource/file owner and the complete prepared scope
+before SDK use; keep semantic and actual transfer-byte digests distinct.
+
+The exit operation latches before dispatch, fences new work, and consumes the
+fixed genuine file witness on the original thread once. Unknown outcomes cannot
+be retried, adopted or healed by late results. The separate authenticated
+capability and closed readiness response cannot be interpreted as settled=True.
+The HTTP client must explicitly capture that capability; older peers keep their
+existing protocol. No Native token, callback-selected operation or resource
+credit is carried on the wire. Model/input guards and result accounting remain.
+
+This closes the worker-side protocol/thread-alignment component, not complete
+execution. The Node session coordinator stays v1; parent orchestration, actual
+Native worker/SDK/Job exit, exclusive both-copy capacity, protected destination
+and crash handoff, complete producer, Save/generation and real host qualification
+remain pending. No new executor, provider, policy limit or default activation.

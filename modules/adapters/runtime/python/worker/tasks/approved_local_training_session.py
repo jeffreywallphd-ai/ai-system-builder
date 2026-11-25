@@ -249,6 +249,10 @@ class NativeTrainingResources(ABC):
         """Optional original queue. JSON and default resources cannot supply it."""
         return None
 
+    def original_files(self):
+        """Optional genuine file owner, not a readiness or settlement boolean."""
+        return None
+
 
 _DEFAULT_OUTPUT_DELIVERY = NativeTrainingResources.output_delivery
 
@@ -371,11 +375,13 @@ class NativeTrainingProducer(ABC):
 
 
 class OriginalTrainingSession:
-    def __init__(self, definition, producer, current: Callable[[], bool], publish, submit, profile=None):
+    def __init__(self, definition, producer, current: Callable[[], bool], publish, submit, profile=None,
+                 *, retirement_protocol="settled-v1"):
         self.loader = train_model_from_local_files
         self.definition = capture_definition(definition)
         self._sealed_definition = _copy(self.definition)
         _original_scopes[self] = _scope_digest(self._sealed_definition)
+        _session_exit.initialize(self, retirement_protocol)
         # Capture the actual schemas before any producer/profile callback. A
         # typed instance alone, or its replaceable dump method, is not a proof.
         self._request_validator = TrainModelTaskRequest.__pydantic_validator__.validate_python
@@ -392,6 +398,7 @@ class OriginalTrainingSession:
         _need(type(self.profile) is NativeTrainingProfile)
         self.current, self.publish, self.submit = current, publish, submit
         self.lock = RLock()
+        _session_exit.capture_controls(self)
         self.phase = "bound"
         self.native = None
         self.payload = None
@@ -430,6 +437,7 @@ class OriginalTrainingSession:
             return False
 
     def prepare(self):
+        _session_exit.assert_work(self)
         with self.lock:
             if self.phase != "bound":
                 return self.phase
@@ -444,22 +452,39 @@ class OriginalTrainingSession:
                     self._worker_retirement_required = False  # Positive no-effect only.
                     self.phase = "unavailable"; self.known_not_run = True; self.settled = True
                 return "unavailable"
-            _need(isinstance(owner, NativeTrainingResources))
-            self.native = owner  # Retain before optional callbacks or preparation IO.
-            self.native_prepare, self.native_seal = owner.prepare, owner.seal_inputs
-            self.native_borrow, self.native_cancel, self.native_settle = owner.borrow, owner.request_cancel, owner.settle
+            if _session_exit.enabled(self):
+                self.native = owner  # Retain before passive method admission.
+                methods = _session_exit.capture_resource(self, owner)
+                self.native_prepare, self.native_seal = methods["prepare"], methods["seal_inputs"]
+                self.native_borrow, self.native_cancel, self.native_settle = methods["borrow"], methods["request_cancel"], methods["settle"]
+            else:
+                _need(isinstance(owner, NativeTrainingResources))
+                self.native = owner  # Retain before optional callbacks or preparation IO.
+                self.native_prepare, self.native_seal = owner.prepare, owner.seal_inputs
+                self.native_borrow, self.native_cancel, self.native_settle = owner.borrow, owner.request_cancel, owner.settle
             _capture_output_delivery(self, owner)
             with self.lock:
                 _need(not self.cancelled and not self.settled and self.phase == "preparing")
+            _session_exit.assert_work(self)
             ready = self.native_prepare()
             _need(type(ready) is str and ready in ("ready", "unavailable", "unconfirmed"))
             current = self._current()
             with self.lock:
+                _need(self.phase == "preparing" and not self.cancelled and not self.settled)
+            if ready == "ready" and current:
+                _session_exit.capture_files(self)
+                if _session_exit.enabled(self):
+                    current = self._current()
+                    _need(current)
+                    _session_exit.assert_work(self)
+            with self.lock:
+                _need(self.phase == "preparing" and not self.cancelled and not self.settled)
                 self.phase = "prepared" if ready == "ready" and current else "unconfirmed"
             if ready == "unavailable":
                 self.known_not_run = True
             return self.phase
         except Exception:
+            if _session_exit.enabled(self): _session_exit.lost(self)
             with self.lock:
                 self.phase = "unconfirmed"
             return "unconfirmed"
@@ -468,6 +493,7 @@ class OriginalTrainingSession:
                 self.operations -= 1
 
     def seal(self, raw):
+        _session_exit.assert_work(self); _session_exit.assert_thread(self)
         _need(self._current())
         with self.lock:
             _need(self.phase == "prepared" and not self.settled and not self.cancelled)
@@ -478,11 +504,13 @@ class OriginalTrainingSession:
             _need(self._current())
             with self.lock:
                 _need(self.phase == "sealing" and not self.cancelled and not self.settled)
+            _session_exit.assert_work(self)
             payload = self.native_seal(_copy(staged))
             _need(self._current())
             owned = _native_request_data(payload, self._request_fields, self._model_fields, self._dataset_fields)
             payload = self._request_validator(owned)
             _compare_native_payload(expected, self._request_serializer(payload, mode="json"))
+            _session_exit.sealed(self, self._request_serializer(payload, mode="json"))
             _need(self._current())
             with self.lock:
                 _need(self.phase == "sealing" and not self.cancelled and not self.settled)
@@ -493,6 +521,7 @@ class OriginalTrainingSession:
                 self.payload = payload; self.phase = "ready"
             return "ready"
         except Exception:
+            if _session_exit.enabled(self): _session_exit.lost(self)
             with self.lock:
                 self.phase = "unconfirmed"
             return "unconfirmed"
@@ -501,6 +530,7 @@ class OriginalTrainingSession:
                 self.operations -= 1
 
     def start(self):
+        _session_exit.assert_work(self)
         _need(self._current())
         with self.lock:
             _need(self.phase == "ready" and not self.issue_attempted and not self.settled and not self.cancelled)
@@ -510,6 +540,7 @@ class OriginalTrainingSession:
             # A raised submit may have queued this exact owner: never retry it.
             future = self.submit(self)
             _need(isinstance(future, Future))
+            _session_exit.capture_future(self, future)
             with self.lock:
                 self.future = future
                 if self.phase == "issuing":
@@ -525,6 +556,7 @@ class OriginalTrainingSession:
                 self.operations -= 1
 
     def run(self):
+        _session_exit.run_entered(self)
         with self.lock:
             _need(not self.run_entered and not self.settled and self.issue_attempted)
             self.run_entered = True; self.operations += 1; self.started_at = monotonic()
@@ -536,6 +568,7 @@ class OriginalTrainingSession:
         try:
             progress({"stage": "starting"})
             self.publish(status="running")
+            _session_exit.assert_work(self)
             with self.native_borrow() as model_view:
                 progress({"stage": "training"})
                 owned = _native_request_data(self.payload, self._request_fields, self._model_fields, self._dataset_fields)
@@ -566,8 +599,10 @@ class OriginalTrainingSession:
                 self.run_returned = True; self.operations -= 1
                 if self.phase != "settled":
                     self.phase = "terminal"
+            _session_exit.run_returned(self)
 
     def cancel(self):
+        _session_exit.assert_cancel(self)
         with self.lock:
             if self.settled or self.cancel_attempted:
                 return self.cancel_result
@@ -598,6 +633,8 @@ class OriginalTrainingSession:
                 self.operations -= 1
 
     def settle(self):
+        if _session_exit.enabled(self):
+            return False  # Local readiness is never global/permanent settlement.
         binding = _output_sessions.get(self)
         if binding is not None:
             try:
@@ -632,3 +669,17 @@ class OriginalTrainingSession:
         result = _OUTPUT_ACK(binding["queue"], sequence)
         _need(result is True and _output_snapshot(self) is binding)
         return True
+
+    def begin_exit_ready(self):
+        return _session_exit.begin(self)
+
+    def finish_exit_ready(self):
+        return _session_exit.finish(self)
+
+    def mark_exit_ready_lost(self):
+        _session_exit.lost(self)
+
+
+# The fixed helper captures the actual class after its methods exist. It adds
+# no producer, executor, model, process or default host activation.
+from . import original_training_session_exit as _session_exit

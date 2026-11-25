@@ -3456,3 +3456,16 @@ controller routing keeps complete related suites and actual commands; incomplete
 nonregular, mixed, unknown or explicit generic scope retains broad discovery.
 Evidence establishes local IO lifetime only. It does not qualify real Native
 worker retirement, capacity, Save, model quality or whole-host operation.
+
+### Original training session exit readiness
+
+The focused `headless-training-session-exit-ready-unit` executes the complete
+new genuine session/file readiness cases and legacy original-session suite.
+It tests exact original executor scheduling, private one-use file proof,
+authenticated local routes, unknown/pending outcomes and retained admission.
+Original file/barrier/output/HTTP and strict type checks remain selected where
+relevant. A sandbox TestClient socketpair stall is an environment failure; use
+the established local fixture environment, preserve the failed/interrupted
+evidence and do not skip the check. No real model, physical Native lifecycle,
+accuracy or full-software suite is part of this profile. Local readiness cannot
+qualify the complete producer, parent release, capacity, Save or real host.

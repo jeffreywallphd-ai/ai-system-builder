@@ -253,3 +253,14 @@ training runtime profile retains whole receiver/session/HTTP compatibility.
 Exact closed routing runs whole related controller modules; missing, nonregular,
 unknown, mixed or explicitly generic scope keeps the broad fallback. These tests
 use small owned files and controlled promises, without models or Native execution.
+
+### Original training session readiness checks
+
+`headless-training-session-exit-ready-unit` runs the entire finite original-file
+session/readiness suite and the existing legacy session/route/Native-software
+suite. Real local TestClient requests need the established host test environment;
+the Windows sandbox can stall their socketpair. The registered profile contains
+no model, physical Native lifecycle or accuracy run. Related original file,
+exit-barrier, output and HTTP/types checks remain independently selected. Only
+the complete known scope gets focused controller routing; unknown, mixed,
+incomplete, nonregular or explicitly generic work retains existing fallback.
