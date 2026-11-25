@@ -1,0 +1,418 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Portable roadmap engine, history validation and deterministic rendering",
+        "Skill installation, workflow, security and documentation"
+      ],
+      "chunkId": "story-model",
+      "completedAt": "2026-11-25T15:32:34Z",
+      "criteriaIds": [
+        "story-ownership",
+        "legacy-history",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Roadmap skill/workflow/events/installation",
+        "Control-plane architecture, threat model and documentation context"
+      ],
+      "feedbackAddressed": [],
+      "id": "stable-stories-and-tasks-story-model",
+      "incrementId": "stable-stories-and-tasks",
+      "summary": "Fixed story intent and audited task ownership implemented, independently reviewed and checkpointed at 0934d8d2ee8307f4f21e4c3477c2e3673a87d93d.",
+      "tests": [
+        "Current executed Work stories-task-model receipt 93c083810004293fa67946a57f3a989bbe0db0bfc6c2c3be6a8719574802e26e passed documentation, agent-support and portable roadmap checks.",
+        "Independent review a51247f5fe58d717e4eeaec7e56ffef88452cb64942f10c1e4449cf2b6830502 accepted; 26 legacy roadmaps retain unchanged rendering.",
+        "Focused retirement, exact history, offline scope and 52-refinement bounded recovery fixtures passed."
+      ],
+      "title": "Preserve stable story intent and task history"
+    }
+  ],
+  "completion": null,
+  "completionSuite": "standardande2e",
+  "createdAt": "2026-11-25T15:03:27Z",
+  "currentIncrementId": "stable-stories-and-tasks",
+  "decisions": [],
+  "discovery": {
+    "constraints": [
+      "No live Headless or shared usage mutation.",
+      "No new retention/resource choice without separately supplied authority.",
+      "No historical timing/token guesses."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-11-25T15:03:27Z",
+    "securityImpact": {
+      "abuseCases": [
+        "Task refinement hides scope changes or retargets evidence.",
+        "Unknown or overlapping activity is counted repeatedly.",
+        "Malformed metrics expose private content or exhaust storage."
+      ],
+      "assets": [
+        "Approved intent, immutable evidence and private numeric-source identities"
+      ],
+      "controls": [
+        "Strict bounded schemas, digests and fail-closed ownership.",
+        "Exclusive leaf conservation, unchanged approval and qualification.",
+        "Numeric-only selected sources and inert safe display."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Cooperative-local identity and filesystem assumptions.",
+        "Missing host activity/counter capture remains unknown."
+      ],
+      "summary": "Changes planning/evidence associations, telemetry retention and public JSON projection.",
+      "trustBoundaries": [
+        "Canonical roadmap to Work targets, telemetry importer and read-only review projection"
+      ],
+      "verification": [
+        "Focused denial, migration, conservation, bounds and DOM tests."
+      ]
+    },
+    "sources": [
+      {
+        "title": "Contributor control plane",
+        "url": "docs/architecture/ai-development-control-plane.md"
+      },
+      {
+        "title": "Roadmap workflow",
+        "url": "skills/manage-implementation-roadmaps/references/workflow.md"
+      }
+    ],
+    "summary": "Implement approved compatibility-first design b09f087503d3a3504f12761e67f5e542048f565070a0d24ef48114e8e1e97572 in an isolated checkout. Existing workPackages are approved intent; chunk IDs, evidence and fixed restriction archives remain unchanged."
+  },
+  "evidence": [],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "7fc195370c91c5ff657cf7838a04718d096393ecfe579c7239f98e76f84920e3",
+      "recordedAt": "2026-11-25T15:03:27Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "e96fabe1fcde59c1bc4510b51b6a4f94d1e812bbbdad636458cf56153574fa7f",
+      "recordedAt": "2026-11-25T15:03:27Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "3e16f5c8f099d5ede3fd2486c5ebea5c5d204513ef1f2fe6662164e257b1b8cf",
+      "recordedAt": "2026-11-25T15:06:15Z",
+      "sequence": 3,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "fdb4d884ae0bc2de9cad6e33efb45042dc5d7715d58e131234e19f6dde3be2ee",
+      "recordedAt": "2026-11-25T15:06:15Z",
+      "sequence": 4,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "d5e9faf63e44c1ba53a9dc07812fb805a6f6f4bf0a522970c5eeda133f0d75e7",
+      "recordedAt": "2026-11-25T15:06:15Z",
+      "sequence": 5,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "de900a3759b1965d5be19b63aff49a9ad70f37d0a3f57bbbfd4d2485ca54472e",
+      "recordedAt": "2026-11-25T15:06:15Z",
+      "sequence": 6,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "ddca88f4a574b26f0ce51e8e3df5b7c246f3c9af61b98f5beddeea36a736ca3c",
+      "recordedAt": "2026-11-25T15:32:34Z",
+      "sequence": 7,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3b6c4287595eab2612b8048553e00c8e07bbf7b71366e28515e3975aa8a57ed4",
+      "recordedAt": "2026-11-25T15:32:34Z",
+      "sequence": 8,
+      "storyTaskRevisionDigest": "e55e06eed1f3fe8e16f736f804a7c4225876921cb9428ada954cad31072fcc9d",
+      "type": "story-tasks-assigned"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Story adoption and refinement validate exact definitions, unique ownership and complete criterion coverage.",
+          "id": "story-ownership",
+          "qualification": "local"
+        },
+        {
+          "description": "Legacy and Headless restricted plan history, approved scope and completed task definitions/order remain unchanged.",
+          "id": "legacy-history",
+          "qualification": "local"
+        },
+        {
+          "description": "Optional Work task targets detect changed or foreign task definitions without altering legacy Work bindings.",
+          "id": "task-currentness",
+          "qualification": "local"
+        },
+        {
+          "description": "JSON projection, exact compact joins and inert UI show stories and tasks separately from execution Work.",
+          "id": "review-progress",
+          "qualification": "local"
+        },
+        {
+          "description": "Strict identities, approval and evidence integrity, bounded storage, inert display and failure paths are verified without new execution authority.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [
+        "story-model"
+      ],
+      "deliverables": [
+        "Existing approved work packages remain fixed story intent.",
+        "Every adopted task has one story owner and exact optional Work evidence references.",
+        "Roadmaps show stable stories, task counts and separate pending technical qualification."
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Live Headless state adoption while another checkout is working.",
+        "Live shared usage migration before compatible readers are integrated.",
+        "Full application, model, native, accuracy and broad aggregate suites, per the implementation instruction."
+      ],
+      "id": "stable-stories-and-tasks",
+      "number": 1,
+      "objective": "Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence.",
+      "plan": {
+        "assumptions": [
+          "No live Headless migration or shared usage writes occur."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "story-ownership",
+              "legacy-history",
+              "security-impact-reviewed"
+            ],
+            "id": "story-model",
+            "outcome": "Audited task ownership retains approved definitions and completed history.",
+            "title": "Preserve stable story intent and task history"
+          },
+          {
+            "criteriaIds": [
+              "task-currentness",
+              "legacy-history",
+              "security-impact-reviewed"
+            ],
+            "id": "task-work-binding",
+            "outcome": "Optional task targets and pure support previews detect drift without changing old Work.",
+            "title": "Bind task implementation to exact Work evidence"
+          },
+          {
+            "criteriaIds": [
+              "review-progress",
+              "story-ownership",
+              "security-impact-reviewed"
+            ],
+            "id": "story-progress-ui",
+            "outcome": "Stable story groups and expandable task counts retain exact joins, inert copy and separate qualification.",
+            "title": "Show stories and tasks on Roadmaps"
+          }
+        ],
+        "completionTests": [
+          "Changed framework and review-site feature checks.",
+          "Documentation and agent-support gates."
+        ],
+        "documentation": [
+          "Roadmap skill, workflow/events/installation and implementation guide.",
+          "Control-plane architecture/security, helper/site instructions and context routing."
+        ],
+        "fingerprint": "9c4aab88c6e0ade5cc335f98f62c4613b926024940b25fce9645894d0bdd8d55",
+        "focusedTests": [
+          "Portable story/task ownership and legacy refusal tests.",
+          "Focused Work, projection, pagination, support and DOM tests."
+        ],
+        "recordedAt": "2026-11-25T15:06:15Z",
+        "rollback": "Retain all original state/history and run compatible readers before optional adoption.",
+        "steps": [
+          "Add canonical audited ownership adoption and refinement guards.",
+          "Bind optional Work task targets and preserve exact evidence/history.",
+          "Group stories and tasks on the review site with current source-bound copy."
+        ],
+        "summary": "Deliver stable stories and expandable tasks through compatible canonical state, exact Work evidence and read-only review."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-25T15:06:15Z",
+          "risks": [
+            "Scope or completed history could be silently changed by ownership metadata. Require strict digests and reviewed adoption.",
+            "A new source target association must not bypass current independent review or pending qualification."
+          ],
+          "sources": [
+            {
+              "title": "Engine and exact chunk refinement",
+              "url": "skills/manage-implementation-roadmaps/scripts/roadmap.py"
+            },
+            {
+              "title": "Projection and candidate Work binding",
+              "url": "dev-tools/helpers/control_plane/projection.py"
+            }
+          ],
+          "summary": "Reuse unchanged workPackages and chunk plan/completion identity. Store audited ownership outside historical plan objects. Keep optional Work task targets distinct from canonical increment binding."
+        }
+      ],
+      "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
+      "startedAt": "2026-11-25T15:06:15Z",
+      "status": "implementing",
+      "title": "Stable stories and task progress",
+      "verification": [
+        "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
+        "Run documentation and agent-support checks after affected instructions change."
+      ],
+      "workPackages": [
+        {
+          "id": "stable-outcomes",
+          "outcome": "Existing approved work packages remain fixed story intent.",
+          "title": "Keep approved story outcomes"
+        },
+        {
+          "id": "task-evidence",
+          "outcome": "Every adopted task has one story owner and exact optional Work evidence references.",
+          "title": "Track tasks and their evidence"
+        },
+        {
+          "id": "readable-progress",
+          "outcome": "Roadmaps show stable stories, task counts and separate pending technical qualification.",
+          "title": "Show story and task progress"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Completed own-agent activity spans validate replay, clock/session, overlap, phase and scope without deriving coding time from Work elapsed.",
+          "id": "time-observations",
+          "qualification": "local"
+        },
+        {
+          "description": "Story, increment-only, roadmap-only and unattributed contributions conserve counters without inclusive/child or hierarchy double counting.",
+          "id": "scope-conservation",
+          "qualification": "local"
+        },
+        {
+          "description": "Old numeric totals, cursors, phases, baselines and day/week/quarter retention are preserved by compatible bounded migration.",
+          "id": "usage-compatibility",
+          "qualification": "local"
+        },
+        {
+          "description": "Roadmaps show measured, estimated and unknown scope summaries; unavailable metrics do not change qualification or break navigation.",
+          "id": "roadmap-metrics",
+          "qualification": "local"
+        },
+        {
+          "description": "Strict identities, approval and evidence integrity, bounded storage, inert display and failure paths are verified without new execution authority.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Closed bounded activity spans preserve measured, estimated and unknown time.",
+        "One atomic token importer preserves original counters and exclusive leaf ancestry.",
+        "Roadmaps show simple time/token summaries and bounded period trends with explicit coverage gaps."
+      ],
+      "dependsOn": [
+        "stable-stories-and-tasks"
+      ],
+      "excluded": [
+        "Live Headless state adoption while another checkout is working.",
+        "Live shared usage migration before compatible readers are integrated.",
+        "Full application, model, native, accuracy and broad aggregate suites, per the implementation instruction."
+      ],
+      "id": "scoped-time-and-tokens",
+      "number": 2,
+      "objective": "Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history.",
+      "plan": null,
+      "research": [],
+      "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Scoped implementation time and token reporting",
+      "verification": [
+        "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
+        "Run documentation and agent-support checks after affected instructions change."
+      ],
+      "workPackages": [
+        {
+          "id": "honest-time",
+          "outcome": "Closed bounded activity spans preserve measured, estimated and unknown time.",
+          "title": "Record implementation effort"
+        },
+        {
+          "id": "scoped-tokens",
+          "outcome": "One atomic token importer preserves original counters and exclusive leaf ancestry.",
+          "title": "Attribute token observations"
+        },
+        {
+          "id": "simple-reporting",
+          "outcome": "Roadmaps show simple time/token summaries and bounded period trends with explicit coverage gaps.",
+          "title": "Show scoped metrics"
+        }
+      ]
+    }
+  ],
+  "name": "Stories, tasks and scoped implementation reporting",
+  "objective": "Keep approved stories stable while tasks expand beneath them, and show honestly attributed implementation time and tokens at story, increment and roadmap levels.",
+  "paths": {
+    "report": "docs/tmp/stories-tasks-control-plane-implementation-report.md",
+    "roadmap": "docs/stories-tasks-control-plane-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/stories-tasks-control-plane/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-11-25T15:06:15Z",
+    "fingerprint": "9601effbc103b3f8b8ae9be1aeb07204bbf95d5c88a0a516c0c01c1a446f828c",
+    "note": "User explicitly dispatched implementation of approved compatibility-first exploration b09f087503d3a3504f12761e67f5e542048f565070a0d24ef48114e8e1e97572, including the two described increments and scoped time/token reporting. This records that actual existing authorization; no new approval is inferred for broader retention/resource/architecture changes."
+  },
+  "schemaVersion": 1,
+  "slug": "stories-tasks-control-plane",
+  "status": "executing",
+  "storyTaskTracking": {
+    "revisions": [
+      {
+        "approvedScopeDigest": "9601effbc103b3f8b8ae9be1aeb07204bbf95d5c88a0a516c0c01c1a446f828c",
+        "assignments": [
+          {
+            "storyId": "stable-outcomes",
+            "taskDefinitionDigest": "6c5f7121bc5744e5431d0be33d80eed2b582651df65768f389df3637b71ae8f7",
+            "taskId": "story-model"
+          },
+          {
+            "storyId": "task-evidence",
+            "taskDefinitionDigest": "0e83060e283d836d6baa2c753e3b8cb02f01567699a79539d0544e87ba3e1c78",
+            "taskId": "task-work-binding"
+          },
+          {
+            "storyId": "readable-progress",
+            "taskDefinitionDigest": "6d05ec67808c2c75fd2fcc2451ae2de569aa7fd48a56f7fd37ed8b393b4c0b16",
+            "taskId": "story-progress-ui"
+          }
+        ],
+        "authorityRef": "user-approved-stories-tasks-b09f0875",
+        "eventFingerprint": "3b6c4287595eab2612b8048553e00c8e07bbf7b71366e28515e3975aa8a57ed4",
+        "incrementId": "stable-stories-and-tasks",
+        "planDigest": "e5c654afd9c65ee4d5f9bee37f74f496d403b5137f7555a53947e759da785afe",
+        "priorDigest": null,
+        "reason": "Apply the approved stable-story ownership model to this owned implementation roadmap after the reviewed source checkpoint. No live Headless state is adopted.",
+        "recordedAt": "2026-11-25T15:32:34Z",
+        "revision": 1,
+        "storiesDigest": "ab2e3df0227af95a44a7e3fbb5ed809603d8eea3ce5653eab02b055cb286c588"
+      }
+    ],
+    "schemaVersion": 1
+  },
+  "updatedAt": "2026-11-25T15:32:34Z"
+}

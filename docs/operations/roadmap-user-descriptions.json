@@ -8328,6 +8328,185 @@
           "Measure page switching, editing, validation, and submission on a representative larger form. Record the agreed test size and budgets before measuring."
         ]
       }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "criterion_id": "story-ownership",
+      "source_description_sha256": "36c170db24817e0c5825ecc101bbfc9ae63b4943b28c24fa0b2c92aa92052ea3",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep each task under the right story.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Check saved story and task definitions before assigning an owner.",
+          "Assign each task to one story. Keep every acceptance requirement covered."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "criterion_id": "legacy-history",
+      "source_description_sha256": "723dde059eb2b3e975c095d1655b1ef2347f7fd025f0f91556d640e7beb2458c",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep earlier work and approvals intact.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Keep the saved Headless testing restriction and all earlier plan changes.",
+          "Keep approved scope, completed task IDs, their definitions and their order unchanged."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "criterion_id": "task-currentness",
+      "source_description_sha256": "74131aa68633d06816bc1aa48751f9671a21510b9ba1da0e2b850a29ee5e2bf5",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Link each task to the correct execution record.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Use exact saved task definitions and story ownership when linking execution Work.",
+          "Refuse changed tasks and tasks from another story or increment.",
+          "Keep earlier execution records and their increment links unchanged."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "criterion_id": "review-progress",
+      "source_description_sha256": "c1f2984b136688fb12abdd9c99651676a8275cfb6e32b621ed2186554f234f0a",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Show stories and tasks clearly.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Show fixed stories and their tasks from saved JSON.",
+          "Open the exact linked tasks and their complete acceptance details.",
+          "Display source text safely. Distinguish planned tasks from execution records."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "criterion_id": "security-impact-reviewed",
+      "source_description_sha256": "cf0fa905f250a8a5c568bfaf401b3fa03159f16957c14270091fee8c3e4559fd",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep planning and evidence changes safe.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Check identities, approval links and evidence before accepting a change.",
+          "Reject unsafe or oversized data and test failure paths.",
+          "Display saved text safely. Keep storage bounded and grant no new execution authority."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "criterion_id": "time-observations",
+      "source_description_sha256": "4c1345df3a1e2c0f93ec982d522038dfbc155d2fc9bd6e4ba98e47c17e59a409",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Record implementation time honestly.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Count only completed activity spans reported for the acting agent.",
+          "Check session clocks, repeated spans, overlaps, activity phases and the linked story or increment.",
+          "Keep measured time, estimates and missing time distinct.",
+          "Do not treat elapsed execution-record time as coding time."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "criterion_id": "scope-conservation",
+      "source_description_sha256": "e402696922b25567f279cfd23ae360378e5090697b82597f6f00c0680075ddf3",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Count each observation once.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Assign each observation once to its story, its known parent, or unknown scope.",
+          "Build increment and roadmap totals from those contributions.",
+          "Do not add a parent's inclusive counters to child counters or count the same work at several levels."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "criterion_id": "usage-compatibility",
+      "source_description_sha256": "c4e10b735ac4a2de4bf466444bcfbbf31795a66453fd179a0cd136e2c33585a2",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep saved token history intact.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Keep all saved token totals, replay positions, counter baselines and activity phases.",
+          "Keep the current daily, weekly and quarterly history limits.",
+          "Migrate only with compatible readers and within existing storage limits."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "criterion_id": "roadmap-metrics",
+      "source_description_sha256": "88ac15e2329d751ace5f646479ed2c489c84b1653649b724b422098497fbe159",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Show useful reports when capture is partial.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Show measured values, estimates and missing data at story, increment and roadmap levels.",
+          "Keep partial capture and unknown attribution visible.",
+          "Keep navigation and technical acceptance results unchanged when metrics are unavailable."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "criterion_id": "security-impact-reviewed",
+      "source_description_sha256": "cf0fa905f250a8a5c568bfaf401b3fa03159f16957c14270091fee8c3e4559fd",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep planning and evidence changes safe.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test this requirement. No action needed.",
+        "completion_proof": "Current focused checks and a separate technical review confirm this requirement.",
+        "requirements": [
+          "Check identities, approval links and evidence before accepting a change.",
+          "Reject unsafe or oversized data and test failure paths.",
+          "Display saved text safely. Keep storage bounded and grant no new execution authority."
+        ]
+      }
     }
   ],
   "headings": [
@@ -9725,6 +9904,49 @@
           "Open a specific form with Edit Form. Return to that form on Canvas with Back to Canvas.",
           "Choose the next form page based on an answer and run an approved action after submission.",
           "Verify the experience on Desktop and in the managed browser."
+        ]
+      }
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "stable-stories-and-tasks",
+      "source_title_objective_digest": "02b3dc594ff8460543654c9df532adeab39c54d3adc359527db284dabc60c9b7",
+      "user_description": {
+        "title": "Stable stories and task progress",
+        "purpose": "Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence.",
+        "scope": [
+          "Existing approved work packages remain fixed story intent.",
+          "Every adopted task has one story owner and exact optional Work evidence references.",
+          "Roadmaps show stable stories, task counts and separate pending technical qualification."
+        ]
+      }
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "stories-tasks-control-plane",
+      "increment_id": "scoped-time-and-tokens",
+      "source_title_objective_digest": "0c7182966c60be95b49f14a977fb530f188794c237c4a34ddeb708eb0b1dfa68",
+      "user_description": {
+        "title": "Scoped implementation time and token reporting",
+        "purpose": "Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history.",
+        "scope": [
+          "Closed bounded activity spans preserve measured, estimated and unknown time.",
+          "One atomic token importer preserves original counters and exclusive leaf ancestry.",
+          "Roadmaps show simple time/token summaries and bounded period trends with explicit coverage gaps."
+        ]
+      }
+    },
+    {
+      "record_type": "roadmap",
+      "roadmap_id": "stories-tasks-control-plane",
+      "source_title_objective_digest": "52f4540d68422e5a1f7d6a340a5422b77bb3363faa38ea6c7fa354ad0a9a0a5a",
+      "user_description": {
+        "title": "Stories, tasks and scoped implementation reporting",
+        "purpose": "Keep approved stories stable while tasks expand beneath them, and show honestly attributed implementation time and tokens at story, increment and roadmap levels.",
+        "scope": [
+          "Keep stories fixed and expand tasks inside approved outcomes.",
+          "Report honestly attributed implementation time and token usage."
         ]
       }
     }
