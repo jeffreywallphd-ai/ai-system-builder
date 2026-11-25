@@ -361,6 +361,169 @@ def test_private_pipeline_requires_original_output_family_before_dataset_or_mode
         assert sum(name=="ReadFile" for name,_ in kernel.calls)==reads and use._pipeline_slot["stage"]=="failed"
 
 
+@pytest.mark.parametrize("method",["full-finetune","lora","qlora"])
+def test_original_result_binding_checks_every_pipeline_output_without_ordinary_io(monkeypatch,method):
+    with _protected_pipeline_fixture(monkeypatch,method=method) as (native,use,_,_,family,control,kernel,_,_,disk):
+        final=train_model_module._run_protected_training_pipeline(use)
+        members=tuple(native._output_family_snapshot(family)["members"])
+        charges=tuple(control.charges);writes=sum(name=="WriteFile" for name,_ in kernel.calls)
+        def forbidden(*a,**k):pytest.fail("Result binding invoked ordinary IO or model execution")
+        with monkeypatch.context() as guard:
+            for name in ("open","read_bytes","write_bytes","mkdir"):guard.setattr(Path,name,forbidden)
+            for name in ("validate_model_output","save_adapter_pretrained","save_full_model_pretrained",
+                    "_load_dataset","_load_transformers_objects"):
+                # Captured pipeline helpers must stay installed; replacing them
+                # is separately denied. Their SDK boundaries are already inert.
+                if name not in ("_load_dataset","_load_transformers_objects"):guard.setattr(train_model_module,name,forbidden)
+            facts=train_model_module._validate_protected_training_results(use)
+        assert tuple(row[0] for row in facts)==("checkpoint","candidate") and facts[0][1]==1 and facts[1][1] is None
+        assert type(facts) is tuple and all(type(row) is tuple and row[-1]>0 for row in facts)
+        assert all(row[4]==("safetensors" if method=="full-finetune" else "adapter-safetensors") for row in facts)
+        assert use._result_validation_slot=={"stage":"complete","facts":facts}
+        assert all(native._training_output_readers[row["graph"]]["read_state"]=="complete" for row in members)
+        assert len(repr(facts))<8192 and members[-1]["graph"] is final and final.retired is False
+        assert sum(name=="WriteFile" for name,_ in kernel.calls)==writes and tuple(control.charges)==charges
+        assert disk==[] and control.retained==[] and family.phase=="sealed"
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._validate_protected_training_results(use)
+        assert len(kernel.calls)==before and family.phase=="sealed" and use._result_validation_slot["stage"]=="complete"
+
+
+def test_original_result_binding_foreign_thread_cannot_consume_the_owner_attempt(monkeypatch):
+    from threading import Thread
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,_,kernel,_,_,_):
+        train_model_module._run_protected_training_pipeline(use)
+        errors=[];before=len(kernel.calls)
+        def foreign():
+            try:train_model_module._validate_protected_training_results(use)
+            except BaseException as error:errors.append(type(error))
+        thread=Thread(target=foreign);thread.start();thread.join(2)
+        assert not thread.is_alive() and errors==[ValueError] and use._result_validation_slot is None
+        assert len(kernel.calls)==before and family.phase=="sealed"
+        assert len(train_model_module._validate_protected_training_results(use))==2
+
+
+@pytest.mark.parametrize("change",["reader","parser","history","graph","permission","reentry",
+    "business-method","resource-method","admission-owner","reservation-owner"])
+def test_original_result_binding_owned_failures_preserve_outputs_and_deny_retry(monkeypatch,change):
+    with _protected_pipeline_fixture(monkeypatch) as (native,use,_,_,family,control,kernel,_,_,disk):
+        train_model_module._run_protected_training_pipeline(use)
+        graphs=tuple(row["graph"] for row in native._output_family_snapshot(family)["members"])
+        charges=tuple(control.charges);writes=sum(name=="WriteFile" for name,_ in kernel.calls)
+        injected=[]
+        if change in ("reader","parser"):
+            def replacement(*a,**k):injected.append(True);pytest.fail("Replacement helper executed")
+            monkeypatch.setattr(train_model_module,"_NATIVE_TRAINING_OUTPUT_READER" if change=="reader"
+                else "validate_protected_training_output_chunks",replacement)
+        elif change=="history":use._training_slot["files"]=tuple(list(use._training_slot["files"]))
+        elif change=="graph":use._pipeline_slot["graph"]=object()
+        elif change=="permission":control.current=False
+        elif change in ("business-method","resource-method"):
+            def replacement():injected.append(True);return True
+            native._output_family_snapshot(family)["methods"][change.split("-")[0]]=replacement
+        elif change in ("admission-owner","reservation-owner"):
+            native._output_family_snapshot(family)[change.split("-")[0]]=object()
+        else:
+            def current(obj):
+                if obj is control and not injected and use._result_validation_slot is not None:
+                    injected.append(True)
+                    with pytest.raises(ValueError):train_model_module._validate_protected_training_results(use)
+                return obj.__dict__["current"]
+            monkeypatch.setattr(type(control),"current",property(current,
+                lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises((ValueError,train_model_module.LaunchUnavailable)) as error:
+            train_model_module._validate_protected_training_results(use)
+        assert "Replacement helper" not in str(error.value)
+        assert injected==([True] if change=="reentry" else [])
+        assert use._result_validation_slot["stage"]=="failed" and family.phase=="failed"
+        assert all(graph.retired is False and graph.guards for graph in graphs)
+        assert tuple(control.charges)==charges and sum(name=="WriteFile" for name,_ in kernel.calls)==writes
+        assert control.retained==[] and disk==[]
+        before=len(kernel.calls)
+        with pytest.raises(ValueError):train_model_module._validate_protected_training_results(use)
+        assert len(kernel.calls)==before
+
+
+@pytest.mark.parametrize("change",[None,"profile","files","run-id","started-at","method","task","record-hash",
+    "format","empty-shapes","step","boolean-step"])
+def test_checked_result_summary_requires_original_lineage_and_exact_final_record_hashes(change):
+    files=(("training-run.json",12,"a"*64),("serialization_manifest.json",15,"b"*64))
+    identity=("11111111-1111-4111-8111-111111111111","2026-01-01T00:00:00+00:00")
+    role="checkpoint" if change in ("step","boolean-step") else "candidate"
+    run={"runId":identity[0],"startedAt":identity[1],"method":"full-finetune","trainingTask":"llm-instruction","checkpointStep":1}
+    result={"profile":role,"files":files,"metadata":{"training-run.json":run},
+        "tensorShapeSummary":{"layer":[2]},"serializationFormat":"safetensors"}
+    if change=="profile":result["profile"]="checkpoint"
+    elif change=="files":result["files"]=tuple(list(files))
+    elif change=="run-id":run["runId"]="22222222-2222-4222-8222-222222222222"
+    elif change=="started-at":run["startedAt"]="2026-01-02T00:00:00+00:00"
+    elif change=="method":run["method"]="lora"
+    elif change=="task":run["trainingTask"]="llm-extraction"
+    elif change=="format":result["serializationFormat"]="adapter-safetensors"
+    elif change=="empty-shapes":result["tensorShapeSummary"]={}
+    elif change=="step":run["checkpointStep"]=2
+    elif change=="boolean-step":run["checkpointStep"]=True
+    expected=files if change!="record-hash" else (("training-run.json",12,"c"*64),files[1])
+    def invoke():return train_model_module._training_result_summary(result,files,role=role,
+        step=1 if role=="checkpoint" else None,name="synthetic-result",identity=identity,
+        method="full-finetune",training_task="llm-instruction",original_records=expected)
+    if change is None:
+        assert invoke()==("candidate",None,"synthetic-result",files,"safetensors",1)
+    else:
+        with pytest.raises(ValueError):invoke()
+
+
+def test_original_result_binding_refuses_unknown_previous_stage_without_equality_hooks():
+    from threading import get_ident
+    callbacks=[]
+    class Stage:
+        def __eq__(self,other):callbacks.append(other);return True
+    # An incomplete private object is denial-only test data, not a Native Use.
+    use=object.__new__(train_model_module._ProtectedTrainingUse)
+    use._thread=get_ident();use._result_validation_slot={"stage":Stage()};use._checkpoint_slot=None
+    with pytest.raises(ValueError):train_model_module._validate_protected_training_results(use)
+    assert callbacks==[] and use._result_validation_slot["stage"]=="failed"
+
+
+@pytest.mark.parametrize("driver_present",[False,True])
+def test_partial_private_use_without_result_helpers_refuses_with_controlled_error(tmp_path,driver_present):
+    use=object.__new__(train_model_module._ProtectedTrainingUse)
+    use.payload=_request(tmp_path)
+    use._completion_helpers=train_model_module._PROTECTED_COMPLETION_HELPERS
+    if driver_present:use._result_validation_driver=train_model_module._validate_protected_training_results
+    with pytest.raises(ValueError,match="result validation helpers"):
+        train_model_module._ProtectedTrainingUse.assert_snapshot(use)
+
+
+@pytest.mark.parametrize("change",["permission","stage-hook"])
+def test_original_result_binding_final_resource_observer_cannot_publish_after_permission_changes(monkeypatch,change):
+    with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,control,_,_,_,_):
+        train_model_module._run_protected_training_pipeline(use)
+        injected=[];equality=[]
+        class Stage:
+            def __eq__(self,other):equality.append(other);return True
+        def current(obj):
+            frame=sys._getframe(1);resource=False;final=False
+            while frame:
+                if (frame.f_code.co_name=="_guard_output_family_training" and frame.f_locals.get("key")=="resource"
+                        or frame.f_code.co_name=="current" and frame.f_locals.get("kind")=="resource"):resource=True
+                if frame.f_code.co_name=="_validate_protected_training_results" and type(frame.f_locals.get("facts")) is tuple:final=True
+                frame=frame.f_back
+            if obj is control and resource and final and not injected:
+                injected.append(True)
+                if change=="permission":obj.__dict__["current"]=False
+                else:use._result_validation_slot["stage"]=Stage()
+                return True  # This resource observation itself succeeds.
+            return obj.__dict__["current"]
+        monkeypatch.setattr(type(control),"current",property(current,
+            lambda obj,value:obj.__dict__.__setitem__("current",value)),raising=False)
+        with pytest.raises((ValueError,train_model_module.LaunchUnavailable)):
+            train_model_module._validate_protected_training_results(use)
+        assert injected==[True] and equality==[]
+        assert use._result_validation_slot["stage"]=="failed" and use._result_validation_slot["facts"] is None
+        assert family.phase=="failed" and control.retained==[]
+
+
 def test_private_pipeline_foreign_thread_refuses_without_poisoning_original_attempt(monkeypatch):
     from threading import Thread
     with _protected_pipeline_fixture(monkeypatch) as (_,use,_,_,family,control,kernel,calls,_,_):

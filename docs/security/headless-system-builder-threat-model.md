@@ -2954,6 +2954,26 @@ producer/custody/retirement, Save, model accuracy, Native or host qualification.
 
 ### Protected result structure validation
 
+The private fixed consumer must bind these data checks to its original completed
+Use, pipeline, view/request/thread, training history, finite family, graphs,
+configuration and inventories. Capture the original reader/parser and pure
+summary helpers before observers. Reserve one owner attempt, exhaust all original
+streams, recheck bindings, and compare run ID, start time, method, checkpoint steps
+and final task. Require final history/manifest file hashes to match the retained
+producer bytes. Keep only immutable bounded summaries, not every checkpoint's
+metadata or weight body. Capture the exact resource/business methods already held
+by the Native family and their reservation/admission owners before SDK callbacks.
+Bind them in the
+checkpoint's passive snapshot. After final resource observations, call that
+original permission method last, then only passive same-attempt/binding checks
+before publication. Require exact string states before comparisons, without
+calling substituted equality hooks. Deny helper replacement, substituted lineage/graphs,
+reentry, incomplete batches, repeated attempts and lost original permission.
+Wrong-thread attempts do not poison the owner; owned failure retains graphs,
+handles, charges and failed history. This private composition does not retire
+workers or IO, refund resources, Save files, publish task success or enable a
+default producer. Actual Native/resource/retirement/host proof remains separate.
+
 Treat result chunks, descriptors and declared history as untrusted data. Require
 exact primitive types, finite current filenames/methods, explicit original byte
 bounds, ordered offsets and every size/hash/EOF. Exhaust the source even after the

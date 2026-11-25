@@ -143,10 +143,17 @@ def profile_commands(root, profile_id):
     return _commands_for_snapshot(root, paths, source, exact=True)
 
 
-def profile_command_timeout(profile):
+def profile_command_timeout(profile, *, regression_test=None):
     # The review-site Node guard includes the existing600second controller.
     # Leave bounded grace for its assertion/output before the outer660s ceiling.
-    return 630 if profile == "review-site" else 270
+    if profile == "review-site":
+        return 630
+    # Only this exact source-owned inert text batch has a measured calibration.
+    # Keep 30s grace below its 420s outer check and generic budgets unchanged.
+    if (profile is None and type(regression_test) is str and
+            regression_test == "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"):
+        return 390
+    return 270
 
 
 def main():
@@ -162,7 +169,8 @@ def main():
         root = Path(__file__).resolve().parents[2]
         if sum(bool(v) for v in (args.regression_test, args.affected, args.profile)) > 1:
             refuse("verification.arguments", "Choose affected ownership or one exact regression.")
-        selected = profile_commands(root, args.profile) if args.profile else commands(root, [relative(args.regression_test)] if args.regression_test else args.affected, exact=bool(args.regression_test))
+        regression_test = relative(args.regression_test) if args.regression_test else None
+        selected = profile_commands(root, args.profile) if args.profile else commands(root, [regression_test] if regression_test else args.affected, exact=bool(regression_test))
         for argv in selected:
             env = dict(os.environ)
             env.pop("PYTHONOPTIMIZE", None)
@@ -174,11 +182,15 @@ def main():
             if args.profile == "review-site":
                 # The fixed Node guard runs Python tests in this selected environment.
                 env["PYTHON"] = sys.executable
-            r = subprocess.run(argv, cwd=root, check=False, timeout=profile_command_timeout(args.profile), env=env)
+            r = subprocess.run(argv, cwd=root, check=False,
+                timeout=profile_command_timeout(args.profile,regression_test=regression_test), env=env)
             if r.returncode:
                 return r.returncode
         return 0
-    except (ControlError, OSError, SyntaxError, subprocess.TimeoutExpired):
+    except subprocess.TimeoutExpired:
+        print("Focused verification exceeded its fixed child limit (TimeoutExpired).", file=sys.stderr)
+        return 1
+    except (ControlError, OSError, SyntaxError):
         print("Focused verification unavailable or failed; inspect the owning tests.", file=sys.stderr)
         return 1
 

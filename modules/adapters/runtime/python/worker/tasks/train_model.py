@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import stat
 import sys
@@ -22,9 +23,9 @@ from ..native.windows_original_worker_launch import (LaunchUnavailable, Original
     _resolve_output_family_for_training, _claim_output_family_training, _guard_output_family_training,
     _output_family_training_binding,
     resolve_original_training_references, resolve_original_training_task_id,
-    read_original_training_input_bytes)
+    read_original_training_input_bytes, read_original_training_output_chunks)
 from .model_serialization import DEFAULT_MAX_SHARD_SIZE, save_adapter_pretrained, save_full_model_pretrained, write_serialization_manifest
-from .model_validation import validate_model_output
+from .model_validation import validate_model_output, validate_protected_training_output_chunks
 
 SUPPORTED_METHODS = {"lora", "qlora", "full-finetune"}
 SUPPORTED_DATASET_FORMATS = {"jsonl", "json", "csv", "parquet"}
@@ -50,6 +51,7 @@ _NATIVE_REQUEST_SERIALIZER = TrainModelTaskRequest.__pydantic_serializer__.to_py
 _NATIVE_REFERENCE_RESOLVER = resolve_original_training_references
 _NATIVE_TASK_ID_RESOLVER = resolve_original_training_task_id
 _NATIVE_TRAINING_INPUT_READER = read_original_training_input_bytes
+_NATIVE_TRAINING_OUTPUT_READER = read_original_training_output_chunks
 _NATIVE_TENSOR_STREAM = OriginalTrainingDenseTensorStream
 _NATIVE_OUTPUT_INIT = OriginalTrainingOutputGraph.__init__
 _NATIVE_OUTPUT_GUARD = OriginalTrainingOutputGraph.guard
@@ -397,6 +399,7 @@ class _ProtectedTrainingUse:
         "_run_identity","_training_driver","_training_slot","_thread","_completion_helpers",
         "_dataset_reader","_dataset_loader","_dataset_parquet_reader","_dataset_slot",
         "_pipeline_driver","_pipeline_helpers","_pipeline_slot",
+        "_result_validation_driver","_result_validation_helpers","_result_validation_slot",
         "_output_family_type","_output_family_snapshot","_output_family_fail",
         "_checkpoint_slot","_checkpoint_family_resolve","_checkpoint_family_claim","_checkpoint_family_guard",
         "_checkpoint_family_owner","_checkpoint_export_guard","_checkpoint_export_binding","_final_result_slot","__weakref__")
@@ -412,6 +415,9 @@ class _ProtectedTrainingUse:
         self._dataset_slot = None
         self._pipeline_driver, self._pipeline_helpers = _run_protected_training_pipeline, _PROTECTED_PIPELINE_HELPERS
         self._pipeline_slot = None
+        self._result_validation_driver = _validate_protected_training_results
+        self._result_validation_helpers = _PROTECTED_RESULT_VALIDATION_HELPERS
+        self._result_validation_slot = None
         self._tensor_stream_type = _NATIVE_TENSOR_STREAM
         self._embedding_status, self._tensor_selection_slot = "unknown", None
         self._embedding_model = None
@@ -452,6 +458,13 @@ class _ProtectedTrainingUse:
                 or any(original is not current for original,current in zip(self._completion_helpers,
                     (_protected_output_seal_facts,_sealed_training_checkpoint_facts,_finalize_protected_training_result)))):
             raise ValueError("The private training completion helpers changed.")
+        if (getattr(self,"_result_validation_driver",None) is not _validate_protected_training_results
+                or getattr(self,"_result_validation_helpers",None) is not _PROTECTED_RESULT_VALIDATION_HELPERS
+                or type(self._result_validation_helpers) is not tuple or len(self._result_validation_helpers) != 5
+                or any(original is not current for original,current in zip(self._result_validation_helpers,
+                    (_NATIVE_TRAINING_OUTPUT_READER,validate_protected_training_output_chunks,_protected_output_seal_facts,
+                     _resolve_training_task,_training_result_summary)))):
+            raise ValueError("The private result validation helpers changed.")
         if (self._pipeline_driver is not _run_protected_training_pipeline
                 or self._pipeline_helpers is not _PROTECTED_PIPELINE_HELPERS
                 or self._pipeline_slot is not None and any(original is not current for original,current in zip(self._pipeline_helpers,
@@ -554,12 +567,12 @@ def _bind_protected_checkpoint_schedule(use):
     if use._training_slot is not None or use._tensor_selection_slot is not None or use._metadata_slot is not None:
         raise ValueError("The private checkpoint binding is unavailable.")
     slot = {"owner":use,"stage":"binding","family":None,"steps":None,"arguments":None,"arguments_type":None}
-    family = stamp = schedule = None
+    family = stamp = schedule = admission = business = reservation = resource = None
     resolve, claim = _NATIVE_CHECKPOINT_FAMILY_RESOLVE, _NATIVE_CHECKPOINT_FAMILY_CLAIM
     def snapshot():
         _ProtectedTrainingUse.assert_snapshot(use)
         if (use._checkpoint_slot is not slot or slot["owner"] is not use or slot["snapshot"] is not snapshot
-                or slot["stage"] not in ("binding","ready","arguments-constructing","arguments-ready")
+                or type(slot.get("stage")) is not str or slot["stage"] not in ("binding","ready","arguments-constructing","arguments-ready")
                 or use._checkpoint_family_resolve is not resolve or use._checkpoint_family_claim is not claim
                 or use._checkpoint_family_guard is not _NATIVE_CHECKPOINT_FAMILY_GUARD
                 or use._checkpoint_family_owner is not _NATIVE_CHECKPOINT_FAMILY_OWNER
@@ -572,6 +585,9 @@ def _bind_protected_checkpoint_schedule(use):
             if (slot["family"] is not family or record["view"] is not use.view
                     or type(proof) is not tuple or len(proof) != 3
                     or proof[0] is not use or proof[1] is not slot or proof[2] is not snapshot
+                    or record["admission"] is not admission or record["methods"]["business"] is not business
+                    or record["reservation"] is not reservation or record["methods"]["resource"] is not resource
+                    or slot.get("result_business") is not business or slot.get("result_resource") is not resource
                     or json.dumps(record["outputs"],sort_keys=True,allow_nan=False,separators=(",",":")) != stamp):
                 raise ValueError("The private checkpoint family changed.")
         if schedule is not None and slot["steps"] is not schedule:
@@ -598,6 +614,14 @@ def _bind_protected_checkpoint_schedule(use):
         # Failure authority starts only after the original one-use claim succeeds.
         family = selected; slot["family"] = family
         record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+        # Freeze the method already held by the genuine Native family before
+        # SDK/model callbacks. Never reacquire an observer with getattr later.
+        admission,business = record["admission"],record["methods"]["business"]
+        reservation,resource = record["reservation"],record["methods"]["resource"]
+        if (type(business) not in (MethodType,BuiltinMethodType) or business.__self__ is not admission
+                or type(resource) not in (MethodType,BuiltinMethodType) or resource.__self__ is not reservation):
+            raise ValueError("The private checkpoint admission is unavailable.")
+        slot.update(result_business=business,result_resource=resource)
         stamp = json.dumps(record["outputs"],sort_keys=True,allow_nan=False,separators=(",",":"))
         common, advanced = _to_dict(use.payload.commonParameters), _to_dict(use.payload.advancedParameters)
         maximum = common.get("maxSteps")
@@ -1072,7 +1096,7 @@ def _protected_output_seal_facts(graph):
         raise ValueError("The private checkpoint graph is unavailable.")
     fields = _sdk_passive_fields(graph)
     files = fields.get("records")
-    if fields.get("phase") != "sealed" or type(files) is not list or not 1 <= len(files) <= 32:
+    if type(fields.get("phase")) is not str or fields["phase"] != "sealed" or type(files) is not list or not 1 <= len(files) <= 32:
         raise ValueError("The private checkpoint files are unavailable.")
     captured = []
     for file in files:
@@ -2377,7 +2401,7 @@ def _sealed_training_checkpoint_facts(use):
     if type(checkpoint) is not dict or type(training) is not dict:
         raise ValueError("The private checkpoint evidence is unavailable.")
     execution = training.get("checkpoint_execution")
-    if type(execution) is not dict or execution.get("stage") != "complete":
+    if type(execution) is not dict or type(execution.get("stage")) is not str or execution["stage"] != "complete":
         raise ValueError("The private checkpoint evidence is unavailable.")
     schedule,saved = checkpoint["steps"],execution.get("saved")
     record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(checkpoint["family"])
@@ -2391,7 +2415,7 @@ def _sealed_training_checkpoint_facts(use):
         row,member = saved[index],members[index]
         if (type(row) is not tuple or len(row) != 3 or type(row[0]) is not int or row[0] != step
                 or row[1] != record["outputs"][index]["freshName"] or member["graph"] is not row[2]
-                or member["stage"] != "sealed" or type(row[2]) is not _ProtectedTrainingOutputGraph):
+                or type(member.get("stage")) is not str or member["stage"] != "sealed" or type(row[2]) is not _ProtectedTrainingOutputGraph):
             raise ValueError("The private checkpoint evidence changed.")
         result.append((step,row[1],use._completion_helpers[0](row[2])))
     return tuple(result)
@@ -2543,7 +2567,7 @@ def _run_trainer(model, tokenizer, dataset, eval_dataset, args, *, on_progress=N
     checkpoint_reader, finalize = use._completion_helpers[1:]
     def snapshot():
         _ProtectedTrainingUse.assert_snapshot(use)
-        if (use._training_slot is not slot or slot["stage"] != ("running" if captured is None else "complete")
+        if (use._training_slot is not slot or type(slot.get("stage")) is not str or slot["stage"] != ("running" if captured is None else "complete")
                 or use._run_identity is not identity or use._training_driver is not driver
                 or use._embedding_model is not model or use._embedding_tokenizer is not tokenizer
                 or slot["model"] is not model or slot["tokenizer"] is not tokenizer or slot["args"] is not args
@@ -2930,6 +2954,137 @@ def _run_protected_training_pipeline(use, *, on_progress=None):
 _PROTECTED_PIPELINE_HELPERS = (_bind_protected_checkpoint_schedule,_load_dataset,_load_transformers_objects,
     _resolve_training_purpose_paths,_resolve_effective_sequence_length,_tokenize_dataset,
     _apply_lora,_build_training_args,_run_trainer,_capture_pipeline_dataset_binding)
+
+
+def _training_result_summary(result,files,*,role,step,name,identity,method,training_task,original_records):
+    """Small immutable data summary, never original custody or run authority."""
+    if (type(result) is not dict or result.get("profile") != role or result.get("files") is not files
+            or type(result.get("metadata")) is not dict or type(result.get("tensorShapeSummary")) is not dict
+            or not 1 <= len(result["tensorShapeSummary"]) <= 4096
+            or result.get("serializationFormat") != ("safetensors" if method == "full-finetune" else "adapter-safetensors")):
+        raise ValueError("The private checked training result is unavailable.")
+    run = result["metadata"].get("training-run.json")
+    if (type(run) is not dict or run.get("runId") != identity[0] or run.get("startedAt") != identity[1]
+            or run.get("method") != method):
+        raise ValueError("The private checked training lineage changed.")
+    if role == "checkpoint":
+        if type(run.get("checkpointStep")) is not int or run["checkpointStep"] != step:
+            raise ValueError("The private checked checkpoint schedule changed.")
+    elif (role != "candidate" or run.get("trainingTask") != training_task
+            or any(expected not in files for expected in original_records)):
+        raise ValueError("The private checked final training records changed.")
+    return (role,step,name,files,result["serializationFormat"],len(result["tensorShapeSummary"]))
+
+
+def _validate_protected_training_results(use):
+    """Bind structural facts to this original run; no completion/custody grant.
+
+    Consume every checkpoint and final stream once. Retain only small immutable
+    summaries, never model bodies or the parser's full metadata. Actual resource
+    ownership, permanent retirement, Save and public task activation are separate.
+    """
+    if type(use) is not _ProtectedTrainingUse or get_ident() != use._thread:
+        raise ValueError("The private training result validation is unavailable.")
+    previous = use._result_validation_slot
+    if previous is not None:
+        if type(previous) is dict and (type(previous.get("stage")) is not str or
+                previous["stage"] not in ("complete","failed")):
+            previous["stage"] = "failed"
+            _fail_checkpoint_arguments(use)
+        raise ValueError("The private training result validation attempt is unavailable.")
+    slot = {"stage":"validating","facts":None}
+    use._result_validation_slot = slot  # Reserve before any Native observer.
+    try:
+        _ProtectedTrainingUse.assert_snapshot(use)
+        _checkpoint_snapshot(use)  # Passive original owner/method binding first.
+        pipeline,history,checkpoint = use._pipeline_slot,use._training_slot,use._checkpoint_slot
+        proof = _training_pipeline_proof(use)
+        if (type(pipeline) is not dict or type(pipeline.get("stage")) is not str or pipeline["stage"] != "complete" or proof is None
+                or type(history) is not dict or type(history.get("stage")) is not str or history["stage"] != "complete"
+                or type(history.get("snapshot")) is not FunctionType
+                or type(checkpoint) is not dict):
+            raise ValueError("The private completed training run is unavailable.")
+        identity,view,helpers = use._run_identity,use.view,use._result_validation_helpers
+        reader,validate,seal_facts,resolve_task,summary = helpers
+        request = _ProtectedTrainingUse.assert_snapshot(use)
+        training_task = resolve_task(use.payload)
+        family = checkpoint["family"];record = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+        business,resource,history_snapshot = checkpoint["result_business"],checkpoint["result_resource"],history["snapshot"]
+        steps = checkpoint["steps"];final = use._final_result_slot
+        if (type(steps) is not tuple or type(final) is not dict or type(final.get("stage")) is not str or final["stage"] != "sealed"
+                or pipeline.get("graph") is not final.get("graph")
+                or len(record["members"]) != len(steps)+1 or len(record["outputs"]) != len(steps)+1):
+            raise ValueError("The private completed output family is unavailable.")
+        graphs = tuple(member["graph"] for member in record["members"])
+        configurations = tuple(tuple(sorted(row.items())) for row in record["outputs"])
+        inventories = tuple(seal_facts(graph) for graph in graphs)
+        original_records = history["files"]
+        if (graphs[-1] is not final["graph"] or type(original_records) is not tuple or len(original_records) != 2
+                or tuple(name for name,_ in original_records) != ("training-run.json","serialization_manifest.json")
+                or any(type(raw) is not bytes or not 0 < len(raw) <= 128*1024 for _,raw in original_records)):
+            raise ValueError("The private completed training records are unavailable.")
+        expected_records = tuple((name,len(raw),hashlib.sha256(raw).hexdigest()) for name,raw in original_records)
+        def snapshot():
+            _ProtectedTrainingUse.assert_snapshot(use)
+            if (use._result_validation_slot is not slot or type(slot.get("stage")) is not str or slot["stage"] != "validating"
+                    or use._pipeline_slot is not pipeline or _training_pipeline_proof(use) is not proof
+                    or use._training_slot is not history or use._checkpoint_slot is not checkpoint
+                    or use._final_result_slot is not final or use._run_identity is not identity or use.view is not view
+                    or use._result_validation_helpers is not helpers or history["files"] is not original_records
+                    or checkpoint["steps"] is not steps or checkpoint.get("result_business") is not business
+                    or checkpoint.get("result_resource") is not resource or history.get("snapshot") is not history_snapshot
+                    or final.get("graph") is not graphs[-1]):
+                raise ValueError("The private training result binding changed.")
+            _checkpoint_snapshot(use)
+            history_snapshot()
+            proof.snapshot()
+            current = _NATIVE_OUTPUT_FAMILY_SNAPSHOT(family)
+            if (current is not record or len(current["members"]) != len(graphs)
+                    or tuple(tuple(sorted(row.items())) for row in current["outputs"]) != configurations
+                    or any(member["graph"] is not graph or type(member.get("stage")) is not str or member["stage"] != "sealed"
+                        for member,graph in zip(current["members"],graphs))
+                    or tuple(seal_facts(graph) for graph in graphs) != inventories):
+                raise ValueError("The private original result inventory changed.")
+        def current():
+            # Retain original model/input Native admission without invoking the
+            # older family guard's dynamically read business/resource methods.
+            _ProtectedTrainingUse.assert_current(use)
+            snapshot()
+            for kind,method in (("resource",resource),("business",business)):
+                if method() is not True:
+                    raise ValueError("The private result permission is no longer available.")
+                snapshot()  # Business is last; no observer follows this proof.
+        summaries = []
+        current()
+        for index,(graph,files,configuration) in enumerate(zip(graphs,inventories,configurations)):
+            settings = dict(configuration)
+            current()
+            stream = reader(graph,view,request)
+            current()
+            result = validate(stream,files,method=request["method"],
+                maximum_copy_bytes=settings["maximumCopyBytes"],
+                maximum_metadata_bytes=min(settings["maximumCopyBytes"],64*1024**2),
+                chunk_bytes=settings["bufferBytes"])
+            current()  # A parser return alone cannot establish current binding.
+            role = "candidate" if index == len(graphs)-1 else "checkpoint"
+            summaries.append(summary(result,files,role=role,step=steps[index] if role == "checkpoint" else None,
+                name=settings["freshName"],identity=identity,method=request["method"],
+                training_task=training_task,original_records=expected_records))
+            del result  # Do not retain each checkpoint's metadata or tensors.
+            current()
+        facts = tuple(summaries)
+        current()
+        slot.update(facts=facts,stage="complete")
+        return facts
+    except BaseException as error:
+        slot["stage"] = "failed"
+        _fail_checkpoint_arguments(use)
+        if isinstance(error,(TrainingCancellationRequested,LaunchUnavailable,KeyboardInterrupt,SystemExit)):raise
+        raise ValueError("The private training results could not be checked.") from None
+
+
+_PROTECTED_RESULT_VALIDATION_HELPERS = (_NATIVE_TRAINING_OUTPUT_READER,
+    validate_protected_training_output_chunks,_protected_output_seal_facts,_resolve_training_task,_training_result_summary)
 
 
 def _write_run_metadata(output_path: Path, metadata: dict[str, Any]) -> str:

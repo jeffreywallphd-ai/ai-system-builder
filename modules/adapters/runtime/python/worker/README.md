@@ -2426,6 +2426,31 @@ training and existing default host roots are unchanged. Original producer/hard
 resource ownership, protected output-reader validation/custody, permanent
 retirement, separately approved Save and actual-host qualification remain pending.
 Synthetic SDK and Native ABI tests supply no actual model or quality score.
+`_validate_protected_training_results` is the private consumer of the completed
+pipeline's original output family. Capture its fixed reader, structural parser,
+seal-fact reader, task resolver and summary helper on the original Use before
+callbacks. Require that exact completed pipeline, history, family, graphs,
+configuration and inventories throughout one same-thread attempt. Check every
+checkpoint's run and scheduled step, then the final run/task and the hashes of
+the exact retained history/manifest bytes. Exhaust each original stream before
+accepting its structural report. Retain only immutable file/format/count facts.
+The checkpoint binding captures the exact resource and business methods already
+retained by the Native family, plus their original reservation/admission owners,
+before SDK callbacks. Bind them throughout; never reacquire them through a late
+`getattr`. Check original model/input admission and passive retained history,
+then call the captured resource and business methods in that order. After the
+final resource observations, call that original permission check last, then
+only passive owned-slot/book/inventory checks before publishing facts. Check
+the exact state value type before equality so passive checks cannot call hooks.
+Keep the established completion-helper rejection first. Missing result-helper
+slots on an incomplete private Use must refuse with a controlled validation error,
+without virtual equality calls or an attribute error.
+Refuse replacement, foreign lineage, reentry, repeated or incomplete checks and
+lost permission without ordinary IO or fallback. Foreign threads leave the owner
+attempt available; owned failure keeps files, handles, charges and failed history.
+These internal facts grant no task success, resource credit, retirement, Save or
+new public capability. A concrete original producer, measured resource ownership,
+permanent IO/worker retirement and actual host qualification remain necessary.
 The shared SDK fixture prepares only the selected method/output through the
 original Native fixture. It keeps the same guard/retirement assertions without
 first retaining an unused default LoRA graph; test and runtime limits stay intact.

@@ -118,7 +118,7 @@ class TrainingResultValidationRoutingTests(unittest.TestCase):
         selected=self.selected(core+owners,("control-plane",))
         self.assertEqual(selected[self.check]["argv"][-1],self.test)
         definitions={row["id"]:row for row in catalog.definitions(self.root)}
-        self.assertEqual(definitions["model-training-worker-unit"]["timeout"],240)
+        self.assertEqual(definitions["model-training-worker-unit"]["timeout"],420)
         self.assertNotIn("-k",definitions["model-training-worker-unit"]["argv"])
         for name in ("headless-training-runtime-unit","headless-training-runtime-worker-unit","python-runtime-owned-worker"):
             self.assertEqual(definitions[name]["timeout"],120)

@@ -45,7 +45,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         selected=checks['model-training-worker-unit']
         self.assertEqual(selected['argv'],[sys.executable,'-B','dev-tools/helpers/run_focused_checks.py',
             '--regression-test','modules/adapters/runtime/python/worker/tests/test_train_model_task.py'])
-        self.assertEqual(selected['timeout'],240)
+        self.assertEqual(selected['timeout'],420)
         # No shorter selector or new runtime/model authorization follows from
         # allowing the complete inert feature batch to finish.
         self.assertNotIn('-k',selected['argv'])
@@ -60,6 +60,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         selected=controller(scope)
         self.assertIn('test_control_plane_model_training_worker.',selected['argv'])
         self.assertIn('test_control_plane_focused.',selected['argv'])
+        self.assertIn('test_control_plane_training_result_validation.',selected['argv'])
         self.assertEqual(selected['timeout'],600)
         core=list(catalog.MODEL_TRAINING_ROUTING_SCOPE)
         owners=list(catalog.MODEL_TRAINING_OWNER_SCOPE)
@@ -75,7 +76,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         # Shared-only, unknown mixed, incomplete and explicitly generic work
         # cannot borrow this closed known-source profile.
         for paths,required in [(scope+['docs/unrelated.md'],('control-plane',)),
-                (scope[:-1],('control-plane',)),([],('control-plane',)),
+                ([],('control-plane',)),
                 (core[:-1],('control-plane',)),([owners[0]],('control-plane',)),
                 (core+['modules/adapters/runtime/python/createPythonRuntimePort.ts'],('control-plane',)),
                 (scope,('control-plane','focused-tests'))]:
@@ -83,7 +84,9 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         with patch.object(catalog,'_automatic_files_available',return_value=False):
             self.assertNotIn('-k',controller(scope)['argv'])
         original=catalog._automatic_files_available
-        for missing in catalog.MODEL_TRAINING_BOUND_REQUIRED:
+        support=(catalog.MODEL_TRAINING_BOUND_REQUIRED+
+            catalog.PUBLISHED_FORM_CHECKS['headless-training-result-validation-unit']['automatic_required_files'])
+        for missing in support:
             def without_fixture(repo,check):
                 return False if missing in check.get('automatic_required_files',()) else original(repo,check)
             with self.subTest(missing_support=missing),patch.object(catalog,'_automatic_files_available',side_effect=without_fixture):
@@ -514,6 +517,38 @@ class FocusedPythonCollectionTests(unittest.TestCase):
                     self.assertNotIn('PYTHONOPTIMIZE', child)
                     self.assertEqual(child.get('PYTHON'), sys.executable if profile == 'review-site' else ambient)
                     self.assertEqual(run.call_args.kwargs['timeout'], 630 if profile == 'review-site' else 270)
+
+    def test_only_the_exact_text_regression_gets_the_calibrated_child_budget(self):
+        target='modules/adapters/runtime/python/worker/tests/test_train_model_task.py'
+        self.assertEqual(focused.profile_command_timeout(None,regression_test=target),390)
+        for profile in (None,'functionality-outcomes','review-site'):
+            self.assertEqual(focused.profile_command_timeout(profile),630 if profile=='review-site' else 270)
+            for path in (None,'modules/adapters/other/test_train_model_task.py',target+'.other'):
+                self.assertEqual(focused.profile_command_timeout(profile,regression_test=path),630 if profile=='review-site' else 270)
+        self.assertEqual(focused.profile_command_timeout('functionality-outcomes',regression_test=target),270)
+        command=[sys.executable,'-m','unittest']
+        with patch.object(sys,'argv',['focused','--regression-test',target]), \
+                patch.object(focused,'commands',return_value=[command]) as commands, \
+                patch.object(focused.subprocess,'run',return_value=SimpleNamespace(returncode=0)) as run:
+            self.assertEqual(focused.main(),0)
+            commands.assert_called_once_with(Path(focused.__file__).resolve().parents[2],[target],exact=True)
+            self.assertEqual(run.call_args.args[0],command)
+            self.assertEqual(run.call_args.kwargs['timeout'],390)
+        outer=next(row for row in catalog.definitions(Path(__file__).resolve().parents[3])
+            if row['id']=='model-training-worker-unit')['timeout']
+        self.assertEqual(outer,420);self.assertEqual(outer-390,30)
+
+    def test_child_timeout_reports_only_a_fixed_diagnostic_type(self):
+        import io
+        command=[sys.executable,'-m','unittest']
+        error=focused.subprocess.TimeoutExpired(['synthetic-private-command'],270,
+            output='synthetic-private-output',stderr='synthetic-private-error')
+        with patch.object(sys,'argv',['focused','--regression-test','modules/adapters/example/test.py']), \
+                patch.object(focused,'commands',return_value=[command]), \
+                patch.object(focused.subprocess,'run',side_effect=error), \
+                patch.object(sys,'stderr',new_callable=io.StringIO) as stderr:
+            self.assertEqual(focused.main(),1)
+            self.assertEqual(stderr.getvalue(),'Focused verification exceeded its fixed child limit (TimeoutExpired).\n')
 
     def test_review_site_python_binding_keeps_failure_exit_and_timeouts(self):
         for code in (1, 5):

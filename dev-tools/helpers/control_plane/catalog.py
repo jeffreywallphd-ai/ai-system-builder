@@ -262,6 +262,8 @@ MODEL_TRAINING_BOUND_SCOPE = (
     "dev-tools/helpers/tests/test_control_plane_model_training_worker.py",
     "dev-tools/helpers/README.md",
     "docs/diagnostics/ai-development-control-plane.md",
+    "dev-tools/helpers/tests/test_control_plane_training_result_validation.py",
+    "dev-tools/helpers/run_focused_checks.py",
 )
 MODEL_TRAINING_ROUTING_SCOPE = (
     "dev-tools/helpers/control_plane/catalog.py",
@@ -774,9 +776,9 @@ PUBLISHED_FORM_CHECKS = {
     },
     "model-training-worker-unit": {
         "interpreter": "python",
-        # Expanded inert training regression grew beyond180s; retain every case.
+        # The complete batch exceeded240s after new result-binding regressions.
         # This developer-check ceiling does not change model/runtime limits.
-        "timeout": 240,
+        "timeout": 420,
         "automatic_sources": (
             "modules/adapters/runtime/python/worker/tasks/train_model.py",
             "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",
@@ -3795,20 +3797,24 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   "-k", "test_control_plane_deterministic_support.",
                                   "-k", "test_control_plane_focused."]
+    model_training_support = (MODEL_TRAINING_BOUND_REQUIRED
+                             + PUBLISHED_FORM_CHECKS["headless-training-result-validation-unit"]["automatic_required_files"])
     if (set(MODEL_TRAINING_ROUTING_SCOPE) <= set(paths) <= set(MODEL_TRAINING_BOUND_SCOPE + MODEL_TRAINING_OWNER_SCOPE)
             and "focused-tests" not in explicit_required and
-            _automatic_files_available(root, {"automatic_required_files": MODEL_TRAINING_BOUND_REQUIRED})):
+            all(_automatic_files_available(root, {"automatic_required_files": model_training_support[index:index+16]})
+                for index in range(0, len(model_training_support), 16))):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None:
-            # Both existing modules run, including their actual complete text/
-            # image commands and environment/negative routing cases. This does
+            # All related modules run, including their actual complete text/
+            # image/parser commands and environment/negative routing cases. This does
             # not trim the model regression file or relax another check limit.
             # Known owner edits remain covered by their independent automatic/
             # required checks; unknown mixed work keeps the broad fallback.
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                                   "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                                   "-k", "test_control_plane_model_training_worker.",
-                                  "-k", "test_control_plane_focused."]
+                                  "-k", "test_control_plane_focused.",
+                                  "-k", "test_control_plane_training_result_validation."]
     result_support = (TRAINING_RESULT_ROUTING_SCOPE + TRAINING_RESULT_OWNER_SCOPE + TRAINING_RESULT_CONTROLLER_TESTS
                       + PUBLISHED_FORM_CHECKS["headless-training-result-validation-unit"]["automatic_required_files"])
     if (set(TRAINING_RESULT_ROUTING_SCOPE) <= set(paths) <= set(TRAINING_RESULT_ROUTING_SCOPE + TRAINING_RESULT_OWNER_SCOPE)

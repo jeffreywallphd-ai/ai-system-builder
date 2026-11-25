@@ -1171,7 +1171,15 @@ tables through progress and Trainer setup. Missing output custody denies before
 dataset/model reads; changed inputs, reentry or lost permission cannot retry or
 publish a partial result. Ordinary directory writers and automatic Save are unused.
 
-The returned graph is private sealed staging. Its files still require protected
-validation and custody handoff. No default producer or public capability is enabled.
+The returned graph is private sealed staging. A separate private validator now
+consumes every original checkpoint and final stream once. It binds the checked
+formats to this Use, request, thread, run ID, start time, method, checkpoint
+schedule and exact saved final records. The original permission check runs last
+after resource observations, followed only by passive binding checks before
+publication. Unexpected state types cannot invoke comparison hooks. It retains
+small immutable summaries without model bodies or all metadata. Foreign threads do
+not consume the owner's attempt. Owned reentry, changes or failure prevent retry
+and retain the original files and accounting. Custody handoff is still separate.
+No default producer or public capability is enabled.
 Synthetic SDK/Native tests are not actual model execution, hard resource ownership,
 permanent retirement, approved Save or host qualification; those remain pending.

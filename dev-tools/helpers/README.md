@@ -60,13 +60,24 @@ They use only the Python standard library.
 Copy `helpers.example.json` into an ignored local directory and pass it with
 `--config`. Command-line values override matching configuration values.
 The fixed `model-training-worker-unit` check retains the complete inert training
-test file with a 240-second outer ceiling. The 386-case batch took 179.34 seconds;
-the expanded batch exceeded 180 seconds. Keep all 394 cases. This changes no test selector, model/runtime resource limit,
-Native execution permission or controlled qualification allowance.
-For the complete four-file training-routing core, run the existing training-worker
-and focused-controller modules. The original forwarding test and only the six
-registered training-owner files may accompany that core. All 16 support files
-must be regular and available. These modules execute the full text/image commands
+test file with a 390-second child and 420-second outer ceiling. The 30-second
+grace allows fixed helper output and shutdown. Generic children retain 270 seconds
+and review-site children 630 seconds; no caller-selected timeout exists.
+Timeout failures print a fixed `TimeoutExpired` diagnostic without child command,
+output or exception text.
+Prior calibration recorded 179.34
+seconds for 386 cases, then 237.45 seconds for 469 cases. The expanded batch
+timed out at 240 seconds; its 29 added focused cases passed in 136.80 seconds.
+Keep every case and the exact command. The measured developer-test calibration
+changes no model/runtime resource, memory, process, disk or Native permission
+limit and grants no controlled qualification retry.
+For the complete four-file training-routing core, run the existing training-worker,
+focused-controller and result-validation routing modules. The original forwarding
+and result-routing tests, the fixed focused-check helper, and only the six
+registered training-owner files may
+accompany that core. The full support and parser-fixture closure must be regular
+and available; check it in groups within the existing 16-file presence bound.
+These modules execute the complete text/image/parser commands
 and routing/environment denials; owner changes retain automatic and required
 checks. Missing/nonregular support, unknown mixed or incomplete scopes, and
 explicit generic checks keep broad coverage. This avoids a broad helper-suite

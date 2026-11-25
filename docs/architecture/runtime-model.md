@@ -3253,6 +3253,26 @@ remain pending. Installed-SDK synthetic tests supply no model-quality result.
 
 ### Private protected training stage composition
 
+The private result-binding consumer composes the original sealed byte reader and
+common structural parser after the private pipeline finishes. It reserves one
+same-thread Use attempt, keeps fixed helper identities and the original pipeline,
+history, family, graph/configuration/inventory bindings, and checks them around
+each complete read. Checkpoint metadata must match the original run ID, start
+time, method and scheduled step. Final records must also match the original task
+and exact retained history/manifest byte hashes. Retain small immutable summaries
+instead of model bodies or the metadata for every checkpoint. Wrong threads do
+not consume the owner attempt. The checkpoint binding captures the genuine
+Native family's original resource/business methods and reservation/admission
+owners before SDK calls. The consumer checks original model/input admission and
+retained history, then performs those captured resource and business checks in
+that order. It does not select a replacement observer from a later field read.
+The permission check runs last after resource observations,
+then only passive original bindings before publishing facts. Exact string state
+checks prevent comparison hooks. Owned failures retain original custody and deny
+retry. Structural and lineage facts confer no task success, producer activation,
+resource credit, retirement or Save. The concrete producer/resource owner,
+permanent IO/worker retirement and actual host qualification are separate.
+
 Pure protected-result structure validation belongs to the common model-validation
 module. It consumes bounded ordered data, not paths or a Native capability. The
 fixed producer must separately bind genuine original stream/descriptors, live
@@ -3284,8 +3304,9 @@ whole model. Original Native dispatch, resource and business authority remain li
 static class checks prevent virtual field/lookup callbacks in passive bindings.
 sealed-file reads do not depend on obsolete producer SDK tensors or preparation
 timers. No reader result grants retirement, settlement, custody transfer or Save.
-Actual resources, producer composition, format validation and host tests remain
-pending; synthetic Native ABI evidence qualifies only this byte-reader component.
+Actual resources, public producer composition, permanent custody/retirement and
+host tests remain pending; synthetic Native ABI evidence qualifies only this
+byte-reader component.
 
 A fixed private pipeline joins original dataset bytes, memory-only tokenization,
 safe local model loading, optional adapter setup, approved training arguments,

@@ -3080,21 +3080,33 @@ active/missing/aliased/foreign module refusal and source wiring without engines.
 
 The distinct `model-training-worker-unit` check retains its exact complete
 training-task test file. Its 386-case controlled batch measured 179.34 seconds;
-the expanded batch exceeded 180 seconds. The fixed outer ceiling is 240 seconds
-for all 394 cases. Preserve prior timeout receipts and
-all test cases. Other checks and model/runtime limits remain unchanged; this
+the later 469-case batch measured 237.45 seconds. The added result-binding cases
+made the complete batch exceed its 240-second ceiling; all 29 new focused cases
+passed in 136.80 seconds. The fixed developer-test outer ceiling is now 420 seconds
+for the complete file. Preserve earlier failed receipts and every test case.
+Independent review also identified an inherited 270-second child cutoff. Only this exact text regression
+gets a 390-second child budget, leaving 30 seconds under its 420-second outer
+ceiling. Generic children keep 270 seconds and review-site children 630 seconds;
+no arbitrary timeout option or generic/profile budget change is introduced.
+Child timeout failures report a fixed `TimeoutExpired` diagnostic, without raw
+commands, output or exception text.
+Other checks and model/runtime limits remain unchanged; this
 developer-check calibration starts no real model or Native controller and grants
 no qualification retry, public capability or roadmap completion.
-The existing routing fixture uses that same 240-second text bound; its image
+The existing routing fixture uses that same 420-second text bound; its image
 subclass keeps 120 seconds. The complete four-file routing core may select the
-two existing related controller modules, with the original forwarding test and
-only the six fixed training-owner files as optional extras. All 16 support files
-must be regular and available. Both modules execute actual full text/image
+three existing related controller modules, with the original forwarding and
+result-routing tests, the fixed focused-check helper and only the six fixed
+training-owner files as optional extras. Require the full support and inherited parser-fixture closure to be
+regular and present, using groups within the existing 16-file presence bound.
+The controller retains its 600-second limit. Its modules execute actual full text/image/parser
 commands, hostile-environment checks and routing denials. Known owner edits retain
 their automatic and required checks. Empty, incomplete, unknown mixed or
 missing/nonregular support and explicit generic requests preserve broad controller
 coverage. No model case is deselected. This scope correction retains the failed
-600-second broad-helper receipt; it changes no command limit or runtime authority.
+600-second broad-helper receipt. Only the measured text developer-test ceiling
+changes; no model, Native, memory/process/disk limit, retry authority or public
+capability changes. Feature evidence is not final comprehensive qualification.
 
 Only the two exact adapter/test files, with all three required files present,
 replace automatic operational-ui selection. An explicit operational-ui request,
