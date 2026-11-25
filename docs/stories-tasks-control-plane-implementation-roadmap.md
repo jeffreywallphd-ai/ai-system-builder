@@ -3,7 +3,7 @@
 # Stories, tasks and scoped implementation reporting Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-25T15:32:34Z`
+- Updated: `2026-11-25T18:22:35Z`
 
 ## Objective
 
@@ -53,13 +53,13 @@ No high-level decision has been recorded.
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Stable stories and task progress | Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence. | None | `implementing` |
+| 1: Stable stories and task progress | Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence. | None | `verifying` |
 | 2: Scoped implementation time and token reporting | Report optional numeric time and token observations at exact story, increment and roadmap scope without inventing history. | stable-stories-and-tasks | `pending` |
 
 ## Increment 1: Stable stories and task progress
 
 - Id: `stable-stories-and-tasks`
-- Status: `implementing`
+- Status: `verifying`
 - Dependencies: None
 
 Group expandable implementation tasks beneath fixed approved stories while retaining exact history and evidence.
@@ -76,10 +76,10 @@ Task counts show implementation tracking. Technical qualification remains separa
 
 - **Keep approved story outcomes**: 1 of 1 tasks complete
   - Preserve stable story intent and task history (`story-model`): complete
-- **Track tasks and their evidence**: 0 of 1 tasks complete
-  - Bind task implementation to exact Work evidence (`task-work-binding`): planned
-- **Show story and task progress**: 0 of 1 tasks complete
-  - Show stories and tasks on Roadmaps (`story-progress-ui`): planned
+- **Track tasks and their evidence**: 1 of 1 tasks complete
+  - Bind task implementation to exact Work evidence (`task-work-binding`): complete
+- **Show story and task progress**: 1 of 1 tasks complete
+  - Show stories and tasks on Roadmaps (`story-progress-ui`): complete
 
 ### Deliverables
 

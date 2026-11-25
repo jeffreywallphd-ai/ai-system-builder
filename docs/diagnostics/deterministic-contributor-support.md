@@ -104,7 +104,8 @@ push, history change, primary-checkout operation or main/release advancement.
 ## Progress preparation and pure replay
 
 `progress` needs roadmap-bound Work and one to eight explicit `events`, using only
-the existing `work-chunks-reconfigured` and `chunk-recorded` event types. It loads
+the existing `story-tasks-assigned`, `work-chunks-reconfigured` and `chunk-recorded`
+event types. It loads
 state with the canonical engine's `load_state`, including its current codec. For
 refinement, omit `expectedPlanDigest` to derive the fingerprint of the complete
 stored plan. A supplied stale/internal fingerprint refuses.

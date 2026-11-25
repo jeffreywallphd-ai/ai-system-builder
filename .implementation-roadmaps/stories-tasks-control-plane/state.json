@@ -27,6 +27,66 @@
         "Focused retirement, exact history, offline scope and 52-refinement bounded recovery fixtures passed."
       ],
       "title": "Preserve stable story intent and task history"
+    },
+    {
+      "areas": [
+        "Current task Work binding"
+      ],
+      "chunkId": "task-work-binding",
+      "completedAt": "2026-11-25T18:22:29Z",
+      "criteriaIds": [
+        "task-currentness",
+        "legacy-history",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Portable skill, event/install/workflow references, contributor guides, threat model, plain descriptions and review-site guidance."
+      ],
+      "feedbackAddressed": [],
+      "id": "stable-stories-and-tasks-task-work-binding",
+      "incrementId": "stable-stories-and-tasks",
+      "summary": "The exact Root feature outcome is implemented, current-source checked, independently reviewed and committed. Exact task identities, plain descriptions, read-only story progress and separate parent qualification remain intact.",
+      "tests": [
+        "Root commit 387ee91624e50bec76a57dab9cbd222b2fdd7522; six actual focused checks passed on source 88067768811e10a49ca950c6c7e0585ea361828c3e06011ce2abf94c3fc9df5f.",
+        "Separate review and independent controller/DOM probes passed. Background installed Chrome verified real Root grouping, refresh/disclosure, dark desktop and narrow light layout; it changed no canonical state.",
+        "Exact local task outcome only. Whole increment qualification, scoped metrics, live usage migration and all runtime or parent roadmap passes remain separate. No model accuracy, physical Native or full software test was run."
+      ],
+      "title": "Bind task implementation to exact Work evidence",
+      "workProof": {
+        "receiptDigest": "2b1eb737cd00f63ed593af1cfe16d6a4374ff5e6b9fff13ce0aaf42c3deb3b10",
+        "reviewDigest": "b3e63c6227ba56a9edf66455a945665f10ac0bfa9fd4220c5ae2f49a2f4ceaa9",
+        "workId": "stories-task-ui-integration"
+      }
+    },
+    {
+      "areas": [
+        "Read-only story/task progress and plain descriptions"
+      ],
+      "chunkId": "story-progress-ui",
+      "completedAt": "2026-11-25T18:22:35Z",
+      "criteriaIds": [
+        "review-progress",
+        "story-ownership",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Portable skill, event/install/workflow references, contributor guides, threat model, plain descriptions and review-site guidance."
+      ],
+      "feedbackAddressed": [],
+      "id": "stable-stories-and-tasks-story-progress-ui",
+      "incrementId": "stable-stories-and-tasks",
+      "summary": "The exact Root feature outcome is implemented, current-source checked, independently reviewed and committed. Exact task identities, plain descriptions, read-only story progress and separate parent qualification remain intact.",
+      "tests": [
+        "Root commit 387ee91624e50bec76a57dab9cbd222b2fdd7522; six actual focused checks passed on source 88067768811e10a49ca950c6c7e0585ea361828c3e06011ce2abf94c3fc9df5f.",
+        "Separate review and independent controller/DOM probes passed. Background installed Chrome verified real Root grouping, refresh/disclosure, dark desktop and narrow light layout; it changed no canonical state.",
+        "Exact local task outcome only. Whole increment qualification, scoped metrics, live usage migration and all runtime or parent roadmap passes remain separate. No model accuracy, physical Native or full software test was run."
+      ],
+      "title": "Show stories and tasks on Roadmaps",
+      "workProof": {
+        "receiptDigest": "2b1eb737cd00f63ed593af1cfe16d6a4374ff5e6b9fff13ce0aaf42c3deb3b10",
+        "reviewDigest": "b3e63c6227ba56a9edf66455a945665f10ac0bfa9fd4220c5ae2f49a2f4ceaa9",
+        "workId": "stories-task-ui-integration"
+      }
     }
   ],
   "completion": null,
@@ -134,6 +194,20 @@
       "sequence": 8,
       "storyTaskRevisionDigest": "e55e06eed1f3fe8e16f736f804a7c4225876921cb9428ada954cad31072fcc9d",
       "type": "story-tasks-assigned"
+    },
+    {
+      "eventFingerprint": "c60a72c48a75ebb41f77b4f5d1a3071907838a50013362cdb306c462a0e5b8a3",
+      "recordedAt": "2026-11-25T18:22:29Z",
+      "sequence": 9,
+      "taskCompletionDigest": "370391ea2bd9ac666ab92eb9dbe20defcd9fbea372fe03a34e55a87ed09f4697",
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9609a6847ab71659f22c2b24d608d349adfc827e85f2cbc39c8b561b767243ff",
+      "recordedAt": "2026-11-25T18:22:35Z",
+      "sequence": 10,
+      "taskCompletionDigest": "9fe5c4617df110a58111556ec80981f0f8b9f8f93a81e31b9964cd0b15ca6544",
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -168,7 +242,9 @@
       "allowPendingQualification": false,
       "completedAt": null,
       "completedChunks": [
-        "story-model"
+        "story-model",
+        "task-work-binding",
+        "story-progress-ui"
       ],
       "deliverables": [
         "Existing approved work packages remain fixed story intent.",
@@ -264,7 +340,7 @@
       ],
       "rollback": "Keep versioned evidence and restore a compatible reader; never erase migrated history or reallocate unknown measurements.",
       "startedAt": "2026-11-25T15:06:15Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "Stable stories and task progress",
       "verification": [
         "Run focused story/task or scoped-metric tests and related framework/DOM checks.",
@@ -414,5 +490,5 @@
     ],
     "schemaVersion": 1
   },
-  "updatedAt": "2026-11-25T15:32:34Z"
+  "updatedAt": "2026-11-25T18:22:35Z"
 }
