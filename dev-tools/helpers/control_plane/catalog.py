@@ -671,7 +671,45 @@ CHECKPOINT_COPY_REQUIRED = (
     "dev-tools/helpers/run_focused_checks.py",
 )
 
+TRAINING_STORAGE_BUDGET_SCOPE = (
+    "modules/application/ports/model/training-storage-budget.port.ts",
+    "modules/application/ports/model/index.ts",
+    "modules/adapters/persistence/model/createStructuredTrainingStorageBudget.ts",
+    "modules/adapters/persistence/model/index.ts",
+    "modules/adapters/persistence/model/README.md",
+    "modules/adapters/persistence/model/tests/structured-training-storage-budget.unit.test.ts",
+    "docs/architecture/persistence-and-storage.md",
+    "docs/security/headless-system-builder-threat-model.md",
+    "docs/context/packs/persistence-storage.pack.md",
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_training_storage_budget.py",
+)
+TRAINING_STORAGE_BUDGET_CORE = tuple(TRAINING_STORAGE_BUDGET_SCOPE[i] for i in (0, 2, 5))
+TRAINING_STORAGE_BUDGET_NEIGHBORS = (
+    "modules/adapters/persistence/sqlite/tests/structured-transaction-ownership.unit.test.ts",
+    "modules/adapters/persistence/shared/tests/organization-context-structured-document-store.unit.test.ts",
+    "modules/adapters/persistence/model/tests/local-model-registry.adapter.unit.test.ts",
+    "modules/adapters/persistence/model/tests/model-registry-pagination.unit.test.ts",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-storage-budget-neighbors": {
+        "automatic_sources": TRAINING_STORAGE_BUDGET_CORE,
+        "automatic_required_files": TRAINING_STORAGE_BUDGET_SCOPE + TRAINING_STORAGE_BUDGET_NEIGHBORS,
+        "sources": TRAINING_STORAGE_BUDGET_SCOPE,
+        "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--", *TRAINING_STORAGE_BUDGET_NEIGHBORS),
+        "timeout": 120,
+    },
+    "headless-training-storage-budget-types": {
+        "automatic_sources": TRAINING_STORAGE_BUDGET_CORE,
+        "automatic_required_files": TRAINING_STORAGE_BUDGET_SCOPE + TRAINING_STORAGE_BUDGET_NEIGHBORS,
+        "sources": TRAINING_STORAGE_BUDGET_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck",
+            "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node",
+            "--esModuleInterop", "--lib", "ES2021,DOM", TRAINING_STORAGE_BUDGET_SCOPE[1],
+            TRAINING_STORAGE_BUDGET_SCOPE[2], TRAINING_STORAGE_BUDGET_SCOPE[5]),
+        "timeout": 120,
+    },
     "checkpoint-copy-unit": {
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--",
             CHECKPOINT_COPY_OWNER_SCOPE[1]),
@@ -4675,6 +4713,25 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 roadmap = next((check for check in selected if check["id"] == "roadmap"), None)
                 if roadmap is not None:
                     roadmap["argv"] = [sys.executable, "-B", "skills/manage-implementation-roadmaps/tests/test_roadmap.py", "-k", "usage_phase"]
+    budget_check = PUBLISHED_FORM_CHECKS["headless-training-storage-budget-types"]
+    if (paths and set(paths) <= set(TRAINING_STORAGE_BUDGET_SCOPE)
+            and set(paths).intersection(TRAINING_STORAGE_BUDGET_CORE)
+            and _automatic_files_available(root, budget_check)):
+        # This complete fixed feature and its actual transaction neighbors are
+        # the focused suite, including when acceptance requests focused-tests.
+        # Unknown/mixed/incomplete roots retain generic owner discovery.
+        focused_check = next((check for check in selected if check["id"] == "focused-tests"), None)
+        if focused_check is not None:
+            # The executor appends --affected metadata to this identity. A
+            # fixed Node test program accepts that as program arguments; a
+            # node --test command would mistake those paths for test files.
+            # node:test still reports failures through its process exit code.
+            focused_check["argv"] = ["node", "--import", "tsx", TRAINING_STORAGE_BUDGET_SCOPE[5]]
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None and "control-plane" not in explicit_required:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_training_storage_budget.", "-k", "test_control_plane_focused."]
     value = {"schema_version": "check-plan-v1", "candidate": candidate, "catalog_digest": policy_digest(root, checks), "changed_paths": paths, "coverage": covered, "selected": selected, "deferred": [c["id"] for c in checks if c not in selected]}
     value["plan_digest"] = digest(value)
     return value

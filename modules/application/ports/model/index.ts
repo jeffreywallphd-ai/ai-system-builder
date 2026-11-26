@@ -17,3 +17,4 @@ export * from "./model-download-source.port";
 export * from "./approved-model-source-download.port";
 export * from "./approved-local-model-training.port";
 export * from "./training-result-file-byte-storage.port";
+export * from "./training-storage-budget.port";

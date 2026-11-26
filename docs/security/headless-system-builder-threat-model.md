@@ -3442,3 +3442,26 @@ admission, IO, SDK or executor callback during construction. The actual external
 owned reservation and separately qualified profile remain mandatory: no data
 correlation, local binding or inert fixture constitutes physical readiness or
 capacity, and no default producer is activated.
+
+### Retained configured-store training budget
+
+The private Model budget port's structured adapter uses a true platform
+root-owned transaction with exact organization partitioning. It never accepts a
+request-context store or JSON fallback. Require one already provisioned pool,
+immutable explicit policy and current exact actor/request/profile binding. Atomic
+bounded aggregate/organization/principal counters reserve the full declared
+five-role ceiling. A final synchronous currentness fence precedes commit and
+another check precedes the caller's grant. Retry callbacks remain pure and local.
+
+Missing/changed/malformed accounting, invalid role arithmetic, conflicting owners,
+counter-only resets, exhausted limits and stale control refuse new grants. Existing
+reservations and lost commit/rollback acknowledgements retain uncertainty; no
+timeout, process exit, ID, status or callback supplies release/adoption authority.
+Records contain only exact digests, limits and opaque owner keys, never model/data
+contents, paths or credentials. No runtime or filesystem effect occurs here.
+
+This is configured-store accounting, not Native quota/custody or measured physical
+readiness. A valid restored database may still be stale; actual host anti-rollback,
+protected pool provenance, single-store/all-producer composition and original
+cleanup/credit require separate qualification before activation. Default hosts
+remain unconfigured, and this component cannot complete the storage task or parent.

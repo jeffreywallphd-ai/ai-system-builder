@@ -762,3 +762,30 @@ The later training coordinator must own both copies' actual resource reservation
 original protected source and exact transfer/result lineage, destination
 integrity/lifecycle and final retirement. Native races, crash recovery, complete
 producer wiring and actual host qualification remain separate and pending.
+
+## Private training storage-budget accounting
+
+The typed Model `TrainingStorageBudgetPort` has one reserve operation and no
+provisioning, expiry, adoption or release operation. Its structured adapter uses
+the existing host-selected platform root-owned transaction. One explicitly
+configured pool belongs to one authoritative store across all producers. Require
+an already provisioned exact policy row; never seed a missing ledger over unknown
+content. No production limit or default host is selected by this component.
+
+Capture the exact original organization, actor, workspace, client, host, request,
+definition/storage/profile digests and five-role bounds before waits. The owned
+transaction authorizes that scope and uses `forOrganization` for its private
+insert-only reservation. A bounded platform counter holds aggregate and hashed
+organization/principal byte/count totals. Reserve the declared ceiling atomically,
+with revision compare-and-swap and a synchronous currentness check before commit.
+Each retry uses new local data and only its supplied transaction. No filesystem,
+runtime, provider or Native effect occurs in the callback.
+
+Policy changes, missing history, malformed/subordinate totals and counter-only
+resets refuse admission. Original reservation replay is unconfirmed, never a new
+grant. Lost commit responses and unclear rollback never produce credit. Debits
+remain after process exit; a real finite SQLite restart test covers that logical
+property. The adapter cannot prove that a whole valid database snapshot is current.
+Physical pool provenance, anti-rollback, Native fencing/readiness, original pending
+operation ownership and proven cleanup remain separately required. This unused
+component does not activate training or qualify its parent task.

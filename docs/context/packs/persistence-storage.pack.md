@@ -193,7 +193,7 @@
   policy/approval fencing is mandatory. Unknown effects and ordinary metadata
   cannot be adopted; one exact lost-commit read cannot authorize another write
   or public disclosure. Native/crash and physical execution remain separate.
-
 - Public approved Context saves add a version-2 opaque point index to the same causal activation transaction.
   Passive metadata reads verify the receipt, catalog and primary binding and assert no byte readiness. Version-1 private
   receipts remain internally replayable without public indexing or adoption.
+- Private training budgets use the typed Model reserve port and the existing root-owned database transaction. Missing ledgers never initialize; retained debits grant no Native custody, anti-rollback, cleanup credit or host activation. See the persistence architecture.
