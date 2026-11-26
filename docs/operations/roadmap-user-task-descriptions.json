@@ -1245,13 +1245,14 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "models-training-and-generation",
       "record_id": "connect-training-candidate-review-and-history",
-      "source_definition_digest": "d1dbeb6590a726f623774c373720ab9ea51f642636bf87d298d184774a404ec8",
+      "source_definition_digest": "eebfaeb3ea050509909ea8b5457122dcf558cd494de70a1817fb039b4a84f10e",
       "user_description": {
-        "title": "Connect candidate review and evaluation history",
-        "purpose": "Show the exact trained candidate with its model, data, settings, device, task and evaluation history.",
+        "title": "Connect candidate review and training history",
+        "purpose": "Show the exact locally verified candidate with its training history before Save approval.",
         "scope": [
-          "Reuse the existing result readers and evaluation software.",
-          "Test with controlled metrics. Keep accepted accuracy tests closed."
+          "Connect the Model, Dataset, recipe, hardware, task and output history.",
+          "Check evaluation software with controlled measurements on both hosts. Keep readiness separate from quality.",
+          "Keep accepted accuracy tests closed. Reviewing a candidate does not approve Save."
         ]
       }
     },
@@ -1260,13 +1261,64 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "models-training-and-generation",
       "record_id": "save-approved-trained-model",
-      "source_definition_digest": "65534567710c3ec0b48f48225f301c1e0199fae2bd110200dd6970d334398757",
+      "source_definition_digest": "7de69d07210d91315f20459081631d65b88150951acbf4b0838b6d9b96313785",
       "user_description": {
         "title": "Save a separately approved trained model",
-        "purpose": "Register the exact reviewed candidate only after the user gives separate approval to save it.",
+        "purpose": "Register the exact reviewed and locally verified candidate only after separate Save approval.",
         "scope": [
-          "Check current permission and the selected result before saving.",
-          "Handle lost replies without saving the same result twice."
+          "Recheck actor, workspace, permission, candidate identity and expected saved revision.",
+          "Refuse declined, withdrawn, changed or uncertain approval. Handle lost replies without duplicate registration.",
+          "Retain files until the original save and cleanup outcomes are known. Training and evaluation cannot approve Save."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "bind-pluggable-local-training-storage",
+      "source_definition_digest": "692820f0598dfc85a9f7e85238ba4cff5d6310fdce7b074563c251ca3ea77a9b",
+      "user_description": {
+        "title": "Use replaceable local training storage",
+        "purpose": "Use bounded local files now and keep the storage interface replaceable.",
+        "scope": [
+          "Check task identity, file counts, byte limits, time limits and free disk space.",
+          "Track local copies and retained results. Do not claim disk space reserved against other programs.",
+          "Keep stronger protection pending in the storage roadmap. Never switch a strict request to local mode."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "compose-local-training-producer",
+      "source_definition_digest": "096ec7cc33310b74016a6d57883805efd44aae2ccbba95205bad189a312e0f13",
+      "user_description": {
+        "title": "Connect the local training worker",
+        "purpose": "Run the fixed safe local training pipeline through the replaceable storage adapter.",
+        "scope": [
+          "Keep the exact task, current permissions and one-use start.",
+          "Check the Model, recipe, Dataset and local copies before loading.",
+          "Use safe weights with remote code and network access disabled. Enforce the supported method and resource limits.",
+          "Retain original worker and process ownership. This mode does not provide the future service protection."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "retain-verified-local-training-results",
+      "source_definition_digest": "7059b9d586fe8b0da5c10bbf2cc3a28555f8f600a421db22aa7a03f0c917b447",
+      "user_description": {
+        "title": "Retain verified local training results",
+        "purpose": "Keep task-owned checkpoints and the candidate after their files and delivery are checked.",
+        "scope": [
+          "Check file names, roles, sizes and hashes. Retain the completed delivery record.",
+          "Wait for original IO, worker, SDK and Job shutdown proof before cleanup.",
+          "Keep uncertain operations and files. Do not retry, delete or return disk credit without proof.",
+          "Protected recovery after a crash remains work for the storage roadmap."
         ]
       }
     }

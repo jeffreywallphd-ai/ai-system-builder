@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-25T23:20:18Z`
+- Updated: `2026-11-26T20:30:10Z`
 
 ## Objective
 
@@ -512,9 +512,9 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Track original training operations through cancellation (`track-original-parent-training-io`): complete
   - Use one original task executor for training and local exit proof (`stage-original-training-and-exit-on-one-executor`): complete
   - Coordinate training file closure and original worker shutdown (`coordinate-original-parent-and-worker-retirement`): complete
-  - Reserve shared storage for training (`reserve-shared-training-storage`): planned
-  - Connect the protected training worker (`compose-original-training-producer`): planned
-  - Protect training results through shutdown (`retain-protected-training-results-through-exit`): planned
+  - Use replaceable bounded local training storage (`bind-pluggable-local-training-storage`): planned
+  - Connect the local training worker (`compose-local-training-producer`): planned
+  - Retain verified local results through shutdown (`retain-verified-local-training-results`): planned
   - Connect candidate review and evaluation history (`connect-training-candidate-review-and-history`): planned
   - Save a separately approved trained model (`save-approved-trained-model`): planned
   - Run a bounded fine-tuning task (`run-approved-fine-tuning`): planned
