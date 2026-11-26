@@ -3764,11 +3764,14 @@ handler is needed. This profile adds no physical resource or settlement proof.
 The optional `windowsTrainingResultStore.cc` adapter now uses one fresh protected
 container in the existing Node parent, following the user-approved replacement in
 [Private Training Result Container](training-result-container.md). The final file
-owner/ACL/protected controls and original grant0x13019f stay unchanged. A complete
+owner/protected controls and original grant0x13019f remain. Fresh result files
+add explicit READ_DATA denial0xD0157 while retaining all write/delete/control and
+OWNER_RIGHTS restrictions. A complete
 copied group/role/name/size/hash inventory, checked aligned offsets, exact logical
 payload and metadata/rounding limits precede file effects. The original exclusive
 preallocated file must pass identity, single-link/default-stream/empty-EOF/full
-allocation, exact permissions and secondary-control denial before private metadata.
+allocation, exact permissions and both secondary-control and least-right read
+denial before private metadata.
 It needs no result-directory child insertion or permission transition.
 
 Ordered bounded writes and complete row/index/padding/prefix/footer verification
@@ -3777,7 +3780,9 @@ lost readers keep their owner; fencing is not retirement. Known same-episode
 original-handle deletion credits no global capacity. The explicit small fixture
 remains source/review/binary/Node bound with clean loaders, original locks, child/
 job closure and final full-source verification. No-file ABI supplies no actual
-file pass. All four failed directory tests and their data stay untouched.
+file pass. All failed directory/container tests and their data stay untouched. The secondary
+read succeeded in the diagnostic container test; it is not accepted as private
+read isolation or attributed to an unproven Windows sharing branch.
 
 This physical candidate remains unqualified. A file DACL does not prove parent
 namespace protection or post-host-exit custody. Actual global reservation and

@@ -164,7 +164,9 @@ std::vector<unsigned char> acl(const std::vector<unsigned char>& principal) {
     auto ace = [&](BYTE type, DWORD mask, const auto& sid) {
         bytes(result, type); bytes(result, BYTE{0}); bytes(result, static_cast<WORD>(8 + sid.size())); bytes(result, mask); result.insert(result.end(), sid.begin(), sid.end());
     };
-    ace(ACCESS_DENIED_ACE_TYPE, 0xD0156UL, world);
+    // Fresh private results are read only through their original capability.
+    // Sharing mode alone did not deny secondary path reads on Windows.
+    ace(ACCESS_DENIED_ACE_TYPE, 0xD0157UL, world);
     ace(ACCESS_ALLOWED_ACE_TYPE, 0x20000UL, owner); ace(ACCESS_ALLOWED_ACE_TYPE, 0x1701ffUL, principal);
     need(IsValidAcl(reinterpret_cast<PACL>(result.data())) != FALSE); return result;
 }
@@ -239,16 +241,22 @@ HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, b
 void verifySealed(Store& s,HANDLE h,HANDLE parent,const std::wstring& name,bool directory) {
     const auto id=identity(h); creatorAccess(s,h,directory?0x1301a7UL:0x13019fUL);
     s.sealStep=3; permissions(s,h);
-    // Control-only opens are not blocked by sharing alone. Prove that the final
-    // DACL denies a SECONDARY WRITE_DAC open without changing any permission.
-    need(s.frame==nullptr); s.frame=std::make_shared<Frame>(); auto& f=*s.frame; f.name=name;
-    f.string.Length=static_cast<USHORT>(name.size()*2); f.string.MaximumLength=f.string.Length; f.string.Buffer=f.name.data();
-    f.attributes.Length=sizeof(OBJECT_ATTRIBUTES); f.attributes.RootDirectory=parent; f.attributes.ObjectName=&f.string; f.attributes.Attributes=0x40;
-    s.sealStep=4;
-    const NTSTATUS status=NtCreateFile(&f.handle,READ_CONTROL|WRITE_DAC|SYNCHRONIZE,&f.attributes,&f.io,nullptr,
-        FILE_ATTRIBUTE_NORMAL,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,1,0x200000|0x20|(directory?1:0x40),nullptr,0);
-    if(static_cast<uint32_t>(status)!=0xC0000022U || valid(f.handle)) {s.sealStatus=static_cast<uint32_t>(status);throw Denied{};}
-    s.frame.reset(); s.sealStep=5; need(identity(h)==id); permissions(s,h); s.sealStep=6;
+    // Neither a control-only nor a least-right data read may reopen the file.
+    // These probes precede private metadata. Unknown original output slots and
+    // any unexpectedly returned handle stay retained; no permission is changed.
+    const std::array<std::pair<ACCESS_MASK,uint32_t>,2> probes{{
+        {READ_CONTROL|WRITE_DAC|SYNCHRONIZE,4}, {FILE_READ_DATA|SYNCHRONIZE,5}}};
+    for(const auto& probe:probes) {
+        need(s.frame==nullptr);s.frame=std::make_shared<Frame>();auto& f=*s.frame;f.name=name;
+        f.string.Length=static_cast<USHORT>(name.size()*2);f.string.MaximumLength=f.string.Length;f.string.Buffer=f.name.data();
+        f.attributes.Length=sizeof(OBJECT_ATTRIBUTES);f.attributes.RootDirectory=parent;f.attributes.ObjectName=&f.string;f.attributes.Attributes=0x40;
+        s.sealStep=probe.second;
+        const NTSTATUS status=NtCreateFile(&f.handle,probe.first,&f.attributes,&f.io,nullptr,
+            FILE_ATTRIBUTE_NORMAL,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,1,0x200000|0x20|(directory?1:0x40),nullptr,0);
+        if(static_cast<uint32_t>(status)!=0xC0000022U || valid(f.handle)) {s.sealStatus=static_cast<uint32_t>(status);throw Denied{};}
+        s.frame.reset();
+    }
+    s.sealStep=6;need(identity(h)==id);permissions(s,h);
 }
 void facts(Store& s) {
     kind(s.container, false); FILE_STANDARD_INFO info{};

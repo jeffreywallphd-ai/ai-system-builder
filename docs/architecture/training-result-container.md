@@ -78,12 +78,18 @@ historical reopen or extraction API. Existing raw model directories are unchange
 
 ## Original Capability and Accounting
 
-The existing final owner/World/OWNER_RIGHTS DACL and protected controls apply at
-file creation. Actual original grant 0x13019f, exact permissions, identity, single
+The final owner/World/OWNER_RIGHTS DACL and protected controls apply at creation.
+For fresh private result files, World denial0xD0157 adds FILE_READ_DATA denial to
+the existing write/delete/control restrictions. The owner retains only the same
+READ_CONTROL owner policy. Earlier Model/input/legacy file policies are unchanged. Actual original grant 0x13019f, exact permissions, identity, single
 link, default stream, empty EOF and measured full allocation precede private
-metadata writes. Secondary control opens must be denied. No ACL transition or
+metadata writes. Secondary control and least-right READ_DATA|SYNCHRONIZE opens
+must return access denied without a handle before any private header/index. No ACL transition or
 weaker initial policy is used. Original non-delete-sharing ancestors pin live
-names; they do not establish protection after a host crash.
+names only within the declared profile; they do not establish protection after
+a host crash. A real diagnostic fixture permitted a secondary path read under
+the prior D0156 policy. Sharing mode alone is not confidentiality proof. Actual
+original-handle reads under the tighter policy remain required qualification.
 
 The single physical allocation includes 512 fixed bytes, 64 per row, actual zero
 padding, payloads and NTFS allocation rounding. Everything except logical payload

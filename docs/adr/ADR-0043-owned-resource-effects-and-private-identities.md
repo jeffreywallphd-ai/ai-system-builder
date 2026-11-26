@@ -64,7 +64,10 @@ authorization and negative evidence; this decision grants no blanket admission.
 The user-approved2026-11-26 training-result replacement uses one private protected
 container in the existing Node parent, as specified in
 [Private Training Result Container](../architecture/training-result-container.md).
-The final file ACL, original capabilities and explicit data/metadata limits stay.
+Original capabilities, owner/control restrictions and explicit data/metadata
+limits stay. Fresh private result files additionally deny FILE_READ_DATA to
+enforce the approved original-reader boundary. The least-right read probe must
+deny before metadata, and actual original-reader compatibility must qualify.
 This replaces only fresh result-directory construction, which real Windows tests
 refused before payload. It does not authorize historical-data access, parent ACL
 changes, new privileges/identities, recovery, quota credit or default activation.

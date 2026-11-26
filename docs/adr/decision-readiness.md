@@ -25,7 +25,9 @@ The user-approved2026-11-26 private training-result container direction is ready
 for bounded source implementation under ADR-0043. See
 [the fixed format and scope](../architecture/training-result-container.md).
 Actual parent/crash/shared-reservation and host evidence remains pending.
-No parent provisioning, permission change or weaker live-only mode is authorized.
+Fresh private result READ_DATA denial enforces the approved original-reader
+boundary; actual original-reader compatibility remains unqualified. No parent
+provisioning/ACL change, broader grant or weaker live-only mode is authorized.
 
 | Area                                                                                        | Readiness         | Authority and boundary                                                                                                                                                                                                               | Agent action                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -12,10 +12,14 @@ The user-approved replacement and fixed binary layout are specified in
 [Private Training Result Container](../../../docs/architecture/training-result-container.md).
 The complete copied group/role/name/size/hash inventory, safe offsets and exact
 payload/metadata bounds pass before effects. One fresh exclusive preallocated file
-receives the unchanged final owner/World/OWNER_RIGHTS DACL at creation. Actual
+receives its final owner/World/OWNER_RIGHTS DACL at creation. The fresh-result
+World denial0xD0157 includes READ_DATA; original write/delete/control restrictions
+and OWNER_RIGHTS remain. Actual
 original grant0x13019f, identity, permissions, single link, default stream, empty
 EOF and measured allocation precede private metadata. Secondary control opens
-must deny. There is no result directory, child insertion or ACL transition.
+and least-right secondary READ_DATA opens must deny before private metadata.
+Protection sub-steps4/5 identify control/read probes;6 checks final identity.
+There is no result directory, child insertion or ACL transition.
 
 Ordered8KiB writes finish with row hashes, verified header/index/zero padding,
 then footer and full prefix/EOF/identity/allocation/stream readback. Only a fully
@@ -24,7 +28,9 @@ and one reader lease remain owned through actual settlement. Fencing, GC and
 lost readers cannot retire unknown IO. Known same-episode original-handle cleanup
 returns no capacity credit and never deletes by pathname or touches old data.
 
-Four failed directory fixtures and all their trees stay retained. The container
+Four failed directory fixtures, both failed container fixtures and their trees
+stay retained. The measured secondary path-read exposure is corrected by the
+explicit read denial; sharing mode alone was insufficient in that fixture. The container
 is a new unqualified physical candidate. Actual shared reservation, caller-parent
 protection, durable crash retention, original SDK/controller/Job retirement,
 receiver role/name binding, review/Save, packaging and hosts remain separate.

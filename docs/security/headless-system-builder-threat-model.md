@@ -3508,7 +3508,12 @@ private rejection escapes and no startup/release follows.
 The optional Node-parent native result custodian uses the user-approved single
 protected container format. See the fixed codec and limits in
 `docs/architecture/training-result-container.md`. It is private and default-off.
-The complete copied bounded group/role/name inventory, safe derived offsets and
+Fresh result World denial0xD0157 adds FILE_READ_DATA denial without changing
+original creator0x13019f, OWNER_RIGHTS or existing write/delete/control rules.
+Both least-right secondary read and control probes must fail access denied before
+private metadata. The prior live fixture allowed a secondary path read; its
+sharing-branch cause is not inferred. Original-capability reads must still pass
+actual qualification. The complete copied bounded group/role/name inventory, safe derived offsets and
 metadata/rounding charge pass before effects. Exact final file permissions apply
 at creation; actual original grant0x13019f, identity, single link/default stream,
 empty EOF and complete allocation precede private metadata. No directory child
