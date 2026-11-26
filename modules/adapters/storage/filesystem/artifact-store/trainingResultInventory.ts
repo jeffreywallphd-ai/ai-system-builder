@@ -27,9 +27,9 @@ function files(value: unknown, maximum: number): unknown[] {
 
 /** Revalidate the receiver's complete inventory before allocating the existing
  * ASBTRS02 input. Returned bytes grant no custody, quota, permission or Save. */
-export function encodeTrainingResultInventory(input: unknown, configured: {
+export function captureTrainingResultInventory(input: unknown, configured: {
   readonly maximumFiles: number; readonly maximumFileBytes: number; readonly maximumTotalBytes: number;
-}): Buffer {
+}) {
   try {
     const limits = record(configured, ["maximumFiles", "maximumFileBytes", "maximumTotalBytes"]);
     const maximumFiles = integer(limits.maximumFiles, 1, 256);
@@ -63,6 +63,15 @@ export function encodeTrainingResultInventory(input: unknown, configured: {
       encoded[at + 6] = row.role; encoded[at + 7] = row.ordinal;
       encoded.writeBigUInt64LE(BigInt(row.size), at + 8); Buffer.from(row.hash, "hex").copy(encoded, at + 16);
     }
-    return encoded;
+    return Object.freeze({publicationId: publication.publicationId, totalBytes: sum, encoded,
+      files: Object.freeze(rows.map(row => Object.freeze({fileIndex: row.index, groupIndex: row.group,
+        name: names[row.ordinal - 1]!, role: row.role === 1 ? "checkpoint" as const : "candidate" as const,
+        mediaType: names[row.ordinal - 1]!.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
+        expectedSizeBytes: row.size, expectedSha256: "sha256:" + row.hash})))});
   } catch {throw invalid();}
 }
+
+/** Compatibility encoder; the captured metadata stays private to its caller. */
+export function encodeTrainingResultInventory(input: unknown, configured: {
+  readonly maximumFiles: number; readonly maximumFileBytes: number; readonly maximumTotalBytes: number;
+}): Buffer {return captureTrainingResultInventory(input, configured).encoded;}

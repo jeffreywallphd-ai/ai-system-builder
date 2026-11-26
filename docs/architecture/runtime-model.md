@@ -3808,4 +3808,14 @@ The private filesystem inventory codec revalidates that complete passive metadat
 and explicit limits into the existing bounded `ASBTRS02` input. Fixed-format
 golden vectors, all name ordinals, integer bounds and no-callback denial tests
 cover encoding only. It performs no file/native operation and does not establish
-the still-pending native backend, actual reservation, crash or host composition.
+qualified native loading, actual reservation, crash or host composition.
+
+An optional private native training-byte adapter consumes that captured inventory
+and trusted preloaded bindings. It retains one original store, exact actor/context,
+ordered verified8KiB writes and real original promises. IO fencing does not retire
+pending producer/native operations, and unknown replies grant no retry or cleanup.
+Its separate original-owner logical readers/discard are private lower-level
+capabilities, not application permission or worker/SDK/Job/global-credit proof.
+The qualifying coordinator must supply those gates. No native loader, public
+barrel/route or default composition is added; inert ABI tests do not qualify the
+real pipeline, installation, capacity, crash custody, candidate/Save or hosts.

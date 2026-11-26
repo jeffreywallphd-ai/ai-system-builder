@@ -3557,6 +3557,20 @@ errors without input detail. Its metadata is not permission or a physical storag
 proof. It starts no file, native module or worker; native allocation/custody,
 shared reservations, crash protection and host composition remain separate.
 
+The private native byte adapter accepts only an explicitly trusted preloaded ABI
+dependency, captures frozen data method descriptors without invoking getters,
+and creates one exact original store under captured tenant/actor/context/limits.
+No module path, loader or public binding request is introduced. Its factory does
+not attest that a dependency is native: installation provenance remains mandatory
+in the still-uncomposed qualifying host. Logical mock tests supply no such proof.
+Complete metadata precedes data, chunks are intrinsically bounded before copies,
+and native promises settle through their original observations. Fencing cannot
+erase a pending producer flight; unknown replies stay retained. Private original
+readers and one-use discard preserve same-owner/read/IO guards without exposing
+result paths. They grant no application/cleanup permission or global capacity
+credit; actual worker/SDK/controller/Job and crash/reservation proof remain the
+coordinator's separate obligations. No default host can invoke this bridge yet.
+
 The explicit container fixture distinguishes each filesystem denial assertion
 with a fixed numeric step and finite failure/OS categories. Unexpected success
 and an unexpected error remain distinct failures. The child emits no raw error

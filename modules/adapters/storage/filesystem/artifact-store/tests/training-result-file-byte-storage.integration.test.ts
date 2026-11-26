@@ -9,6 +9,7 @@ import {createOrganizationId} from "../../../../../contracts/organization";
 import type {OrganizationRequestContext} from "../../../../../contracts/organization";
 import {createFilesystemTrainingResultFileByteStorageAdapter as create} from "../createFilesystemTrainingResultFileByteStorageAdapter";
 import {encodeTrainingResultInventory as encodeInventory} from "../trainingResultInventory";
+import {createNativeTrainingResultFileByteStorageAdapter as createNative} from "../createNativeTrainingResultFileByteStorageAdapter";
 
 const publicationId = "a".repeat(32), context = {workspaceId: "workspace-a"};
 const key = (index = 0) => `workspaces/workspace-a/artifacts/training-results/${publicationId}/${index}`;
@@ -33,13 +34,245 @@ const safe = (result: unknown) => assert.doesNotMatch(JSON.stringify(result), /t
 
 const inventoryLimits = {maximumFiles: 256, maximumFileBytes: 64, maximumTotalBytes: 512};
 const nativeInventory = () => ({publicationId, totalBytes: 5, files: [
-  {fileIndex: 0, groupIndex: 0, name: "config.json", role: "checkpoint", mediaType: "application/json",
+  {fileIndex: 0, groupIndex: 0, name: "config.json", role: "checkpoint" as const, mediaType: "application/json" as const,
     expectedSizeBytes: 2, expectedSha256: "sha256:" + "a".repeat(64)},
-  {fileIndex: 1, groupIndex: 1, name: "model.safetensors", role: "candidate", mediaType: "application/octet-stream",
+  {fileIndex: 1, groupIndex: 1, name: "model.safetensors", role: "candidate" as const, mediaType: "application/octet-stream" as const,
     expectedSizeBytes: 3, expectedSha256: "sha256:" + "b".repeat(64)},
 ]});
 const invalidInventory = (value: unknown, limits = inventoryLimits) => assert.throws(
   () => encodeInventory(value, limits), {message: "Private training result inventory is invalid."});
+
+/** Inert ABI-shaped dependency. It performs no native or filesystem operation
+ * and supplies no physical protection or qualification evidence. */
+function nativeFixture() {
+  const originalStore = Object.freeze({}), calls: {name: string; args: any[]}[] = [];
+  const state = {pending: false, fenced: false, uncertain: false, prepared: false, closed: false, completedFiles: 0, readers: 0, stage: 0};
+  const chunks = new Map<number, Buffer[]>(), readers = new Map<object, {index: number; offset: number}>();
+  const implementations: Record<string, (...args: any[]) => any> = {
+    createStore: () => originalStore,
+    inspect: store => {assert.equal(store, originalStore); return Object.freeze({...state,
+      diagnostics: Object.freeze({sealStep: 0, nativeStatus: 0, permissionBits: 0, permissionControl: 0, grantedAccess: 0})});},
+    prepare: async (store, encoded) => {assert.equal(store, originalStore); assert.equal(encoded.toString("ascii", 0, 8), "ASBTRS02"); state.prepared = true; state.stage = 8; return true;},
+    append: async (store, index, bytes) => {assert.equal(store, originalStore); assert.equal(index, state.completedFiles);
+      assert.ok(Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= 8192);
+      chunks.set(index, [...(chunks.get(index) ?? []), Buffer.from(bytes)]); return true;},
+    finishFile: async (store, index) => {assert.equal(store, originalStore); assert.equal(index, state.completedFiles); state.completedFiles++; return true;},
+    fence: store => {assert.equal(store, originalStore); state.fenced = true; return true;},
+    openReader: (store, index) => {assert.equal(store, originalStore); const reader = Object.freeze({}); readers.set(reader, {index, offset: 0}); state.readers++; return reader;},
+    read: async (reader, maximum) => {const current = readers.get(reader)!; assert.ok(current);
+      const bytes = Buffer.concat(chunks.get(current.index) ?? []), result = Buffer.from(bytes.subarray(current.offset, current.offset + maximum)); current.offset += result.length; return result;},
+    closeReader: reader => {assert.ok(readers.delete(reader)); state.readers--; return true;},
+    discard: async store => {assert.equal(store, originalStore); state.closed = true; state.stage = 14; return true;},
+  };
+  const api = Object.freeze(Object.defineProperties({}, Object.fromEntries(Object.keys(implementations).map(name =>
+    [name, {value: (...args: any[]) => {calls.push({name, args}); return implementations[name]!(...args);}}]))));
+  const actor = {workspaceId: "workspace-a", organizationId: createOrganizationId("organization-a"), principalId: "actor-a", requestId: "native-test-request"};
+  const options = {nativeApi: api, parentDirectory: "X:\\synthetic-result-parent", publicationId, scopeDigest: "d".repeat(64),
+    maximumFiles: 4, maximumFileBytes: 20000, maximumTotalBytes: 40000, maximumMetadataBytes: 32768, maximumOperationMs: 10000, context: actor};
+  const values = [Buffer.from("{}"), Buffer.from([1, 2, 3])];
+  const inventory = () => ({...nativeInventory(), totalBytes: values.reduce((sum, value) => sum + value.length, 0),
+    files: nativeInventory().files.map((row, index) => ({...row, expectedSizeBytes: values[index]!.length, expectedSha256: digest(values[index]!)}))});
+  const packet = (index: number, content = stream(values[index]!)) => {
+    const row = inventory().files[index]!;
+    return {fileIndex: row.fileIndex, mediaType: row.mediaType, expectedSizeBytes: row.expectedSizeBytes, expectedSha256: row.expectedSha256, content};
+  };
+  const createAdapter = () => createNative(options);
+  return {calls, state, chunks, api, options, actor, values, implementations, inventory, packet, createAdapter,
+    count: (name: string) => calls.filter(call => call.name === name).length};
+}
+const gate = () => {let resolve!: () => void; const promise = new Promise<void>(done => {resolve = done;}); return {promise, resolve};};
+const tickNative = () => new Promise<void>(done => setImmediate(done));
+
+test("native publication binds the original ABI, complete inventory, ordered bytes and original readers", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter();
+  const retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+  assert.throws(() => adapter.storage.captureIoRetirement!({publicationId}, f.actor));
+  assert.throws(() => adapter.originalOwner.openReader(0, f.actor));
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  assert.equal((await adapter.storage.publishResultFile(f.packet(1), f.actor)).ok, false);
+  assert.equal(f.count("append"), 0);
+  for (const index of [0, 1]) {
+    const result = await adapter.storage.publishResultFile(f.packet(index), f.actor); assert.equal(result.ok, true);
+    assert.deepEqual(Buffer.concat(f.chunks.get(index)!), f.values[index]);
+  }
+  assert.equal(f.count("createStore"), 1); assert.equal(f.count("prepare"), 1); assert.equal(f.count("finishFile"), 2);
+  assert.deepEqual(f.calls.find(call => call.name === "prepare")!.args[1], encodeInventory(f.inventory(),
+    {maximumFiles: 4, maximumFileBytes: 20000, maximumTotalBytes: 40000}));
+  retirement.fencePublication(); assert.equal(retirement.inspect().phase, "closed");
+  const reader = adapter.originalOwner.openReader(0, {...f.actor, requestId: "new-read-request"});
+  await assert.rejects(adapter.originalOwner.discard(f.actor));
+  assert.deepEqual(await reader.read(), f.values[0]); assert.equal((await reader.read()).length, 0); reader.close();
+  await adapter.originalOwner.discard(f.actor); assert.equal(f.state.closed, true);
+  await assert.rejects(adapter.originalOwner.discard(f.actor)); assert.equal(f.count("discard"), 1);
+  safe(adapter.storage.inspectPublication());
+});
+
+test("native publication captures actor/configuration and denies foreign or duplicate calls before consuming content", async () => {
+  const f = nativeFixture(), actor = {...f.actor}, adapter = f.createAdapter(); let consumed = 0;
+  const body = async function* () {consumed++; yield f.values[0]!;};
+  f.options.context.workspaceId = "other-workspace"; f.options.publicationId = "b".repeat(32); f.options.nativeApi = Object.freeze({});
+  await assert.rejects(adapter.storage.preparePublication!(f.inventory(), {...actor, principalId: "other-actor"}));
+  assert.equal(f.count("prepare"), 0);
+  await adapter.storage.preparePublication!(f.inventory(), actor);
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0, body()), {...actor, workspaceId: "other-workspace"})).ok, false);
+  assert.equal(consumed, 0); assert.equal(f.count("append"), 0);
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0), actor)).ok, true);
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0, body()), actor)).ok, false);
+  assert.equal(consumed, 0); assert.equal(f.count("finishFile"), 1);
+  assert.equal(adapter.storage.inspectPublication().declaredPayloadBytes, 2);
+});
+
+test("native publication keeps a pending producer flight after fencing and refuses its late bytes", {timeout: 2000}, async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), wait = gate(), entered = gate();
+  const retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  const body = async function* () {entered.resolve(); await wait.promise; yield f.values[0]!;};
+  const pending = adapter.storage.publishResultFile(f.packet(0, body()), f.actor); await entered.promise;
+  retirement.fencePublication(); assert.equal(retirement.inspect().phase, "pending");
+  await assert.rejects(adapter.originalOwner.discard(f.actor)); wait.resolve();
+  assert.equal((await pending).ok, false); assert.equal(f.count("append"), 0); assert.equal(f.count("finishFile"), 0);
+  assert.equal(retirement.inspect().phase, "closed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+  assert.equal(retirement.inspect().declaredPayloadBytes, 2);
+});
+
+test("native publication observes the actual pending append and keeps declarations after a late acknowledgement", {timeout: 2000}, async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), wait = gate(), entered = gate();
+  const retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  const append = f.implementations.append!;
+  f.implementations.append = (...args) => {f.state.pending = true; entered.resolve(); return (async () => {await wait.promise; f.state.pending = false; return append(...args);})();};
+  const pending = adapter.storage.publishResultFile(f.packet(0), f.actor); await entered.promise;
+  retirement.fencePublication(); assert.equal(retirement.inspect().phase, "pending");
+  assert.ok(retirement.inspect().pendingOperations > 0); await assert.rejects(adapter.originalOwner.discard(f.actor));
+  wait.resolve(); assert.equal((await pending).ok, false); assert.equal(f.count("append"), 1); assert.equal(f.count("finishFile"), 0);
+  assert.equal(retirement.inspect().phase, "closed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+});
+
+for (const mode of ["false", "thenable", "native-error"] as const) {
+  test(`native publication retains ${mode} without retry, cleanup credit or private errors`, async () => {
+    const f = nativeFixture(), adapter = f.createAdapter(); let thenCalls = 0;
+    const retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+    await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    f.implementations.append = mode === "thenable" ? (() => ({then() {thenCalls++;}})) : mode === "false" ? (async () => false) :
+      (async () => {f.state.uncertain = true; throw Error("private-synthetic failed at X:\\private");});
+    const result = await adapter.storage.publishResultFile(f.packet(0), f.actor);
+    assert.equal(result.ok, false); safe(result); assert.equal(retirement.inspect().phase, "unconfirmed");
+    assert.equal(retirement.inspect().declaredPayloadBytes, 2); assert.equal(thenCalls, 0);
+    assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, false);
+    await assert.rejects(adapter.originalOwner.discard(f.actor)); assert.equal(f.count("append"), 1); assert.equal(f.count("discard"), 0);
+  });
+}
+
+test("native publication enforces8KiB intrinsic chunks and preserves source-independent bytes", async () => {
+  const f = nativeFixture(); f.values[1] = Buffer.alloc(8300, 90); const adapter = f.createAdapter();
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, true);
+  const source = async function* () {yield f.values[1]!.subarray(0, 8192); yield f.values[1]!.subarray(8192);};
+  assert.equal((await adapter.storage.publishResultFile(f.packet(1, source()), f.actor)).ok, true);
+  assert.deepEqual(f.calls.filter(call => call.name === "append").map(call => call.args[2].length), [2, 8192, 108]);
+  const tooLarge = nativeFixture(); tooLarge.values[0] = Buffer.alloc(8193); const rejected = tooLarge.createAdapter();
+  const retirement = rejected.storage.captureIoRetirement!({publicationId}, tooLarge.actor);
+  await rejected.storage.preparePublication!(tooLarge.inventory(), tooLarge.actor);
+  const oversized = tooLarge.packet(0);
+  Object.defineProperty(tooLarge.values[0], "byteLength", {get() {throw Error("must not read instance length");}});
+  assert.equal((await rejected.storage.publishResultFile(oversized, tooLarge.actor)).ok, false);
+  assert.equal(tooLarge.count("append"), 0); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+});
+
+test("native adapter rejects API/configuration accessors and proxies before original store creation", () => {
+  const f = nativeFixture(); let calls = 0;
+  const options: any = {...f.options}; Object.defineProperty(options, "nativeApi", {enumerable: true, get() {calls++; throw Error("private-synthetic");}});
+  assert.throws(() => createNative(options), {message: "Private training publication is unavailable."});
+  const proxy = new Proxy(f.options, {getPrototypeOf() {calls++; throw Error("private-synthetic");}});
+  assert.throws(() => createNative(proxy));
+  const descriptors = Object.getOwnPropertyDescriptors(f.api); descriptors.append = {enumerable: false, get() {calls++; throw Error("private-synthetic");}};
+  assert.throws(() => createNative({...f.options, nativeApi: Object.freeze(Object.defineProperties({}, descriptors))}));
+  assert.throws(() => createNative({...f.options, context: {workspaceId: "workspace-a"}}));
+  assert.equal(f.count("createStore"), 0); assert.equal(calls, 0);
+});
+
+test("native adapter rejects noncanonical workspace context before native store creation", () => {
+  const f = nativeFixture();
+  for (const workspaceId of [" workspace-a ", "\tworkspace-a", "workspace-a\n", "", "../workspace-a", "workspace/a",
+    "https://workspace.invalid", "workspace..a", "a".repeat(97), undefined]) {
+    assert.throws(() => createNative({...f.options, context: {...f.actor, workspaceId}}),
+      {message: "Private training publication is unavailable."});
+  }
+  assert.equal(f.count("createStore"), 0); assert.equal(f.count("inspect"), 0);
+  f.createAdapter(); assert.equal(f.count("createStore"), 1);
+});
+
+test("native readers reject concurrent reads without erasing the original reader lifetime", {timeout: 2000}, async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(); await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  for (const index of [0, 1]) assert.equal((await adapter.storage.publishResultFile(f.packet(index), f.actor)).ok, true);
+  adapter.originalOwner.fencePublication(); const reader = adapter.originalOwner.openReader(0, f.actor);
+  const wait = gate(), entered = gate(), read = f.implementations.read!;
+  f.implementations.read = (...args) => {entered.resolve(); return (async () => {await wait.promise; return read(...args);})();};
+  const pending = reader.read(); await entered.promise;
+  await assert.rejects(reader.read()); assert.throws(() => reader.close()); await assert.rejects(adapter.originalOwner.discard(f.actor));
+  wait.resolve(); assert.deepEqual(await pending, f.values[0]); reader.close();
+  await adapter.originalOwner.discard(f.actor); assert.equal(f.count("discard"), 1);
+});
+
+test("native publication verifies complete bytes before finishing a file and retains a failed copy", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  const result = await adapter.storage.publishResultFile(f.packet(0, stream(Buffer.from("xx"))), f.actor);
+  assert.equal(result.ok, false); safe(result); assert.equal(f.count("append"), 1); assert.equal(f.count("finishFile"), 0);
+  assert.equal(f.count("discard"), 0); assert.equal(retirement.inspect().declaredPayloadBytes, 2);
+  assert.equal(retirement.inspect().publicationUnconfirmed, true);
+});
+
+test("native publication rejects stream accessors and proxies without consuming a file index", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(); let invoked = 0;
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  const accessor = Object.defineProperty({}, Symbol.asyncIterator, {get() {invoked++; throw Error("private-synthetic");}});
+  const proxy = new Proxy({}, {getPrototypeOf() {invoked++; throw Error("private-synthetic");}});
+  for (const content of [accessor, proxy]) {
+    const result = await adapter.storage.publishResultFile({...f.packet(0), content: content as AsyncIterable<Uint8Array>}, f.actor);
+    assert.equal(result.ok, false); safe(result);
+  }
+  assert.equal(invoked, 0); assert.equal(adapter.storage.inspectPublication().attemptedFileCount, 0); assert.equal(f.count("append"), 0);
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, true);
+});
+
+test("native publication never reads an own promise then and retains its unknown acknowledgement", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+  await adapter.storage.preparePublication!(f.inventory(), f.actor); let reads = 0;
+  const original = Promise.resolve(true);
+  Object.defineProperty(original, "then", {get() {reads++; throw Error("private-synthetic");}});
+  f.implementations.append = () => original;
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, false); await tickNative();
+  assert.equal(reads, 0); assert.equal(retirement.inspect().phase, "unconfirmed");
+  assert.ok(retirement.inspect().pendingOperations > 0); await assert.rejects(adapter.originalOwner.discard(f.actor));
+});
+
+for (const mode of ["fence", "inspect"] as const) {
+  test(`an asynchronous native ${mode} cannot establish synchronous closure or leak a rejection`, async () => {
+    const f = nativeFixture(), adapter = f.createAdapter(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+    f.implementations[mode] = async () => {throw Error("private-synthetic");};
+    if (mode === "fence") assert.throws(() => retirement.fencePublication(), {message: "Private training publication is unavailable."});
+    assert.equal(retirement.inspect().phase, "unconfirmed"); await tickNative();
+    await assert.rejects(adapter.originalOwner.discard(f.actor)); assert.equal(f.count("discard"), 0);
+  });
+}
+
+test("native reader overrun stays retained and cannot close or discard its original owner", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(); await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  for (const index of [0, 1]) assert.equal((await adapter.storage.publishResultFile(f.packet(index), f.actor)).ok, true);
+  adapter.originalOwner.fencePublication(); const reader = adapter.originalOwner.openReader(0, f.actor);
+  f.implementations.read = async () => Buffer.alloc(8193);
+  await assert.rejects(reader.read()); assert.throws(() => reader.close()); await assert.rejects(adapter.originalOwner.discard(f.actor));
+  assert.equal(f.count("closeReader"), 0); assert.equal(f.count("discard"), 0); assert.equal(f.state.readers, 1);
+});
+
+test("lost original native discard acknowledgement never authorizes another effect or capacity credit", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+  retirement.fencePublication(); f.implementations.discard = async () => {f.state.closed = true; throw Error("private-synthetic");};
+  await assert.rejects(adapter.originalOwner.discard(f.actor), {message: "Private training publication is unavailable."});
+  await assert.rejects(adapter.originalOwner.discard(f.actor)); assert.equal(f.count("discard"), 1);
+  assert.equal(retirement.inspect().phase, "unconfirmed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+});
 
 test("private native inventory matches the fixed independent ASBTRS02 golden vector", () => {
   const expected = Buffer.from("415342545253303202000000" +

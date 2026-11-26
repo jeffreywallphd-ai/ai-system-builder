@@ -58,6 +58,31 @@ accessors, sparse/extra arrays and unknown fields are denied without callbacks.
 This pure encoder opens no file, loads no native module and supplies no authority.
 Native layout/allocation checks and actual backend composition remain mandatory.
 
+The codec can also return a detached frozen metadata snapshot beside its private
+encoded Buffer. The optional filesystem publication adapter uses that one snapshot
+with an installation-owned preloaded native API, never a request-selected module.
+It captures all ten original method descriptors, including non-enumerable exports,
+then creates and retains the exact store. Workspace/organization/principal scope
+is fixed; publication calls also match the original request/correlation context.
+Later private reads may use a fresh request under the same actor/workspace scope;
+the application must independently reauthorize them before and after waits.
+
+Preparation, append, finish, reads and discard observe their original native
+promises. Pending producer flights survive fencing. Unknown replies retain
+uncertainty; no retry or automatic cleanup occurs. Producer chunks are intrinsically
+bounded to8KiB before copying. Returned storage keys are private logical references,
+not result paths; consumers must use the captured original reader, never a normal
+filesystem-key lookup. Reader leases block discard, and discard is one-use over
+the same fenced original owner. This local capability is not a cleanup grant:
+the qualifying coordinator still owns application authority, actual global
+reservations, SDK/controller/worker/Job barriers and capacity reconciliation.
+
+The bridge has no loader, public export barrel or default host wiring. Frozen
+bindings and opaque-looking objects do not attest native provenance; trusted
+installation binding and actual host execution remain mandatory. Its inert ABI
+tests supply logical adapter evidence only, independently of the completed small
+native component fixture. No physical fixture attempt is repeated by those tests.
+
 The physical version1 format is 256-byte header, complete index with 64 bytes per row,
 ordered payloads at derived 8-byte-aligned offsets, zero gaps, then 256-byte footer.
 Every addition, alignment, total and allocation calculation is checked. No caller
@@ -127,7 +152,9 @@ source/review-bound Windows profile after the source checkpoint. Earlier failure
 remain recorded. No model accuracy tests are repeated for this workflow work.
 
 The receiver's optional preparation passes its validated frozen group/role/name
-inventory before data, but Native backend composition still needs evidence.
+inventory before data. A private native adapter implements logical byte/owner
+dispatch, but qualified native loading and actual producer/host composition still
+need evidence.
 Current application authority, actual shared
 capacity, parent deletion/rename/ADS/injection protection, durable ownership and
 post-host-exit retention, SDK/controller/Job retirement, review/Save and both hosts

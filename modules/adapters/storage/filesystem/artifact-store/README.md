@@ -116,3 +116,18 @@ metadata bytes. Golden-vector and malformed/proxy/accessor tests run with the
 focused training-storage checks. It loads no native module and performs no file
 operation. Encoded bytes do not prove permission, custody, capacity or Save;
 actual native backend composition and worker/host qualification remain pending.
+
+Private `createNativeTrainingResultFileByteStorageAdapter` bridges the byte port
+to trusted, already-loaded original Node-API bindings. It captures the frozen
+ten-method ABI, explicit limits and tenant/actor/context before creating one
+original opaque store. Complete captured metadata precedes ordered verified8KiB
+writes and original native finishes. No path-based result reader or loader is
+added. The returned private original owner supports fenced finalized logical
+readers and original-handle discard, with no unknown/pending operation or reader
+retirement inferred. The qualifying coordinator must independently authorize
+reads and cleanup and prove worker/SDK/Job retirement before global credit.
+Neither injected function references, frozen objects nor local observations
+attest native provenance or confer application permission. Inert ABI-shaped
+tests exercise logical control flow only. Default hosts remain uncomposed;
+installation binding, actual capacity, parent/crash protection, full pipeline,
+review/Save and host evidence remain pending.
