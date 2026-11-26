@@ -7,7 +7,7 @@ import {
   it,
   testDouble,
 } from "../../../../testing/node-test";
-import { createPythonRuntimeSupervisor } from "../supervisor/createPythonRuntimeSupervisor";
+import { createPythonRuntimeSupervisor, createBoundedLocalTrainingStartupProfile } from "../supervisor/createPythonRuntimeSupervisor";
 import { OWNED_RUNTIME_READY_PREFIX } from "../supervisor/ownedPythonRuntimeProof";
 import path from "node:path";
 import {createWindowsOriginalWorkerLaunch, originalWorkerResourceDigest,
@@ -674,7 +674,7 @@ function nativeWireHarness() {
   child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
   child.kill = () => {throw Error("controller kill cannot prove worker retirement");};
   let boot: any, starts = 0, resumes = 0, stops = 0, hostLive = true;
-  let resumeReply = true, stopReply = true, stopCloses = true, exitFirst = false;
+  let resumeReply = true, stopReply = true, stopCloses = true, exitFirst = false, ownedReady = false;
   const frame = (kind: string, fields: Record<string, unknown> = {}) => {
     child.stdout.write(JSON.stringify({schema: "windows-original-worker-control-v1", nonce: boot.nonce,
       profileDigest: boot.profileDigest, kind, ...fields}) + "\n");
@@ -684,7 +684,11 @@ function nativeWireHarness() {
     const value = JSON.parse(data.toString());
     if (value.schema === "windows-original-worker-launch-v1") {boot = value; queueMicrotask(() => frame("suspended")); return;}
     assert.equal(value.nonce, boot.nonce); assert.equal(value.profileDigest, boot.profileDigest);
-    if (value.action === "resume") {resumes++; if (resumeReply) queueMicrotask(() => frame("running"));}
+    if (value.action === "resume") {resumes++; if (resumeReply) queueMicrotask(() => {
+      frame("running");
+      if (ownedReady) frame("worker-output", {lane: "stdout", data: Buffer.from(OWNED_RUNTIME_READY_PREFIX +
+        boot.environment.PYTHON_RUNTIME_STARTUP_PROOF + " 127.0.0.1:43111\n").toString("base64")});
+    });}
     else {assert.equal(value.action, "stop"); stops++; queueMicrotask(() => {
       if (exitFirst) child.emit("exit", 0, null);
       if (stopReply) frame("retired");
@@ -703,6 +707,7 @@ function nativeWireHarness() {
   const packet = (...rows: {kind: string; lane?: string; data?: string}[]) => child.stdout.write(rows.map(row => JSON.stringify({
     schema: "windows-original-worker-control-v1", nonce: boot.nonce, profileDigest: boot.profileDigest, ...row})).join("\n") + "\n");
   return {configuration, child, frame, packet, close, create: () => createWindowsOriginalWorkerLaunch(configuration),
+    get boot() {return boot;}, set ownedReady(value: boolean) {ownedReady = value;},
     get starts() {return starts;}, get resumes() {return resumes;}, get stops() {return stops;},
     set resumeReply(value: boolean) {resumeReply = value;}, set stopReply(value: boolean) {stopReply = value;},
     set stopCloses(value: boolean) {stopCloses = value;}, set exitFirst(value: boolean) {exitFirst = value;}, endHost() {hostLive = false;}};
@@ -834,4 +839,109 @@ for (const mode of ["unsupported-platform", "host-ended"] as const) it(`native p
     spawnImplementation: (() => {starts++; throw Error("No process permitted");}) as never});
   await assert.rejects(supervisor.startWithoutInstalling!(), /^Error: The configured native Python worker is unavailable\.$/);
   assert.equal(starts, 0); assert.equal(supervisor.getStatus(), "failed");
+});
+
+const localBootKey = "PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT";
+function localStartupProfile() {
+  return createBoundedLocalTrainingStartupProfile({profileId: "bounded-local-inert-startup", maximumDurationSeconds: 30,
+    stagingRoot: path.resolve(__dirname, "../worker"), maximumModelBytes: 4096, maximumOutputBytes: 8192, minimumFreeBytes: 1024});
+}
+function localStartupHarness() {
+  const h = nativeWireHarness(); h.ownedReady = true;
+  const options = {command: h.configuration.command, args: ["main.py"], cwd: h.configuration.cwd,
+    env: {...h.configuration.environment} as Record<string, string>, nativeWorkerResourceProfile: inertResourceProfile,
+    nativePlatform: h.configuration.nativePlatform, spawnImplementation: h.configuration.spawnImplementation,
+    assertHostCurrent: h.configuration.assertHostCurrent, verifyRuntimeEnvironment: async () => true,
+    startupTimeoutMs: 300, healthCheckIntervalMs: 1,
+    runtimeClient: {async getHealthStatus() {return {healthy: true, status: {runtimeId: "inert", status: "ready" as const}};}}};
+  return {h, options, create: () => createPythonRuntimeSupervisor(options)};
+}
+
+it("captures the local startup profile and sends a current nonce-bound packet under original process guards", async () => {
+  const f = localStartupHarness(), supplied = {...localStartupProfile()};
+  const admission = {boundedLocalTraining: supplied, assertCurrent() {}, async assertAllowed() {
+    supplied.maximumOutputBytes = 1; // Cannot replace the already captured policy.
+  }};
+  const supervisor = f.create();
+  try {
+    await supervisor.startWithoutInstalling!(admission);
+    const packet = JSON.parse(f.h.boot.environment[localBootKey]);
+    assert.equal(packet.schema, "bounded-local-training-startup-v1"); assert.deepEqual(packet.profile, localStartupProfile());
+    assert.equal(packet.nonce, f.h.boot.environment.PYTHON_RUNTIME_STARTUP_PROOF);
+    assert.match(packet.nonce, /^[a-f0-9]{64}$/); assert.equal(f.h.boot.schema, "windows-original-worker-launch-v1");
+    assert.equal(f.h.boot.modelSource, undefined); assert.equal(f.h.starts, 1); assert.equal(f.h.resumes, 1);
+    assert.equal(supervisor.getStatus(), "ready");
+    await assert.rejects(supervisor.start(), /^Error: The configured native Python worker is unavailable\.$/);
+    assert.equal(f.h.starts, 1); assert.equal(f.h.stops, 0);
+  } finally {await supervisor.stop();}
+  assert.equal(f.h.stops, 1);
+});
+
+it("ordinary startup strips inherited and callback local-mode packets", async () => {
+  const f = localStartupHarness();
+  f.options.env[localBootKey] = "untrusted-inherited";
+  f.options.env[localBootKey.toLowerCase()] = "untrusted-case-alias";
+  const supervisor = createPythonRuntimeSupervisor({...f.options,
+    prepareLaunchEnvironment(context) {context.env[localBootKey] = "callback-only";}});
+  try {
+    await supervisor.startWithoutInstalling!();
+    assert.ok(Object.keys(f.h.boot.environment).every(key => key.toUpperCase() !== localBootKey));
+    assert.equal(f.h.starts, 1); assert.equal(supervisor.getStatus(), "ready");
+  } finally {await supervisor.stop();}
+});
+
+for (const mode of ["no-job", "duration", "bad-fingerprint", "mixed", "getter"] as const)
+  it(`local startup refuses ${mode} before process construction or authority callbacks`, async () => {
+    const f = localStartupHarness(); let hooks = 0;
+    const profile: any = {...localStartupProfile()};
+    if (mode === "duration") Object.assign(profile, createBoundedLocalTrainingStartupProfile({...profileInput(profile), maximumDurationSeconds: 31}));
+    if (mode === "bad-fingerprint") profile.profileFingerprint = "sha256:" + "f".repeat(64);
+    const admission: any = {boundedLocalTraining: profile, assertCurrent() {hooks++;}, async assertAllowed() {hooks++;}};
+    if (mode === "mixed") admission.originalModelSource = {};
+    if (mode === "getter") Object.defineProperty(admission, "boundedLocalTraining", {enumerable: true, get() {hooks++; return profile;}});
+    const supervisor = createPythonRuntimeSupervisor({...f.options,
+      ...(mode === "no-job" ? {nativeWorkerResourceProfile: undefined} : {})});
+    try {await assert.rejects(supervisor.startWithoutInstalling!(admission)); assert.equal(hooks, 0); assert.equal(f.h.starts, 0);}
+    finally {await supervisor.stop(); f.h.close();}
+  });
+function profileInput(profile: ReturnType<typeof localStartupProfile>) {
+  const {profileFingerprint: _fingerprint, ...input} = profile; return input;
+}
+
+it("a running ordinary worker cannot adopt a fresh local training profile", async () => {
+  const f = localStartupHarness(), supervisor = f.create();
+  try {
+    await supervisor.startWithoutInstalling!();
+    await assert.rejects(supervisor.startWithoutInstalling!({boundedLocalTraining: localStartupProfile(),
+      assertCurrent() {}, async assertAllowed() {}}), /^Error: The configured native Python worker is unavailable\.$/);
+    assert.equal(f.h.starts, 1); assert.equal(f.h.stops, 0);
+    assert.equal(f.h.boot.environment[localBootKey], undefined);
+  } finally {await supervisor.stop();}
+});
+
+it("withdrawn local startup permission cannot launch a worker or retain an environment packet", async () => {
+  const f = localStartupHarness(); let allowed = true;
+  f.options.verifyRuntimeEnvironment = async () => {allowed = false; return true;};
+  const supervisor = f.create();
+  try {
+    await assert.rejects(supervisor.startWithoutInstalling!({boundedLocalTraining: localStartupProfile(),
+      assertCurrent() {if (!allowed) throw Error("original request ended");}, async assertAllowed() {}}));
+    assert.equal(f.h.starts, 0); assert.equal(f.h.boot, undefined);
+    assert.equal(f.options.env[localBootKey], undefined);
+  } finally {await supervisor.stop(); f.h.close();}
+});
+
+it("local startup profiles reject malformed limits, roots and accessor metadata without hooks", () => {
+  for (const mode of ["fraction", "boolean", "zero", "overflow", "duration", "root", "extra", "getter"] as const) {
+    const raw: any = {...profileInput(localStartupProfile())}; let hooks = 0;
+    if (mode === "fraction") raw.maximumModelBytes = 1.5;
+    if (mode === "boolean") raw.maximumDurationSeconds = true;
+    if (mode === "zero") raw.minimumFreeBytes = 0;
+    if (mode === "overflow") raw.maximumOutputBytes = Number.MAX_SAFE_INTEGER;
+    if (mode === "duration") raw.maximumDurationSeconds = 86401;
+    if (mode === "root") raw.stagingRoot = path.parse(raw.stagingRoot).root;
+    if (mode === "extra") raw.nativeReady = true;
+    if (mode === "getter") Object.defineProperty(raw, "stagingRoot", {enumerable: true, get() {hooks++; throw Error("must not run");}});
+    assert.throws(() => createBoundedLocalTrainingStartupProfile(raw)); assert.equal(hooks, 0);
+  }
 });

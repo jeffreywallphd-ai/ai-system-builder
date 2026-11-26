@@ -197,5 +197,105 @@ assert sys.path == before, "worker bootstrap changed the interpreter search path
                     resolve()
 
 
+class BoundedLocalTrainingBootTests(unittest.TestCase):
+    def profile(self, root):
+        import hashlib
+        value = {"profileId": "bounded-local-inert-boot", "maximumDurationSeconds": 30, "stagingRoot": str(root),
+            "maximumModelBytes": 4096, "maximumOutputBytes": 8192, "minimumFreeBytes": 1024}
+        digest = "sha256:" + hashlib.sha256(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf8")).hexdigest()
+        return {**value, "profileFingerprint": digest}
+
+    def test_flat_deployed_boot_uses_fixed_module_and_preserves_import_isolation(self):
+        with tempfile.TemporaryDirectory(prefix="local-training-boot-") as temporary:
+            root = Path(temporary).resolve(); worker = root / "worker"; worker.mkdir(); (worker / "tasks").mkdir()
+            shutil.copyfile(Path(__file__).resolve().parents[1] / "main.py", worker / "main.py")
+            (worker / "app.py").write_text('app = "ordinary"\ndef configure_bounded_local_training(producer):\n'
+                '    global app\n    app = ("local", producer.profile.profile_id)\n', encoding="utf-8")
+            (worker / "tasks/approved_local_training_session.py").write_text(
+                'class BoundedLocalTrainingProfile:\n'
+                '    def __init__(self, profile_id, fingerprint, duration, root, model, output, free):\n'
+                '        self.profile_id = profile_id\n'
+                'class BoundedLocalTrainingProducer:\n'
+                '    def __init__(self, profile): self.profile = profile\n', encoding="utf-8")
+            profile = self.profile(root)
+            packet = {"schema": "bounded-local-training-startup-v1", "nonce": "a" * 64, "profile": profile}
+            probe = '''
+import json, runpy, sys, types
+from pathlib import Path
+main = sys.argv[1]
+sys.modules["uvicorn"] = types.ModuleType("uvicorn")
+before = list(sys.path)
+result = runpy.run_path(main, run_name="local_boot_probe")
+assert result["app"] == ("local", "bounded-local-inert-boot")
+assert sys.path == before
+fixed = sys.modules["_ai_system_builder_worker.tasks.approved_local_training_session"]
+assert Path(fixed.__file__).resolve() == Path(main).parent / "tasks/approved_local_training_session.py"
+'''
+            environment = {k: v for k, v in os.environ.items() if k.upper() in {"SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"}}
+            environment.update(PYTHON_RUNTIME_STARTUP_PROOF="a" * 64, PYTHON_RUNTIME_AUTH_TOKEN="inert-".ljust(40, "x"),
+                PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT=json.dumps(packet))
+            result = subprocess.run([sys.executable, "-I", "-B", "-c", probe, str(worker / "main.py")],
+                cwd=root, env=environment, capture_output=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr[-4096:].decode(errors="replace"))
+
+    def boot(self):
+        from modules.adapters.runtime.python.worker import main
+        return main._load_bounded_local_training_boot
+
+    def environment(self, packet):
+        return {"PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT": json.dumps(packet),
+            "PYTHON_RUNTIME_STARTUP_PROOF": "a" * 64, "PYTHON_RUNTIME_AUTH_TOKEN": "inert-".ljust(40, "x"),
+            "PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP": ""}
+
+    def test_packet_configures_the_real_fixed_producer_without_io_or_model_loading(self):
+        from modules.adapters.runtime.python.worker import app
+        from modules.adapters.runtime.python.worker.tasks.approved_local_training_session import BoundedLocalTrainingProducer
+        boot = self.boot(); root = Path(tempfile.gettempdir()).resolve() / "inert-no-io-staging"
+        packet = {"schema": "bounded-local-training-startup-v1", "nonce": "a" * 64, "profile": self.profile(root)}
+        with patch.dict(environ, self.environment(packet)), patch.object(app, "TASK_REGISTRY", {}), \
+             patch.object(app, "_ORIGINAL_TRAINING_PRODUCER", None), patch.object(app, "_ORIGINAL_TRAINING_PROFILE", None), \
+             patch.object(app, "_ORIGINAL_TRAINING_PROTOCOL", "settled-v1"):
+            boot("modules.adapters.runtime.python.worker", app)
+            self.assertIs(type(app._ORIGINAL_TRAINING_PRODUCER), BoundedLocalTrainingProducer)
+            self.assertEqual(app._ORIGINAL_TRAINING_PROFILE.staging_root, str(root))
+            self.assertEqual(app._ORIGINAL_TRAINING_PROFILE.fingerprint, packet["profile"]["profileFingerprint"])
+            self.assertEqual(app._ORIGINAL_TRAINING_PROTOCOL, "settled-v1")
+            with self.assertRaisesRegex(RuntimeError, "unavailable"):
+                boot("modules.adapters.runtime.python.worker", app)
+
+    def test_malformed_stale_unknown_or_mixed_packets_never_configure_the_app(self):
+        from copy import deepcopy
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        boot = self.boot(); root = Path(tempfile.gettempdir()).resolve() / "inert-no-io-staging"
+        base = {"schema": "bounded-local-training-startup-v1", "nonce": "a" * 64, "profile": self.profile(root)}
+        for mode in ("schema", "nonce", "unknown", "fingerprint", "profile-extra", "duration-bool", "token", "proof", "mixed", "duplicate", "oversize", "nonfinite"):
+            with self.subTest(mode=mode):
+                packet = deepcopy(base); environment = self.environment(packet)
+                if mode == "schema": packet["schema"] = "other"
+                if mode == "nonce": packet["nonce"] = "b" * 64
+                if mode == "unknown": packet["callback"] = "not-authority"
+                if mode == "fingerprint": packet["profile"]["profileFingerprint"] = "sha256:" + "f" * 64
+                if mode == "profile-extra": packet["profile"]["native"] = True
+                if mode == "duration-bool":
+                    import hashlib
+                    packet["profile"]["maximumDurationSeconds"] = True
+                    canonical = {key: value for key, value in packet["profile"].items() if key != "profileFingerprint"}
+                    packet["profile"]["profileFingerprint"] = "sha256:" + hashlib.sha256(json.dumps(canonical, ensure_ascii=False, separators=(",", ":")).encode("utf8")).hexdigest()
+                if mode == "token": environment["PYTHON_RUNTIME_AUTH_TOKEN"] = ""
+                if mode == "proof": environment["PYTHON_RUNTIME_STARTUP_PROOF"] = ""
+                if mode == "mixed": environment["PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP"] = "a" * 64
+                raw = json.dumps(packet)
+                if mode == "duplicate": raw = '{"nonce":"a",' + raw[1:]
+                if mode == "oversize": raw = " " * 8193
+                if mode == "nonfinite": raw = raw.replace('"maximumModelBytes": 4096', '"maximumModelBytes": NaN')
+                environment["PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT"] = raw
+                target = SimpleNamespace(configure_bounded_local_training=Mock())
+                with patch.dict(environ, environment):
+                    with self.assertRaisesRegex(RuntimeError, "^Bounded local training startup is unavailable\.$"):
+                        boot("modules.adapters.runtime.python.worker", target)
+                target.configure_bounded_local_training.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

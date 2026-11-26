@@ -6,11 +6,51 @@ import importlib.util
 import sys
 import re
 import socket
+import json
+import hashlib
 from os import getenv
 from pathlib import Path
 from types import ModuleType
 
 import uvicorn
+
+
+def _load_bounded_local_training_boot(package_name, application):
+    """Fixed host startup packet, never a model-selected module or permission."""
+    raw = getenv("PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT", "")
+    if not raw: return
+    try:
+        if len(raw.encode("utf8")) > 8192: raise ValueError()
+        def pairs(items):
+            result = {}
+            for key, value in items:
+                if key in result: raise ValueError()
+                result[key] = value
+            return result
+        def constant(_value): raise ValueError()
+        packet = json.loads(raw, object_pairs_hook=pairs, parse_constant=constant)
+        if (type(packet) is not dict or set(packet) != {"schema", "nonce", "profile"}
+                or packet["schema"] != "bounded-local-training-startup-v1"
+                or type(packet["nonce"]) is not str or re.fullmatch(r"[a-f0-9]{64}", packet["nonce"]) is None
+                or packet["nonce"] != getenv("PYTHON_RUNTIME_STARTUP_PROOF", "")
+                or len(getenv("PYTHON_RUNTIME_AUTH_TOKEN", "")) < 32
+                or getenv("PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP", "")):
+            raise ValueError()
+        profile = packet["profile"]
+        keys = ("profileId", "maximumDurationSeconds", "stagingRoot", "maximumModelBytes", "maximumOutputBytes", "minimumFreeBytes")
+        if type(profile) is not dict or set(profile) != {*keys, "profileFingerprint"}: raise ValueError()
+        canonical = {key: profile[key] for key in keys}
+        expected = "sha256:" + hashlib.sha256(json.dumps(canonical, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf8")).hexdigest()
+        if profile["profileFingerprint"] != expected: raise ValueError()
+        # The fixed deployed package was already checked by _load_app. Nothing
+        # in the packet selects an import, callback, loader or external supplier.
+        session = importlib.import_module(package_name + ".tasks.approved_local_training_session")
+        selected = session.BoundedLocalTrainingProfile(profile["profileId"], profile["profileFingerprint"],
+            profile["maximumDurationSeconds"], profile["stagingRoot"], profile["maximumModelBytes"],
+            profile["maximumOutputBytes"], profile["minimumFreeBytes"])
+        application.configure_bounded_local_training(session.BoundedLocalTrainingProducer(selected))
+    except Exception:
+        raise RuntimeError("Bounded local training startup is unavailable.") from None
 
 
 def _load_original_model_bootstrap(package_name):
@@ -26,11 +66,13 @@ def _load_original_model_bootstrap(package_name):
 
 
 def _load_app():
+    if getenv("PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT", "") and getenv("PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP", ""):
+        raise RuntimeError("Bounded local training startup is unavailable.")
     if __package__:
         _load_original_model_bootstrap(__package__)
-        from .app import app as package_app
-
-        return package_app
+        application = importlib.import_module(__package__ + ".app")
+        _load_bounded_local_training_boot(__package__, application)
+        return application.app
 
     # The shipped worker is a flat directory. Bind its relative imports to that
     # exact directory without searching a checkout or changing sys.path.
@@ -73,6 +115,7 @@ def _load_app():
         sys.modules[package_name] = package
     _load_original_model_bootstrap(package_name)
     module = importlib.import_module(f"{package_name}.app")
+    _load_bounded_local_training_boot(package_name, module)
     return module.app
 
 

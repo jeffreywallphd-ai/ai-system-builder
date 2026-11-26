@@ -3664,3 +3664,14 @@ keeps remote code, online fallback and real quality comparison disabled.
 SDK output limits are checked after its return, not an OS-enforced physical quota.
 No worker, SDK, Job, cleanup, candidate or Save authority follows from local
 settlement alone. No service or Native protection is activated by this component.
+
+The local-profile startup packet crosses only the existing private host-to-worker
+launch boundary. The host captures passive policy before permission callbacks,
+removes inherited/callback-only selectors, requires the original installed-only
+Windows Job guard and binds the finite packet to its rotated ownership nonce.
+The worker refuses malformed, duplicate, unknown, stale or mixed Native/local
+data and configures only the fixed deployed producer before serving. A live or
+attached worker cannot adopt a new local profile. Existing authentication and
+original worker retirement remain mandatory. Environment transport is not a
+permission grant, hostile-user isolation or protected storage proof. Synthetic
+controller/import tests supply no real Job, model, service or host qualification.

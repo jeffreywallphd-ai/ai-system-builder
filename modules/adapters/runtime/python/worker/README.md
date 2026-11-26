@@ -2701,7 +2701,9 @@ configures the app nor qualifies capacity, physical readiness or global retireme
 ## Explicit bounded local training producer
 
 The trusted boot function `configure_bounded_local_training` selects a distinct
-`BoundedLocalTrainingProfile`. No environment or task flag enables it. Its private
+`BoundedLocalTrainingProfile`. The original host launch supplies a bounded packet
+bound to its current startup nonce; inherited flags are stripped and raw tasks
+cannot select this policy. Its private
 prepare body requires the exact copied-Model manifest; strict Native boot still
 refuses that field. The original session/executor preserves one-use start, progress,
 cancellation and current scope. Only the existing offline safe-local loader runs,
@@ -2722,3 +2724,10 @@ SDK and Job retirement remains mandatory before directory cleanup, result review
 or separately approved Save. This component performs no deletion or registration.
 Installed host activation, actual training and Desktop/Managed qualification remain
 pending; synthetic-byte tests with an inert loader supply no model or host pass.
+
+The deployed entrypoint accepts only the fixed local startup schema and producer.
+It checks exact fields, duplicate keys, finite profile types, profile fingerprint,
+current owned-launch nonce and existing authentication configuration. Strict Native
+bootstrap data cannot accompany a local packet. No module, loader or callback is
+selected by boot data. The transport supplies no tool permission or protected
+storage guarantee; current application admission still governs every operation.

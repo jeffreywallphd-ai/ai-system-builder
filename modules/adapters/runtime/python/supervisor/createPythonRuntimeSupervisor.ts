@@ -1,6 +1,6 @@
 import { ChildProcess, spawn, type SpawnOptions } from "node:child_process";
 import { platform } from "node:os";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { createOwnedPythonRuntimeProof } from "./ownedPythonRuntimeProof";
 import { terminateOwnedProcess } from "../../shared/terminateOwnedProcess";
 import path from "node:path";
@@ -11,6 +11,45 @@ import {captureOriginalWorkerResourceProfile, createWindowsOriginalWorkerLaunch,
 import type { PythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
 import type { PythonStartupEvent } from "../pythonRuntimeStartupDiagnostics";
 import type {OriginalTrainingSourceLaunch} from "../client/originalTrainingModelSource";
+import {readStrictPassiveRecord} from "../../../../contracts/shared";
+
+const localTrainingBootKey = "PYTHON_RUNTIME_BOUNDED_LOCAL_TRAINING_BOOT";
+export interface BoundedLocalTrainingStartupProfile {
+  readonly profileId: string;
+  readonly profileFingerprint: string;
+  readonly maximumDurationSeconds: number;
+  readonly stagingRoot: string;
+  readonly maximumModelBytes: number;
+  readonly maximumOutputBytes: number;
+  readonly minimumFreeBytes: number;
+}
+type LocalTrainingProfileInput = Omit<BoundedLocalTrainingStartupProfile, "profileFingerprint">;
+const localProfileKeys = ["profileId", "maximumDurationSeconds", "stagingRoot", "maximumModelBytes", "maximumOutputBytes", "minimumFreeBytes"] as const;
+const localUnavailable = () => new Error("Bounded local training startup is unavailable.");
+function localNeed(value: unknown): asserts value {if (value !== true) throw localUnavailable();}
+/** Trusted host policy only. Constructing this value grants no startup authority. */
+export function createBoundedLocalTrainingStartupProfile(raw: LocalTrainingProfileInput): BoundedLocalTrainingStartupProfile {
+  localNeed(!!raw && typeof raw === "object" && !types.isProxy(raw));
+  const row = readStrictPassiveRecord(raw, localProfileKeys);
+  localNeed(Object.keys(row).length === localProfileKeys.length);
+  localNeed(typeof row.profileId === "string" && /^bounded-local-[A-Za-z0-9._-]{1,105}$/.test(row.profileId));
+  localNeed(typeof row.stagingRoot === "string" && row.stagingRoot.length > 0 && row.stagingRoot.length <= 2048
+    && path.isAbsolute(row.stagingRoot) && path.normalize(row.stagingRoot) === row.stagingRoot
+    && path.parse(row.stagingRoot).root !== row.stagingRoot && !/^[\\/]{2}|[\x00-\x1f\x7f]/.test(row.stagingRoot));
+  for (const key of ["maximumDurationSeconds", "maximumModelBytes", "maximumOutputBytes", "minimumFreeBytes"] as const)
+    localNeed(typeof row[key] === "number" && Number.isSafeInteger(row[key]) && row[key]! > 0);
+  localNeed((row.maximumDurationSeconds as number) <= 86400 &&
+    (row.maximumOutputBytes as number) <= Number.MAX_SAFE_INTEGER - (row.minimumFreeBytes as number));
+  const canonical = Object.fromEntries(localProfileKeys.map(key => [key, row[key]]));
+  return Object.freeze({...canonical, profileFingerprint: "sha256:" + createHash("sha256").update(JSON.stringify(canonical)).digest("hex")}) as unknown as BoundedLocalTrainingStartupProfile;
+}
+function captureLocalTrainingProfile(raw: unknown): BoundedLocalTrainingStartupProfile {
+  localNeed(!!raw && typeof raw === "object" && !types.isProxy(raw));
+  const row = readStrictPassiveRecord(raw, [...localProfileKeys, "profileFingerprint"]);
+  localNeed(Object.keys(row).length === localProfileKeys.length + 1);
+  const profile = createBoundedLocalTrainingStartupProfile(Object.fromEntries(localProfileKeys.map(key => [key, row[key]])) as LocalTrainingProfileInput);
+  localNeed(row.profileFingerprint === profile.profileFingerprint); return profile;
+}
 
 export type PythonRuntimeSupervisorStatus =
   "stopped" | "starting" | "ready" | "failed";
@@ -55,6 +94,7 @@ export interface InstalledPythonRuntimeStartupAdmission {
   assertCurrent(): void;
   assertAllowed(): Promise<void>;
   readonly originalModelSource?: OriginalTrainingSourceLaunch;
+  readonly boundedLocalTraining?: BoundedLocalTrainingStartupProfile;
 }
 
 function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmission | undefined) {
@@ -69,6 +109,11 @@ function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmissio
   if (sourceProperty && (!("value" in sourceProperty) || sourceProperty.value === undefined)) throw unavailable();
   if (!sourceProperty && "originalModelSource" in original) throw unavailable();
   const originalModelSource = sourceProperty?.value as OriginalTrainingSourceLaunch | undefined;
+  const localProperty = properties.boundedLocalTraining;
+  if (localProperty && (!("value" in localProperty) || localProperty.value === undefined)) throw unavailable();
+  if (!localProperty && "boundedLocalTraining" in original) throw unavailable();
+  const boundedLocalTraining = localProperty ? captureLocalTrainingProfile(localProperty.value) : undefined;
+  if (boundedLocalTraining && originalModelSource) throw unavailable();
   let lost = false;
   const assertCurrent = () => {
     if (lost) throw unavailable();
@@ -78,7 +123,7 @@ function captureStartupAdmission(original: InstalledPythonRuntimeStartupAdmissio
       if (result !== undefined) throw unavailable();
     } catch {lost = true; throw unavailable();}
   };
-  return Object.freeze({assertCurrent, originalModelSource, async assertAllowed() {
+  return Object.freeze({assertCurrent, originalModelSource, boundedLocalTraining, async assertAllowed() {
     assertCurrent();
     try {
       if (await Reflect.apply(allowed, original, []) !== undefined) throw unavailable();
@@ -162,6 +207,8 @@ export function createPythonRuntimeSupervisor(
   const spawnImplementation = options.spawnImplementation ?? spawn;
   const requiredCapabilities = [...(options.requiredCapabilities ?? [])];
   const runtimeEnvironment: NodeJS.ProcessEnv = { ...(options.env ?? process.env) };
+  for (const key of Object.keys(runtimeEnvironment))
+    if (key.toUpperCase() === localTrainingBootKey) delete runtimeEnvironment[key];
   const configuredCommand = options.command;
   const configuredArgs = options.args ? [...options.args] : undefined;
   const workingDirectory = options.cwd;
@@ -179,6 +226,7 @@ export function createPythonRuntimeSupervisor(
   let childProcess: ChildProcess | undefined;
   let boundReadyProcess: ChildProcess | undefined;
   let managedWorker: ManagedOriginalPythonWorker | undefined, boundReadyManaged: ManagedOriginalPythonWorker | undefined;
+  let boundedLocalLaunch = false;
   let managedStopping = false, managedClaim: OriginalPythonWorkerRetirement | undefined;
   type WorkerClose = {closed: boolean; observers: Set<() => void>; retirement?: OriginalPythonWorkerRetirement};
   const workerCloses = new WeakMap<ChildProcess, WorkerClose>();
@@ -558,6 +606,10 @@ export function createPythonRuntimeSupervisor(
       }
       if (originalAdmission?.originalModelSource && !nativeProfile)
         throw new Error("Original Model source requires the configured native worker owner.");
+      const localTraining = originalAdmission?.boundedLocalTraining;
+      if (localTraining && (!nativeProfile || policy !== "installed-only"
+          || localTraining.maximumDurationSeconds * 1000 > nativeProfile.maximumDurationMs))
+        throw localUnavailable();
       const generation = lifecycleGeneration;
       let operationToken: object | undefined;
       let handedOff = false;
@@ -582,6 +634,7 @@ export function createPythonRuntimeSupervisor(
         // Source copying belongs to one exact launch. An existing worker,
         // including the same live process, cannot adopt a fresh source request.
         if (originalAdmission?.originalModelSource) throw new Error("Original Model source requires its own unused worker launch.");
+        if (localTraining || boundedLocalLaunch) throw localUnavailable();
         emitEvent(
           "start-skipped",
           "Runtime start skipped because supervisor is already active.",
@@ -590,6 +643,7 @@ export function createPythonRuntimeSupervisor(
       }
       if (attachedToExistingRuntime) {
         if (originalAdmission?.originalModelSource) throw new Error("An attached worker cannot receive an original Model source.");
+        if (localTraining) throw localUnavailable();
         if (await tryAttachToExistingRuntime(assertCurrent)) {
           assertCurrent();
           emitEvent(
@@ -691,6 +745,17 @@ export function createPythonRuntimeSupervisor(
         host: runtimeEnvironment.PYTHON_RUNTIME_HOST ?? "", port: runtimeEnvironment.PYTHON_RUNTIME_PORT ?? "",
       }) : undefined;
       if (ownedNonce) launchEnvironment.PYTHON_RUNTIME_STARTUP_PROOF = ownedNonce;
+      // Inherited/callback flags cannot select this mode. Only the captured
+      // original admission supplies the detached, current-launch packet.
+      for (const key of Object.keys(launchEnvironment))
+        if (key.toUpperCase() === localTrainingBootKey || localTraining && key.toUpperCase() === "PYTHON_RUNTIME_ORIGINAL_MODEL_BOOTSTRAP")
+          delete launchEnvironment[key];
+      if (localTraining) {
+        localNeed(!!ownedNonce && typeof launchEnvironment.PYTHON_RUNTIME_AUTH_TOKEN === "string"
+          && launchEnvironment.PYTHON_RUNTIME_AUTH_TOKEN.length >= 32);
+        const packet = JSON.stringify({schema: "bounded-local-training-startup-v1", nonce: ownedNonce, profile: localTraining});
+        localNeed(Buffer.byteLength(packet, "utf8") <= 8192); launchEnvironment[localTrainingBootKey] = packet;
+      }
       boundReadyProcess = undefined;
       boundReadyManaged = undefined;
       if (nativeProfile) {
@@ -708,6 +773,7 @@ export function createPythonRuntimeSupervisor(
           nativePlatform: () => ({platform: "win32", arch: "x64"}),
           assertStartupAllowed: allowed,
           assertHostCurrent: () => {assertCurrent(); assertHostCurrent(); assertCurrent();}});
+        boundedLocalLaunch = localTraining !== undefined;
         managedStopping = false; managedClaim = undefined;
         owner.onUnavailable(() => {
           if (managedWorker !== owner) return;
@@ -717,7 +783,7 @@ export function createPythonRuntimeSupervisor(
         });
         owner.onRetired(() => {
           if (managedWorker !== owner) return;
-          managedWorker = undefined; boundReadyManaged = undefined; status = "stopped";
+          managedWorker = undefined; boundReadyManaged = undefined; boundedLocalLaunch = false; status = "stopped";
           emitEvent("process-exit", "Original managed Python worker and Job retired.");
         });
         for (const source of ["stdout", "stderr"] as const) owner[source].on("data", (chunk: Buffer) => {

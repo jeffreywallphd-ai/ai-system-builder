@@ -1544,3 +1544,21 @@ passive/qualified behavior and any pre-output budget hook remain prerequisites.
 Foundation tests compose the actual budget/copy binder with an inert controller;
 they do not supply physical capacity, producer/readiness, parent/crash, retirement
 or real-host qualification. Default activation remains unavailable.
+
+## Original bounded-local training startup
+
+The installed-only supervisor accepts a closed, fingerprinted bounded-local
+profile only through its captured original startup admission. Existing Windows
+Job/process guards remain mandatory, with a compatible declared duration. The
+supervisor strips inherited and callback-only local-mode packets, requires the
+current permission, rotates its normal token/ownership nonce and passes one bounded
+nonce-bound packet to the fixed deployed worker. A configured or attached worker
+cannot adopt this profile, and a local launch cannot mix strict Native Model data.
+
+The fixed worker entrypoint checks the packet schema, duplicate fields, fingerprint,
+current nonce and existing authentication setup before configuring its existing
+local producer. No packet chooses a module, callable, supplier or permission.
+The OS user and app remain trusted; this transport is not cross-process storage
+custody. Source tests use synthetic controller replies and isolated deployed
+imports. Actual original Job execution, Model-copy binding, training, candidate
+Save and Desktop/Managed qualification remain separate required work.

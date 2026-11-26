@@ -3889,3 +3889,12 @@ synchronous handles, rejects links and bounds enumeration/time/headroom. SDK out
 bounds are cooperative postflight checks. Local settlement never replaces parent
 SDK/worker/Job retirement, candidate review or separate Save approval. Source-level
 producer tests are not installed-host or actual-training qualification.
+
+Bounded-local training startup uses the existing installed-only original worker
+supervisor and Windows Job guard. A closed profile captured from the original
+admission supplies one current-nonce boot packet to the fixed deployed producer.
+Inherited flags, mixed Native/local startup and adoption by an active or attached
+worker are refused. Profile fingerprints describe the selected local limits;
+worker/process proof remains independently owned. No public configure route is
+added, and no environment value grants tool permission. Actual execution and host
+qualification remain pending after source bootstrap checks.
