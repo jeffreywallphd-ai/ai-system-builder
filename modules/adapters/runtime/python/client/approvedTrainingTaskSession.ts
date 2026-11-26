@@ -93,11 +93,12 @@ export function createOriginalTrainingPort(options: {
   prepareStorageBudget?: (original: OriginalTrainingCapture) => Promise<void>;
   /** Trusted private composition only; no default host or wire-supplied storage. */
   createOutputStorage?: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
+  localOutputLimits?: {readonly maximumTotalBytes: number; readonly maximumDurationMs: number};
   retirementProtocol?: "original-exit-ready-v1";
   storageProfile?: "bounded-local-v1";
 }): ApprovedLocalModelTrainingPort {
   need(!types.isProxy(options));
-  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol", "prepareStorageBudget", "storageProfile"]);
+  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol", "prepareStorageBudget", "storageProfile", "localOutputLimits"]);
   const localStorage = capturedOptions.storageProfile === "bounded-local-v1";
   need(capturedOptions.storageProfile === undefined || localStorage);
   const capture = options.captureChannel, reserve = options.reserve, outputFactory = capturedOptions.createOutputStorage;
@@ -109,7 +110,16 @@ export function createOriginalTrainingPort(options: {
   const exitReady = capturedOptions.retirementProtocol === "original-exit-ready-v1";
   need(capturedOptions.retirementProtocol === undefined || exitReady);
   need(!exitReady || typeof outputFactory === "function");
-  need(!localStorage || !exitReady && prepareStorageBudget === undefined && outputFactory === undefined);
+  need(!localStorage || !exitReady && prepareStorageBudget === undefined);
+  let localOutputLimits: Readonly<{maximumTotalBytes: number; maximumDurationMs: number}> | undefined;
+  if (capturedOptions.localOutputLimits !== undefined) {
+    need(localStorage && !!outputFactory && !types.isProxy(capturedOptions.localOutputLimits));
+    const row = readStrictPassiveRecord(capturedOptions.localOutputLimits, ["maximumTotalBytes", "maximumDurationMs"]);
+    need(Object.keys(row).length === 2 && [row.maximumTotalBytes, row.maximumDurationMs].every(value =>
+      typeof value === "number" && Number.isSafeInteger(value) && value > 0) && (row.maximumDurationMs as number) <= 86_400_000);
+    localOutputLimits = Object.freeze(row) as unknown as Readonly<{maximumTotalBytes: number; maximumDurationMs: number}>;
+  }
+  need(!localStorage || !outputFactory || !!localOutputLimits);
   return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl,
     rawSource?: ApprovedLocalTrainingModelReader) {
     const definition = copy(raw), isCurrent = rawControl.isCurrent, allowed = rawControl.stillAllowed;
@@ -158,7 +168,7 @@ export function createOriginalTrainingPort(options: {
     need(typeof originalRelease === "function"); source.reserved = true;
     let releaseAttempted = false;
     const release = () => {
-      if (exitReady) {need(!releaseAttempted); releaseAttempted = true;}
+      if (exitReady || localStorage && outputFactory) {need(!releaseAttempted); releaseAttempted = true;}
       const result: unknown = originalRelease();
       if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
       need(result === undefined); source.reserved = false; source.stage = "closed";
@@ -167,9 +177,11 @@ export function createOriginalTrainingPort(options: {
     let channel: OriginalTrainingChannel | undefined, binding: Record<string, unknown> | undefined;
     let operations = 0, cancelAttempted = false, closeAttempted = false, closing = false;
     let remoteRetired = false, retireWorker: (() => Promise<boolean>) | undefined, releaseUnusedWorker: (() => void) | undefined;
+    let localWorkerRetired = false;
     let cached: RuntimeTaskRecord | undefined, cancellation: boolean | undefined;
     let output: ReturnType<typeof createOriginalTrainingOutputReceiver> | undefined;
     let outputSetupUnknown = false, outputStarted = false, outputAborted = false;
+    const outputSetup: {original?: unknown; observation?: Promise<unknown>} = {};
     let storageBudgetSetupUnknown = false, storageBudgetWithdrawn = false;
     let storageBudgetOperation: Promise<unknown> | undefined, storageBudgetObservation: Promise<BudgetObservation> | undefined;
     let parentFenced = false;
@@ -177,6 +189,7 @@ export function createOriginalTrainingPort(options: {
     const send = async (action: string, input?: unknown, dispatch?: () => void) => {
       need(!!channel && !!binding && phase !== "settled");
       need(!exitReady || !parentFenced || action === "exit-ready");
+      need(!localStorage || !outputFactory || !parentFenced);
       const rawReply = await channel!.send("/training/original/" + definition.requestId + "/" + action,
         {binding, ...(input === undefined ? {} : action === "output-ack" ? {sequence: input} : {input})}, dispatch);
       need(!!rawReply && typeof rawReply === "object" && !types.isProxy(rawReply));
@@ -193,6 +206,53 @@ export function createOriginalTrainingPort(options: {
       return reply;
     };
     const parentIoClosed = () => !!output && !outputSetupUnknown && output.inspectIoRetirement().phase === "closed";
+    const localOutputStatus = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
+      if (!localStorage || !outputFactory || record.status !== "succeeded" || output?.isComplete()) return record;
+      const failed = outputAborted || output?.inspectIoRetirement().publicationFenced === true;
+      return copy({...record, status: failed ? "failed" : "running", data: undefined,
+        error: failed ? {code: "private_training_output_unconfirmed", message: "The training result files could not be confirmed."} : undefined});
+    };
+    const cacheResponse = (response: ReturnType<typeof mapTaskStatusResponse>) => {
+      need(response.requestId === definition.requestId && response.taskType === "train-model" && response.status !== "unknown" &&
+        response.metadata?.workspaceId === definition.workspaceId);
+      cached = localOutputStatus(copy({...response, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
+        progress: response.progress ? {details: response.progress} : undefined,
+        status: response.status as RuntimeTaskRecord["status"], concurrencyClass: "gpu-exclusive"} as RuntimeTaskRecord));
+    };
+    const settleLocalOutput = async () => {
+      if (phase === "settled") return true;
+      if (releaseAttempted || storageBudgetSetupUnknown || outputSetupUnknown || operations || closing) return false;
+      if (phase === "bound") {
+        try {release(); phase = "settled"; return true;} catch {return false;}
+      }
+      if (!channel || !retireWorker || !output) return false;
+      closing = true; operations++;
+      try {
+        if (!parentFenced) {
+          let force = phase !== "accepted" || outputAborted || output.inspectIoRetirement().publicationFenced;
+          try {current(); channel.assertCurrent();} catch {force = true;}
+          const terminal = () => !!cached && ["succeeded", "failed", "cancelled"].includes(cached.status);
+          if (!force && !terminal()) cacheResponse(mapTaskStatusResponse((await send("read")).record));
+          if (!force && !terminal()) return false; // The original task is still working.
+          parentFenced = true; abortOutput(); // No new remote call or byte effect after this fence.
+        }
+        if (!localWorkerRetired) {
+          need(await retireWorker() === true); localWorkerRetired = true; remoteRetired = true;
+        }
+        // A status string or vanished PID cannot establish these barriers.
+        // Retire only this already-captured original Job/worker; retain unknown
+        // Node operations and result bytes without retry or storage credit.
+        if (!parentIoClosed() || operations !== 1) return false;
+        if (phase === "accepted" && (!cached || !["succeeded", "failed", "cancelled"].includes(cached.status) ||
+            cached.status === "succeeded" && !output.isComplete())) {
+          cached = copy({requestId: definition.requestId, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
+            concurrencyClass: "gpu-exclusive", status: cancelAttempted ? "cancelled" : "failed",
+            error: {code: "private_training_output_unconfirmed", message: "The training result files could not be confirmed."}} as RuntimeTaskRecord);
+        }
+        release(); phase = "settled"; return true;
+      } catch {return false;}
+      finally {operations--; closing = false;}
+    };
     const settleExitReady = async () => {
       if (phase === "settled") return true;
       if (releaseAttempted) return false; // An unknown accepted release cannot be repeated or healed.
@@ -274,8 +334,25 @@ export function createOriginalTrainingPort(options: {
             // The returned session already owns retirement before composition can reenter.
             outputSetupUnknown = true; need(!outputAborted);
             const configuration = Reflect.apply(outputFactory as Function, options, [originalCapture]);
-            if (types.isPromise(configuration)) void Promise.prototype.then.call(configuration, undefined, () => {});
+            outputSetup.original = configuration;
+            if (localStorage && types.isPromise(configuration)) {
+              need(Object.getPrototypeOf(configuration) === budgetPromisePrototype
+                && Object.getOwnPropertyDescriptor(configuration, "constructor") === undefined
+                && Object.getOwnPropertyDescriptor(budgetPromisePrototype, "constructor")?.value === budgetPromise);
+              outputSetup.observation = (async () => {try {await configuration;} catch {}})();
+            } else if (types.isPromise(configuration)) void Promise.prototype.then.call(configuration, undefined, () => {});
             need(!types.isPromise(configuration) && !outputAborted && phase === "preparing");
+            if (localOutputLimits) {
+              need(!!configuration && !types.isProxy(configuration));
+              const row = readStrictPassiveRecord(configuration, ["storage", "context", "publicationId", "maximumFiles",
+                "maximumFileBytes", "maximumTotalBytes", "maximumDurationMs"]);
+              need(typeof row.maximumTotalBytes === "number" && Number.isSafeInteger(row.maximumTotalBytes) && row.maximumTotalBytes > 0
+                && row.maximumTotalBytes <= localOutputLimits.maximumTotalBytes && typeof row.maximumDurationMs === "number"
+                && Number.isSafeInteger(row.maximumDurationMs) && row.maximumDurationMs > 0 && row.maximumDurationMs <= localOutputLimits.maximumDurationMs);
+              const context = readStrictPassiveRecord(row.context, ["requestId", "correlationId", "organizationId", "principalId", "workspaceId"]);
+              need(context.requestId === definition.requestId && context.workspaceId === definition.workspaceId &&
+                context.organizationId === definition.owner.organizationId && context.principalId === definition.owner.principalId);
+            }
             output = createOriginalTrainingOutputReceiver({configuration, definition,
               assertCurrent() {current(); need(!outputAborted && !!channel); channel!.assertCurrent();}, assertAllowed: permission,
               read: async () => (await send("output-read")).output,
@@ -323,7 +400,7 @@ export function createOriginalTrainingPort(options: {
           need(!storageBudgetWithdrawn);
           await permission();
           const reply = exact(await channel.send("/training/original/prepare", {identity: channel.identity, definition,
-            ...(localStorage ? {localModelCopy} : {})}, current), ["binding", "phase"]);
+            ...(localStorage ? {localModelCopy, ...(outputFactory ? {outputDelivery: "bounded-local-v1"} : {})} : {})}, current), ["binding", "phase"]);
           const candidate = exact(reply.binding, ["runtimeId", "workerStartedAt", "profileId", "profileFingerprint", "requestId", "workspaceId", "sessionId"]);
           need(Object.keys(channel.identity).every(key => candidate[key] === channel!.identity[key as keyof OriginalTrainingIdentity]) &&
             candidate.requestId === definition.requestId && candidate.workspaceId === definition.workspaceId &&
@@ -335,8 +412,11 @@ export function createOriginalTrainingPort(options: {
             if (localStorage) {
               // The cooperative worker was launched for this request. Even a
               // positive no-loader refusal must close that original Job first.
+              if (outputFactory) {parentFenced = true; abortOutput();}
               need(!!retireWorker && await retireWorker() === true);
-              remoteRetired = true; release(); phase = "settled"; return "unavailable" as const;
+              localWorkerRetired = true; remoteRetired = true;
+              need(!outputFactory || parentIoClosed());
+              release(); phase = "settled"; return "unavailable" as const;
             }
             releaseUnusedWorker();
             if (exitReady) {need(parentIoClosed()); release(); phase = "settled"; return "unavailable" as const;}
@@ -371,12 +451,8 @@ export function createOriginalTrainingPort(options: {
         operations++;
         try {
           const response = mapTaskStatusResponse((await send("read")).record);
-          need(response.requestId === definition.requestId && response.taskType === "train-model" &&
-            response.status !== "unknown" && response.metadata?.workspaceId === definition.workspaceId);
-          cached = copy({...response, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
-            progress: response.progress ? {details: response.progress} : undefined,
-            status: response.status as RuntimeTaskRecord["status"], concurrencyClass: "gpu-exclusive"} as RuntimeTaskRecord);
-          return copy(cached);
+          cacheResponse(response);
+          return copy(cached!);
         } finally {operations--;}
       },
       async cancel() {
@@ -399,6 +475,7 @@ export function createOriginalTrainingPort(options: {
       },
       async settle() {
         if (exitReady) return settleExitReady();
+        if (localStorage && outputFactory) return settleLocalOutput();
         if (phase === "settled") return true;
         if (storageBudgetSetupUnknown || outputSetupUnknown || outputStarted && !output?.isComplete()) return false;
         if (operations || (!remoteRetired && closeAttempted) || closing) return false;

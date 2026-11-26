@@ -13,15 +13,15 @@ import {createOriginalTrainingPort, ORIGINAL_TRAINING_CAPABILITY, type OriginalT
 import {createPythonRuntimeHttpClient} from "../client/createPythonRuntimeHttpClient";
 import {createPythonRuntimeAdapterFoundation} from "../createPythonRuntimePort";
 import {OWNED_RUNTIME_READY_PREFIX} from "../supervisor/ownedPythonRuntimeProof";
-import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput, TrainingResultFileIoRetirement} from "../../../../application/ports/model";
 import {TaskType} from "../../../../contracts/runtime";
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import type {OriginalTrainingSourceReservationFactory, OriginalTrainingSourceReservation} from "../client/originalTrainingModelSource";
 import {bindOriginalTrainingCopyReservations, originalTrainingModelCopyReservation,
   bindOriginalTrainingWorkerConfiguration, prepareOriginalTrainingSharedStorageBudget} from "../client/originalTrainingModelSource";
 import type {OriginalTrainingExitConfiguration} from "../client/approvedTrainingTaskSession";
-import {createFilesystemTrainingResultFileByteStorageAdapter} from "../../../storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
-import type {OrganizationId} from "../../../../contracts/organization";
+import {createFilesystemTrainingResultFileByteStorageAdapter, createFilesystemLocalTrainingResultPublication} from "../../../storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
+import {createOrganizationId, type OrganizationId} from "../../../../contracts/organization";
 import {createInMemoryStructuredDocumentStore} from "../../../persistence/shared";
 import {createStructuredTrainingStorageBudget} from "../../../persistence/model";
 import {createFilesystemLocalTrainingModelCopyStorage} from "../../../storage/filesystem/artifact-store/createFilesystemLocalTrainingModelCopyStorage";
@@ -1115,13 +1115,19 @@ test("foundation refuses training while an original direct model download is in 
 /** Actual fresh Model bytes; original controller/HTTP remain explicitly inert. */
 async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready" | "unavailable" | "lost";
   storage?: OriginalBoundedLocalTrainingConfiguration["createModelCopy"]; selectionAfterCopy?: () => Promise<void>;
-  observeMs?: number; autoRetire?: boolean} = {}) {
+  observeMs?: number; autoRetire?: boolean; output?: boolean; corruptOutput?: boolean;
+  outputFactory?: OriginalBoundedLocalTrainingConfiguration["createOutputStorage"];
+  holdOutputRead?: () => Promise<void>; holdFinalOutputAck?: () => Promise<void>} = {}) {
   const root = await realpath(await mkdtemp(path.join(await realpath(tmpdir()), "local-training-composition-")));
   const original = await lstat(root, {bigint: true}), model = path.join(root, "selected"), staging = path.join(root, "staging");
   await mkdir(model); await mkdir(staging);
   for (const name of ["config.json", "tokenizer.json", "model.safetensors"]) await writeFile(path.join(model, name), "synthetic local Model, never loaded");
   let live = false, permitted = true, copied = false, status = "running", factories = 0, reads = 0, storagePhase = "not-created", cleanupGranted = false;
   let storageOwner: ReturnType<typeof createFilesystemLocalTrainingModelCopyStorage> | undefined;
+  let resultOwner: ReturnType<typeof createFilesystemLocalTrainingResultPublication> | undefined;
+  let resultIo: TrainingResultFileIoRetirement | undefined;
+  let outputFactories = 0, outputAcknowledged = 0;
+  const publicationId = "c".repeat(32), outputRoot = path.join(root, "results"); await mkdir(outputRoot);
   const controller = inertNativeController(() => {live = true;});
   // This fixture explicitly supplies the final synthetic retirement frame.
   // The shared controller intentionally leaves it pending for other tests.
@@ -1132,6 +1138,23 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
     stagingRoot: root, maximumModelBytes: 4096, maximumOutputBytes: 8192, minimumFreeBytes: 1024});
   const localIdentity = {...runtime, profileId: startupProfile.profileId, profileFingerprint: startupProfile.profileFingerprint};
   const localBinding = {...localIdentity, requestId: id, workspaceId: workspace, sessionId: "b".repeat(64)};
+  const adapter = ["lora", "qlora"].includes(definition().request.method);
+  const outputNames = [adapter ? "adapter_config.json" : "config.json", "tokenizer.json",
+    adapter ? "adapter_model.safetensors" : "model.safetensors"];
+  const outputValues = [Buffer.from("{}"), Buffer.from("{}"), Buffer.from("synthetic safe result"),
+    Buffer.from("{}"), Buffer.from("{}"), Buffer.from("synthetic safe result")];
+  const outputFiles = outputValues.map((bytes, fileIndex) => ({fileIndex, groupIndex: Math.floor(fileIndex / 3),
+    name: outputNames[fileIndex % 3]!, role: fileIndex < 3 ? "checkpoint" : "candidate", sizeBytes: bytes.length,
+    sha256: "sha256:" + createHash("sha256").update(bytes).digest("hex")}));
+  const outputFrames: Record<string, unknown>[] = [];
+  const frame = (kind: string, fields: object) => outputFrames.push({schema: "original-training-output-delivery-v1",
+    sequence: outputFrames.length + 1, kind, ...fields});
+  frame("manifest", {taskId: id, files: outputFiles, totalBytes: outputValues.reduce((sum, bytes) => sum + bytes.length, 0)});
+  outputValues.forEach((bytes, fileIndex) => {
+    frame("data", {fileIndex, offset: 0, data: (options.corruptOutput && fileIndex === 5 ? Buffer.alloc(bytes.length) : bytes).toString("base64")});
+    frame("file-eof", {fileIndex, sizeBytes: bytes.length});
+  });
+  frame("streams-complete", {fileCount: outputFiles.length, totalBytes: outputValues.reduce((sum, bytes) => sum + bytes.length, 0), provisional: true});
   const calls: {endpoint: string; body: any}[] = [];
   const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url, init) => {
     const endpoint = new URL(String(url)).pathname;
@@ -1148,6 +1171,17 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
     if (endpoint.endsWith("/settle")) return Response.json({binding: localBinding, settled: true, retirement: "settled"});
     if (endpoint.endsWith("/read")) return Response.json({binding: localBinding, record: {requestId: id, taskType: "train-model", status,
       progress: {step: 1, totalSteps: 1}, metadata: {workspaceId: workspace}, ...(status === "succeeded" ? {data: {runId: id, status}} : {})}});
+    if (endpoint.endsWith("/output-read")) {
+      await options.holdOutputRead?.();
+      return Response.json({binding: localBinding, output: {phase: outputAcknowledged === outputFrames.length ? "complete" : "active",
+        acknowledged: outputAcknowledged, frame: outputFrames[outputAcknowledged] ?? null}});
+    }
+    if (endpoint.endsWith("/output-ack")) {
+      assert.equal(body.sequence, outputAcknowledged + 1);
+      if (body.sequence === outputFrames.length) await options.holdFinalOutputAck?.();
+      outputAcknowledged = body.sequence;
+      return Response.json({binding: localBinding, acknowledged: true});
+    }
     throw Error("Unexpected synthetic endpoint");
   }) as typeof fetch}, supervisor: {...controller.configuration, verifyRuntimeEnvironment: async () => true,
     startupTimeoutMs: 200, healthCheckIntervalMs: 1}});
@@ -1166,7 +1200,21 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
           async assertCleanupAllowed() {await input.control.assertCleanupAllowed(); cleanupGranted = true;}}});
       storageOwner = storage; storagePhase = "constructed";
       return Object.freeze({...storage, async prepare(context: Parameters<typeof storage.prepare>[0]) {storagePhase = "preparing"; await storage.prepare(context); copied = true; storagePhase = "prepared";}});
-    }};
+    }, ...(options.output || options.outputFactory ? {createOutputStorage(original: OriginalTrainingCapture) {
+      outputFactories++;
+      if (options.outputFactory) return Reflect.apply(options.outputFactory, configuration, [original]);
+      const context = Object.freeze({requestId: original.definition.requestId, workspaceId: original.definition.workspaceId,
+        organizationId: createOrganizationId(original.definition.owner.organizationId), principalId: original.definition.owner.principalId});
+      const limits = {maximumFiles: 6, maximumFileBytes: 4096, maximumTotalBytes: 8192, minimumFreeBytes: 1024, maximumDurationMs: 5000};
+      const publication = createFilesystemLocalTrainingResultPublication({rootDirectory: outputRoot, publicationId, context, limits,
+        control: {assertCurrent: () => original.assertCurrent(), assertAllowed: () => original.assertAllowed()}});
+      resultOwner = publication;
+      const storage = Object.freeze({...publication.storage, captureIoRetirement(input: {readonly publicationId: string}, supplied: Parameters<NonNullable<typeof publication.storage.captureIoRetirement>>[1]) {
+        const captured = publication.storage.captureIoRetirement!(input, supplied); resultIo = captured; return captured;
+      }});
+      return {storage, context, publicationId, maximumFiles: limits.maximumFiles, maximumFileBytes: limits.maximumFileBytes,
+        maximumTotalBytes: limits.maximumTotalBytes, maximumDurationMs: limits.maximumDurationMs};
+    }} : {})};
   const port = foundation.createBoundedLocalTrainingPort!(configuration), selected = definition();
   (selected.request.baseModel as any).localPath = model;
   const reader = {async read() {reads++; if (copied) await options.selectionAfterCopy?.();
@@ -1178,9 +1226,150 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
     const observed = await lstat(root, {bigint: true}); assert.equal(observed.dev, original.dev); assert.equal(observed.ino, original.ino);
     await rm(root, {recursive: true, force: true});
   });
-  return {foundation, configuration, session, selected, port, reader, control, controller, calls, model, staging,
+  return {foundation, configuration, session, selected, port, reader, control, controller, calls, model, staging, outputRoot, outputFiles, outputValues, outputFrames,
+    get outputFactories() {return outputFactories;}, get outputAcknowledged() {return outputAcknowledged;},
+    get resultOwner() {return resultOwner;}, get resultIo() {return resultIo;},
     get factories() {return factories;}, get reads() {return reads;}, get storagePhase() {return storagePhase;}, get storageState() {return storageOwner?.inspect();}, get cleanupGranted() {return cleanupGranted;}, deny() {permitted = false;}, succeed() {status = "succeeded";}};
 }
+
+async function waitForLocalOutput(check: () => boolean) {
+  const end = Date.now() + 5000;
+  while (!check() && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 2));
+  assert.equal(check(), true, "Local output fixture did not reach its expected bounded phase.");
+}
+const localOutputContext = () => ({requestId: id, workspaceId: workspace, organizationId: createOrganizationId("org"), principalId: "actor"});
+
+test("local output joins real result files to its original session and keeps them through worker retirement", async t => {
+  const f = await boundedLocalFoundation(t, {output: true});
+  assert.equal(await f.session.prepare(), "ready");
+  const packet = f.calls.find(row => row.endpoint.endsWith("/prepare"))!.body;
+  assert.equal(packet.outputDelivery, "bounded-local-v1"); assert.equal(f.outputFactories, 1);
+  assert.equal((await f.session.start(staged(), () => true)).kind, "accepted");
+  await waitForLocalOutput(() => f.outputAcknowledged === f.outputFrames.length);
+  await new Promise(resolve => setTimeout(resolve, 5)); f.succeed();
+  assert.equal((await f.session.read()).status, "succeeded");
+  assert.throws(() => f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()));
+  assert.equal(await f.session.settle(), true);
+  assert.equal(f.resultIo!.inspect().phase, "closed"); assert.equal(f.controller.stops, 1);
+  assert.deepEqual(await readdir(f.staging), []);
+  const inventory = f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext());
+  assert.equal(inventory.files.length, 6);
+  for (const file of inventory.files) {
+    const bytes = await readFile(path.join(f.outputRoot, "organizations", "org", file.key));
+    assert.deepEqual(bytes, f.outputValues[file.fileIndex]); assert.equal("sha256:" + createHash("sha256").update(bytes).digest("hex"), file.expectedSha256);
+    assert.equal(file.role, f.outputFiles[file.fileIndex]!.role);
+  }
+  const count = f.calls.length; assert.equal(await f.session.settle(), true); assert.equal(f.calls.length, count);
+  assert.equal((await f.session.read()).status, "succeeded"); assert.equal(f.calls.length, count);
+});
+
+test("local output cannot report worker success before its original final acknowledgement returns", async t => {
+  let entered = false, release!: () => void;
+  const held = new Promise<void>(resolve => {release = resolve;});
+  const f = await boundedLocalFoundation(t, {output: true, holdFinalOutputAck: async () => {entered = true; await held;}});
+  try {
+    assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
+    await waitForLocalOutput(() => entered); f.succeed();
+    const pending = await f.session.read(); assert.equal(pending.status, "running"); assert.equal(pending.data, undefined);
+    assert.equal(await f.session.settle(), false); assert.equal(f.controller.stops, 0);
+    assert.throws(() => f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()));
+    release(); await waitForLocalOutput(() => f.outputAcknowledged === f.outputFrames.length);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    assert.equal((await f.session.read()).status, "succeeded"); assert.equal(await f.session.settle(), true);
+  } finally {release();}
+});
+
+test("local output waits for original worker close proof even after every file is acknowledged", async t => {
+  const f = await boundedLocalFoundation(t, {output: true, autoRetire: false});
+  assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
+  await waitForLocalOutput(() => f.outputAcknowledged === f.outputFrames.length); await new Promise(resolve => setTimeout(resolve, 5)); f.succeed();
+  assert.equal(await f.session.settle(), false); assert.equal(f.controller.stops, 1);
+  assert.equal((await readdir(f.staging)).length, 1);
+  f.controller.closeWithProof(); assert.equal(await f.session.settle(), true);
+  assert.deepEqual(await readdir(f.staging), []); assert.equal(f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()).files.length, 6);
+});
+
+for (const prepare of ["unavailable", "lost"] as const) test(`local output ${prepare} preparation retires only its original worker without starting delivery`, async t => {
+  const f = await boundedLocalFoundation(t, {output: true, prepare});
+  assert.equal(await f.session.prepare(), prepare === "unavailable" ? "unavailable" : "unconfirmed");
+  if (prepare === "lost") assert.equal(await f.session.settle(), true);
+  assert.equal(f.controller.stops, 1); assert.equal(f.outputAcknowledged, 0); assert.deepEqual(await readdir(f.staging), []);
+  assert.equal(f.resultIo!.inspect().phase, "closed"); assert.deepEqual(await readdir(f.outputRoot), []);
+  assert.throws(() => f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()));
+});
+
+test("local output malformed scope or profile limits refuse before Model copies or worker effects", async t => {
+  for (const mode of ["request", "workspace", "organization", "principal", "bytes", "duration", "getter"] as const) {
+    let hooks = 0;
+    const f = await boundedLocalFoundation(t, {outputFactory(original) {
+      const context: any = {...localOutputContext()};
+      if (mode === "request") context.requestId = "different";
+      if (mode === "workspace") context.workspaceId = "different";
+      if (mode === "organization") context.organizationId = "different";
+      if (mode === "principal") context.principalId = "different";
+      const configuration: any = {storage: {}, context, publicationId: "c".repeat(32), maximumFiles: 6,
+        maximumFileBytes: 4096, maximumTotalBytes: mode === "bytes" ? 8193 : 8192, maximumDurationMs: mode === "duration" ? 30001 : 5000};
+      if (mode === "getter") Object.defineProperty(configuration, "maximumTotalBytes", {enumerable: true, get() {hooks++; return 1;}});
+      return configuration;
+    }});
+    assert.equal(await f.session.prepare(), "unconfirmed", mode); assert.equal(hooks, 0);
+    assert.equal(f.factories, 0); assert.equal(f.reads, 0); assert.equal(f.controller.starts, 0);
+    assert.equal(await f.session.settle(), false); await assert.rejects(f.session.prepare());
+  }
+});
+
+test("local output captures its original factory and refuses declared asynchronous callbacks", async t => {
+  const f = await boundedLocalFoundation(t, {output: true}); let hooks = 0;
+  assert.throws(() => f.foundation.createBoundedLocalTrainingPort!({...f.configuration,
+    createOutputStorage: (async () => {hooks++;}) as never}));
+  const bad = {...f.configuration}; Object.defineProperty(bad, "createOutputStorage", {enumerable: true, get() {hooks++; throw Error("must not execute");}});
+  assert.throws(() => f.foundation.createBoundedLocalTrainingPort!(bad));
+  (f.configuration as any).createOutputStorage = () => {throw Error("replacement must not execute");};
+  assert.equal(await f.session.prepare(), "ready"); assert.equal(hooks, 0); assert.equal(f.outputFactories, 1);
+  assert.equal(await f.session.settle(), true); assert.equal(f.controller.stops, 1);
+});
+
+test("local output retains a malformed native factory Promise and observes its safe late rejection without hooks", async t => {
+  let reject!: (error: unknown) => void, hooks = 0;
+  const original = new Promise<never>((_resolve, fail) => {reject = fail;});
+  Object.defineProperty(original, "then", {get() {hooks++; throw Error("must not execute");}});
+  const f = await boundedLocalFoundation(t, {outputFactory: (() => original) as never});
+  try {
+    assert.equal(await f.session.prepare(), "unconfirmed"); assert.equal(f.controller.starts, 0); assert.equal(f.factories, 0);
+    reject(Error("synthetic private factory failure")); await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(hooks, 0); assert.equal(await f.session.settle(), false); await assert.rejects(f.session.prepare());
+  } finally {reject(Error("synthetic private factory failure"));}
+});
+
+test("local output preserves a corrupt publication without success, repeated transfer or cleanup credit", async t => {
+  const f = await boundedLocalFoundation(t, {output: true, corruptOutput: true});
+  assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
+  await waitForLocalOutput(() => f.resultOwner!.storage.inspectPublication().phase === "unconfirmed");
+  f.succeed(); const record = await f.session.read(); assert.equal(record.status, "failed"); assert.equal(record.data, undefined);
+  assert.equal(await f.session.settle(), false); assert.equal(f.controller.stops, 1);
+  assert.throws(() => f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()));
+  const count = f.calls.length; assert.equal(await f.session.settle(), false); assert.equal(f.calls.length, count);
+  assert.ok(f.resultOwner!.storage.inspectPublication().declaredPayloadBytes > 0);
+});
+
+test("local output stop retains the original pending read until its own response returns", async t => {
+  let entered = false, release!: () => void;
+  const held = new Promise<void>(resolve => {release = resolve;});
+  const f = await boundedLocalFoundation(t, {output: true, holdOutputRead: async () => {entered = true; await held;}});
+  try {
+    assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
+    await waitForLocalOutput(() => entered); assert.equal((await f.session.cancel()).cancelled, true);
+    assert.equal(await f.session.settle(), false); assert.equal(f.controller.stops, 1);
+    assert.equal(f.outputAcknowledged, 0); assert.ok(f.resultIo!.inspect().publicationFenced);
+    const calls = f.calls.length; release();
+    let settled = false;
+    for (let attempt = 0; attempt < 100 && !settled; attempt++) {await new Promise(resolve => setTimeout(resolve, 2)); settled = await f.session.settle();}
+    assert.equal(settled, true); assert.equal(f.calls.length, calls); assert.equal(f.controller.stops, 1);
+    assert.equal((await f.session.read()).status, "cancelled");
+    assert.deepEqual(await readdir(f.outputRoot), []); assert.deepEqual(await readdir(f.staging), []);
+    assert.throws(() => f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()));
+  } finally {release();}
+});
 
 test("local foundation prepares actual copies and binds their exact private manifest to the original worker", async t => {
   const f = await boundedLocalFoundation(t); assert.equal(await f.session.prepare(), "ready", JSON.stringify({factoryPhase: f.storagePhase, factories: f.factories, reads: f.reads, workerStarts: f.controller.starts, files: await readdir(f.staging)}));

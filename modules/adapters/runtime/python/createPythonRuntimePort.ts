@@ -58,6 +58,8 @@ export interface OriginalBoundedLocalTrainingConfiguration {
   readonly createModelCopy: (input: Readonly<{definition: ApprovedLocalTrainingDefinition;
     source: BoundedLocalTrainingModelSource; context: ApplicationRequestContext;
     control: {assertCurrent(): void; assertAllowed(): Promise<void>; assertCleanupAllowed(): Promise<void>}}>) => BoundedLocalTrainingModelCopyStoragePort;
+  /** Original private result capability only; no public activation or Save. */
+  readonly createOutputStorage?: OriginalTrainingExitConfiguration["createOutputStorage"];
 }
 
 export interface PythonRuntimeAdapterFoundation {
@@ -605,6 +607,9 @@ export function createPythonRuntimeAdapterFoundation(
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
       return createOriginalTrainingPort({
         ...(localConfiguration ? {storageProfile: "bounded-local-v1" as const} : {}),
+        ...(localConfiguration?.createOutputStorage ? {createOutputStorage: localConfiguration.createOutputStorage,
+          localOutputLimits: Object.freeze({maximumTotalBytes: localConfiguration.startupProfile.maximumOutputBytes,
+            maximumDurationMs: localConfiguration.startupProfile.maximumDurationSeconds * 1000})} : {}),
         ...(exitConfiguration ?? {}),
         reserve(capture) {
           const requestId = capture.definition.requestId;
@@ -865,9 +870,12 @@ export function createPythonRuntimeAdapterFoundation(
     },
     createBoundedLocalTrainingPort(raw) {
       if (!raw || typeof raw !== "object" || types.isProxy(raw)) throw new Error("Local training composition is unavailable.");
-      const row = readStrictPassiveRecord(raw, ["startupProfile", "observation", "createModelCopy"]);
-      if (Object.keys(row).length !== 3 || typeof row.createModelCopy !== "function" || types.isProxy(row.createModelCopy)
+      const row = readStrictPassiveRecord(raw, ["startupProfile", "observation", "createModelCopy", "createOutputStorage"]);
+      if (Object.keys(row).length !== (row.createOutputStorage === undefined ? 3 : 4) || typeof row.createModelCopy !== "function" || types.isProxy(row.createModelCopy)
           || types.isAsyncFunction(row.createModelCopy) || types.isGeneratorFunction(row.createModelCopy))
+        throw new Error("Local training composition is unavailable.");
+      if (row.createOutputStorage !== undefined && (typeof row.createOutputStorage !== "function" || types.isProxy(row.createOutputStorage)
+          || types.isAsyncFunction(row.createOutputStorage) || types.isGeneratorFunction(row.createOutputStorage)))
         throw new Error("Local training composition is unavailable.");
       if (!row.startupProfile || typeof row.startupProfile !== "object" || types.isProxy(row.startupProfile)
           || !row.observation || typeof row.observation !== "object" || types.isProxy(row.observation))
@@ -894,8 +902,10 @@ export function createPythonRuntimeAdapterFoundation(
       const capturedObservation = Object.freeze({...observation, allowedRootDirectories: Object.freeze(capturedRoots)}) as unknown as OriginalTrainingModelObservationPolicy;
       createOriginalTrainingModelSourceFactory(capturedObservation);
       const factory = row.createModelCopy as OriginalBoundedLocalTrainingConfiguration["createModelCopy"];
+      const outputFactory = row.createOutputStorage as OriginalBoundedLocalTrainingConfiguration["createOutputStorage"];
       const local = Object.freeze({startupProfile, observation: capturedObservation,
-        createModelCopy: (input: Parameters<typeof factory>[0]) => Reflect.apply(factory, raw, [input])});
+        createModelCopy: (input: Parameters<typeof factory>[0]) => Reflect.apply(factory, raw, [input]),
+        ...(outputFactory ? {createOutputStorage: (original: OriginalTrainingCapture) => Reflect.apply(outputFactory, raw, [original])} : {})});
       return createTrainingPort({profileId: startupProfile.profileId, profileFingerprint: startupProfile.profileFingerprint}, capturedObservation,
         undefined, undefined, local);
     },
