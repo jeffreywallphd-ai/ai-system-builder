@@ -3847,3 +3847,19 @@ capabilities, not application permission or worker/SDK/Job/global-credit proof.
 The qualifying coordinator must supply those gates. No native loader, public
 barrel/route or default composition is added; inert ABI tests do not qualify the
 real pipeline, installation, capacity, crash custody, candidate/Save or hosts.
+
+### Original completed training delivery facts
+
+The private receiver captures the validated complete file inventory before
+publication. It retains a historical delivery record only after the final
+streams-complete ACK returns and original currentness still holds. Its passive
+`inspectCompletedDelivery` returns detached frozen task/workspace/publication,
+sequence, group/role/name/media-type/size/hash metadata only when the original
+drain finished, no operation remains pending or unknown, and the captured storage
+retirement capability confirms fenced, closed and confirmed publication IO.
+File ACKs alone do not satisfy this condition. A missing or failed retirement
+capability never produces a record. Reads of this metadata perform no file IO.
+This private handoff is not physical readiness, parent/crash protection, shared
+capacity, worker/SDK/Job retirement, candidate evaluation or task success. The
+owning application must independently authorize user-visible review and later
+registration/Save. Existing session completion and default host wiring stay.

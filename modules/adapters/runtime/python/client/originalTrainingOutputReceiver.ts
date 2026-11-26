@@ -67,6 +67,18 @@ const names = new Set(["config.json", "generation_config.json", "tokenizer.json"
   "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors",
   "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"]);
 type File = Readonly<{fileIndex: number; groupIndex: number; name: string; sizeBytes: number; sha256: string; role: "checkpoint" | "candidate"}>;
+type PublicationInventory = Parameters<NonNullable<TrainingResultFileByteStoragePort["preparePublication"]>>[0];
+/** Historical delivery facts from one original receiver, never effect authority.
+ * Owning application authorization remains required before user-visible review. */
+export interface OriginalTrainingCompletedOutputDelivery {
+  readonly schema: "original-training-completed-output-delivery-v1";
+  readonly requestId: string;
+  readonly workspaceId: ApprovedLocalTrainingDefinition["workspaceId"];
+  readonly publicationId: string;
+  readonly acknowledgedSequence: number;
+  readonly totalBytes: number;
+  readonly files: PublicationInventory["files"];
+}
 
 /** Called synchronously by the session before its first startup await. Only
  * trusted composition supplies storage; wire frames can never select it. */
@@ -104,6 +116,7 @@ export function createOriginalTrainingOutputReceiver(options: {
   let phase: "bound" | "receiving" | "complete" | "unconfirmed" = "bound", aborted = false, lastAck = 0;
   let deadline = 0, flight: Promise<void> | undefined, flightFinished = false, unknownOperation = false;
   let issuedOperations = 0, returnedOperations = 0;
+  let completedDelivery: OriginalTrainingCompletedOutputDelivery | undefined;
   const pendingOperations = new Set<object>();
   // Register before dispatch. Only the original promise's intrinsic settlement
   // retires an operation; a raced observer, abort or iterator return cannot.
@@ -231,12 +244,12 @@ export function createOriginalTrainingOutputReceiver(options: {
   };
   const receive = async () => {
     const header = await nextFrame(), declared = manifest(header);
+    const inventory: PublicationInventory = Object.freeze({publicationId: publicationId as string, totalBytes: declared.totalBytes,
+      files: Object.freeze(declared.files.map(file => Object.freeze({fileIndex: file.fileIndex,
+        groupIndex: file.groupIndex, name: file.name, role: file.role,
+        mediaType: file.name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
+        expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256})))});
     if (prepare !== undefined) {
-      const inventory = Object.freeze({publicationId: publicationId as string, totalBytes: declared.totalBytes,
-        files: Object.freeze(declared.files.map(file => Object.freeze({fileIndex: file.fileIndex,
-          groupIndex: file.groupIndex, name: file.name, role: file.role,
-          mediaType: file.name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
-          expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256})))});
       // The manifest ACK releases the worker's first data frame. Preparation
       // must finish under current authority before that release, never per file.
       need(await effect(() => Reflect.apply(prepare as Function, storage, [inventory, context])) === undefined);
@@ -284,7 +297,11 @@ export function createOriginalTrainingOutputReceiver(options: {
     }
     const end = await nextFrame(), complete = frameShape(end, "streams-complete", ["fileCount", "totalBytes", "provisional"]);
     need(complete.fileCount === declared.files.length && complete.totalBytes === declared.totalBytes && complete.provisional === true);
-    await ack(end); check(); phase = "complete";
+    await ack(end); check();
+    completedDelivery = Object.freeze({schema: "original-training-completed-output-delivery-v1" as const,
+      requestId: definition.requestId, workspaceId: definition.workspaceId, publicationId: inventory.publicationId,
+      acknowledgedSequence: lastAck, totalBytes: inventory.totalBytes, files: inventory.files});
+    phase = "complete";
   };
   return Object.freeze({
     start() {
@@ -296,5 +313,15 @@ export function createOriginalTrainingOutputReceiver(options: {
     isComplete() {return phase === "complete";},
     // Local observation only. No worker/Job retirement, retry, credit or Save.
     inspectIoRetirement,
+    inspectCompletedDelivery(): OriginalTrainingCompletedOutputDelivery | undefined {
+      if (phase !== "complete" || !flightFinished || !completedDelivery || unknownOperation || pendingOperations.size !== 0) return undefined;
+      const retirement = inspectIoRetirement();
+      // A storage callback may reenter or fail. Recheck the original receiver
+      // after inspection; storage file ACKs alone never prove final delivery.
+      if (phase !== "complete" || !flightFinished || unknownOperation || pendingOperations.size !== 0 ||
+          retirement.phase !== "closed" || retirement.publicationUnconfirmed) return undefined;
+      return Object.freeze({...completedDelivery,
+        files: Object.freeze(completedDelivery.files.map(file => Object.freeze({...file})))});
+    },
   });
 }

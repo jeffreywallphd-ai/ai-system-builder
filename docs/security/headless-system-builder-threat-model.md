@@ -3619,3 +3619,17 @@ nonfinite values, boolean/range errors and contradictory pass combinations. A
 failed mutation stops without reversing, inspecting or cleaning retained files.
 The unchanged parent independently checks actual original process/job closure
 and current reviewed source. Diagnostic success is never authority or custody.
+
+## Original completed-delivery evidence boundary
+
+A trusted original receiver can retain historical delivery metadata only after
+the exact final output ACK and currentness check. Its private passive inspector
+requires finished original drain, zero pending/unknown operations and confirmed
+fenced/closed storage IO. It returns detached frozen allowlisted file metadata
+with the captured task, workspace and publication identity, never payloads or
+paths. Lost ACKs, withdrawal and missing/failed retirement cannot become proof.
+This closes a file-ACK versus final-delivery ambiguity; it grants no current
+permission, file read, Native custody, capacity credit, retry, task success or
+Model/Save authority. The owning application must authorize later user-visible
+review or effects separately. Full physical parent/crash/worker/SDK/Job and host
+composition still needs independent qualification.

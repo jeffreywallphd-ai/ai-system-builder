@@ -1,5 +1,17 @@
 # Python runtime adapter
 
+## Original completed output delivery
+
+The private original receiver retains a frozen task/workspace/publication-bound
+file inventory only after its final streams-complete ACK and currentness check.
+`inspectCompletedDelivery` returns detached metadata only after the original drain
+finished, all operations returned, and fenced storage IO is confirmed closed.
+Pending/lost ACKs, unknown IO and missing or failed retirement supply no record.
+These are historical delivery facts, not Native custody, task success, worker/Job
+retirement, candidate acceptance, registration or Save authority. The owning
+application must authorize any later user-visible review or effect separately.
+No public route, default host activation, file read, retry or credit is added.
+
 ## Private protected training source copy
 
 The original Windows controller has a private, default-off source-copy owner.

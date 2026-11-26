@@ -449,11 +449,11 @@ test("finite deadline fences a still-pending read without claiming IO retirement
 });
 function directReceiver(f: Awaited<ReturnType<typeof fixture>>, hooks: {
   read?: () => Promise<unknown>; acknowledge?: (sequence: number) => Promise<unknown>;
-  assertAllowed?: () => Promise<void>;
+  assertAllowed?: () => Promise<void>; assertCurrent?: () => void;
 } = {}) {
   let ack = 0;
   return createOriginalTrainingOutputReceiver({configuration: f.configuration, definition: definition(),
-    assertCurrent() {}, assertAllowed: hooks.assertAllowed ?? (async () => {}),
+    assertCurrent: hooks.assertCurrent ?? (() => {}), assertAllowed: hooks.assertAllowed ?? (async () => {}),
     read: hooks.read ?? (async () => ({phase: "active", acknowledged: ack, frame: f.input.rows[ack]})),
     acknowledge: hooks.acknowledge ?? (async sequence => {assert.equal(sequence, ack + 1); ack++; return true;})});
 }
@@ -694,4 +694,100 @@ test("original HTTP output-only body limit is 128 KiB; existing actions stay at 
   for (const action of ["seal", "start", "read", "cancel", "settle"]) await assert.rejects(() => channel.send(`/training/original/${id}/${action}`, {binding}));
   bodyBytes = 128 * 1024; await assert.rejects(() => channel.send(`/training/original/${id}/output-read`, {binding}));
   const count = requests.length; await assert.rejects(() => channel.send(`/training/original/${id}/output-delete`, {binding})); assert.equal(requests.length, count);
+});
+
+
+test("completed delivery retains detached four-file facts only after final ACK and fenced IO retirement", async () => {
+  const f = await fixture(false, true), finalAck = deferred(); let ack = 0, finalEntered = false;
+  try {
+    const receiver = directReceiver(f, {read: async () => ({phase: "active", acknowledged: ack, frame: f.input.rows[ack]}),
+      acknowledge: async sequence => {
+        assert.equal(sequence, ack + 1);
+        if (sequence === f.input.rows.length) {finalEntered = true; await finalAck.promise;}
+        ack++; return true;
+      }});
+    assert.equal(receiver.inspectCompletedDelivery(), undefined);
+    receiver.start(); await until(() => finalEntered);
+    assert.equal(f.published, 4); assert.equal(receiver.isComplete(), false);
+    assert.equal(receiver.inspectCompletedDelivery(), undefined);
+    finalAck.resolve(); await until(() => receiver.inspectIoRetirement().drainFinished);
+    assert.equal(receiver.isComplete(), true); assert.equal(receiver.inspectCompletedDelivery(), undefined);
+    receiver.abort(); assert.equal(receiver.inspectIoRetirement().phase, "closed");
+    const record = receiver.inspectCompletedDelivery()!;
+    assert.deepEqual(record, {schema: "original-training-completed-output-delivery-v1", requestId: id,
+      workspaceId: workspace, publicationId, acknowledgedSequence: f.input.rows.length,
+      totalBytes: f.input.bytes.reduce((sum, bytes) => sum + bytes.length, 0),
+      files: f.input.files.map(file => ({fileIndex: file.fileIndex, groupIndex: file.groupIndex,
+        name: file.name, role: file.role, mediaType: file.name.endsWith(".json") ? "application/json" : "application/octet-stream",
+        expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256}))});
+    assert.ok(Object.isFrozen(record) && Object.isFrozen(record.files) && record.files.every(Object.isFrozen));
+    assert.throws(() => {(record.files[0] as any).role = "candidate";});
+    const again = receiver.inspectCompletedDelivery()!;
+    assert.notEqual(again, record); assert.notEqual(again.files, record.files); assert.notEqual(again.files[0], record.files[0]);
+    f.input.files[0]!.name = "redirected"; f.input.files[0]!.groupIndex = 9;
+    assert.equal(receiver.inspectCompletedDelivery()!.files[0]!.name, "config.json");
+    assert.equal(receiver.inspectCompletedDelivery()!.files[0]!.groupIndex, 0);
+    const calls = [...f.publications]; assert.deepEqual(receiver.inspectCompletedDelivery(), record);
+    assert.deepEqual(f.publications, calls, "metadata inspection cannot republish files");
+    assert.throws(() => receiver.start());
+  } finally {finalAck.resolve(); await f.close();}
+});
+
+for (const mode of ["lost-final-ack", "withdraw-current", "withdraw-permission", "invalid-complete"] as const) {
+  test(`completed delivery is unavailable after ${mode} despite four published files`, async () => {
+    const f = await fixture(false, true); let ack = 0, current = true, allowed = true;
+    try {
+      if (mode === "invalid-complete") f.input.rows[f.input.rows.length - 1]!.totalBytes++;
+      const receiver = directReceiver(f, {assertCurrent() {assert.ok(current);}, assertAllowed: async () => {assert.ok(allowed);},
+        read: async () => ({phase: "active", acknowledged: ack, frame: f.input.rows[ack]}),
+        acknowledge: async sequence => {
+          assert.equal(sequence, ack + 1);
+          if (sequence === f.input.rows.length) {
+            if (mode === "lost-final-ack") throw Error("private lost acknowledgement");
+            if (mode === "withdraw-current") current = false;
+            if (mode === "withdraw-permission") allowed = false;
+          }
+          ack++; return true;
+        }});
+      receiver.start(); await until(() => receiver.inspectIoRetirement().drainFinished); receiver.abort();
+      assert.equal(f.published, 4); assert.equal(receiver.isComplete(), false);
+      assert.equal(receiver.inspectCompletedDelivery(), undefined); assert.throws(() => receiver.start());
+    } finally {await f.close();}
+  });
+}
+
+for (const mode of ["no-retirement", "failed-fence", "failed-inspection"] as const) {
+  test(`completed delivery needs confirmed IO retirement: ${mode}`, async () => {
+    const f = await fixture(false, mode !== "no-retirement"); let badInspection = false;
+    try {
+      if (mode !== "no-retirement") {
+        const capture = f.storage.captureIoRetirement!;
+        f.storage.captureIoRetirement = (input, context) => {
+          const original = capture(input, context);
+          return Object.freeze({fencePublication() {original.fencePublication(); if (mode === "failed-fence") throw Error("private fence detail");},
+            inspect() {if (badInspection) throw Error("private inspection detail"); return original.inspect();}});
+        };
+      }
+      const receiver = directReceiver(f);
+      receiver.start(); await until(() => receiver.inspectIoRetirement().drainFinished);
+      assert.equal(receiver.isComplete(), true); assert.equal(f.published, 4);
+      receiver.abort(); if (mode === "failed-inspection") badInspection = true;
+      assert.equal(receiver.inspectCompletedDelivery(), undefined);
+      badInspection = false;
+      assert.equal(receiver.inspectCompletedDelivery(), undefined, "unknown original inspection cannot later become proof");
+    } finally {await f.close();}
+  });
+}
+
+test("late original read after abort cannot manufacture completed delivery", async () => {
+  const f = await fixture(false, true), read = deferred<unknown>(); let reads = 0, acks = 0;
+  try {
+    const receiver = directReceiver(f, {read: async () => {reads++; return read.promise;}, acknowledge: async () => {acks++; return true;}});
+    receiver.start(); await until(() => reads === 1); receiver.abort();
+    assert.equal(receiver.inspectCompletedDelivery(), undefined);
+    assert.equal(receiver.inspectIoRetirement().pendingOperations, 1);
+    read.resolve({phase: "active", acknowledged: 0, frame: f.input.rows[0]});
+    await until(() => receiver.inspectIoRetirement().drainFinished);
+    assert.equal(receiver.inspectCompletedDelivery(), undefined); assert.equal(acks, 0); assert.equal(f.published, 0);
+  } finally {read.resolve(undefined); await f.close();}
 });
