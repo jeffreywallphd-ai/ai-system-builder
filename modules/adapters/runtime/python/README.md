@@ -1511,3 +1511,24 @@ close/reopen an explicitly provisioned synthetic pool and preserve the debit;
 these tests do not establish production provisioning, anti-rollback, exclusive
 physical capacity, native custody or host readiness. No default producer is
 enabled, and no model or accuracy test is run by this integration.
+
+### Bounded source reservation before installed startup
+
+The private foundation's source-reservation factory supports either its existing
+synchronous owner or an unbound current-realm native async factory. The latter
+can bind the original copy purposes and await their shared-budget debit before
+returning the Model-copy owner. The foundation retains preparation ownership
+before the callback, then its actual Promise, observer and any late returned owner.
+The captured observation duration also bounds async setup. A deadline, rejected
+or malformed reply, withdrawn permission or pre-channel Stop never admits a late
+worker start, another factory attempt or release of the original slot.
+
+Fresh original authority, a renewed original Model selection and exact source
+binding follow acknowledgement, before installed-only startup. No thenable or sync prebuilt-Promise supplier substitutes
+for the async profile. Existing synchronous callers remain supported. Stop during
+any pre-channel preparation permanently fences original currentness, including
+when no pre-output budget hook was configured. The output factory's independent
+passive/qualified behavior and any pre-output budget hook remain prerequisites.
+Foundation tests compose the actual budget/copy binder with an inert controller;
+they do not supply physical capacity, producer/readiness, parent/crash, retirement
+or real-host qualification. Default activation remains unavailable.

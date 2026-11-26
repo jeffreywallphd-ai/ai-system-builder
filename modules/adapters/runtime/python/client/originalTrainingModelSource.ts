@@ -369,7 +369,7 @@ export function originalTrainingModelCopyReservation(token: OriginalTrainingCopy
 declare const sourceLaunchBrand: unique symbol;
 export interface OriginalTrainingSourceLaunch {readonly [sourceLaunchBrand]: true}
 export type OriginalTrainingSourceReservationFactory = (original: OriginalTrainingCapture,
-  observed: ObservedOriginalTrainingModelSource) => OriginalTrainingSourceReservation;
+  observed: ObservedOriginalTrainingModelSource) => OriginalTrainingSourceReservation | Promise<OriginalTrainingSourceReservation>;
 export type OriginalTrainingSourcePhase = "charge" | "allocate" | "copy" | "seal" | "create" | "dispatch" | "retain";
 const sourceLaunches = new WeakMap<OriginalTrainingSourceLaunch, {descriptor: Readonly<Record<string, unknown>>;
   definitionByteCount: number; bootstrapRequired: boolean; claimed: boolean;

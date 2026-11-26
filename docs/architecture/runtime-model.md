@@ -3765,6 +3765,20 @@ SQLite close/reopen and controlled accounting tests prove ledger integration
 only. Trusted pool provisioning, anti-rollback, measured/exclusive Native capacity,
 parent/crash retention, full producer/worker retirement and hosts remain pending.
 
+The installed-only foundation may await a private current-realm native async
+source-reservation factory after its genuine Model observation. It owns the setup
+before callback invocation and retains the actual Promise, observation and late
+owner in the original reservation. The captured observation duration bounds that
+setup. Only acknowledged completion, renewed original authority/Model selection
+and exact source binding can precede installed startup. A timeout or unknown outcome stays fenced
+and retained; a late owner cannot resume startup or release the execution slot.
+Synchronous factories retain their established path. Pre-channel Stop now loses
+original admission permanently even without an optional pre-output budget hook.
+The output factory's separate passive/qualified behavior remains required; this
+does not move or waive pre-output accounting. Real budget/copy/foundation software
+with an inert controller supplies integration evidence only, not Native physical
+capacity, complete producer, parent/crash, worker/Job or actual-host qualification.
+
 The qualified callback shape is an unbound current-realm native async function,
 checked before invocation. Bound, proxy, generator, foreign-realm and arbitrary
 prebuilt-Promise suppliers are unsupported. Retain original Promise/async

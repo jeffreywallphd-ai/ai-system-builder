@@ -342,7 +342,10 @@ export function createOriginalTrainingPort(options: {
       },
       async cancel() {
         // Local fencing requires no current business permission and proves no IO settlement.
-        if (prepareStorageBudget && phase === "preparing" && !channel) storageBudgetWithdrawn = true;
+        if (phase === "preparing" && !channel) {
+          storageBudgetWithdrawn = true;
+          admissionLost = true; // Late original channel/source setup cannot restart after Stop.
+        }
         abortOutput();
         await permission();
         if (phase === "settled" || remoteRetired || parentFenced) return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};

@@ -3509,6 +3509,20 @@ roots, parent/crash custody, producer/worker/Job retirement and hosts remain
 unqualified. Existing unconfigured callers still require their already-reserved
 original owner; selecting this option does not create such physical authority.
 
+The private foundation can await an original async source-reservation factory
+before installed startup. It owns preparation before invocation and keeps the
+actual Promise, observer and late returned owner in the original slot. Require
+the current-realm native async profile and captured observation deadline, then
+renew original permission/currentness and Model selection, and bind the exact source before startup.
+Rejected, malformed, late or unknown replies cannot be retried, adopted or used
+to release the slot; thenables are never assimilated. A pre-channel Stop now
+permanently fences the session's original admission, with or without a pre-output
+budget hook. Late setup cannot heal that fence. The independent passive/qualified
+output factory and pre-output accounting are not waived. Controlled foundation
+tests prove budget-before-start and Stop/withdrawal/deadline/rejection denials;
+they supply no Native protection, pool provenance, producer, parent/crash,
+worker/Job or real-host pass. No parent-folder policy is changed here.
+
 Only an ordinary unbound current-realm native async function is supported for this
 new unused option. Refuse unsupported/foreign suppliers before they can create an
 unowned rejection. Keep original async/Promise intrinsics and validate the safe

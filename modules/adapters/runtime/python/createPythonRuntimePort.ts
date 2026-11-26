@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
-import {captureTrainingProfile, createOriginalTrainingPort, type OriginalTrainingProfile, type OriginalTrainingCapture,
+import {captureTrainingProfile, createOriginalTrainingPort, captureOriginalTrainingModelReader, type OriginalTrainingProfile, type OriginalTrainingCapture,
   type OriginalTrainingExitConfiguration} from "./client/approvedTrainingTaskSession";
 import {readStrictPassiveRecord} from "../../../contracts/shared";
 import {createOriginalTrainingModelSourceFactory, type OriginalTrainingModelObservationPolicy,
@@ -61,6 +61,14 @@ export interface PythonRuntimeAdapterFoundation {
   createModelSourceDownloadConfiguration(createStorage: (cacheRoot: string) => GeneratedModelStoragePort):
     NonNullable<CreatePythonRuntimeTaskRegistryAdapterOptions["modelSource"]>;
 }
+
+type OriginalSourcePreparation = {returned: boolean; confirmed: boolean; uncertain: boolean;
+  pending?: Promise<unknown>; observation?: Promise<{ok: boolean; value?: unknown}>; owner?: unknown};
+type OriginalFoundationTrainingReservation = {settled: boolean; capture: OriginalTrainingCapture;
+  source?: OriginalTrainingModelObservation; observed?: ObservedOriginalTrainingModelSource;
+  sourceReservation?: OriginalTrainingSourceReservation; sourcePreparation?: OriginalSourcePreparation};
+const sourcePreparationPromise = Promise, sourcePreparationPromisePrototype = Promise.prototype;
+const sourcePreparationAsyncPrototype = Object.getPrototypeOf(async function originalSourcePreparation() {});
 
 export function createPythonRuntimeAdapterFoundation(
   options: CreatePythonRuntimePortOptions,
@@ -122,9 +130,7 @@ export function createPythonRuntimeAdapterFoundation(
   >();
   // Original reservations survive worker exit, failed startup, and lost replies.
   // Their release is owned exclusively by permanent original session retirement.
-  const trainingReservations = new Map<string, {settled: boolean; capture: OriginalTrainingCapture;
-    source?: OriginalTrainingModelObservation; observed?: ObservedOriginalTrainingModelSource;
-    sourceReservation?: OriginalTrainingSourceReservation}>();
+  const trainingReservations = new Map<string, OriginalFoundationTrainingReservation>();
   let directModelDownloads = 0;
   const trainingCustodyLive = () => [...trainingReservations.values()].some(value => !value.settled);
   // A disconnected POST can already have started non-cancellable Dataset work.
@@ -566,10 +572,18 @@ export function createPythonRuntimeAdapterFoundation(
           createOutputStorage: (original: OriginalTrainingCapture) => Reflect.apply(factory, rawExitConfiguration, [original])});
       }
       if (rawProfile === undefined || !hasNativeTrainingConfiguration) return Object.freeze({createSession: () => undefined});
-      if (sourceReservation !== undefined && (typeof sourceReservation !== "function" || rawObservation === undefined))
+      if (sourceReservation !== undefined && (typeof sourceReservation !== "function" || types.isProxy(sourceReservation) || rawObservation === undefined))
         throw new Error("Original Model source reservation is unavailable.");
+      const asyncSourceReservation = sourceReservation !== undefined && types.isAsyncFunction(sourceReservation);
+      if (asyncSourceReservation && (types.isGeneratorFunction(sourceReservation!)
+          || Object.getPrototypeOf(sourceReservation) !== sourcePreparationAsyncPrototype))
+        throw new Error("Original Model source preparation is unavailable.");
       const profile = captureTrainingProfile(rawProfile);
       const sourceFactory = rawObservation === undefined ? undefined : createOriginalTrainingModelSourceFactory(rawObservation);
+      // The already validated explicit observation bound also bounds private
+      // async reservation setup. Capture its scalar before any caller wait.
+      const sourcePreparationMs = rawObservation === undefined ? 0 : readStrictPassiveRecord(rawObservation,
+        ["allowedRootDirectories", "maximumTotalBytes", "maximumDurationMs", "bufferBytes"]).maximumDurationMs as number;
       const startInstalled = supervisor.startWithoutInstalling?.bind(supervisor);
       const captureRetirement = supervisor.captureOriginalTrainingWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
@@ -584,9 +598,7 @@ export function createPythonRuntimeAdapterFoundation(
           // original slot is reserved, with no presence/discovery fallback.
           const source = sourceFactory?.bind(capture);
           if (sourceFactory && !source) return undefined;
-          const original = {settled: false, capture, source} as {
-            settled: boolean; capture: OriginalTrainingCapture; source?: OriginalTrainingModelObservation; observed?: ObservedOriginalTrainingModelSource;
-            sourceReservation?: OriginalTrainingSourceReservation};
+          const original: OriginalFoundationTrainingReservation = {settled: false, capture, source};
           trainingReservations.set(requestId, original);
           try {assertHostAccepting();} catch (error) {
             original.settled = true; // No preparation/IO was issued by this reservation.
@@ -595,6 +607,8 @@ export function createPythonRuntimeAdapterFoundation(
           return () => {
             if (trainingReservations.get(requestId) !== original) throw new Error("Original training retirement is unavailable.");
             if (original.source && !original.source.isSettled()) throw new Error("Original training source IO is still retained.");
+            if (original.sourcePreparation && (!original.sourcePreparation.returned || !original.sourcePreparation.confirmed || original.sourcePreparation.uncertain))
+              throw new Error("Original training source preparation is still retained.");
             original.settled = true;
           };
         },
@@ -619,11 +633,53 @@ export function createPythonRuntimeAdapterFoundation(
           let originalModelSource: OriginalTrainingSourceLaunch | undefined;
           if (sourceReservation) {
             if (!reservation!.observed) throw new Error("Original Model source observation is unavailable.");
-            // A real trusted reservation is separate from concurrency and the
-            // observer's byte estimate. Keep its owner through native retirement.
-            const owner = sourceReservation(capture, reservation!.observed);
-            reservation!.sourceReservation = owner; // Before any owner-property callback.
-            originalModelSource = bindOriginalTrainingSourceLaunch(capture, reservation!.observed, owner);
+            await allowedCapture();
+            const preparation: OriginalSourcePreparation = {returned: false, confirmed: false, uncertain: false};
+            reservation!.sourcePreparation = preparation; // Own before the callback can perform IO or reenter.
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              const deadline = Date.now() + sourcePreparationMs;
+              const supplied = sourceReservation(capture, reservation!.observed);
+              let owner: OriginalTrainingSourceReservation;
+              if (types.isPromise(supplied)) {
+                preparation.pending = supplied;
+                if (Object.getPrototypeOf(supplied) !== sourcePreparationPromisePrototype
+                    || Object.getOwnPropertyDescriptor(supplied, "constructor") !== undefined
+                    || Object.getOwnPropertyDescriptor(sourcePreparationPromisePrototype, "constructor")?.value !== sourcePreparationPromise)
+                  throw new Error("Original Model source preparation is unavailable.");
+                const observed = (async () => {
+                  try {const value = await supplied; preparation.owner = value; preparation.returned = true; return {ok: true, value};}
+                  catch {preparation.returned = true; return {ok: false};}
+                })();
+                preparation.observation = observed; // Retain actual settlement, even after the outward timer.
+                if (!asyncSourceReservation || Object.getOwnPropertyDescriptor(supplied, "then") !== undefined)
+                  throw new Error("Original Model source preparation is unavailable.");
+                const result = await Promise.race([observed, new Promise<never>((_resolve, reject) => {
+                  timer = setTimeout(() => {preparation.uncertain = true; reject(new Error("Original Model source preparation is unavailable."));},
+                    Math.max(1, deadline - Date.now()));
+                })]);
+                if (!result.ok || preparation.uncertain || Date.now() >= deadline)
+                  throw new Error("Original Model source preparation is unavailable.");
+                owner = result.value as OriginalTrainingSourceReservation;
+              } else {owner = supplied; preparation.owner = owner; preparation.returned = true;}
+              reservation!.sourceReservation = owner; // Before any owner-property callback or permission wait.
+              await allowedCapture();
+              if (asyncSourceReservation) {
+                const reader = captureOriginalTrainingModelReader(capture);
+                if (!reader) throw new Error("Original Model source preparation is unavailable.");
+                const selected = await reader.readModelSelection(); currentCapture();
+                if (selected.modelRecordId !== reservation!.observed.modelRecordId
+                    || selected.modelUpdatedAt !== reservation!.observed.modelUpdatedAt
+                    || selected.localModelReference !== reservation!.observed.logicalPath)
+                  throw new Error("Original Model source preparation is unavailable.");
+                await allowedCapture();
+              }
+              if (preparation.uncertain || asyncSourceReservation && Date.now() >= deadline)
+                throw new Error("Original Model source preparation is unavailable.");
+              originalModelSource = bindOriginalTrainingSourceLaunch(capture, reservation!.observed, owner);
+              preparation.confirmed = true;
+            } catch {preparation.uncertain = true; throw new Error("Original Model source preparation is unavailable.");}
+            finally {if (timer) clearTimeout(timer);}
           }
           const admission = Object.freeze({assertCurrent: currentCapture, assertAllowed: allowedCapture,
             ...(originalModelSource ? {originalModelSource} : {})});

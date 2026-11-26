@@ -17,7 +17,8 @@ import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput} 
 import {TaskType} from "../../../../contracts/runtime";
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import type {OriginalTrainingSourceReservationFactory, OriginalTrainingSourceReservation} from "../client/originalTrainingModelSource";
-import {bindOriginalTrainingCopyReservations, originalTrainingModelCopyReservation} from "../client/originalTrainingModelSource";
+import {bindOriginalTrainingCopyReservations, originalTrainingModelCopyReservation,
+  bindOriginalTrainingWorkerConfiguration, prepareOriginalTrainingSharedStorageBudget} from "../client/originalTrainingModelSource";
 import type {OriginalTrainingExitConfiguration} from "../client/approvedTrainingTaskSession";
 import {createFilesystemTrainingResultFileByteStorageAdapter} from "../../../storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
 import type {OrganizationId} from "../../../../contracts/organization";
@@ -203,6 +204,18 @@ test("Stop fences a pending budget before renewed permission and cannot later re
     assert.equal(await preparing, "unconfirmed"); assert.equal(f.captures, 0); assert.equal(factories, 0);
     assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
   }
+});
+
+test("Stop permanently fences pending channel capture without an optional budget hook", async () => {
+  const peer = fixture(); let entered!: () => void, finish!: () => void;
+  const issued = new Promise<void>(done => {entered = done;}), held = new Promise<void>(done => {finish = done;});
+  const f = fixture({async captureChannel() {entered(); await held; return peer.channel;}});
+  const preparing = f.session.prepare();
+  try {
+    await issued; await assert.rejects(f.session.cancel()); finish();
+    assert.equal(await preparing, "unconfirmed"); assert.deepEqual(peer.calls, []);
+    assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
+  } finally {finish(); await preparing;}
 });
 
 test("budget function is captured passively with the original receiver and definition", async () => {
@@ -662,6 +675,101 @@ test("configured foundation refuses a missing Model reader before reserving or s
   const next = f.port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader);
   assert.ok(next); assert.equal(await next.settle(), true);
   assert.equal(f.controller.starts, 0); assert.equal(f.modelReads, 0); assert.deepEqual(f.calls, []);
+});
+
+test("foundation awaits the actual original shared-budget debit before installed source startup", {timeout: 3000}, async t => {
+  const f = await observationFoundation(t), documents = createInMemoryStructuredDocumentStore(), calls: string[] = [];
+  const policy = {poolId: "synthetic-foundation-copy-budget", profileFingerprint: profile.profileFingerprint,
+    maximumBytes: 524_288, maximumOrganizationBytes: 524_288, maximumPrincipalBytes: 524_288,
+    maximumReservations: 1, maximumOrganizationReservations: 1, maximumPrincipalReservations: 1};
+  const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  const namespace = "model/training/storage-budget/pools-v1", poolKey = hash([policy.poolId]);
+  await documents.writeDocument(namespace, poolKey, {schema: "training-storage-budget-pool-v1",
+    policyDigest: "sha256:" + hash(policy), reservedBytes: 0, reservationCount: 0, organizations: []}, {expectedRevision: 0});
+  const budget = createStructuredTrainingStorageBudget({documents, policy, authorize: async () => true});
+  let entered!: () => void, finish!: () => void, factories = 0;
+  const issued = new Promise<void>(done => {entered = done;}), held = new Promise<void>(done => {finish = done;});
+  const shared = {async reserve(...args: Parameters<typeof budget.reserve>) {
+    assert.equal(f.controller.starts, 0); const result = await budget.reserve(...args); calls.push("budget-committed"); entered(); await held; return result;
+  }};
+  const factory: OriginalTrainingSourceReservationFactory = async (original, observed) => {
+    factories++;
+    const directory = path.dirname(f.model), slot = (freshName: string, maximumCopyBytes: number) =>
+      ({freshParent: directory, freshName, maximumCopyBytes, bufferBytes: 4096, preparationMs: 5000});
+    const token = bindOriginalTrainingCopyReservations(original, observed, {modelCopy: slot("async-model-copy", 65_536),
+      maximumInputCopyBytes: 65_536, maximumWorkerOutputBytes: 131_072, maximumParentOutputBytes: 131_072,
+      storageOverheadBytes: 4096, maximumReservedBytes: 524_288}, {
+      assertCurrent() {}, async chargeCopy(role) {assert.equal(f.controller.starts, 1); calls.push("charge:" + role);},
+      async retainCopy(role) {calls.push("retain:" + role);},
+    }, shared);
+    bindOriginalTrainingWorkerConfiguration(token, {profileFingerprint: profile.profileFingerprint,
+      inputCopy: slot("async-inputs-copy", 65_536), outputFamily: {maximumCopyBytes: 131_072, outputs: [slot("async-worker-final", 131_072)]}});
+    await prepareOriginalTrainingSharedStorageBudget(token); calls.push("budget-acknowledged");
+    return originalTrainingModelCopyReservation(token);
+  };
+  const port = f.foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [path.dirname(f.model)],
+    maximumTotalBytes: 1024, maximumDurationMs: 1000, bufferBytes: 8}, factory);
+  const session = port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader)!, preparing = session.prepare();
+  try {
+    await issued; assert.equal(f.controller.starts, 0); assert.deepEqual(f.calls, []); assert.deepEqual(calls, ["budget-committed"]);
+    assert.equal((await documents.readDocument<{reservedBytes: number}>(namespace, poolKey))!.value.reservedBytes, 524_288);
+    finish(); assert.equal(await preparing, "unavailable", "The inert peer still has no full native producer.");
+    assert.equal(factories, 1); assert.equal(f.controller.starts, 1); assert.equal(f.controller.resumes, 1);
+    assert.deepEqual(calls, ["budget-committed", "budget-acknowledged", "charge:overhead", "charge:inputs", "charge:worker-output", "charge:parent-output", "charge:model"]);
+    assert.equal(f.controller.boot.modelSource.schema, "windows-original-model-graph-v2");
+    assert.equal(f.calls.filter(row => row === "/training/original/prepare").length, 1);
+  } finally {finish(); await preparing;}
+});
+
+for (const mode of ["stop", "permission-loss", "model-change", "deadline", "rejection"] as const)
+  test(`foundation pending async source preparation ${mode} cannot start or release an original worker`, {timeout: 3000}, async t => {
+    const f = await observationFoundation(t); let caller = true, factories = 0, charges = 0, entered!: () => void, finish!: () => void;
+    const issued = new Promise<void>(done => {entered = done;}), held = new Promise<void>(done => {finish = done;});
+    const factory: OriginalTrainingSourceReservationFactory = async () => {
+      factories++; entered(); await held;
+      if (mode === "rejection") throw Error("synthetic private preparation rejection");
+      return {configuration: {freshParent: path.dirname(f.model), freshName: "async-copy", maximumCopyBytes: 65_536, bufferBytes: 4096, preparationMs: 5000},
+        assertCurrent() {}, async chargeSourceCopy() {charges++;}, async retainSourceCopy() {}};
+    };
+    const observation = {allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024,
+      maximumDurationMs: mode === "deadline" ? 100 : 1000, bufferBytes: 8};
+    const port = f.foundation.createApprovedTrainingPort(profile, observation, factory);
+    const session = port.createSession(f.selected, {isCurrent: () => caller, stillAllowed: async () => caller}, f.reader)!, preparing = session.prepare();
+    try {
+      await issued; assert.equal(f.controller.starts, 0); assert.deepEqual(f.calls, []);
+      if (mode === "stop") await assert.rejects(session.cancel());
+      if (mode === "permission-loss") caller = false;
+      if (mode === "model-change") (f.selected as {modelUpdatedAt: string}).modelUpdatedAt = "2026-11-26T00:00:00Z";
+      if (mode !== "deadline") finish();
+      assert.equal(await preparing, "unconfirmed"); assert.equal(await session.settle(), false);
+      finish(); await new Promise(done => setImmediate(done));
+      assert.equal(f.controller.starts, 0); assert.equal(charges, 0); assert.equal(factories, 1); assert.deepEqual(f.calls, []);
+      await assert.rejects(session.prepare());
+      assert.equal(port.createSession({...f.selected, requestId: workspace}, {isCurrent: () => true, stillAllowed: async () => true}, f.reader), undefined);
+    } finally {finish(); await preparing;}
+  });
+
+test("foundation refuses non-native async substitutes without assimilating thenables or leaking rejected replies", async t => {
+  for (const kind of ["thenable", "sync-promise", "invalid-owner"] as const) {
+    const f = await observationFoundation(t); let thenCalls = 0, factories = 0;
+    const factory: OriginalTrainingSourceReservationFactory = kind === "invalid-owner" ? (async () => {factories++; return undefined as never;}) :
+      (() => {factories++; return kind === "sync-promise" ? Promise.reject(Error("synthetic private source reply")) : {then() {thenCalls++;}};}) as never;
+    const port = f.foundation.createApprovedTrainingPort(profile, {allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024,
+      maximumDurationMs: 1000, bufferBytes: 8}, factory);
+    const session = port.createSession(f.selected, {isCurrent: () => true, stillAllowed: async () => true}, f.reader)!;
+    assert.equal(await session.prepare(), "unconfirmed"); await new Promise(done => setImmediate(done));
+    assert.equal(thenCalls, 0); assert.equal(factories, 1); assert.equal(f.controller.starts, 0); assert.deepEqual(f.calls, []);
+    assert.equal(await session.settle(), false);
+  }
+});
+
+test("foundation refuses proxy and foreign-realm async source factories before invocation", async t => {
+  const f = await observationFoundation(t); let invoked = 0;
+  const foreign = runInNewContext("(async function () { invoke(); return {}; })", {invoke() {invoked++;}});
+  const proxy = new Proxy(() => {invoked++; return {} as never;}, {apply() {invoked++; throw Error("must not call proxy");}});
+  for (const factory of [foreign, proxy]) assert.throws(() => f.foundation.createApprovedTrainingPort(profile,
+    {allowedRootDirectories: [path.dirname(f.model)], maximumTotalBytes: 1024, maximumDurationMs: 1000, bufferBytes: 8}, factory));
+  assert.equal(invoked, 0); assert.equal(f.controller.starts, 0); assert.deepEqual(f.calls, []);
 });
 
 test("failed source observation retains original foundation reservation without controller fallback", async t => {
