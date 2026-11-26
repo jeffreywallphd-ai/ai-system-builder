@@ -549,6 +549,82 @@
         "Actual shared reservations, parent/crash retention, original training worker/controller integration, candidate review/Save and host qualification remain pending.",
         "All earlier failures and retained data remain untouched and charged. Restricted slot7 has no persisted group-empty proof and receives no historical cleanup credit. No further physical fixture attempt or model accuracy rerun is authorized by this support."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-result-role-name-integration",
+      "work_criteria": [
+        "complete-frozen-metadata",
+        "invalid-metadata-denied-before-effects",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "b32f800f725df77abb8755c0dc4f02b23a341e0696a895d8f756b0b80ee00b3e",
+      "review_digest": "2fcc16799b9773fe0a83043806d666eff218b55d37d947d7a4e3b1987f5feae7",
+      "scope": "Commit 0a986ca5 binds each output file to its detached group, fixed name, checkpoint/candidate role, size and hash before manifest acknowledgement. Focused receiver/storage/type and documentation checks plus independent review passed. No physical custody or runtime activation is claimed.",
+      "limitations": [
+        "Historical reviewed component evidence only; no current-candidate, task, story, increment or parent qualification, default runtime activation, cleanup authority or capacity credit.",
+        "Agent work remains for actual shared capacity, durable parent/crash protection, the complete original producer and worker/SDK/Job retirement, application candidate/history/Save and real hosts. File acknowledgements alone are not final receiver delivery or task success.",
+        "Previous failures and retained data remain unchanged. Existing model accuracy outcomes stay closed. This support record runs no model test or physical native fixture and authorizes no retry or publication."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-result-native-inventory-codec",
+      "work_criteria": [
+        "exact-bounded-native-codec",
+        "malformed-input-before-effects",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "a6d8efddb49e4544a97a7904dfe0f25e31bc223e62386a7ee35dfb484c425476",
+      "review_digest": "1e31a2b607675c1ce640da7bfdc86d9ee70a58ee09234ea026fdc312f118ac04",
+      "scope": "Commit 48e094ea encodes the complete validated file inventory into fixed ASBTRS02 metadata with bounded file counts, grouping, roles, names, sizes, hashes and exact totals. Focused tests/types/docs and independent review passed. The codec performs no file or native-module effect.",
+      "limitations": [
+        "Historical reviewed component evidence only; no current-candidate, task, story, increment or parent qualification, default runtime activation, cleanup authority or capacity credit.",
+        "Agent work remains for actual shared capacity, durable parent/crash protection, the complete original producer and worker/SDK/Job retirement, application candidate/history/Save and real hosts. File acknowledgements alone are not final receiver delivery or task success.",
+        "Previous failures and retained data remain unchanged. Existing model accuracy outcomes stay closed. This support record runs no model test or physical native fixture and authorizes no retry or publication."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-native-training-publication-adapter",
+      "work_criteria": [
+        "original-native-publication",
+        "owned-lifetimes-and-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "cd94ebe5598238c817462fd3042d3de58454c6b8e9b60d1e239e7ab53dbef349",
+      "review_digest": "eba859544e2a353a064710724af2973a7d19a418c608270972c57cb41d714ce7",
+      "scope": "Commit 00074a02 connects the private byte port to captured original native store methods for ordered bounded writes, fencing, original readers and one-use local discard. Six focused source check groups and independent review passed, including the noncanonical-workspace correction. Native dependencies were inert in these tests; no physical or host qualification is inferred.",
+      "limitations": [
+        "Historical reviewed component evidence only; no current-candidate, task, story, increment or parent qualification, default runtime activation, cleanup authority or capacity credit.",
+        "Agent work remains for actual shared capacity, durable parent/crash protection, the complete original producer and worker/SDK/Job retirement, application candidate/history/Save and real hosts. File acknowledgements alone are not final receiver delivery or task success.",
+        "Previous failures and retained data remain unchanged. Existing model accuracy outcomes stay closed. This support record runs no model test or physical native fixture and authorizes no retry or publication."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-native-training-candidate-inventory",
+      "work_criteria": [
+        "completed-original-inventory",
+        "receiver-native-bridge-composition",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d907498fcb8bd63c7f70b1c6a7ce062799df45caad6d1d55e6de60fd1528026d",
+      "review_digest": "1b6c63b768340ad927ae60cf690c04409781c0eb4e9587a975c2d2a12467b19e",
+      "scope": "Commit 3c90a69b adds a detached frozen finalized-file inventory under the original actor/workspace and fresh native state. The actual cooperative receiver and inert native adapter passed multi-group four-file delivery and corrupt-candidate denial tests. Six source check groups and independent review passed. These are file facts, not final delivery, task success, permissions or Save.",
+      "limitations": [
+        "Historical reviewed component evidence only; no current-candidate, task, story, increment or parent qualification, default runtime activation, cleanup authority or capacity credit.",
+        "Agent work remains for actual shared capacity, durable parent/crash protection, the complete original producer and worker/SDK/Job retirement, application candidate/history/Save and real hosts. File acknowledgements alone are not final receiver delivery or task success.",
+        "Previous failures and retained data remain unchanged. Existing model accuracy outcomes stay closed. This support record runs no model test or physical native fixture and authorizes no retry or publication."
+      ]
     }
   ]
 }
