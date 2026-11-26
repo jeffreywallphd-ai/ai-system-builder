@@ -1,6 +1,21 @@
 import type {ApplicationRequestContext} from "../application-request-context";
 import type {StoreArtifactResult} from "../../../contracts/storage";
 
+/** Private acknowledged inventory, not current file or model-readiness proof.
+ * The coordinator still owns final delivery ACK, original worker retirement,
+ * fresh review permission, current file verification and separate Save. */
+export interface TrainingResultFinalizedFiles {
+  readonly schema: "training-result-finalized-files-v1";
+  readonly publicationId: string;
+  readonly totalBytes: number;
+  readonly files: readonly Readonly<{
+    fileIndex: number; groupIndex: number; name: string;
+    role: "checkpoint" | "candidate";
+    mediaType: "application/json" | "application/octet-stream";
+    expectedSizeBytes: number; expectedSha256: string; key: string;
+  }>[];
+}
+
 /** Captured private adapter lifetime, never request-selected or Native custody.
  * Capture, fence and inspection are strictly synchronous. Fence returns exactly
  * undefined; Promise results cannot establish local retirement. */

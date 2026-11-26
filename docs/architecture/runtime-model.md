@@ -3908,3 +3908,5 @@ Native ABI. Known copies retire only after the captured original worker/Job and
 Node IO close; earlier unknown setup cannot adopt a worker or task by status/ID.
 Positive no-loader refusal also retires the local worker. Retained output review,
 separate Save and real host qualification remain independently required.
+
+The bounded-local result-publication adapter implements the existing TrainingResultFileByteStoragePort behind a replaceable private factory. It binds complete inventory, actor/workspace/request and finite limits before receiving bytes, reuses contained writes and per-file SHA-256 verification, and preserves original pending operations through deadlines. A private finalized inventory requires a permanent publication fence, all exact file acknowledgements and actual original IO closure. Historical delivery facts do not replace current file checks, final receiver completion, original worker/SDK/Job retirement, candidate readiness or separate Save. No automatic host activation, physical quota or protected-service guarantee follows.

@@ -7,12 +7,13 @@ import path from "node:path";
 import {mock, test} from "node:test";
 import {createOrganizationId} from "../../../../../contracts/organization";
 import type {OrganizationRequestContext} from "../../../../../contracts/organization";
-import {createFilesystemTrainingResultFileByteStorageAdapter as create} from "../createFilesystemTrainingResultFileByteStorageAdapter";
+import {createFilesystemTrainingResultFileByteStorageAdapter as create,
+  createFilesystemLocalTrainingResultPublication as createLocalPublication} from "../createFilesystemTrainingResultFileByteStorageAdapter";
 import {encodeTrainingResultInventory as encodeInventory} from "../trainingResultInventory";
 import {createNativeTrainingResultFileByteStorageAdapter as createNative} from "../createNativeTrainingResultFileByteStorageAdapter";
 import {createOriginalTrainingOutputReceiver} from "../../../../runtime/python/client/originalTrainingOutputReceiver";
 import {createFilesystemLocalTrainingModelCopyStorage as createLocalModelCopy} from "../createFilesystemLocalTrainingModelCopyStorage";
-import type {ApprovedLocalTrainingDefinition} from "../../../../../application/ports/model";
+import type {ApprovedLocalTrainingDefinition, TrainingResultFileByteStoragePort} from "../../../../../application/ports/model";
 import {createWorkspaceId} from "../../../../../contracts/workspace";
 
 const publicationId = "a".repeat(32), context = {workspaceId: "workspace-a"};
@@ -91,7 +92,7 @@ async function untilNative(predicate: () => boolean) {
   for (let count = 0; count < 250 && !predicate(); count++) await new Promise(done => setTimeout(done, 1));
   assert.ok(predicate(), "bounded receiver observation did not complete");
 }
-function nativeReceiverFixture(corrupt = false) {
+function nativeReceiverFixture(corrupt = false, storageOverride?: TrainingResultFileByteStoragePort) {
   const f = nativeFixture(), adapter = f.createAdapter();
   const values = [Buffer.from('{"checkpoint":true}'), Buffer.from([1, 2, 3]),
     Buffer.from('{"candidate":true}'), Buffer.from([4, 5, 6, 7])];
@@ -117,12 +118,164 @@ function nativeReceiverFixture(corrupt = false) {
     modelUpdatedAt: "2026-11-26T00:00:00Z", dataset: {datasetId: "inert-dataset", versionId: "inert-version",
       versionDigest: "sha256:" + "a".repeat(64), recipeDigest: "sha256:" + "b".repeat(64)}, proposalDigest: "sha256:" + "c".repeat(64),
     inputs: [{artifactId: "inert-input", role: "train", mediaType: "application/jsonl", digest: "sha256:" + "d".repeat(64), sizeBytes: 4}], recipeSizeBytes: 4};
-  const receiver = createOriginalTrainingOutputReceiver({configuration: {storage: adapter.storage, context: f.actor,
+  const receiver = createOriginalTrainingOutputReceiver({configuration: {storage: storageOverride ?? adapter.storage, context: f.actor,
     publicationId, maximumFiles: 4, maximumFileBytes: 20000, maximumTotalBytes: 40000, maximumDurationMs: 1000}, definition,
     assertCurrent() {}, async assertAllowed() {}, async read() {return {phase: "active", acknowledged, frame: frames[acknowledged]};},
     async acknowledge(sequence) {assert.equal(sequence, acknowledged + 1); acknowledged = sequence; return true;}});
   return {f, adapter, receiver, values, files, frames, acknowledged: () => acknowledged};
 }
+
+function localPublicationFixture(rootDirectory: string) {
+  const f = nativeFixture(), state = {current: true, allowed: true, policyCalls: 0};
+  const options = {rootDirectory, publicationId, context: {...f.actor},
+    limits: {maximumFiles: 4, maximumFileBytes: 20000, maximumTotalBytes: 40000, minimumFreeBytes: 1, maximumDurationMs: 2000},
+    control: {assertCurrent() {assert.ok(state.current);}, async assertAllowed() {state.policyCalls++; assert.ok(state.allowed);}}};
+  const make = () => createLocalPublication(options);
+  return {...f, state, options, make};
+}
+
+test("local publication retains the complete original receiver inventory after real file IO closes", {timeout: 5000}, async () => {
+  await fixture(async root => {
+    const f = localPublicationFixture(root), adapter = f.make(), wire = nativeReceiverFixture(false, adapter.storage);
+    assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+    wire.receiver.start(); await untilNative(() => wire.receiver.isComplete()); await tickNative();
+    assert.equal(wire.acknowledged(), wire.frames.length);
+    assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor), "A publication fence is required.");
+    wire.receiver.abort(); assert.equal(wire.receiver.inspectIoRetirement().phase, "closed");
+    const completed = adapter.originalOwner.inspectFinalizedFiles(f.actor);
+    assert.equal(completed.files.length, 4); assert.ok(Object.isFrozen(completed) && Object.isFrozen(completed.files));
+    for (const file of completed.files) {
+      assert.ok(Object.isFrozen(file));
+      assert.equal(file.name, wire.files[file.fileIndex]!.name); assert.equal(file.role, wire.files[file.fileIndex]!.role);
+      const actual = await readFile(path.join(root, "organizations", f.actor.organizationId, file.key));
+      assert.deepEqual(actual, wire.values[file.fileIndex]); assert.equal(digest(actual), file.expectedSha256);
+    }
+    const again = adapter.originalOwner.inspectFinalizedFiles(f.actor); assert.notEqual(again, completed);
+    for (const field of ["requestId", "workspaceId", "organizationId", "principalId", "correlationId"])
+      assert.throws(() => adapter.originalOwner.inspectFinalizedFiles({...f.actor, [field]: "other"}));
+    assert.equal("encoded" in completed, false); safe(completed);
+  });
+});
+
+test("local publication captures manifest, limits, actor and original policy methods before waits", async () => {
+  await fixture(async root => {
+    const f = localPublicationFixture(root), adapter = f.make(), original = f.inventory();
+    await adapter.storage.preparePublication!(original, f.actor);
+    original.files[0]!.name = "changed"; f.options.context.workspaceId = "other"; f.options.limits.maximumFileBytes = 1;
+    f.options.control.assertAllowed = async () => {throw Error("replacement must not execute");};
+    for (const index of [0, 1]) assert.equal((await adapter.storage.publishResultFile(f.packet(index), f.actor)).ok, true);
+    adapter.originalOwner.fencePublication();
+    const inventory = adapter.originalOwner.inspectFinalizedFiles(f.actor);
+    assert.equal(inventory.files[0]!.name, "config.json"); assert.equal(inventory.totalBytes, 5);
+  });
+});
+
+for (const change of ["index", "size", "hash", "media", "actor", "getter"] as const) {
+  test(`local publication refuses ${change} substitution without creating result files`, async () => {
+    await fixture(async root => {
+      const f = localPublicationFixture(root), adapter = f.make(); await adapter.storage.preparePublication!(f.inventory(), f.actor);
+      const packet = f.packet(0), actor = {...f.actor}; let hooks = 0;
+      if (change === "index") packet.fileIndex = 1;
+      if (change === "size") packet.expectedSizeBytes++;
+      if (change === "hash") packet.expectedSha256 = "sha256:" + "0".repeat(64);
+      if (change === "media") packet.mediaType = "application/octet-stream";
+      if (change === "actor") actor.principalId = "other";
+      if (change === "getter") Object.defineProperty(packet, "content", {enumerable: true, get() {hooks++; throw Error("must not execute");}});
+      assert.equal((await adapter.storage.publishResultFile(packet, actor)).ok, false);
+      assert.equal(hooks, 0); assert.deepEqual(await readdir(root), []);
+      assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+      assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, false);
+    });
+  });
+}
+
+test("local publication denies insufficient free space before contained writes", async () => {
+  await fixture(async root => {
+    const f = localPublicationFixture(root), adapter = f.make();
+    const patched = mock.method(fs, "statfs", async () => ({bsize: 4096n, bavail: 0n})); syncBuiltinESMExports();
+    try {await assert.rejects(adapter.storage.preparePublication!(f.inventory(), f.actor));
+      assert.deepEqual(await readdir(root), []); assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));}
+    finally {patched.mock.restore(); syncBuiltinESMExports();}
+  });
+});
+
+test("local publication retains a late permission operation after its outward deadline", {timeout: 5000}, async () => {
+  await fixture(async root => {
+    const f = localPublicationFixture(root), permission = gate(); let entered = false;
+    f.options.limits.maximumDurationMs = 40;
+    f.options.control.assertAllowed = async () => {entered = true; await permission.promise;};
+    const adapter = f.make(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+    try {
+      const preparation = adapter.storage.preparePublication!(f.inventory(), f.actor); await untilNative(() => entered);
+      await assert.rejects(preparation); assert.ok(retirement.inspect().pendingOperations > 0);
+      assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+      permission.resolve(); await untilNative(() => retirement.inspect().pendingOperations === 0);
+      assert.equal(retirement.inspect().phase, "unconfirmed"); assert.deepEqual(await readdir(root), []);
+      await assert.rejects(adapter.storage.preparePublication!(f.inventory(), f.actor));
+    } finally {permission.resolve();}
+  });
+});
+
+test("local publication stops on withdrawn authority and refuses duplicate acknowledged files", async () => {
+  for (const mode of ["permission", "current", "duplicate", "corrupt"] as const) await fixture(async root => {
+    const f = localPublicationFixture(root), adapter = f.make(); await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    if (mode === "permission") f.state.allowed = false;
+    if (mode === "current") f.state.current = false;
+    if (mode === "duplicate") assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, true);
+    const packet = mode === "corrupt" ? f.packet(0, stream(Buffer.from("!!"))) : f.packet(0);
+    assert.equal((await adapter.storage.publishResultFile(packet, f.actor)).ok, false);
+    adapter.originalOwner.fencePublication(); assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+    assert.equal(adapter.storage.inspectPublication().phase, "unconfirmed");
+  });
+});
+
+test("local publication retains a pending original writer after its outward deadline", {timeout: 5000}, async () => {
+  await fixture(async root => {
+    const f = localPublicationFixture(root), finish = gate(); let entered = false;
+    f.options.limits.maximumDurationMs = 100;
+    const adapter = f.make(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+    await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    const held = async function* () {yield f.values[0]!.subarray(0, 1); entered = true; await finish.promise; yield f.values[0]!.subarray(1);};
+    try {
+      const write = adapter.storage.publishResultFile(f.packet(0, held()), f.actor); await untilNative(() => entered);
+      assert.equal((await write).ok, false); assert.ok(retirement.inspect().pendingOperations > 0);
+      assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+      finish.resolve(); await untilNative(() => retirement.inspect().pendingOperations === 0);
+      assert.equal(retirement.inspect().phase, "unconfirmed");
+      await assert.rejects(readFile(path.join(root, "organizations", f.actor.organizationId, key(0))));
+      assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+    } finally {finish.resolve();}
+  });
+});
+
+test("local publication refuses malformed configuration and manifests without invoking hooks", async () => {
+  await fixture(async root => {
+    for (const field of ["maximumFiles", "maximumFileBytes", "maximumTotalBytes", "minimumFreeBytes", "maximumDurationMs"] as const) {
+      const f = localPublicationFixture(root); f.options.limits[field] = NaN; assert.throws(f.make);
+    }
+    const f = localPublicationFixture(root); let hooks = 0;
+    Object.defineProperty(f.options.control, "assertAllowed", {enumerable: true, get() {hooks++; throw Error("must not execute");}});
+    assert.throws(f.make); assert.equal(hooks, 0);
+    const other = localPublicationFixture(root), adapter = other.make(), manifest = other.inventory(); manifest.files[0]!.name = "../private";
+    await assert.rejects(adapter.storage.preparePublication!(manifest, other.actor)); assert.deepEqual(await readdir(root), []);
+  });
+});
+
+test("local publication refuses noncanonical workspaces before any publication effect", async () => {
+  await fixture(async root => {
+    for (const workspaceId of [" workspace-a", "workspace-a ", " workspace-a ", "", "../workspace-a", "workspace/a", "workspace..a", "X:/private", "https://example.invalid/workspace"]) {
+      const f = localPublicationFixture(root); f.options.context.workspaceId = workspaceId;
+      assert.throws(f.make); assert.equal(f.state.policyCalls, 0); assert.deepEqual(await readdir(root), []);
+    }
+    const f = localPublicationFixture(root), adapter = f.make();
+    await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    for (const index of [0, 1]) assert.equal((await adapter.storage.publishResultFile(f.packet(index), f.actor)).ok, true);
+    adapter.originalOwner.fencePublication();
+    const inventory = adapter.originalOwner.inspectFinalizedFiles(f.actor);
+    assert.equal(inventory.files[0]!.key, key(0));
+    assert.deepEqual(await readFile(path.join(root, "organizations", f.actor.organizationId, inventory.files[0]!.key)), f.values[0]);
+  });
+});
 
 test("finalized native file inventory is scoped, detached and distinct from completion or Save authority", async () => {
   const f = nativeFixture(), adapter = f.createAdapter(), original = f.inventory();

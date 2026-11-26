@@ -157,3 +157,5 @@ This is the explicit trusted-local profile in ADR-0049, not exclusive Native
 custody, a physical shared quota, antirollback or protected crash recovery.
 Those stronger requirements remain pending in the separate storage roadmap.
 There is no strict-profile fallback, global quota credit or host activation.
+
+The explicit local training result-publication factory wraps the existing contained byte writer. It captures the complete allowlisted checkpoint/candidate inventory and original actor/workspace/request, matches each ordered file index/media/size/hash, and checks current permission and actual disk headroom before writing. Finite deadlines retain late original operations; refusal permanently fences this publication without retry or cleanup credit. Only fenced, fully acknowledged, known-closed original IO exposes a detached typed inventory. That inventory records delivered bytes, not current file integrity, the final receiver ACK, original worker retirement, model readiness or Save approval. The qualifying coordinator must still compose those separate checks. Ordinary publication and the exclusive Native adapter retain their existing behavior.

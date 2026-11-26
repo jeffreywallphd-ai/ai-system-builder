@@ -1,15 +1,18 @@
 import type {ApplicationRequestContext} from "../../../../application/ports";
 import {types} from "node:util";
-import type {TrainingResultFileByteStoragePort} from "../../../../application/ports/model";
+import {statfs} from "node:fs/promises";
+import path from "node:path";
+import type {TrainingResultFileByteStoragePort, TrainingResultFinalizedFiles, TrainingResultFileIoRetirement} from "../../../../application/ports/model";
 import type {OrganizationRequestContextProviderPort} from "../../../../application/ports/organization";
 import {isOrganizationId} from "../../../../contracts/organization";
 import {createContractError, readStrictPassiveRecord} from "../../../../contracts/shared";
 import {createStoreArtifactFailureResult, createStoreArtifactSuccessResult} from "../../../../contracts/storage";
-import {createWorkspaceId} from "../../../../contracts/workspace";
+import {createWorkspaceId, isWorkspaceId} from "../../../../contracts/workspace";
 import {writeContainedFileStream, createContainedFileStreamLifetime, inspectContainedFileStreamLifetime,
   type ContainedFileStreamLifetime} from "../../../filesystem-security";
 import {resolveOrganizationStorageKey} from "../organizationStorageScope";
 import {verifiedPublicationStream} from "./verifiedPublicationStream";
+import {captureTrainingResultInventory} from "./trainingResultInventory";
 
 function need(value: unknown): asserts value {
   if (value !== true) throw new Error("Private training publication is unavailable.");
@@ -90,7 +93,7 @@ export function createFilesystemTrainingResultFileByteStorageAdapter(options: {
       }});
     }} : {}),
     inspectPublication() {return {phase, attemptedFileCount: attempted.size, acknowledgedFileCount, declaredPayloadBytes};},
-    async publishResultFile(input, supplied) {
+    async publishResultFile(input: Parameters<TrainingResultFileByteStoragePort["publishResultFile"]>[0], supplied: ApplicationRequestContext) {
       let context: ApplicationRequestContext = {}, checking = false, issued = false;
       try {
         // Inspect only data descriptors: a request accessor cannot run before
@@ -145,4 +148,141 @@ export function createFilesystemTrainingResultFileByteStorageAdapter(options: {
       }
     },
   };
+}
+
+/** Explicit trusted-local composition over the unchanged contained byte writer.
+ * The original owner records acknowledged files, not protected global capacity,
+ * current file integrity, receiver completion, worker exit or Save authority. */
+export function createFilesystemLocalTrainingResultPublication(options: {
+  readonly rootDirectory: string;
+  readonly publicationId: string;
+  readonly context: ApplicationRequestContext;
+  readonly limits: {readonly maximumFiles: number; readonly maximumFileBytes: number;
+    readonly maximumTotalBytes: number; readonly minimumFreeBytes: number; readonly maximumDurationMs: number};
+  readonly control: {assertCurrent(): void; assertAllowed(): Promise<void>};
+}): {readonly storage: TrainingResultFileByteStoragePort; readonly originalOwner: {
+  fencePublication(): void;
+  inspectFinalizedFiles(context: ApplicationRequestContext): TrainingResultFinalizedFiles;
+}} {
+  const record = (raw: unknown, keys: readonly string[]) => {
+    need(!!raw && typeof raw === "object" && !types.isProxy(raw));
+    const value = readStrictPassiveRecord(raw, keys); need(Object.keys(value).length === keys.length); return value;
+  };
+  const settings = record(options, ["rootDirectory", "publicationId", "context", "limits", "control"]);
+  const {rootDirectory, publicationId} = settings;
+  need(typeof rootDirectory === "string" && path.isAbsolute(rootDirectory) && path.resolve(rootDirectory) === rootDirectory &&
+    path.parse(rootDirectory).root !== rootDirectory && !/^[\\/]{2}/.test(rootDirectory) &&
+    typeof publicationId === "string" && /^[a-f0-9]{32}$/.test(publicationId));
+  const scope = readStrictPassiveRecord(settings.context, ["requestId", "correlationId", "organizationId", "principalId", "workspaceId"]);
+  need(Object.values(scope).every(value => value === undefined || typeof value === "string" && value.length > 0 && value.length <= 256));
+  need(isOrganizationId(scope.organizationId) && typeof scope.principalId === "string" && typeof scope.requestId === "string");
+  need(isWorkspaceId(scope.workspaceId)); Object.freeze(scope);
+  const match = (supplied: ApplicationRequestContext) => {
+    need(!!supplied && !types.isProxy(supplied));
+    const actual = readStrictPassiveRecord(supplied, ["requestId", "correlationId", "organizationId", "principalId", "workspaceId"]);
+    need(["requestId", "correlationId", "organizationId", "principalId", "workspaceId"].every(key => actual[key] === scope[key]));
+  };
+  const limits = record(settings.limits, ["maximumFiles", "maximumFileBytes", "maximumTotalBytes", "minimumFreeBytes", "maximumDurationMs"]);
+  need(Object.values(limits).every(positive) && (limits.maximumFiles as number) <= 256 &&
+    (limits.maximumFileBytes as number) <= (limits.maximumTotalBytes as number) && (limits.maximumDurationMs as number) <= 86_400_000 &&
+    (limits.minimumFreeBytes as number) <= Number.MAX_SAFE_INTEGER - (limits.maximumTotalBytes as number));
+  const controls = record(settings.control, ["assertCurrent", "assertAllowed"]);
+  need(Object.values(controls).every(value => typeof value === "function" && !types.isProxy(value)));
+  need(!types.isAsyncFunction(controls.assertCurrent) && !types.isGeneratorFunction(controls.assertCurrent));
+  const assertCurrent = controls.assertCurrent as Function, assertAllowed = controls.assertAllowed as Function;
+  const organization = Object.freeze({organizationId: scope.organizationId, principalId: scope.principalId});
+  const base = createFilesystemTrainingResultFileByteStorageAdapter({rootDirectory, publicationId,
+    maximumFiles: limits.maximumFiles as number, maximumFileBytes: limits.maximumFileBytes as number,
+    maximumTotalBytes: limits.maximumTotalBytes as number, trackIoRetirement: true,
+    organizationContextProvider: {getCurrentOrganizationContext: () => organization}});
+  const io = base.captureIoRetirement!({publicationId}, scope);
+  let inventory: ReturnType<typeof captureTrainingResultInventory> | undefined;
+  let preparing = false, prepareAttempted = false, retirementCaptured = false, fenced = false, uncertain = false;
+  let deadline = 0, acknowledged = 0, attempted = 0, declared = 0;
+  const pending = new Set<object>();
+  const current = () => {
+    need(!fenced && !uncertain && deadline > Date.now());
+    const result: unknown = Reflect.apply(assertCurrent, settings.control, []);
+    if (types.isPromise(result) && !types.isProxy(result) && Object.getPrototypeOf(result) === Promise.prototype &&
+        !Object.getOwnPropertyDescriptor(result, "constructor")) void (async () => {try {await result;} catch {}})();
+    need(result === undefined);
+    need(!fenced && !uncertain && deadline > Date.now());
+  };
+  const track = async <T>(action: () => Promise<T>): Promise<T> => {
+    const token: {original?: unknown; observation?: Promise<unknown>} = {}; need(pending.size < 8); pending.add(token);
+    let original: Promise<T>;
+    try {original = action(); token.original = original; need(types.isPromise(original) && !types.isProxy(original) &&
+      Object.getPrototypeOf(original) === Promise.prototype && !Object.getOwnPropertyDescriptor(original, "constructor"));}
+    catch {uncertain = true; throw new Error("Private training publication is unavailable.");}
+    const observation = (async () => {try {return {ok: true, value: await original};}
+      catch {return {ok: false, value: undefined};} finally {pending.delete(token);}})();
+    token.observation = observation;
+    if (Object.getOwnPropertyDescriptor(original, "then")) {uncertain = true; throw new Error("Private training publication is unavailable.");}
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([observation, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {fenced = true; uncertain = true; io.fencePublication();
+          reject(new Error("Private training publication is unavailable."));}, Math.max(1, deadline - Date.now()));
+      })]);
+      need(result.ok); return result.value as T;
+    } finally {if (timer) clearTimeout(timer);}
+  };
+  const allowed = async () => {current(); need(await track(() => Reflect.apply(assertAllowed, settings.control, [])) === undefined); current();};
+  const headroom = async (remaining: number) => {
+    current(); const volume = await track(() => statfs(rootDirectory, {bigint: true})); current();
+    need(volume.bsize > 0n && volume.bavail >= 0n && volume.bavail * volume.bsize >= BigInt(remaining) + BigInt(limits.minimumFreeBytes as number));
+  };
+  const fence = () => {fenced = true; io.fencePublication();};
+  const inspect = () => {
+    const state = io.inspect();
+    return Object.freeze({...state, phase: uncertain ? "unconfirmed" as const : preparing || pending.size ? "pending" as const : state.phase,
+      pendingOperations: state.pendingOperations + pending.size, publicationUnconfirmed: state.publicationUnconfirmed || uncertain});
+  };
+  const storage: TrainingResultFileByteStoragePort = Object.freeze({
+    captureIoRetirement(input: {readonly publicationId: string}, supplied: ApplicationRequestContext): TrainingResultFileIoRetirement {
+      const request = record(input, ["publicationId"]); match(supplied);
+      need(request.publicationId === publicationId && !retirementCaptured && !prepareAttempted && !fenced);
+      retirementCaptured = true; return Object.freeze({fencePublication: fence, inspect});
+    },
+    async preparePublication(input: Parameters<NonNullable<TrainingResultFileByteStoragePort["preparePublication"]>>[0], supplied: ApplicationRequestContext) {
+      match(supplied); need(!prepareAttempted && !fenced && !uncertain); prepareAttempted = true;
+      preparing = true; deadline = Date.now() + (limits.maximumDurationMs as number);
+      try {
+        const captured = captureTrainingResultInventory(input, {maximumFiles: limits.maximumFiles as number,
+          maximumFileBytes: limits.maximumFileBytes as number, maximumTotalBytes: limits.maximumTotalBytes as number});
+        need(captured.publicationId === publicationId); await allowed(); await headroom(captured.totalBytes); current(); inventory = captured;
+      } catch {uncertain = true; fence(); throw new Error("Private training publication is unavailable.");}
+      finally {preparing = false;}
+    },
+    inspectPublication() {return Object.freeze({phase: uncertain ? "unconfirmed" as const : preparing || pending.size ? "checking" as const : "open" as const,
+      attemptedFileCount: attempted, acknowledgedFileCount: acknowledged, declaredPayloadBytes: declared});},
+    async publishResultFile(input: Parameters<TrainingResultFileByteStoragePort["publishResultFile"]>[0], supplied: ApplicationRequestContext) {
+      try {
+        match(supplied); current(); need(!preparing && pending.size === 0 && !!inventory && attempted === acknowledged);
+        const packet = record(input, ["fileIndex", "mediaType", "content", "expectedSizeBytes", "expectedSha256"]);
+        const file = inventory.files[acknowledged];
+        need(!!file && packet.fileIndex === file.fileIndex && packet.mediaType === file.mediaType &&
+          packet.expectedSizeBytes === file.expectedSizeBytes && packet.expectedSha256 === file.expectedSha256);
+        const source = captureStream(packet.content); attempted++; declared += file.expectedSizeBytes;
+        await allowed(); await headroom(inventory.totalBytes - inventory.files.slice(0, acknowledged).reduce((sum, item) => sum + item.expectedSizeBytes, 0)); current();
+        const content = async function* () {for await (const bytes of source) {current(); yield bytes; current();}};
+        const result = await track(() => base.publishResultFile({fileIndex: file.fileIndex, mediaType: file.mediaType,
+          expectedSizeBytes: file.expectedSizeBytes, expectedSha256: file.expectedSha256, content: content()}, scope)); current();
+        need(result.ok); await allowed(); current(); acknowledged++; return result;
+      } catch {
+        uncertain = true; fence();
+        return createStoreArtifactFailureResult(createContractError("unavailable", "Training result file storage could not be confirmed. Retained data requires recovery."), scope);
+      }
+    },
+  });
+  return Object.freeze({storage, originalOwner: Object.freeze({fencePublication: fence,
+    inspectFinalizedFiles(supplied: ApplicationRequestContext): TrainingResultFinalizedFiles {
+      match(supplied); const state = inspect();
+      need(fenced && !preparing && !uncertain && pending.size === 0 && !!inventory && acknowledged === inventory.files.length &&
+        state.phase === "closed" && state.pendingOperations === 0 && !state.publicationUnconfirmed);
+      return Object.freeze({schema: "training-result-finalized-files-v1" as const, publicationId, totalBytes: inventory.totalBytes,
+        files: Object.freeze(inventory.files.map(file => Object.freeze({...file,
+          key: `workspaces/${scope.workspaceId}/artifacts/training-results/${publicationId}/${file.fileIndex}`})))});
+    },
+  })});
 }
