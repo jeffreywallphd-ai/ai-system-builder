@@ -3760,3 +3760,16 @@ fulfilment and rejection are consumed; private rejection reasons are discarded.
 The session retains the actual operation and observation, and malformed outcomes
 remain unconfirmed. No supplied then/species hook or global rejection-policy
 handler is needed. This profile adds no physical resource or settlement proof.
+
+The private `windowsTrainingResultStore.cc` adapter keeps fresh parent result
+creators in the existing Node host through asynchronous Node-API operations. It
+introduces no service, worker identity or changed controller retirement. The
+trusted caller supplies explicit data/metadata/time limits and current authority
+and shared reservation; the adapter cannot grant them. Entire empty inventories
+are preallocated, ACL-sealed and checked before payload writes. Sequential writes
+finish with flush and complete SHA-256 readback. Original-capability readers
+replace ordinary path reads while exclusive creators remain held. Fencing is not
+IO completion; unknown operations and lost readers retain custody. Known cleanup
+uses only same-episode original handles and never credits capacity. No default
+host loads it. Compiler/no-file ABI evidence is separate from actual native
+file/crash, receiver, global capacity, Save, packaging and host qualification.

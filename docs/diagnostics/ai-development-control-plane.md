@@ -3561,3 +3561,10 @@ routing tests plus the existing focused-runner tests. Unknown/mixed paths, missi
 support and explicitly requested generic focused checks retain conservative fallback.
 The fixed command does not accept caller-supplied commands or qualify Native
 identity, capacity, model loading, Headless execution or any parent criterion.
+
+The closed Windows training-result store scope selects the fixed offline compiler,
+compiled no-file ABI and builder-admission tests. Its
+`native-training-result-store-abi` receipt establishes only those component checks.
+Unknown/mixed paths, missing support and explicit controller coverage retain
+conservative selection. Physical file/crash, application authorization, actual
+shared reservation, receiver, Save and host qualification remain pending.

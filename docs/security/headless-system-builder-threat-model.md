@@ -3504,3 +3504,20 @@ a global process error handler. Retain the actual operation/observer under the
 original session; a refused result remains unconfirmed and never becomes a void
 acknowledgement. An isolated ordinary-Node failure-policy fixture verifies no
 private rejection escapes and no startup/release follows.
+
+The opt-in Windows Node-parent training-result custodian adds a private native
+ABI, not a public tool capability. Forged JavaScript values, paths, manifests,
+counts, bytes and deadlines are rejected before dispatch. Opaque module tags and
+exact environment identity bind live owners; retained original creators deny
+path substitution, mutation and ordinary path reads. The existing World and
+OWNER_RIGHTS ACL seal covers every empty file and the directory before private
+bytes. Sealed inventory, identity, streams, allocations, hashes and readback are
+checked. A single asynchronous operation owns its original buffers and handles
+through completion; cancellation/fencing cannot release pending or uncertain IO.
+Reader loss or unknown effects retain the store. Only exact known creators from
+that live episode can be discarded after fencing and reader retirement. There
+is no recovery, historical-root inspection, ACL reset, capacity credit or Model
+registration. SDK/build inputs are fixed, pinned and offline. Same-process
+trusted-caller compromise, actual native file/crash behavior, global quota and
+durable accounting, receiver/Save binding, packaging and host wiring remain
+unqualified; compiler and no-file ABI checks supply none of those guarantees.

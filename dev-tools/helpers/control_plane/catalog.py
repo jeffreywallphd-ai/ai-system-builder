@@ -692,7 +692,39 @@ TRAINING_STORAGE_BUDGET_NEIGHBORS = (
     "modules/adapters/persistence/model/tests/model-registry-pagination.unit.test.ts",
 )
 
+NATIVE_TRAINING_RESULT_SCOPE = (
+    "modules/adapters/filesystem-security/windowsTrainingResultStore.cc",
+    "modules/adapters/filesystem-security/README.md",
+    "modules/adapters/runtime/python/tests/windows-training-result-store.unit.test.mjs",
+    "dev-tools/scripts/native/build_windows_training_result_store.py",
+    "dev-tools/scripts/native/tests/test_build_windows_training_result_store.py",
+    "dev-tools/config/windows-training-result-sdk.json",
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_windows_training_result_store.py",
+    "dev-tools/README.md", "dev-tools/helpers/README.md",
+    "docs/diagnostics/ai-development-control-plane.md",
+    "docs/architecture/runtime-model.md",
+    "docs/security/headless-system-builder-threat-model.md",
+    "docs/context/packs/runtime.pack.md",
+)
+NATIVE_TRAINING_RESULT_CORE = tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (0, 2, 3, 4, 5))
+
 PUBLISHED_FORM_CHECKS = {
+    "native-training-result-store-abi": {
+        "automatic_sources": NATIVE_TRAINING_RESULT_CORE,
+        "automatic_required_files": NATIVE_TRAINING_RESULT_SCOPE,
+        "sources": NATIVE_TRAINING_RESULT_SCOPE,
+        "command": (NATIVE_TRAINING_RESULT_SCOPE[2], "--native-abi"),
+        "timeout": 240,
+    },
+    "native-training-result-store-build-unit": {
+        "automatic_sources": NATIVE_TRAINING_RESULT_CORE,
+        "automatic_required_files": NATIVE_TRAINING_RESULT_SCOPE,
+        "sources": NATIVE_TRAINING_RESULT_SCOPE,
+        "interpreter": "python",
+        "command": (NATIVE_TRAINING_RESULT_SCOPE[4],),
+        "timeout": 120,
+    },
     "headless-training-storage-budget-neighbors": {
         "automatic_sources": TRAINING_STORAGE_BUDGET_CORE,
         "automatic_required_files": TRAINING_STORAGE_BUDGET_SCOPE + TRAINING_STORAGE_BUDGET_NEIGHBORS,
@@ -4321,7 +4353,7 @@ def definitions(root: Path) -> list[dict]:
         {"id": "roadmap", "patterns": ["skills/manage-implementation-roadmaps/*"], "argv": [py, "-B", "skills/manage-implementation-roadmaps/tests/test_roadmap.py"], "timeout": 120},
         {"id": "architecture", "patterns": ["modules/*", "apps/*", "dev-tools/scripts/architecture/*"], "argv": [node, "dev-tools/scripts/architecture/check-module-dependencies.mjs"], "timeout": 120},
         {"id": "focused-tests", "patterns": ["modules/*", "apps/*", "dev-tools/scripts/*", "dev-tools/config/*"], "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py"], "timeout": 300},
-        {"id": "dependencies", "patterns": ["package.json", "package-lock.json", "apps/*/package.json", ".github/workflows/*", "deployments/*", "dev-tools/vendor/*", "dev-tools/helpers/requirements-tests.txt", "*webpack*", "*tsconfig*", "dev-tools/scripts/native/build_windows_ocr.py", "dev-tools/scripts/native/build_windows_ocr.cjs", "dev-tools/scripts/native/build_windows_model_file_identity.py", "apps/desktop/forge.config.js"], "argv": [node, "dev-tools/scripts/security/check-dependency-security.mjs"], "timeout": 300},
+        {"id": "dependencies", "patterns": ["package.json", "package-lock.json", "apps/*/package.json", ".github/workflows/*", "deployments/*", "dev-tools/vendor/*", "dev-tools/helpers/requirements-tests.txt", "*webpack*", "*tsconfig*", "dev-tools/scripts/native/build_windows_ocr.py", "dev-tools/scripts/native/build_windows_ocr.cjs", "dev-tools/scripts/native/build_windows_model_file_identity.py", "dev-tools/scripts/native/build_windows_training_result_store.py", "dev-tools/config/windows-training-result-sdk.json", "apps/desktop/forge.config.js"], "argv": [node, "dev-tools/scripts/security/check-dependency-security.mjs"], "timeout": 300},
         {"id": "evaluation", "patterns": ["dev-tools/agent-evals/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_evaluations.py"], "timeout": 120},
         {"id": "repository-policy", "patterns": [".gitignore", ".gitattributes", "dev-tools/helpers/*.json"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "managed-saved-state-postgres-migration", "patterns": ["migrations/postgres/0003-index-workspace-saved-state.sql"],
@@ -4732,6 +4764,20 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_training_storage_budget.", "-k", "test_control_plane_focused."]
+    native_store = PUBLISHED_FORM_CHECKS["native-training-result-store-abi"]
+    if (paths and set(paths) <= set(NATIVE_TRAINING_RESULT_SCOPE)
+            and set(paths).intersection(NATIVE_TRAINING_RESULT_CORE)
+            and _automatic_files_available(root, native_store)):
+        focused_check = next((check for check in selected if check["id"] == "focused-tests"), None)
+        if focused_check is not None:
+            # Real compiled ABI has its own selected check above. The program
+            # accepts executor --affected metadata; no node --test CLI confusion.
+            focused_check["argv"] = ["node", NATIVE_TRAINING_RESULT_SCOPE[2]]
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None and "control-plane" not in explicit_required:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_windows_training_result_store.", "-k", "test_control_plane_focused."]
     value = {"schema_version": "check-plan-v1", "candidate": candidate, "catalog_digest": policy_digest(root, checks), "changed_paths": paths, "coverage": covered, "selected": selected, "deferred": [c["id"] for c in checks if c not in selected]}
     value["plan_digest"] = digest(value)
     return value

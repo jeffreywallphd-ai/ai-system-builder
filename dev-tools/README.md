@@ -2367,3 +2367,11 @@ checks run no engine/model; a real result still needs current reviewed source,
 runtime/package witnesses, fresh owned native admission and the actual UI run.
 Keep all prior evidence and native limits. Do not adopt old temporary trees or
 reuse a consumed retry. This feature check does not repeat accepted accuracy.
+
+The private Windows training-result custodian uses the fixed offline builder
+`python -B dev-tools/scripts/native/build_windows_training_result_store.py --plan`.
+It reuses the installed MSVC/SDK and existing 2 GiB compiler job. Exact cached
+Node SDK files are pinned in `dev-tools/config/windows-training-result-sdk.json`;
+there is no automatic fetch or runtime change. Run the matching compiled no-file
+ABI check with `node modules/adapters/runtime/python/tests/windows-training-result-store.unit.test.mjs --native-abi`.
+Physical file/crash, receiver, Save and host qualification remain separate.

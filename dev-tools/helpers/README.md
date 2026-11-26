@@ -320,3 +320,9 @@ routing tests plus the existing focused-runner tests. Unknown/mixed paths, missi
 support and explicitly requested generic focused checks retain conservative fallback.
 The fixed command does not accept caller-supplied commands or qualify Native
 identity, capacity, model loading, Headless execution or any parent criterion.
+
+The `native-training-result-store-abi` and `native-training-result-store-build-unit`
+checks build and test the private Windows Node-parent component with fixed inputs.
+Only its complete declared scope narrows generic focused/controller selection;
+unknown or missing support keeps conservative checks. These checks do not run a
+model, mutate training files or qualify a parent roadmap criterion.
