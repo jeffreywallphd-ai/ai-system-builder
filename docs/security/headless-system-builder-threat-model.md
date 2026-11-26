@@ -3430,3 +3430,15 @@ These local controlled cases grant no real exclusive capacity, stable Native
 fence, resource token, readiness, producer activation, protected parent/crash
 custody, permanent retirement, Save or host qualification. Those remain pending;
 no model accuracy, physical Native effects or full-system tests are performed.
+
+The private fixed composer uses only that original v2 lease's layout to construct
+the existing file/resource/producer chain. It pins original APIs and initializers,
+uses direct allocation and rejects foreign, legacy, consumed or competing leases
+and mismatched profiles before effects. Bound duration by the existing original
+Job. Keep its nonblocking lock through final quiet-binding validation; retain the
+existing Files latch after partial construction. Preserve the allowed initial
+executor handoff and later exact-thread/one-use controls. Invoke no reservation,
+admission, IO, SDK or executor callback during construction. The actual externally
+owned reservation and separately qualified profile remain mandatory: no data
+correlation, local binding or inert fixture constitutes physical readiness or
+capacity, and no default producer is activated.

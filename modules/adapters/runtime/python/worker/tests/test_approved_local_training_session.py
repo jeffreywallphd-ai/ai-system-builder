@@ -1080,4 +1080,139 @@ finally:
         self.assertEqual(result.returncode, 0, result.stderr[-8192:].decode(errors="replace"))
 
 
+class ConfiguredOriginalTrainingFileProducerTests(unittest.TestCase):
+    def fixture(self, *, configured=True):
+        from . import test_native_training_model_graph as fixture
+        case = fixture.TrainingInputCopyTests(); self.addCleanup(case.doCleanups)
+        source, lease, staged, _, control, kernel, *_ = case.fixture(
+            count=2, native_module=model_native, worker_configuration_data=configured)
+        # Only fixture-owned passive bindings are removed after the existing
+        # original retirement assertions; this is no production cleanup/credit.
+        self.addCleanup(lambda: session._training_files._leases.pop(lease, None))
+        profile = session.NativeTrainingProfile("synthetic-software-only", model_native.profile_digest(source.profile), 30)
+        return source, lease, staged, control, kernel, profile
+
+    def compose(self, row, **options):
+        _, lease, _, control, _, profile = row
+        return session.compose_original_training_file_producer(lease, profile, control, control, **options)
+
+    def test_genuine_configuration_composes_passively_and_captures_the_exact_resource_once(self):
+        row = self.fixture(); source, lease, _, control, kernel, _ = row
+        before = len(kernel.calls); calls = []
+        # No resource/admission callback may run at this binding boundary.
+        def admitted(actor): calls.append("admission"); return True
+        with patch.object(type(control), "assert_current", admitted):
+            producer = self.compose(row)
+            resource = producer.capture(deepcopy(source.definition))
+        self.assertEqual(calls, []); self.assertEqual(len(kernel.calls), before)
+        self.assertEqual(control.charges, []); self.assertEqual(control.retained, [])
+        self.assertIs(type(resource), session.OriginalTrainingFileResources)
+        original = resource.original_files(); book = session._training_files._owners[original]
+        received = model_native.read_original_training_worker_configuration(lease)
+        self.assertEqual(book["input_configuration"], received["inputCopy"])
+        self.assertEqual(book["output_configuration"], received["outputFamily"])
+        self.assertIs(book["lease"], lease); self.assertFalse(resource.settle())
+        with self.assertRaises(session.TrainingSessionError): producer.capture(source.definition)
+        with self.assertRaises(session.TrainingSessionError): self.compose(row)
+        self.assertIs(session._training_files._leases[lease], original)
+        self.assertEqual(len(kernel.calls), before)
+
+    def test_received_layout_drives_real_finite_file_seal_joint_borrow_and_retained_output(self):
+        from time import monotonic
+        from ..tasks import original_training_output_delivery as delivery
+        row = self.fixture(); source, lease, staged, control, kernel, _ = row
+        received = model_native.read_original_training_worker_configuration(lease)
+        queue = delivery.OriginalTrainingOutputDelivery(TASK, maximum_files=64,
+            maximum_payload_bytes=received["limits"]["worker-output"], deadline=monotonic() + 30)
+        producer = self.compose(row, delivery=queue); resource = producer.capture(source.definition)
+        self.assertEqual(resource.prepare(), "ready")
+        original = deepcopy(staged); payload = resource.seal_inputs(staged)
+        self.assertEqual(staged, original)
+        expected = received["outputFamily"]["outputs"][-1]
+        self.assertEqual(payload.output["outputDirectory"], expected["freshParent"] + "\\" + expected["freshName"])
+        self.assertEqual(control.charges, [received["limits"]["inputs"]])
+        with resource.borrow() as view:
+            model, inputs = model_native.resolve_original_training_references(view, payload.model_dump(mode="json"))
+            self.assertEqual(model, source.physical_path); self.assertEqual(len(inputs), 2)
+            self.assertTrue(all("\\training-inputs\\" in name for name in inputs))
+            self.assertIs(delivery.capture_original_output_delivery(view, payload.model_dump(mode="json")), queue)
+        self.assertEqual(source.phase, "spent"); self.assertFalse(resource.settle())
+        self.assertEqual(control.retained, [])
+        self.assertTrue(all(not handle.closed for handle in source.guards))
+        self.assertEqual(resource.original_files().local_status()["globalRetirement"], "not-qualified")
+
+    def test_legacy_foreign_and_consumed_leases_have_no_composition_fallback(self):
+        legacy = self.fixture(configured=False)
+        before = len(legacy[4].calls)
+        with self.assertRaises(session.TrainingSessionError): self.compose(legacy)
+        self.assertEqual(len(legacy[4].calls), before)
+        row = self.fixture(); source, lease, staged, control, kernel, profile = row
+        before = len(kernel.calls)
+        for foreign in (object(), {}, object.__new__(model_native.OriginalInheritedModelLease)):
+            with self.assertRaises(session.TrainingSessionError):
+                session.compose_original_training_file_producer(foreign, profile, control, control)
+        self.assertEqual(len(kernel.calls), before)
+        with lease.borrow(staged["payload"]): pass
+        before = len(kernel.calls)
+        with self.assertRaises(session.TrainingSessionError): self.compose(row)
+        self.assertEqual(len(kernel.calls), before)
+        self.assertNotIn(lease, session._training_files._leases)
+        self.assertTrue(all(not handle.closed for handle in source.guards))
+
+    def test_wrong_profile_and_excess_duration_do_not_consume_the_legitimate_binding(self):
+        row = self.fixture(); source, lease, _, control, kernel, profile = row
+        before = len(kernel.calls)
+        for supplied in (session.NativeTrainingProfile("synthetic", DIGEST, 30),
+                         session.NativeTrainingProfile("synthetic", profile.fingerprint, 31), {}, object()):
+            with self.assertRaises(session.TrainingSessionError):
+                session.compose_original_training_file_producer(lease, supplied, control, control)
+        self.assertNotIn(lease, session._training_files._leases)
+        self.assertEqual(len(kernel.calls), before)
+        producer = self.compose(row)
+        self.assertIs(type(producer.capture(source.definition)), session.OriginalTrainingFileResources)
+
+    def test_replaced_original_helpers_and_initializers_are_not_invoked(self):
+        row = self.fixture(); calls = []; before = len(row[4].calls)
+        def replaced(*args, **kwargs): calls.append("replacement"); raise AssertionError("Replacement ran")
+        changes = ((model_native, "read_original_training_worker_configuration"),
+                   (model_native, "_capture_original_training_file_lease"),
+                   (session._training_files.OriginalTrainingFiles, "__init__"),
+                   (session.OriginalTrainingFileResources, "__init__"),
+                   (session.OriginalTrainingFileProducer, "__init__"))
+        for owner, name in changes:
+            with self.subTest(name=name), patch.object(owner, name, replaced):
+                with self.assertRaises(session.TrainingSessionError): self.compose(row)
+        self.assertEqual(calls, []); self.assertEqual(len(row[4].calls), before)
+        self.assertNotIn(row[1], session._training_files._leases)
+        self.assertIs(type(self.compose(row)), session.OriginalTrainingFileProducer)
+
+    def test_competing_original_lock_holder_refuses_without_waiting_or_claiming_files(self):
+        row = self.fixture(); state = model_native._model_leases[row[1]]
+        held, released = Event(), Event()
+        def hold():
+            with state["lock"]:
+                held.set(); released.wait(5)
+        thread = Thread(target=hold); thread.start()
+        try:
+            self.assertTrue(held.wait(3)); before = len(row[4].calls)
+            with self.assertRaises(session.TrainingSessionError): self.compose(row)
+            self.assertEqual(len(row[4].calls), before)
+            self.assertNotIn(row[1], session._training_files._leases)
+        finally:
+            released.set(); thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertIs(type(self.compose(row)), session.OriginalTrainingFileProducer)
+
+    def test_existing_bootstrap_to_file_executor_handoff_and_later_thread_guard_are_preserved(self):
+        from concurrent.futures import ThreadPoolExecutor
+        row = self.fixture(); source = row[0]; before = len(row[4].calls)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            producer = executor.submit(self.compose, row).result(timeout=10)
+            with self.assertRaises(session.TrainingSessionError): producer.capture(source.definition)
+            resource = executor.submit(producer.capture, source.definition).result(timeout=10)
+            self.assertEqual(executor.submit(resource.prepare).result(timeout=10), "ready")
+            self.assertEqual(len(row[4].calls), before)
+        self.assertFalse(resource.settle())
+
+
 if __name__ == "__main__": unittest.main()

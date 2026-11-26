@@ -2674,3 +2674,14 @@ remain separate pending work. Inert ABI tests create no real files or model.
 The passive copy keeps the original nonblocking lease lock until final
 unentered/quiet-owner checks pass. It rechecks after helpers, including legitimate
 same-thread borrow reentry, and refuses metadata after real lease consumption.
+
+`compose_original_training_file_producer` binds the existing protected file,
+resource and producer components directly from that exact v2 lease configuration.
+It takes an explicit profile and already owned reservation/admission, with optional
+existing output delivery; no caller layout or legacy fallback is accepted. Profile
+fingerprint and duration must match the original Job's permitted scope. Original
+API pins, direct allocation, the nonblocking lease lock and final revalidation
+keep construction passive and once-only. The first Files binding still permits
+the existing bootstrap-to-file-executor handoff. No resource/admission callback,
+file/Native IO, SDK or executor is invoked during composition. This helper neither
+configures the app nor qualifies capacity, physical readiness or global retirement.

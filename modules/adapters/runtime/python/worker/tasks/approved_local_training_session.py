@@ -968,3 +968,72 @@ _FILE_PRODUCER_API = tuple((base, name, type.__getattribute__(base, "__dict__").
     for base in _FILE_PRODUCER_MRO
     for name in ("__getattribute__", "__getattr__", "__hash__", "__eq__", "__dict__",
         "__init__", "profile", "capture"))
+
+
+_FILE_COMPOSITION_CONFIGURATION = native.read_original_training_worker_configuration
+_FILE_COMPOSITION_LEASE = native._capture_original_training_file_lease
+_FILE_COMPOSITION_FILE_API = _training_files._api
+_FILE_COMPOSITION_FILE_INIT = _FILE_TYPE.__init__
+_FILE_COMPOSITION_RESOURCE_TYPE = OriginalTrainingFileResources
+_FILE_COMPOSITION_RESOURCE_API = _file_resource_api
+_FILE_COMPOSITION_RESOURCE_INIT = OriginalTrainingFileResources.__init__
+_FILE_COMPOSITION_PRODUCER_TYPE = OriginalTrainingFileProducer
+_FILE_COMPOSITION_PRODUCER_API = _file_producer_api
+_FILE_COMPOSITION_PRODUCER_INIT = OriginalTrainingFileProducer.__init__
+
+
+def compose_original_training_file_producer(lease, profile, reservation, admission, *, delivery=None):
+    """Bind existing protected components from the original private layout.
+
+    Reservation/admission must already be genuinely owned by trusted composition.
+    This passive helper creates no capacity, readiness, activation or IO. The
+    existing Files latch retains a partial binding rather than minting a retry.
+    """
+    try:
+        _need(native.read_original_training_worker_configuration is _FILE_COMPOSITION_CONFIGURATION
+              and native._capture_original_training_file_lease is _FILE_COMPOSITION_LEASE
+              and _training_files.OriginalTrainingFiles is _FILE_TYPE
+              and _training_files._api is _FILE_COMPOSITION_FILE_API
+              and _FILE_TYPE.__init__ is _FILE_COMPOSITION_FILE_INIT
+              and OriginalTrainingFileResources is _FILE_COMPOSITION_RESOURCE_TYPE
+              and _file_resource_api is _FILE_COMPOSITION_RESOURCE_API
+              and OriginalTrainingFileProducer is _FILE_COMPOSITION_PRODUCER_TYPE
+              and _file_producer_api is _FILE_COMPOSITION_PRODUCER_API)
+        # Bypass class __new__ hooks; the existing API pins cover each actual
+        # initializer and passive lookup before any weak-key record is touched.
+        producer = object.__new__(_FILE_COMPOSITION_PRODUCER_TYPE)
+        resource = object.__new__(_FILE_COMPOSITION_RESOURCE_TYPE)
+        _FILE_COMPOSITION_PRODUCER_API(producer)
+        _FILE_COMPOSITION_RESOURCE_API(resource)
+        _FILE_COMPOSITION_FILE_API()
+        _need(type(profile) is _FILE_PRODUCER_PROFILE_TYPE)
+        values = _copy(object.__getattribute__(profile, "__dict__"))
+        _record(values, ("profile_id", "fingerprint", "maximum_duration_seconds"))
+        captured_profile = _FILE_PRODUCER_PROFILE_TYPE(**values)
+        configuration = _FILE_COMPOSITION_CONFIGURATION(lease)
+        _need(type(configuration) is dict
+              and configuration["profileFingerprint"] == captured_profile.fingerprint)
+        state, source_record, source, _ = _FILE_COMPOSITION_LEASE(lease)
+        lock = state["lock"]
+        _need(lock.acquire(blocking=False))
+        try:
+            current = _FILE_COMPOSITION_LEASE(lease)
+            _need(all(actual is original for actual, original in
+                      zip(current[:3], (state, source_record, source))))
+            _need(_same(_FILE_COMPOSITION_CONFIGURATION(lease), configuration))
+            job = _copy(object.__getattribute__(source, "__dict__")["profile"])
+            _need(type(job["maximumDurationMs"]) is int
+                  and captured_profile.maximum_duration_seconds * 1000 <= job["maximumDurationMs"])
+            original_files = object.__new__(_FILE_TYPE)
+            _FILE_COMPOSITION_FILE_INIT(original_files, lease,
+                configuration["inputCopy"], configuration["outputFamily"], reservation, admission, delivery=delivery)
+            _FILE_COMPOSITION_RESOURCE_INIT(resource, original_files)
+            _FILE_COMPOSITION_PRODUCER_INIT(producer, resource, captured_profile)
+            # Keep the original lock through final revalidation. A changed or
+            # consumed binding cannot return a usable producer or be retried.
+            _need(_same(_FILE_COMPOSITION_CONFIGURATION(lease), configuration))
+            return producer
+        finally:
+            lock.release()
+    except Exception:
+        raise TrainingSessionError() from None

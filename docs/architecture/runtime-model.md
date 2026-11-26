@@ -3697,3 +3697,21 @@ The nonblocking original lease lock remains held through the final unentered,
 quiet-owner validation and returned copy. Recheck after helper calls as well:
 same-thread reentry can consume a real lease even while an RLock is held. Neither
 ordinary interleaving nor reentry may return configuration for a consumed lease.
+
+The fixed private `compose_original_training_file_producer` connects that exact
+configuration to the existing Files, FileResources and FileProducer. It accepts
+no layout override or v1 fallback. Snapshot the explicit profile, correlate its
+fingerprint and bound its duration by the existing original Job. Keep the original
+nonblocking lease lock through construction and final quiet-binding checks.
+Direct original allocation and pinned initializers prevent substituted creation
+hooks from becoming effects. Construction calls no resource/admission callback,
+Native IO, SDK or executor. The first genuine Files binding establishes its
+existing executor, preserving startup-to-executor handoff; later capture/seal and
+borrow keep their original thread and one-use controls. A partial binding retains
+its existing latch and cannot be replaced by a retry.
+
+The caller still must own actual reservation/admission and independently qualify
+the profile. This connection is not installed by a default or boot path and
+supplies no capacity, readiness, protected parent/crash custody, global retirement,
+Save or host qualification. Its inert-ABI integration checks exercise the original
+finite file workflow without actual filesystem/model or quality tests.
