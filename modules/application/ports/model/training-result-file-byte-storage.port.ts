@@ -26,12 +26,17 @@ export interface TrainingResultFileByteStoragePort {
   /** Optional trusted complete-inventory preparation. Called once after wire
    * validation, before the first manifest acknowledgement permits file bytes.
    * The caller tracks the original operation through abort/deadline. Returning
-   * undefined confirms only this local preparation, never capacity or custody. */
+   * undefined confirms only this local preparation, never capacity or custody.
+   * Groups, roles and allowlisted names are validated metadata labels; they do
+   * not select physical paths or grant model registration or Save authority. */
   preparePublication?(input: {
     readonly publicationId: string;
     readonly totalBytes: number;
     readonly files: readonly Readonly<{
       fileIndex: number;
+      groupIndex: number;
+      name: string;
+      role: "checkpoint" | "candidate";
       mediaType: "application/json" | "application/octet-stream";
       expectedSizeBytes: number;
       expectedSha256: string;

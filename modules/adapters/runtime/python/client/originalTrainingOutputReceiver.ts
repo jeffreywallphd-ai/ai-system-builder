@@ -66,7 +66,7 @@ const exact = (value: unknown, keys: readonly string[]) => {
 const names = new Set(["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
   "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors",
   "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"]);
-type File = Readonly<{fileIndex: number; groupIndex: number; name: string; sizeBytes: number; sha256: string; role: string}>;
+type File = Readonly<{fileIndex: number; groupIndex: number; name: string; sizeBytes: number; sha256: string; role: "checkpoint" | "candidate"}>;
 
 /** Called synchronously by the session before its first startup await. Only
  * trusted composition supplies storage; wire frames can never select it. */
@@ -234,6 +234,7 @@ export function createOriginalTrainingOutputReceiver(options: {
     if (prepare !== undefined) {
       const inventory = Object.freeze({publicationId: publicationId as string, totalBytes: declared.totalBytes,
         files: Object.freeze(declared.files.map(file => Object.freeze({fileIndex: file.fileIndex,
+          groupIndex: file.groupIndex, name: file.name, role: file.role,
           mediaType: file.name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
           expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256})))});
       // The manifest ACK releases the worker's first data frame. Preparation

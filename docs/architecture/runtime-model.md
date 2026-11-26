@@ -3794,7 +3794,10 @@ recovery policy or default activation, and permits no weaker live-only mode.
 Before releasing the first result byte, the original receiver can call the trusted
 storage port's optional `preparePublication`. It captures the method before
 startup and sends only the complete validated, detached, frozen inventory and
-configured publication context. The original preparation Promise must settle with
+configured publication context. The inventory preserves every file's group,
+checkpoint/candidate role, allowlisted name, index, media type, size and hash.
+Names remain metadata labels, not physical paths or registration authority.
+The original preparation Promise must settle with
 exactly `undefined`, with fresh permission/currentness checks, before the manifest
 ACK. Abort and deadline fence the effect without retiring pending IO. A late
 completion cannot resume delivery. Legacy ports retain the previous path. This

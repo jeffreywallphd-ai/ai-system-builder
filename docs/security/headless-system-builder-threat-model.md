@@ -3541,7 +3541,9 @@ controlled-environment component; see ADR0043/0047 and the runtime architecture.
 The private result receiver accepts an optional trusted full-inventory preparation
 method. It captures the passive method before startup, validates the worker's
 entire manifest, copies and freezes only bounded metadata, and awaits the original
-operation before the manifest ACK permits data. A rejection, invalid result,
+operation before the manifest ACK permits data. The prepared inventory preserves
+each validated group, checkpoint/candidate role, allowlisted name, index, media
+type, size and hash. Names are labels, not paths or registration authority. A rejection, invalid result,
 unknown operation, timeout or stale permission cannot issue that ACK. Pending
 preparation survives local abort in IO accounting; only its actual settlement
 retires the operation. No worker frame selects a backend or supplies permission.

@@ -365,16 +365,21 @@ test("caught second iterator acquisition permanently fences the original consume
     assert.equal(f.published, 0); assert.equal(f.completed, false); assert.deepEqual(f.acks, [1]); assert.equal(await f.session.settle(), false);
   } finally {await f.close();}
 });
-for (const mode of ["task", "unknown-field", "group", "role", "name", "size", "hash", "offset", "sequence", "base64", "eof", "totals", "provisional"])
+for (const mode of ["task", "unknown-field", "group", "role", "name", "unknown-name", "duplicate-name", "no-candidate", "mixed-role", "size", "hash", "offset", "sequence", "base64", "eof", "totals", "provisional"])
   test(`malformed ${mode} fences one receive flight without replay or release`, async () => {
-    const f = await fixture();
+    const f = await fixture(); let preparations = 0;
     try {
+      f.storage.preparePublication = async () => {preparations++;};
       const manifest = f.input.rows[0]!, data = f.input.rows[1]!, eof = f.input.rows.find(row => row.kind === "file-eof")!, end = f.input.rows[f.input.rows.length - 1]!;
       if (mode === "task") manifest.taskId = workspace;
       if (mode === "unknown-field") manifest.extra = "denied";
       if (mode === "group") manifest.files[0].groupIndex = 1;
       if (mode === "role") manifest.files[0].role = "candidate";
       if (mode === "name") manifest.files[0].name = "../escape";
+      if (mode === "unknown-name") manifest.files[0].name = "unlisted.bin";
+      if (mode === "duplicate-name") manifest.files[1].name = manifest.files[0].name;
+      if (mode === "no-candidate") manifest.files.forEach((file: any) => {file.role = "checkpoint";});
+      if (mode === "mixed-role") manifest.files[2].role = "checkpoint";
       if (mode === "size") manifest.files[0].sizeBytes = 32769;
       if (mode === "hash") manifest.files[0].sha256 = "sha256:" + "0".repeat(64);
       if (mode === "offset") data.offset = 1;
@@ -387,6 +392,7 @@ for (const mode of ["task", "unknown-field", "group", "role", "name", "size", "h
       assert.equal(f.completed, false); assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
       const count = f.calls.length; await tick(); await tick(); assert.equal(f.calls.length, count);
       assert.equal(new Set(f.publications).size, f.publications.length); assert.ok(f.publications.length <= 4);
+      assert.equal(preparations, ["task", "unknown-field", "group", "role", "name", "unknown-name", "duplicate-name", "no-candidate", "mixed-role", "size"].includes(mode) ? 0 : 1);
     } finally {await f.close();}
   });
 test("lost accepted publication is retained and never reissued or acknowledged", async () => {
@@ -453,23 +459,32 @@ function directReceiver(f: Awaited<ReturnType<typeof fixture>>, hooks: {
 }
 
 test("complete frozen inventory is prepared once before the manifest ACK releases any file data", async () => {
-  const f = await fixture(), gate = deferred(), entered = deferred(); let preparations = 0, reads = 0;
+  const f = await fixture(), gate = deferred(); let preparations = 0, reads = 0;
+  let prepared: Parameters<NonNullable<TrainingResultFileByteStoragePort["preparePublication"]>>[0] | undefined;
   try {
     f.storage.preparePublication = async (inventory, context) => {
       preparations++; assert.equal(context.workspaceId, workspace); assert.ok(Object.isFrozen(context));
       assert.equal(inventory.publicationId, publicationId); assert.equal(inventory.totalBytes, f.input.bytes.reduce((n, b) => n + b.length, 0));
       assert.ok(Object.isFrozen(inventory)); assert.ok(Object.isFrozen(inventory.files));
       assert.deepEqual(inventory.files, f.input.files.map(file => ({fileIndex: file.fileIndex,
+        groupIndex: file.groupIndex, name: file.name, role: file.role,
         mediaType: file.name.endsWith(".json") ? "application/json" : "application/octet-stream",
         expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256})));
       assert.ok(inventory.files.every(Object.isFrozen));
       assert.throws(() => {(inventory.files[0] as any).expectedSizeBytes++;});
-      entered.resolve(); await gate.promise;
+      assert.throws(() => {(inventory.files[0] as any).groupIndex = 9;});
+      assert.throws(() => {(inventory.files[0] as any).name = "redirected.bin";});
+      assert.throws(() => {(inventory.files[0] as any).role = "candidate";});
+      prepared = inventory; await gate.promise;
     };
     const receiver = directReceiver(f, {read: async () => {reads++; return {phase: "active", acknowledged: 0, frame: f.input.rows[0]};},
       acknowledge: async () => {f.acks.push(1); throw Error("stop after preparation");}});
     f.storage.preparePublication = async () => {throw Error("replacement must not run");};
-    receiver.start(); await entered.promise; await tick();
+    receiver.start(); await until(() => preparations === 1); await tick();
+    assert.ok(prepared);
+    f.input.files[0]!.groupIndex = 9; f.input.files[0]!.name = "../redirected"; f.input.files[0]!.role = "candidate";
+    assert.equal(prepared.files[0]!.groupIndex, 0); assert.equal(prepared.files[0]!.name, "config.json");
+    assert.equal(prepared.files[0]!.role, "checkpoint");
     assert.equal(reads, 1); assert.deepEqual(f.acks, []); assert.equal(f.published, 0);
     assert.equal(receiver.inspectIoRetirement().pendingOperations, 1);
     gate.resolve(); await until(() => receiver.inspectIoRetirement().drainFinished);

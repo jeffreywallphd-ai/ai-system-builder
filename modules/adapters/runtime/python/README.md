@@ -1482,8 +1482,9 @@ real configured-store budget adapter, with no model or Native execution.
 
 The result storage port may also provide private `preparePublication`. The
 receiver captures it before startup. After validating the whole wire manifest,
-it supplies a detached frozen inventory of file indices, media types, sizes and
-hashes, plus the configured publication and exact total. The original preparation
+it supplies a detached frozen inventory of file indices, groups, roles, allowlisted
+names, media types, sizes and hashes, plus the configured publication and exact total.
+Names are metadata labels, not physical paths or model registration authority. The original preparation
 operation must return `undefined` under current permission and deadline before
 the manifest ACK releases any file data. Preparation is never repeated per file.
 Timeout, abort and withdrawn authority cannot acknowledge late completion. The

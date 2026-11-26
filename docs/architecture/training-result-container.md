@@ -116,7 +116,9 @@ limits and safe-integer layout overflow. Actual files require the explicit small
 source/review-bound Windows profile after the source checkpoint. Earlier failures
 remain recorded. No model accuracy tests are repeated for this workflow work.
 
-Full receiver role/name binding, current application authority, actual shared
+The receiver's optional preparation passes its validated frozen group/role/name
+inventory before data, but Native backend composition still needs evidence.
+Current application authority, actual shared
 capacity, parent deletion/rename/ADS/injection protection, durable ownership and
 post-host-exit retention, SDK/controller/Job retirement, review/Save and both hosts
 still need their own evidence. A file DACL alone does not protect its parent or
