@@ -48,6 +48,16 @@ These labels select no physical path or executable loader. The file name is only
 the trusted fresh 32-hex publication plus `.asbtr` under the configured parent.
 Input version1, unknown tags, duplicate names and malformed sizes are refused.
 
+The private filesystem adapter's `trainingResultInventory` codec revalidates the
+receiver's complete passive inventory and explicit count/file/total limits before
+encoding this input. It emits no more than12,300 metadata bytes for256rows.
+Publication identity, groups, roles, fixed labels, media types, indices, positive
+sizes, lowercase SHA-256 and exact total must agree. Golden vectors cover the
+existing layout, all13name ordinals and large integer precision. Proxies,
+accessors, sparse/extra arrays and unknown fields are denied without callbacks.
+This pure encoder opens no file, loads no native module and supplies no authority.
+Native layout/allocation checks and actual backend composition remain mandatory.
+
 The physical version1 format is 256-byte header, complete index with 64 bytes per row,
 ordered payloads at derived 8-byte-aligned offsets, zero gaps, then 256-byte footer.
 Every addition, alignment, total and allocation calculation is checked. No caller

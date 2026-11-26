@@ -3803,3 +3803,9 @@ ACK. Abort and deadline fence the effect without retiring pending IO. A late
 completion cannot resume delivery. Legacy ports retain the previous path. This
 ordering capability supplies no physical allocation, custody, capacity or Save
 proof; those remain the selected backend and coordinator's separate obligations.
+
+The private filesystem inventory codec revalidates that complete passive metadata
+and explicit limits into the existing bounded `ASBTRS02` input. Fixed-format
+golden vectors, all name ordinals, integer bounds and no-callback denial tests
+cover encoding only. It performs no file/native operation and does not establish
+the still-pending native backend, actual reservation, crash or host composition.

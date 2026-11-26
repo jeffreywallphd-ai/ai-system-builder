@@ -8,6 +8,7 @@ import {mock, test} from "node:test";
 import {createOrganizationId} from "../../../../../contracts/organization";
 import type {OrganizationRequestContext} from "../../../../../contracts/organization";
 import {createFilesystemTrainingResultFileByteStorageAdapter as create} from "../createFilesystemTrainingResultFileByteStorageAdapter";
+import {encodeTrainingResultInventory as encodeInventory} from "../trainingResultInventory";
 
 const publicationId = "a".repeat(32), context = {workspaceId: "workspace-a"};
 const key = (index = 0) => `workspaces/workspace-a/artifacts/training-results/${publicationId}/${index}`;
@@ -29,6 +30,106 @@ async function fixture(run: (root: string, storage: ReturnType<typeof create>) =
   }
 }
 const safe = (result: unknown) => assert.doesNotMatch(JSON.stringify(result), /training-private-bytes|private-synthetic|RangeError|byteLength|[A-Z]:\\/);
+
+const inventoryLimits = {maximumFiles: 256, maximumFileBytes: 64, maximumTotalBytes: 512};
+const nativeInventory = () => ({publicationId, totalBytes: 5, files: [
+  {fileIndex: 0, groupIndex: 0, name: "config.json", role: "checkpoint", mediaType: "application/json",
+    expectedSizeBytes: 2, expectedSha256: "sha256:" + "a".repeat(64)},
+  {fileIndex: 1, groupIndex: 1, name: "model.safetensors", role: "candidate", mediaType: "application/octet-stream",
+    expectedSizeBytes: 3, expectedSha256: "sha256:" + "b".repeat(64)},
+]});
+const invalidInventory = (value: unknown, limits = inventoryLimits) => assert.throws(
+  () => encodeInventory(value, limits), {message: "Private training result inventory is invalid."});
+
+test("private native inventory matches the fixed independent ASBTRS02 golden vector", () => {
+  const expected = Buffer.from("415342545253303202000000" +
+    "00000000000001010200000000000000" + "a".repeat(64) +
+    "01000000010002090300000000000000" + "b".repeat(64), "hex");
+  assert.equal(expected.length, 108);
+  const original = nativeInventory(), encoded = encodeInventory(original, inventoryLimits);
+  assert.deepEqual(encoded, expected);
+  const independent = encodeInventory(original, inventoryLimits);
+  original.files[0]!.name = "changed.json"; original.files[0]!.expectedSha256 = "sha256:" + "c".repeat(64);
+  assert.deepEqual(encoded, expected); encoded[0] = 0;
+  assert.deepEqual(independent, expected);
+});
+
+test("native inventory preserves all thirteen fixed name ordinals without using paths", () => {
+  const labels = ["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+    "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors",
+    "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"];
+  const files = labels.map((name, index) => ({...nativeInventory().files[1]!, fileIndex: index, groupIndex: 0,
+    name, mediaType: name.endsWith(".json") ? "application/json" : "application/octet-stream", expectedSizeBytes: 1}));
+  const encoded = encodeInventory({publicationId, files, totalBytes: 13}, inventoryLimits);
+  files.forEach((_, index) => assert.equal(encoded[12 + index * 48 + 7], index + 1));
+});
+
+test("native inventory bounds rows and preserves exact large integer sizes without allocating payload", () => {
+  const files = Array.from({length: 256}, (_, index) => ({...nativeInventory().files[0]!, fileIndex: index,
+    groupIndex: index, role: index === 255 ? "candidate" : "checkpoint", expectedSizeBytes: 1}));
+  const encoded = encodeInventory({publicationId, files, totalBytes: 256}, inventoryLimits);
+  assert.equal(encoded.length, 12300); assert.equal(encoded.readUInt32LE(8), 256);
+  assert.equal(encoded.readUInt16LE(12 + 255 * 48 + 4), 255);
+  invalidInventory({publicationId, files: [...files, {...files[255], fileIndex: 256}], totalBytes: 257});
+  const size = 2 ** 32 + 17, row = {...nativeInventory().files[1]!, fileIndex: 0, groupIndex: 0, expectedSizeBytes: size};
+  const large = encodeInventory({publicationId, files: [row], totalBytes: size},
+    {maximumFiles: 1, maximumFileBytes: size, maximumTotalBytes: size});
+  assert.equal(large.length, 60); assert.equal(large.readBigUInt64LE(20), BigInt(size));
+  const half = Math.floor(Number.MAX_SAFE_INTEGER / 2) + 1;
+  invalidInventory({publicationId, files: nativeInventory().files.map(file => ({...file, expectedSizeBytes: half})),
+    totalBytes: Number.MAX_SAFE_INTEGER}, {maximumFiles: 2, maximumFileBytes: half, maximumTotalBytes: Number.MAX_SAFE_INTEGER});
+});
+
+for (const mode of ["publication", "total", "empty", "sparse", "extra-array", "array-prototype", "index", "group-start",
+  "group-gap", "role", "no-candidate", "mixed-role", "duplicate", "traversal", "unknown-name", "media", "zero", "over-file", "unsafe-size", "hash", "extra-row", "symbol-row"]) {
+  test(`native inventory denies ${mode} before producing bytes`, () => {
+    const value: any = nativeInventory();
+    if (mode === "publication") value.publicationId = "../private-synthetic";
+    if (mode === "total") value.totalBytes++;
+    if (mode === "empty") value.files = [];
+    if (mode === "sparse") delete value.files[0];
+    if (mode === "extra-array") value.files.extra = true;
+    if (mode === "array-prototype") Object.setPrototypeOf(value.files, Object.create(Array.prototype));
+    if (mode === "index") value.files[1].fileIndex = 0;
+    if (mode === "group-start") value.files[0].groupIndex = 1;
+    if (mode === "group-gap") value.files[1].groupIndex = 2;
+    if (mode === "role") value.files[1].role = "executable";
+    if (mode === "no-candidate") value.files[1].role = "checkpoint";
+    if (mode === "mixed-role") value.files[0].role = "candidate";
+    if (mode === "duplicate") {value.files[0].role = "candidate"; value.files[1].groupIndex = 0; value.files[1].name = "config.json"; value.files[1].mediaType = "application/json";}
+    if (mode === "traversal") value.files[0].name = "../private-synthetic";
+    if (mode === "unknown-name") value.files[0].name = "unlisted.bin";
+    if (mode === "media") value.files[0].mediaType = "application/octet-stream";
+    if (mode === "zero") value.files[0].expectedSizeBytes = 0;
+    if (mode === "over-file") value.files[0].expectedSizeBytes = 65;
+    if (mode === "unsafe-size") value.files[0].expectedSizeBytes = Number.MAX_SAFE_INTEGER + 1;
+    if (mode === "hash") value.files[0].expectedSha256 = "sha256:" + "A".repeat(64);
+    if (mode === "extra-row") value.files[0].private = "private-synthetic";
+    if (mode === "symbol-row") value.files[0][Symbol("private")] = true;
+    invalidInventory(value);
+  });
+}
+
+test("native inventory refuses proxies and accessors without invoking supplied code", () => {
+  let calls = 0;
+  const trap = () => {calls++; throw Error("private-synthetic must not run");};
+  const proxy = <T extends object>(value: T): T => new Proxy(value, {get: trap, getPrototypeOf: trap, ownKeys: trap, getOwnPropertyDescriptor: trap});
+  invalidInventory(proxy(nativeInventory())); invalidInventory(nativeInventory(), proxy(inventoryLimits));
+  for (const target of ["files-proxy", "row-proxy", "files-getter", "row-getter", "entry-getter", "limits-getter"]) {
+    const value: any = nativeInventory(), limits = {...inventoryLimits};
+    if (target === "files-proxy") value.files = proxy(value.files);
+    if (target === "row-proxy") value.files[0] = proxy(value.files[0]);
+    if (target === "files-getter") Object.defineProperty(value, "files", {enumerable: true, get: trap});
+    if (target === "row-getter") Object.defineProperty(value.files[0], "name", {enumerable: true, get: trap});
+    if (target === "entry-getter") Object.defineProperty(value.files, "0", {enumerable: true, get: trap});
+    if (target === "limits-getter") Object.defineProperty(limits, "maximumFileBytes", {enumerable: true, get: trap});
+    invalidInventory(value, limits);
+  }
+  for (const limits of [{...inventoryLimits, maximumFiles: 257}, {...inventoryLimits, maximumFileBytes: 513},
+    {...inventoryLimits, maximumTotalBytes: Infinity}, {...inventoryLimits, maximumFiles: true},
+    {...inventoryLimits, unknown: true}]) invalidInventory(nativeInventory(), limits as typeof inventoryLimits);
+  assert.equal(calls, 0);
+});
 
 test("optional actual writer retirement is captured once and fences only the same private publication", async () => fixture(async root => {
   const storage = create({...configuration(root), trackIoRetirement: true});

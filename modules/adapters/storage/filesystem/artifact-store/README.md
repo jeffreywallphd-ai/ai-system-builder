@@ -107,3 +107,12 @@ race/crash proof or global settlement. The owning coordinator still needs actual
 reserved capacity for both copies, original source guards and transfer lineage,
 fresh permission, separate Save and final worker/host qualification. No production
 producer or public Root is configured by this component.
+
+Private `trainingResultInventory` encodes the receiver's complete metadata into
+the existing `ASBTRS02` input for the protected result container. It revalidates
+passive records, contiguous groups, checkpoint/candidate roles, fixed name labels,
+media types, exact sizes/hashes and total limits before allocating at most12,300
+metadata bytes. Golden-vector and malformed/proxy/accessor tests run with the
+focused training-storage checks. It loads no native module and performs no file
+operation. Encoded bytes do not prove permission, custody, capacity or Save;
+actual native backend composition and worker/host qualification remain pending.
