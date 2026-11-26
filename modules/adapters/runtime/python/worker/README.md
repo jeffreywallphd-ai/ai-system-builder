@@ -2697,3 +2697,28 @@ keep construction passive and once-only. The first Files binding still permits
 the existing bootstrap-to-file-executor handoff. No resource/admission callback,
 file/Native IO, SDK or executor is invoked during composition. This helper neither
 configures the app nor qualifies capacity, physical readiness or global retirement.
+
+## Explicit bounded local training producer
+
+The trusted boot function `configure_bounded_local_training` selects a distinct
+`BoundedLocalTrainingProfile`. No environment or task flag enables it. Its private
+prepare body requires the exact copied-Model manifest; strict Native boot still
+refuses that field. The original session/executor preserves one-use start, progress,
+cancellation and current scope. Only the existing offline safe-local loader runs,
+with validation comparison disabled and no fabricated Native view.
+
+The local producer reads only fresh Node-owned staging. It checks original Model
+IDs, allowlisted safe files, actual SHA256 bytes, exact Dataset/recipe hashes,
+regular non-link identities, bounded directory enumeration, elapsed time and disk
+headroom. Windows path/descriptor change-time observations can differ on fresh
+files; this profile binds file identity, links, size, mtime and verified bytes.
+The strict Native metadata and custody rules are unchanged. SDK output count,
+depth and bytes are checked after return. That postflight check is not a physical
+quota or protection from another hostile process using the same account.
+
+Local settlement means these original synchronous operations returned and known
+handles closed. An unknown file/directory close denies settlement. Parent worker,
+SDK and Job retirement remains mandatory before directory cleanup, result review
+or separately approved Save. This component performs no deletion or registration.
+Installed host activation, actual training and Desktop/Managed qualification remain
+pending; synthetic-byte tests with an inert loader supply no model or host pass.

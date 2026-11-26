@@ -3880,3 +3880,12 @@ Application guards are not physical global quotas, hostile-process custody,
 antirollback or protected crash recovery. The service roadmap owns those stronger
 requirements. No service, strict-profile fallback, producer or host is activated
 by this storage component; actual runtime/result/Save/host composition follows.
+
+The explicit bounded-local training worker producer reuses the original session,
+executor and fixed safe-local loader. Trusted boot selects its own profile and
+private copied-Model manifest; strict Native requests cannot downgrade to it.
+It verifies staged safe Model bytes and Dataset/recipe hashes, tracks original
+synchronous handles, rejects links and bounds enumeration/time/headroom. SDK output
+bounds are cooperative postflight checks. Local settlement never replaces parent
+SDK/worker/Job retirement, candidate review or separate Save approval. Source-level
+producer tests are not installed-host or actual-training qualification.

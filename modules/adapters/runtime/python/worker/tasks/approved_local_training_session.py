@@ -1,19 +1,22 @@
-"""Private original training ownership; no configured native producer by default.
+"""Private original training ownership; no configured producer by default.
 
-The producer is trusted application composition, never request JSON. It must own
-the exact native source/input/output graph, exclusive resource reservation and
-permanent IO retirement. This module does not implement or qualify that proof.
+Trusted boot explicitly selects strict Native or cooperative bounded-local
+resources. A request cannot select or downgrade that policy. Native custody and
+physical accounting remain separately qualified; local settlement still requires
+original parent worker/SDK/Job retirement before cleanup or Save.
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager, contextmanager
 from concurrent.futures import Future
 from dataclasses import dataclass
 import json
 import hashlib
 import os
 import re
+import stat
+from pathlib import Path
 from threading import RLock, get_ident
 from time import monotonic
 from types import FunctionType, MethodType
@@ -374,9 +377,249 @@ class NativeTrainingProducer(ABC):
         """Synchronous binding only. No IO/acquisition. None proves no effect."""
 
 
+@dataclass(frozen=True)
+class BoundedLocalTrainingProfile:
+    """Explicit cooperative profile. Not Native custody or a physical quota."""
+    profile_id: str
+    fingerprint: str
+    maximum_duration_seconds: int
+    staging_root: str
+    maximum_model_bytes: int
+    maximum_output_bytes: int
+    minimum_free_bytes: int
+
+    def __post_init__(self):
+        NativeTrainingProfile(self.profile_id, self.fingerprint, self.maximum_duration_seconds)
+        _need(self.profile_id.startswith("bounded-local-"))
+        _local_locator(self.staging_root)
+        _need(os.path.normpath(self.staging_root) == self.staging_root)
+        for value in (self.maximum_model_bytes, self.maximum_output_bytes, self.minimum_free_bytes):
+            _need(type(value) is int and 1 <= value <= 2**53 - 1)
+
+
+_LOCAL_MODEL_NAMES = frozenset(("config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+    "special_tokens_map.json", "vocab.json", "merges.txt", "tokenizer.model", "model.safetensors"))
+
+
+class BoundedLocalTrainingResources:
+    """Read only Node-owned staging. The original parent owns cleanup and exit.
+
+    There is deliberately no Native inheritance, deletion, recovery, public path
+    report or claim that a cooperative SDK has an OS-enforced disk quota.
+    """
+    def __init__(self, definition, manifest, profile):
+        _need(type(profile) is BoundedLocalTrainingProfile)
+        self.definition, self.profile = capture_definition(definition), profile
+        copied = _copy(manifest)
+        _record(copied, ("modelRecordId", "modelUpdatedAt", "directory", "files"))
+        _need(copied["modelRecordId"] == self.definition["request"]["baseModel"]["modelRecordId"]
+              and copied["modelUpdatedAt"] == self.definition["modelUpdatedAt"])
+        self.model_directory = self._location(copied["directory"])
+        _need(self.model_directory != self.definition["request"]["baseModel"].get("localPath"))
+        rows = copied["files"]
+        _need(type(rows) is list and 3 <= len(rows) <= len(_LOCAL_MODEL_NAMES))
+        total, names = 0, set()
+        for row in rows:
+            _record(row, ("name", "sizeBytes", "sha256"))
+            _need(type(row["name"]) is str and row["name"] in _LOCAL_MODEL_NAMES and row["name"] not in names)
+            _need(type(row["sizeBytes"]) is int and 1 <= row["sizeBytes"] <= profile.maximum_model_bytes - total)
+            _need(type(row["sha256"]) is str and re.fullmatch(r"sha256:[a-f0-9]{64}", row["sha256"]) is not None)
+            names.add(row["name"]); total += row["sizeBytes"]
+        _need({"config.json", "tokenizer.json", "model.safetensors"} <= names)
+        self.manifest = copied
+        self.lock = RLock()
+        self.phase, self.cancelled, self.unknown = "bound", False, False
+        self.operations, self.handles, self.directory_handles = 0, set(), set()
+        self.started = monotonic()
+        self.files, self.directories, self.output = {}, {}, None
+
+    def _location(self, value):
+        _local_locator(value)
+        _need(os.path.normpath(value) == value)
+        if os.name == "nt":
+            _drive, tail = os.path.splitdrive(value)
+            _need(":" not in tail and all(not part.endswith((".", " ")) for part in Path(tail).parts))
+        root = self.profile.staging_root
+        _need(os.path.commonpath((root, value)) == root and value != root)
+        return value
+
+    def _check(self):
+        with self.lock:
+            _need(not self.cancelled and not self.unknown and self.phase != "settled"
+                  and monotonic() - self.started < self.profile.maximum_duration_seconds)
+
+    @staticmethod
+    def _identity(info, *, directory=False):
+        _need((stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode))
+              and not stat.S_ISLNK(info.st_mode) and not getattr(info, "st_file_attributes", 0) & 0x400
+              and info.st_ino > 0 and (directory or info.st_nlink == 1))
+        if directory: return (info.st_dev, info.st_ino, info.st_mode)
+        identity = (info.st_dev, info.st_ino, info.st_mode, info.st_nlink, info.st_size, info.st_mtime_ns)
+        # Fresh Windows files can report different change times through path
+        # and descriptor observations. Bind object/links/size/mtime plus actual
+        # approved SHA256 bytes; no ctime field supplies cooperative custody.
+        return identity if os.name == "nt" else (*identity, info.st_ctime_ns)
+
+    def _directory(self, value):
+        self._check()
+        cursor = Path(value)
+        for candidate in (cursor, *cursor.parents):
+            self._check(); self._identity(os.lstat(candidate), directory=True)
+        _need(os.path.realpath(value) == value)
+        identity = self._identity(os.lstat(value), directory=True)
+        previous = self.directories.get(value)
+        _need(previous is None or previous == identity)
+        self.directories[value] = identity
+
+    def _entries(self, directory, maximum):
+        self._check(); reader = os.scandir(directory); self.directory_handles.add(reader)
+        try:
+            entries = []
+            for entry in reader:
+                self._check(); _need(len(entries) < maximum); entries.append(entry.name)
+            return entries
+        finally:
+            try: reader.close()
+            except BaseException:
+                self.unknown = True
+                raise
+            else: self.directory_handles.remove(reader)
+
+    def _file(self, value, size, expected_hash):
+        self._check(); self._directory(os.path.dirname(value))
+        before = self._identity(os.lstat(value)); _need(before[4] == size)
+        descriptor = os.open(value, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        self.handles.add(descriptor)  # Original descriptor retained before any read.
+        try:
+            _need(self._identity(os.fstat(descriptor)) == before)
+            digest, count = hashlib.sha256(), 0
+            while True:
+                self._check(); block = os.read(descriptor, min(65536, size - count + 1))
+                if not block: break
+                count += len(block); _need(count <= size); digest.update(block)
+            _need(count == size and "sha256:" + digest.hexdigest() == expected_hash
+                  and self._identity(os.fstat(descriptor)) == before
+                  and self._identity(os.lstat(value)) == before)
+            self._check(); self.files[value] = before
+        finally:
+            try: os.close(descriptor)
+            except BaseException:
+                self.unknown = True  # No retry or false handle-retirement credit.
+                raise
+            else: self.handles.remove(descriptor)
+
+    @contextmanager
+    def _operation(self, before, during, after):
+        with self.lock:
+            self._check(); _need(self.phase == before); self.phase = during; self.operations += 1
+        try:
+            yield
+            self._check()
+            with self.lock:
+                _need(self.phase == during); self.phase = after
+        except BaseException:
+            # These fixed synchronous calls have returned. Only an unconfirmed
+            # original handle close retains unknown IO, separately above.
+            with self.lock: self.phase = "failed"
+            raise
+        finally:
+            with self.lock: self.operations -= 1
+
+    def prepare(self):
+        try:
+            with self._operation("bound", "preparing", "prepared"):
+                self._directory(self.profile.staging_root); self._directory(self.model_directory)
+                _need(set(self._entries(self.model_directory, len(self.manifest["files"]))) == {row["name"] for row in self.manifest["files"]})
+                for row in self.manifest["files"]:
+                    self._file(os.path.join(self.model_directory, row["name"]), row["sizeBytes"], row["sha256"])
+        except Exception:
+            if not self.unknown and not self.handles and not self.directory_handles and not self.operations: return "unavailable"
+            raise
+        return "ready"
+
+    def seal_inputs(self, staged):
+        with self._operation("prepared", "sealing", "sealed"):
+            value = _capture_staged(self.definition, staged)
+            output = self._location(value["outputDirectory"])
+            self._directory(output); self._entries(output, 0)
+            _need(os.path.commonpath((output, self.model_directory)) not in (output, self.model_directory))
+            used = {self.model_directory, output}
+            for row, source in zip(value["payload"]["datasets"], self.definition["inputs"]):
+                location = self._location(row["path"]); _need(location not in used); used.add(location)
+                _need(os.path.commonpath((output, location)) != output
+                      and os.path.commonpath((self.model_directory, location)) != self.model_directory)
+                self._file(location, source["sizeBytes"], source["digest"])
+            recipe = value["recipe"]; location = self._location(recipe["path"])
+            _need(location not in used and os.path.commonpath((output, location)) != output
+                  and os.path.commonpath((self.model_directory, location)) != self.model_directory)
+            self._file(location, recipe["sizeBytes"], recipe["digest"])
+            self.output = output
+            value["payload"]["baseModel"]["localPath"] = self.model_directory
+            payload = TrainModelTaskRequest.model_validate(value["payload"])
+        return payload
+
+    @contextmanager
+    def borrow(self):
+        with self._operation("sealed", "borrowed", "returned"):
+            for directory in tuple(self.directories): self._directory(directory)
+            for location, identity in self.files.items():
+                self._check(); _need(self._identity(os.lstat(location)) == identity)
+            _need(self.output is not None); self._entries(self.output, 0)
+            import shutil
+            _need(shutil.disk_usage(self.profile.staging_root).free >=
+                  self.profile.minimum_free_bytes + self.profile.maximum_output_bytes)
+            yield None  # Explicit local loader path; never a forged Native Model view.
+            # Cooperative SDK output is retained, never loaded or registered here.
+            # This is a postflight limit, not a physical disk reservation.
+            self._directory(self.output)
+            pending, directories, count, total = [(self.output, 0)], 0, 0, 0
+            while pending:
+                directory, depth = pending.pop(); self._check()
+                directories += 1; _need(directories <= 32 and depth <= 4)
+                entries = self._entries(directory, 256)
+                for name in entries:
+                    self._check(); location = self._location(os.path.join(directory, name)); info = os.lstat(location)
+                    if stat.S_ISDIR(info.st_mode):
+                        self._identity(info, directory=True); pending.append((location, depth + 1))
+                    else:
+                        self._identity(info); count += 1; total += info.st_size
+                        _need(count <= 256 and total <= self.profile.maximum_output_bytes)
+
+    def request_cancel(self):
+        with self.lock: self.cancelled = True
+
+    def settle(self):
+        # Local quiescence only. Parent must still retire the original worker,
+        # SDK and Job before cleanup, reuse, review or Save.
+        with self.lock:
+            if self.phase == "settled": return True
+            if self.unknown or self.operations or self.handles or self.directory_handles or self.phase == "borrowed": return False
+            if self.phase not in ("bound", "prepared", "sealed", "returned", "failed"): return False
+            self.phase = "settled"; return True
+
+    def output_delivery(self): return None
+
+
+class BoundedLocalTrainingProducer:
+    """Trusted boot-only policy. capture is synchronous binding, never IO."""
+    def __init__(self, profile):
+        _need(type(profile) is BoundedLocalTrainingProfile)
+        self.profile = profile
+        self.lock, self.requests, self.directories = RLock(), set(), set()
+
+    def capture(self, definition, manifest):
+        value = capture_definition(definition)
+        resource = BoundedLocalTrainingResources(value, manifest, self.profile)
+        with self.lock:
+            _need(len(self.requests) < MAX_SESSIONS and value["requestId"] not in self.requests
+                  and resource.model_directory not in self.directories)
+            self.requests.add(value["requestId"]); self.directories.add(resource.model_directory)
+        return resource
+
+
 class OriginalTrainingSession:
     def __init__(self, definition, producer, current: Callable[[], bool], publish, submit, profile=None,
-                 *, retirement_protocol="settled-v1"):
+                 *, retirement_protocol="settled-v1", local_model=None):
         self.loader = train_model_from_local_files
         self.definition = capture_definition(definition)
         self._sealed_definition = _copy(self.definition)
@@ -395,7 +638,13 @@ class OriginalTrainingSession:
         self.workspace_id = self.definition["workspaceId"]
         self.producer = producer
         self.profile = profile if profile is not None else producer.profile
-        _need(type(self.profile) is NativeTrainingProfile)
+        self._bounded_local = type(self.profile) is BoundedLocalTrainingProfile
+        _need(type(self.profile) is NativeTrainingProfile or self._bounded_local)
+        if self._bounded_local:
+            _need(type(producer) is BoundedLocalTrainingProducer and retirement_protocol == "settled-v1")
+            _need(producer.profile is self.profile and local_model is not None)
+            local_model = _copy(local_model)
+        else: _need(local_model is None)
         self.current, self.publish, self.submit = current, publish, submit
         self.lock = RLock()
         _session_exit.capture_controls(self)
@@ -416,7 +665,8 @@ class OriginalTrainingSession:
         self._worker_retirement_required = False
         self.started_at = None
         # Capture trusted methods and receivers before the first awaited IO.
-        self.capture = producer.capture
+        original_capture = producer.capture
+        self.capture = (lambda definition: original_capture(definition, local_model)) if self._bounded_local else original_capture
 
     @property
     def retains_record(self):
@@ -458,7 +708,7 @@ class OriginalTrainingSession:
                 self.native_prepare, self.native_seal = methods["prepare"], methods["seal_inputs"]
                 self.native_borrow, self.native_cancel, self.native_settle = methods["borrow"], methods["request_cancel"], methods["settle"]
             else:
-                _need(isinstance(owner, NativeTrainingResources))
+                _need(type(owner) is BoundedLocalTrainingResources if self._bounded_local else isinstance(owner, NativeTrainingResources))
                 self.native = owner  # Retain before optional callbacks or preparation IO.
                 self.native_prepare, self.native_seal = owner.prepare, owner.seal_inputs
                 self.native_borrow, self.native_cancel, self.native_settle = owner.borrow, owner.request_cancel, owner.settle
@@ -509,6 +759,9 @@ class OriginalTrainingSession:
             _need(self._current())
             owned = _native_request_data(payload, self._request_fields, self._model_fields, self._dataset_fields)
             payload = self._request_validator(owned)
+            if self._bounded_local:
+                _need(type(self.native) is BoundedLocalTrainingResources)
+                expected["baseModel"]["localPath"] = self.native.model_directory
             _compare_native_payload(expected, self._request_serializer(payload, mode="json"))
             _session_exit.sealed(self, self._request_serializer(payload, mode="json"))
             _need(self._current())
@@ -574,7 +827,11 @@ class OriginalTrainingSession:
                 progress({"stage": "training"})
                 owned = _native_request_data(self.payload, self._request_fields, self._model_fields, self._dataset_fields)
                 payload = self._request_validator(owned)
-                self._model_view_resolver(model_view, _copy(self._request_serializer(payload, mode="json")))
+                if self._bounded_local:
+                    _need(model_view is None and type(self.native) is BoundedLocalTrainingResources
+                          and payload.baseModel.localPath == self.native.model_directory)
+                else:
+                    self._model_view_resolver(model_view, _copy(self._request_serializer(payload, mode="json")))
                 # Fixed safe loader; a request cannot select a callable or score
                 # a real validation baseline through this workflow protocol.
                 result = self.loader(self._request_copy(payload, deep=True), on_progress=progress,

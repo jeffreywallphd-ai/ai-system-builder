@@ -3651,3 +3651,16 @@ permanently ended. It denies unexpected entries or changed copied-file identitie
 Do not assert cross-process custody, protected physical quota, antirollback or
 protected crash recovery. Keep strict Native mode unqualified/default-off, with
 no downgrade fallback, historical-data adoption or service installation.
+
+The bounded-local worker profile trusts the signed-in OS user, installed app and
+pinned training dependencies. Its separate boot configuration requires the exact
+private copied-Model manifest and original selection identifiers. It bounds passive
+metadata, requires safe format names and hashes, rejects links, verifies Dataset
+and recipe bytes, and keeps source/output paths off public failure replies.
+File identity, links, size and mtime accompany SHA256 validation; Windows change
+time is not a cross-process custody assertion. Directory enumeration is bounded
+and owned. An unconfirmed handle close prevents local settlement. The fixed loader
+keeps remote code, online fallback and real quality comparison disabled.
+SDK output limits are checked after its return, not an OS-enforced physical quota.
+No worker, SDK, Job, cleanup, candidate or Save authority follows from local
+settlement alone. No service or Native protection is activated by this component.

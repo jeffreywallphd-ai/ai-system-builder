@@ -1215,4 +1215,218 @@ class ConfiguredOriginalTrainingFileProducerTests(unittest.TestCase):
         self.assertFalse(resource.settle())
 
 
+class BoundedLocalTrainingWorkerTests(unittest.TestCase):
+    """Actual fresh files plus an inert fixed loader. No models or Native effects."""
+    def fixture(self):
+        import hashlib
+        temp = tempfile.TemporaryDirectory(prefix="bounded-local-training-")
+        self.addCleanup(temp.cleanup); self.root = Path(temp.name).resolve()
+        self.model = self.root / "model-copy"; self.model.mkdir()
+        self.inputs = self.root / "inputs"; self.inputs.mkdir()
+        self.output = self.root / "output"; self.output.mkdir()
+        values = {"config.json": b"{}", "tokenizer.json": b"{}", "model.safetensors": b"synthetic-safe-format-placeholder"}
+        files = []
+        for name, value in values.items():
+            (self.model / name).write_bytes(value)
+            files.append({"name": name, "sizeBytes": len(value), "sha256": "sha256:" + hashlib.sha256(value).hexdigest()})
+        self.defined, self.staged = definition(), staged()
+        data, recipe = b'{"instruction":"hello","response":"world"}\n', b'{"format":"jsonl"}\n'
+        data_path, recipe_path = self.inputs / "input-0.jsonl", self.inputs / "recipe.json"
+        data_path.write_bytes(data); recipe_path.write_bytes(recipe)
+        self.defined["inputs"][0].update(sizeBytes=len(data), digest="sha256:" + hashlib.sha256(data).hexdigest())
+        self.defined["recipeSizeBytes"] = len(recipe)
+        self.defined["dataset"]["recipeDigest"] = "sha256:" + hashlib.sha256(recipe).hexdigest()
+        self.staged["recipe"].update(path=str(recipe_path), sizeBytes=len(recipe), digest=self.defined["dataset"]["recipeDigest"])
+        self.staged["payload"]["datasets"][0]["path"] = str(data_path)
+        self.staged["outputDirectory"] = str(self.output)
+        self.staged["payload"]["output"]["outputDirectory"] = str(self.output)
+        self.manifest = {"modelRecordId": self.defined["request"]["baseModel"]["modelRecordId"],
+            "modelUpdatedAt": self.defined["modelUpdatedAt"], "directory": str(self.model), "files": files}
+        self.profile = session.BoundedLocalTrainingProfile("bounded-local-inert-files", DIGEST, 30, str(self.root), 4096, 4096, 1)
+        self.producer = session.BoundedLocalTrainingProducer(self.profile)
+        self.executor, self.publications, self.current = QueuedExecutor(), [], True
+        loader_patch = patch.object(session, "train_model_from_local_files",
+            return_value=TrainModelTaskResult(runId="inert", status="succeeded"))
+        self.loader = loader_patch.start(); self.addCleanup(loader_patch.stop)
+        native_patch = patch.object(session, "resolve_original_model_view", side_effect=AssertionError("Native view must not be used"))
+        self.native = native_patch.start(); self.addCleanup(native_patch.stop)
+        self.owner = session.OriginalTrainingSession(self.defined, self.producer, lambda: self.current,
+            lambda **value: self.publications.append(value), lambda owner: self.executor.submit(owner.run), self.profile,
+            local_model=self.manifest)
+        return self.owner
+
+    def ready(self):
+        owner = self.fixture(); self.assertEqual(owner.prepare(), "prepared")
+        self.assertEqual(owner.seal(self.staged), "ready"); return owner
+
+    def test_actual_local_bytes_reach_the_fixed_loader_once_without_native_view_or_quality_comparison(self):
+        owner = self.ready()
+        def load(*_args, **kwargs):
+            kwargs["on_progress"]({"stage": "training", "step": 1, "totalSteps": 1})
+            return TrainModelTaskResult(runId="inert", status="succeeded")
+        self.loader.side_effect = load
+        self.assertEqual(owner.start()["kind"], "accepted"); self.executor.run()
+        self.assertEqual(self.publications[-1]["status"], "succeeded"); self.loader.assert_called_once()
+        self.assertIn({"progress": {"stage": "training", "step": 1, "totalSteps": 1}}, self.publications)
+        args, keywords = self.loader.call_args
+        self.assertEqual(args[0].baseModel.localPath, str(self.model))
+        self.assertEqual(args[0].datasets[0].path, str(self.inputs / "input-0.jsonl"))
+        self.assertIs(keywords["compare_validation_baseline"], False); self.assertIsNone(keywords["_model_view"])
+        self.native.assert_not_called(); self.assertTrue(owner.settle()); self.assertTrue(owner.blocks_recovery)
+        self.assertTrue(self.model.exists()); self.assertTrue((self.inputs / "recipe.json").exists())
+        with self.assertRaises(session.TrainingSessionError): owner.start()
+        self.assertEqual(self.executor.calls, 1)
+
+    def test_manifest_binding_and_unknown_fields_are_rejected_before_file_io(self):
+        self.fixture()
+        for mode in ("record", "version", "extra", "unsafe-name", "duplicate", "source-path", "outside"):
+            with self.subTest(mode=mode):
+                manifest = deepcopy(self.manifest)
+                if mode == "record": manifest["modelRecordId"] = "other"
+                if mode == "version": manifest["modelUpdatedAt"] = "other"
+                if mode == "extra": manifest["native"] = True
+                if mode == "unsafe-name": manifest["files"][0]["name"] = "../config.json"
+                if mode == "duplicate": manifest["files"].append(manifest["files"][0])
+                if mode == "source-path": manifest["directory"] = self.defined["request"]["baseModel"]["localPath"]
+                if mode == "outside": manifest["directory"] = str(self.root.parent / "outside")
+                with patch.object(session.os, "open", side_effect=AssertionError("no IO")):
+                    with self.assertRaises(session.TrainingSessionError):
+                        session.BoundedLocalTrainingResources(self.defined, manifest, self.profile)
+        self.loader.assert_not_called()
+
+    def test_caller_manifest_changes_cannot_replace_the_captured_copy(self):
+        owner = self.fixture(); self.manifest["directory"] = str(self.root / "other")
+        self.manifest["files"][0]["sha256"] = DIGEST
+        self.assertEqual(owner.prepare(), "prepared"); self.assertEqual(owner.seal(self.staged), "ready")
+        owner.start(); self.executor.run(); self.assertEqual(self.publications[-1]["status"], "succeeded")
+
+    def test_changed_model_bytes_or_unexpected_model_inventory_never_load(self):
+        for mode in ("hash", "inventory", "hardlink"):
+            with self.subTest(mode=mode):
+                owner = self.fixture()
+                if mode == "hash": (self.model / "config.json").write_bytes(b"[]")
+                if mode == "inventory": (self.model / "unreviewed.py").write_text("inert", encoding="utf-8")
+                if mode == "hardlink": os.link(self.model / "config.json", self.root / "linked.json")
+                self.assertEqual(owner.prepare(), "unconfirmed"); self.assertTrue(owner.known_not_run)
+                self.assertTrue(owner.settle()); self.loader.assert_not_called()
+                self.assertTrue((self.model / "config.json").exists())
+
+    def test_changed_dataset_recipe_or_output_is_refused_before_dispatch(self):
+        for mode in ("data", "recipe", "output", "outside"):
+            with self.subTest(mode=mode):
+                owner = self.fixture(); self.assertEqual(owner.prepare(), "prepared")
+                if mode == "data": (self.inputs / "input-0.jsonl").write_bytes(b"changed")
+                if mode == "recipe": (self.inputs / "recipe.json").write_bytes(b"changed")
+                if mode == "output": (self.output / "foreign.txt").write_text("keep", encoding="utf-8")
+                if mode == "outside": self.staged["recipe"]["path"] = str(self.root.parent / "outside.json")
+                self.assertEqual(owner.seal(self.staged), "unconfirmed"); self.loader.assert_not_called()
+                self.assertTrue(owner.cancel()); self.assertTrue(owner.settle())
+
+    def test_changed_files_between_seal_and_borrow_are_refused(self):
+        owner = self.ready(); (self.inputs / "input-0.jsonl").write_bytes(b"changed")
+        owner.start(); self.executor.run(); self.loader.assert_not_called()
+        self.assertEqual(self.publications[-1]["status"], "failed")
+        self.assertNotIn(str(self.root), json.dumps(self.publications[-1])); self.assertTrue(owner.settle())
+
+    def test_missing_disk_headroom_or_duration_denies_before_loader(self):
+        for mode in ("disk", "duration"):
+            with self.subTest(mode=mode):
+                owner = self.ready()
+                if mode == "duration": owner.native.started -= 31
+                with patch("shutil.disk_usage", return_value=type("Space", (), {"free": 0})()):
+                    owner.start(); self.executor.run()
+                self.loader.assert_not_called(); self.assertEqual(self.publications[-1]["status"], "failed")
+
+    def test_actual_close_failure_retains_original_descriptor_without_cleanup_or_retry(self):
+        owner = self.fixture(); original = os.close
+        def close(descriptor):
+            original(descriptor); raise OSError("private close acknowledgement lost")
+        with patch.object(session.os, "close", side_effect=close): self.assertEqual(owner.prepare(), "unconfirmed")
+        self.assertTrue(owner.native.handles); self.assertTrue(owner.native.unknown)
+        self.assertFalse(owner.settle()); self.assertEqual(owner.prepare(), "unconfirmed")
+        self.loader.assert_not_called(); self.assertTrue((self.model / "config.json").exists())
+
+    def test_output_limit_failure_is_redacted_and_never_publishes_a_candidate(self):
+        owner = self.ready()
+        def load(*_args, **_kwargs):
+            (self.output / "model.safetensors").write_bytes(b"x" * 4097)
+            return TrainModelTaskResult(runId="inert", status="succeeded")
+        self.loader.side_effect = load; owner.start(); self.executor.run()
+        self.assertEqual(self.publications[-1]["status"], "failed")
+        self.assertIsNone(self.publications[-1].get("data")); self.assertNotIn(str(self.root), json.dumps(self.publications[-1]))
+        self.assertTrue(owner.settle()); self.assertTrue((self.output / "model.safetensors").exists())
+
+    def test_running_sdk_cannot_settle_and_cancel_retains_parent_worker_obligation(self):
+        owner = self.ready(); entered, release = Event(), Event()
+        def load(*_args, **kwargs):
+            entered.set(); self.assertTrue(release.wait(5)); kwargs["on_progress"]({"stage": "training", "step": 1})
+            return TrainModelTaskResult(runId="inert", status="succeeded")
+        self.loader.side_effect = load; owner.start(); thread = Thread(target=self.executor.run)
+        thread.start()
+        try:
+            self.assertTrue(entered.wait(5)); self.assertFalse(owner.settle()); self.assertTrue(owner.cancel())
+        finally: release.set(); thread.join(5)
+        self.assertFalse(thread.is_alive()); self.assertEqual(self.publications[-1]["status"], "cancelled")
+        self.assertTrue(owner.settle()); self.assertTrue(owner.blocks_recovery)
+
+    def test_cancelled_or_stale_owner_cannot_issue_loader_work(self):
+        for mode in ("cancel", "stale"):
+            with self.subTest(mode=mode):
+                owner = self.ready()
+                if mode == "cancel": self.assertTrue(owner.cancel())
+                else: self.current = False
+                with self.assertRaises(session.TrainingSessionError): owner.start()
+                self.loader.assert_not_called(); self.assertEqual(self.executor.calls, 0)
+
+    def test_original_request_and_copy_directory_cannot_be_recaptured(self):
+        owner = self.fixture(); self.assertEqual(owner.prepare(), "prepared")
+        with self.assertRaises(session.TrainingSessionError): self.producer.capture(self.defined, self.manifest)
+        other = deepcopy(self.defined); other["requestId"] = WORKSPACE
+        with self.assertRaises(session.TrainingSessionError): self.producer.capture(other, self.manifest)
+        self.assertTrue((self.model / "config.json").exists())
+
+    def test_output_hardlink_or_excess_inventory_is_refused_and_retained(self):
+        for mode in ("link", "count"):
+            with self.subTest(mode=mode):
+                owner = self.ready()
+                def load(*_args, **_kwargs):
+                    if mode == "link": os.link(self.model / "config.json", self.output / "linked.json")
+                    else:
+                        for index in range(257): (self.output / (str(index) + ".json")).write_bytes(b"{}")
+                    return TrainModelTaskResult(runId="inert", status="succeeded")
+                self.loader.side_effect = load; owner.start(); self.executor.run()
+                self.assertEqual(self.publications[-1]["status"], "failed")
+                self.assertTrue(owner.settle()); self.assertTrue(any(self.output.iterdir()))
+
+    @unittest.skipUnless(os.name == "nt", "Windows stream syntax")
+    def test_windows_stream_and_alias_paths_are_refused_before_io(self):
+        self.fixture()
+        for suffix in ("copy:stream", "copy.", "copy "):
+            value = deepcopy(self.manifest); value["directory"] = str(self.root / suffix)
+            with self.assertRaises(session.TrainingSessionError):
+                session.BoundedLocalTrainingResources(self.defined, value, self.profile)
+
+    def test_trusted_local_boot_and_original_routes_keep_strict_native_schema_separate(self):
+        self.fixture()
+        with patch.object(app, "TASK_REGISTRY", {}), patch.object(app, "TASK_EXECUTOR", self.executor), \
+             patch.object(app, "_ORIGINAL_TRAINING_PRODUCER", None), patch.object(app, "_ORIGINAL_TRAINING_PROFILE", None), \
+             patch.object(app, "_ORIGINAL_TRAINING_PROTOCOL", "settled-v1"):
+            with self.assertRaises(session.TrainingSessionError): app.configure_original_training(self.producer)
+            app.configure_bounded_local_training(self.producer)
+            identity = app._training_identity()
+            with self.assertRaises(session.TrainingSessionError): app._prepare_original_training({"identity": identity, "definition": self.defined})
+            reply = app._prepare_original_training({"identity": identity, "definition": self.defined, "localModelCopy": self.manifest})
+            self.assertEqual(reply["phase"], "ready")
+            def action(name, **extra): return app._operate_original_training(TASK, name, {"binding": reply["binding"], **extra})
+            self.assertEqual(action("seal", input=self.staged)["phase"], "ready")
+            self.assertEqual(action("start")["kind"], "accepted"); self.executor.run()
+            self.assertEqual(action("read")["record"]["status"], "succeeded"); self.assertTrue(action("settle")["settled"])
+            self.assertNotIn("train-model.original-exit-ready-v1", app.capabilities().capabilities)
+        with patch.object(app, "TASK_REGISTRY", {}), patch.object(app, "_ORIGINAL_TRAINING_PRODUCER", None), \
+             patch.object(app, "_ORIGINAL_TRAINING_PROFILE", None):
+            app.configure_original_training(Producer())
+            with self.assertRaises(session.TrainingSessionError):
+                app._prepare_original_training({"identity": app._training_identity(), "definition": self.defined, "localModelCopy": self.manifest})
+
+
 if __name__ == "__main__": unittest.main()

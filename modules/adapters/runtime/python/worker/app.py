@@ -73,6 +73,7 @@ from .tasks.train_model import TrainingCancellationRequested, train_model
 from .tasks.approved_local_training_session import (
     CAPABILITY as ORIGINAL_TRAINING_CAPABILITY, MAX_BODY_BYTES as TRAINING_BODY_LIMIT,
     MAX_SESSIONS as TRAINING_SESSION_LIMIT, NativeTrainingProducer, NativeTrainingProfile,
+    BoundedLocalTrainingProducer, BoundedLocalTrainingProfile,
     OriginalTrainingSession, TrainingSessionError, capture_definition,
     _copy as _capture_training_stage_input,
 )
@@ -854,6 +855,22 @@ def configure_original_training(producer: NativeTrainingProducer, *, retirement_
         _ORIGINAL_TRAINING_PROTOCOL = retirement_protocol
 
 
+def configure_bounded_local_training(producer: BoundedLocalTrainingProducer):
+    """Explicit trusted boot selection; neither JSON nor an env flag enables it.
+
+    The local guarantee is cooperative. The original parent still owns process
+    limits, worker retirement, task-owned directories, result review and Save.
+    """
+    global _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE, _ORIGINAL_TRAINING_PROTOCOL
+    if type(producer) is not BoundedLocalTrainingProducer or type(producer.profile) is not BoundedLocalTrainingProfile:
+        raise TrainingSessionError()
+    with TASK_REGISTRY_LOCK:
+        if _ORIGINAL_TRAINING_PRODUCER is not None or TASK_REGISTRY:
+            raise TrainingSessionError()
+        _ORIGINAL_TRAINING_PRODUCER, _ORIGINAL_TRAINING_PROFILE = producer, producer.profile
+        _ORIGINAL_TRAINING_PROTOCOL = "settled-v1"
+
+
 def _capture_original_training_stages(owner, record, submit_original, current, timeout):
     """Closed operations on the same captured executor, never HTTP callbacks."""
     methods = {"prepare": OriginalTrainingSession.prepare, "seal": OriginalTrainingSession.seal,
@@ -907,7 +924,9 @@ async def _training_body(request: Request):
 
 
 def _prepare_original_training(body):
-    if set(body) != {"identity", "definition"} or body["identity"] != _training_identity():
+    local = type(_ORIGINAL_TRAINING_PROFILE) is BoundedLocalTrainingProfile
+    keys = {"identity", "definition", "localModelCopy"} if local else {"identity", "definition"}
+    if type(body) is not dict or set(body) != keys or body["identity"] != _training_identity():
         raise TrainingSessionError()
     definition = capture_definition(body["definition"])
     task_id = definition["requestId"]
@@ -947,7 +966,7 @@ def _prepare_original_training(body):
             return future
         protocol = _ORIGINAL_TRAINING_PROTOCOL
         owner = OriginalTrainingSession(definition, _ORIGINAL_TRAINING_PRODUCER, current, publish, submit, _ORIGINAL_TRAINING_PROFILE,
-            retirement_protocol=protocol)
+            retirement_protocol=protocol, local_model=body["localModelCopy"] if local else None)
         record.update(_originalTrainingOwner=owner, _trainingBinding=binding, _trainingIncarnation=incarnation)
         if protocol == _training_exit_ready.PROTOCOL:
             if len(_ORIGINAL_TRAINING_STAGES) >= TRAINING_SESSION_LIMIT:
