@@ -13,6 +13,103 @@ from modules.adapters.runtime.python.worker.tasks import original_training_outpu
 from modules.adapters.runtime.python.worker.tests import test_protected_training_workflow as workflow
 
 
+def local_fixture(*, seconds=5):
+    owner = object()
+    queue = delivery.BoundedLocalTrainingOutputDelivery(owner, "11111111-1111-4111-8111-111111111111",
+        maximum_files=4, maximum_payload_bytes=65536, deadline=monotonic() + seconds, current=lambda: None)
+    values = [b"{}", b"a" * 20000, b"{}", b"b" * 9000]
+    files = [{"fileIndex": index, "groupIndex": index // 2, "name": "config.json" if index % 2 == 0 else "model.safetensors",
+        "role": "checkpoint" if index < 2 else "candidate", "sizeBytes": len(value),
+        "sha256": "sha256:" + hashlib.sha256(value).hexdigest()} for index, value in enumerate(values)]
+    def read_file(index):
+        for offset in range(0, len(values[index]), delivery.SEGMENT_BYTES):
+            yield values[index][offset:offset + delivery.SEGMENT_BYTES]
+    return owner, queue, files, values, read_file
+
+
+def test_local_delivery_reuses_bounded_frames_without_native_family_or_view():
+    owner, queue, files, values, read_file = local_fixture()
+    assert not isinstance(queue, delivery.OriginalTrainingOutputDelivery)
+    with pytest.raises(delivery.OutputDeliveryUnavailable): delivery._record(queue)
+    with consumer(queue) as (frames, errors):
+        queue.deliver(owner, files, read_file)
+        assert queue.read()["phase"] == "complete" and errors == []
+        assert frames[0]["files"] == files and frames[-1]["kind"] == "streams-complete"
+        for index, value in enumerate(values):
+            blocks = [base64.b64decode(frame["data"]) for frame in frames if frame["kind"] == "data" and frame["fileIndex"] == index]
+            assert b"".join(blocks) == value and all(0 < len(block) <= 8192 for block in blocks)
+        assert queue.acknowledge(frames[-1]["sequence"]) is True
+        with pytest.raises(delivery.OutputDeliveryUnavailable): queue.deliver(owner, files, read_file)
+        with pytest.raises(delivery.OutputDeliveryUnavailable): queue.acknowledge(frames[-1]["sequence"] + 1)
+
+
+@pytest.mark.parametrize("change", ("owner", "name", "index", "group", "role", "size", "hash", "extra", "duplicate"))
+def test_local_delivery_refuses_wrong_owner_or_manifest_before_file_reads(change):
+    owner, queue, files, _values, read_file = local_fixture(); reads = []
+    if change == "owner": owner = object()
+    if change == "name": files[0]["name"] = "../private"
+    if change == "index": files[0]["fileIndex"] = True
+    if change == "group": files[0]["groupIndex"] = 1
+    if change == "role": files[-1]["role"] = "checkpoint"
+    if change == "size": files[0]["sizeBytes"] = 0
+    if change == "hash": files[0]["sha256"] = "sha256:" + "A" * 64
+    if change == "extra": files[0]["path"] = "private"
+    if change == "duplicate": files[1]["name"] = files[0]["name"]
+    def observed(index):
+        reads.append(index)
+        return read_file(index)
+    with pytest.raises(delivery.OutputDeliveryUnavailable): queue.deliver(owner, files, observed)
+    assert reads == [] and queue.read()["frame"] is None
+
+
+def test_local_delivery_lost_manifest_ack_expires_without_file_read_or_retry():
+    owner, queue, files, _values, _read = local_fixture(seconds=0.03); reads = []
+    def source(index): reads.append(index); yield b"x"
+    with pytest.raises(delivery.OutputDeliveryUnavailable): queue.deliver(owner, files, source)
+    assert reads == [] and queue.read()["phase"] == "failed"
+    with pytest.raises(delivery.OutputDeliveryUnavailable): queue.deliver(owner, files, source)
+
+
+def test_local_delivery_rejects_changed_bytes_before_eof_or_final_ack():
+    owner, queue, files, values, read = local_fixture(); values[0] = b"!!"
+    with consumer(queue) as (frames, _errors):
+        with pytest.raises(delivery.OutputDeliveryUnavailable): queue.deliver(owner, files, read)
+        assert queue.read()["phase"] == "failed"
+        assert all(frame["kind"] not in ("file-eof", "streams-complete") for frame in frames)
+
+
+def test_local_delivery_waits_for_original_generator_close_before_file_eof():
+    owner, queue, files, _values, read = local_fixture(); entered, release = Event(), Event(); errors = []
+    def held(index):
+        try: yield from read(index)
+        finally:
+            if index == 0:
+                entered.set()
+                assert release.wait(3)
+    def send():
+        try: queue.deliver(owner, files, held)
+        except BaseException as error: errors.append(error)
+    with consumer(queue) as (frames, _consumer_errors):
+        thread = Thread(target=send); thread.start()
+        try:
+            assert entered.wait(3)
+            assert queue.read()["phase"] == "active"
+            assert all(frame["kind"] != "file-eof" for frame in frames)
+        finally: release.set(); thread.join(3)
+        assert not thread.is_alive() and errors == [] and queue.read()["phase"] == "complete"
+
+
+def test_local_delivery_failed_original_close_cannot_publish_eof():
+    owner, queue, files, _values, read = local_fixture()
+    def broken(index):
+        try: yield from read(index)
+        finally: raise OSError("synthetic owned close failure")
+    with consumer(queue) as (frames, _errors):
+        with pytest.raises(OSError): queue.deliver(owner, files, broken)
+        assert queue.read()["phase"] == "failed"
+        assert all(frame["kind"] not in ("file-eof", "streams-complete") for frame in frames)
+
+
 @contextmanager
 def bound_fixture(*,seconds=10,maximum_files=256,maximum_bytes=2**20):
     with workflow.family_fixture() as facts:

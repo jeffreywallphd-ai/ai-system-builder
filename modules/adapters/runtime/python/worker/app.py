@@ -926,6 +926,9 @@ async def _training_body(request: Request):
 def _prepare_original_training(body):
     local = type(_ORIGINAL_TRAINING_PROFILE) is BoundedLocalTrainingProfile
     keys = {"identity", "definition", "localModelCopy"} if local else {"identity", "definition"}
+    deliver_output = (local and type(body) is dict and type(body.get("outputDelivery")) is str
+                      and body["outputDelivery"] == "bounded-local-v1")
+    if deliver_output: keys = keys | {"outputDelivery"}
     if type(body) is not dict or set(body) != keys or body["identity"] != _training_identity():
         raise TrainingSessionError()
     definition = capture_definition(body["definition"])
@@ -966,7 +969,8 @@ def _prepare_original_training(body):
             return future
         protocol = _ORIGINAL_TRAINING_PROTOCOL
         owner = OriginalTrainingSession(definition, _ORIGINAL_TRAINING_PRODUCER, current, publish, submit, _ORIGINAL_TRAINING_PROFILE,
-            retirement_protocol=protocol, local_model=body["localModelCopy"] if local else None)
+            retirement_protocol=protocol, local_model=body["localModelCopy"] if local else None,
+            local_output_delivery=bool(deliver_output))
         record.update(_originalTrainingOwner=owner, _trainingBinding=binding, _trainingIncarnation=incarnation)
         if protocol == _training_exit_ready.PROTOCOL:
             if len(_ORIGINAL_TRAINING_STAGES) >= TRAINING_SESSION_LIMIT:

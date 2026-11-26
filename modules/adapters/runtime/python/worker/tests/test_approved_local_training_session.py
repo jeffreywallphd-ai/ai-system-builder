@@ -1217,7 +1217,7 @@ class ConfiguredOriginalTrainingFileProducerTests(unittest.TestCase):
 
 class BoundedLocalTrainingWorkerTests(unittest.TestCase):
     """Actual fresh files plus an inert fixed loader. No models or Native effects."""
-    def fixture(self):
+    def fixture(self, *, deliver_output=False, method=None):
         import hashlib
         temp = tempfile.TemporaryDirectory(prefix="bounded-local-training-")
         self.addCleanup(temp.cleanup); self.root = Path(temp.name).resolve()
@@ -1230,6 +1230,8 @@ class BoundedLocalTrainingWorkerTests(unittest.TestCase):
             (self.model / name).write_bytes(value)
             files.append({"name": name, "sizeBytes": len(value), "sha256": "sha256:" + hashlib.sha256(value).hexdigest()})
         self.defined, self.staged = definition(), staged()
+        if method is not None:
+            self.defined["request"]["method"] = method; self.staged["payload"]["method"] = method
         data, recipe = b'{"instruction":"hello","response":"world"}\n', b'{"format":"jsonl"}\n'
         data_path, recipe_path = self.inputs / "input-0.jsonl", self.inputs / "recipe.json"
         data_path.write_bytes(data); recipe_path.write_bytes(recipe)
@@ -1252,11 +1254,11 @@ class BoundedLocalTrainingWorkerTests(unittest.TestCase):
         self.native = native_patch.start(); self.addCleanup(native_patch.stop)
         self.owner = session.OriginalTrainingSession(self.defined, self.producer, lambda: self.current,
             lambda **value: self.publications.append(value), lambda owner: self.executor.submit(owner.run), self.profile,
-            local_model=self.manifest)
+            local_model=self.manifest, local_output_delivery=deliver_output)
         return self.owner
 
-    def ready(self):
-        owner = self.fixture(); self.assertEqual(owner.prepare(), "prepared")
+    def ready(self, *, deliver_output=False, method=None):
+        owner = self.fixture(deliver_output=deliver_output, method=method); self.assertEqual(owner.prepare(), "prepared")
         self.assertEqual(owner.seal(self.staged), "ready"); return owner
 
     def test_actual_local_bytes_reach_the_fixed_loader_once_without_native_view_or_quality_comparison(self):
@@ -1276,6 +1278,157 @@ class BoundedLocalTrainingWorkerTests(unittest.TestCase):
         self.assertTrue(self.model.exists()); self.assertTrue((self.inputs / "recipe.json").exists())
         with self.assertRaises(session.TrainingSessionError): owner.start()
         self.assertEqual(self.executor.calls, 1)
+
+    def write_delivery_outputs(self, *, validation_reports=False):
+        checkpoint = self.output / "checkpoints" / "checkpoint-1"; checkpoint.mkdir(parents=True)
+        adapter = self.defined["request"]["method"] in ("lora", "qlora")
+        self.result_config_name = "adapter_config.json" if adapter else "config.json"
+        self.result_weight_name = "adapter_model.safetensors" if adapter else "model.safetensors"
+        for root in (checkpoint, self.output):
+            for name, data in ((self.result_config_name, b"{}"), ("tokenizer.json", b"{}"), (self.result_weight_name, b"synthetic-safe-result")):
+                (root / name).write_bytes(data)
+            (root / "training_args.bin").write_bytes(b"synthetic-unexported-sdk-state")
+        if validation_reports:
+            (self.output / "model_validation_diff.json").write_text('{"synthetic":true}', encoding="utf-8")
+            (self.output / "model_validation_report.md").write_text("# Synthetic validation report\n", encoding="utf-8")
+        return TrainModelTaskResult(runId="inert", status="succeeded")
+
+    @contextmanager
+    def consume_local_output(self, owner, on_frame=None, *, expected_refusal=False):
+        stopped, frames, errors = Event(), [], []
+        def receive():
+            try:
+                previous = 0
+                while not stopped.is_set():
+                    row = owner.read_output(); frame = row["frame"]
+                    if row["phase"] in ("complete", "failed"): return
+                    if frame is not None and frame["sequence"] != previous:
+                        previous = frame["sequence"]; frames.append(frame)
+                        if on_frame is not None: on_frame(frame)
+                        owner.acknowledge_output(frame["sequence"])
+                        if frame["kind"] == "streams-complete": return
+                    stopped.wait(0.001)
+            except BaseException as error: errors.append(error)
+        thread = Thread(target=receive); thread.start()
+        try: yield frames, errors
+        finally:
+            stopped.set(); session._local_output_sessions[owner][4](); thread.join(3)
+            self.assertFalse(thread.is_alive())
+            if not expected_refusal: self.assertEqual(errors, [])
+
+    def test_opt_in_local_results_deliver_real_checkpoint_and_candidate_bytes_before_success(self):
+        import base64, hashlib
+        owner = self.ready(deliver_output=True)
+        self.assertEqual(owner.read_output()["phase"], "bound")
+        self.loader.side_effect = lambda *_a, **_k: self.write_delivery_outputs()
+        with self.consume_local_output(owner) as (frames, _errors):
+            self.assertEqual(owner.start()["kind"], "accepted"); self.executor.run()
+            self.assertEqual(self.publications[-1]["status"], "succeeded")
+            self.assertEqual(owner.read_output()["phase"], "complete")
+            files = frames[0]["files"]; self.assertEqual(len(files), 6)
+            self.assertEqual([row["role"] for row in files], ["checkpoint"] * 3 + ["candidate"] * 3)
+            self.assertNotIn("training_args.bin", [row["name"] for row in files])
+            self.assertEqual(frames[-1]["kind"], "streams-complete")
+            for row in files:
+                content = b"".join(base64.b64decode(frame["data"]) for frame in frames
+                    if frame["kind"] == "data" and frame["fileIndex"] == row["fileIndex"])
+                self.assertEqual(len(content), row["sizeBytes"])
+                self.assertEqual("sha256:" + hashlib.sha256(content).hexdigest(), row["sha256"])
+            self.assertFalse(owner.native.handles); self.assertFalse(owner.native.directory_handles)
+            self.assertTrue(owner.settle()); self.assertTrue(owner.blocks_recovery)
+        self.assertTrue((self.output / self.result_weight_name).exists())
+        self.assertFalse(self.loader.call_args.kwargs["compare_validation_baseline"])
+
+    def test_local_output_binding_refuses_replaced_owner_scope_and_withdrawn_lifetime(self):
+        owner = self.ready(deliver_output=True); original = owner.native
+        owner.native = object()
+        with self.assertRaises(session.TrainingSessionError): owner.read_output()
+        owner.native = original; self.current = False
+        with self.assertRaises(session.TrainingSessionError): owner.read_output()
+        self.current = True; self.assertEqual(owner.read_output()["phase"], "bound")
+        with self.assertRaises(session.TrainingSessionError): owner.acknowledge_output(True)
+
+    def test_safe_output_layout_matches_full_lora_and_qlora_methods_with_validation_reports(self):
+        for method in ("full-finetune", "lora", "qlora"):
+            with self.subTest(method=method):
+                owner = self.ready(deliver_output=True, method=method)
+                self.loader.side_effect = lambda *_a, **_k: self.write_delivery_outputs(validation_reports=True)
+                with self.consume_local_output(owner) as (frames, _errors):
+                    owner.start(); self.executor.run()
+                    self.assertEqual(self.publications[-1]["status"], "succeeded")
+                    names = [row["name"] for row in frames[0]["files"]]
+                    self.assertEqual(names.count(self.result_config_name), 2)
+                    self.assertEqual(names.count(self.result_weight_name), 2)
+                    self.assertNotIn("model_validation_diff.json", names)
+                    self.assertNotIn("model_validation_report.md", names)
+                    self.assertTrue((self.output / "model_validation_diff.json").is_file())
+                    self.assertTrue((self.output / "model_validation_report.md").is_file())
+                    self.assertEqual(self.loader.call_args.args[0].method, method)
+                    self.assertIs(self.loader.call_args.kwargs["compare_validation_baseline"], False)
+                    self.assertTrue(owner.settle())
+
+    def test_wrong_or_mixed_safe_weight_pair_cannot_complete_local_delivery(self):
+        for method, mixed in (("full-finetune", False), ("lora", False), ("qlora", False), ("lora", True)):
+            with self.subTest(method=method, mixed=mixed):
+                owner = self.ready(deliver_output=True, method=method)
+                def load(*_a, **_k):
+                    result = self.write_delivery_outputs()
+                    other_config = "config.json" if method in ("lora", "qlora") else "adapter_config.json"
+                    other_weight = "model.safetensors" if method in ("lora", "qlora") else "adapter_model.safetensors"
+                    for root in (self.output / "checkpoints" / "checkpoint-1", self.output):
+                        if not mixed:
+                            (root / self.result_config_name).unlink(); (root / self.result_weight_name).unlink()
+                        (root / other_config).write_bytes(b"{}"); (root / other_weight).write_bytes(b"synthetic-wrong-format")
+                    return result
+                self.loader.side_effect = load
+                owner.start(); self.executor.run()
+                self.assertEqual(self.publications[-1]["status"], "failed")
+                self.assertIsNone(owner.read_output()["frame"]); self.assertTrue(owner.settle())
+
+    def test_changed_local_output_after_manifest_cannot_complete_or_rerun_loader(self):
+        owner = self.ready(deliver_output=True)
+        self.loader.side_effect = lambda *_a, **_k: self.write_delivery_outputs()
+        def change(frame):
+            if frame["kind"] == "manifest": (self.output / self.result_weight_name).write_bytes(b"changed-result")
+        with self.consume_local_output(owner, change) as (frames, _errors):
+            owner.start(); self.executor.run()
+            self.assertEqual(self.publications[-1]["status"], "failed")
+            self.assertNotIn("streams-complete", [row["kind"] for row in frames])
+            self.assertTrue(owner.settle())  # Local IO only; parent must retire the worker/Job.
+        self.loader.assert_called_once()
+        with self.assertRaises(session.TrainingSessionError): owner.start()
+
+    def test_stop_during_local_result_delivery_stays_cancelled_without_final_ack(self):
+        owner = self.ready(deliver_output=True)
+        self.loader.side_effect = lambda *_a, **_k: self.write_delivery_outputs()
+        def stop(frame):
+            if frame["kind"] == "manifest": owner.cancel()
+        with self.consume_local_output(owner, stop, expected_refusal=True) as (frames, errors):
+            owner.start(); self.executor.run()
+            self.assertEqual(self.publications[-1]["status"], "cancelled")
+            self.assertNotIn("streams-complete", [row["kind"] for row in frames])
+            self.assertTrue(owner.settle())
+        self.loader.assert_called_once()
+
+    def test_unsafe_unknown_or_linked_output_never_reaches_local_manifest(self):
+        for mode in ("unknown", "hardlink", "missing-tokenizer", "oversized"):
+            with self.subTest(mode=mode):
+                owner = self.ready(deliver_output=True)
+                def load(*_a, **_k):
+                    result = self.write_delivery_outputs()
+                    if mode == "unknown": (self.output / "execute.py").write_text("synthetic-unexported-input")
+                    if mode == "hardlink":
+                        (self.output / self.result_weight_name).unlink()
+                        os.link(self.model / "model.safetensors", self.output / self.result_weight_name)
+                    if mode == "missing-tokenizer": (self.output / "tokenizer.json").unlink()
+                    if mode == "oversized": (self.output / self.result_weight_name).write_bytes(b"x" * 4097)
+                    return result
+                self.loader.side_effect = load
+                owner.start(); self.executor.run()
+                self.assertEqual(self.publications[-1]["status"], "failed")
+                self.assertEqual(owner.read_output()["phase"], "failed")
+                self.assertIsNone(owner.read_output()["frame"])
+                self.assertTrue(owner.settle())
 
     def test_manifest_binding_and_unknown_fields_are_rejected_before_file_io(self):
         self.fixture()
@@ -1427,6 +1580,36 @@ class BoundedLocalTrainingWorkerTests(unittest.TestCase):
             app.configure_original_training(Producer())
             with self.assertRaises(session.TrainingSessionError):
                 app._prepare_original_training({"identity": app._training_identity(), "definition": self.defined, "localModelCopy": self.manifest})
+
+    def test_local_output_transport_requires_its_exact_private_opt_in(self):
+        self.fixture()
+        with patch.object(app, "TASK_REGISTRY", {}), patch.object(app, "TASK_EXECUTOR", self.executor), \
+             patch.object(app, "_ORIGINAL_TRAINING_PRODUCER", None), patch.object(app, "_ORIGINAL_TRAINING_PROFILE", None), \
+             patch.object(app, "_ORIGINAL_TRAINING_PROTOCOL", "settled-v1"):
+            app.configure_bounded_local_training(self.producer)
+            identity = app._training_identity()
+            body = {"identity": identity, "definition": self.defined, "localModelCopy": self.manifest}
+            for value in (None, False, True, "native", "bounded-local-v2", {}, 1):
+                with self.assertRaises(session.TrainingSessionError):
+                    app._prepare_original_training({**body, "outputDelivery": value})
+                self.assertEqual(app.TASK_REGISTRY, {})
+            hooks = []
+            class ActiveValue:
+                def __eq__(self, other): hooks.append(other); return True
+            with self.assertRaises(session.TrainingSessionError):
+                app._prepare_original_training({**body, "outputDelivery": ActiveValue()})
+            self.assertEqual(hooks, []); self.assertEqual(app.TASK_REGISTRY, {})
+            reply = app._prepare_original_training({**body, "outputDelivery": "bounded-local-v1"})
+            owner = app.TASK_REGISTRY[TASK]["_originalTrainingOwner"]
+            def action(name, **extra): return app._operate_original_training(TASK, name, {"binding": reply["binding"], **extra})
+            self.assertEqual(action("output-read")["output"]["phase"], "bound")
+            self.assertEqual(action("seal", input=self.staged)["phase"], "ready")
+            self.loader.side_effect = lambda *_a, **_k: self.write_delivery_outputs()
+            with self.consume_local_output(owner) as (frames, _errors):
+                self.assertEqual(action("start")["kind"], "accepted"); self.executor.run()
+                self.assertEqual(action("read")["record"]["status"], "succeeded")
+                self.assertEqual(frames[-1]["kind"], "streams-complete")
+                self.assertTrue(action("settle")["settled"])
 
 
 if __name__ == "__main__": unittest.main()

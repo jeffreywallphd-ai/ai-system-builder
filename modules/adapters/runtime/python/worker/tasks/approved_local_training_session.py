@@ -38,6 +38,7 @@ _OUTPUT_READ = output_delivery.OriginalTrainingOutputDelivery.read
 _OUTPUT_ACK = output_delivery.OriginalTrainingOutputDelivery.acknowledge
 _OUTPUT_ABORT = output_delivery.abort_original_output_delivery
 _output_sessions = WeakKeyDictionary()
+_local_output_sessions = WeakKeyDictionary()
 _original_scopes = WeakKeyDictionary()
 _MODEL_LEASES = native._model_leases
 _MODEL_SOURCES = native._verified_model_receivers
@@ -263,6 +264,14 @@ _DEFAULT_OUTPUT_DELIVERY = NativeTrainingResources.output_delivery
 def _capture_output_delivery(session, resource):
     # Retain resources before any optional callback; never invoke a property.
     _need(session.native is resource)
+    if type(resource) is BoundedLocalTrainingResources:
+        queue = resource.output_delivery()
+        if queue is not None:
+            _need(type(queue) is output_delivery.BoundedLocalTrainingOutputDelivery
+                  and queue.belongs_to(resource, session.task_id) and session not in _local_output_sessions)
+            _local_output_sessions[session] = (resource, queue, queue.read, queue.acknowledge, queue.abort,
+                resource.deliver_outputs, _original_scopes[session])
+        return
     selected = None
     bases = type.__getattribute__(type(resource), "__mro__")
     _need(len(bases) <= 8)
@@ -359,7 +368,20 @@ def _output_snapshot(session):
     return binding
 
 
+def _local_output_snapshot(session):
+    _need(session._current())
+    original = _local_output_sessions.get(session)
+    _need(original is not None and original[0] is session.native and not session.settled and not session.cancelled
+          and _original_scopes.get(session) is original[6] and _scope_digest(session._sealed_definition) == original[6]
+          and original[1].belongs_to(original[0], session.task_id))
+    return original
+
+
 def _abort_output(session):
+    local = _local_output_sessions.get(session)
+    if local is not None:
+        local[4]()
+        return
     binding = _output_sessions.get(session)
     if binding is not None:
         try:_OUTPUT_ABORT(binding["queue"])
@@ -407,8 +429,9 @@ class BoundedLocalTrainingResources:
     There is deliberately no Native inheritance, deletion, recovery, public path
     report or claim that a cooperative SDK has an OS-enforced disk quota.
     """
-    def __init__(self, definition, manifest, profile):
+    def __init__(self, definition, manifest, profile, *, deliver_output=False):
         _need(type(profile) is BoundedLocalTrainingProfile)
+        _need(type(deliver_output) is bool)
         self.definition, self.profile = capture_definition(definition), profile
         copied = _copy(manifest)
         _record(copied, ("modelRecordId", "modelUpdatedAt", "directory", "files"))
@@ -432,6 +455,10 @@ class BoundedLocalTrainingResources:
         self.operations, self.handles, self.directory_handles = 0, set(), set()
         self.started = monotonic()
         self.files, self.directories, self.output = {}, {}, None
+        def current(): self._check()
+        self.delivery = output_delivery.BoundedLocalTrainingOutputDelivery(self, self.definition["requestId"],
+            maximum_files=256, maximum_payload_bytes=profile.maximum_output_bytes,
+            deadline=self.started + profile.maximum_duration_seconds, current=current) if deliver_output else None
 
     def _location(self, value):
         _local_locator(value)
@@ -587,6 +614,7 @@ class BoundedLocalTrainingResources:
 
     def request_cancel(self):
         with self.lock: self.cancelled = True
+        if self.delivery is not None: self.delivery.abort()
 
     def settle(self):
         # Local quiescence only. Parent must still retire the original worker,
@@ -597,7 +625,76 @@ class BoundedLocalTrainingResources:
             if self.phase not in ("bound", "prepared", "sealed", "returned", "failed"): return False
             self.phase = "settled"; return True
 
-    def output_delivery(self): return None
+    def output_delivery(self): return self.delivery
+
+    def _read_output_file(self, location, identity, size):
+        self._check(); self._directory(os.path.dirname(location))
+        _need(self._identity(os.lstat(location)) == identity)
+        descriptor = os.open(location, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        self.handles.add(descriptor)
+        try:
+            _need(self._identity(os.fstat(descriptor)) == identity)
+            count = 0
+            while True:
+                self._check(); block = os.read(descriptor, min(8192, size - count + 1))
+                _need(type(block) is bytes)
+                if not block: break
+                count += len(block); _need(count <= size); yield block
+            _need(count == size and self._identity(os.fstat(descriptor)) == identity
+                  and self._identity(os.lstat(location)) == identity)
+            self._check()
+        finally:
+            try: os.close(descriptor)
+            except BaseException:
+                self.unknown = True; raise
+            else: self.handles.remove(descriptor)
+
+    def deliver_outputs(self):
+        _need(self.delivery is not None and self.delivery.belongs_to(self, self.definition["requestId"]))
+        with self._operation("returned", "delivering", "returned"):
+            _need(self.output is not None); self._directory(self.output)
+            names = frozenset(("config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+                "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors",
+                "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"))
+            # Known SDK auxiliary state is retained under the original output
+            # limits, never loaded or exported as a safe model candidate.
+            auxiliary = frozenset(("training_args.bin", "optimizer.pt", "scheduler.pt", "rng_state.pth", "scaler.pt",
+                "trainer_state.json", "tokenizer.model", "README.md", "chat_template.jinja",
+                "model_validation_diff.json", "model_validation_report.md"))
+            adapter = self.definition["request"]["method"] in ("lora", "qlora")
+            required = {"adapter_config.json", "adapter_model.safetensors"} if adapter else {"config.json", "model.safetensors"}
+            incompatible_weight = "model.safetensors" if adapter else "adapter_model.safetensors"
+            roots = []
+            entries = self._entries(self.output, 256)
+            if "checkpoints" in entries:
+                checkpoints = os.path.join(self.output, "checkpoints"); self._directory(checkpoints)
+                children = self._entries(checkpoints, 31)
+                _need(all(re.fullmatch(r"checkpoint-[1-9][0-9]{0,11}", name) is not None for name in children))
+                for name in sorted(children, key=lambda value: int(value.split("-")[1])):
+                    root = os.path.join(checkpoints, name); self._directory(root); roots.append(root)
+            roots.append(self.output)
+            manifest, sources, total = [], [], 0
+            for group, root in enumerate(roots):
+                entries = self._entries(root, 256); selected = set()
+                for name in sorted(entries):
+                    if root == self.output and name == "checkpoints": continue
+                    _need(name in names or name in auxiliary)
+                    location = os.path.join(root, name); identity = self._identity(os.lstat(location))
+                    if name not in names: continue
+                    size = identity[4]
+                    _need(type(size) is int and 1 <= size <= self.profile.maximum_output_bytes - total and len(manifest) < 256)
+                    checksum = hashlib.sha256()
+                    for block in self._read_output_file(location, identity, size): checksum.update(block)
+                    selected.add(name); total += size
+                    sources.append((location, identity, size))
+                    manifest.append({"fileIndex": len(manifest), "groupIndex": group, "name": name, "sizeBytes": size,
+                        "sha256": "sha256:" + checksum.hexdigest(), "role": "candidate" if root == self.output else "checkpoint"})
+                _need(required <= selected and incompatible_weight not in selected)
+                if root == self.output: _need("tokenizer.json" in selected)
+            def read_file(index):
+                _need(type(index) is int and 0 <= index < len(sources))
+                return self._read_output_file(*sources[index])
+            self.delivery.deliver(self, manifest, read_file)
 
 
 class BoundedLocalTrainingProducer:
@@ -607,9 +704,9 @@ class BoundedLocalTrainingProducer:
         self.profile = profile
         self.lock, self.requests, self.directories = RLock(), set(), set()
 
-    def capture(self, definition, manifest):
+    def capture(self, definition, manifest, *, deliver_output=False):
         value = capture_definition(definition)
-        resource = BoundedLocalTrainingResources(value, manifest, self.profile)
+        resource = BoundedLocalTrainingResources(value, manifest, self.profile, deliver_output=deliver_output)
         with self.lock:
             _need(len(self.requests) < MAX_SESSIONS and value["requestId"] not in self.requests
                   and resource.model_directory not in self.directories)
@@ -619,7 +716,7 @@ class BoundedLocalTrainingProducer:
 
 class OriginalTrainingSession:
     def __init__(self, definition, producer, current: Callable[[], bool], publish, submit, profile=None,
-                 *, retirement_protocol="settled-v1", local_model=None):
+                 *, retirement_protocol="settled-v1", local_model=None, local_output_delivery=False):
         self.loader = train_model_from_local_files
         self.definition = capture_definition(definition)
         self._sealed_definition = _copy(self.definition)
@@ -639,6 +736,7 @@ class OriginalTrainingSession:
         self.producer = producer
         self.profile = profile if profile is not None else producer.profile
         self._bounded_local = type(self.profile) is BoundedLocalTrainingProfile
+        _need(type(local_output_delivery) is bool and (self._bounded_local or not local_output_delivery))
         _need(type(self.profile) is NativeTrainingProfile or self._bounded_local)
         if self._bounded_local:
             _need(type(producer) is BoundedLocalTrainingProducer and retirement_protocol == "settled-v1")
@@ -666,7 +764,7 @@ class OriginalTrainingSession:
         self.started_at = None
         # Capture trusted methods and receivers before the first awaited IO.
         original_capture = producer.capture
-        self.capture = (lambda definition: original_capture(definition, local_model)) if self._bounded_local else original_capture
+        self.capture = (lambda definition: original_capture(definition, local_model, deliver_output=local_output_delivery)) if self._bounded_local else original_capture
 
     @property
     def retains_record(self):
@@ -836,6 +934,10 @@ class OriginalTrainingSession:
                 # a real validation baseline through this workflow protocol.
                 result = self.loader(self._request_copy(payload, deep=True), on_progress=progress,
                     compare_validation_baseline=False, _model_view=model_view)
+            if result.status == "succeeded" and _local_output_sessions.get(self) is not None:
+                local = _local_output_snapshot(self)
+                local[5]()
+                _need(_local_output_snapshot(self) is local and local[2]()["phase"] == "complete")
             if result.status == "succeeded" and _output_sessions.get(self) is not None:
                 binding = _output_snapshot(self)
                 _need(_OUTPUT_READ(binding["queue"])["phase"] == "complete")
@@ -848,7 +950,10 @@ class OriginalTrainingSession:
         except TrainingCancellationRequested:
             self.publish(status="cancelled", data=None)
         except Exception:
-            self.publish(status="failed", data=None, error={"code": "private_training_failed", "message": "The private training task could not finish."})
+            if self._bounded_local and self.cancelled:
+                self.publish(status="cancelled", data=None)
+            else:
+                self.publish(status="failed", data=None, error={"code": "private_training_failed", "message": "The private training task could not finish."})
         finally:
             if not successful:
                 try:_abort_output(self)
@@ -906,6 +1011,12 @@ class OriginalTrainingSession:
     def settle(self):
         if _session_exit.enabled(self):
             return False  # Local readiness is never global/permanent settlement.
+        local = _local_output_sessions.get(self)
+        if local is not None:
+            try:
+                _need(local[0] is self.native and local[1].belongs_to(local[0], self.task_id)
+                      and local[2]()["phase"] in ("complete", "failed"))
+            except Exception: return False
         binding = _output_sessions.get(self)
         if binding is not None:
             try:
@@ -929,6 +1040,9 @@ class OriginalTrainingSession:
             return False
 
     def read_output(self):
+        if self in _local_output_sessions:
+            local = _local_output_snapshot(self); result = _copy(local[2]())
+            _need(_local_output_snapshot(self) is local); return result
         binding = _output_snapshot(self)
         result = _copy(_OUTPUT_READ(binding["queue"]))
         _need(_output_snapshot(self) is binding)
@@ -936,6 +1050,9 @@ class OriginalTrainingSession:
 
     def acknowledge_output(self, sequence):
         _need(type(sequence) is int and 1 <= sequence <= 2**53 - 1)
+        if self in _local_output_sessions:
+            local = _local_output_snapshot(self); result = local[3](sequence)
+            _need(result is True and _local_output_snapshot(self) is local); return True
         binding = _output_snapshot(self)
         result = _OUTPUT_ACK(binding["queue"], sequence)
         _need(result is True and _output_snapshot(self) is binding)

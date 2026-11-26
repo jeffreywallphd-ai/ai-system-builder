@@ -7,6 +7,7 @@ thread, executor, transport, readiness profile or default resource producer.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 from math import isfinite
 from threading import Condition, RLock, get_ident
@@ -30,6 +31,134 @@ _TASK = native.resolve_original_training_task_id
 _records = WeakKeyDictionary()
 _families = WeakKeyDictionary()
 _streams = WeakKeyDictionary()
+
+
+class BoundedLocalTrainingOutputDelivery:
+    """One original local producer, with the same bounded wire frames.
+
+    This owner is deliberately distinct from a Native family/view. It grants no
+    protected custody, worker retirement, current-file or model Save authority.
+    Only trusted local-session composition supplies the owner and file reader.
+    """
+    __slots__ = ("_state", "__weakref__")
+
+    def __init__(self, owner, task_id, *, maximum_files, maximum_payload_bytes, deadline, current):
+        _need(type(self) is BoundedLocalTrainingOutputDelivery and owner is not None)
+        _need(type(task_id) is str and str(UUID(task_id)) == task_id)
+        _need(type(maximum_files) is int and 1 <= maximum_files <= 256
+              and type(maximum_payload_bytes) is int and 1 <= maximum_payload_bytes <= 2**53 - 1
+              and type(deadline) in (int, float) and isfinite(deadline) and deadline > 0
+              and type(current) is FunctionType)
+        self._state = {"owner": owner, "task_id": task_id, "maximum_files": maximum_files,
+            "maximum_bytes": maximum_payload_bytes, "deadline": deadline, "current": current,
+            "condition": Condition(RLock()), "phase": "bound", "thread": None,
+            "sequence": 0, "acknowledged": 0, "pending": None, "checking": False}
+
+    def _record(self):
+        _need(type(self) is BoundedLocalTrainingOutputDelivery)
+        record = object.__getattribute__(self, "_state"); _need(type(record) is dict)
+        return record
+
+    def belongs_to(self, owner, task_id):
+        record = self._record()
+        return record["owner"] is owner and record["task_id"] == task_id
+
+    def _current(self):
+        record = self._record()
+        _need(get_ident() == record["thread"] and not record["checking"])
+        record["checking"] = True
+        try:
+            _need(record["phase"] == "active" and monotonic() < record["deadline"])
+            _need(record["current"]() is None)
+            _need(record["phase"] == "active" and monotonic() < record["deadline"])
+        except BaseException:
+            self.abort(); raise
+        finally:
+            record["checking"] = False
+
+    def read(self):
+        record = self._record()
+        with record["condition"]:
+            return {"phase": record["phase"], "acknowledged": record["acknowledged"],
+                "frame": None if record["phase"] == "failed" or record["pending"] is None else _COPY(record["pending"])}
+
+    def acknowledge(self, sequence):
+        record = self._record(); _need(type(sequence) is int and 1 <= sequence <= 2**53 - 1)
+        with record["condition"]:
+            _need(record["phase"] in ("active", "complete"))
+            if sequence == record["acknowledged"]: return True
+            _need(record["pending"] is not None and record["pending"]["sequence"] == sequence
+                  and sequence == record["acknowledged"] + 1)
+            record["acknowledged"] = sequence; record["pending"] = None; record["condition"].notify_all()
+            return True
+
+    def abort(self):
+        record = self._record()
+        with record["condition"]:
+            record["phase"] = "failed"; record["condition"].notify_all()
+
+    def _emit(self, kind, **fields):
+        record = self._record(); self._current()
+        with record["condition"]:
+            _need(record["phase"] == "active" and record["pending"] is None and record["sequence"] < 2**53 - 1)
+            record["sequence"] += 1; sequence = record["sequence"]
+            frame = {"schema": "original-training-output-delivery-v1", "sequence": sequence, "kind": kind, **fields}
+            _need(len(json.dumps(frame, allow_nan=False, separators=(",", ":")).encode("utf8")) <= FRAME_BYTES)
+            record["pending"] = _COPY(frame); record["condition"].notify_all()
+        while True:
+            self._current()
+            with record["condition"]:
+                _need(record["phase"] == "active")
+                if record["acknowledged"] == sequence and record["pending"] is None: break
+                _need(record["pending"] is not None and record["pending"]["sequence"] == sequence)
+                record["condition"].wait(min(0.025, max(0.001, record["deadline"] - monotonic())))
+        self._current()
+
+    def deliver(self, owner, files, read_file):
+        record = self._record()
+        _need(record["owner"] is owner and type(read_file) is FunctionType)
+        names = frozenset(("config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+            "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors",
+            "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"))
+        manifest = _COPY(files); _need(type(manifest) is list and 1 <= len(manifest) <= record["maximum_files"])
+        total, group, seen = 0, 0, set()
+        for index, row in enumerate(manifest):
+            _need(type(row) is dict and set(row) == {"fileIndex", "groupIndex", "name", "sizeBytes", "sha256", "role"}
+                  and type(row["fileIndex"]) is int and row["fileIndex"] == index
+                  and type(row["groupIndex"]) is int and (row["groupIndex"] == group or index > 0 and row["groupIndex"] == group + 1))
+            group = row["groupIndex"]
+            _need(type(row["name"]) is str and row["name"] in names and (group, row["name"]) not in seen
+                  and type(row["sizeBytes"]) is int and 1 <= row["sizeBytes"] <= record["maximum_bytes"] - total
+                  and type(row["sha256"]) is str and len(row["sha256"]) == 71 and row["sha256"].startswith("sha256:")
+                  and all(c in "0123456789abcdef" for c in row["sha256"][7:]))
+            seen.add((group, row["name"])); total += row["sizeBytes"]
+        _need(all(row["role"] == ("candidate" if row["groupIndex"] == group else "checkpoint") for row in manifest))
+        with record["condition"]:
+            _need(record["phase"] == "bound" and record["thread"] is None)
+            record["phase"] = "active"; record["thread"] = get_ident()
+        try:
+            self._emit("manifest", taskId=record["task_id"], files=manifest, totalBytes=total)
+            for row in manifest:
+                self._current(); offset, checksum = 0, hashlib.sha256()
+                source = read_file(row["fileIndex"])
+                try:
+                    for block in source:
+                        self._current(); _need(type(block) is bytes and 1 <= len(block) <= SEGMENT_BYTES
+                            and len(block) <= row["sizeBytes"] - offset)
+                        checksum.update(block)
+                        self._emit("data", fileIndex=row["fileIndex"], offset=offset, data=base64.b64encode(block).decode("ascii"))
+                        offset += len(block)
+                finally:
+                    source.close()  # Original fixed file generator owns its descriptor.
+                _need(offset == row["sizeBytes"] and "sha256:" + checksum.hexdigest() == row["sha256"])
+                self._emit("file-eof", fileIndex=row["fileIndex"], sizeBytes=offset)
+            self._emit("streams-complete", fileCount=len(manifest), totalBytes=total, provisional=True)
+            self._current()
+            with record["condition"]:
+                _need(record["phase"] == "active" and record["pending"] is None and record["acknowledged"] == record["sequence"])
+                record["phase"] = "complete"; record["condition"].notify_all()
+        except BaseException:
+            self.abort(); raise
 
 
 class OutputDeliveryUnavailable(RuntimeError):
