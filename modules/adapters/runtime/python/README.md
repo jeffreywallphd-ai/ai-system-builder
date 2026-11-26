@@ -1562,3 +1562,30 @@ The OS user and app remain trusted; this transport is not cross-process storage
 custody. Source tests use synthetic controller replies and isolated deployed
 imports. Actual original Job execution, Model-copy binding, training, candidate
 Save and Desktop/Managed qualification remain separate required work.
+
+## Original local Model-copy/session composition
+
+`createBoundedLocalTrainingPort` is an explicit optional foundation capability.
+It captures a closed startup profile, bounded source-observation policy and a
+synchronous typed storage factory before work. The genuine original Model reader
+observes the selected files under current authority. Only its digest encoding is
+translated from the existing bare-hex Native ABI to the local `sha256:` contract.
+Original Model bytes and Native source/reservation behavior remain unchanged.
+
+The exact original actor/workspace/request and copy owner are retained before IO.
+Preparation, private locator and final Model reread use bounded original-Promise
+observers; late or malformed completion cannot start another worker. The fixed
+local profile carries only the private copied-Model manifest to its original
+authenticated session. Missing Model readers, mixed modes, changed snapshots and
+unknown IO refuse execution without a generic or Native fallback.
+
+Known local copies are fenced and discarded only after that same original
+worker/Job retires. Even a positive no-loader refusal closes the local worker
+before releasing its slot. A lost preparation acknowledgement with an already
+captured worker can close that exact worker; it cannot adopt another task by ID.
+Unknown earlier setup without the captured worker stays retained. Node-side IO
+still needs its own confirmed completion. Cleanup can retire owned files after
+business permission withdrawal; it does not grant a new read or Save permission.
+Actual training, retained result/candidate/Save and Desktop/Managed qualification
+remain pending. Source tests combine actual fresh copy files with explicitly
+inert controller/HTTP replies; those replies supply no physical Job/model pass.

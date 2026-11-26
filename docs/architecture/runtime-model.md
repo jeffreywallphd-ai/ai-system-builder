@@ -3898,3 +3898,13 @@ worker are refused. Profile fingerprints describe the selected local limits;
 worker/process proof remains independently owned. No public configure route is
 added, and no environment value grants tool permission. Actual execution and host
 qualification remain pending after source bootstrap checks.
+
+The optional bounded-local training factory composes the genuine original Model
+observer, replaceable local-copy port, explicit local boot profile and original
+authenticated session. It snapshots exact actor/task/Model metadata before effects
+and owns original IO across bounded waits. Existing bare-hex observation digests
+are explicitly encoded as `sha256:` for the local contract without changing the
+Native ABI. Known copies retire only after the captured original worker/Job and
+Node IO close; earlier unknown setup cannot adopt a worker or task by status/ID.
+Positive no-loader refusal also retires the local worker. Retained output review,
+separate Save and real host qualification remain independently required.

@@ -2,17 +2,21 @@ import type { PythonRuntimePort } from "../../../application/ports/runtime";
 import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { isWorkspaceId } from "../../../contracts/workspace";
+import {isOrganizationId} from "../../../contracts/organization";
 import { types } from "node:util";
 import {ModelSourceRecipient} from "./client/modelSourceRecipient";
 import {captureTrainingProfile, createOriginalTrainingPort, captureOriginalTrainingModelReader, type OriginalTrainingProfile, type OriginalTrainingCapture,
-  type OriginalTrainingExitConfiguration} from "./client/approvedTrainingTaskSession";
+  type OriginalTrainingExitConfiguration, type OriginalTrainingOwnedChannel} from "./client/approvedTrainingTaskSession";
 import {readStrictPassiveRecord} from "../../../contracts/shared";
 import {createOriginalTrainingModelSourceFactory, type OriginalTrainingModelObservationPolicy,
   type OriginalTrainingModelObservation, type ObservedOriginalTrainingModelSource, bindOriginalTrainingSourceLaunch,
   type OriginalTrainingSourceReservationFactory, type OriginalTrainingSourceLaunch,
   type OriginalTrainingSourceReservation} from "./client/originalTrainingModelSource";
 import {captureOriginalWorkerResourceProfile} from "./supervisor/windowsOriginalWorkerLaunch";
-import type {ApprovedLocalModelTrainingPort} from "../../../application/ports/model";
+import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingDefinition, BoundedLocalTrainingModelCopyStoragePort,
+  BoundedLocalTrainingModelSource} from "../../../application/ports/model";
+import type {ApplicationRequestContext} from "../../../application/ports/application-request-context";
+import path from "node:path";
 import type {ModelSourceTaskSession, CapturedModelSourceTask} from "./client/modelSourceTaskSession";
 import type {GeneratedModelStoragePort} from "../../../application/ports/model";
 import type {CreatePythonRuntimeTaskRegistryAdapterOptions} from "./createPythonRuntimeTaskRegistryAdapter";
@@ -32,7 +36,7 @@ import {
 import {
   createPythonRuntimeSupervisor,
   type CreatePythonRuntimeSupervisorOptions,
-  type PythonRuntimeSupervisor,
+  type PythonRuntimeSupervisor, createBoundedLocalTrainingStartupProfile, type BoundedLocalTrainingStartupProfile,
 } from "./supervisor/createPythonRuntimeSupervisor";
 
 export interface CreatePythonRuntimePortOptions {
@@ -47,7 +51,18 @@ export interface CreatePythonRuntimePortOptions {
   generateAuthorizationToken?: () => string;
 }
 
+export interface OriginalBoundedLocalTrainingConfiguration {
+  readonly startupProfile: BoundedLocalTrainingStartupProfile;
+  readonly observation: OriginalTrainingModelObservationPolicy;
+  /** Synchronous capability binding only; the returned owner performs later IO. */
+  readonly createModelCopy: (input: Readonly<{definition: ApprovedLocalTrainingDefinition;
+    source: BoundedLocalTrainingModelSource; context: ApplicationRequestContext;
+    control: {assertCurrent(): void; assertAllowed(): Promise<void>; assertCleanupAllowed(): Promise<void>}}>) => BoundedLocalTrainingModelCopyStoragePort;
+}
+
 export interface PythonRuntimeAdapterFoundation {
+  /** Explicit cooperative profile; absent support never permits Native fallback. */
+  createBoundedLocalTrainingPort?(configuration: OriginalBoundedLocalTrainingConfiguration): ApprovedLocalModelTrainingPort;
   /** Private trusted composition; no profile means no availability or startup. */
   createApprovedTrainingPort(profile?: OriginalTrainingProfile, observation?: OriginalTrainingModelObservationPolicy,
     sourceReservation?: OriginalTrainingSourceReservationFactory, exitConfiguration?: OriginalTrainingExitConfiguration): ApprovedLocalModelTrainingPort;
@@ -66,7 +81,10 @@ type OriginalSourcePreparation = {returned: boolean; confirmed: boolean; uncerta
   pending?: Promise<unknown>; observation?: Promise<{ok: boolean; value?: unknown}>; owner?: unknown};
 type OriginalFoundationTrainingReservation = {settled: boolean; capture: OriginalTrainingCapture;
   source?: OriginalTrainingModelObservation; observed?: ObservedOriginalTrainingModelSource;
-  sourceReservation?: OriginalTrainingSourceReservation; sourcePreparation?: OriginalSourcePreparation};
+  sourceReservation?: OriginalTrainingSourceReservation; sourcePreparation?: OriginalSourcePreparation;
+  local?: {owner?: unknown; calls: {kind: "prepare" | "locator" | "selection" | "discard" | "invalid-fence" | "invalid-factory" | "invalid-inspect"; original?: unknown; observation?: Promise<{ok: boolean; value: unknown}>; finished: boolean}[];
+    prepared: boolean; uncertain: boolean; workerRetired: boolean; cleanupAttempted: boolean;
+    storage?: BoundedLocalTrainingModelCopyStoragePort; context: ApplicationRequestContext}};
 const sourcePreparationPromise = Promise, sourcePreparationPromisePrototype = Promise.prototype;
 const sourcePreparationAsyncPrototype = Object.getPrototypeOf(async function originalSourcePreparation() {});
 
@@ -555,11 +573,9 @@ export function createPythonRuntimeAdapterFoundation(
     unloadModels: async () => {assertAdmissionAvailable(); return client.unloadModels();},
   };
 
-  const foundation: PythonRuntimeAdapterFoundation = {
-    runtimePort,
-    supervisor,
-    bindHostAdmission,
-    createApprovedTrainingPort(rawProfile, rawObservation, sourceReservation, rawExitConfiguration) {
+  const createTrainingPort = (rawProfile?: OriginalTrainingProfile, rawObservation?: OriginalTrainingModelObservationPolicy,
+    sourceReservation?: OriginalTrainingSourceReservationFactory, rawExitConfiguration?: OriginalTrainingExitConfiguration,
+    localConfiguration?: OriginalBoundedLocalTrainingConfiguration): ApprovedLocalModelTrainingPort => {
       let exitConfiguration: OriginalTrainingExitConfiguration | undefined;
       if (rawExitConfiguration !== undefined) {
         if (!rawExitConfiguration || types.isProxy(rawExitConfiguration)) throw new Error("Original training retirement configuration is unavailable.");
@@ -588,6 +604,7 @@ export function createPythonRuntimeAdapterFoundation(
       const captureRetirement = supervisor.captureOriginalTrainingWorkerRetirement?.bind(supervisor);
       const captureOriginal = client.captureOriginalTrainingChannel.bind(client);
       return createOriginalTrainingPort({
+        ...(localConfiguration ? {storageProfile: "bounded-local-v1" as const} : {}),
         ...(exitConfiguration ?? {}),
         reserve(capture) {
           const requestId = capture.definition.requestId;
@@ -609,6 +626,9 @@ export function createPythonRuntimeAdapterFoundation(
             if (original.source && !original.source.isSettled()) throw new Error("Original training source IO is still retained.");
             if (original.sourcePreparation && (!original.sourcePreparation.returned || !original.sourcePreparation.confirmed || original.sourcePreparation.uncertain))
               throw new Error("Original training source preparation is still retained.");
+            if (original.local && (!original.local.workerRetired || !original.local.cleanupAttempted || original.local.uncertain
+                || original.local.calls.some(call => !call.finished)))
+              throw new Error("Original local Model copy is still retained.");
             original.settled = true;
           };
         },
@@ -629,6 +649,124 @@ export function createPythonRuntimeAdapterFoundation(
             reservation!.observed = await reservation!.source.observe();
             currentCapture();
             if (!reservation!.source.isSettled()) throw new Error("Original training source IO is still retained.");
+          }
+          let localModelCopy: OriginalTrainingOwnedChannel["localModelCopy"];
+          if (localConfiguration) {
+            if (!reservation!.observed) throw new Error("Original local Model observation is unavailable.");
+            const definition = capture.definition;
+            const organizationId = definition.owner.organizationId;
+            if (!isOrganizationId(organizationId)) throw new Error("Original local Model organization is unavailable.");
+            const context: ApplicationRequestContext = Object.freeze({requestId: definition.requestId, workspaceId: definition.workspaceId,
+              organizationId, principalId: definition.owner.principalId});
+            const local = reservation!.local = {calls: [], prepared: false, uncertain: false, workerRetired: false,
+              cleanupAttempted: false, context} as NonNullable<OriginalFoundationTrainingReservation["local"]>;
+            const preparationDeadline = Date.now() + Math.min(localConfiguration.observation.maximumDurationMs,
+              localConfiguration.startupProfile.maximumDurationSeconds * 1000);
+            const invoke = async <T>(kind: typeof local.calls[number]["kind"], operation: () => Promise<T>): Promise<T> => {
+              // Invalid results already exist. Always attach their safe
+              // rejection observer even after the preparation budget expired.
+              const deadline = kind === "discard" || kind.startsWith("invalid-")
+                ? Date.now() + localConfiguration.observation.maximumDurationMs : preparationDeadline;
+              if (local.calls.length >= 5 || Date.now() >= deadline) {local.uncertain = true; throw new Error("Original local Model operation limit reached.");}
+              const call: typeof local.calls[number] = {kind, finished: false}; local.calls.push(call);
+              let timer: ReturnType<typeof setTimeout> | undefined;
+              try {
+                const original = operation(); call.original = original;
+                if (!types.isPromise(original) || types.isProxy(original) || Object.getPrototypeOf(original) !== sourcePreparationPromisePrototype
+                    || Object.getOwnPropertyDescriptor(original, "constructor") !== undefined
+                    || Object.getOwnPropertyDescriptor(sourcePreparationPromisePrototype, "constructor")?.value !== sourcePreparationPromise)
+                  throw new Error();
+                call.observation = (async () => {
+                  try {return {ok: true, value: await original};}
+                  catch {return {ok: false, value: undefined};}
+                  finally {call.finished = true;}
+                })();
+                if (Object.getOwnPropertyDescriptor(original, "then") !== undefined) throw new Error();
+                const result = await Promise.race([call.observation, new Promise<never>((_resolve, reject) => {
+                  timer = setTimeout(() => {local.uncertain = true; reject(new Error());}, Math.max(1, deadline - Date.now()));
+                })]);
+                if (!result.ok) throw new Error();
+                return result.value as T;
+              } catch {local.uncertain = true; throw new Error("Original local Model storage is unavailable.");}
+              finally {if (timer) clearTimeout(timer);}
+            };
+            const control = Object.freeze({assertCurrent: currentCapture, assertAllowed: allowedCapture,
+              async assertCleanupAllowed() {
+                if (!local.workerRetired || !local.cleanupAttempted || trainingReservations.get(requestId) !== reservation || reservation!.settled
+                    || local.calls.some(call => !call.finished && call.kind !== "discard")
+                    || local.calls.filter(call => !call.finished && call.kind === "discard").length !== 1)
+                  throw new Error("Original local Model cleanup is unavailable.");
+              }});
+            try {
+              // The genuine existing observer's Native ABI uses bare hex.
+              // The local storage/worker contract uses an algorithm-qualified
+              // digest. Translate only the encoding, never source authority.
+              const source: BoundedLocalTrainingModelSource = Object.freeze({...reservation!.observed,
+                files: Object.freeze(reservation!.observed.files.map(row => {
+                  if (!/^[a-f0-9]{64}$/.test(row.sha256)) throw new Error();
+                  return Object.freeze({...row, sha256: "sha256:" + row.sha256});
+                }))});
+              const supplied = localConfiguration.createModelCopy(Object.freeze({definition, source, context, control}));
+              local.owner = supplied; // Before reading properties or invoking preparation.
+              if (types.isPromise(supplied)) {void invoke("invalid-factory", () => supplied).catch(() => {}); throw new Error();}
+              if (!supplied || typeof supplied !== "object" || types.isProxy(supplied) || types.isPromise(supplied)) throw new Error();
+              const row = readStrictPassiveRecord(supplied, ["profile", "identity", "prepare", "modelDirectory", "fence", "inspect", "discard"]);
+              if (Object.keys(row).length !== 7 || row.profile !== "bounded-local-v1"
+                  || ["prepare", "modelDirectory", "fence", "inspect", "discard"].some(key => typeof row[key] !== "function" || types.isProxy(row[key])))
+                throw new Error();
+              if (!row.identity || typeof row.identity !== "object" || types.isProxy(row.identity)) throw new Error();
+              const identity = readStrictPassiveRecord(row.identity, ["requestId", "workspaceId", "modelRecordId", "modelUpdatedAt"]);
+              if (Object.keys(identity).length !== 4 || identity.requestId !== requestId || identity.workspaceId !== definition.workspaceId
+                  || identity.modelRecordId !== reservation!.observed.modelRecordId || identity.modelUpdatedAt !== reservation!.observed.modelUpdatedAt) throw new Error();
+              local.storage = Object.freeze({profile: "bounded-local-v1", identity: Object.freeze({requestId, workspaceId: definition.workspaceId,
+                modelRecordId: reservation!.observed.modelRecordId, modelUpdatedAt: reservation!.observed.modelUpdatedAt}),
+                prepare: () => invoke<void>("prepare", () => Reflect.apply(row.prepare as Function, supplied, [context])),
+                modelDirectory: () => invoke<string>("locator", () => Reflect.apply(row.modelDirectory as Function, supplied, [context])),
+                fence: () => {
+                  const result: unknown = Reflect.apply(row.fence as Function, supplied, []);
+                  if (types.isPromise(result)) {
+                    void invoke("invalid-fence", () => result).catch(() => {}); local.uncertain = true; throw new Error();
+                  }
+                  if (result !== undefined) {local.uncertain = true; throw new Error();}
+                },
+                inspect: () => {
+                  const value: unknown = Reflect.apply(row.inspect as Function, supplied, []);
+                  if (types.isPromise(value)) {
+                    void invoke("invalid-inspect", () => value).catch(() => {}); local.uncertain = true; throw new Error();
+                  }
+                  if (!value || typeof value !== "object" || types.isProxy(value)) throw new Error();
+                  const observed = readStrictPassiveRecord(value, ["phase", "fenced", "pendingOperations", "sourceHandlesOpen", "destinationIoClosed",
+                    "fileCount", "declaredBytes", "preparationFinished", "physicalQuotaEnforced"]);
+                  if (Object.keys(observed).length !== 9 || !["bound", "preparing", "ready", "unconfirmed", "discarded"].includes(observed.phase as string)
+                      || ["fenced", "destinationIoClosed", "preparationFinished"].some(key => typeof observed[key] !== "boolean")
+                      || ["pendingOperations", "sourceHandlesOpen", "fileCount", "declaredBytes"].some(key =>
+                        typeof observed[key] !== "number" || !Number.isSafeInteger(observed[key]) || (observed[key] as number) < 0)
+                      || observed.physicalQuotaEnforced !== false) throw new Error();
+                  return Object.freeze(observed) as unknown as ReturnType<BoundedLocalTrainingModelCopyStoragePort["inspect"]>;
+                },
+                discard: () => invoke<boolean>("discard", () => Reflect.apply(row.discard as Function, supplied, [context]))}) as BoundedLocalTrainingModelCopyStoragePort;
+              await allowedCapture();
+              const prepared: unknown = await local.storage.prepare(context);
+              if (prepared !== undefined) throw new Error();
+              currentCapture();
+              const directory = await local.storage.modelDirectory(context); currentCapture();
+              const relative = path.relative(localConfiguration.startupProfile.stagingRoot, directory);
+              if (!relative || relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative)) throw new Error();
+              const reader = captureOriginalTrainingModelReader(capture);
+              if (!reader) throw new Error();
+              const selected = await invoke("selection", () => reader.readModelSelection()); currentCapture();
+              if (selected.modelRecordId !== reservation!.observed.modelRecordId || selected.modelUpdatedAt !== reservation!.observed.modelUpdatedAt
+                  || selected.localModelReference !== reservation!.observed.logicalPath) throw new Error();
+              const state = local.storage.inspect();
+              if (state.phase !== "ready" || state.fenced !== false || state.pendingOperations !== 0 || state.sourceHandlesOpen !== 0
+                  || state.destinationIoClosed !== true || state.preparationFinished !== true || state.physicalQuotaEnforced !== false
+                  || state.fileCount !== reservation!.observed.files.length
+                  || state.declaredBytes !== reservation!.observed.files.reduce((sum, row) => sum + row.sizeBytes, 0)
+                  || local.calls.some(call => !call.finished)) throw new Error();
+              localModelCopy = Object.freeze({modelRecordId: selected.modelRecordId, modelUpdatedAt: selected.modelUpdatedAt,
+                directory, files: source.files});
+              local.prepared = true;
+            } catch {local.uncertain = true; throw new Error("Original local Model preparation is unavailable.");}
           }
           let originalModelSource: OriginalTrainingSourceLaunch | undefined;
           if (sourceReservation) {
@@ -682,7 +820,8 @@ export function createPythonRuntimeAdapterFoundation(
             finally {if (timer) clearTimeout(timer);}
           }
           const admission = Object.freeze({assertCurrent: currentCapture, assertAllowed: allowedCapture,
-            ...(originalModelSource ? {originalModelSource} : {})});
+            ...(originalModelSource ? {originalModelSource} : {}),
+            ...(localConfiguration ? {boundedLocalTraining: localConfiguration.startupProfile} : {})});
           await startInstalled(admission); currentCapture();
           const worker = captureRetirement(), workerCurrent = worker.assertCurrent.bind(worker);
           const retire = worker.retireOriginal.bind(worker), unused = worker.releaseUnused.bind(worker);
@@ -693,7 +832,21 @@ export function createPythonRuntimeAdapterFoundation(
           const current = () => {workerCurrent(); channelCurrent();};
           await allowedCapture(); current();
           return Object.freeze({identity: original.identity, assertCurrent: current,
-            retireOriginalWorker: retire, releaseUnusedWorker: unused,
+            ...(localModelCopy ? {localModelCopy} : {}),
+            async retireOriginalWorker() {
+              const local = reservation!.local;
+              if (!local?.workerRetired && await retire() !== true) return false;
+              if (!local) return true;
+              local.workerRetired = true; // Only the original actual Job capability can establish this fact.
+              if (!local.prepared || local.uncertain || local.calls.some(call => !call.finished) || !local.storage) return false;
+              if (local.cleanupAttempted) return local.storage.inspect().phase === "discarded";
+              local.cleanupAttempted = true;
+              try {
+                const result: unknown = local.storage.fence();
+                if (result !== undefined || await local.storage.discard(local.context) !== true) throw new Error();
+                return true;
+              } catch {local.uncertain = true; return false;}
+            }, releaseUnusedWorker: unused,
             async send(endpoint: string, body: unknown, dispatch?: () => void) {
               current();
               const reply = await sendOriginal(endpoint, body, () => {current(); dispatch?.(); current();});
@@ -701,6 +854,50 @@ export function createPythonRuntimeAdapterFoundation(
             }});
         },
       });
+  };
+
+  const foundation: PythonRuntimeAdapterFoundation = {
+    runtimePort,
+    supervisor,
+    bindHostAdmission,
+    createApprovedTrainingPort(rawProfile, rawObservation, sourceReservation, rawExitConfiguration) {
+      return createTrainingPort(rawProfile, rawObservation, sourceReservation, rawExitConfiguration);
+    },
+    createBoundedLocalTrainingPort(raw) {
+      if (!raw || typeof raw !== "object" || types.isProxy(raw)) throw new Error("Local training composition is unavailable.");
+      const row = readStrictPassiveRecord(raw, ["startupProfile", "observation", "createModelCopy"]);
+      if (Object.keys(row).length !== 3 || typeof row.createModelCopy !== "function" || types.isProxy(row.createModelCopy)
+          || types.isAsyncFunction(row.createModelCopy) || types.isGeneratorFunction(row.createModelCopy))
+        throw new Error("Local training composition is unavailable.");
+      if (!row.startupProfile || typeof row.startupProfile !== "object" || types.isProxy(row.startupProfile)
+          || !row.observation || typeof row.observation !== "object" || types.isProxy(row.observation))
+        throw new Error("Local training composition is unavailable.");
+      const profile = readStrictPassiveRecord(row.startupProfile, ["profileId", "profileFingerprint", "maximumDurationSeconds", "stagingRoot",
+        "maximumModelBytes", "maximumOutputBytes", "minimumFreeBytes"]);
+      const {profileFingerprint, ...input} = profile;
+      const startupProfile = createBoundedLocalTrainingStartupProfile(input as unknown as Parameters<typeof createBoundedLocalTrainingStartupProfile>[0]);
+      if (startupProfile.profileFingerprint !== profileFingerprint) throw new Error("Local training composition is unavailable.");
+      const observation = readStrictPassiveRecord(row.observation, ["allowedRootDirectories", "maximumTotalBytes", "maximumDurationMs", "bufferBytes"]);
+      const roots = observation.allowedRootDirectories;
+      if (!Array.isArray(roots) || types.isProxy(roots) || Object.getPrototypeOf(roots) !== Array.prototype
+          || roots.length < 1 || roots.length > 8 || Reflect.ownKeys(roots).length !== roots.length + 1
+          || typeof observation.maximumTotalBytes !== "number" || !Number.isSafeInteger(observation.maximumTotalBytes)
+          || observation.maximumTotalBytes > startupProfile.maximumModelBytes)
+        throw new Error("Local training composition is unavailable.");
+      const capturedRoots: string[] = [];
+      for (let index = 0; index < roots.length; index++) {
+        const property = Object.getOwnPropertyDescriptor(roots, String(index));
+        if (!property || !("value" in property) || typeof property.value !== "string") throw new Error("Local training composition is unavailable.");
+        capturedRoots.push(property.value);
+      }
+      // The existing observer validates and captures all policy values before effects.
+      const capturedObservation = Object.freeze({...observation, allowedRootDirectories: Object.freeze(capturedRoots)}) as unknown as OriginalTrainingModelObservationPolicy;
+      createOriginalTrainingModelSourceFactory(capturedObservation);
+      const factory = row.createModelCopy as OriginalBoundedLocalTrainingConfiguration["createModelCopy"];
+      const local = Object.freeze({startupProfile, observation: capturedObservation,
+        createModelCopy: (input: Parameters<typeof factory>[0]) => Reflect.apply(factory, raw, [input])});
+      return createTrainingPort({profileId: startupProfile.profileId, profileFingerprint: startupProfile.profileFingerprint}, capturedObservation,
+        undefined, undefined, local);
     },
     createModelSourceDownloadConfiguration(createStorage) {
       if (typeof createStorage !== "function") throw new TypeError("Model source storage composition is unavailable.");

@@ -3675,3 +3675,17 @@ attached worker cannot adopt a new local profile. Existing authentication and
 original worker retirement remain mandatory. Environment transport is not a
 permission grant, hostile-user isolation or protected storage proof. Synthetic
 controller/import tests supply no real Job, model, service or host qualification.
+
+The local foundation binds genuine current Model observation to one typed copy
+owner and original actor/workspace/request before preparation. It validates safe
+file metadata and explicitly translates digest encoding without changing source
+authority. Passive configuration cannot select async suppliers or metadata hooks.
+Bounded original-Promise observers retain native operations and reject misleading
+constructor/then surfaces; timeouts and late Model rereads cannot launch work.
+The private copy manifest is not included in model-tool responses. Known copy
+discard follows actual captured worker/Job retirement and separate Node IO
+closure; positive no-loader refusal does not leave a reusable live local worker.
+Earlier unknown setup remains retained, with no adoption by ID or retry credit.
+Original cleanup survives business-permission withdrawal but grants no new read,
+result registration or Save authority. Inert transport tests are not physical
+Job, SDK, model, service, host or parent qualification.

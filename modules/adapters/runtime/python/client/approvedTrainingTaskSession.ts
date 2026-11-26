@@ -2,12 +2,14 @@
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingControl, ApprovedLocalTrainingDefinition,
   ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingModelReader,
   ApprovedLocalTrainingModelSelection} from "../../../../application/ports/model";
+import type {BoundedLocalTrainingModelSource} from "../../../../application/ports/model";
 import type {RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {TaskType} from "../../../../contracts/runtime";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import {capturePassiveModelData} from "./modelDownloadManifest";
 import {mapTaskStatusResponse} from "../protocol/pythonRuntimeHttpProtocol";
 import {types} from "node:util";
+import path from "node:path";
 import {createOriginalTrainingOutputReceiver, type OriginalTrainingOutputStorage} from "./originalTrainingOutputReceiver";
 
 export const ORIGINAL_TRAINING_CAPABILITY = "train-model.original-session-v1";
@@ -20,6 +22,8 @@ export interface OriginalTrainingChannel {
 }
 /** The foundation must add the exact supervisor owner; HTTP cannot create it. */
 export interface OriginalTrainingOwnedChannel extends OriginalTrainingChannel {
+  /** Private local copy metadata only, never Native custody or tool authority. */
+  readonly localModelCopy?: Pick<BoundedLocalTrainingModelSource, "modelRecordId" | "modelUpdatedAt" | "files"> & {readonly directory: string};
   retireOriginalWorker(): Promise<boolean>;
   /** Must acknowledge synchronously with undefined, not an async void Promise. */
   releaseUnusedWorker(): void;
@@ -90,9 +94,12 @@ export function createOriginalTrainingPort(options: {
   /** Trusted private composition only; no default host or wire-supplied storage. */
   createOutputStorage?: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
   retirementProtocol?: "original-exit-ready-v1";
+  storageProfile?: "bounded-local-v1";
 }): ApprovedLocalModelTrainingPort {
   need(!types.isProxy(options));
-  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol", "prepareStorageBudget"]);
+  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol", "prepareStorageBudget", "storageProfile"]);
+  const localStorage = capturedOptions.storageProfile === "bounded-local-v1";
+  need(capturedOptions.storageProfile === undefined || localStorage);
   const capture = options.captureChannel, reserve = options.reserve, outputFactory = capturedOptions.createOutputStorage;
   const prepareStorageBudget = capturedOptions.prepareStorageBudget;
   need(prepareStorageBudget === undefined || typeof prepareStorageBudget === "function" && !types.isProxy(prepareStorageBudget)
@@ -102,6 +109,7 @@ export function createOriginalTrainingPort(options: {
   const exitReady = capturedOptions.retirementProtocol === "original-exit-ready-v1";
   need(capturedOptions.retirementProtocol === undefined || exitReady);
   need(!exitReady || typeof outputFactory === "function");
+  need(!localStorage || !exitReady && prepareStorageBudget === undefined && outputFactory === undefined);
   return Object.freeze({createSession(raw: ApprovedLocalTrainingDefinition, rawControl: ApprovedLocalTrainingControl,
     rawSource?: ApprovedLocalTrainingModelReader) {
     const definition = copy(raw), isCurrent = rawControl.isCurrent, allowed = rawControl.stillAllowed;
@@ -112,6 +120,7 @@ export function createOriginalTrainingPort(options: {
       need(Object.keys(source).length === 1 && typeof source.read === "function" && !types.isProxy(source.read));
       sourceRead = source.read as ApprovedLocalTrainingModelReader["read"];
     }
+    if (localStorage && !sourceRead) return undefined;
     need(typeof isCurrent === "function" && typeof allowed === "function");
     let admissionLost = false;
     const current = () => {
@@ -277,6 +286,29 @@ export function createOriginalTrainingPort(options: {
           await permission(); need(!storageBudgetWithdrawn);
           const original = await capture.call(options, originalCapture); current();
           const identity = copy(original.identity), assertCurrent = original.assertCurrent, sendOriginal = original.send;
+          const localProperty = Object.getOwnPropertyDescriptor(original, "localModelCopy");
+          let localModelCopy: unknown;
+          if (localStorage) {
+            need(!!localProperty && "value" in localProperty && identity.profileId.startsWith("bounded-local-"));
+            const row = exact(localProperty!.value, ["modelRecordId", "modelUpdatedAt", "directory", "files"]);
+            need(row.modelRecordId === definition.request.baseModel.modelRecordId && row.modelUpdatedAt === definition.modelUpdatedAt
+              && typeof row.directory === "string" && path.isAbsolute(row.directory) && path.resolve(row.directory) === row.directory
+              && !/^[\\/]{2}|[\x00-\x1f\x7f]/.test(row.directory) && row.directory !== definition.request.baseModel.localPath);
+            need(Array.isArray(row.files) && row.files.length >= 3 && row.files.length <= 9);
+            const names = new Set<string>(), allowed = new Set(["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+              "special_tokens_map.json", "vocab.json", "merges.txt", "tokenizer.model", "model.safetensors"]);
+            let total = 0;
+            for (const file of row.files as unknown[]) {
+              const value = exact(file, ["name", "sizeBytes", "sha256"]);
+              need(typeof value.name === "string" && allowed.has(value.name) && !names.has(value.name)
+                && typeof value.sizeBytes === "number" && Number.isSafeInteger(value.sizeBytes) && value.sizeBytes > 0
+                && value.sizeBytes <= Number.MAX_SAFE_INTEGER - total
+                && typeof value.sha256 === "string" && /^sha256:[a-f0-9]{64}$/.test(value.sha256));
+              names.add(value.name as string); total += value.sizeBytes as number;
+            }
+            need(["config.json", "tokenizer.json", "model.safetensors"].every(name => names.has(name)));
+            localModelCopy = row;
+          } else need(!localProperty && !("localModelCopy" in original));
           const retireOriginalWorker = original.retireOriginalWorker, releaseOriginalUnused = original.releaseUnusedWorker;
           need(typeof retireOriginalWorker === "function" && typeof releaseOriginalUnused === "function");
           retireWorker = () => retireOriginalWorker.call(original);
@@ -290,7 +322,8 @@ export function createOriginalTrainingPort(options: {
           channel.assertCurrent();
           need(!storageBudgetWithdrawn);
           await permission();
-          const reply = exact(await channel.send("/training/original/prepare", {identity: channel.identity, definition}, current), ["binding", "phase"]);
+          const reply = exact(await channel.send("/training/original/prepare", {identity: channel.identity, definition,
+            ...(localStorage ? {localModelCopy} : {})}, current), ["binding", "phase"]);
           const candidate = exact(reply.binding, ["runtimeId", "workerStartedAt", "profileId", "profileFingerprint", "requestId", "workspaceId", "sessionId"]);
           need(Object.keys(channel.identity).every(key => candidate[key] === channel!.identity[key as keyof OriginalTrainingIdentity]) &&
             candidate.requestId === definition.requestId && candidate.workspaceId === definition.workspaceId &&
@@ -299,6 +332,12 @@ export function createOriginalTrainingPort(options: {
           if (reply.phase === "unavailable") {
             // Only the original producer's positive no-effect/settlement reply.
             if (exitReady) {parentFenced = true; abortOutput(); need(parentIoClosed());}
+            if (localStorage) {
+              // The cooperative worker was launched for this request. Even a
+              // positive no-loader refusal must close that original Job first.
+              need(!!retireWorker && await retireWorker() === true);
+              remoteRetired = true; release(); phase = "settled"; return "unavailable" as const;
+            }
             releaseUnusedWorker();
             if (exitReady) {need(parentIoClosed()); release(); phase = "settled"; return "unavailable" as const;}
             phase = "settled"; release(); return "unavailable" as const;
@@ -364,7 +403,15 @@ export function createOriginalTrainingPort(options: {
         if (storageBudgetSetupUnknown || outputSetupUnknown || outputStarted && !output?.isComplete()) return false;
         if (operations || (!remoteRetired && closeAttempted) || closing) return false;
         if (phase === "bound") {phase = "settled"; release(); return true;}
-        if (!binding) return false; // Lost preparation cannot adopt a record by ID.
+        if (!binding) {
+          if (!localStorage || !channel || !retireWorker) return false; // No adoption by ID or status.
+          // Unknown prepare cannot dispatch this fixed loader. Retire the exact
+          // already captured original worker before cleaning its known copy.
+          closing = true; operations++;
+          try {need(await retireWorker() === true); remoteRetired = true; release(); phase = "settled"; return true;}
+          catch {return false;}
+          finally {operations--; closing = false;}
+        }
         closing = true; operations++;
         try {
           if (!remoteRetired) {
