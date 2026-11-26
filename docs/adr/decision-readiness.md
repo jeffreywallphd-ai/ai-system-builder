@@ -107,3 +107,13 @@ The portable contract does not make OCR available: trusted helper/build,
 native lifetime, normalization, installed-language readiness and actual host
 qualification remain required. New suppliers, remote transfer or expanded
 source/task support require their own applicable review.
+
+## Bounded local training storage
+
+[ADR-0049](ADR-0049-bounded-local-training-storage.md) records the explicit user
+choice to finish Headless I7 with replaceable bounded-local storage. This permits
+fresh task-owned copies, existing safe-local loading, finite application limits
+and separately authorized original cleanup. It does not activate or downgrade
+exclusive Native mode. Strong cross-process custody, protected shared accounting
+and protected restart recovery remain pending in the separate storage roadmap.
+Actual worker/SDK/Job, candidate/Save and both-host qualification remain required.

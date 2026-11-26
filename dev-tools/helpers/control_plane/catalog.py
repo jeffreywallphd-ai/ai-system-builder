@@ -747,6 +747,17 @@ NATIVE_TRAINING_DOCUMENT_SCOPE = tuple(
 NATIVE_TRAINING_DOCUMENT_ROUTING_CORE = tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (6, 7))
 NATIVE_TRAINING_FILE_REQUIRED = NATIVE_TRAINING_FILE_FEATURE + tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (0, 1, 2, 3, 5, 6, 7, 11, 12))
 
+BOUNDED_LOCAL_MODEL_COPY = "modules/adapters/storage/filesystem/artifact-store/createFilesystemLocalTrainingModelCopyStorage.ts"
+BOUNDED_LOCAL_MODEL_COPY_PORT = "modules/application/ports/model/approved-local-model-training.port.ts"
+BOUNDED_LOCAL_MODEL_COPY_SCOPE = TRAINING_IO_RETIREMENT_SCOPE + (
+    BOUNDED_LOCAL_MODEL_COPY, BOUNDED_LOCAL_MODEL_COPY_PORT,
+    "modules/adapters/storage/filesystem/artifact-store/tests/training-result-file-byte-storage.integration.test.ts",
+    "modules/adapters/storage/filesystem/artifact-store/README.md",
+    "docs/adr/ADR-0049-bounded-local-training-storage.md", "docs/adr/README.md", "docs/adr/decision-readiness.md",
+    "docs/architecture/runtime-model.md", "docs/security/headless-system-builder-threat-model.md", "docs/context/packs/runtime.pack.md",
+)
+BOUNDED_LOCAL_COPY_CONTROLLER_FILTERS = ("test_control_plane_training_io_retirement.", "test_control_plane_focused.", "test_control_plane_support_registry.")
+
 PUBLISHED_FORM_CHECKS = {
     "native-training-result-files-contract": {
         "automatic_sources": NATIVE_TRAINING_FILE_FEATURE,
@@ -947,15 +958,15 @@ PUBLISHED_FORM_CHECKS = {
             "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts"),
     },
     "headless-training-io-retirement-unit": {
-        "automatic_sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7],
-        "automatic_required_files": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7] + (
+        "automatic_sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7] + (BOUNDED_LOCAL_MODEL_COPY,),
+        "automatic_required_files": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7] + (BOUNDED_LOCAL_MODEL_COPY, BOUNDED_LOCAL_MODEL_COPY_PORT,
             "modules/adapters/storage/filesystem/artifact-store/verifiedPublicationStream.ts",
             "modules/adapters/filesystem-security/index.ts",
             "modules/adapters/storage/filesystem/artifact-store/tests/filesystem-artifact-storage.integration.test.ts",
             "modules/adapters/storage/filesystem/artifact-store/tests/context-result-byte-storage.integration.test.ts",
             "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
         ),
-        "sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE,
+        "sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE + (BOUNDED_LOCAL_MODEL_COPY, BOUNDED_LOCAL_MODEL_COPY_PORT, "modules/adapters/storage/filesystem/artifact-store/README.md"),
         "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
             "modules/adapters/storage/filesystem/artifact-store/tests/contained-stream-retirement.integration.test.ts",
             "modules/adapters/storage/filesystem/artifact-store/tests/training-result-file-byte-storage.integration.test.ts",
@@ -965,7 +976,7 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-training-io-retirement-types": {
         "companion_to": "headless-training-io-retirement-unit",
-        "sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7],
+        "sources": TRAINING_IO_RETIREMENT_OWNER_SCOPE[:7] + (BOUNDED_LOCAL_MODEL_COPY, BOUNDED_LOCAL_MODEL_COPY_PORT),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
             "modules/adapters/storage/filesystem/artifact-store/tests/contained-stream-retirement.integration.test.ts",
@@ -4478,6 +4489,18 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                     if set(paths).intersection(check.get("automatic_sources", ())) and _automatic_files_available(root, check))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if check.get("companion_to") in required and set(paths).intersection(check["sources"]))
+    local_copy_support = (BOUNDED_LOCAL_MODEL_COPY_SCOPE + ("dev-tools/helpers/tests/test_control_plane_focused.py", "dev-tools/helpers/tests/test_control_plane_support_registry.py")
+        + tuple(name for identity in ("headless-training-io-retirement-unit", "headless-approved-training-owner-unit")
+            for name in PUBLISHED_FORM_CHECKS[identity]["automatic_required_files"]))
+    local_copy_routing = (set(TRAINING_IO_RETIREMENT_SCOPE) <= set(paths) <= set(BOUNDED_LOCAL_MODEL_COPY_SCOPE)
+        and (BOUNDED_LOCAL_MODEL_COPY in paths or "headless-training-io-retirement-unit" in explicit_required)
+        and all(_automatic_files_available(root, {"automatic_required_files": local_copy_support[index:index+16]})
+                for index in range(0, len(local_copy_support), 16)))
+    if local_copy_routing:
+        # Mapping edits exercise the complete importing feature and owner,
+        # including a source slice explicitly adopted before the mapping fix.
+        required.update(("headless-training-io-retirement-unit", "headless-training-io-retirement-types",
+                         "headless-approved-training-owner-unit", "headless-approved-training-owner-types"))
     # Exact training fixture/producer files have their own executed regression
     # profile. They do not require unrelated operational UI fixtures. Preserve
     # explicit operational coverage, unavailable-file and every other-path rule.
@@ -4589,7 +4612,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                                    "--", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"]
     # Empty/mixed/unknown scope or missing/nonregular support retains the ordinary
     # complete controller command. The actual argv is bound to plan and receipt.
-    if (paths and set(paths) <= set(SUPPORT_REGISTRY_SCOPE) and "focused-tests" not in explicit_required
+    if (paths and set(paths) <= set(SUPPORT_REGISTRY_SCOPE) and set(paths) != {"dev-tools/helpers/control_plane/catalog.py"}
+            and "focused-tests" not in explicit_required
             and _automatic_files_available(root, {"automatic_required_files": SUPPORT_REGISTRY_REQUIRED})):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None:
@@ -4770,6 +4794,12 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[item for name in TRAINING_IO_RETIREMENT_CONTROLLER_FILTERS for item in ("-k", name)]]
+    if local_copy_routing and "focused-tests" not in explicit_required:
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[part for name in BOUNDED_LOCAL_COPY_CONTROLLER_FILTERS for part in ("-k", name)]]
     session_exit_support = (TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE
         + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS)
         + tuple(name for identity in ("headless-training-session-exit-ready-unit", "headless-training-runtime-unit",

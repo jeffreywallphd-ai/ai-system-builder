@@ -3633,3 +3633,21 @@ permission, file read, Native custody, capacity credit, retry, task success or
 Model/Save authority. The owning application must authorize later user-visible
 review or effects separately. Full physical parent/crash/worker/SDK/Job and host
 composition still needs independent qualification.
+
+## Explicit bounded-local training storage
+
+ADR-0049 records the user-approved trusted-local alternative while stronger
+storage custody moves to the separate service roadmap. Treat the OS user and
+installed app/runtime dependencies as trusted for this profile. Preserve exact
+scope/approval, safe weights, offline/no-remote-code loading, containment, expected
+sizes/hashes, finite application limits and original IO/process ownership.
+The private filesystem Model-copy owner captures passive source declarations,
+checks actual headroom and source identity, and creates one fresh copy through
+the existing contained writer. Unknown operations stay retained through a
+bounded outward deadline; late returns cannot resume copy admission.
+A locator is never Model registration, Save or worker readiness. Cleanup requires
+captured original authority after worker/SDK/Job use and start admission have
+permanently ended. It denies unexpected entries or changed copied-file identities.
+Do not assert cross-process custody, protected physical quota, antirollback or
+protected crash recovery. Keep strict Native mode unqualified/default-off, with
+no downgrade fallback, historical-data adoption or service installation.

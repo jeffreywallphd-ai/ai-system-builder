@@ -91,4 +91,49 @@ class TrainingIoRetirementRoutingTests(unittest.TestCase):
             self.assertRegex(result.stdout, rf"(?m)^# {counter} 0$")
 
 
+class BoundedLocalModelCopyRoutingTests(unittest.TestCase):
+    root = TrainingIoRetirementRoutingTests.root
+
+    def rows(self, paths, required=("architecture",)):
+        return {row["id"]: row for row in catalog.plan(self.root, list(paths), list(required), "b"*64)["selected"]}
+
+    def test_new_adapter_runs_actual_importing_storage_suite_and_strict_types(self):
+        rows = self.rows([catalog.BOUNDED_LOCAL_MODEL_COPY])
+        self.assertIn("headless-training-io-retirement-unit", rows)
+        self.assertIn("headless-training-io-retirement-types", rows)
+        self.assertNotIn("focused-tests", rows)
+        self.assertTrue(any(p.endswith("/training-result-file-byte-storage.integration.test.ts")
+                            for p in rows["headless-training-io-retirement-unit"]["argv"]))
+        self.assertIn("--strict", rows["headless-training-io-retirement-types"]["argv"])
+        self.assertFalse(any("qualify_windows" in p or "test:all" in p for row in rows.values() for p in row["argv"]))
+
+    def test_closed_mapping_pair_keeps_both_feature_owner_groups_and_focused_controller(self):
+        for paths in (catalog.TRAINING_IO_RETIREMENT_SCOPE, catalog.BOUNDED_LOCAL_MODEL_COPY_SCOPE):
+            rows = self.rows(paths, ("control-plane", "documentation", "headless-training-io-retirement-unit"))
+            for name in ("headless-training-io-retirement-unit", "headless-training-io-retirement-types",
+                         "headless-approved-training-owner-unit", "headless-approved-training-owner-types"):
+                self.assertIn(name, rows)
+            for module in catalog.BOUNDED_LOCAL_COPY_CONTROLLER_FILTERS:
+                self.assertIn(module, rows["control-plane"]["argv"])
+            self.assertNotIn("focused-tests", rows)
+
+    def test_unknown_mixed_or_explicit_generic_keeps_original_fallback(self):
+        default = next(row["argv"] for row in catalog.definitions(self.root) if row["id"] == "control-plane")
+        for paths, required in ((catalog.BOUNDED_LOCAL_MODEL_COPY_SCOPE+("docs/unknown.md",), ("control-plane",)),
+                                (catalog.TRAINING_IO_RETIREMENT_SCOPE[:-1], ("control-plane",)),
+                                (catalog.BOUNDED_LOCAL_MODEL_COPY_SCOPE, ("control-plane", "focused-tests"))):
+            self.assertEqual(self.rows(paths, required)["control-plane"]["argv"], default)
+        self.assertIn("focused-tests", self.rows([catalog.BOUNDED_LOCAL_MODEL_COPY, "modules/adapters/unknown.ts"]))
+
+    def test_missing_or_unsafe_current_feature_file_cannot_suppress_fallback(self):
+        actual = catalog._automatic_files_available
+        default = next(row["argv"] for row in catalog.definitions(self.root) if row["id"] == "control-plane")
+        for missing in (catalog.BOUNDED_LOCAL_MODEL_COPY, catalog.BOUNDED_LOCAL_MODEL_COPY_PORT,
+                        "docs/adr/ADR-0049-bounded-local-training-storage.md"):
+            with self.subTest(missing=missing):
+                with patch.object(catalog, "_automatic_files_available", side_effect=lambda root, check:
+                        False if missing in check.get("automatic_required_files", ()) else actual(root, check)):
+                    self.assertEqual(self.rows(catalog.BOUNDED_LOCAL_MODEL_COPY_SCOPE, ("control-plane",))["control-plane"]["argv"], default)
+
+
 if __name__ == "__main__": unittest.main()

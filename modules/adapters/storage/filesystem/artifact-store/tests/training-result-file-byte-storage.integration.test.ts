@@ -11,6 +11,7 @@ import {createFilesystemTrainingResultFileByteStorageAdapter as create} from "..
 import {encodeTrainingResultInventory as encodeInventory} from "../trainingResultInventory";
 import {createNativeTrainingResultFileByteStorageAdapter as createNative} from "../createNativeTrainingResultFileByteStorageAdapter";
 import {createOriginalTrainingOutputReceiver} from "../../../../runtime/python/client/originalTrainingOutputReceiver";
+import {createFilesystemLocalTrainingModelCopyStorage as createLocalModelCopy} from "../createFilesystemLocalTrainingModelCopyStorage";
 import type {ApprovedLocalTrainingDefinition} from "../../../../../application/ports/model";
 import {createWorkspaceId} from "../../../../../contracts/workspace";
 
@@ -760,3 +761,311 @@ test("a real final link followed by a lost acknowledgement retains bytes and fen
   assert.equal((await storage.publishResultFile(input(), context)).ok, false);
   assert.deepEqual(new Uint8Array(await readFile(path.join(root, key()))), new Uint8Array([1, 2, 3]));
 }));
+
+
+async function localModelCopyFixture(run: (f: {
+  sourceDirectory: string; stagingRoot: string; actor: {workspaceId: string; organizationId: ReturnType<typeof createOrganizationId>; principalId: string; requestId: string};
+  values: Record<string, Buffer>; options: Parameters<typeof createLocalModelCopy>[0];
+  setCurrent(value: boolean): void; setAllowed(value: boolean): void; setRetired(value: boolean): void;
+}) => Promise<void>) {
+  await fixture(async root => {
+    const sourceDirectory = path.join(root, "source-model"), stagingRoot = path.join(root, "local-copies");
+    await mkdir(sourceDirectory); await mkdir(stagingRoot);
+    const values = {"config.json": Buffer.from('{"model_type":"synthetic"}'),
+      "tokenizer.json": Buffer.from('{"version":"synthetic"}'), "model.safetensors": Buffer.from("synthetic copy bytes, not a model fixture")};
+    for (const [name, bytes] of Object.entries(values)) await writeFile(path.join(sourceDirectory, name), bytes);
+    const actor = {workspaceId: "workspace-a", organizationId: createOrganizationId("organization-a"), principalId: "local-copy-actor", requestId: "local-copy-request"};
+    let current = true, allowed = true, retired = false;
+    const options: Parameters<typeof createLocalModelCopy>[0] = {rootDirectory: stagingRoot, allowedSourceRoots: [sourceDirectory], context: actor,
+      source: {modelRecordId: "exact-model-record", modelUpdatedAt: "2026-11-26T00:00:00Z", logicalPath: sourceDirectory,
+        files: Object.entries(values).map(([name, bytes]) => ({name, sizeBytes: bytes.length, sha256: digest(bytes)}))},
+      limits: {maximumFiles: 9, maximumFileBytes: 4096, maximumTotalBytes: 8192, maximumDurationMs: 10000, minimumFreeBytes: 1024, bufferBytes: 65536},
+      control: {assertCurrent() {assert.ok(current);}, async assertAllowed() {assert.ok(allowed);}, async assertCleanupAllowed() {assert.ok(retired);}}};
+    await run({sourceDirectory, stagingRoot, actor, values, options,
+      setCurrent(value) {current = value;}, setAllowed(value) {allowed = value;}, setRetired(value) {retired = value;}});
+  });
+}
+
+test("bounded-local Model copy uses real contained files and original cleanup authority", async () => {
+  await localModelCopyFixture(async f => {
+    const storage = createLocalModelCopy(f.options); assert.equal(storage.profile, "bounded-local-v1");
+    assert.deepEqual(storage.identity, {requestId: f.actor.requestId, workspaceId: f.actor.workspaceId,
+      modelRecordId: "exact-model-record", modelUpdatedAt: "2026-11-26T00:00:00Z"});
+    assert.ok(Object.isFrozen(storage.identity));
+    await storage.prepare(f.actor); const directory = await storage.modelDirectory(f.actor);
+    assert.equal(path.dirname(directory), f.stagingRoot); assert.notEqual(directory, f.sourceDirectory);
+    for (const [name, bytes] of Object.entries(f.values)) {
+      assert.deepEqual(await readFile(path.join(directory, name)), bytes);
+      assert.deepEqual(await readFile(path.join(f.sourceDirectory, name)), bytes);
+    }
+    assert.deepEqual((await readdir(directory)).sort(), Object.keys(f.values).sort());
+    assert.ok(Object.isFrozen(storage.inspect()));
+    assert.deepEqual(storage.inspect(), {phase: "ready", fenced: false, pendingOperations: 0, sourceHandlesOpen: 0,
+      destinationIoClosed: true, fileCount: 3, declaredBytes: Object.values(f.values).reduce((sum, bytes) => sum + bytes.length, 0),
+      preparationFinished: true, physicalQuotaEnforced: false});
+    assert.throws(() => storage.prepare(f.actor));
+    await assert.rejects(() => storage.modelDirectory({...f.actor, principalId: "other-actor"}));
+    storage.fence(); await assert.rejects(() => storage.modelDirectory(f.actor));
+    // Refusing a new loan does not erase the verified files. Only the
+    // separately captured original cleanup authority can retire them.
+    f.setRetired(true); assert.equal(await storage.discard(f.actor), true);
+  });
+});
+
+test("bounded-local Model copies discard only after fencing and original use retirement", async () => {
+  await localModelCopyFixture(async f => {
+    const storage = createLocalModelCopy(f.options); await storage.prepare(f.actor);
+    const directory = await storage.modelDirectory(f.actor); assert.equal(await storage.discard(f.actor), false);
+    storage.fence(); f.setAllowed(false); f.setCurrent(false); f.setRetired(true);
+    assert.equal(await storage.discard(f.actor), true); assert.equal(await storage.discard(f.actor), true);
+    assert.equal(storage.inspect().phase, "discarded"); await assert.rejects(() => lstat(directory), {code: "ENOENT"});
+    assert.deepEqual(await readdir(f.stagingRoot), []);
+    for (const [name, bytes] of Object.entries(f.values)) assert.deepEqual(await readFile(path.join(f.sourceDirectory, name)), bytes);
+  });
+});
+
+for (const mode of ["duplicate", "unsafe-name", "wrong-hash", "over-file", "over-total", "sparse", "array-hook", "getter", "source-root", "source-destination-overlap", "strict-mode-field"] as const) {
+  test(`bounded-local copy constructor denies ${mode} without IO or metadata hooks`, async () => {
+    await localModelCopyFixture(async f => {
+      const options: any = {...f.options, source: {...f.options.source, files: f.options.source.files.map(row => ({...row}))}, limits: {...f.options.limits}};
+      let hooks = 0;
+      if (mode === "duplicate") options.source.files.push({...options.source.files[0]});
+      if (mode === "unsafe-name") options.source.files[0].name = "../outside.json";
+      if (mode === "wrong-hash") options.source.files[0].sha256 = "sha256:invalid";
+      if (mode === "over-file") options.limits.maximumFileBytes = 1;
+      if (mode === "over-total") options.limits.maximumTotalBytes = 1;
+      if (mode === "sparse") delete options.source.files[1];
+      if (mode === "array-hook") Object.defineProperty(options.source.files, "map", {get() {hooks++; throw Error("must not run");}});
+      if (mode === "getter") Object.defineProperty(options.source.files[0], "name", {enumerable: true, get() {hooks++; throw Error("must not run");}});
+      if (mode === "source-root") options.allowedSourceRoots = [f.stagingRoot];
+      if (mode === "source-destination-overlap") options.rootDirectory = f.sourceDirectory;
+      if (mode === "strict-mode-field") options.profile = "native-exclusive-v1";
+      assert.throws(() => createLocalModelCopy(options)); assert.equal(hooks, 0);
+      assert.deepEqual(await readdir(f.stagingRoot), []);
+    });
+  });
+}
+
+for (const mode of ["insufficient-space", "digest-changed", "size-changed", "permission", "currentness"] as const) {
+  test(`bounded-local copy refuses ${mode} and cannot retry or lend an incomplete Model`, async () => {
+    await localModelCopyFixture(async f => {
+      if (mode === "insufficient-space") f.options.limits.minimumFreeBytes = Number.MAX_SAFE_INTEGER - f.options.limits.maximumTotalBytes;
+      const storage = createLocalModelCopy(f.options);
+      if (mode === "digest-changed") await writeFile(path.join(f.sourceDirectory, "model.safetensors"), Buffer.alloc(f.values["model.safetensors"].length, 120));
+      if (mode === "size-changed") await writeFile(path.join(f.sourceDirectory, "model.safetensors"), "changed");
+      if (mode === "permission") f.setAllowed(false);
+      if (mode === "currentness") f.setCurrent(false);
+      await assert.rejects(() => storage.prepare(f.actor), {message: "Bounded local training storage is unavailable."});
+      assert.equal(storage.inspect().phase, "unconfirmed"); assert.equal(storage.inspect().fenced, true);
+      assert.throws(() => storage.prepare(f.actor)); await assert.rejects(() => storage.modelDirectory(f.actor));
+      storage.fence(); f.setRetired(true); assert.equal(await storage.discard(f.actor), false);
+    });
+  });
+}
+
+test("bounded-local copy captures source declarations before caller mutation", async () => {
+  await localModelCopyFixture(async f => {
+    const storage = createLocalModelCopy(f.options); (f.options.source.files[0] as any).name = "redirected.bin";
+    (f.options.source as any).logicalPath = f.stagingRoot;
+    await storage.prepare(f.actor); const directory = await storage.modelDirectory(f.actor);
+    assert.deepEqual((await readdir(directory)).sort(), Object.keys(f.values).sort());
+    storage.fence(); f.setRetired(true); assert.equal(await storage.discard(f.actor), true);
+  });
+});
+
+test("bounded-local cleanup preserves unexpected entries and edited original files", async () => {
+  for (const mode of ["extra-entry", "edited-copy"] as const) await localModelCopyFixture(async f => {
+    const storage = createLocalModelCopy(f.options); await storage.prepare(f.actor); const directory = await storage.modelDirectory(f.actor);
+    if (mode === "extra-entry") await writeFile(path.join(directory, "user-created.txt"), "preserve");
+    else await writeFile(path.join(directory, "config.json"), "user edit");
+    storage.fence(); f.setRetired(true); assert.equal(await storage.discard(f.actor), false);
+    assert.equal((await readdir(directory)).length, mode === "extra-entry" ? 4 : 3);
+    assert.equal(storage.inspect().phase, "unconfirmed");
+  });
+});
+
+
+for (const mode of ["hardlink", "junction"] as const) {
+  test(`bounded-local copy denies an actual ${mode} source`, async () => {
+    await localModelCopyFixture(async f => {
+      if (mode === "hardlink") await fs.link(path.join(f.sourceDirectory, "model.safetensors"), path.join(f.stagingRoot, "source-alias"));
+      else {
+        const link = path.join(f.stagingRoot, "linked-model"); await fs.symlink(f.sourceDirectory, link, "junction");
+        (f.options.source as any).logicalPath = link; (f.options as any).allowedSourceRoots = [f.stagingRoot];
+      }
+      const storage = createLocalModelCopy(f.options);
+      await assert.rejects(() => storage.prepare(f.actor)); assert.equal(storage.inspect().phase, "unconfirmed");
+      await assert.rejects(() => storage.modelDirectory(f.actor));
+    });
+  });
+}
+
+test("bounded-local deadline retains the actual original pending source close", async () => {
+  await localModelCopyFixture(async f => {
+    f.options.limits.maximumDurationMs = 500;
+    const closeGate = gate(), originalOpen = fs.open; let closeEntered = false;
+    const patched = mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+      const handle = await originalOpen(...args);
+      if (String(args[0]) === path.join(f.sourceDirectory, "config.json")) {
+        const originalClose = handle.close.bind(handle);
+        mock.method(handle, "close", async () => {closeEntered = true; await closeGate.promise; await originalClose();});
+      }
+      return handle;
+    });
+    syncBuiltinESMExports(); const storage = createLocalModelCopy(f.options);
+    try {
+      const pending = storage.prepare(f.actor); void pending.catch(() => {});
+      await untilNative(() => closeEntered); await assert.rejects(pending);
+      assert.equal(storage.inspect().sourceHandlesOpen, 1); assert.equal(storage.inspect().pendingOperations, 1);
+      assert.equal(storage.inspect().preparationFinished, false); assert.throws(() => storage.prepare(f.actor));
+      storage.fence(); f.setRetired(true); assert.equal(await storage.discard(f.actor), false);
+      closeGate.resolve(); await untilNative(() => storage.inspect().preparationFinished);
+      assert.equal(storage.inspect().sourceHandlesOpen, 0); assert.equal(storage.inspect().pendingOperations, 0);
+      assert.equal(storage.inspect().phase, "unconfirmed"); await assert.rejects(() => storage.modelDirectory(f.actor));
+    } finally {closeGate.resolve(); await untilNative(() => storage.inspect().preparationFinished); patched.mock.restore(); syncBuiltinESMExports();}
+  });
+});
+
+test("bounded-local delayed permission cannot start a copy after its deadline", async () => {
+  await localModelCopyFixture(async f => {
+    const permission = gate(); let entered = false;
+    f.options.limits.maximumDurationMs = 250;
+    f.options.control.assertAllowed = async () => {entered = true; await permission.promise;};
+    const storage = createLocalModelCopy(f.options); const pending = storage.prepare(f.actor); void pending.catch(() => {});
+    try {
+      await untilNative(() => entered); await assert.rejects(pending);
+      assert.equal(storage.inspect().pendingOperations, 1); assert.deepEqual(await readdir(f.stagingRoot), []);
+      permission.resolve(); await untilNative(() => storage.inspect().preparationFinished);
+      assert.equal(storage.inspect().pendingOperations, 0); assert.deepEqual(await readdir(f.stagingRoot), []);
+      assert.equal(storage.inspect().phase, "unconfirmed"); assert.throws(() => storage.prepare(f.actor));
+    } finally {permission.resolve(); await untilNative(() => storage.inspect().preparationFinished);}
+  });
+});
+
+test("bounded-local cleanup latches before its original authority callback can reenter", async () => {
+  await localModelCopyFixture(async f => {
+    const permission = gate(); let entered = false, nested: Promise<boolean> | undefined;
+    let storage!: ReturnType<typeof createLocalModelCopy>;
+    f.options.control.assertCleanupAllowed = async () => {entered = true; nested = storage.discard(f.actor); await permission.promise;};
+    storage = createLocalModelCopy(f.options); await storage.prepare(f.actor); storage.fence();
+    const cleanup = storage.discard(f.actor);
+    try {
+      await untilNative(() => entered); assert.equal(await nested, false); assert.equal(storage.inspect().pendingOperations, 1);
+      permission.resolve(); assert.equal(await cleanup, true); assert.deepEqual(await readdir(f.stagingRoot), []);
+    } finally {permission.resolve(); await cleanup;}
+  });
+});
+
+
+test("bounded-local late cleanup permission cannot delete files after its deadline", async () => {
+  await localModelCopyFixture(async f => {
+    const permission = gate(); let entered = false;
+    f.options.limits.maximumDurationMs = 500;
+    f.options.control.assertCleanupAllowed = async () => {entered = true; await permission.promise;};
+    const storage = createLocalModelCopy(f.options); await storage.prepare(f.actor);
+    const directory = await storage.modelDirectory(f.actor); storage.fence(); const cleanup = storage.discard(f.actor);
+    try {
+      await untilNative(() => entered); assert.equal(await cleanup, false); assert.equal(storage.inspect().pendingOperations, 1);
+      assert.equal((await readdir(directory)).length, 3);
+      permission.resolve(); await untilNative(() => storage.inspect().pendingOperations === 0);
+      await tickNative(); assert.equal((await readdir(directory)).length, 3); assert.equal(storage.inspect().phase, "unconfirmed");
+      assert.equal(await storage.discard(f.actor), false);
+    } finally {permission.resolve(); await cleanup; await untilNative(() => storage.inspect().pendingOperations === 0);}
+  });
+});
+
+test("bounded-local lost delete acknowledgement cannot trigger remaining cleanup or retry", async () => {
+  await localModelCopyFixture(async f => {
+    f.options.limits.maximumDurationMs = 500;
+    const storage = createLocalModelCopy(f.options); await storage.prepare(f.actor);
+    const directory = await storage.modelDirectory(f.actor), deletion = gate(); let entered = false, effects = 0;
+    const original = fs.unlink;
+    const patched = mock.method(fs, "unlink", async (...args: Parameters<typeof fs.unlink>) => {
+      const name = String(args[0]); await original(...args);
+      if (name.startsWith(path.join(directory, ".config.json.")) && name.endsWith(".delete")) {
+        effects++; entered = true; await deletion.promise;
+      }
+    });
+    syncBuiltinESMExports(); storage.fence(); f.setRetired(true); const cleanup = storage.discard(f.actor);
+    try {
+      await untilNative(() => entered); assert.equal(await cleanup, false); assert.equal(storage.inspect().pendingOperations, 1);
+      deletion.resolve(); await untilNative(() => storage.inspect().pendingOperations === 0); await tickNative();
+      assert.equal(effects, 1); assert.equal((await readdir(directory)).length, 2);
+      assert.equal(storage.inspect().phase, "unconfirmed"); assert.equal(await storage.discard(f.actor), false);
+      assert.equal(effects, 1);
+    } finally {deletion.resolve(); await cleanup; await untilNative(() => storage.inspect().pendingOperations === 0); patched.mock.restore(); syncBuiltinESMExports();}
+  });
+});
+
+for (const mode of ["native-constructor", "subclass"] as const) {
+  test(`bounded-local copy retains ${mode} promises without calling misleading hooks`, async () => {
+    await localModelCopyFixture(async f => {
+      let resolve!: () => void, hooks = 0;
+      class OtherPromise extends Promise<void> {}
+      const original = mode === "subclass" ? new OtherPromise(done => {resolve = done;}) : new Promise<void>(done => {resolve = done;});
+      if (mode === "native-constructor") Object.defineProperty(original, "constructor", {value: {}});
+      Object.defineProperty(original, "then", {value: (done: (value?: unknown) => void) => {hooks++; done();}});
+      f.options.control.assertAllowed = () => original;
+      const storage = createLocalModelCopy(f.options);
+      try {
+        await assert.rejects(() => storage.prepare(f.actor));
+        assert.equal(hooks, 0); assert.equal(storage.inspect().pendingOperations, 1);
+        assert.equal(storage.inspect().phase, "unconfirmed"); assert.deepEqual(await readdir(f.stagingRoot), []);
+        resolve(); await tickNative();
+        // Invalid observation cannot later create retirement credit.
+        assert.equal(storage.inspect().pendingOperations, 1); assert.throws(() => storage.prepare(f.actor));
+        storage.fence(); f.setRetired(true); assert.equal(await storage.discard(f.actor), false);
+      } finally {resolve();}
+    });
+  });
+}
+
+test("bounded-local own-then permission retains the original and handles its late rejection", async () => {
+  await localModelCopyFixture(async f => {
+    let reject!: (error: Error) => void, hooks = 0;
+    const original = new Promise<void>((_done, fail) => {reject = fail;});
+    Object.defineProperty(original, "then", {get() {hooks++; throw Error("must not read");}});
+    f.options.control.assertAllowed = () => original;
+    const storage = createLocalModelCopy(f.options);
+    try {
+      await assert.rejects(() => storage.prepare(f.actor)); assert.equal(hooks, 0);
+      assert.equal(storage.inspect().pendingOperations, 1); assert.deepEqual(await readdir(f.stagingRoot), []);
+      reject(Error("private permission failure")); await untilNative(() => storage.inspect().pendingOperations === 0);
+      assert.equal(hooks, 0); assert.equal(storage.inspect().phase, "unconfirmed");
+      assert.deepEqual(await readdir(f.stagingRoot), []); await assert.rejects(() => storage.modelDirectory(f.actor));
+    } finally {reject(Error("private permission failure")); await untilNative(() => storage.inspect().pendingOperations === 0);}
+  });
+});
+
+test("bounded-local own-then close cannot release a source handle before original rejection", async () => {
+  await localModelCopyFixture(async f => {
+    const originalOpen = fs.open; let reject!: (error: Error) => void, hooks = 0, entered = false;
+    let closeOriginal: (() => Promise<void>) | undefined;
+    const original = new Promise<void>((_done, fail) => {reject = fail;});
+    Object.defineProperty(original, "then", {value: (done: (value?: unknown) => void) => {hooks++; done();}});
+    const patched = mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+      const handle = await originalOpen(...args);
+      if (String(args[0]) === path.join(f.sourceDirectory, "config.json")) {
+        closeOriginal = handle.close.bind(handle);
+        mock.method(handle, "close", () => {entered = true; return original;});
+      }
+      return handle;
+    });
+    syncBuiltinESMExports(); const storage = createLocalModelCopy(f.options);
+    try {
+      await assert.rejects(() => storage.prepare(f.actor)); assert.equal(entered, true);
+      assert.equal(hooks, 0); assert.equal(storage.inspect().pendingOperations, 1);
+      assert.equal(storage.inspect().sourceHandlesOpen, 1); assert.equal(storage.inspect().destinationIoClosed, true);
+      storage.fence(); f.setRetired(true); assert.equal(await storage.discard(f.actor), false);
+      await closeOriginal!(); reject(Error("private close acknowledgement lost"));
+      await untilNative(() => storage.inspect().pendingOperations === 0);
+      assert.equal(hooks, 0); assert.equal(storage.inspect().sourceHandlesOpen, 1);
+      assert.equal(storage.inspect().phase, "unconfirmed"); assert.equal(await storage.discard(f.actor), false);
+    } finally {
+      if (closeOriginal) await closeOriginal();
+      reject(Error("private close acknowledgement lost"));
+      await untilNative(() => storage.inspect().pendingOperations === 0);
+      patched.mock.restore(); syncBuiltinESMExports();
+    }
+  });
+});

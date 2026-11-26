@@ -142,3 +142,18 @@ The coordinator must also check original receiver/session completion and fresh
 application permission before candidate review. Inert integration tests connect
 the real receiver and bridge for multi-file checkpoints/candidates and reject
 corrupt candidate bytes. They supply no physical or model-quality evidence.
+
+The private bounded-local training Model-copy adapter captures an exact source
+snapshot, original request/actor/workspace and finite limits. It reuses the
+contained streaming writer and checksum verifier, creates one fresh task-owned
+copy, and checks expected sizes/hashes, source identities and free disk headroom.
+Original source operations and destination lifetimes remain retained through
+cancellation or a bounded outward deadline. No historical trees are adopted.
+A private loader locator requires current authority and complete known IO.
+A permanent fence prevents new use. Discard requires separately captured original
+cleanup authority, ended worker/SDK/Job use and start admission, known IO,
+unchanged original file identities and no unexpected directory entries.
+This is the explicit trusted-local profile in ADR-0049, not exclusive Native
+custody, a physical shared quota, antirollback or protected crash recovery.
+Those stronger requirements remain pending in the separate storage roadmap.
+There is no strict-profile fallback, global quota credit or host activation.

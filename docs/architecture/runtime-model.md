@@ -3863,3 +3863,20 @@ This private handoff is not physical readiness, parent/crash protection, shared
 capacity, worker/SDK/Job retirement, candidate evaluation or task success. The
 owning application must independently authorize user-visible review and later
 registration/Save. Existing session completion and default host wiring stay.
+
+### Replaceable bounded-local Model storage
+
+ADR-0049 permits an explicit trusted-local storage profile for Headless I7,
+separate from the unqualified exclusive Native profile. The typed internal
+Model-copy port captures source metadata, original context and finite limits.
+The filesystem backend reuses contained streaming writes and checksum validation,
+checks disk headroom and original source identities, and retains actual source
+operations and destination lifetimes. It creates only a fresh task-owned copy.
+A private loader locator requires current authority and known complete IO.
+A permanent fence blocks new use. Cleanup needs separate original authority,
+ended worker/SDK/Job use and start admission, known IO, unchanged original file
+identities and no unexpected directory entries. It supplies no global credit.
+Application guards are not physical global quotas, hostile-process custody,
+antirollback or protected crash recovery. The service roadmap owns those stronger
+requirements. No service, strict-profile fallback, producer or host is activated
+by this storage component; actual runtime/result/Save/host composition follows.

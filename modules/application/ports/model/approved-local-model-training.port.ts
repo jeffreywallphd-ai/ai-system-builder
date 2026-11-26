@@ -1,6 +1,34 @@
 import type {ModelTrainingRequest, ModelTrainingResult} from "../../../contracts/model";
 import type {WorkspaceId} from "../../../contracts/workspace";
 import type {RuntimeTaskRecord, CancelRuntimeTaskResult} from "../../../contracts/runtime";
+import type {ApplicationRequestContext} from "../application-request-context";
+
+/** Internal replaceable storage for the explicitly trusted-local profile.
+ * Paths stay between the owning adapter and safe local loader, never API/IPC
+ * tool responses. This is not exclusive Native custody or a physical quota. */
+export interface BoundedLocalTrainingModelSource {
+  readonly modelRecordId: string;
+  readonly modelUpdatedAt: string;
+  readonly logicalPath: string;
+  readonly files: readonly Readonly<{name: string; sizeBytes: number; sha256: string}>[];
+}
+export interface BoundedLocalTrainingModelCopyStoragePort {
+  readonly profile: "bounded-local-v1";
+  readonly identity: Readonly<{requestId: string; workspaceId: WorkspaceId; modelRecordId: string; modelUpdatedAt: string}>;
+  prepare(context: ApplicationRequestContext): Promise<void>;
+  /** Private loader locator only. The caller retains original worker ownership. */
+  modelDirectory(context: ApplicationRequestContext): Promise<string>;
+  fence(): void;
+  inspect(): Readonly<{
+    phase: "bound" | "preparing" | "ready" | "unconfirmed" | "discarded";
+    fenced: boolean; pendingOperations: number; sourceHandlesOpen: number;
+    destinationIoClosed: boolean; fileCount: number; declaredBytes: number;
+    preparationFinished: boolean; physicalQuotaEnforced: false;
+  }>;
+  /** Separately captured cleanup authority must prove original worker/SDK/Job
+   * use has ended. This result grants no global quota or service credit. */
+  discard(context: ApplicationRequestContext): Promise<boolean>;
+}
 
 /** Internal configured capabilities only. These objects never cross API/IPC. */
 export interface ApprovedLocalTrainingControl {
