@@ -322,20 +322,15 @@ The fixed command does not accept caller-supplied commands or qualify Native
 identity, capacity, model loading, Headless execution or any parent criterion.
 
 The `native-training-result-store-abi` and `native-training-result-store-build-unit`
-checks build and test the private Windows Node-parent component with fixed inputs.
-Only its complete declared scope narrows generic focused/controller selection;
-unknown or missing support keeps conservative checks. These checks do not run a
-model, mutate training files or qualify a parent roadmap criterion.
-
-`native-training-result-files-contract` checks the fixed real-file harness without
-file effects. `native-training-result-files` is an explicit-only qualification
-identity; ordinary source edits never select it. The fixture requires current
-completed/reviewed source. Component file checks do not qualify training or a host.
-
-The explicit native-file profile also checks the actual Node image, clears ambient
-loaders, serializes count/create under an original lock, validates lock identity
-and rechecks the complete accepted source Work/review after execution.
-
-Native-file contracts reject unknown diagnostic fields, boolean numeric values
-and out-of-range values. Seal counters/status/match bits are diagnostic only,
-never authorization, readiness or qualification on their own.
+checks cover the fixed Windows component without protected-file effects.
+`native-training-result-files-contract` checks the actual-file harness passively.
+The `native-training-result-files` identity is explicit-only; ordinary code edits
+cannot select it. Its reviewed-source gate binds the complete current Source
+Work/review, binary and actual Node image. Child loaders/credentials are cleared.
+Original regular single-link OS locks guard atomic admission and worker lifetime.
+Final source stability and original child/job closure are mandatory. Strict
+numeric stage/sub-step/status/access/permission fields are diagnostic only.
+Earlier failures and trees stay retained without automatic retry, ACL reset,
+old-tree adoption or storage credit. Final-DACL creator capability, training and
+host qualification remain separate. Unknown/missing/mixed source paths preserve
+conservative generic verification; a partial profile never borrows a pass.

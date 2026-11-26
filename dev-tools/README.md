@@ -2370,23 +2370,18 @@ reuse a consumed retry. This feature check does not repeat accepted accuracy.
 
 The private Windows training-result custodian uses the fixed offline builder
 `python -B dev-tools/scripts/native/build_windows_training_result_store.py --plan`.
-It reuses the installed MSVC/SDK and existing 2 GiB compiler job. Exact cached
-Node SDK files are pinned in `dev-tools/config/windows-training-result-sdk.json`;
-there is no automatic fetch or runtime change. Run the matching compiled no-file
-ABI check with `node modules/adapters/runtime/python/tests/windows-training-result-store.unit.test.mjs --native-abi`.
-Physical file/crash, receiver, Save and host qualification remain separate.
-
-Prepare the small native training-result file fixture with
+It reuses installed MSVC/SDK, the existing 2 GiB/8-process compiler job and pinned
+cached official Node SDK inputs. No runtime or dependency version changes.
+Run compiled no-file ABI checks with
+`node modules/adapters/runtime/python/tests/windows-training-result-store.unit.test.mjs --native-abi`.
+Prepare actual synthetic-file checks with
 `python -B dev-tools/scripts/native/qualify_windows_training_result_store.py --plan`.
-Its contract tests have no native file effects. The explicit `--run` command needs
-current completed/reviewed source, creates one bounded synthetic fixture, reuses
-the existing 2 GiB/8-process owned job, and verifies original child/job closure.
-It retains failures without path cleanup or automatic retry. No model or app runs.
-
-The file profile sanitizes child loader environments and binds the Node image.
-Original single-link lock files protect atomic admission and owned execution;
-final closure rechecks the complete accepted source/review, not only fixture files.
-
-The native file result includes strictly validated numeric seal diagnostics:
-sub-step, native setter status, original access and owner/ACL/control match bits.
-It emits no SID, path, payload or raw exception text and does not infer custody.
+Only explicit `--run` performs the small file fixture, after current completed and
+separately reviewed source. The driver binds source/binary/Node image, sanitizes
+child loaders, validates original single-link locks and serializes admission.
+Final source/review, original child exit and job closure are checked. Eight named
+capability checks include root child creation, secondary control/path/ADS denial,
+original writes/reads and cleanup. Numeric diagnostics contain no path, SID or
+payload and grant no authority. Earlier permission-transition failures stay
+retained. Final-DACL creation and all original capabilities still require actual
+Windows qualification; no model, full app, crash recovery or parent pass follows.

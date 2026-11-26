@@ -3,67 +3,49 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `containedFilesystem.ts` supplies the existing cooperative containment helpers.
+`windowsTrainingResultStore.cc` is an opt-in private Node-parent custodian. It is
+not in the public barrel or default host composition. It starts no service/model
+and changes no original training controller retirement.
 
-`windowsTrainingResultStore.cc` is a private, opt-in Node-parent custodian for
-fresh training results. It is not exported through the adapter barrel or selected
-by a default host. It uses stable Node-API 8 and the existing Node process; it
-starts no helper, service, model or training worker.
+The trusted caller supplies current authority, actual shared reservation, the
+exact existing parent, a fresh32hex publication ID, scope digest and explicit
+file/count/data/metadata/time limits. Configuration grants none of that authority.
+Inventories are copied and checked before native effects. Every fresh object uses
+the unchanged FINAL owner/World/OWNER_RIGHTS ACL and protected controls from birth.
+The creator profile is the previous profile minus unavailable WRITE_DAC:
+0x1301a7 for directories and0x13019f for files. These are explicit profiles, not a
+globally minimal-rights claim. Actual grant, identity and exact final permissions
+must match. A secondary control-only WRITE_DAC open must return access denied.
+The full allocated empty namespace is checked before payload. There is no weaker
+construction ACL, later setter, new privilege, identity, service or recovery.
 
-The trusted caller must supply the exact existing parent directory, a fresh
-32-character lower-case hexadecimal publication ID, a scope digest, and explicit
-file/count/data/metadata/operation limits. These values provide no authorization,
-global capacity reservation or right to inspect an old directory. The complete
-binary inventory is copied and validated before native effects. All empty entries
-are preallocated and sealed with the original World/OWNER_RIGHTS policy before
-any private payload. Original creators remain private and non-inheritable.
+This is an unqualified construction candidate. Actual original-root child creation
+and creator write/read/delete must work on Windows. Unsupported behavior refuses
+before data. Three earlier setter-based failures and their trees stay retained.
+Tagged objects own one async operation and its original buffers through known
+completion. GC/fencing cannot retire unknown IO or lost readers. Ordered writes
+finish with flush and full SHA-256 readback. Readers use original capabilities;
+ordinary path readers cannot replace them. Only fenced, known, reader-free stores
+can discard original same-episode creators. There is no quota credit or old-tree
+inspection, deletion, move, adoption or ACL reset.
 
-Only module-tagged opaque objects can prepare, append, finish, read, fence or
-discard. Each operation owns its native buffers and asynchronous completion.
-Fencing never claims that pending IO stopped. Unknown effects remain retained.
-Sequential appends and a full SHA-256 readback precede completion. One explicit
-reader uses the retained creator; ordinary path readers are not compatible with
-the exclusive sharing policy. GC never closes a live store or reader. A lost
-reader therefore retains its store until process exit, rather than permitting
-cleanup. Only explicitly fenced, known, reader-free stores can discard their
-exact original creators. There is no old-root adoption, ACL reset or quota credit.
+Private `inspect` has finite numeric diagnostics only. Stage0..14 records the
+operation phase. Protection sub-step1 is NtCreate,2 actual creator grant,3 exact
+final descriptor,4 secondary control-open denial,5 stable identity,6 verified.
+`nativeStatus` records creation/grant or unexpected-probe NTSTATUS, unsigned32bit.
+`grantedAccess` records the last original grant. Permission bits1/2/4/8 mean valid
+descriptor/matching owner/exact ACL/expected protected controls; controls are
+masked0x150c. No paths, SIDs, payloads or raw exception text. Diagnostics are not
+authorization, custody, readiness or qualification.
 
-Build with `python -B dev-tools/scripts/native/build_windows_training_result_store.py`.
-The fixed builder needs the pinned official Node SDK inputs already present in
-the ignored local cache. It never fetches them. The existing bounded compiler
-profile is reused. Run compiled no-file ABI checks with
+Build: `python -B dev-tools/scripts/native/build_windows_training_result_store.py`.
+The fixed no-fetch builder uses pinned cached official Node SDK files and existing
+MSVC/SDK with the unchanged bounded job. No-file ABI:
 `node modules/adapters/runtime/python/tests/windows-training-result-store.unit.test.mjs --native-abi`.
-These checks do not qualify actual file/crash behavior, durable custody, receiver
-integration, secure Save, packaging or a training task. Those checks and the actual
-global reservation must pass before a host enables this component.
-
-Private `inspect` reports a finite numeric stage (0 captured, 1 principal,
-2 parent, 3 capacity, 4 directory creation, 5 files, 6 sealing, 7 empty-tree
-checks, 8 prepared, 9 append, 10 hash/readback, 11 receipt, 12 read,
-13 discard, 14 closed). It contains no paths or payloads and grants no authority.
-The explicit synthetic-file fixture is prepared separately from the no-file ABI:
-`python -B dev-tools/scripts/native/qualify_windows_training_result_store.py --plan`.
-Only `--run` performs actual file effects, after a current completed source Work
-and separate review. It uses the existing bounded owned job, small fixed data,
-known original child exit and observed job closure. Unknown file trees are retained,
-with no automatic retry, path cleanup, ACL reset or capacity credit. These are
-controlled component checks; crash, original training controller/SDK, application
-receiver, Save, quota and full-host qualification remain separate.
-
-The file fixture uses a fixed child environment without provider keys or ambient
-loaders and binds the actual Node image/version/hash. A short original OS lock
-serializes namespace count/create; a separate worker-owned lock lasts through
-execution. Regular single-link lock identities are checked against the opened
-descriptor. Full current Source Work/review binding is rechecked at closure.
-
-Construction and sealing share one complete descriptor builder: exact ACL bytes,
-original principal owner and protected-DACL controls are preserved in both paths.
-The first real fixture failed during sealing before any payload; that failed tree
-and receipt stay retained. A source correction alone does not qualify real files.
-
-Private seal diagnostics contain numbers only. `sealStep` is 1 identity-before,
-2 construction permissions, 3 descriptor construction, 4 native setter,
-5 sealed permissions, or 6 identity-after. `nativeStatus` is the setter NTSTATUS
-as an unsigned32bit value; `grantedAccess` is advisory original-handle access.
-`permissionBits` uses 1 valid descriptor, 2 matching owner, 4 exact ACL and
-8 expected protected controls. `permissionControl` is only mask0x150c. No SID,
-path, payload or exception text is emitted. These fields grant no authority.
+Plan real files: `python -B dev-tools/scripts/native/qualify_windows_training_result_store.py --plan`.
+Only explicit `--run` executes its tiny synthetic fixture after current separately
+reviewed completed source. Loader environments, actual Node/source/binary identity,
+original single-link locks, atomic admission, child/job closure and final full
+source review are checked. Failed files remain; no automatic retry/cleanup.
+Original SDK/controller, crash custody, global quota/durable accounting, receiver,
+Save, packaging and whole-host qualification remain separate and pending.

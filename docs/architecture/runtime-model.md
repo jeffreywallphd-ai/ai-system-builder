@@ -3761,39 +3761,25 @@ The session retains the actual operation and observation, and malformed outcomes
 remain unconfirmed. No supplied then/species hook or global rejection-policy
 handler is needed. This profile adds no physical resource or settlement proof.
 
-The private `windowsTrainingResultStore.cc` adapter keeps fresh parent result
-creators in the existing Node host through asynchronous Node-API operations. It
-introduces no service, worker identity or changed controller retirement. The
-trusted caller supplies explicit data/metadata/time limits and current authority
-and shared reservation; the adapter cannot grant them. Entire empty inventories
-are preallocated, ACL-sealed and checked before payload writes. Sequential writes
-finish with flush and complete SHA-256 readback. Original-capability readers
-replace ordinary path reads while exclusive creators remain held. Fencing is not
-IO completion; unknown operations and lost readers retain custody. Known cleanup
-uses only same-episode original handles and never credits capacity. No default
-host loads it. Compiler/no-file ABI evidence is separate from actual native
-file/crash, receiver, global capacity, Save, packaging and host qualification.
-
-The native training-result component has an explicit synthetic-file qualification
-profile, separate from the no-file ABI and original training execution. Its private
-finite stage diagnostics contain no paths or payloads. Source-only preparation
-checks do not invoke native file operations. Actual qualification needs a current
-completed/reviewed source Work, the fixed verified binary and existing bounded
-owned job. It tests small ordered writes, post-seal path denials, original-capability
-reads and creator cleanup, then observes original Node exit and job closure. It
-does not establish crash recovery, original SDK/controller retirement, global
-reservation, application receiver/Save composition or whole-host readiness.
-
-The synthetic file driver isolates loader environments and binds the actual Node
-image. Short admission and worker-lifetime locks use validated original regular
-single-link descriptors; final closure rechecks the full accepted source Work.
-
-Native result creation and sealing share the complete principal/ACL/protected-DACL
-descriptor construction. Source consistency checks do not replace a fresh actual
-file qualification. Preserve the earlier pre-payload seal failure and retained
-fixture; no recovery, historical ACL mutation or capacity credit is implied.
-
-The private custodian exposes finite numeric seal diagnostics through its
-existing inspect/test-result path. Sub-step, native status, original handle
-access and permission-check bits contain no identity, path or payload and do
-not change the original setter, ACL policy or unknown-operation retirement.
+The private `windowsTrainingResultStore.cc` adapter retains fresh result creators
+in the existing Node host through async Node-API operations. It starts no service,
+changes no original controller retirement and is off by default. The trusted
+caller still supplies current authority and an actual shared reservation.
+Fresh objects receive the unchanged final owner/ACL/protected controls in their
+creating call. The original creator profile excludes WRITE_DAC. Actual grants,
+identity, exact descriptor, secondary control-open denial and the complete empty
+allocated inventory must be checked before payload. This avoids the setter-based
+transition which real fixtures found impossible with the observed creator grant.
+All earlier failures and trees remain; this candidate is not yet physically
+qualified. Original root child creation, data writes/reads and deletion must pass
+on Windows, with no weaker ACL fallback if unsupported.
+Sequential writes finish with flush/SHA-256 readback. Original-capability readers
+replace path reads while creators remain held. Fencing is not completion; unknown
+IO and lost readers retain custody. Same-episode known cleanup credits no capacity.
+The explicit synthetic-file driver requires completed/reviewed current source,
+fixed binary/Node inputs, clean loader environment, original single-link admission
+and worker locks, actual child/job closure and final complete-source revalidation.
+Only finite numeric diagnostics leave its private inspect/result path. No-file
+ABI/contracts do not execute the real fixture. Native crash, global quota/durable
+accounting, original SDK/controller, receiver/Save, packaging and host qualification
+remain pending. The Windows construction candidate stays within ADR0043/0047.

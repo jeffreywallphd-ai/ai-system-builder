@@ -20,7 +20,7 @@ class NativeFeatureContractTests(unittest.TestCase):
     def diagnostics(self):return {'sealStep':0,'nativeStatus':0,'permissionBits':0,'permissionControl':0,'grantedAccess':0}
     def result(self):return {'kind':'native-file-result','passed':True,'cleanup_passed':True,'stage':14,'diagnostics':self.diagnostics(),'checks':feature.CHECKS.copy()}
 
-    def test_exact_success_requires_all_six_real_feature_checks_and_cleanup(self):
+    def test_exact_success_requires_all_eight_real_feature_checks_and_cleanup(self):
         value=self.result();self.assertEqual(feature.decode_result(json.dumps(value)),value)
         for field,wrong in [('kind','copied-status'),('cleanup_passed',False),('stage',8),('checks',feature.CHECKS[:-1])]:
             invalid=copy.deepcopy(value);invalid[field]=wrong

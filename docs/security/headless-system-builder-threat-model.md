@@ -3505,53 +3505,28 @@ original session; a refused result remains unconfirmed and never becomes a void
 acknowledgement. An isolated ordinary-Node failure-policy fixture verifies no
 private rejection escapes and no startup/release follows.
 
-The opt-in Windows Node-parent training-result custodian adds a private native
-ABI, not a public tool capability. Forged JavaScript values, paths, manifests,
-counts, bytes and deadlines are rejected before dispatch. Opaque module tags and
-exact environment identity bind live owners; retained original creators deny
-path substitution, mutation and ordinary path reads. The existing World and
-OWNER_RIGHTS ACL seal covers every empty file and the directory before private
-bytes. Sealed inventory, identity, streams, allocations, hashes and readback are
-checked. A single asynchronous operation owns its original buffers and handles
-through completion; cancellation/fencing cannot release pending or uncertain IO.
-Reader loss or unknown effects retain the store. Only exact known creators from
-that live episode can be discarded after fencing and reader retirement. There
-is no recovery, historical-root inspection, ACL reset, capacity credit or Model
-registration. SDK/build inputs are fixed, pinned and offline. Same-process
-trusted-caller compromise, actual native file/crash behavior, global quota and
-durable accounting, receiver/Save binding, packaging and host wiring remain
-unqualified; compiler and no-file ABI checks supply none of those guarantees.
-
-The controlled synthetic-file test driver is not an app capability. Ordinary
-source checks cannot select real native effects. The explicit profile validates
-current separately reviewed source, source/binary/Node inputs and finite fixture
-paths before one run. It creates no model or app and sends no data externally.
-Only tiny public synthetic bytes are used; fixed stages replace raw error or
-payload logging. The existing bounded owned job constrains descendants and
-requires original Node exit/empty job observations. Failed trees remain untouched;
-there is no automatic retry, old-tree ownership, ACL recovery or storage credit.
-The worker owns an OS file lock which process exit releases. The profile bounds
-its named evidence namespace to eight runs and stops instead of deleting history.
-This cooperative controlled-environment test does not qualify hostile file races,
-crash custody, product quota, original worker handoff, Save or host activation.
-
-The explicit file driver clears ambient Node/Python loaders and credentials from
-child environments and checks the actual Node image/version/hash in the child.
-Original regular single-link descriptor identity is checked before and after OS
-locking. A short admission lock serializes namespace count/create; the worker
-keeps a separate execution lock through closure. Final validation binds the full
-current accepted Source Work and review, beyond the five fixture inputs. These
-observed checks remain cooperative; they do not claim hostile filesystem safety.
-
-The fresh result seal uses the same complete descriptor builder as creation,
-including original owner and protected-DACL controls with the exact existing ACL
-bytes. The earlier controlled fixture failed at the seal before payload writes.
-Its failed evidence and retained tree remain untouched. This source consistency
-fix does not grant retrospective custody, cleanup, actual-file or parent proof.
-
-Seal diagnostics expose only fixed bounded numbers: operation sub-step,
-unsigned setter status, original-handle access, exact owner/ACL/control match
-bits and masked controls. No SIDs, paths, payloads, raw security descriptors or
-exceptions are serialized. Diagnostics never grant custody, readiness or app
-authority. The original policy/setter, pending/unknown ownership and failed
-retained trees remain unchanged. Actual native qualification stays separate.
+The opt-in Windows Node-parent custodian is a private native ABI, not a public
+app/tool capability. Strict primitives, bounded inventories and module-tagged
+environment-bound owners precede finite effects. The current candidate creates
+fresh objects with the unchanged final World/OWNER_RIGHTS descriptor and verifies
+actual creator rights without WRITE_DAC, exact owner/ACL/control, identity and
+secondary control-only denial. All allocated empty entries must match before
+payload. No weaker construction ACL, privilege, identity, service or permission
+transition is added. Original root child creation and data/read/delete capability
+are unresolved physical checks; absent rights refuse before data.
+Earlier real setter failures (observed missing WRITE_DAC/access denied) stay
+retained. There is no historical-tree access, ACL reset, adoption, recovery or
+quota credit. Pending/unknown original operations and lost readers retain owners.
+Known cleanup uses only the exact original same-episode creators after fencing.
+The synthetic-file driver is explicit-only and requires current completed/reviewed
+source. Exact source/binary/Node images, allowlisted child environments, original
+regular single-link lock identities, atomic admission and actual child/job closure
+are mandatory; final validation rechecks the full accepted source/review.
+Eight finite checks cover original child creation, final protection, secondary
+control/path/ADS denial, data/read/reader and cleanup. Private numeric diagnostics
+(stage/sub-step/status/access/match bits) emit no SID, path, payload, descriptor
+or raw exception and grant no authority. No automatic retry or history deletion.
+Source-only contracts/ABI supply no physical, crash, original SDK/controller,
+product quota, receiver/Save, packaging or host proof. This is a cooperative
+controlled-environment component; hostile races/toolchain/host compromise remain
+outside its qualification. See ADR0043/0047 and the runtime architecture.

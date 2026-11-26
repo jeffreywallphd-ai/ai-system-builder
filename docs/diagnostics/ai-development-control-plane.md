@@ -3563,26 +3563,18 @@ The fixed command does not accept caller-supplied commands or qualify Native
 identity, capacity, model loading, Headless execution or any parent criterion.
 
 The closed Windows training-result store scope selects the fixed offline compiler,
-compiled no-file ABI and builder-admission tests. Its
-`native-training-result-store-abi` receipt establishes only those component checks.
-Unknown/mixed paths, missing support and explicit controller coverage retain
-conservative selection. Physical file/crash, application authorization, actual
-shared reservation, receiver, Save and host qualification remain pending.
-
-The explicit `native-training-result-files` identity runs only the reviewed small
-Windows synthetic-file fixture. Its source preparation selects
-`native-training-result-files-contract` and the no-file ABI instead. `--plan` is
-passive; `--run` requires a current completed source Work with separate review.
-The fixed compiler/job, finite output/stages, source/binary binding and actual
-original child/job closure remain mandatory. Failed files stay retained; no
-automatic retry, path cleanup, ACL reset, quota credit or parent pass is inferred.
-
-The file profile pins the actual Node image/version/hash and uses a fixed child
-environment. Original regular single-link lock identities guard atomic admission
-and the worker lifetime. Final closure rechecks the complete accepted source
-Work/review so a change outside the fixture files cannot yield a standalone pass.
-
-The synthetic file receipt can record bounded numeric seal sub-step, setter
-status, original access, and owner/ACL/control match bits. The result schema
-rejects extra fields and invalid numeric values. No path, SID, payload or raw
-exception enters this diagnostic view. Counters cannot supply a technical pass.
+compiled no-file ABI, builder tests and passive file-harness contracts. Unknown or
+mixed paths, missing support and explicit controller coverage keep conservative
+selection. Only explicit `native-training-result-files` executes the small real
+Windows fixture after a current completed Source Work and separate review.
+The fixture binds source/binary/Node, clears ambient loaders, validates original
+single-link OS locks, serializes count/create and observes original child exit
+and job closure. Final validation rechecks the complete accepted source/review.
+Eight checks cover root child creation, empty final protection, secondary control
+opens, path/ADS writes, ordered data, reads, reader lifetime and creator cleanup.
+Private numeric diagnostics reject unknown fields, booleans, invalid ranges and
+unmasked control bits. They contain no path, SID, payload or raw exception and
+cannot supply readiness or a technical pass. Earlier post-creation permission
+failures remain retained. The final-DACL-at-creation candidate still needs real
+capability proof. File/crash, app capacity, original SDK/controller, receiver,
+Save and host qualification remain distinct; no parent or storage credit follows.

@@ -19,7 +19,6 @@
 #include <string>
 #include <vector>
 
-extern "C" NTSYSAPI NTSTATUS NTAPI NtSetSecurityObject(HANDLE, SECURITY_INFORMATION, PSECURITY_DESCRIPTOR);
 extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(HANDLE, PIO_STATUS_BLOCK, PVOID, ULONG, ULONG);
 // Electron exports the same stable Node-API symbols from its own executable.
 static FARPROC WINAPI executableHook(unsigned event, PDelayLoadInfo info) {
@@ -73,7 +72,7 @@ struct Store {
     std::vector<HANDLE> ancestors;
     HANDLE token = INVALID_HANDLE_VALUE, root = INVALID_HANDLE_VALUE, receipt = INVALID_HANDLE_VALUE;
     std::array<unsigned char, 24> rootIdentity{};
-    std::vector<unsigned char> principal, constructionAcl, sealedAcl;
+    std::vector<unsigned char> principal, sealedAcl;
     std::vector<Row> rows;
     std::shared_ptr<Frame> frame;
     std::shared_ptr<Operation> unacknowledged;
@@ -155,14 +154,14 @@ std::array<unsigned char, 24> identity(HANDLE handle) {
     static_assert(sizeof(info) == 24); std::array<unsigned char,24> value{}; std::memcpy(value.data(), &info, 24);
     need(std::any_of(value.begin(), value.begin()+8, [](auto c){ return c != 0; }) && std::any_of(value.begin()+8, value.end(), [](auto c){ return c != 0; })); return value;
 }
-std::vector<unsigned char> acl(const std::vector<unsigned char>& principal, bool sealed) {
+std::vector<unsigned char> acl(const std::vector<unsigned char>& principal) {
     const std::array<unsigned char,12> world{1,1,0,0,0,0,0,1,0,0,0,0}, owner{1,1,0,0,0,0,0,3,4,0,0,0};
     std::vector<unsigned char> result(sizeof(ACL)); auto* head = reinterpret_cast<ACL*>(result.data());
     head->AclRevision = ACL_REVISION; head->AceCount = 3; head->AclSize = static_cast<WORD>(56 + principal.size());
     auto ace = [&](BYTE type, DWORD mask, const auto& sid) {
         bytes(result, type); bytes(result, BYTE{0}); bytes(result, static_cast<WORD>(8 + sid.size())); bytes(result, mask); result.insert(result.end(), sid.begin(), sid.end());
     };
-    ace(ACCESS_DENIED_ACE_TYPE, sealed ? 0xD0156UL : 0xD0150UL, world);
+    ace(ACCESS_DENIED_ACE_TYPE, 0xD0156UL, world);
     ace(ACCESS_ALLOWED_ACE_TYPE, 0x20000UL, owner); ace(ACCESS_ALLOWED_ACE_TYPE, 0x1701ffUL, principal);
     need(IsValidAcl(reinterpret_cast<PACL>(result.data())) != FALSE); return result;
 }
@@ -175,16 +174,16 @@ void principal(Store& s) {
     const DWORD size = GetLengthSid(user->User.Sid); need(size >= 8 && size <= 68 && sid + size <= first + data.size());
     s.principal.assign(reinterpret_cast<unsigned char*>(sid), reinterpret_cast<unsigned char*>(sid) + size);
     need(CloseHandle(s.token) != FALSE); s.token = INVALID_HANDLE_VALUE;
-    s.constructionAcl = acl(s.principal, false); s.sealedAcl = acl(s.principal, true);
+    s.sealedAcl = acl(s.principal);
 }
-void permissions(Store& s, HANDLE h, bool sealed) {
+void permissions(Store& s, HANDLE h) {
     PSID owner = nullptr; PACL observed = nullptr; PSECURITY_DESCRIPTOR descriptor = nullptr;
     const DWORD status = GetSecurityInfo(h, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, &owner, nullptr, &observed, nullptr, &descriptor);
     // A known return never leaves an asynchronous borrower of this allocation.
     bool correct = false;
     s.permissionBits=0; s.permissionControl=0;
     if (status == ERROR_SUCCESS && descriptor != nullptr && owner != nullptr && observed != nullptr && IsValidSecurityDescriptor(descriptor) && IsValidSid(owner) && IsValidAcl(observed)) {
-        SECURITY_DESCRIPTOR_CONTROL control{}; DWORD revision = 0; const auto& expected = sealed ? s.sealedAcl : s.constructionAcl;
+        SECURITY_DESCRIPTOR_CONTROL control{}; DWORD revision = 0; const auto& expected = s.sealedAcl;
         const bool haveControl=GetSecurityDescriptorControl(descriptor,&control,&revision)!=FALSE;
         s.permissionControl=haveControl?static_cast<uint32_t>(control & 0x150c):0;
         const uint32_t bits=1U | (EqualSid(owner,s.principal.data())?2U:0U)
@@ -194,26 +193,36 @@ void permissions(Store& s, HANDLE h, bool sealed) {
     }
     if (descriptor != nullptr) need(LocalFree(descriptor) == nullptr); need(correct);
 }
-void securityDescriptor(Store& s, SECURITY_DESCRIPTOR& descriptor, bool sealed) {
-    const auto& policy=sealed?s.sealedAcl:s.constructionAcl;
+void securityDescriptor(Store& s, SECURITY_DESCRIPTOR& descriptor) {
+    const auto& policy=s.sealedAcl;
     need(InitializeSecurityDescriptor(&descriptor, SECURITY_DESCRIPTOR_REVISION)
         && SetSecurityDescriptorOwner(&descriptor,s.principal.data(),FALSE)
         && SetSecurityDescriptorDacl(&descriptor,TRUE,reinterpret_cast<PACL>(const_cast<unsigned char*>(policy.data())),FALSE)
         && SetSecurityDescriptorControl(&descriptor,0x1500,0x1000)
         && IsValidSecurityDescriptor(&descriptor));
 }
+void creatorAccess(Store& s,HANDLE h,ACCESS_MASK expected) {
+    s.sealStep=2; std::array<DWORD,14> basic{}; ULONG length=0;
+    const NTSTATUS status=NtQueryObject(h,ObjectBasicInformation,basic.data(),static_cast<ULONG>(sizeof(basic)),&length);
+    if(status!=0) s.sealStatus=static_cast<uint32_t>(status);
+    need(status==0 && length==sizeof(basic)); s.sealAccess=basic[1]; need(basic[1]==expected);
+}
 HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, bool fresh, uint64_t allocation = 0) {
     need(s.frame == nullptr); s.frame = std::make_shared<Frame>(); auto& f = *s.frame; f.name = name;
     f.string.Length = static_cast<USHORT>(name.size()*2); f.string.MaximumLength = f.string.Length; f.string.Buffer = f.name.data();
     f.attributes.Length = sizeof(OBJECT_ATTRIBUTES); f.attributes.RootDirectory = parent; f.attributes.ObjectName = &f.string; f.attributes.Attributes = 0x40;
     if (fresh) {
-        securityDescriptor(s,f.security,false);
+        securityDescriptor(s,f.security);
         f.attributes.SecurityDescriptor = &f.security; s.effects = true;
     }
     f.allocation.QuadPart = static_cast<LONGLONG>(allocation);
-    const ACCESS_MASK access = fresh ? (directory ? 0x1701a7UL : 0x17019fUL) : 0x1200a1UL;
+    // The final OWNER_RIGHTS policy removes WRITE_DAC even from creation.
+    // Request only the existing creator profile minus that unavailable right.
+    const ACCESS_MASK access = fresh ? (directory ? 0x1301a7UL : 0x13019fUL) : 0x1200a1UL;
+    s.sealStep=1;
     const NTSTATUS status = NtCreateFile(&f.handle, access, &f.attributes, &f.io, allocation ? &f.allocation : nullptr,
         FILE_ATTRIBUTE_NORMAL, fresh ? 0 : FILE_SHARE_READ, fresh ? 2 : 1, 0x200000 | 0x20 | (directory ? 1 : 0x40), nullptr, 0);
+    s.sealStatus=static_cast<uint32_t>(status);
     // No retry, destructor or GC may free an original unknown native frame.
     need(status == 0 && f.io.Status == 0 && f.io.Information == static_cast<ULONG_PTR>(fresh ? 2 : 1) && valid(f.handle));
     const HANDLE result = f.handle;
@@ -222,17 +231,23 @@ HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, b
     else if (directory) s.root = result;
     else if (s.rows.size() > 0 && std::all_of(s.rows.begin(), s.rows.end(), [](const Row& r){ return valid(r.handle); })) s.receipt = result;
     else { auto row = std::find_if(s.rows.begin(), s.rows.end(), [](const Row& r){ return !valid(r.handle); }); need(row != s.rows.end()); row->handle = result; }
-    s.frame.reset(); kind(result, directory); if (fresh) permissions(s, result, false); return result;
+    s.frame.reset(); kind(result, directory);
+    if(fresh) { creatorAccess(s,result,access); s.sealStep=3; permissions(s,result); }
+    return result;
 }
-void seal(Store& s, HANDLE h) {
-    s.sealStep=1; const auto id = identity(h); s.sealStep=2; permissions(s,h,false); SECURITY_DESCRIPTOR descriptor{};
-    s.sealStep=3;
-    securityDescriptor(s,descriptor,true);
-    // Advisory rights only, never a substitute for the enforced calls/checks.
-    std::array<DWORD,14> basic{}; ULONG length=0;
-    s.sealAccess=NtQueryObject(h,ObjectBasicInformation,basic.data(),static_cast<ULONG>(sizeof(basic)),&length)==0 && length==sizeof(basic)?basic[1]:0;
-    s.sealStep=4; const NTSTATUS status=NtSetSecurityObject(h,DACL_SECURITY_INFORMATION,&descriptor); s.sealStatus=static_cast<uint32_t>(status);
-    need(status==0); s.sealStep=5; permissions(s,h,true); s.sealStep=6; need(identity(h)==id);
+void verifySealed(Store& s,HANDLE h,HANDLE parent,const std::wstring& name,bool directory) {
+    const auto id=identity(h); creatorAccess(s,h,directory?0x1301a7UL:0x13019fUL);
+    s.sealStep=3; permissions(s,h);
+    // Control-only opens are not blocked by sharing alone. Prove that the final
+    // DACL denies a SECONDARY WRITE_DAC open without changing any permission.
+    need(s.frame==nullptr); s.frame=std::make_shared<Frame>(); auto& f=*s.frame; f.name=name;
+    f.string.Length=static_cast<USHORT>(name.size()*2); f.string.MaximumLength=f.string.Length; f.string.Buffer=f.name.data();
+    f.attributes.Length=sizeof(OBJECT_ATTRIBUTES); f.attributes.RootDirectory=parent; f.attributes.ObjectName=&f.string; f.attributes.Attributes=0x40;
+    s.sealStep=4;
+    const NTSTATUS status=NtCreateFile(&f.handle,READ_CONTROL|WRITE_DAC|SYNCHRONIZE,&f.attributes,&f.io,nullptr,
+        FILE_ATTRIBUTE_NORMAL,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,1,0x200000|0x20|(directory?1:0x40),nullptr,0);
+    if(static_cast<uint32_t>(status)!=0xC0000022U || valid(f.handle)) {s.sealStatus=static_cast<uint32_t>(status);throw Denied{};}
+    s.frame.reset(); s.sealStep=5; need(identity(h)==id); permissions(s,h); s.sealStep=6;
 }
 void facts(Store& s, Row& r, uint64_t expectedSize) {
     kind(r.handle, false); FILE_STANDARD_INFO info{};
@@ -242,7 +257,7 @@ void facts(Store& s, Row& r, uint64_t expectedSize) {
     need(GetFileInformationByHandleEx(r.handle, FileStreamInfo, stream.data(), static_cast<DWORD>(stream.size())));
     need(u32(stream.data()) == 0 && u32(stream.data()+4) == 14 && u64(stream.data()+8) == expectedSize
          && u64(stream.data()+16) == static_cast<uint64_t>(info.AllocationSize.QuadPart) && std::memcmp(stream.data()+24,L"::$DATA",14) == 0);
-    need(identity(r.handle) == r.identity); permissions(s,r.handle,true);
+    need(identity(r.handle) == r.identity); permissions(s,r.handle);
 }
 void seek(HANDLE handle, uint64_t offset) { LARGE_INTEGER distance{}; distance.QuadPart = static_cast<LONGLONG>(offset); need(SetFilePointerEx(handle,distance,nullptr,FILE_BEGIN)); }
 void write(HANDLE handle, const unsigned char* data, size_t size) {
@@ -303,7 +318,7 @@ struct Operation {
         throw Denied{};
     }
     void metadataFacts() {
-        auto& s=*store; kind(s.root,true); need(identity(s.root)==s.rootIdentity); permissions(s,s.root,true);
+        auto& s=*store; kind(s.root,true); need(identity(s.root)==s.rootIdentity); permissions(s,s.root);
         FILE_STANDARD_INFO info{}; need(GetFileInformationByHandleEx(s.root,FileStandardInfo,&info,sizeof(info)) && info.Directory && !info.DeletePending
             && info.AllocationSize.QuadPart>=0 && static_cast<uint64_t>(info.AllocationSize.QuadPart)<=s.maximumMetadata-s.metadataAllocation);
         // A named directory stream is not an enumerated child. Reject it too;
@@ -339,9 +354,13 @@ struct Operation {
         for (uint32_t i=0;i<s.rows.size();++i) { guard(); auto h=open(s,s.root,std::to_wstring(i)+L".bin",false,true,s.rows[i].allocation); s.rows[i].identity=identity(h); }
         guard(); open(s,s.root,L"receipt.bin",false,true,s.metadataAllocation);
         s.receiptFacts.handle=s.receipt; s.receiptFacts.allocation=s.metadataAllocation; s.receiptFacts.size=metadata; s.receiptFacts.identity=identity(s.receipt);
-        // Every empty entry is sealed before the first private payload write.
-        s.stage=6; for (const auto& row:s.rows) { guard(); seal(s,row.handle); }
-        seal(s,s.receipt); seal(s,s.root);
+        // Every entry had FINAL permissions at creation. No setter, privilege
+        // or weaker construction ACL is used. Verify the entire empty inventory
+        // and secondary-control denial before the first private payload write.
+        s.stage=6;
+        for(uint32_t i=0;i<s.rows.size();++i) { guard(); verifySealed(s,s.rows[i].handle,s.root,std::to_wstring(i)+L".bin",false); }
+        verifySealed(s,s.receipt,s.root,L"receipt.bin",false);
+        verifySealed(s,s.root,s.ancestors.back(),s.publication,true);
         s.stage=7; for (auto& row:s.rows) { guard(); facts(s,row,0); }
         facts(s,s.receiptFacts,0); metadataFacts(); namespaceMatches(false); s.prepared=true; s.stage=8;
     }

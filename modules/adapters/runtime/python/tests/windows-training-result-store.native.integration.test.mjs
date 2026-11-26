@@ -9,7 +9,7 @@ import { test } from 'node:test';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../../../..');
 const enabled=process.argv.includes('--native-feature-child');
-const checks=['empty-inventory-sealed','path-mutation-denied','ordered-bounded-writes','verified-native-read','reader-prevents-discard','original-creator-cleanup'];
+const checks=['original-root-child-creation','empty-inventory-sealed','secondary-control-open-denied','path-mutation-denied','ordered-bounded-writes','verified-native-read','reader-prevents-discard','original-creator-cleanup'];
 const sha=value=>createHash('sha256').update(value).digest('hex');
 let api,store;
 const emptyDiagnostics=()=>({sealStep:0,nativeStatus:0,permissionBits:0,permissionControl:0,grantedAccess:0});
