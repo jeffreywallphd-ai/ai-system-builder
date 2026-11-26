@@ -54,3 +54,8 @@ loaders and binds the actual Node image/version/hash. A short original OS lock
 serializes namespace count/create; a separate worker-owned lock lasts through
 execution. Regular single-link lock identities are checked against the opened
 descriptor. Full current Source Work/review binding is rechecked at closure.
+
+Construction and sealing share one complete descriptor builder: exact ACL bytes,
+original principal owner and protected-DACL controls are preserved in both paths.
+The first real fixture failed during sealing before any payload; that failed tree
+and receipt stay retained. A source correction alone does not qualify real files.

@@ -188,14 +188,20 @@ void permissions(Store& s, HANDLE h, bool sealed) {
     }
     if (descriptor != nullptr) need(LocalFree(descriptor) == nullptr); need(correct);
 }
+void securityDescriptor(Store& s, SECURITY_DESCRIPTOR& descriptor, bool sealed) {
+    const auto& policy=sealed?s.sealedAcl:s.constructionAcl;
+    need(InitializeSecurityDescriptor(&descriptor, SECURITY_DESCRIPTOR_REVISION)
+        && SetSecurityDescriptorOwner(&descriptor,s.principal.data(),FALSE)
+        && SetSecurityDescriptorDacl(&descriptor,TRUE,reinterpret_cast<PACL>(const_cast<unsigned char*>(policy.data())),FALSE)
+        && SetSecurityDescriptorControl(&descriptor,0x1500,0x1000)
+        && IsValidSecurityDescriptor(&descriptor));
+}
 HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, bool fresh, uint64_t allocation = 0) {
     need(s.frame == nullptr); s.frame = std::make_shared<Frame>(); auto& f = *s.frame; f.name = name;
     f.string.Length = static_cast<USHORT>(name.size()*2); f.string.MaximumLength = f.string.Length; f.string.Buffer = f.name.data();
     f.attributes.Length = sizeof(OBJECT_ATTRIBUTES); f.attributes.RootDirectory = parent; f.attributes.ObjectName = &f.string; f.attributes.Attributes = 0x40;
     if (fresh) {
-        need(InitializeSecurityDescriptor(&f.security, SECURITY_DESCRIPTOR_REVISION) && SetSecurityDescriptorOwner(&f.security, s.principal.data(), FALSE)
-             && SetSecurityDescriptorDacl(&f.security, TRUE, reinterpret_cast<PACL>(s.constructionAcl.data()), FALSE)
-             && SetSecurityDescriptorControl(&f.security, 0x1500, 0x1000));
+        securityDescriptor(s,f.security,false);
         f.attributes.SecurityDescriptor = &f.security; s.effects = true;
     }
     f.allocation.QuadPart = static_cast<LONGLONG>(allocation);
@@ -214,7 +220,7 @@ HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, b
 }
 void seal(Store& s, HANDLE h) {
     const auto id = identity(h); permissions(s,h,false); SECURITY_DESCRIPTOR descriptor{};
-    need(InitializeSecurityDescriptor(&descriptor, SECURITY_DESCRIPTOR_REVISION) && SetSecurityDescriptorDacl(&descriptor, TRUE, reinterpret_cast<PACL>(s.sealedAcl.data()), FALSE));
+    securityDescriptor(s,descriptor,true);
     need(NtSetSecurityObject(h, DACL_SECURITY_INFORMATION, &descriptor) == 0); permissions(s,h,true); need(identity(h) == id);
 }
 void facts(Store& s, Row& r, uint64_t expectedSize) {

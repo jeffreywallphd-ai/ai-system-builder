@@ -3787,3 +3787,8 @@ reservation, application receiver/Save composition or whole-host readiness.
 The synthetic file driver isolates loader environments and binds the actual Node
 image. Short admission and worker-lifetime locks use validated original regular
 single-link descriptors; final closure rechecks the full accepted source Work.
+
+Native result creation and sealing share the complete principal/ACL/protected-DACL
+descriptor construction. Source consistency checks do not replace a fresh actual
+file qualification. Preserve the earlier pre-payload seal failure and retained
+fixture; no recovery, historical ACL mutation or capacity credit is implied.

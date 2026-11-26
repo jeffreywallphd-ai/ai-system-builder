@@ -3542,3 +3542,9 @@ locking. A short admission lock serializes namespace count/create; the worker
 keeps a separate execution lock through closure. Final validation binds the full
 current accepted Source Work and review, beyond the five fixture inputs. These
 observed checks remain cooperative; they do not claim hostile filesystem safety.
+
+The fresh result seal uses the same complete descriptor builder as creation,
+including original owner and protected-DACL controls with the exact existing ACL
+bytes. The earlier controlled fixture failed at the seal before payload writes.
+Its failed evidence and retained tree remain untouched. This source consistency
+fix does not grant retrospective custody, cleanup, actual-file or parent proof.
