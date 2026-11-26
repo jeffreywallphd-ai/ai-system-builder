@@ -2,6 +2,8 @@
 from __future__ import annotations
 import re
 import importlib.util
+import json
+import stat
 from pathlib import Path
 from .common import digest, fields, identifier, read_json, safe_text, text
 from .contracts import ControlError
@@ -13,7 +15,78 @@ REFERENCE = 'docs/operations/roadmap-supporting-work.json'
 CONSOLIDATION = 'docs/security/security-roadmap-consolidation.json'
 RETIREMENT = 'docs/operations/retired-run-test-roadmap.json'
 ROADMAP_ENGINE = 'skills/manage-implementation-roadmaps/scripts/roadmap.py'
-MAX_SUPPORT_LINKS = 1000  # Whole document is still limited to 1 MiB.
+MAX_SUPPORT_LINKS = 1000  # Unchanged logical row limit across either format.
+MAX_LINK_PARTS = 16
+MAX_LINK_PART_BYTES = 128 * 1024
+MAX_LINK_PART_ROWS = 100
+
+
+def _read_registry_root(root: Path) -> dict:
+    # One original bounded payload: v1 keeps its 1MiB physical-file limit, while
+    # v2 root metadata is at most128KiB, including whitespace and checkout EOLs.
+    with confined_path(root, REFERENCE).open('rb') as stream:
+        payload = stream.read(1024*1024 + 1)
+    if len(payload) > 1024*1024:
+        raise ValueError('supporting-work root is too large')
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result: raise ValueError('duplicate supporting-work key')
+            result[key] = value
+        return result
+    try:
+        document = json.loads(payload, object_pairs_hook=unique,
+            parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite value')))
+    except RecursionError as error:
+        raise ValueError('supporting-work root nesting is too deep') from error
+    if not isinstance(document, dict): raise ValueError('supporting-work root object required')
+    if document.get('schema_version') == 'roadmap-supporting-work-v2' and len(payload) > MAX_LINK_PART_BYTES:
+        raise ValueError('supporting-work root metadata is too large')
+    return document
+
+
+def load_support_registry(root: Path) -> dict:
+    """Read all bounded declarations before enrichment. Content digests use the
+    existing canonical JSON digest, deliberately independent of checkout EOLs.
+    This format supplies no receipt, approval or source-currentness authority.
+    """
+    document = _read_registry_root(root)
+    metadata = {'schema_version','agent_only_roadmaps','criterion_labels','successors'}
+    if document.get('schema_version') == 'roadmap-supporting-work-v1':
+        fields(document, metadata | {'links'}, metadata | {'links'})
+        return document
+    fields(document, metadata | {'link_files'}, metadata | {'link_files'})
+    if document['schema_version'] != 'roadmap-supporting-work-v2':
+        raise ValueError('unsupported supporting-work schema')
+    parts = _list(document['link_files'], MAX_LINK_PARTS)
+    if not parts:
+        raise ValueError('supporting-work parts required')
+    links = []
+    for index, reference in enumerate(parts, 1):
+        fields(reference, {'path','content_digest'}, {'path','content_digest'})
+        expected = f'docs/operations/roadmap-supporting-work/links-{index:04d}.json'
+        if reference['path'] != expected:
+            raise ValueError('supporting-work part order or path mismatch')
+        _sha(reference['content_digest'])
+        # Fixed lexical names and regular original repository entries only.
+        # No discovery, alternate namespace, symlink or junction source.
+        target = root
+        for component in Path(expected).parts:
+            target = target / component
+            info = target.lstat()
+            if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & 0x400:
+                raise ValueError('supporting-work part redirects are unsupported')
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError('supporting-work part must be a regular file')
+        part = read_json(confined_path(root, expected), maximum=MAX_LINK_PART_BYTES)
+        fields(part, {'schema_version','links'}, {'schema_version','links'})
+        if part['schema_version'] != 'roadmap-supporting-work-links-v1' or digest(part) != reference['content_digest']:
+            raise ValueError('supporting-work part content mismatch')
+        rows = _list(part['links'], MAX_LINK_PART_ROWS)
+        if not rows or len(links) + len(rows) > MAX_SUPPORT_LINKS:
+            raise ValueError('supporting-work link capacity exceeded')
+        links.extend(rows)
+    return {**{key: document[key] for key in metadata}, 'schema_version':'roadmap-supporting-work-v1', 'links':links}
 
 
 def criterion_definitions(state):
@@ -192,7 +265,7 @@ def enrich(root: Path, roadmaps: list, records: dict, diagnostics: list) -> None
         path = confined_path(root, REFERENCE)
         if not path.exists():
             return
-        document = read_json(path, maximum=1024*1024)
+        document = load_support_registry(root)
         keys = {'schema_version','agent_only_roadmaps','criterion_labels','successors','links'}
         fields(document, keys, keys)
         if document['schema_version'] != 'roadmap-supporting-work-v1':

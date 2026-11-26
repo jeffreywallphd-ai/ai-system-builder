@@ -334,3 +334,17 @@ Earlier failures and trees stay retained without automatic retry, ACL reset,
 old-tree adoption or storage credit. Final-DACL creator capability, training and
 host qualification remain separate. Unknown/missing/mixed source paths preserve
 conservative generic verification; a partial profile never borrows a pass.
+
+### Bounded supporting-work records
+
+The read-only support registry keeps v1 compatibility and can use a v2 root with
+fixed ordered JSON parts. Read it with `load_support_registry`; do not assume the
+root contains an inline `links` array. V2 root and each part are at most128KiB;
+there are at most16 parts,100 rows per part and1000 rows overall. Pack by bytes
+and rows, with a checkout-newline margin. The accepted total is at most2MiB of
+parts plus128KiB root. `content_digest` pins canonical parsed JSON, not raw bytes,
+so equivalent LF/CRLF checkouts work. Strict schemas, duplicate-key/nonfinite
+denial, fixed paths, nonredirected entries, full digest and complete global
+validation precede any decoration. Publish all files together and restart an old
+server for the new reader. Missing evidence remains unavailable; this format
+cannot complete work, qualify parents or grant source-currentness or authority.

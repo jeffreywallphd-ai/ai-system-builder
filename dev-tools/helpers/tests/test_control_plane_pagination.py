@@ -20,6 +20,7 @@ from control_plane.projection import (CHUNK_REFERENCE_FORMAT, PAGE_SIZES, REVIEW
     bound_review_projection, chunk_reference, encode_review_projection, expanded_review_work_items,
     project, review_content, review_page, roadmap_chunk_work_items)
 from control_plane.records import Records
+from control_plane.planning_metrics import strip_anchors
 from control_plane.user_presentation import apply_user_descriptions, compact_user_project
 
 spec = importlib.util.spec_from_file_location("review_pagination_server", HELPERS.parent / "review-site/server.py")
@@ -202,6 +203,9 @@ class PageProjectionTests(unittest.TestCase):
         root = HELPERS.parents[1]
         with patch.object(Records, "load", return_value=Records.empty()):
             source = apply_user_descriptions(root, review_content(root, compact_work_items=True, paginated=True))
+            # Ancestry anchors are private calculation inputs, not lost roadmap
+            # facts. Compare public history after applying that existing boundary.
+            strip_anchors(source)
             count = len(source["roadmaps"])
             seen = {}
             for number in range(1, (count + 2)//3 + 1):

@@ -295,6 +295,26 @@ ROADMAP_STORAGE_CONTROLLER_TESTS = tuple("dev-tools/helpers/tests/" + name for n
     "test_control_plane_journal_capacity.py", "test_control_plane_delivery.py",
 ))
 
+SUPPORT_REGISTRY_SCOPE = (
+    "dev-tools/helpers/control_plane/supporting_work.py",
+    "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/helpers/tests/test_control_plane_supporting_work.py",
+    "dev-tools/helpers/tests/test_control_plane_support_registry.py",
+    "docs/operations/roadmap-supporting-work.json",
+    "docs/diagnostics/ai-development-control-plane.md",
+    "dev-tools/helpers/README.md",
+    "docs/operations/roadmap-user-support-descriptions.json",
+    "dev-tools/helpers/tests/test_control_plane_pagination.py",
+) + tuple(f"docs/operations/roadmap-supporting-work/links-{i:04d}.json" for i in range(1, 17))
+SUPPORT_REGISTRY_TESTS = (
+    "test_control_plane_supporting_work.", "test_control_plane_support.",
+    "test_control_plane_user_presentation.", "test_control_plane_story_tasks.",
+    "test_control_plane_site.", "test_control_plane_pagination.",
+    "test_control_plane_support_registry.",
+)
+SUPPORT_REGISTRY_REQUIRED = SUPPORT_REGISTRY_SCOPE[:4] + tuple(
+    "dev-tools/helpers/tests/" + name[:-1] + ".py" for name in SUPPORT_REGISTRY_TESTS)
+
 DETERMINISTIC_SUPPORT_SCOPE = (
     "dev-tools/helpers/control_plane/deterministic_support.py",
     "dev-tools/helpers/tests/test_control_plane_deterministic_support.py",
@@ -4558,6 +4578,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                                    "--", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"]
     # Empty/mixed/unknown scope or missing/nonregular support retains the ordinary
     # complete controller command. The actual argv is bound to plan and receipt.
+    if (paths and set(paths) <= set(SUPPORT_REGISTRY_SCOPE) and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": SUPPORT_REGISTRY_REQUIRED})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            # The complete registry and its actual projection consumers. No
+            # product, model or Native suite is needed for this closed format.
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"]
+            for test in SUPPORT_REGISTRY_TESTS:
+                controller["argv"].extend(["-k", test])
     storage_files = ROADMAP_STORAGE_SCOPE + ROADMAP_STORAGE_CONTROLLER_TESTS
     if (set(paths) == set(ROADMAP_STORAGE_SCOPE) and
             all(_automatic_files_available(root, {"automatic_required_files": storage_files[index:index+16]})

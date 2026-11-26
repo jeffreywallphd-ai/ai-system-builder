@@ -8,7 +8,8 @@ from pathlib import Path
 
 from control_plane.common import digest
 from control_plane.projection import project
-from control_plane.supporting_work import CONSOLIDATION, RETIREMENT, criterion_definitions, enrich
+from control_plane.supporting_work import (CONSOLIDATION, RETIREMENT, criterion_definitions, enrich,
+    load_support_registry, MAX_LINK_PART_BYTES)
 
 ENGINE_PATH = 'skills/manage-implementation-roadmaps/scripts/roadmap.py'
 ENGINE_SOURCE = Path(__file__).resolve().parents[3] / ENGINE_PATH
@@ -335,6 +336,97 @@ class SupportRegistryCapacityTests(unittest.TestCase):
         self.assertTrue(all(row['status']=='unverified-support' for row in criterion['supporting_work']))
         self.assertEqual(criterion['outcome'],'pending')
         self.assertEqual(self.roadmaps[0]['status'],'executing')
+
+
+class MultipartSupportRegistryTests(unittest.TestCase):
+    setUp = SupportRegistryCapacityTests.setUp
+    links = SupportRegistryCapacityTests.links
+    run_projection = SupportRegistryCapacityTests.run_projection
+    assert_rejected_without_prefix_decoration = SupportRegistryCapacityTests.assert_rejected_without_prefix_decoration
+
+    def parts(self, count=204, chunk=100):
+        self.links(count); rows = copy.deepcopy(self.document['links'])
+        self.document = {key: value for key, value in self.document.items() if key != 'links'}
+        self.document.update(schema_version='roadmap-supporting-work-v2', link_files=[])
+        for start in range(0, len(rows), chunk):
+            relative = f'docs/operations/roadmap-supporting-work/links-{len(self.document["link_files"])+1:04d}.json'
+            part = {'schema_version':'roadmap-supporting-work-links-v1','links':rows[start:start+chunk]}
+            target = self.root / relative; target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(part), encoding='utf8')
+            self.document['link_files'].append({'path':relative,'content_digest':digest(part)})
+        return rows
+
+    def test_v1_and_v2_preserve_complete_ordered_projection_without_qualification(self):
+        self.links(916); self.assertEqual(self.run_projection(),[])
+        expected = copy.deepcopy(self.roadmaps); self.roadmaps = copy.deepcopy(self.original)
+        rows = self.parts(916); self.assertEqual(self.run_projection(),[])
+        self.assertEqual(self.roadmaps, expected)
+        self.assertEqual(load_support_registry(self.root)['links'], rows)
+        self.assertEqual(self.roadmaps[0]['status'],'executing')
+        self.assertEqual(self.roadmaps[0]['increments'][0]['criteria'][0]['outcome'],'pending')
+
+    def test_content_digest_accepts_only_equivalent_json_across_checkout_whitespace(self):
+        self.parts(3)
+        part_path = self.root / self.document['link_files'][0]['path']
+        original = json.loads(part_path.read_text())
+        part_path.write_bytes((json.dumps(original, indent=2)+'\n').replace('\n','\r\n').encode('utf8'))
+        self.assertEqual(self.run_projection(),[])
+        self.roadmaps = copy.deepcopy(self.original)
+        original['links'][0]['scope'] = 'Different reviewed claim.'
+        part_path.write_text(json.dumps(original),encoding='utf8')
+        self.assert_rejected_without_prefix_decoration()
+
+    def test_missing_wrong_digest_and_unknown_or_reordered_parts_refuse_the_whole_view(self):
+        for mode in ('missing','digest','relative','absolute','out-of-order','repeated-path','unknown-field','empty'):
+            with self.subTest(mode=mode):
+                self.roadmaps=copy.deepcopy(self.original); self.parts()
+                ref=self.document['link_files'][-1]
+                if mode=='missing': (self.root/ref['path']).unlink()
+                if mode=='digest': ref['content_digest']='f'*64
+                if mode=='relative': ref['path']='../untrusted.json'
+                if mode=='absolute': ref['path']='C:/untrusted.json'
+                if mode=='out-of-order': self.document['link_files'].reverse()
+                if mode=='repeated-path': ref['path']=self.document['link_files'][0]['path']
+                if mode=='unknown-field': ref['ready']=True
+                if mode=='empty': self.document['link_files']=[]
+                self.assert_rejected_without_prefix_decoration()
+
+    def test_duplicate_and_unknown_tail_with_matching_digest_never_publish_a_prefix(self):
+        for mode in ('duplicate','unknown-target','extra-field','empty','wrong-version','too-many-rows'):
+            with self.subTest(mode=mode):
+                self.roadmaps=copy.deepcopy(self.original); rows=self.parts()
+                ref=self.document['link_files'][-1]; target=self.root/ref['path'];part=json.loads(target.read_text())
+                if mode=='duplicate':part['links'][-1]=rows[0]
+                if mode=='unknown-target':part['links'][-1]['criterion_id']='foreign'
+                if mode=='extra-field':part['approved']=True
+                if mode=='empty':part['links']=[]
+                if mode=='wrong-version':part['schema_version']='untrusted-v1'
+                if mode=='too-many-rows':part['links']*=26
+                target.write_text(json.dumps(part),encoding='utf8');ref['content_digest']=digest(part)
+                self.assert_rejected_without_prefix_decoration()
+
+    def test_raw_root_and_part_byte_bounds_cannot_be_bypassed_by_whitespace(self):
+        self.parts(1); ref=self.document['link_files'][0];target=self.root/ref['path']
+        target.write_bytes(b' '*MAX_LINK_PART_BYTES+target.read_bytes())
+        self.assert_rejected_without_prefix_decoration()
+        self.parts(1); self.path.write_bytes(b' '*MAX_LINK_PART_BYTES+json.dumps(self.document).encode())
+        with self.assertRaises(ValueError):load_support_registry(self.root)
+
+    def test_part_and_global_row_limits_are_inclusive_and_do_not_raise_the_legacy_limit(self):
+        self.parts(1000);self.assertEqual(self.run_projection(),[])
+        self.roadmaps=copy.deepcopy(self.original);self.parts(1001);self.assert_rejected_without_prefix_decoration()
+        self.roadmaps=copy.deepcopy(self.original);self.parts(16,1);self.assertEqual(self.run_projection(),[])
+        self.roadmaps=copy.deepcopy(self.original);self.parts(17,1);self.assert_rejected_without_prefix_decoration()
+
+    def test_duplicate_json_keys_nonfinite_and_invalid_objects_are_rejected_before_decoration(self):
+        for payload in (b'{"schema_version":"x","schema_version":"y"}',b'{"links":NaN}',b'[]'):
+            with self.subTest(payload=payload):
+                self.path.write_bytes(payload)
+                with self.assertRaises(ValueError):
+                    load_support_registry(self.root)
+        self.parts(1);ref=self.document['link_files'][0];target=self.root/ref['path']
+        target.write_bytes(b'{"schema_version":"roadmap-supporting-work-links-v1","links":[],"links":[]}')
+        self.assert_rejected_without_prefix_decoration()
 
 
 if __name__ == '__main__':

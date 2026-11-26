@@ -1378,6 +1378,27 @@ Never link an active/failed work record as completed evidence. The projection
 validates recorded lineage but does not run tests or infer currentness from an old
 completion. Missing local records remain unavailable on another checkout.
 
+The map supports legacy `roadmap-supporting-work-v1` within its unchanged1MiB
+physical-file limit. Version2 keeps root metadata within128KiB and references up
+to16 ordered, fixed `docs/operations/roadmap-supporting-work/links-NNNN.json`
+files. Each part has at most100 links and128KiB of raw JSON; the complete registry
+still admits at most1000 links. Accepted v2 files total at most2MiB plus128KiB for
+the root. Pack by both bytes and row count, allowing checkout newline growth.
+`content_digest` uses the control plane's canonical JSON digest of the same
+strictly parsed complete part, not a raw-file hash. Equivalent whitespace and
+LF/CRLF retain content identity; changed facts, duplicate keys and nonfinite
+values do not. Sources remain bound separately by normal candidate receipts.
+
+Use `control_plane.supporting_work.load_support_registry` for a complete read.
+Publish root and parts together, preserving existing link objects and order.
+Only the exact contiguous part names are admitted; no discovery, redirected
+entries or arbitrary paths. A missing, changed, oversized or invalid part rejects
+all support decoration. Canonical roadmaps remain visible and gain no pass.
+Restart an older review server after installing the v2 reader. The closed
+registry check profile runs the complete registry, lineage, presentation, story,
+pagination and site test modules. Unknown/mixed changes, missing support or an
+explicit generic focused check retain normal fallback.
+
 "Qualification not recorded" means the parent has no recorded acceptance outcome;
 it does not mean every linked component is unimplemented. "Technical check pending"
 identifies an agent-executable requirement with remaining declared environment or
