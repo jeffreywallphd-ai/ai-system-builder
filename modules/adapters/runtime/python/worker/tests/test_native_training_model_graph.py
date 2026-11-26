@@ -137,7 +137,7 @@ class Kernel:
         if name == "GetVolumeInformationByHandleW": a[6].value = "NTFS"; a[5]._obj.value = 8; return 1, 0
         if name == "NtQueryVolumeInformationFile":
             a[1]._obj.information = C.sizeof(n.NativeVolumeSize)
-            a[2]._obj.total, a[2]._obj.available, a[2]._obj.sectors, a[2]._obj.sector_bytes = 1024, 512, 8, 512
+            a[2]._obj.total, a[2]._obj.available, a[2]._obj.sectors, a[2]._obj.sector_bytes = 1024, getattr(self, "volume_available", 512), 8, 512
             return 0, 0
         if name == "NtCreateFile":
             attrs = a[2]._obj; text = C.wstring_at(attrs.name.contents.buffer, attrs.name.contents.length // 2)
@@ -829,6 +829,27 @@ class TrainingInputCopyTests(unittest.TestCase):
         self.assertNotIn(graph.physical_path,kernel.nodes)
         self.assertFalse(any(name=="WriteFile" for name,_ in kernel.calls[offset:]))
         self.assertTrue(graph.retire_copy_io()); self.assertEqual(control.retained,[8000])
+
+    def test_input_copy_checks_available_allocation_units_before_creating(self):
+        for available in (0, 1, 2, 3):
+            with self.subTest(available=available):
+                _,lease,staged,config,control,kernel,_,_=self.fixture()
+                kernel.volume_available=available
+                graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control)
+                offset=len(kernel.calls)
+                if available < 2:  # One allocation unit each for data and recipe.
+                    with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+                    self.assertNotIn(graph.physical_path,kernel.nodes)
+                    self.assertFalse(any(name=="NtCreateFile" and args[7]==2 or name=="WriteFile"
+                                         for name,args in kernel.calls[offset:]))
+                    before=len(kernel.calls)
+                    with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+                    self.assertEqual(len(kernel.calls),before)
+                else:
+                    graph.prepare();graph.assert_sealed()
+                self.assertEqual(control.charges,[config["maximumCopyBytes"]])
+                self.assertTrue(graph.retire_copy_io())
+                self.assertEqual(control.retained,[config["maximumCopyBytes"]])
 
     def test_destination_readback_detects_same_size_tampering(self):
         _,lease,staged,config,control,kernel,_,_=self.fixture()
@@ -1703,6 +1724,30 @@ class TrainingOutputCustodyTests(unittest.TestCase):
         else: contents.update({"adapter_config.json":b'{}',"adapter_model.safetensors":b"synthetic-adapter-container"})
         files=[{"name":name,"sizeBytes":len(raw)} for name,raw in contents.items()]
         return actual,source,lease,inputs,request,input_control,kernel,config,contents,files,Control()
+
+    def test_output_copy_checks_available_allocation_units_before_creating(self):
+        for available in (0, 2, 3, 4):
+            with self.subTest(available=available):
+                actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+                kernel.volume_available=available
+                self.assertEqual(len(files),3)
+                with lease.borrow(request) as view:
+                    graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+                    streams={name:(raw,) for name,raw in contents.items()}
+                    offset=len(kernel.calls)
+                    if available < 3:
+                        with self.assertRaises(actual.LaunchUnavailable):graph.prepare(streams)
+                        self.assertNotIn(graph.physical_path,kernel.nodes)
+                        self.assertFalse(any(name=="NtCreateFile" and args[7]==2 or name=="WriteFile"
+                                             for name,args in kernel.calls[offset:]))
+                        before=len(kernel.calls)
+                        with self.assertRaises(actual.LaunchUnavailable):graph.prepare(streams)
+                        self.assertEqual(len(kernel.calls),before)
+                    else:
+                        graph.prepare(streams);graph.assert_sealed()
+                    self.assertEqual(control.charges,[config["maximumCopyBytes"]])
+                    self.assertTrue(graph.retire_copy_io())
+                    self.assertEqual(control.retained,[config["maximumCopyBytes"]])
 
     def test_training_history_is_a_fixed_bounded_output_leaf_not_a_path_or_permission(self):
         actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
@@ -2791,6 +2836,54 @@ class ModelGraphTests(unittest.TestCase):
         self.assertFalse(graph.attempted); self.assertNotIn(graph.physical_path, kernel.nodes)
         self.assertFalse(any(name == "WriteFile" for name, _ in kernel.calls))
         self.assertEqual(control.charges, [8000])
+
+    def test_model_copy_checks_available_allocation_units_before_creating(self):
+        for available in (0, 2, 3, 4):
+            with self.subTest(available=available):
+                graph,kernel,control=self.graph()
+                self.assertEqual(len(graph.descriptor["files"]),3)
+                kernel.volume_available=available
+                if available < 3:
+                    with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+                    self.assertFalse(graph.attempted)
+                    self.assertNotIn(graph.physical_path,kernel.nodes)
+                    self.assertFalse(any(name=="NtCreateFile" and args[7]==2 or name=="WriteFile"
+                                         for name,args in kernel.calls))
+                    before=len(kernel.calls)
+                    with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+                    self.assertEqual(len(kernel.calls),before)
+                else:
+                    graph.prepare();graph.assert_sealed()
+                self.assertTrue(graph.charged)
+                self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]])
+
+    def test_invalid_available_units_never_authorize_destination_creation(self):
+        for available in (-1, 1025):
+            with self.subTest(available=available):
+                graph,kernel,control=self.graph();kernel.volume_available=available
+                with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+                self.assertFalse(graph.attempted)
+                self.assertNotIn(graph.physical_path,kernel.nodes)
+                self.assertFalse(any(name=="NtCreateFile" and args[7]==2 or name=="WriteFile"
+                                     for name,args in kernel.calls))
+                self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]])
+
+    def test_available_space_observation_does_not_replace_actual_allocation_or_release_charge(self):
+        graph,kernel,control=self.graph();kernel.volume_available=3
+        original=kernel.result
+        def result(name,args):
+            if name=="NtCreateFile" and args[7]==2:return -1,0
+            return original(name,args)
+        kernel.result=result
+        with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+        self.assertTrue(graph.charged);self.assertTrue(graph.attempted)
+        self.assertNotIn(graph.physical_path,kernel.nodes)
+        self.assertFalse(graph.retain_after_worker())
+        before=len(kernel.calls)
+        with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+        self.assertEqual(len(kernel.calls),before)
+        self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]])
+        self.assertEqual(control.retained,[])
 
     def test_same_size_destination_tamper_fails_actual_readback(self):
         graph, kernel, _ = self.graph()

@@ -687,7 +687,9 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
         # Refuse BEFORE creating the destination: logical tiny files can each
         # consume one allocation unit. Free-space observation is not a quota or
         # a replacement for the original exclusive reservation.
-        need(sum(sizes) <= self.descriptor["maximumCopyBytes"])
+        required = sum(sizes)
+        need(required <= self.descriptor["maximumCopyBytes"]
+             and required // unit <= facts.available)
         return sizes
 
 

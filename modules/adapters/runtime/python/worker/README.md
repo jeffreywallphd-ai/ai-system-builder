@@ -34,6 +34,12 @@ creator handles and complete post-seal enumeration remain necessary. Only the
 actual attested original creators can finish the seal. There are no later
 mutable-control pathname opens. Unsupported creator access is denied.
 Partial or unknown calls cannot be retried or treated as no-file effects.
+The shared Model/input/output copy plan compares rounded file allocation units
+with observed free units on the original destination-volume handle before it
+creates a destination. An already insufficient or invalid observation refuses
+the copy and retains its existing charge. This observation reserves nothing:
+space can change afterward, and actual allocation checks, exclusive capacity,
+retained failure custody and separate storage-overhead accounting still apply.
 Retirement closes all original copy handles and requires retained byte accounting;
 it does not delete the files or release any candidate-output reservation.
 

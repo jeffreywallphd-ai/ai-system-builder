@@ -2839,6 +2839,12 @@ a new engine. Reuse actual Native exclusive parent-relative creation, private
 DACL/OWNER_RIGHTS, allocation-aware bounds, digest/readback, complete enumeration
 and retained read-only guards. Charge an explicit existing exclusive reservation
 before creation; free-space observation never substitutes for that reservation.
+The shared Model/input/output plan refuses before destination creation when its
+complete rounded file allocation exceeds observed available allocation units on
+the original destination-volume handle. Invalid volume facts also refuse. This
+is an early shortage check, not stable capacity or a directory/metadata reserve;
+actual allocation checks and separately reserved overhead remain necessary.
+Later allocation failures keep the original attempt and charge without retry.
 
 Recheck actual joint custody and business admission around reservation/iterator
 callbacks and owned writes. Wrong-thread/reentrant operations refuse without

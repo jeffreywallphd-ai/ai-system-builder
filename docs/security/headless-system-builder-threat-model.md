@@ -2556,7 +2556,12 @@ safetensors/configuration/tokenizer filenames matching the approved method.
 Reject pickle, executables, path components, duplicates and unsupported shards.
 
 Charge the explicit exclusive capacity before effects and verify allocation
-rounding before creating the fresh namespace. Reuse atomic private creation,
+rounding before creating the fresh namespace. The shared Model/input/output
+planner also compares all rounded file units with the original volume handle's
+available units before creation. Invalid or insufficient facts deny with charges
+retained. This observation cannot guarantee future space, reserve directory or
+metadata overhead, establish a quota, or justify retry/release after a later
+allocation failure. Reuse atomic private creation,
 DACL/OWNER_RIGHTS, exclusive writers, bounded chunks, hash/flush/readback, sealing,
 complete inventory and retained read-only identity guards. Check actual joint
 custody and currentness after reservation and iterator callbacks and before
