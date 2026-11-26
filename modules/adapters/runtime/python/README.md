@@ -1491,3 +1491,23 @@ Timeout, abort and withdrawn authority cannot acknowledge late completion. The
 actual operation remains tracked until its original settlement; malformed promise
 suppliers stay unknown. Ports without this optional method remain compatible.
 This sequencing seam proves no physical protection, reservation, custody or Save.
+
+### Original shared budget and copy purposes
+
+The all-role copy binder optionally captures one explicit shared-budget port.
+When selected, `prepareOriginalTrainingSharedStorageBudget` must acknowledge one
+configured-store debit before role preparation or a Model-copy adapter claim.
+It derives the request from the exact original token: actor/workspace/client/host/
+request, definition and storage-scope digests, five copied role limits, total and
+the already-bound worker profile. It captures the original async reserve method;
+later method replacement cannot redirect admission.
+
+The original copy-operation flight and deadline retain the actual budget promise
+and observer. Failed, lost, late or malformed replies and withdrawn permission
+cannot issue another debit, enable copies, reset a pool or release bytes. A
+selected missing pool stays unavailable. Existing callers without the optional
+port retain their established already-reserved-owner behavior. SQLite tests
+close/reopen an explicitly provisioned synthetic pool and preserve the debit;
+these tests do not establish production provisioning, anti-rollback, exclusive
+physical capacity, native custody or host readiness. No default producer is
+enabled, and no model or accuracy test is run by this integration.

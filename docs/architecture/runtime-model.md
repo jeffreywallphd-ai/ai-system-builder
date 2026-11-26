@@ -3751,6 +3751,20 @@ Native provenance, readiness or cleanup witness. Actual all-role reservation,
 qualified source/producer composition, parent/crash custody and permanent
 retirement remain separately required, with no default Root activation or credit.
 
+The private all-role copy binder can capture an explicit shared-budget port.
+For that selected mode, `prepareOriginalTrainingSharedStorageBudget` derives one
+request from the genuine original token and bound worker profile, including all
+five role amounts, total, actor/workspace/client/host/request and exact definition/
+purpose digests. The original role preparation and Model-copy adapter refuse
+admission until the configured-store debit is acknowledged. The actual async
+operation and observer remain with the copy flight through deadline, permission
+loss or unknown response; no retry, release, pool initialization or adoption is
+added. Current permission, Model revision and original resource controls apply
+before and after waits. Callers without the optional port remain compatible.
+SQLite close/reopen and controlled accounting tests prove ledger integration
+only. Trusted pool provisioning, anti-rollback, measured/exclusive Native capacity,
+parent/crash retention, full producer/worker retirement and hosts remain pending.
+
 The qualified callback shape is an unbound current-realm native async function,
 checked before invocation. Bound, proxy, generator, foreign-realm and arbitrary
 prebuilt-Promise suppliers are unsupported. Retain original Promise/async

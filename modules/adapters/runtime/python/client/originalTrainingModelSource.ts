@@ -5,7 +5,8 @@ import {constants} from "node:fs";
 import {lstat, open, opendir, realpath} from "node:fs/promises";
 import path from "node:path";
 import {types} from "node:util";
-import type {ApprovedLocalTrainingModelSelection} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingModelSelection, TrainingStorageBudgetPort, TrainingStorageBudgetRequest} from "../../../../application/ports/model";
+import {isOrganizationId} from "../../../../contracts/organization";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import {captureOriginalTrainingModelReader, type OriginalTrainingCapture} from "./approvedTrainingTaskSession";
 import {capturePassiveModelData} from "./modelDownloadManifest";
@@ -127,9 +128,13 @@ export interface OriginalTrainingCopyReservationOwner {
 declare const copyReservationsBrand: unique symbol;
 export interface OriginalTrainingCopyReservations {readonly [copyReservationsBrand]: true}
 type CopyPhase = "bound" | "charging" | "charged" | "retaining" | "retained" | "unknown";
+type SharedBudget = {phase: "bound" | "reserving" | "reserved" | "unknown";
+  reserve: TrainingStorageBudgetPort["reserve"]; pending?: Promise<unknown>; observed?: Promise<{ok: boolean; value?: unknown}>};
+const sharedBudgetPromise = Promise, sharedBudgetPromisePrototype = Promise.prototype;
+const sharedBudgetAsyncPrototype = Object.getPrototypeOf(async function originalSharedBudget() {});
 type Copies = {original: OriginalTrainingCapture; observed: ObservedOriginalTrainingModelSource;
   configuration: OriginalTrainingSourceReservation["configuration"]; scopeDigest: string;
-  maximumReservedBytes: number; workerConfiguration?: Readonly<Record<string, unknown>>;
+  maximumReservedBytes: number; workerConfiguration?: Readonly<Record<string, unknown>>; workerProfileFingerprint?: string; sharedBudget?: SharedBudget;
   limits: Readonly<Record<OriginalTrainingStorageRole, number>>; states: Record<OriginalTrainingStorageRole, CopyPhase>;
   current(): void; allowed(): Promise<void>; readModel(): Promise<ApprovedLocalTrainingModelSelection>;
   resource(): unknown; charge(...args: any[]): any; retain(...args: any[]): any;
@@ -144,15 +149,16 @@ function copyRecord(token: OriginalTrainingCopyReservations): Copies {
   const record = token && typeof token === "object" && !types.isProxy(token) ? copyReservations.get(token) : undefined;
   storageNeed(!!record); return record;
 }
-function resourceCurrent(record: Copies) {
-  storageNeed(!record.lost);
+function resourceCurrent(record: Copies, budgetAdmission = false) {
+  storageNeed(!record.lost && (!record.sharedBudget || record.sharedBudget.phase === "reserved"
+    || budgetAdmission && record.sharedBudget.phase === "reserving"));
   const result = record.resource();
   if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => {});
   storageNeed(result === undefined && !record.lost);
 }
-async function copyPermit(record: Copies) {
-  record.current(); resourceCurrent(record); await record.allowed(); record.current(); resourceCurrent(record);
-  const model = await record.readModel(); record.current(); resourceCurrent(record);
+async function copyPermit(record: Copies, budgetAdmission = false) {
+  record.current(); resourceCurrent(record, budgetAdmission); await record.allowed(); record.current(); resourceCurrent(record, budgetAdmission);
+  const model = await record.readModel(); record.current(); resourceCurrent(record, budgetAdmission);
   storageNeed(model.modelRecordId === record.observed.modelRecordId && model.modelUpdatedAt === record.observed.modelUpdatedAt &&
     model.localModelReference === record.observed.logicalPath);
 }
@@ -190,7 +196,8 @@ async function retainCopy(record: Copies, role: OriginalTrainingStorageRole) {
   resourceCurrent(record); storageNeed(record.states[role] === "retaining"); record.states[role] = "retained";
 }
 export function bindOriginalTrainingCopyReservations(original: OriginalTrainingCapture, observed: ObservedOriginalTrainingModelSource,
-  policy: OriginalTrainingCopyPolicy, owner: OriginalTrainingCopyReservationOwner): OriginalTrainingCopyReservations {
+  policy: OriginalTrainingCopyPolicy, owner: OriginalTrainingCopyReservationOwner,
+  sharedBudgetPort?: TrainingStorageBudgetPort): OriginalTrainingCopyReservations {
   try {
     assertOriginalTrainingModelObservation(original, observed);
     const raw = data(policy, ["modelCopy", "maximumInputCopyBytes", "maximumWorkerOutputBytes", "maximumParentOutputBytes", "storageOverheadBytes", "maximumReservedBytes"]);
@@ -205,9 +212,17 @@ export function bindOriginalTrainingCopyReservations(original: OriginalTrainingC
     storageNeed(!!owner && typeof owner === "object" && !types.isProxy(owner) && !usedCopyOwners.has(owner) && !usedCopySources.has(original));
     const resource = method(owner, "assertCurrent"), charge = method(owner, "chargeCopy"), retain = method(owner, "retainCopy");
     const reader = captureOriginalTrainingModelReader(original); storageNeed(!!reader);
+    let sharedBudget: SharedBudget | undefined;
+    if (sharedBudgetPort !== undefined) {
+      storageNeed(!!sharedBudgetPort && typeof sharedBudgetPort === "object" && !types.isProxy(sharedBudgetPort));
+      const port = readStrictPassiveRecord(sharedBudgetPort, ["reserve"]), reserve = port.reserve;
+      storageNeed(Object.keys(port).length === 1 && typeof reserve === "function" && !types.isProxy(reserve)
+        && types.isAsyncFunction(reserve) && !types.isGeneratorFunction(reserve) && Object.getPrototypeOf(reserve) === sharedBudgetAsyncPrototype);
+      sharedBudget = {phase: "bound", reserve: (request, control) => Reflect.apply(reserve, sharedBudgetPort, [request, control])};
+    }
     const scopeDigest = "sha256:" + createHash("sha256").update(JSON.stringify({definition: original.definition,
       observed, configuration, limits, maximum})).digest("hex");
-    const record: Copies = {original, observed, configuration, scopeDigest, limits, maximumReservedBytes: maximum,
+    const record: Copies = {original, observed, configuration, scopeDigest, limits, maximumReservedBytes: maximum, sharedBudget,
       states: {model: "bound", inputs: "bound", "worker-output": "bound", "parent-output": "bound", overhead: "bound"},
       current: original.assertCurrent.bind(original), allowed: original.assertAllowed.bind(original), readModel: reader.readModelSelection.bind(reader),
       resource, charge, retain, prepared: false, preparationAttempted: false, modelClaimed: false, lost: false};
@@ -230,7 +245,8 @@ export function bindOriginalTrainingWorkerConfiguration(token: OriginalTrainingC
   configuration: OriginalTrainingWorkerConfiguration): void {
   const record = copyRecord(token);
   storageNeed(!record.lost && !record.modelClaimed && !record.preparationAttempted && !record.flight &&
-    !record.workerConfiguration && Object.values(record.states).every(phase => phase === "bound"));
+    !record.workerConfiguration && (!record.sharedBudget || record.sharedBudget.phase === "bound")
+    && Object.values(record.states).every(phase => phase === "bound"));
   const raw = data(configuration, ["profileFingerprint", "inputCopy", "outputFamily"]);
   storageNeed(typeof raw.profileFingerprint === "string" && /^sha256:[a-f0-9]{64}$/.test(raw.profileFingerprint));
   const inputCopy = sourceCopyConfiguration(raw.inputCopy);
@@ -254,6 +270,46 @@ export function bindOriginalTrainingWorkerConfiguration(token: OriginalTrainingC
   record.workerConfiguration = Object.freeze({schema: "original-training-worker-configuration-envelope-v1",
     encoding: "base64", byteCount: body.length, sha256: "sha256:" + createHash("sha256").update(body).digest("hex"),
     data: body.toString("base64")});
+  record.workerProfileFingerprint = raw.profileFingerprint;
+}
+
+/** One configured-store debit for this exact original token before copy roles.
+ * Ledger acknowledgement is not measured Native capacity or trusted provisioning.
+ * A failed/lost operation has no retry, release, adoption or initialization path. */
+export function prepareOriginalTrainingSharedStorageBudget(token: OriginalTrainingCopyReservations): Promise<void> {
+  const record = copyRecord(token), shared = record.sharedBudget;
+  storageNeed(!!shared && shared.phase === "bound" && !record.lost && !record.modelClaimed && !record.preparationAttempted
+    && !record.flight && !!record.workerConfiguration && !!record.workerProfileFingerprint
+    && Object.values(record.states).every(phase => phase === "bound"));
+  shared.phase = "reserving";
+  return copyOperation(record, async () => {
+    try {
+      await copyPermit(record, true);
+      const definition = record.original.definition, organizationId = definition.owner.organizationId;
+      storageNeed(isOrganizationId(organizationId));
+      const request: TrainingStorageBudgetRequest = Object.freeze({scope: Object.freeze({...definition.owner,
+        organizationId, workspaceId: definition.workspaceId, requestId: definition.requestId}),
+        definitionDigest: "sha256:" + createHash("sha256").update(JSON.stringify(definition)).digest("hex"),
+        storageScopeDigest: record.scopeDigest, profileFingerprint: record.workerProfileFingerprint!,
+        limits: Object.freeze({...record.limits}), maximumReservedBytes: record.maximumReservedBytes});
+      const isCurrent = () => {try {
+        record.current(); resourceCurrent(record, true);
+        return !record.lost && shared.phase === "reserving";
+      } catch {return false;}};
+      storageNeed(isCurrent());
+      const pending = shared.reserve(request, Object.freeze({isCurrent})); shared.pending = pending;
+      storageNeed(types.isPromise(pending) && !types.isProxy(pending) && Object.getPrototypeOf(pending) === sharedBudgetPromisePrototype
+        && Object.getOwnPropertyDescriptor(pending, "constructor") === undefined
+        && Object.getOwnPropertyDescriptor(sharedBudgetPromisePrototype, "constructor")?.value === sharedBudgetPromise);
+      // Observe the original rejection before refusing a malformed own-then field.
+      const observed = (async () => {try {return {ok: true, value: await pending};} catch {return {ok: false};}})();
+      shared.observed = observed;
+      storageNeed(Object.getOwnPropertyDescriptor(pending, "then") === undefined);
+      const result = await observed; storageNeed(result.ok);
+      const value = data(result.value, ["kind"]); storageNeed(value.kind === "reserved");
+      await copyPermit(record, true); storageNeed(isCurrent()); shared.phase = "reserved";
+    } catch {shared.phase = "unknown"; throw storageUnavailable();}
+  });
 }
 /** One original flight owns this sequence, whether prepared explicitly or by
  * the actual Model charge. Never nest a public preparation flight here. */
@@ -265,6 +321,7 @@ async function prepareCopyRoles(record: Copies) {
  * These are original accounting acknowledgements, not proof of physical capacity. */
 export function prepareOriginalTrainingCopyReservations(token: OriginalTrainingCopyReservations): Promise<void> {
   const record = copyRecord(token);
+  storageNeed(!record.sharedBudget || record.sharedBudget.phase === "reserved");
   if (record.preparationAttempted) {if (record.flight) record.lost = true; return Promise.reject(storageUnavailable());}
   record.preparationAttempted = true;
   return copyOperation(record, () => prepareCopyRoles(record));
@@ -279,7 +336,8 @@ export function retainOriginalTrainingCopyReservations(token: OriginalTrainingCo
 }
 /** Adapter for the existing original source launch, not an independent grant. */
 export function originalTrainingModelCopyReservation(token: OriginalTrainingCopyReservations): OriginalTrainingSourceReservation {
-  const record = copyRecord(token); storageNeed(!record.modelClaimed && !record.lost); record.modelClaimed = true;
+  const record = copyRecord(token); storageNeed(!record.modelClaimed && !record.lost
+    && (!record.sharedBudget || record.sharedBudget.phase === "reserved")); record.modelClaimed = true;
   const matching = (purpose?: "source-charge" | "retain") => {
     const context = reservationContext.getStore();
     storageNeed(!!context && context.original === record.original && context.observed === record.observed &&

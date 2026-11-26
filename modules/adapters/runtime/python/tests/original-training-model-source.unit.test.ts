@@ -4,7 +4,11 @@ import {lstat, mkdir, mkdtemp, open, opendir, readFile, realpath, rename, rm, wr
 import path from "node:path";
 import {tmpdir} from "node:os";
 import test, {type TestContext} from "node:test";
-import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingModelSelection} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingModelSelection, TrainingStorageBudgetPort, TrainingStorageBudgetRequest} from "../../../../application/ports/model";
+import {createOrganizationId} from "../../../../contracts/organization";
+import {createInMemoryStructuredDocumentStore, type StructuredDocumentStore} from "../../../persistence/shared";
+import {createStructuredTrainingStorageBudget} from "../../../persistence/model";
+import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../../persistence/sqlite";
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import {createOriginalTrainingPort, type OriginalTrainingCapture, type OriginalTrainingOwnedChannel} from "../client/approvedTrainingTaskSession";
 import {createOriginalTrainingModelSourceFactory, assertOriginalTrainingModelObservation,
@@ -14,7 +18,7 @@ import {createOriginalTrainingModelSourceFactory, assertOriginalTrainingModelObs
 import {bindOriginalTrainingCopyReservations, prepareOriginalTrainingCopyReservations, retainOriginalTrainingCopyReservations,
   originalTrainingModelCopyReservation, type OriginalTrainingCopyPolicy, type OriginalTrainingCopyReservationOwner,
   type OriginalTrainingStorageRole, bindOriginalTrainingWorkerConfiguration,
-  type OriginalTrainingWorkerConfiguration} from "../client/originalTrainingModelSource";
+  type OriginalTrainingWorkerConfiguration, prepareOriginalTrainingSharedStorageBudget} from "../client/originalTrainingModelSource";
 
 type IO = NonNullable<Parameters<typeof createOriginalTrainingModelSourceFactory>[1]>;
 const realIO: IO = {lstat, open, opendir, realpath};
@@ -117,7 +121,8 @@ async function copyBudgetFixture(t: TestContext, preparationMs = 5000) {
     async chargeCopy(role, bytes, scope) {assert.equal(this, reservation); calls.push({action: "charge", role, bytes, scope}); await hooks.charge?.(role);},
     async retainCopy(role, bytes, scope) {assert.equal(this, reservation); calls.push({action: "retain", role, bytes, scope}); await hooks.retain?.();},
   };
-  const bind = (raw = policy, owner = reservation) => bindOriginalTrainingCopyReservations(f.original!, f.observed!, raw, owner);
+  const bind = (raw = policy, owner = reservation, sharedBudget?: TrainingStorageBudgetPort) =>
+    bindOriginalTrainingCopyReservations(f.original!, f.observed!, raw, owner, sharedBudget);
   return {...f, calls, hooks, policy, reservation, reservationState: state, bind};
 }
 
@@ -127,6 +132,151 @@ function workerConfiguration(root: string): OriginalTrainingWorkerConfiguration 
   return {profileFingerprint: "sha256:" + "b".repeat(64), inputCopy: slot("original-inputs", 65_536),
     outputFamily: {maximumCopyBytes: 131_072, outputs: [slot("original-final", 131_072)]}};
 }
+
+const sharedPoolNamespace = "model/training/storage-budget/pools-v1";
+const sharedReservationNamespace = "model/training/storage-budget/reservations-v1";
+const jsonDigest = (value: unknown) => digest(JSON.stringify(value));
+async function sharedBudgetFixture(documents = createInMemoryStructuredDocumentStore(), provision = true) {
+  const policy = {poolId: "synthetic-original-copy-budget", profileFingerprint: "sha256:" + "b".repeat(64),
+    maximumBytes: 524_288, maximumOrganizationBytes: 524_288, maximumPrincipalBytes: 524_288,
+    maximumReservations: 1, maximumOrganizationReservations: 1, maximumPrincipalReservations: 1};
+  const key = jsonDigest([policy.poolId]);
+  if (provision) await documents.writeDocument(sharedPoolNamespace, key, {schema: "training-storage-budget-pool-v1",
+    policyDigest: "sha256:" + jsonDigest(policy), reservedBytes: 0, reservationCount: 0, organizations: []}, {expectedRevision: 0});
+  return {documents, key, policy, port: createStructuredTrainingStorageBudget({documents, policy, authorize: async () => true}),
+    pool: async (source: StructuredDocumentStore = documents) => (await source.readDocument<{reservedBytes: number; reservationCount: number}>(sharedPoolNamespace, key))};
+}
+
+test("shared copy budget binds the exact original purposes before effects and survives SQLite reopen", async t => {
+  const f = await copyBudgetFixture(t), directory = path.join(f.root, "budget"); await mkdir(directory);
+  const policy = resolveLocalSqliteDatabasePolicy({dataRootDirectory: directory});
+  let database = await openLocalSqliteDatabase({policy});
+  try {
+    const store = await sharedBudgetFixture(database.documents); let captured: TrainingStorageBudgetRequest | undefined, debits = 0;
+    const port: TrainingStorageBudgetPort = {async reserve(request, control) {captured = request; debits++; return store.port.reserve(request, control);}};
+    const token = f.bind(f.policy, f.reservation, port);
+    assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token), /storage reservation/);
+    bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+    assert.throws(() => prepareOriginalTrainingCopyReservations(token));
+    assert.throws(() => originalTrainingModelCopyReservation(token)); assert.equal(f.calls.length, 0);
+    port.reserve = async () => {assert.fail("Never use a replaced budget callback.");};
+    await prepareOriginalTrainingSharedStorageBudget(token);
+    assert.equal(debits, 1); assert.equal(f.calls.length, 0); assert.ok(captured);
+    assert.ok(Object.isFrozen(captured) && Object.isFrozen(captured.scope) && Object.isFrozen(captured.limits));
+    assert.deepEqual(captured.scope, {...f.original!.definition.owner, workspaceId: f.definition.workspaceId, requestId: f.definition.requestId});
+    assert.equal(captured.definitionDigest, "sha256:" + jsonDigest(f.original!.definition));
+    assert.equal(captured.profileFingerprint, workerConfiguration(f.root).profileFingerprint);
+    assert.deepEqual(captured.limits, {model: 65_536, inputs: 65_536, "worker-output": 131_072, "parent-output": 131_072, overhead: 4096});
+    assert.equal(captured.maximumReservedBytes, 524_288);
+    assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token));
+    const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!, f.observed!, originalTrainingModelCopyReservation(token)), true);
+    const envelope = source.descriptor.trainingConfiguration as {data: string};
+    assert.equal(JSON.parse(Buffer.from(envelope.data, "base64").toString()).storageScopeDigest, captured.storageScopeDigest);
+    await source.readDefinition(0); await source.acknowledge("charge", 65_536);
+    assert.deepEqual(f.calls.map(row => row.role), ["overhead", "inputs", "worker-output", "parent-output", "model"]);
+    assert.ok(f.calls.every(row => row.scope === captured!.storageScopeDigest && row.bytes === captured!.limits[row.role]));
+    await database.close(); database = await openLocalSqliteDatabase({policy});
+    assert.equal((await store.pool(database.documents))!.value.reservedBytes, 524_288);
+    assert.equal((await store.pool(database.documents))!.value.reservationCount, 1);
+    const records = await database.documents.forOrganization(createOrganizationId(f.definition.owner.organizationId)).listDocuments<Record<string, unknown>>(sharedReservationNamespace);
+    assert.equal(records.length, 1); assert.deepEqual(records[0]!.value.limits, captured.limits);
+    assert.equal(records[0]!.value.storageScopeDigest, captured.storageScopeDigest); assert.equal(debits, 1);
+  } finally {await database.close();}
+});
+
+test("competing original copy tokens cannot oversubscribe the configured shared pool", async t => {
+  const a = await copyBudgetFixture(t), b = await copyBudgetFixture(t), store = await sharedBudgetFixture();
+  const first = a.bind(a.policy, a.reservation, store.port), second = b.bind(b.policy, b.reservation, store.port);
+  bindOriginalTrainingWorkerConfiguration(first, workerConfiguration(a.root)); bindOriginalTrainingWorkerConfiguration(second, workerConfiguration(b.root));
+  const results = await Promise.allSettled([prepareOriginalTrainingSharedStorageBudget(first), prepareOriginalTrainingSharedStorageBudget(second)]);
+  assert.equal(results.filter(row => row.status === "fulfilled").length, 1); assert.equal((await store.pool())!.value.reservedBytes, 524_288);
+  assert.equal(a.calls.length + b.calls.length, 0);
+  const denied = results[0]!.status === "rejected" ? first : second;
+  assert.throws(() => prepareOriginalTrainingSharedStorageBudget(denied)); assert.throws(() => originalTrainingModelCopyReservation(denied));
+  assert.throws(() => prepareOriginalTrainingCopyReservations(denied)); assert.equal((await store.pool())!.value.reservationCount, 1);
+});
+
+test("missing configured shared pool never initializes storage or permits copy effects", async t => {
+  const f = await copyBudgetFixture(t), store = await sharedBudgetFixture(undefined, false), token = f.bind(f.policy, f.reservation, store.port);
+  bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+  await assert.rejects(prepareOriginalTrainingSharedStorageBudget(token), /storage reservation/);
+  assert.equal(await store.pool(), undefined); assert.equal(f.calls.length, 0);
+  assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token)); assert.throws(() => originalTrainingModelCopyReservation(token));
+});
+
+test("shared copy budget retains a committed debit after its acknowledgement is lost", async t => {
+  const f = await copyBudgetFixture(t), store = await sharedBudgetFixture(); let debits = 0;
+  const port: TrainingStorageBudgetPort = {async reserve(request, control) {debits++; await store.port.reserve(request, control); throw Error("synthetic private lost budget reply");}};
+  const token = f.bind(f.policy, f.reservation, port); bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+  await assert.rejects(prepareOriginalTrainingSharedStorageBudget(token), {message: "The original training storage reservation is unavailable."});
+  assert.equal((await store.pool())!.value.reservedBytes, 524_288); assert.equal(f.calls.length, 0);
+  assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token)); assert.throws(() => prepareOriginalTrainingCopyReservations(token));
+  assert.throws(() => originalTrainingModelCopyReservation(token)); assert.equal(debits, 1);
+});
+
+test("shared copy budget keeps pending committed accounting after its outward deadline", {timeout: 3000}, async t => {
+  const f = await copyBudgetFixture(t, 100), store = await sharedBudgetFixture(); let entered!: () => void, release!: () => void, debits = 0;
+  const started = new Promise<void>(done => {entered = done;}), held = new Promise<void>(done => {release = done;}); f.gates.push(release);
+  const port: TrainingStorageBudgetPort = {async reserve(request, control) {debits++; const value = await store.port.reserve(request, control); entered(); await held; return value;}};
+  const token = f.bind(f.policy, f.reservation, port); bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+  const pending = prepareOriginalTrainingSharedStorageBudget(token), refused = assert.rejects(pending, /storage reservation/);
+  try {
+    await started; assert.equal((await store.pool())!.value.reservedBytes, 524_288);
+    assert.throws(() => originalTrainingModelCopyReservation(token)); await refused;
+    assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token)); assert.throws(() => prepareOriginalTrainingCopyReservations(token));
+    release(); await new Promise(done => setImmediate(done));
+    assert.throws(() => originalTrainingModelCopyReservation(token)); assert.equal(f.calls.length, 0); assert.equal(debits, 1);
+    assert.equal((await store.pool())!.value.reservationCount, 1);
+  } finally {release(); await refused;}
+});
+
+test("shared budget acknowledgement cannot survive lost business permission", async t => {
+  const f = await copyBudgetFixture(t), store = await sharedBudgetFixture();
+  const port: TrainingStorageBudgetPort = {async reserve(request, control) {const value = await store.port.reserve(request, control); f.state.allowed = false; return value;}};
+  const token = f.bind(f.policy, f.reservation, port); bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+  await assert.rejects(prepareOriginalTrainingSharedStorageBudget(token), /storage reservation/);
+  assert.equal((await store.pool())!.value.reservedBytes, 524_288); assert.equal(f.calls.length, 0);
+  assert.throws(() => originalTrainingModelCopyReservation(token)); assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token));
+});
+
+test("shared budget binding refuses accessors, proxies and non-async callbacks without calling them", async t => {
+  const f = await copyBudgetFixture(t); let effects = 0;
+  const accessor = Object.defineProperty({}, "reserve", {enumerable: true, get() {effects++; return async () => ({kind: "reserved"});}});
+  for (const port of [accessor, new Proxy({}, {ownKeys() {effects++; throw Error("never");}}), {reserve() {effects++; return Promise.resolve({kind: "reserved"});}}])
+    assert.throws(() => f.bind(f.policy, f.reservation, port as TrainingStorageBudgetPort), /storage reservation/);
+  assert.equal(effects, 0); assert.equal(f.calls.length, 0);
+  assert.throws(() => prepareOriginalTrainingSharedStorageBudget({} as Parameters<typeof prepareOriginalTrainingSharedStorageBudget>[0]));
+  const oldToken = f.bind(); assert.throws(() => prepareOriginalTrainingSharedStorageBudget(oldToken));
+  await prepareOriginalTrainingCopyReservations(oldToken); assert.equal(f.calls.length, 4, "Established caller without an optional shared port stays compatible.");
+});
+
+test("shared copy budget refuses malformed or negative replies without new debits or copy roles", async t => {
+  let getters = 0;
+  const getter = Object.defineProperty({}, "kind", {enumerable: true, get() {getters++; return "reserved";}});
+  for (const reply of [true, undefined, {}, {kind: "capacity"}, {kind: "denied"}, {kind: "unconfirmed"}, {kind: "reserved", extra: true}, getter]) {
+    const f = await copyBudgetFixture(t); let debits = 0;
+    const port: TrainingStorageBudgetPort = {async reserve() {debits++; return reply as Awaited<ReturnType<TrainingStorageBudgetPort["reserve"]>>;}};
+    const token = f.bind(f.policy, f.reservation, port); bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+    await assert.rejects(prepareOriginalTrainingSharedStorageBudget(token), {message: "The original training storage reservation is unavailable."});
+    assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token)); assert.throws(() => prepareOriginalTrainingCopyReservations(token));
+    assert.throws(() => originalTrainingModelCopyReservation(token)); assert.equal(debits, 1); assert.equal(f.calls.length, 0);
+  }
+  assert.equal(getters, 0);
+});
+
+test("shared budget callback reentry cannot charge roles or issue another original reservation", async t => {
+  const f = await copyBudgetFixture(t), store = await sharedBudgetFixture(); let debits = 0;
+  let token!: ReturnType<typeof f.bind>;
+  const port: TrainingStorageBudgetPort = {async reserve(request, control) {
+    debits++; assert.throws(() => prepareOriginalTrainingSharedStorageBudget(token));
+    assert.throws(() => prepareOriginalTrainingCopyReservations(token)); assert.throws(() => originalTrainingModelCopyReservation(token));
+    assert.equal(f.calls.length, 0); return store.port.reserve(request, control);
+  }};
+  token = f.bind(f.policy, f.reservation, port); bindOriginalTrainingWorkerConfiguration(token, workerConfiguration(f.root));
+  await prepareOriginalTrainingSharedStorageBudget(token); assert.equal(debits, 1); assert.equal(f.calls.length, 0);
+  await prepareOriginalTrainingCopyReservations(token); assert.equal(f.calls.length, 4);
+  assert.equal((await store.pool())!.value.reservationCount, 1);
+});
 
 test("worker layout uses exact original copy purposes and bytes without granting effects", async t => {
   const f = await copyBudgetFixture(t), budget = f.bind(), config = workerConfiguration(f.root);

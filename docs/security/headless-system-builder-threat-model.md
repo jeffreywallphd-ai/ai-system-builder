@@ -3495,6 +3495,20 @@ control only. It creates no Native capacity, identity, ownership, readiness,
 default producer, cleanup credit or task/parent qualification. The actual outer
 storage/producer, protected crash/custody and permanent-retirement proofs remain.
 
+The optional original copy-budget binding captures one private async reserve
+method and derives the debit from the genuine token, original identity/definition,
+purpose digest, five role limits and bound worker profile. When selected, role
+preparation and Model-adapter claim require its acknowledged debit. Pending,
+negative, malformed, late or lost replies and withdrawn permission keep the
+original operation/accounting and grant no retry, pool reset, adoption or byte
+credit. Callback replacement, reentry, foreign tokens and passive-record hooks
+cannot redirect or duplicate admission. Synthetic configured-store/SQLite tests
+cover exact scope, competition, persistence and denial; they do not attest trusted
+pool provisioning, anti-rollback or actual exclusive Native storage. Production
+roots, parent/crash custody, producer/worker/Job retirement and hosts remain
+unqualified. Existing unconfigured callers still require their already-reserved
+original owner; selecting this option does not create such physical authority.
+
 Only an ordinary unbound current-realm native async function is supported for this
 new unused option. Refuse unsupported/foreign suppliers before they can create an
 unowned rejection. Keep original async/Promise intrinsics and validate the safe
