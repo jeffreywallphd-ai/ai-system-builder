@@ -718,15 +718,27 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
             self.checkpoint("allocate"); security = self.descriptor_for(sealed=False)
             self.fresh = self.open(parent, self.descriptor["freshName"], 0x1701ff, directory=True, fresh=True, security=security, share=0)
             need(self.permissions(self.fresh) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
-            allocated, copied = 0, 0
+            allocated, copied, writers = 0, 0, []
             for original, requested_allocation in zip(source_records, allocation_plan):
-                self.checkpoint("copy"); writer = self.open(self.fresh, original["name"], 0x1701ff, directory=False, fresh=True,
+                self.guard(); writer = self.open(self.fresh, original["name"], 0x1701ff, directory=False, fresh=True,
                                                 security=security, share=0, allocation_bytes=requested_allocation)
                 need(self.permissions(writer) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
                 _, initial_size, initial_allocation = self.facts(writer)
                 need(initial_size == 0 and original["sizeBytes"] <= initial_allocation <= requested_allocation
                      and allocated + initial_allocation <= self.descriptor["maximumCopyBytes"])
                 identity = self.identity(writer); need(identity != original["identity"])
+                need(self.seal(writer) == identity)
+                writers.append((original, writer, identity, initial_allocation)); allocated += initial_allocation
+            # Only empty allocated objects exist while the namespace is mutable.
+            # Original creator handles keep their granted write rights after the
+            # final ACL seals; no mutable pathname reopen is needed for data IO.
+            self.graph_matches(self.fresh, [{"name": row["name"], "identity": identity, "sizeBytes": 0}
+                                          for row, _, identity, _ in writers])
+            root_identity = self.seal(self.fresh)
+            for original, writer, identity, initial_allocation in writers:
+                self.checkpoint("copy")
+                need(self.facts(writer) == (identity, 0, initial_allocation)
+                     and self.permissions(writer) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
                 digest, remaining = hashlib.sha256(), original["sizeBytes"]
                 buffer = C.create_string_buffer(self.descriptor["bufferBytes"])
                 while remaining:
@@ -739,7 +751,7 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
                     # writes BEFORE dispatch and validate actual allocated size.
                     need(copied + count.value <= self.descriptor["maximumCopyBytes"])
                     need(original["sizeBytes"] - remaining + count.value <= initial_allocation
-                         and allocated + initial_allocation <= self.descriptor["maximumCopyBytes"])
+                         and allocated <= self.descriptor["maximumCopyBytes"])
                     self.guard()
                     self.call("WriteFile", self.owner.number(writer), buffer, count.value, C.byref(written), None,
                               keep=(writer, buffer, count, written))
@@ -747,12 +759,14 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
                     copied += count.value; remaining -= count.value
                     _, size, allocation = self.facts(writer)
                     need(size == original["sizeBytes"] - remaining and allocation == initial_allocation
-                         and allocated + allocation <= self.descriptor["maximumCopyBytes"])
+                         and allocated <= self.descriptor["maximumCopyBytes"])
                 count = U32(); self.call("ReadFile", self.owner.number(original["handle"]), buffer, 1, C.byref(count), None,
                                         keep=(original, buffer, count))
                 need(count.value == 0 and digest.hexdigest() == original["sha256"])
                 self.call("FlushFileBuffers", self.owner.number(writer), keep=(writer,))
-                self.guard(); self.seal(writer); _, size, allocation = self.facts(writer); allocated += allocation
+                self.guard(); _, size, allocation = self.facts(writer)
+                need(self.identity(writer) == identity
+                     and self.permissions(writer) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
                 self.owner.close(writer)
                 read = self.open(self.fresh, original["name"], 0x20089, directory=False)
                 need(self.facts(read) == (identity, size, allocation)); self.guards.append(read)
@@ -760,7 +774,10 @@ class _OriginalProtectedFlatCopy(NativeModelInspection):
                 self.verify_bytes(read, original)
                 self.records.append({**{k: original[k] for k in ("name", "sizeBytes", "sha256")}, "identity": identity})
             self.graph_matches(source, source_records); self.graph_matches(self.fresh, self.records)
-            self.checkpoint("seal"); root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
+            self.checkpoint("seal")
+            need(self.identity(self.fresh) == root_identity
+                 and self.permissions(self.fresh) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
+            self.owner.close(self.fresh)
             root = self.open(parent, self.descriptor["freshName"], 0x200a1, directory=True)
             need(self.identity(root) == root_identity); self.guards.append(root)
             _retain_training_input_read_handle(self,root,None,root_identity)
@@ -3228,15 +3245,24 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                 self.fresh = self.open(parent, self.descriptor["freshName"], 0x1701ff,
                     directory=True, fresh=True, security=security, share=0)
                 need(self.permissions(self.fresh) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
-                allocated = 0
+                allocated, writers = 0, []
                 for row, requested_allocation in zip(self.descriptor["files"], allocation_plan):
-                    self.checkpoint("copy")
+                    self.guard()
                     writer = self.open(self.fresh, row["name"], 0x1701ff, directory=False, fresh=True,
                         security=security, share=0, allocation_bytes=requested_allocation)
                     need(self.permissions(writer) == (model_acl(self.principal, sealed=False), 0x1004, self.principal))
                     identity, size, allocation = self.facts(writer)
                     need(size == 0 and row["sizeBytes"] <= allocation <= requested_allocation
                          and allocated + allocation <= self.descriptor["maximumCopyBytes"])
+                    need(self.seal(writer) == identity)
+                    writers.append((row, writer, identity, allocation)); allocated += allocation
+                self.graph_matches(self.fresh, [{"name": row["name"], "identity": identity, "sizeBytes": 0}
+                                              for row, _, identity, _ in writers])
+                root_identity = self.seal(self.fresh)
+                for row, writer, identity, allocation in writers:
+                    self.checkpoint("copy")
+                    need(self.facts(writer) == (identity, 0, allocation)
+                         and self.permissions(writer) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
                     self.guard(); stream = iter(contents[row["name"]]); self.guard()
                     copied, digest = 0, hashlib.sha256()
                     while True:
@@ -3254,7 +3280,9 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                         need(self.facts(writer) == (identity, copied, allocation))
                     need(copied == row["sizeBytes"])
                     self.call("FlushFileBuffers", self.owner.number(writer), keep=(writer,))
-                    self.guard(); need(self.seal(writer) == identity)
+                    self.guard()
+                    need(self.identity(writer) == identity
+                         and self.permissions(writer) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
                     self.owner.close(writer)
                     read = self.open(self.fresh, row["name"], 0x20089, directory=False)
                     _retain_training_output_read_handle(self,read,(row["name"],copied,digest.hexdigest()),identity)
@@ -3262,9 +3290,11 @@ class OriginalTrainingOutputGraph(_OriginalProtectedFlatCopy):
                     record = {**row, "sha256": digest.hexdigest(), "identity": identity}
                     need(self.facts(read) == (identity, copied, allocation))
                     self.verify_bytes(read, record); self.guard()
-                    self.records.append(record); allocated += allocation
+                    self.records.append(record)
                 self.graph_matches(self.fresh, self.records); self.checkpoint("seal")
-                root_identity = self.seal(self.fresh); self.owner.close(self.fresh)
+                need(self.identity(self.fresh) == root_identity
+                     and self.permissions(self.fresh) == (model_acl(self.principal, sealed=True), 0x1004, self.principal))
+                self.owner.close(self.fresh)
                 root = self.open(parent, self.descriptor["freshName"], 0x200a1, directory=True)
                 _retain_training_output_read_handle(self,root,None,root_identity)
                 need(self.identity(root) == root_identity); self.guards.append(root)

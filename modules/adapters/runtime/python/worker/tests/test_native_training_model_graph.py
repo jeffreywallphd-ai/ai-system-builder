@@ -72,6 +72,7 @@ class Kernel:
         self.opened_names = []
         self.fail = self.after = self.error_after_return = None; self.short_write = False
         self.identity_counter = 1; self.after_write = None
+        self.before_file_read = self.before_file_write = None
         self.active = 1; self.attributes = {}; self.limits = None
         self.pipe_writes = []; self.pipe_write_facts = []; self.pipe_before_write = None
         self.pipe_closed_failure = False
@@ -213,6 +214,7 @@ class Kernel:
                 raw=h["pipe"]["data"][h["offset"]:h["offset"]+a[2]]
                 C.memmove(a[1],bytes(raw),len(raw)); a[3]._obj.value=len(raw); h["offset"]+=len(raw); return 1,0
             if h["node"] is None: a[3]._obj.value = 0; return 0, 109
+            if self.before_file_read:self.before_file_read(h["node"])
             raw = h["node"]["data"][h["offset"]:h["offset"] + a[2]]
             C.memmove(a[1], bytes(raw), len(raw)); a[3]._obj.value = len(raw); h["offset"] += len(raw); return 1, 0
         if name == "WriteFile":
@@ -224,6 +226,7 @@ class Kernel:
                     any(name == "ResumeThread" for name, _ in self.calls), h["inherit"]))
                 raw = C.string_at(a[1], size); h["pipe"]["data"].extend(raw); self.pipe_writes.append(raw)
                 a[3]._obj.value = size; return 1, 0
+            if self.before_file_write:self.before_file_write(h["node"])
             raw = C.string_at(a[1], size); h["node"]["data"].extend(raw); a[3]._obj.value = size
             if self.after_write: self.after_write(h["node"])
             return 1, 0
@@ -829,6 +832,22 @@ class TrainingInputCopyTests(unittest.TestCase):
         self.assertNotIn(graph.physical_path,kernel.nodes)
         self.assertFalse(any(name=="WriteFile" for name,_ in kernel.calls[offset:]))
         self.assertTrue(graph.retire_copy_io()); self.assertEqual(control.retained,[8000])
+
+    def test_input_inventory_is_sealed_before_first_private_source_read_or_write(self):
+        _,lease,staged,config,control,kernel,_,_=self.fixture()
+        graph=n.OriginalTrainingInputGraph(lease,staged,config,control,control);observed=[]
+        def inspect(node):
+            paths=[graph.physical_path+"\\"+row["name"] for row in graph.descriptor["files"]]
+            self.assertIn(graph.physical_path,kernel.nodes)
+            for path in [graph.physical_path,*paths]:
+                self.assertEqual(kernel.nodes[path]["acl"],n.model_acl(kernel.sid,sealed=True))
+            if not observed:self.assertTrue(all(not kernel.nodes[path]["data"] for path in paths))
+            observed.append(node["path"])
+        kernel.before_file_read=lambda node:inspect(node) if node["path"].startswith(graph.descriptor["sourcePath"]+"\\") else None
+        kernel.before_file_write=inspect
+        graph.prepare();graph.assert_sealed()
+        self.assertTrue(observed);self.assertTrue(graph.retire_copy_io())
+        self.assertEqual(control.retained,[config["maximumCopyBytes"]])
 
     def test_input_copy_checks_available_allocation_units_before_creating(self):
         for available in (0, 1, 2, 3):
@@ -1724,6 +1743,35 @@ class TrainingOutputCustodyTests(unittest.TestCase):
         else: contents.update({"adapter_config.json":b'{}',"adapter_model.safetensors":b"synthetic-adapter-container"})
         files=[{"name":name,"sizeBytes":len(raw)} for name,raw in contents.items()]
         return actual,source,lease,inputs,request,input_control,kernel,config,contents,files,Control()
+
+    def test_output_inventory_is_sealed_before_any_iterator_or_private_write(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture();observed=[]
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            def inspect():
+                paths=[graph.physical_path+"\\"+row["name"] for row in files]
+                for path in [graph.physical_path,*paths]:
+                    self.assertEqual(kernel.nodes[path]["acl"],actual.model_acl(kernel.sid,sealed=True))
+                if not observed:self.assertTrue(all(not kernel.nodes[path]["data"] for path in paths))
+                observed.append(True)
+            class Stream:
+                def __init__(self,raw):self.raw=raw
+                def __iter__(self):inspect();return iter((self.raw,))
+            kernel.before_file_write=lambda node:inspect()
+            graph.prepare({name:Stream(raw) for name,raw in contents.items()});graph.assert_sealed()
+            self.assertTrue(observed);self.assertTrue(graph.retire_copy_io())
+            self.assertEqual(control.retained,[config["maximumCopyBytes"]])
+
+    def test_failed_empty_output_seal_never_writes_private_bytes(self):
+        actual,_,lease,_,request,_,kernel,config,contents,files,control=self.fixture()
+        with lease.borrow(request) as view:
+            graph=actual.OriginalTrainingOutputGraph(view,request,config,files,control,control)
+            kernel.fail="NtSetSecurityObject";offset=len(kernel.calls)
+            with self.assertRaises(actual.LaunchUnavailable):graph.prepare({name:(raw,) for name,raw in contents.items()})
+            self.assertFalse(any(name=="WriteFile" for name,_ in kernel.calls[offset:]))
+            self.assertTrue(all(not node["data"] for path,node in kernel.nodes.items()
+                if path.startswith(graph.physical_path+"\\") and not node["directory"]))
+            self.assertEqual(control.charges,[config["maximumCopyBytes"]]);self.assertEqual(control.retained,[])
 
     def test_output_copy_checks_available_allocation_units_before_creating(self):
         for available in (0, 2, 3, 4):
@@ -2836,6 +2884,27 @@ class ModelGraphTests(unittest.TestCase):
         self.assertFalse(graph.attempted); self.assertNotIn(graph.physical_path, kernel.nodes)
         self.assertFalse(any(name == "WriteFile" for name, _ in kernel.calls))
         self.assertEqual(control.charges, [8000])
+
+    def test_model_inventory_is_sealed_before_first_private_source_read_or_write(self):
+        graph,kernel,control=self.graph();observed=[]
+        def inspect(node):
+            paths=[graph.physical_path+"\\"+row["name"] for row in graph.descriptor["files"]]
+            for path in [graph.physical_path,*paths]:
+                self.assertEqual(kernel.nodes[path]["acl"],n.model_acl(kernel.sid,sealed=True))
+            if not observed:self.assertTrue(all(not kernel.nodes[path]["data"] for path in paths))
+            observed.append(node["path"])
+        kernel.before_file_read=lambda node:inspect(node) if node["path"].startswith(graph.descriptor["sourcePath"]+"\\") else None
+        kernel.before_file_write=inspect
+        graph.prepare();graph.assert_sealed()
+        self.assertTrue(observed);self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]])
+
+    def test_failed_empty_model_seal_never_writes_private_bytes(self):
+        graph,kernel,control=self.graph();kernel.fail="NtSetSecurityObject"
+        with self.assertRaises(n.LaunchUnavailable):graph.prepare()
+        self.assertFalse(any(name=="WriteFile" for name,_ in kernel.calls))
+        self.assertTrue(all(not node["data"] for path,node in kernel.nodes.items()
+            if path.startswith(graph.physical_path+"\\") and not node["directory"]))
+        self.assertEqual(control.charges,[graph.descriptor["maximumCopyBytes"]]);self.assertEqual(control.retained,[])
 
     def test_model_copy_checks_available_allocation_units_before_creating(self):
         for available in (0, 2, 3, 4):

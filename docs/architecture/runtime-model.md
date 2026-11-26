@@ -2846,6 +2846,16 @@ is an early shortage check, not stable capacity or a directory/metadata reserve;
 actual allocation checks and separately reserved overhead remain necessary.
 Later allocation failures keep the original attempt and charge without retry.
 
+Both copy implementations precreate and allocate their complete empty inventory,
+seal every empty file, verify the inventory and seal the directory before any
+source read, output iterator or private data write. Only the original creator
+handles then write data; no mutable pathname reopen is added. Copy checkpoints
+remain at actual per-file data transfer. Final hash, flush, readback, same-object
+read guards, exact inventory and the existing final seal checkpoint still apply.
+Before all seals finish, interrupted preparation contains no private payload.
+Source ABI tests verify this order and failure retention; physical Windows
+write-after-seal, crash custody and complete parent publication remain pending.
+
 Recheck actual joint custody and business admission around reservation/iterator
 callbacks and owned writes. Wrong-thread/reentrant operations refuse without
 waiting. Failed or unknown effects retain original slots, handles and charges;

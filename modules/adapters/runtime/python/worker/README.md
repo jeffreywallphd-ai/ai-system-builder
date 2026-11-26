@@ -33,6 +33,12 @@ Atomic construction restricts DAC, owner, metadata and delete rights; exclusive
 creator handles and complete post-seal enumeration remain necessary. Only the
 actual attested original creators can finish the seal. There are no later
 mutable-control pathname opens. Unsupported creator access is denied.
+Preparation now allocates the complete empty inventory and applies the final
+file and directory seals before reading source bytes or invoking output
+iterators. Data transfer uses only the original creator handles, followed by
+the existing verified read guards. A failure before all seals finish leaves
+only empty files. Source fixtures verify ordering and retained failure custody;
+actual Windows write-after-seal and crash qualification remain separate.
 Partial or unknown calls cannot be retried or treated as no-file effects.
 The shared Model/input/output copy plan compares rounded file allocation units
 with observed free units on the original destination-volume handle before it

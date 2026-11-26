@@ -2562,6 +2562,13 @@ available units before creation. Invalid or insufficient facts deny with charges
 retained. This observation cannot guarantee future space, reserve directory or
 metadata overhead, establish a quota, or justify retry/release after a later
 allocation failure. Reuse atomic private creation,
+then precreate and allocate the entire empty inventory and seal every file and
+the directory before source reads, iterator callbacks or private writes. This
+keeps payload bytes out of an incompletely sealed namespace. Write only through
+original creator handles and preserve each copy checkpoint at data transfer;
+never reopen a path for mutable control. Source fixtures prove the sequence and
+empty failure retention, not actual Windows write-after-seal or crash custody.
+Preserve the existing
 DACL/OWNER_RIGHTS, exclusive writers, bounded chunks, hash/flush/readback, sealing,
 complete inventory and retained read-only identity guards. Check actual joint
 custody and currentness after reservation and iterator callbacks and before
