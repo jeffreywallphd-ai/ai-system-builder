@@ -3571,6 +3571,18 @@ result paths. They grant no application/cleanup permission or global capacity
 credit; actual worker/SDK/controller/Job and crash/reservation proof remain the
 coordinator's separate obligations. No default host can invoke this bridge yet.
 
+Finalized-file inventory observations are private to that original owner and
+exact actor/workspace. They require its permanent fence, every file ACK and a
+fresh native inspection with no IO, reader, uncertainty or closed store. Only
+detached frozen bounded labels/roles/sizes/hashes and logical references leave
+the method; encoded buffers and physical paths do not. File acknowledgements
+cannot stand in for the original receiver's final delivery ACK, task success,
+worker retirement or fresh application authorization. A qualifying coordinator
+must check those independently before review; this observation grants no Save,
+cleanup or capacity credit. Actual receiver/adapter tests with inert native
+bindings cover complete multi-group delivery and corrupt candidate rejection,
+without asserting native protection, runtime readiness or model quality.
+
 The explicit container fixture distinguishes each filesystem denial assertion
 with a fixed numeric step and finite failure/OS categories. Unexpected success
 and an unexpected error remain distinct failures. The child emits no raw error

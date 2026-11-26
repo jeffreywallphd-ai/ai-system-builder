@@ -83,6 +83,17 @@ installation binding and actual host execution remain mandatory. Its inert ABI
 tests supply logical adapter evidence only, independently of the completed small
 native component fixture. No physical fixture attempt is repeated by those tests.
 
+The original owner's private `inspectFinalizedFiles` additionally returns copied,
+frozen role/name/media/size/hash metadata and logical references once every file
+was acknowledged, publication is fenced and current native inspection confirms
+the exact prepared file count without pending IO, readers or uncertainty. It
+never exposes the encoded Buffer, a physical path or a new capability. The facts
+describe finalized files only. Receiver final delivery acknowledgement, task
+completion, worker retirement, fresh application permission and candidate
+review/Save remain independent prerequisites. Tests use the real output receiver
+and an inert native dependency for multiple checkpoint/candidate files and a
+corrupt candidate; this is logical composition, not installed-native execution.
+
 The physical version1 format is 256-byte header, complete index with 64 bytes per row,
 ordered payloads at derived 8-byte-aligned offsets, zero gaps, then 256-byte footer.
 Every addition, alignment, total and allocation calculation is checked. No caller

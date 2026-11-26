@@ -10,6 +10,9 @@ import type {OrganizationRequestContext} from "../../../../../contracts/organiza
 import {createFilesystemTrainingResultFileByteStorageAdapter as create} from "../createFilesystemTrainingResultFileByteStorageAdapter";
 import {encodeTrainingResultInventory as encodeInventory} from "../trainingResultInventory";
 import {createNativeTrainingResultFileByteStorageAdapter as createNative} from "../createNativeTrainingResultFileByteStorageAdapter";
+import {createOriginalTrainingOutputReceiver} from "../../../../runtime/python/client/originalTrainingOutputReceiver";
+import type {ApprovedLocalTrainingDefinition} from "../../../../../application/ports/model";
+import {createWorkspaceId} from "../../../../../contracts/workspace";
 
 const publicationId = "a".repeat(32), context = {workspaceId: "workspace-a"};
 const key = (index = 0) => `workspaces/workspace-a/artifacts/training-results/${publicationId}/${index}`;
@@ -82,6 +85,126 @@ function nativeFixture() {
 }
 const gate = () => {let resolve!: () => void; const promise = new Promise<void>(done => {resolve = done;}); return {promise, resolve};};
 const tickNative = () => new Promise<void>(done => setImmediate(done));
+
+async function untilNative(predicate: () => boolean) {
+  for (let count = 0; count < 250 && !predicate(); count++) await new Promise(done => setTimeout(done, 1));
+  assert.ok(predicate(), "bounded receiver observation did not complete");
+}
+function nativeReceiverFixture(corrupt = false) {
+  const f = nativeFixture(), adapter = f.createAdapter();
+  const values = [Buffer.from('{"checkpoint":true}'), Buffer.from([1, 2, 3]),
+    Buffer.from('{"candidate":true}'), Buffer.from([4, 5, 6, 7])];
+  const files = values.map((bytes, index) => ({fileIndex: index, groupIndex: Math.floor(index / 2),
+    name: index % 2 ? "model.safetensors" : "config.json", role: index < 2 ? "checkpoint" : "candidate",
+    sizeBytes: bytes.length, sha256: digest(bytes)}));
+  const frames: Record<string, unknown>[] = [];
+  const add = (kind: string, fields: object) => frames.push({schema: "original-training-output-delivery-v1",
+    sequence: frames.length + 1, kind, ...fields});
+  add("manifest", {taskId: f.actor.requestId, files, totalBytes: values.reduce((sum, bytes) => sum + bytes.length, 0)});
+  values.forEach((bytes, fileIndex) => {
+    const delivered = corrupt && fileIndex === 3 ? Buffer.alloc(bytes.length, 0) : bytes;
+    for (let offset = 0; offset < delivered.length; offset += 8)
+      add("data", {fileIndex, offset, data: delivered.subarray(offset, offset + 8).toString("base64")});
+    add("file-eof", {fileIndex, sizeBytes: bytes.length});
+  });
+  add("streams-complete", {fileCount: files.length, totalBytes: values.reduce((sum, bytes) => sum + bytes.length, 0), provisional: true});
+  let acknowledged = 0;
+  const definition: ApprovedLocalTrainingDefinition = {requestId: f.actor.requestId, workspaceId: createWorkspaceId(f.actor.workspaceId),
+    owner: {organizationId: f.actor.organizationId, principalId: f.actor.principalId, clientId: "inert-client", hostIncarnationId: "inert-host"},
+    request: {workspaceId: createWorkspaceId(f.actor.workspaceId), trainingTask: "llm-instruction", baseModel: {modelRecordId: "inert-base"},
+      datasets: [{artifactId: "inert-input", splitRole: "train"}], method: "full-finetune", commonParameters: {}, output: {outputModelName: "inert-candidate", destination: {local: {enabled: false}}}},
+    modelUpdatedAt: "2026-11-26T00:00:00Z", dataset: {datasetId: "inert-dataset", versionId: "inert-version",
+      versionDigest: "sha256:" + "a".repeat(64), recipeDigest: "sha256:" + "b".repeat(64)}, proposalDigest: "sha256:" + "c".repeat(64),
+    inputs: [{artifactId: "inert-input", role: "train", mediaType: "application/jsonl", digest: "sha256:" + "d".repeat(64), sizeBytes: 4}], recipeSizeBytes: 4};
+  const receiver = createOriginalTrainingOutputReceiver({configuration: {storage: adapter.storage, context: f.actor,
+    publicationId, maximumFiles: 4, maximumFileBytes: 20000, maximumTotalBytes: 40000, maximumDurationMs: 1000}, definition,
+    assertCurrent() {}, async assertAllowed() {}, async read() {return {phase: "active", acknowledged, frame: frames[acknowledged]};},
+    async acknowledge(sequence) {assert.equal(sequence, acknowledged + 1); acknowledged = sequence; return true;}});
+  return {f, adapter, receiver, values, files, frames, acknowledged: () => acknowledged};
+}
+
+test("finalized native file inventory is scoped, detached and distinct from completion or Save authority", async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), original = f.inventory();
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+  await adapter.storage.preparePublication!(original, f.actor);
+  original.files[0]!.name = "changed-after-capture";
+  assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, true);
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+  assert.equal((await adapter.storage.publishResultFile(f.packet(1), f.actor)).ok, true);
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor), "The permanent publication fence is required.");
+  adapter.originalOwner.fencePublication();
+  for (const change of [{workspaceId: "other"}, {organizationId: createOrganizationId("other")}, {principalId: "other"}, {workspaceId: " workspace-a "}]) {
+    const before = f.calls.length;
+    assert.throws(() => adapter.originalOwner.inspectFinalizedFiles({...f.actor, ...change})); assert.equal(f.calls.length, before);
+  }
+  const inventory = adapter.originalOwner.inspectFinalizedFiles({...f.actor, requestId: "fresh-authorized-read"});
+  assert.deepEqual(Object.keys(inventory), ["schema", "publicationId", "totalBytes", "files"]);
+  assert.equal(inventory.schema, "training-result-finalized-files-v1"); assert.equal(inventory.publicationId, publicationId);
+  assert.equal(inventory.totalBytes, 5); assert.equal(inventory.files[0]!.name, "config.json");
+  assert.ok(Object.isFrozen(inventory) && Object.isFrozen(inventory.files) && inventory.files.every(Object.isFrozen));
+  assert.deepEqual(inventory.files, f.inventory().files.map(file => ({...file, key: key(file.fileIndex)})));
+  assert.equal("encoded" in inventory, false); safe(inventory);
+  const second = adapter.originalOwner.inspectFinalizedFiles(f.actor);
+  assert.notEqual(second, inventory); assert.notEqual(second.files[0], inventory.files[0]);
+  const reader = adapter.originalOwner.openReader(1, f.actor);
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor)); reader.close();
+  await adapter.originalOwner.discard(f.actor);
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+});
+
+test("finalized native file inventory refuses unfinished or uncertain file writes", {timeout: 2000}, async () => {
+  const f = nativeFixture(), adapter = f.createAdapter(), entered = gate(), finish = gate(), append = f.implementations.append!;
+  await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  f.implementations.append = (...args) => {f.state.pending = true; entered.resolve(); return (async () => {
+    await finish.promise; f.state.pending = false; return append(...args);
+  })();};
+  const pending = adapter.storage.publishResultFile(f.packet(0), f.actor); await entered.promise;
+  adapter.originalOwner.fencePublication();
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+  finish.resolve(); assert.equal((await pending).ok, false);
+  assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+  assert.equal(f.count("finishFile"), 0); assert.equal(f.count("discard"), 0);
+});
+
+test("finalized file metadata requires current exact native state even after acknowledged writes", async () => {
+  for (const change of [{uncertain: true}, {pending: true}, {closed: true}, {prepared: false}, {fenced: false}, {readers: 1}, {completedFiles: 1}]) {
+    const f = nativeFixture(), adapter = f.createAdapter();
+    await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    for (const index of [0, 1]) assert.equal((await adapter.storage.publishResultFile(f.packet(index), f.actor)).ok, true);
+    adapter.originalOwner.fencePublication(); Object.assign(f.state, change);
+    const before = f.calls.length;
+    assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor), {message: "Private training publication is unavailable."});
+    assert.deepEqual(f.calls.slice(before).map(call => call.name), ["inspect"]);
+    assert.equal(f.count("openReader"), 0); assert.equal(f.count("discard"), 0);
+  }
+});
+
+test("real output receiver composes with the native bridge for multiple checkpoint and candidate files", {timeout: 2000}, async () => {
+  const f = nativeReceiverFixture(); f.receiver.start();
+  await untilNative(() => f.receiver.isComplete());
+  await tickNative(); f.receiver.abort();
+  assert.equal(f.acknowledged(), f.frames.length); assert.equal(f.receiver.inspectIoRetirement().phase, "closed");
+  const inventory = f.adapter.originalOwner.inspectFinalizedFiles(f.f.actor);
+  assert.equal(inventory.files.length, 4); assert.deepEqual(inventory.files.map(row => [row.groupIndex, row.name, row.role]),
+    f.files.map(row => [row.groupIndex, row.name, row.role]));
+  for (const file of inventory.files) {
+    assert.equal(file.expectedSha256, f.files[file.fileIndex]!.sha256);
+    assert.equal(file.key, key(file.fileIndex));
+    const reader = f.adapter.originalOwner.openReader(file.fileIndex, f.f.actor);
+    assert.deepEqual(await reader.read(), f.values[file.fileIndex]); assert.equal((await reader.read()).length, 0); reader.close();
+  }
+  assert.equal(f.f.count("prepare"), 1); assert.equal(f.f.count("finishFile"), 4); assert.equal(f.f.count("discard"), 0);
+});
+
+test("real output receiver with corrupt candidate bytes retains the original owner without completed inventory", {timeout: 2000}, async () => {
+  const f = nativeReceiverFixture(true); f.receiver.start();
+  await untilNative(() => f.receiver.inspectIoRetirement().drainFinished && f.receiver.inspectIoRetirement().publicationFenced);
+  assert.equal(f.receiver.isComplete(), false); assert.ok(f.acknowledged() < f.frames.length);
+  assert.throws(() => f.adapter.originalOwner.inspectFinalizedFiles(f.f.actor));
+  assert.equal(f.f.count("prepare"), 1); assert.equal(f.f.count("finishFile"), 3); assert.equal(f.f.count("discard"), 0);
+  assert.equal(f.adapter.storage.inspectPublication().phase, "unconfirmed");
+  assert.ok(f.adapter.storage.inspectPublication().declaredPayloadBytes > 0);
+});
 
 test("native publication binds the original ABI, complete inventory, ordered bytes and original readers", async () => {
   const f = nativeFixture(), adapter = f.createAdapter();

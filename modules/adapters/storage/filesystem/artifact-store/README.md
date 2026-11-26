@@ -131,3 +131,14 @@ attest native provenance or confer application permission. Inert ABI-shaped
 tests exercise logical control flow only. Default hosts remain uncomposed;
 installation binding, actual capacity, parent/crash protection, full pipeline,
 review/Save and host evidence remain pending.
+
+The original owner's `inspectFinalizedFiles` returns a detached frozen inventory
+only after its publication fence, all file acknowledgements and current native
+inspection agree, with no pending IO, reader or uncertainty. It retains group,
+fixed name, role, media type, size, checksum and private logical reference for
+each file; it exposes no encoded buffer or physical path. These are finalized
+file facts, not task success or the receiver's final delivery acknowledgement.
+The coordinator must also check original receiver/session completion and fresh
+application permission before candidate review. Inert integration tests connect
+the real receiver and bridge for multi-file checkpoints/candidates and reject
+corrupt candidate bytes. They supply no physical or model-quality evidence.

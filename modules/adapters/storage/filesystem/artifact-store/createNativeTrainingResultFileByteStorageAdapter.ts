@@ -198,6 +198,19 @@ function createOriginalPublication(options: {
   // Local original-handle capabilities only. A qualifying coordinator must
   // independently gate reads/cleanup; these return no global credit or approval.
   const owner = Object.freeze({fencePublication: fence, inspect() {return Object.freeze({...nativeState(), publicationId, unknownOperation});},
+    inspectFinalizedFiles(suppliedContext: ApplicationRequestContext) {
+      match(suppliedContext);
+      need(fenced && !preparing && !writing && !unknownOperation && !publicationUnconfirmed && pending.size === 0
+        && !reader && !!inventory && acknowledged === inventory.files.length);
+      const state = nativeState();
+      need(state.fenced === true && state.prepared === true && !state.pending && !state.closed && !state.uncertain
+        && state.readers === 0 && state.completedFiles === inventory.files.length);
+      // File ACKs are not the receiver's final delivery ACK, task success,
+      // worker retirement or review/Save authority. Never disclose encoded.
+      return Object.freeze({schema: "training-result-finalized-files-v1" as const, publicationId,
+        totalBytes: inventory.totalBytes, files: Object.freeze(inventory.files.map(file => Object.freeze({...file,
+          key: `workspaces/${actor.workspaceId}/artifacts/training-results/${publicationId}/${file.fileIndex}`})))});
+    },
     openReader(fileIndex: number, suppliedContext: ApplicationRequestContext) {
       match(suppliedContext); need(fenced && !preparing && !writing && !unknownOperation && pending.size === 0 && !reader && !!inventory && acknowledged === inventory.files.length);
       integer(fileIndex, 0, inventory.files.length - 1);
