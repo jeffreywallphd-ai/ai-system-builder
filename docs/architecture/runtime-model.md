@@ -3792,3 +3792,8 @@ Native result creation and sealing share the complete principal/ACL/protected-DA
 descriptor construction. Source consistency checks do not replace a fresh actual
 file qualification. Preserve the earlier pre-payload seal failure and retained
 fixture; no recovery, historical ACL mutation or capacity credit is implied.
+
+The private custodian exposes finite numeric seal diagnostics through its
+existing inspect/test-result path. Sub-step, native status, original handle
+access and permission-check bits contain no identity, path or payload and do
+not change the original setter, ACL policy or unknown-operation retirement.

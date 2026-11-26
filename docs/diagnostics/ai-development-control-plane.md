@@ -3581,3 +3581,8 @@ The file profile pins the actual Node image/version/hash and uses a fixed child
 environment. Original regular single-link lock identities guard atomic admission
 and the worker lifetime. Final closure rechecks the complete accepted source
 Work/review so a change outside the fixture files cannot yield a standalone pass.
+
+The synthetic file receipt can record bounded numeric seal sub-step, setter
+status, original access, and owner/ACL/control match bits. The result schema
+rejects extra fields and invalid numeric values. No path, SID, payload or raw
+exception enters this diagnostic view. Counters cannot supply a technical pass.

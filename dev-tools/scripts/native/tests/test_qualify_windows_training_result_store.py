@@ -17,7 +17,8 @@ feature=importlib.util.module_from_spec(spec);spec.loader.exec_module(feature)
 
 
 class NativeFeatureContractTests(unittest.TestCase):
-    def result(self):return {'kind':'native-file-result','passed':True,'cleanup_passed':True,'stage':14,'checks':feature.CHECKS.copy()}
+    def diagnostics(self):return {'sealStep':0,'nativeStatus':0,'permissionBits':0,'permissionControl':0,'grantedAccess':0}
+    def result(self):return {'kind':'native-file-result','passed':True,'cleanup_passed':True,'stage':14,'diagnostics':self.diagnostics(),'checks':feature.CHECKS.copy()}
 
     def test_exact_success_requires_all_six_real_feature_checks_and_cleanup(self):
         value=self.result();self.assertEqual(feature.decode_result(json.dumps(value)),value)
@@ -26,11 +27,16 @@ class NativeFeatureContractTests(unittest.TestCase):
             with self.subTest(field=field),self.assertRaises(ValueError):feature.decode_result(json.dumps(invalid))
 
     def test_failed_or_forged_replies_never_claim_closure_or_emit_payload_fields(self):
-        failed={'kind':'native-file-result','passed':False,'cleanup_passed':False,'stage':6,'checks':[]}
+        failed={'kind':'native-file-result','passed':False,'cleanup_passed':False,'stage':6,'diagnostics':self.diagnostics(),'checks':[]}
         self.assertEqual(feature.decode_result(json.dumps(failed)),failed)
         for wrong in [{**failed,'checks':feature.CHECKS},{**failed,'cleanup_passed':True},{**failed,'stage':True},{**failed,'private_path':'must not enter result'},{**failed,'passed':1}]:
             with self.subTest(wrong=wrong),self.assertRaises(ValueError):feature.decode_result(json.dumps(wrong))
         with self.assertRaises(ValueError):feature.decode_result('x'*16385)
+
+    def test_numeric_diagnostics_deny_payload_fields_boolean_and_out_of_range_values(self):
+        for key,value in [('sealStep',7),('nativeStatus',2**32),('permissionBits',16),('permissionControl',0x150d),('permissionControl',1),('permissionControl',2),('grantedAccess',-1),('sealStep',True),('path','must-not-appear')]:
+            report=self.result();report['diagnostics'][key]=value
+            with self.subTest(key=key,value=value),self.assertRaises(ValueError):feature.decode_result(json.dumps(report))
 
     def test_plan_refuses_unsupported_node_before_source_or_native_execution(self):
         with patch.object(feature.build,'profile'),patch.object(feature.shutil,'which',return_value='C:/fixed/node.exe'),patch.object(feature.fixed,'safe',side_effect=lambda p,k:p),patch.object(feature.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='v23.1.0')),patch.object(feature.fixed,'digest') as read:

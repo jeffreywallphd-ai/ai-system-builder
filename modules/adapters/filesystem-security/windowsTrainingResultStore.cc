@@ -69,6 +69,7 @@ struct Store {
     std::atomic<bool> pending{false}, fenced{false}, uncertain{false}, prepared{false}, closed{false};
     std::atomic<uint32_t> complete{0}, readers{0};
     std::atomic<uint32_t> stage{0}; // Private finite diagnostic; never authority.
+    std::atomic<uint32_t> sealStep{0}, sealStatus{0}, permissionBits{0}, permissionControl{0}, sealAccess{0};
     std::vector<HANDLE> ancestors;
     HANDLE token = INVALID_HANDLE_VALUE, root = INVALID_HANDLE_VALUE, receipt = INVALID_HANDLE_VALUE;
     std::array<unsigned char, 24> rootIdentity{};
@@ -181,10 +182,15 @@ void permissions(Store& s, HANDLE h, bool sealed) {
     const DWORD status = GetSecurityInfo(h, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, &owner, nullptr, &observed, nullptr, &descriptor);
     // A known return never leaves an asynchronous borrower of this allocation.
     bool correct = false;
+    s.permissionBits=0; s.permissionControl=0;
     if (status == ERROR_SUCCESS && descriptor != nullptr && owner != nullptr && observed != nullptr && IsValidSecurityDescriptor(descriptor) && IsValidSid(owner) && IsValidAcl(observed)) {
         SECURITY_DESCRIPTOR_CONTROL control{}; DWORD revision = 0; const auto& expected = sealed ? s.sealedAcl : s.constructionAcl;
-        correct = GetSecurityDescriptorControl(descriptor, &control, &revision) && (control & 0x150c) == 0x1004
-            && EqualSid(owner, s.principal.data()) && observed->AclSize == expected.size() && std::memcmp(observed, expected.data(), expected.size()) == 0;
+        const bool haveControl=GetSecurityDescriptorControl(descriptor,&control,&revision)!=FALSE;
+        s.permissionControl=haveControl?static_cast<uint32_t>(control & 0x150c):0;
+        const uint32_t bits=1U | (EqualSid(owner,s.principal.data())?2U:0U)
+            | (observed->AclSize==expected.size() && std::memcmp(observed,expected.data(),expected.size())==0?4U:0U)
+            | (haveControl && (control & 0x150c)==0x1004?8U:0U);
+        s.permissionBits=bits; correct=bits==15;
     }
     if (descriptor != nullptr) need(LocalFree(descriptor) == nullptr); need(correct);
 }
@@ -219,9 +225,14 @@ HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, b
     s.frame.reset(); kind(result, directory); if (fresh) permissions(s, result, false); return result;
 }
 void seal(Store& s, HANDLE h) {
-    const auto id = identity(h); permissions(s,h,false); SECURITY_DESCRIPTOR descriptor{};
+    s.sealStep=1; const auto id = identity(h); s.sealStep=2; permissions(s,h,false); SECURITY_DESCRIPTOR descriptor{};
+    s.sealStep=3;
     securityDescriptor(s,descriptor,true);
-    need(NtSetSecurityObject(h, DACL_SECURITY_INFORMATION, &descriptor) == 0); permissions(s,h,true); need(identity(h) == id);
+    // Advisory rights only, never a substitute for the enforced calls/checks.
+    std::array<DWORD,14> basic{}; ULONG length=0;
+    s.sealAccess=NtQueryObject(h,ObjectBasicInformation,basic.data(),static_cast<ULONG>(sizeof(basic)),&length)==0 && length==sizeof(basic)?basic[1]:0;
+    s.sealStep=4; const NTSTATUS status=NtSetSecurityObject(h,DACL_SECURITY_INFORMATION,&descriptor); s.sealStatus=static_cast<uint32_t>(status);
+    need(status==0); s.sealStep=5; permissions(s,h,true); s.sealStep=6; need(identity(h)==id);
 }
 void facts(Store& s, Row& r, uint64_t expectedSize) {
     kind(r.handle, false); FILE_STANDARD_INFO info{};
@@ -464,6 +475,10 @@ napi_value inspect(napi_env env,napi_callback_info info) {
     try { auto a=args(env,info,1); auto s=unbox<Store>(env,a[0],storeTag); need(s->env==env); napi_value result; js(napi_create_object(env,&result));
         for(auto [key,value]:std::vector<std::pair<const char*,bool>>{{"pending",s->pending},{"fenced",s->fenced},{"uncertain",s->uncertain},{"prepared",s->prepared},{"closed",s->closed}}) js(napi_set_named_property(env,result,key,boolean(env,value)));
         js(napi_set_named_property(env,result,"completedFiles",integer(env,s->complete))); js(napi_set_named_property(env,result,"readers",integer(env,s->readers)));
+        napi_value diagnostic; js(napi_create_object(env,&diagnostic));
+        for(auto [key,value]:std::vector<std::pair<const char*,uint32_t>>{{"sealStep",s->sealStep},{"nativeStatus",s->sealStatus},{"permissionBits",s->permissionBits},{"permissionControl",s->permissionControl},{"grantedAccess",s->sealAccess}})
+            js(napi_set_named_property(env,diagnostic,key,integer(env,value)));
+        js(napi_object_freeze(env,diagnostic)); js(napi_set_named_property(env,result,"diagnostics",diagnostic));
         js(napi_set_named_property(env,result,"stage",integer(env,s->stage))); js(napi_object_freeze(env,result)); return result;
     } catch(...) { return failure(env); }
 }

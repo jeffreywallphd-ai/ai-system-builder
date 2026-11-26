@@ -2386,3 +2386,7 @@ It retains failures without path cleanup or automatic retry. No model or app run
 The file profile sanitizes child loader environments and binds the Node image.
 Original single-link lock files protect atomic admission and owned execution;
 final closure rechecks the complete accepted source/review, not only fixture files.
+
+The native file result includes strictly validated numeric seal diagnostics:
+sub-step, native setter status, original access and owner/ACL/control match bits.
+It emits no SID, path, payload or raw exception text and does not infer custody.

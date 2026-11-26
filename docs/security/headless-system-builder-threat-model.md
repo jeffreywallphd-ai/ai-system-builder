@@ -3548,3 +3548,10 @@ including original owner and protected-DACL controls with the exact existing ACL
 bytes. The earlier controlled fixture failed at the seal before payload writes.
 Its failed evidence and retained tree remain untouched. This source consistency
 fix does not grant retrospective custody, cleanup, actual-file or parent proof.
+
+Seal diagnostics expose only fixed bounded numbers: operation sub-step,
+unsigned setter status, original-handle access, exact owner/ACL/control match
+bits and masked controls. No SIDs, paths, payloads, raw security descriptors or
+exceptions are serialized. Diagnostics never grant custody, readiness or app
+authority. The original policy/setter, pending/unknown ownership and failed
+retained trees remain unchanged. Actual native qualification stays separate.

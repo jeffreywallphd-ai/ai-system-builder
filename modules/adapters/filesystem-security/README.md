@@ -59,3 +59,11 @@ Construction and sealing share one complete descriptor builder: exact ACL bytes,
 original principal owner and protected-DACL controls are preserved in both paths.
 The first real fixture failed during sealing before any payload; that failed tree
 and receipt stay retained. A source correction alone does not qualify real files.
+
+Private seal diagnostics contain numbers only. `sealStep` is 1 identity-before,
+2 construction permissions, 3 descriptor construction, 4 native setter,
+5 sealed permissions, or 6 identity-after. `nativeStatus` is the setter NTSTATUS
+as an unsigned32bit value; `grantedAccess` is advisory original-handle access.
+`permissionBits` uses 1 valid descriptor, 2 matching owner, 4 exact ACL and
+8 expected protected controls. `permissionControl` is only mask0x150c. No SID,
+path, payload or exception text is emitted. These fields grant no authority.

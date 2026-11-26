@@ -109,8 +109,11 @@ def reviewed_source():
 def decode_result(raw):
     if not isinstance(raw,str) or len(raw.encode('utf-8'))>16384: raise ValueError('Bounded native result unavailable.')
     value=json.loads(raw)
-    if not isinstance(value,dict) or set(value)!={'kind','passed','cleanup_passed','stage','checks'} or value['kind']!='native-file-result': raise ValueError('Native result schema differs.')
+    if not isinstance(value,dict) or set(value)!={'kind','passed','cleanup_passed','stage','diagnostics','checks'} or value['kind']!='native-file-result': raise ValueError('Native result schema differs.')
     if type(value['passed']) is not bool or type(value['cleanup_passed']) is not bool or type(value['stage']) is not int or not 0<=value['stage']<=14: raise ValueError('Native result types differ.')
+    diagnostic=value['diagnostics'];limits={'sealStep':6,'nativeStatus':2**32-1,'permissionBits':15,'permissionControl':0x150c,'grantedAccess':2**32-1}
+    if not isinstance(diagnostic,dict) or set(diagnostic)!=set(limits) or any(type(diagnostic[k]) is not int or not 0<=diagnostic[k]<=limit for k,limit in limits.items()):raise ValueError('Private diagnostic schema differs.')
+    if diagnostic['permissionControl'] & ~0x150c:raise ValueError('Private permission-control mask differs.')
     if value['passed'] and (not value['cleanup_passed'] or value['stage']!=14 or value['checks']!=CHECKS): raise ValueError('Native result coverage incomplete.')
     if not value['passed'] and (value['cleanup_passed'] or value['checks']!=[]): raise ValueError('Failed native result overclaims closure.')
     return value
@@ -193,6 +196,7 @@ def run_locked(args,folder,expected,current,job):
     passed=reason is None and exit_code==0 and report is not None and report['passed'] and stable
     result={'kind':'result','qualification':'passed' if passed else 'failed','cleanup_passed':bool(passed and report['cleanup_passed']),
         'stage':report['stage'] if report else 0,'checks':report['checks'] if passed else [],'node_exit_code':exit_code,'source_stable':stable,
+        'diagnostics':report['diagnostics'] if report else {'sealStep':0,'nativeStatus':0,'permissionBits':0,'permissionControl':0,'grantedAccess':0},
         'compiler_job':observations['after_final_input_check'],'scope':'synthetic native component files only; no model or parent qualification'}
     (folder/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result),flush=True)

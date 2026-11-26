@@ -335,3 +335,7 @@ completed/reviewed source. Component file checks do not qualify training or a ho
 The explicit native-file profile also checks the actual Node image, clears ambient
 loaders, serializes count/create under an original lock, validates lock identity
 and rechecks the complete accepted source Work/review after execution.
+
+Native-file contracts reject unknown diagnostic fields, boolean numeric values
+and out-of-range values. Seal counters/status/match bits are diagnostic only,
+never authorization, readiness or qualification on their own.

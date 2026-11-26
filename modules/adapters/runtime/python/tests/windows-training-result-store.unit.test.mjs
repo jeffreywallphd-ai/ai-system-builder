@@ -64,7 +64,9 @@ test('real compiled private ABI rejects forged handles and invalid input before 
   }
   const store=api.createStore(...config);
   assert(Object.isFrozen(store));
-  assert.deepEqual(api.inspect(store), {pending:false,fenced:false,uncertain:false,prepared:false,closed:false,completedFiles:0,readers:0,stage:0});
+  const emptyDiagnostics={sealStep:0,nativeStatus:0,permissionBits:0,permissionControl:0,grantedAccess:0};
+  assert.deepEqual(api.inspect(store), {pending:false,fenced:false,uncertain:false,prepared:false,closed:false,completedFiles:0,readers:0,diagnostics:emptyDiagnostics,stage:0});
+  assert(Object.isFrozen(api.inspect(store).diagnostics));
   for(const fake of [{}, {...store}, JSON.parse(JSON.stringify(store)), new Proxy(store,{})]) {
     for(const call of [()=>api.inspect(fake),()=>api.fence(fake),()=>api.prepare(fake,Buffer.alloc(12)),()=>api.openReader(fake,0),()=>api.read(fake,1),()=>api.discard(fake)]) denied(call);
   }
@@ -78,7 +80,7 @@ test('real compiled private ABI rejects forged handles and invalid input before 
   api.fence(store); denied(()=>api.prepare(store,inventory));
   const closing=api.discard(store); assert.equal(api.inspect(store).pending,true); denied(()=>api.discard(store));
   await closing;
-  assert.deepEqual(api.inspect(store),{pending:false,fenced:true,uncertain:false,prepared:false,closed:true,completedFiles:0,readers:0,stage:14});
+  assert.deepEqual(api.inspect(store),{pending:false,fenced:true,uncertain:false,prepared:false,closed:true,completedFiles:0,readers:0,diagnostics:emptyDiagnostics,stage:14});
   denied(()=>api.discard(store));
   // Known no-file retirement returns a registry slot; GC never closes a live one.
   for(let i=0;i<40;i++) { const item=api.createStore(...config); api.fence(item); await api.discard(item); }

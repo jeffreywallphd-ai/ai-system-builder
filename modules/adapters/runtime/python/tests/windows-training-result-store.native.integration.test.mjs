@@ -12,6 +12,7 @@ const enabled=process.argv.includes('--native-feature-child');
 const checks=['empty-inventory-sealed','path-mutation-denied','ordered-bounded-writes','verified-native-read','reader-prevents-discard','original-creator-cleanup'];
 const sha=value=>createHash('sha256').update(value).digest('hex');
 let api,store;
+const emptyDiagnostics=()=>({sealStep:0,nativeStatus:0,permissionBits:0,permissionControl:0,grantedAccess:0});
 
 async function run() {
   assert.equal(process.platform,'win32'); assert.equal(process.arch,'x64'); assert.equal(process.argv.length,4);
@@ -64,14 +65,14 @@ async function run() {
   assert.equal(realpathSync(parent),parent);assert(!observed.isSymbolicLink());assert.deepEqual(readdirSync(parent),[]);
   rmdirSync(parent); // Never recurse or remove an adopted/retained tree.
   assert.equal(relative(root,folder),relative(root,realpathSync(folder)));
-  console.log(JSON.stringify({kind:'native-file-result',passed:true,cleanup_passed:true,stage:14,checks}));
+  console.log(JSON.stringify({kind:'native-file-result',passed:true,cleanup_passed:true,stage:14,diagnostics:api.inspect(store).diagnostics,checks}));
 }
 
 if(enabled) {
   try { await run(); }
   catch {
-    let stage=0; try {stage=api.inspect(store).stage;}catch{}
-    console.log(JSON.stringify({kind:'native-file-result',passed:false,cleanup_passed:false,stage:Number.isInteger(stage)&&stage>=0&&stage<=14?stage:0,checks:[]}));
+    let stage=0,diagnostics=emptyDiagnostics(); try {const state=api.inspect(store);stage=state.stage;diagnostics=state.diagnostics;}catch{}
+    console.log(JSON.stringify({kind:'native-file-result',passed:false,cleanup_passed:false,stage:Number.isInteger(stage)&&stage>=0&&stage<=14?stage:0,diagnostics,checks:[]}));
     process.exitCode=1;
   }
 } else {
