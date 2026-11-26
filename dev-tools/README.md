@@ -2375,3 +2375,14 @@ Node SDK files are pinned in `dev-tools/config/windows-training-result-sdk.json`
 there is no automatic fetch or runtime change. Run the matching compiled no-file
 ABI check with `node modules/adapters/runtime/python/tests/windows-training-result-store.unit.test.mjs --native-abi`.
 Physical file/crash, receiver, Save and host qualification remain separate.
+
+Prepare the small native training-result file fixture with
+`python -B dev-tools/scripts/native/qualify_windows_training_result_store.py --plan`.
+Its contract tests have no native file effects. The explicit `--run` command needs
+current completed/reviewed source, creates one bounded synthetic fixture, reuses
+the existing 2 GiB/8-process owned job, and verifies original child/job closure.
+It retains failures without path cleanup or automatic retry. No model or app runs.
+
+The file profile sanitizes child loader environments and binds the Node image.
+Original single-link lock files protect atomic admission and owned execution;
+final closure rechecks the complete accepted source/review, not only fixture files.

@@ -708,8 +708,31 @@ NATIVE_TRAINING_RESULT_SCOPE = (
     "docs/context/packs/runtime.pack.md",
 )
 NATIVE_TRAINING_RESULT_CORE = tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (0, 2, 3, 4, 5))
+NATIVE_TRAINING_FILE_FEATURE = (
+    "modules/adapters/runtime/python/tests/windows-training-result-store.native.integration.test.mjs",
+    "dev-tools/scripts/native/qualify_windows_training_result_store.py",
+    "dev-tools/scripts/native/tests/test_qualify_windows_training_result_store.py",
+)
+NATIVE_TRAINING_FILE_SCOPE = NATIVE_TRAINING_RESULT_SCOPE + NATIVE_TRAINING_FILE_FEATURE
+NATIVE_TRAINING_FILE_REQUIRED = NATIVE_TRAINING_FILE_FEATURE + tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (0, 1, 2, 3, 5, 6, 7, 11, 12))
 
 PUBLISHED_FORM_CHECKS = {
+    "native-training-result-files-contract": {
+        "automatic_sources": NATIVE_TRAINING_FILE_FEATURE,
+        "automatic_required_files": NATIVE_TRAINING_FILE_REQUIRED,
+        "sources": NATIVE_TRAINING_FILE_SCOPE,
+        "interpreter": "python",
+        "command": (NATIVE_TRAINING_FILE_FEATURE[2],),
+        "timeout": 120,
+    },
+    "native-training-result-files": {
+        # Explicit qualification only. Source edits, tests or README changes
+        # cannot opt a contributor into actual native file effects.
+        "sources": NATIVE_TRAINING_FILE_SCOPE,
+        "interpreter": "python",
+        "command": (NATIVE_TRAINING_FILE_FEATURE[1], "--run"),
+        "timeout": 600,
+    },
     "native-training-result-store-abi": {
         "automatic_sources": NATIVE_TRAINING_RESULT_CORE,
         "automatic_required_files": NATIVE_TRAINING_RESULT_SCOPE,
@@ -4765,8 +4788,11 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_training_storage_budget.", "-k", "test_control_plane_focused."]
     native_store = PUBLISHED_FORM_CHECKS["native-training-result-store-abi"]
-    if (paths and set(paths) <= set(NATIVE_TRAINING_RESULT_SCOPE)
-            and set(paths).intersection(NATIVE_TRAINING_RESULT_CORE)
+    native_feature = PUBLISHED_FORM_CHECKS["native-training-result-files-contract"]
+    closed_native = (set(paths) <= set(NATIVE_TRAINING_RESULT_SCOPE)
+        or set(paths) <= set(NATIVE_TRAINING_FILE_SCOPE) and _automatic_files_available(root, native_feature))
+    if (paths and closed_native
+            and set(paths).intersection(NATIVE_TRAINING_RESULT_CORE + NATIVE_TRAINING_FILE_FEATURE)
             and _automatic_files_available(root, native_store)):
         focused_check = next((check for check in selected if check["id"] == "focused-tests"), None)
         if focused_check is not None:

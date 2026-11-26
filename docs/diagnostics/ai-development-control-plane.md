@@ -3568,3 +3568,16 @@ compiled no-file ABI and builder-admission tests. Its
 Unknown/mixed paths, missing support and explicit controller coverage retain
 conservative selection. Physical file/crash, application authorization, actual
 shared reservation, receiver, Save and host qualification remain pending.
+
+The explicit `native-training-result-files` identity runs only the reviewed small
+Windows synthetic-file fixture. Its source preparation selects
+`native-training-result-files-contract` and the no-file ABI instead. `--plan` is
+passive; `--run` requires a current completed source Work with separate review.
+The fixed compiler/job, finite output/stages, source/binary binding and actual
+original child/job closure remain mandatory. Failed files stay retained; no
+automatic retry, path cleanup, ACL reset, quota credit or parent pass is inferred.
+
+The file profile pins the actual Node image/version/hash and uses a fixed child
+environment. Original regular single-link lock identities guard atomic admission
+and the worker lifetime. Final closure rechecks the complete accepted source
+Work/review so a change outside the fixture files cannot yield a standalone pass.

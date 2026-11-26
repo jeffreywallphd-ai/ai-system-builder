@@ -68,6 +68,7 @@ struct Store {
     uint32_t maximumFiles = 0, maximumMs = 0;
     std::atomic<bool> pending{false}, fenced{false}, uncertain{false}, prepared{false}, closed{false};
     std::atomic<uint32_t> complete{0}, readers{0};
+    std::atomic<uint32_t> stage{0}; // Private finite diagnostic; never authority.
     std::vector<HANDLE> ancestors;
     HANDLE token = INVALID_HANDLE_VALUE, root = INVALID_HANDLE_VALUE, receipt = INVALID_HANDLE_VALUE;
     std::array<unsigned char, 24> rootIdentity{};
@@ -297,7 +298,7 @@ struct Operation {
         } else need(GetLastError()==ERROR_HANDLE_EOF);
     }
     void prepare() {
-        auto& s = *store; guard(); principal(s);
+        auto& s = *store; guard(); s.stage=1; principal(s); s.stage=2;
         need(GetDriveTypeW(s.parent.substr(0,3).c_str()) == DRIVE_FIXED);
         HANDLE parent = open(s,nullptr,L"\\??\\" + s.parent.substr(0,3),true,false);
         wchar_t filesystem[32]{}; DWORD flags = 0;
@@ -306,7 +307,7 @@ struct Operation {
             guard(); const auto end=s.parent.find(L'\\',start); parent=open(s,parent,s.parent.substr(start,end==std::wstring::npos?end:end-start),true,false);
             if (end==std::wstring::npos) break; start=end+1;
         }
-        need(s.frame == nullptr); s.frame=std::make_shared<Frame>(); auto& query=*s.frame; auto& volume=query.volume;
+        s.stage=3; need(s.frame == nullptr); s.frame=std::make_shared<Frame>(); auto& query=*s.frame; auto& volume=query.volume;
         need(NtQueryVolumeInformationFile(parent,&query.io,&volume,sizeof(volume),3) == 0 && query.io.Status == 0 && query.io.Information == sizeof(volume)
             && volume.sectors >= 1 && volume.sectors <= 65536 && volume.bytes >= 512 && volume.bytes <= 65536 && volume.available.QuadPart >= 0 && volume.available.QuadPart <= volume.total.QuadPart);
         s.allocationUnit=static_cast<uint64_t>(volume.sectors)*volume.bytes; need(s.allocationUnit <= 1024*1024 && (s.allocationUnit & (s.allocationUnit-1)) == 0);
@@ -317,23 +318,24 @@ struct Operation {
         const uint64_t metadataUnits=(s.maximumMetadata+s.allocationUnit-1)/s.allocationUnit;
         need(s.metadataAllocation+s.allocationUnit <= s.maximumMetadata && allocated/s.allocationUnit+metadataUnits <= static_cast<uint64_t>(volume.available.QuadPart));
         s.frame.reset();
-        guard(); open(s,parent,s.publication,true,true); s.rootIdentity=identity(s.root);
+        guard(); s.stage=4; open(s,parent,s.publication,true,true); s.rootIdentity=identity(s.root); s.stage=5;
         for (uint32_t i=0;i<s.rows.size();++i) { guard(); auto h=open(s,s.root,std::to_wstring(i)+L".bin",false,true,s.rows[i].allocation); s.rows[i].identity=identity(h); }
         guard(); open(s,s.root,L"receipt.bin",false,true,s.metadataAllocation);
         s.receiptFacts.handle=s.receipt; s.receiptFacts.allocation=s.metadataAllocation; s.receiptFacts.size=metadata; s.receiptFacts.identity=identity(s.receipt);
         // Every empty entry is sealed before the first private payload write.
-        for (const auto& row:s.rows) { guard(); seal(s,row.handle); }
+        s.stage=6; for (const auto& row:s.rows) { guard(); seal(s,row.handle); }
         seal(s,s.receipt); seal(s,s.root);
-        for (auto& row:s.rows) { guard(); facts(s,row,0); }
-        facts(s,s.receiptFacts,0); metadataFacts(); namespaceMatches(false); s.prepared=true;
+        s.stage=7; for (auto& row:s.rows) { guard(); facts(s,row,0); }
+        facts(s,s.receiptFacts,0); metadataFacts(); namespaceMatches(false); s.prepared=true; s.stage=8;
     }
     void finish() {
-        auto& s=*store; auto& r=s.rows[index]; guard(); need(r.written==r.size && FlushFileBuffers(r.handle)); facts(s,r,r.size); seek(r.handle,0);
+        auto& s=*store; auto& r=s.rows[index]; guard(); s.stage=10; need(r.written==r.size && FlushFileBuffers(r.handle)); facts(s,r,r.size); seek(r.handle,0);
         Hash hash; std::array<unsigned char,chunkBytes> part{}; uint64_t remaining=r.size;
         while (remaining) { guard(); DWORD count=0; const DWORD request=static_cast<DWORD>(std::min<uint64_t>(remaining,chunkBytes)); need(ReadFile(r.handle,part.data(),request,&count,nullptr) && count>0 && count<=request); hash.add(part.data(),count); remaining-=count; }
         DWORD eof=0; need(ReadFile(r.handle,part.data(),1,&eof,nullptr) && eof==0 && hash.finish()==r.sha); facts(s,r,r.size);
         r.finished=true; s.complete.fetch_add(1);
         if (s.complete==s.rows.size()) {
+            s.stage=11;
             std::vector<unsigned char> receipt{'A','S','B','T','R','S','0','1'};
             for (size_t i=0;i<s.publication.size();i+=2) receipt.push_back(static_cast<unsigned char>((nibble(s.publication[i])<<4)|nibble(s.publication[i+1])));
             receipt.insert(receipt.end(),s.scope.begin(),s.scope.end()); receipt.insert(receipt.end(),s.rootIdentity.begin(),s.rootIdentity.end()); bytes(receipt,static_cast<uint32_t>(s.rows.size()));
@@ -348,23 +350,24 @@ struct Operation {
     }
     void discard() {
         auto& s=*store; guard(true); need(s.fenced && s.readers==0 && !s.uncertain && s.frame==nullptr);
+        s.stage=13;
         auto remove=[&](HANDLE& h) { if (!valid(h)) return; guard(true); FILE_DISPOSITION_INFO disposition{TRUE}; need(SetFileInformationByHandle(h,FileDispositionInfo,&disposition,sizeof(disposition))); need(CloseHandle(h)); h=INVALID_HANDLE_VALUE; };
         // Only exact original creators from this live episode. No path deletion,
         // old-root adoption, ACL restoration or accounting credit exists here.
         for(auto& row:s.rows) remove(row.handle); remove(s.receipt); remove(s.root);
         for(auto i=s.ancestors.rbegin();i!=s.ancestors.rend();++i) { guard(true); need(CloseHandle(*i)); *i=INVALID_HANDLE_VALUE; }
         if(valid(s.token)) { need(CloseHandle(s.token)); s.token=INVALID_HANDLE_VALUE; }
-        s.closed=true; std::lock_guard lock(registryMutex); registry.erase(std::remove(registry.begin(),registry.end(),store),registry.end());
+        s.closed=true; s.stage=14; std::lock_guard lock(registryMutex); registry.erase(std::remove(registry.begin(),registry.end(),store),registry.end());
     }
     void execute() {
         entered=true;
         try {
             if(action==Action::prepare) prepare();
             else if(action==Action::discard) discard();
-            else if(action==Action::append) { guard(); auto& row=store->rows[index]; facts(*store,row,row.written); seek(row.handle,row.written); guard(); write(row.handle,data.data(),data.size()); row.written+=data.size(); guard(); facts(*store,row,row.written); }
+            else if(action==Action::append) { guard(); store->stage=9; auto& row=store->rows[index]; facts(*store,row,row.written); seek(row.handle,row.written); guard(); write(row.handle,data.data(),data.size()); row.written+=data.size(); guard(); facts(*store,row,row.written); }
             else if(action==Action::finish) finish();
             else {
-                guard(true); auto& r=store->rows[reader->index]; facts(*store,r,r.size); seek(r.handle,reader->offset); data.resize(static_cast<size_t>(std::min<uint64_t>(maximum,r.size-reader->offset)));
+                guard(true); store->stage=12; auto& r=store->rows[reader->index]; facts(*store,r,r.size); seek(r.handle,reader->offset); data.resize(static_cast<size_t>(std::min<uint64_t>(maximum,r.size-reader->offset)));
                 if(!data.empty()) { DWORD count=0; need(ReadFile(r.handle,data.data(),static_cast<DWORD>(data.size()),&count,nullptr) && count==data.size()); reader->offset+=count; }
                 guard(true); facts(*store,r,r.size);
             }
@@ -454,7 +457,8 @@ napi_value fence(napi_env env,napi_callback_info info) { try { auto a=args(env,i
 napi_value inspect(napi_env env,napi_callback_info info) {
     try { auto a=args(env,info,1); auto s=unbox<Store>(env,a[0],storeTag); need(s->env==env); napi_value result; js(napi_create_object(env,&result));
         for(auto [key,value]:std::vector<std::pair<const char*,bool>>{{"pending",s->pending},{"fenced",s->fenced},{"uncertain",s->uncertain},{"prepared",s->prepared},{"closed",s->closed}}) js(napi_set_named_property(env,result,key,boolean(env,value)));
-        js(napi_set_named_property(env,result,"completedFiles",integer(env,s->complete))); js(napi_set_named_property(env,result,"readers",integer(env,s->readers))); js(napi_object_freeze(env,result)); return result;
+        js(napi_set_named_property(env,result,"completedFiles",integer(env,s->complete))); js(napi_set_named_property(env,result,"readers",integer(env,s->readers)));
+        js(napi_set_named_property(env,result,"stage",integer(env,s->stage))); js(napi_object_freeze(env,result)); return result;
     } catch(...) { return failure(env); }
 }
 napi_value openReader(napi_env env,napi_callback_info info) {

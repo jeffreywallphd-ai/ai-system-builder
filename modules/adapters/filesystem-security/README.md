@@ -35,3 +35,22 @@ profile is reused. Run compiled no-file ABI checks with
 These checks do not qualify actual file/crash behavior, durable custody, receiver
 integration, secure Save, packaging or a training task. Those checks and the actual
 global reservation must pass before a host enables this component.
+
+Private `inspect` reports a finite numeric stage (0 captured, 1 principal,
+2 parent, 3 capacity, 4 directory creation, 5 files, 6 sealing, 7 empty-tree
+checks, 8 prepared, 9 append, 10 hash/readback, 11 receipt, 12 read,
+13 discard, 14 closed). It contains no paths or payloads and grants no authority.
+The explicit synthetic-file fixture is prepared separately from the no-file ABI:
+`python -B dev-tools/scripts/native/qualify_windows_training_result_store.py --plan`.
+Only `--run` performs actual file effects, after a current completed source Work
+and separate review. It uses the existing bounded owned job, small fixed data,
+known original child exit and observed job closure. Unknown file trees are retained,
+with no automatic retry, path cleanup, ACL reset or capacity credit. These are
+controlled component checks; crash, original training controller/SDK, application
+receiver, Save, quota and full-host qualification remain separate.
+
+The file fixture uses a fixed child environment without provider keys or ambient
+loaders and binds the actual Node image/version/hash. A short original OS lock
+serializes namespace count/create; a separate worker-owned lock lasts through
+execution. Regular single-link lock identities are checked against the opened
+descriptor. Full current Source Work/review binding is rechecked at closure.

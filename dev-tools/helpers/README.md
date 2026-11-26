@@ -326,3 +326,12 @@ checks build and test the private Windows Node-parent component with fixed input
 Only its complete declared scope narrows generic focused/controller selection;
 unknown or missing support keeps conservative checks. These checks do not run a
 model, mutate training files or qualify a parent roadmap criterion.
+
+`native-training-result-files-contract` checks the fixed real-file harness without
+file effects. `native-training-result-files` is an explicit-only qualification
+identity; ordinary source edits never select it. The fixture requires current
+completed/reviewed source. Component file checks do not qualify training or a host.
+
+The explicit native-file profile also checks the actual Node image, clears ambient
+loaders, serializes count/create under an original lock, validates lock identity
+and rechecks the complete accepted source Work/review after execution.

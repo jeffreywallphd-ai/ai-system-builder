@@ -3773,3 +3773,17 @@ IO completion; unknown operations and lost readers retain custody. Known cleanup
 uses only same-episode original handles and never credits capacity. No default
 host loads it. Compiler/no-file ABI evidence is separate from actual native
 file/crash, receiver, global capacity, Save, packaging and host qualification.
+
+The native training-result component has an explicit synthetic-file qualification
+profile, separate from the no-file ABI and original training execution. Its private
+finite stage diagnostics contain no paths or payloads. Source-only preparation
+checks do not invoke native file operations. Actual qualification needs a current
+completed/reviewed source Work, the fixed verified binary and existing bounded
+owned job. It tests small ordered writes, post-seal path denials, original-capability
+reads and creator cleanup, then observes original Node exit and job closure. It
+does not establish crash recovery, original SDK/controller retirement, global
+reservation, application receiver/Save composition or whole-host readiness.
+
+The synthetic file driver isolates loader environments and binds the actual Node
+image. Short admission and worker-lifetime locks use validated original regular
+single-link descriptors; final closure rechecks the full accepted source Work.

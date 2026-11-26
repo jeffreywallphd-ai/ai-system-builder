@@ -3521,3 +3521,24 @@ registration. SDK/build inputs are fixed, pinned and offline. Same-process
 trusted-caller compromise, actual native file/crash behavior, global quota and
 durable accounting, receiver/Save binding, packaging and host wiring remain
 unqualified; compiler and no-file ABI checks supply none of those guarantees.
+
+The controlled synthetic-file test driver is not an app capability. Ordinary
+source checks cannot select real native effects. The explicit profile validates
+current separately reviewed source, source/binary/Node inputs and finite fixture
+paths before one run. It creates no model or app and sends no data externally.
+Only tiny public synthetic bytes are used; fixed stages replace raw error or
+payload logging. The existing bounded owned job constrains descendants and
+requires original Node exit/empty job observations. Failed trees remain untouched;
+there is no automatic retry, old-tree ownership, ACL recovery or storage credit.
+The worker owns an OS file lock which process exit releases. The profile bounds
+its named evidence namespace to eight runs and stops instead of deleting history.
+This cooperative controlled-environment test does not qualify hostile file races,
+crash custody, product quota, original worker handoff, Save or host activation.
+
+The explicit file driver clears ambient Node/Python loaders and credentials from
+child environments and checks the actual Node image/version/hash in the child.
+Original regular single-link descriptor identity is checked before and after OS
+locking. A short admission lock serializes namespace count/create; the worker
+keeps a separate execution lock through closure. Final validation binds the full
+current accepted Source Work and review, beyond the five fixture inputs. These
+observed checks remain cooperative; they do not claim hostile filesystem safety.

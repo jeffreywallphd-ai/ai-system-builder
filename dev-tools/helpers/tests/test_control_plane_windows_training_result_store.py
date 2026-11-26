@@ -37,6 +37,27 @@ class NativeTrainingStoreRoutingTests(unittest.TestCase):
         checks=self.select([self.scope[0],self.scope[6],'modules/unknown/current.ts'])
         self.assertIn('run_focused_checks.py',' '.join(checks['focused-tests']['argv']))
         self.assertNotIn('test_control_plane_windows_training_result_store.',checks['control-plane']['argv'])
+
+    def test_native_file_effects_require_explicit_check_and_contract_tests_are_passive(self):
+        checks=self.select(list(catalog.NATIVE_TRAINING_FILE_SCOPE))
+        self.assertIn('native-training-result-files-contract',checks)
+        self.assertNotIn('native-training-result-files',checks)
+        self.assertEqual(checks['native-training-result-files-contract']['argv'],[sys.executable,'-B',catalog.NATIVE_TRAINING_FILE_FEATURE[2]])
+        self.assertEqual(checks['focused-tests']['argv'],['node',self.scope[2]])
+        selected=self.select(list(catalog.NATIVE_TRAINING_FILE_SCOPE),required=['native-training-result-files'])
+        self.assertEqual(selected['native-training-result-files']['argv'],[sys.executable,'-B',catalog.NATIVE_TRAINING_FILE_FEATURE[1],'--run'])
+        self.assertIn('test_control_plane_windows_training_result_store.',checks['control-plane']['argv'])
+
+    def test_missing_native_file_contract_support_preserves_generic_fallback(self):
+        with tempfile.TemporaryDirectory() as name:
+            root=Path(name)
+            for path in catalog.NATIVE_TRAINING_FILE_SCOPE:
+                if path==catalog.NATIVE_TRAINING_FILE_FEATURE[2]:continue
+                target=root/path;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes((self.root/path).read_bytes())
+            checks=self.select(list(catalog.NATIVE_TRAINING_FILE_FEATURE),root)
+            self.assertNotIn('native-training-result-files-contract',checks)
+            self.assertNotIn('native-training-result-files',checks)
+            self.assertIn('run_focused_checks.py',' '.join(checks['focused-tests']['argv']))
         checks=self.select(list(self.scope),required=['control-plane'])
         self.assertNotIn('test_control_plane_windows_training_result_store.',checks['control-plane']['argv'])
 
