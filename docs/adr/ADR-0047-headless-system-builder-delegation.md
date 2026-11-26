@@ -1632,3 +1632,21 @@ qualified physical capacity, installed readiness, original purpose/configuration
 transport, protected parent/crash custody or process/Job retirement. Keep those
 obligations, separate Save and actual host qualification pending. No new policy
 value, capability, transport, retry or lifecycle guarantee is introduced.
+
+
+### Original worker configuration remains private data
+
+Within the accepted original-controller topology, carry optional worker layout
+and all-role purpose data only from the genuine original copy record and its
+exact registered Model adapter. Bind before charging/claiming. Preserve original
+role charge-before-ACK ordering; refuse copied wrappers that lose configuration.
+Use an additive model-graph v2 descriptor and the same creation-time bootstrap,
+with strict original-byte digest, definition/Job-profile correlation, finite
+layout and unchanged complete-frame bounds. Existing model-graph v1 is unchanged.
+
+A genuine unentered worker lease may expose a passive copied configuration view.
+No metadata digest, scope, profile, path or returned record supplies measured
+shared/durable quota, mutation fencing, readiness, a resource owner or execution
+permission. Do not activate a Root/producer from these local checks. All actual
+capacity, protected parent/crash, retirement, Save and host obligations remain.
+No new process, executor, provider, budget, retry or recovery policy is selected.

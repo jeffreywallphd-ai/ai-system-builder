@@ -37,6 +37,25 @@ def boot():
                             "PYTHON_RUNTIME_AUTH_TOKEN": "inert-".ljust(40, "x"), "PYTHON_RUNTIME_STARTUP_PROOF": "a" * 64}}
 
 
+def worker_configuration(model, profile):
+    def slot(name, size):
+        return {"freshParent": model["freshParent"], "freshName": name, "maximumCopyBytes": size,
+                "bufferBytes": 4096, "preparationMs": 10000}
+    return {"schema": "original-training-worker-configuration-v1", "definitionDigest": model["definitionDigest"],
+        "storageScopeDigest": "sha256:" + "d" * 64, "profileFingerprint": n.profile_digest(profile),
+        "inputCopy": slot("training-inputs", 65536),
+        "outputFamily": {"maximumCopyBytes": 131072, "outputs": [slot("training-final", 131072)]},
+        "limits": {"model": model["maximumCopyBytes"], "inputs": 65536, "worker-output": 131072,
+                   "parent-output": 131072, "overhead": 4096}, "maximumReservedBytes": 2**20}
+
+
+def configuration_envelope(body):
+    raw = body if type(body) is bytes else json.dumps(body, separators=(",", ":"), ensure_ascii=False).encode("utf8")
+    return {"schema": "original-training-worker-configuration-envelope-v1", "encoding": "base64",
+            "byteCount": len(raw), "sha256": "sha256:" + hashlib.sha256(raw).hexdigest(),
+            "data": n.base64.b64encode(raw).decode("ascii")}
+
+
 class Control:
     def __init__(self):
         self.current = True; self.charges = []; self.retained = []; self.retain_ok = True
@@ -271,7 +290,7 @@ class Kernel:
 
 
 class SourceLaunchExchangeTests(unittest.TestCase):
-    def bound_bootstrap(self, definition=None, native_module=n):
+    def bound_bootstrap(self, definition=None, native_module=n, *, worker_configuration_data=False):
         value = boot(); value.update(schema="windows-original-worker-launch-v3", modelSource=descriptor())
         if definition is None: definition={"modelUpdatedAt": value["modelSource"]["modelUpdatedAt"], "request": {"baseModel": {
             "modelRecordId": value["modelSource"]["modelId"], "localPath": value["modelSource"]["logicalPath"]}}}
@@ -279,6 +298,9 @@ class SourceLaunchExchangeTests(unittest.TestCase):
             logicalPath=definition["request"]["baseModel"]["localPath"],modelUpdatedAt=definition["modelUpdatedAt"])
         raw=json.dumps(definition,separators=(",",":"),ensure_ascii=True).encode("ascii")
         value["definitionByteCount"] = len(raw); value["modelSource"]["definitionDigest"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+        if worker_configuration_data:
+            value["modelSource"].update(schema="windows-original-model-graph-v2",
+                trainingConfiguration=configuration_envelope(worker_configuration(value["modelSource"], value["profile"])))
         kernel, control = Kernel(), Control()
         owner = native_module.OriginalWorker(value, kernel=kernel, executable="X:/inert/python.exe", worker_root=_root)
         owner.definition_bytes = raw; owner.bind_model_graph(value["modelSource"], control, control)
@@ -572,7 +594,8 @@ class OriginalTrainingTaskIdentityTests(unittest.TestCase):
 
 
 class TrainingInputCopyTests(unittest.TestCase):
-    def fixture(self, media="application/x-ndjson", count=1, native_module=n, method="lora", output=None):
+    def fixture(self, media="application/x-ndjson", count=1, native_module=n, method="lora", output=None,
+                *, worker_configuration_data=False):
         value = json.loads((Path(__file__).parent/"fixtures/approved_training_staged_input.json").read_text())
         request = value["approvedRequest"]; request["baseModel"]["localPath"] = descriptor()["logicalPath"]
         request["method"] = method
@@ -589,7 +612,8 @@ class TrainingInputCopyTests(unittest.TestCase):
             "inputs":[{"artifactId":row["artifactId"],"role":row["splitRole"],"mediaType":media,"digest":digest(content),"sizeBytes":len(content)} for row in request["datasets"]],
             "dataset":{"datasetId":"synthetic-data","versionId":"synthetic-version","versionDigest":"sha256:"+"d"*64,"recipeDigest":digest(recipe)},
             "recipeSizeBytes":len(recipe)}
-        owner,parent,model_control=SourceLaunchExchangeTests().bound_bootstrap(definition,native_module)
+        owner,parent,model_control=SourceLaunchExchangeTests().bound_bootstrap(definition,native_module,
+            worker_configuration_data=worker_configuration_data)
         owner.resume()
         for thread in owner.readers: thread.join(1)
         self.assertEqual(owner.model_bootstrap.outcome,"written")
@@ -629,6 +653,7 @@ class TrainingInputCopyTests(unittest.TestCase):
                     native_module._training_input_readers.pop(graph,None)
                     native_module._sealed_training_inputs.pop(graph,None)
             native_module._model_leases.pop(lease,None)
+            native_module._training_worker_configurations.pop(source,None)
             native_module._verified_model_receivers.pop(source,None)
         self.addCleanup(finish_model_only)
         return source,lease,staged,config,control,child,content,recipe
@@ -2425,9 +2450,144 @@ class DenseTensorByteAdapterTests(unittest.TestCase):
                         self.assertEqual(stream.phase,"failed")
 
 
+class TrainingWorkerConfigurationTests(unittest.TestCase):
+    def v2_boot(self):
+        value = boot()
+        value.update(schema="windows-original-worker-launch-v3", modelSource=descriptor(), definitionByteCount=1)
+        body = worker_configuration(value["modelSource"], value["profile"])
+        value["modelSource"].update(schema="windows-original-model-graph-v2", trainingConfiguration=configuration_envelope(body))
+        return value, body
+
+    def fixture(self, *, versioned=True):
+        case = TrainingInputCopyTests(); self.addCleanup(case.doCleanups)
+        source, lease, staged, *_ = case.fixture(worker_configuration_data=versioned)
+        return source, lease, staged
+
+    def test_genuine_original_bootstrap_returns_copied_configuration_without_native_effects(self):
+        source, lease, _ = self.fixture()
+        before = len(source.owner.kernel.calls)
+        body = n.read_original_training_worker_configuration(lease)
+        self.assertEqual(body["definitionDigest"], source.descriptor["definitionDigest"])
+        self.assertEqual(body["profileFingerprint"], n.profile_digest(source.profile))
+        self.assertEqual(body["limits"]["model"], source.descriptor["maximumCopyBytes"])
+        body["limits"]["inputs"] = 1
+        self.assertEqual(n.read_original_training_worker_configuration(lease)["limits"]["inputs"], 65536)
+        self.assertEqual(len(source.owner.kernel.calls), before)
+        self.assertFalse(n._model_leases[lease]["entered"])
+        self.assertNotIn("input_copy_owner", n._model_leases[lease])
+        self.assertEqual(source.phase, "bound")
+
+    def test_legacy_bootstrap_has_no_configuration_fallback(self):
+        source, lease, _ = self.fixture(versioned=False)
+        before = len(source.owner.kernel.calls)
+        self.assertIsNone(n.read_original_training_worker_configuration(lease))
+        self.assertEqual(len(source.owner.kernel.calls), before)
+
+    def test_job_profile_mismatch_and_legacy_launch_refuse_before_any_native_call(self):
+        for kind in ("profile", "legacy"):
+            value, body = self.v2_boot()
+            if kind == "profile":
+                body["profileFingerprint"] = "sha256:" + "f" * 64
+                value["modelSource"]["trainingConfiguration"] = configuration_envelope(body)
+            else:
+                value["schema"] = "windows-original-worker-launch-v2"
+                value.pop("definitionByteCount")
+            kernel = Kernel()
+            with self.subTest(kind=kind), self.assertRaises(n.LaunchUnavailable):
+                n.OriginalWorker(value, kernel=kernel)
+            self.assertEqual(kernel.calls, [])
+
+    def test_invalid_envelopes_and_bodies_never_reach_native_acquisition(self):
+        kinds = ("hash", "size", "padding", "utf8", "duplicate", "unknown", "definition", "model-limit",
+                 "input-limit", "output-limit", "total", "overflow", "same", "nested", "case", "too-large")
+        for kind in kinds:
+            value, body = self.v2_boot(); graph = value["modelSource"]
+            if kind == "unknown": body["extra"] = True
+            if kind == "definition": body["definitionDigest"] = "sha256:" + "e" * 64
+            if kind == "model-limit": body["limits"]["model"] += 1
+            if kind == "input-limit": body["inputCopy"]["maximumCopyBytes"] -= 1
+            if kind == "output-limit": body["outputFamily"]["maximumCopyBytes"] -= 1
+            if kind == "total": body["maximumReservedBytes"] = 1
+            if kind == "overflow": body["maximumReservedBytes"] = 2**53
+            if kind == "same": body["inputCopy"]["freshName"] = graph["freshName"]
+            if kind == "nested": body["inputCopy"]["freshParent"] += "\\" + graph["freshName"]
+            if kind == "case": body["outputFamily"]["outputs"][0]["freshName"] = body["inputCopy"]["freshName"].upper()
+            envelope = configuration_envelope(body)
+            if kind == "hash": envelope["sha256"] = "sha256:" + "0" * 64
+            if kind == "size": envelope["byteCount"] += 1
+            if kind == "padding": envelope["data"] += "="
+            if kind == "utf8": envelope = configuration_envelope(b'\xff')
+            if kind == "duplicate": envelope = configuration_envelope(b'{"schema":1,"schema":2}')
+            if kind == "too-large": envelope = configuration_envelope(b' ' * (16 * 1024 + 1))
+            graph["trainingConfiguration"] = envelope
+            kernel = Kernel()
+            with self.subTest(kind=kind), self.assertRaises(n.LaunchUnavailable): n.OriginalWorker(value, kernel=kernel)
+            self.assertEqual(kernel.calls, [])
+
+    def test_whole_boot_frame_stays_bounded_before_native_acquisition(self):
+        value, body = self.v2_boot()
+        long_parent = "X:\\" + "\\".join(["a" * 100] * 39)
+        graph = value["modelSource"]
+        for key in ("sourcePath", "logicalPath", "freshParent"): graph[key] = long_parent
+        body["inputCopy"]["freshParent"] = long_parent
+        output = body["outputFamily"]["outputs"][0]
+        body["outputFamily"]["outputs"] = [{**output, "freshParent": long_parent, "freshName": name,
+            "maximumCopyBytes": 65536} for name in ("one", "two")]
+        graph["trainingConfiguration"] = configuration_envelope(body)
+        value["environment"].update({"EXTRA_" + str(i): "\\" * 7800 for i in range(3)})
+        self.assertGreater(len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf8")), n.FRAME_BYTES)
+        kernel = Kernel()
+        with self.assertRaises(n.LaunchUnavailable): n.OriginalWorker(value, kernel=kernel)
+        self.assertEqual(kernel.calls, [])
+
+    def test_changed_binding_and_unregistered_lease_cannot_supply_configuration(self):
+        source, lease, _ = self.fixture()
+        before = len(source.owner.kernel.calls)
+        for supplied in ({}, object(), object.__new__(n.OriginalInheritedModelLease)):
+            with self.assertRaises(n.LaunchUnavailable): n.read_original_training_worker_configuration(supplied)
+        original = source.descriptor["trainingConfiguration"]
+        body = n.read_original_training_worker_configuration(lease)
+        body["storageScopeDigest"] = "sha256:" + "e" * 64
+        try:
+            source.descriptor["trainingConfiguration"] = configuration_envelope(body)
+            with self.assertRaises(n.LaunchUnavailable): n.read_original_training_worker_configuration(lease)
+        finally: source.descriptor["trainingConfiguration"] = original
+        self.assertEqual(len(source.owner.kernel.calls), before)
+
+    def test_replaced_source_getter_is_refused_before_metadata_or_native_callbacks(self):
+        source, lease, _ = self.fixture()
+        before = len(source.owner.kernel.calls); calls = []
+        def getter(owner): calls.append("getter"); raise AssertionError("Source getter ran")
+        with patch.object(n.OriginalModelBootstrapReceiver, "descriptor", property(getter), create=True):
+            with self.assertRaises(n.LaunchUnavailable): n.read_original_training_worker_configuration(lease)
+        self.assertEqual(calls, [])
+        self.assertEqual(len(source.owner.kernel.calls), before)
+
+    def test_consumed_original_lease_cannot_reconstruct_a_new_configuration_owner(self):
+        source, lease, staged = self.fixture()
+        with lease.borrow(staged["payload"]): pass
+        before = len(source.owner.kernel.calls)
+        with self.assertRaises(n.LaunchUnavailable): n.read_original_training_worker_configuration(lease)
+        self.assertEqual(len(source.owner.kernel.calls), before)
+        self.assertTrue(all(not handle.closed for handle in source.guards))
+
+    def test_legitimate_borrow_between_metadata_check_and_copy_cannot_return_configuration(self):
+        source, lease, staged = self.fixture()
+        original = n._capture_original_training_file_lease
+        def consume_after_check(actual):
+            result = original(actual)
+            with actual.borrow(staged["payload"]): pass
+            return result
+        with patch.object(n, "_capture_original_training_file_lease", consume_after_check):
+            with self.assertRaises(n.LaunchUnavailable): n.read_original_training_worker_configuration(lease)
+        self.assertTrue(n._model_leases[lease]["entered"])
+        self.assertEqual(source.phase, "spent")
+        self.assertTrue(all(not handle.closed for handle in source.guards))
+
+
 class InheritedModelViewTests(unittest.TestCase):
-    def fixture(self):
-        owner,kernel,control=SourceLaunchExchangeTests().bound_bootstrap()
+    def fixture(self, **options):
+        owner,kernel,control=SourceLaunchExchangeTests().bound_bootstrap(**options)
         owner.resume()
         for thread in owner.readers: thread.join(1)
         self.assertEqual(owner.model_bootstrap.outcome,"written")

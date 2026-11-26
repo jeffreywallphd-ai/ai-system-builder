@@ -1436,3 +1436,22 @@ installed readiness or measured capacity. Do not pass it to the trusted boot
 configuration based on these component tests alone. Qualified outer capacity,
 controller/worker purpose and configuration transport, protected result/crash
 custody, original process/Job retirement and separate Save remain mandatory.
+
+
+### Original worker layout transport
+
+`bindOriginalTrainingWorkerConfiguration` copies an explicit input/output layout
+onto the genuine original all-role reservation before charging or claiming its
+Model adapter. Only that exact adapter can carry the configuration. Its private
+source context also refuses a copied wrapper which loses the configuration;
+there is no execution downgrade to an unconfigured source.
+
+The optional model-graph v2 carries at most 16 KiB of original UTF-8 configuration
+bytes, with a strict base64 envelope and byte digest. It reuses the current
+controller and creation-time bootstrap. Both complete wire frames retain their
+64 KiB limits. The Native parser checks definition and Job-profile correlation,
+all-role totals and nonconflicting Windows layout before file effects. V1 remains
+unchanged. The genuine unentered worker lease exposes a copied private metadata
+view only: no callbacks, IO, readiness or resource authority. Real quota/fence,
+producer activation, protected result/crash custody, retirement, Save and actual
+host qualification remain pending; no default host uses the new binding.

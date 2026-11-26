@@ -108,6 +108,16 @@ def capture_boot(raw):
     need(re.fullmatch(r"[a-f0-9]{64}", copied.get("PYTHON_RUNTIME_STARTUP_PROOF", "")) is not None
          and len(copied.get("PYTHON_RUNTIME_AUTH_TOKEN", "")) >= 32)
     source = capture_model_graph(value["modelSource"]) if source_mode else None
+    if source_mode and source["schema"] == "windows-original-model-graph-v2":
+        need(bootstrap_mode)
+        configuration = _capture_training_worker_configuration(source["trainingConfiguration"], source)
+        need(configuration["profileFingerprint"] == profile_digest(profile))
+        # The optional data family never widens either existing wire frame.
+        try:
+            need(len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf8")) <= FRAME_BYTES)
+            _assert_training_bootstrap_header_bound(source, profile)
+        except (UnicodeError, ValueError):
+            raise LaunchUnavailable() from None
     return {**value, "profile": profile, "environment": copied,
             **({"modelSource": {**source, "files": [dict(row) for row in source["files"]]}} if source_mode else {})}
 
@@ -223,9 +233,12 @@ def model_directory_component(value):
 
 def capture_model_graph(raw):
     """Closed data only. This does not grant source or reservation authority."""
+    need(type(raw) is dict)
+    versioned = raw.get("schema") == "windows-original-model-graph-v2"
     value = exact(raw, ("schema", "definitionDigest", "modelId", "modelUpdatedAt", "logicalPath", "sourcePath",
-                        "freshParent", "freshName", "files", "maximumCopyBytes", "bufferBytes", "preparationMs"))
-    need(value["schema"] == "windows-original-model-graph-v1")
+                        "freshParent", "freshName", "files", "maximumCopyBytes", "bufferBytes", "preparationMs")
+                        + (("trainingConfiguration",) if versioned else ()))
+    need(value["schema"] in ("windows-original-model-graph-v1", "windows-original-model-graph-v2"))
     need(type(value["definitionDigest"]) is str and re.fullmatch(r"sha256:[a-f0-9]{64}", value["definitionDigest"]) is not None)
     for key in ("modelId", "modelUpdatedAt"):
         need(type(value[key]) is str and 0 < len(value[key]) <= 200 and not any(ord(c) < 32 for c in value[key]))
@@ -253,7 +266,52 @@ def capture_model_graph(raw):
         need(type(row["sha256"]) is str and re.fullmatch(r"[a-f0-9]{64}", row["sha256"]) is not None)
         total += size; need(total <= maximum); seen.add(name.casefold()); files.append(dict(row))
     need({"config.json", "tokenizer.json", "model.safetensors"} <= seen)
+    if versioned: _capture_training_worker_configuration(value["trainingConfiguration"], value)
     return {**value, "files": tuple(files)}
+
+
+def _capture_training_worker_configuration(envelope, descriptor):
+    """Bounded original layout bytes only; never a resource or readiness proof."""
+    value = exact(_copy_model_json(envelope), ("schema", "encoding", "byteCount", "sha256", "data"))
+    need(value["schema"] == "original-training-worker-configuration-envelope-v1" and value["encoding"] == "base64")
+    size = integer(value["byteCount"], 1, 16 * 1024)
+    need(type(value["data"]) is str and len(value["data"]) <= 4 * ((16 * 1024 + 2) // 3)
+         and type(value["sha256"]) is str and re.fullmatch(r"sha256:[a-f0-9]{64}", value["sha256"]) is not None)
+    try:
+        raw = base64.b64decode(value["data"], validate=True)
+        need(len(raw) == size and base64.b64encode(raw).decode("ascii") == value["data"]
+             and "sha256:" + hashlib.sha256(raw).hexdigest() == value["sha256"])
+        body = exact(parse_json_bytes(raw, 16 * 1024), ("schema", "definitionDigest", "storageScopeDigest",
+            "profileFingerprint", "inputCopy", "outputFamily", "limits", "maximumReservedBytes"))
+    except (ValueError, UnicodeError):
+        raise LaunchUnavailable() from None
+    need(body["schema"] == "original-training-worker-configuration-v1"
+         and body["definitionDigest"] == descriptor["definitionDigest"])
+    for key in ("storageScopeDigest", "profileFingerprint"):
+        need(type(body[key]) is str and re.fullmatch(r"sha256:[a-f0-9]{64}", body[key]) is not None)
+    limits = exact(body["limits"], ("model", "inputs", "worker-output", "parent-output", "overhead"))
+    for amount in limits.values(): integer(amount, 1, 2**53 - 1)
+    maximum = integer(body["maximumReservedBytes"], 1, 2**53 - 1)
+    need(sum(limits.values()) <= maximum and limits["parent-output"] >= limits["worker-output"]
+         and limits["model"] == descriptor["maximumCopyBytes"])
+    inputs = _capture_training_copy_configuration(body["inputCopy"])
+    output_maximum, outputs = _capture_training_output_family_configuration(body["outputFamily"])
+    need(inputs["maximumCopyBytes"] == limits["inputs"] and output_maximum == limits["worker-output"])
+    roots = [ntpath.normcase(row["freshParent"] + "\\" + row["freshName"])
+             for row in (descriptor, inputs, *outputs)]
+    need(all(i == j or left != right and not left.startswith(right + "\\") and not right.startswith(left + "\\")
+             for i, left in enumerate(roots) for j, right in enumerate(roots)))
+    return _copy_model_json(body)
+
+
+def _assert_training_bootstrap_header_bound(descriptor, profile):
+    """Upper bound before any file effect; IDs/handles here grant no authority."""
+    header = {"schema": "windows-original-model-bootstrap-v1", "nonce": "f" * 64,
+        "descriptor": descriptor, "profile": profile,
+        "physicalPath": descriptor["freshParent"] + "\\" + descriptor["freshName"], "principal": "f" * 136,
+        "root": {"handle": 2**64 - 1, "identity": "f" * 48},
+        "files": [{**row, "identity": "f" * 48, "handle": 2**64 - 1} for row in descriptor["files"]]}
+    need(len(json.dumps(header, ensure_ascii=False, separators=(",", ":")).encode("utf8")) <= FRAME_BYTES)
 
 
 def model_acl(principal, *, sealed):
@@ -1321,6 +1379,7 @@ class _OriginalModelView:
 _model_views = WeakKeyDictionary()
 _model_leases = WeakKeyDictionary()
 _verified_model_receivers = WeakKeyDictionary()
+_training_worker_configurations = WeakKeyDictionary()
 _sealed_training_inputs = WeakKeyDictionary()
 _training_input_readers = WeakKeyDictionary()
 _training_output_families = WeakKeyDictionary()
@@ -1652,6 +1711,10 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
         need(header["schema"] == "windows-original-model-bootstrap-v1" and header["nonce"] == nonce)
         self.profile = capture_profile(header["profile"]); self.maximum_ms = self.profile["maximumDurationMs"]
         self.descriptor = capture_model_graph(header["descriptor"])
+        configuration = None
+        if self.descriptor["schema"] == "windows-original-model-graph-v2":
+            configuration = _capture_training_worker_configuration(self.descriptor["trainingConfiguration"], self.descriptor)
+            need(configuration["profileFingerprint"] == profile_digest(self.profile))
         size = struct.unpack("<I", self.read_exact(4))[0]; integer(size, 1, DEFINITION_BYTES)
         raw = self.read_exact(size)
         need("sha256:" + hashlib.sha256(raw).hexdigest() == self.descriptor["definitionDigest"])
@@ -1691,6 +1754,12 @@ class OriginalModelBootstrapReceiver(NativeModelInspection):
             "native_owner": self.owner,
             "guard": OriginalModelBootstrapReceiver.assert_graph.__get__(self),
             "model_guard": OriginalModelBootstrapReceiver.assert_request_model.__get__(self), "bound": False, "lease_issued": False}
+        if configuration is not None:
+            # Original creation-time pipe plus the complete real inherited graph
+            # establish this association. The bytes remain configuration only.
+            _training_worker_configurations[self] = (_verified_model_receivers[self],
+                _training_configuration_descriptor_stamp(self.descriptor),
+                base64.b64decode(self.descriptor["trainingConfiguration"]["data"], validate=True), self.lock)
 
     @staticmethod
     def identity_bytes(value):
@@ -1757,6 +1826,81 @@ def capture_original_model_bootstrap(nonce):
     _original_model_bootstrap = receiver
     OriginalModelBootstrapReceiver.__init__(receiver,nonce)
     return receiver
+
+
+def _training_configuration_descriptor_stamp(value):
+    need(type(value) is dict and type(value.get("files")) is tuple
+         and all(type(row) is dict for row in value["files"]))
+    copied = _copy_model_json({**value, "files": [dict(row) for row in value["files"]]})
+    return hashlib.sha256(json.dumps(copied, sort_keys=True, separators=(",", ":"),
+                                    ensure_ascii=True, allow_nan=False).encode("ascii")).hexdigest()
+
+
+def read_original_training_worker_configuration(lease):
+    """Private passive metadata only. No IO, admission, ownership or readiness."""
+    for cls, bases in _TRAINING_CONFIGURATION_TYPES:
+        current = type.__getattribute__(cls, "__mro__")
+        need(len(current) == len(bases) and all(a is b for a, b in zip(current, bases)))
+    need(all(type.__getattribute__(base, "__dict__").get(name) is original
+             for base, name, original in _TRAINING_CONFIGURATION_API))
+    need(_model_leases is _TRAINING_CONFIGURATION_LEASES
+         and _verified_model_receivers is _TRAINING_CONFIGURATION_SOURCES
+         and _training_worker_configurations is _TRAINING_CONFIGURATION_RECORDS)
+    need(type(lease) is OriginalInheritedModelLease)
+    state = _model_leases.get(lease)
+    need(type(state) is dict and type(state.get("source")) is OriginalModelBootstrapReceiver)
+    source = state["source"]
+    fields = object.__getattribute__(source, "__dict__")
+    need(type(fields) is dict and type(state.get("lock")) is _TRAINING_CONFIGURATION_LOCK
+         and fields.get("lock") is state["lock"])
+    book = _training_worker_configurations.get(source)
+    if book is not None:
+        need(type(book) is tuple and len(book) == 4 and book[3] is state["lock"])
+    lock = state["lock"]
+    need(lock.acquire(blocking=False))
+    try:
+        original = _capture_original_training_file_lease(lease)
+        native_owner = state.get("native_owner")
+        need(type(native_owner) is InheritedModelNativeCalls)
+        native_fields = object.__getattribute__(native_owner, "__dict__")
+        def unchanged():
+            # Keep the final observation and copy inside the same original
+            # lock. Recheck after helpers too: same-thread reentry can acquire
+            # an RLock and consume the real lease before a helper returns.
+            need(_model_leases.get(lease) is state and state.get("source") is source
+                 and _verified_model_receivers.get(source) is original[1]
+                 and state.get("entered") is False and "input_copy_owner" not in state
+                 and type(fields.get("phase")) is str and fields["phase"] == "bound"
+                 and fields.get("owner") is native_owner is original[1].get("native_owner")
+                 and type(native_fields) is dict and native_fields.get("unknown") is False
+                 and type(native_fields.get("pending")) is list and len(native_fields["pending"]) == 0)
+        unchanged()
+        if book is None: return None  # Legacy v1; there is no metadata fallback.
+        need(original[0] is state and original[1] is book[0] and original[2] is source)
+        task_id = original[1].get("task_id")
+        need(type(task_id) is str and _TRAINING_TASK_UUID.fullmatch(task_id) is not None)
+        need(_training_worker_configurations.get(source) is book
+             and _training_configuration_descriptor_stamp(fields.get("descriptor")) == book[1])
+        body = _capture_training_worker_configuration(fields["descriptor"]["trainingConfiguration"], fields["descriptor"])
+        need(body["profileFingerprint"] == profile_digest(_copy_model_json(fields.get("profile")))
+             and body["definitionDigest"] == original[1]["definition_digest"]
+             and _same_model_json(body, parse_json_bytes(book[2], 16 * 1024)))
+        result = _copy_model_json(body)
+        unchanged()
+        return result
+    finally: lock.release()
+
+
+_TRAINING_CONFIGURATION_TYPES = tuple((cls, type.__getattribute__(cls, "__mro__"))
+    for cls in (OriginalInheritedModelLease, OriginalModelBootstrapReceiver, InheritedModelNativeCalls))
+_TRAINING_CONFIGURATION_API = tuple((base, name, type.__getattribute__(base, "__dict__").get(name))
+    for _, bases in _TRAINING_CONFIGURATION_TYPES for base in bases
+    for name in ("__getattribute__", "__getattr__", "__hash__", "__eq__", "__dict__",
+                 "__init__", "descriptor", "profile", "owner", "phase", "lock", "unknown", "pending"))
+_TRAINING_CONFIGURATION_LOCK = type(RLock())
+_TRAINING_CONFIGURATION_LEASES = _model_leases
+_TRAINING_CONFIGURATION_SOURCES = _verified_model_receivers
+_TRAINING_CONFIGURATION_RECORDS = _training_worker_configurations
 
 
 _TRAINING_INPUT_MEDIA = {"application/x-ndjson":"jsonl", "application/jsonl":"jsonl",

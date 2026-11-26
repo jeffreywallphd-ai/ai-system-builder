@@ -13,7 +13,8 @@ import {createOriginalTrainingModelSourceFactory, assertOriginalTrainingModelObs
   type OriginalTrainingModelObservationPolicy} from "../client/originalTrainingModelSource";
 import {bindOriginalTrainingCopyReservations, prepareOriginalTrainingCopyReservations, retainOriginalTrainingCopyReservations,
   originalTrainingModelCopyReservation, type OriginalTrainingCopyPolicy, type OriginalTrainingCopyReservationOwner,
-  type OriginalTrainingStorageRole} from "../client/originalTrainingModelSource";
+  type OriginalTrainingStorageRole, bindOriginalTrainingWorkerConfiguration,
+  type OriginalTrainingWorkerConfiguration} from "../client/originalTrainingModelSource";
 
 type IO = NonNullable<Parameters<typeof createOriginalTrainingModelSourceFactory>[1]>;
 const realIO: IO = {lstat, open, opendir, realpath};
@@ -119,6 +120,99 @@ async function copyBudgetFixture(t: TestContext, preparationMs = 5000) {
   const bind = (raw = policy, owner = reservation) => bindOriginalTrainingCopyReservations(f.original!, f.observed!, raw, owner);
   return {...f, calls, hooks, policy, reservation, reservationState: state, bind};
 }
+
+function workerConfiguration(root: string): OriginalTrainingWorkerConfiguration {
+  const slot = (freshName: string, maximumCopyBytes: number) => ({freshParent: root, freshName,
+    maximumCopyBytes, bufferBytes: 4096, preparationMs: 10_000});
+  return {profileFingerprint: "sha256:" + "b".repeat(64), inputCopy: slot("original-inputs", 65_536),
+    outputFamily: {maximumCopyBytes: 131_072, outputs: [slot("original-final", 131_072)]}};
+}
+
+test("worker layout uses exact original copy purposes and bytes without granting effects", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind(), config = workerConfiguration(f.root);
+  bindOriginalTrainingWorkerConfiguration(budget, config);
+  const descriptorToken = bindOriginalTrainingSourceLaunch(f.original!, f.observed!, originalTrainingModelCopyReservation(budget));
+  assert.throws(() => captureOriginalTrainingSourceLaunch(descriptorToken));
+  const source = captureOriginalTrainingSourceLaunch(descriptorToken, true), descriptor = source.descriptor;
+  assert.equal(descriptor.schema, "windows-original-model-graph-v2");
+  const envelope = descriptor.trainingConfiguration as {data: string; byteCount: number; sha256: string};
+  const bytes = Buffer.from(envelope.data, "base64"), body = JSON.parse(bytes.toString("utf8"));
+  assert.equal(bytes.length, envelope.byteCount); assert.equal(envelope.sha256, "sha256:" + digest(bytes));
+  assert.equal(body.definitionDigest, descriptor.definitionDigest);
+  assert.equal(body.definitionDigest, "sha256:" + digest(JSON.stringify(f.original!.definition)));
+  assert.deepEqual(body.limits, {model: 65_536, inputs: 65_536, "worker-output": 131_072, "parent-output": 131_072, overhead: 4096});
+  assert.equal(body.maximumReservedBytes, f.policy.maximumReservedBytes);
+  assert.deepEqual(body.inputCopy, config.inputCopy); assert.deepEqual(body.outputFamily, config.outputFamily);
+  assert.equal(f.calls.length, 0); await source.readDefinition(0); assert.equal(f.calls.length, 0);
+  await source.acknowledge("charge", 65_536);
+  assert.deepEqual(f.calls.map(row => row.role), ["overhead", "inputs", "worker-output", "parent-output", "model"]);
+  assert.equal(body.storageScopeDigest, f.calls[0].scope);
+});
+
+test("worker layout snapshots caller data and cannot be claimed by copied tokens or adapters", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind(), config = workerConfiguration(f.root);
+  assert.throws(() => bindOriginalTrainingWorkerConfiguration({} as typeof budget, config));
+  bindOriginalTrainingWorkerConfiguration(budget, config);
+  (config.inputCopy as {freshName: string}).freshName = "caller-changed";
+  const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!, f.observed!,
+    originalTrainingModelCopyReservation(budget)), true);
+  const body = JSON.parse(Buffer.from((source.descriptor.trainingConfiguration as {data: string}).data, "base64").toString("utf8"));
+  assert.equal(body.inputCopy.freshName, "original-inputs"); assert.equal(f.calls.length, 0);
+  const other = await copyBudgetFixture(t), otherBudget = other.bind();
+  bindOriginalTrainingWorkerConfiguration(otherBudget, workerConfiguration(other.root));
+  const copied = {...originalTrainingModelCopyReservation(otherBudget)};
+  const legacy = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(other.original!, other.observed!, copied), true);
+  assert.equal(legacy.descriptor.schema, "windows-original-model-graph-v1");
+  assert.equal("trainingConfiguration" in legacy.descriptor, false);
+  await assert.rejects(() => legacy.readDefinition(0)); // No execution downgrade after the configuration is lost.
+  assert.equal(other.calls.length, 0);
+});
+
+test("worker layout refuses repeated and late bindings without another charge", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind(), config = workerConfiguration(f.root);
+  bindOriginalTrainingWorkerConfiguration(budget, config);
+  assert.throws(() => bindOriginalTrainingWorkerConfiguration(budget, config));
+  assert.equal(f.calls.length, 0);
+  const claimed = await copyBudgetFixture(t), claimedBudget = claimed.bind();
+  originalTrainingModelCopyReservation(claimedBudget);
+  assert.throws(() => bindOriginalTrainingWorkerConfiguration(claimedBudget, workerConfiguration(claimed.root)));
+  assert.equal(claimed.calls.length, 0);
+  const charged = await copyBudgetFixture(t), chargedBudget = charged.bind();
+  await prepareOriginalTrainingCopyReservations(chargedBudget);
+  assert.throws(() => bindOriginalTrainingWorkerConfiguration(chargedBudget, workerConfiguration(charged.root)));
+  assert.equal(charged.calls.length, 4);
+});
+
+test("worker layout refuses conflicting namespaces, incorrect limits and oversized data", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind();
+  for (const kind of ["profile", "input-limit", "output-limit", "same", "nested", "case", "size"]) {
+    const config = JSON.parse(JSON.stringify(workerConfiguration(f.root)));
+    if (kind === "profile") config.profileFingerprint = "unbound";
+    if (kind === "input-limit") config.inputCopy.maximumCopyBytes--;
+    if (kind === "output-limit") config.outputFamily.maximumCopyBytes--;
+    if (kind === "same") config.inputCopy.freshName = f.policy.modelCopy.freshName;
+    if (kind === "nested") config.inputCopy.freshParent = path.join(f.root, f.policy.modelCopy.freshName);
+    if (kind === "case") config.outputFamily.outputs[0].freshName = config.inputCopy.freshName.toUpperCase();
+    if (kind === "size") config.outputFamily.outputs = Array.from({length: 16}, (_, at) => ({
+      ...config.outputFamily.outputs[0], freshParent: path.join(f.root, "a".repeat(2000)),
+      freshName: "output-" + at, maximumCopyBytes: 8192}));
+    assert.throws(() => bindOriginalTrainingWorkerConfiguration(budget, config), kind);
+  }
+  assert.equal(f.calls.length, 0);
+  bindOriginalTrainingWorkerConfiguration(budget, workerConfiguration(f.root));
+});
+
+test("worker layout does not invoke a configuration getter or turn values into readiness", async t => {
+  const f = await copyBudgetFixture(t), budget = f.bind(), calls: string[] = [];
+  const config = workerConfiguration(f.root);
+  const raw = {...config}; Object.defineProperty(raw, "inputCopy", {get() {calls.push("getter"); return config.inputCopy;}});
+  assert.throws(() => bindOriginalTrainingWorkerConfiguration(budget, raw)); assert.deepEqual(calls, []);
+  f.reservationState.live = false;
+  bindOriginalTrainingWorkerConfiguration(budget, config); // Data binding is passive.
+  const source = captureOriginalTrainingSourceLaunch(bindOriginalTrainingSourceLaunch(f.original!, f.observed!,
+    originalTrainingModelCopyReservation(budget)), true);
+  await assert.rejects(() => source.readDefinition(0)); assert.equal(f.calls.length, 0);
+});
 
 test("training copy roles precharge the complete declared plan and use the actual Model launch owner", async t => {
   const f = await copyBudgetFixture(t), budget = f.bind(), adapter = originalTrainingModelCopyReservation(budget);

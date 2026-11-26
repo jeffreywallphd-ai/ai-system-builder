@@ -3656,3 +3656,44 @@ controller/worker purpose/configuration transport. Local synthetic component
 checks do not satisfy that contract. Protected parent destination/crash custody,
 original SDK/process/Job retirement, separately authorized Save and real host
 qualification remain pending. There is no model-quality test or parent pass.
+
+
+### Original purpose and layout data through the existing bootstrap
+
+A genuine `OriginalTrainingCopyReservations` may bind one explicit worker layout
+before any charge, preparation or Model-adapter claim. The binder derives the
+complete Model/input/worker-output/parent-output/overhead limits, declared ceiling
+and storage scope from that original record. It copies caller layout/profile
+values and rejects conflicting case-insensitive or nested Windows namespaces.
+Only the exact registered Model adapter attaches the configuration; its private
+source context refuses copied/wrapped adapters that lose that association.
+
+The additive private model-graph v2 descriptor carries a strict base64 envelope
+of at most 16 KiB decoded UTF-8 JSON, with its original-byte SHA-256. It includes
+the exact original definition digest and expected existing Job-profile digest.
+No cross-language reserialization is used as digest authority. The current
+controller/source ACK/bootstrap topology remains. The existing all-role charge
+sequence still finishes before the ACK permits any Model copy or worker creation.
+
+The Native parser validates the envelope, duplicate-free JSON, scope/profile
+correlation, all-role arithmetic, copy bounds and disjoint layout. V2 requires
+the existing v3 original bootstrap launch. The complete boot frame and a
+conservative bootstrap-header bound pass their existing 64 KiB ceiling before
+file effects; the actual writer/reader also keep that ceiling. The worker retains
+metadata only after its original definition bytes and inherited graph verify.
+
+`read_original_training_worker_configuration` requires the genuine unentered
+lease, original source/record/lock and unchanged descriptor/profile association.
+It performs passive checks and returns a deep copy. It calls no Native guard,
+authority callback, file operation or loader. V1 stays unchanged and returns no
+configuration. A digest/profile/scope match is correlation, never exclusive
+capacity, Native mutation fencing, readiness or another resource/ownership grant.
+No default/boot configuration enables training. Real shared/durable storage,
+qualified outer producer, protected result/crash custody, permanent retirement,
+separate Save and actual host qualification remain pending. Tests use inert
+Native replies and synthetic Node files; no accuracy or whole-system run occurs.
+
+The nonblocking original lease lock remains held through the final unentered,
+quiet-owner validation and returned copy. Recheck after helper calls as well:
+same-thread reentry can consume a real lease even while an RLock is held. Neither
+ordinary interleaving nor reentry may return configuration for a consumed lease.

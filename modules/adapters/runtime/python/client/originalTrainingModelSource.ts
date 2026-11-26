@@ -86,7 +86,7 @@ type Owned = {raw: unknown; close?: () => Promise<unknown>; read?: (...args: any
 const observationContext = new AsyncLocalStorage<object>();
 type ReservationPurpose = "effect" | "retain" | "source-definition" | "source-charge";
 const reservationContext = new AsyncLocalStorage<{original: OriginalTrainingCapture; observed: ObservedOriginalTrainingModelSource;
-  purpose: ReservationPurpose}>();
+  purpose: ReservationPurpose; workerConfiguration?: Readonly<Record<string, unknown>>}>();
 const observedOwners = new WeakMap<ObservedOriginalTrainingModelSource, {original: OriginalTrainingCapture; owner: OriginalTrainingModelObservation}>();
 
 /** Trusted host configuration and an ALREADY measured exclusive reservation.
@@ -129,11 +129,13 @@ export interface OriginalTrainingCopyReservations {readonly [copyReservationsBra
 type CopyPhase = "bound" | "charging" | "charged" | "retaining" | "retained" | "unknown";
 type Copies = {original: OriginalTrainingCapture; observed: ObservedOriginalTrainingModelSource;
   configuration: OriginalTrainingSourceReservation["configuration"]; scopeDigest: string;
+  maximumReservedBytes: number; workerConfiguration?: Readonly<Record<string, unknown>>;
   limits: Readonly<Record<OriginalTrainingStorageRole, number>>; states: Record<OriginalTrainingStorageRole, CopyPhase>;
   current(): void; allowed(): Promise<void>; readModel(): Promise<ApprovedLocalTrainingModelSelection>;
   resource(): unknown; charge(...args: any[]): any; retain(...args: any[]): any;
   prepared: boolean; preparationAttempted: boolean; modelClaimed: boolean; lost: boolean; flight?: Promise<void>};
 const copyReservations = new WeakMap<OriginalTrainingCopyReservations, Copies>();
+const modelCopyAdapters = new WeakMap<OriginalTrainingSourceReservation, Copies>();
 const usedCopyOwners = new WeakSet<object>(), usedCopySources = new WeakSet<OriginalTrainingCapture>();
 const otherCopyRoles = ["overhead", "inputs", "worker-output", "parent-output"] as const;
 const storageUnavailable = () => new Error("The original training storage reservation is unavailable.");
@@ -205,13 +207,53 @@ export function bindOriginalTrainingCopyReservations(original: OriginalTrainingC
     const reader = captureOriginalTrainingModelReader(original); storageNeed(!!reader);
     const scopeDigest = "sha256:" + createHash("sha256").update(JSON.stringify({definition: original.definition,
       observed, configuration, limits, maximum})).digest("hex");
-    const record: Copies = {original, observed, configuration, scopeDigest, limits,
+    const record: Copies = {original, observed, configuration, scopeDigest, limits, maximumReservedBytes: maximum,
       states: {model: "bound", inputs: "bound", "worker-output": "bound", "parent-output": "bound", overhead: "bound"},
       current: original.assertCurrent.bind(original), allowed: original.assertAllowed.bind(original), readModel: reader.readModelSelection.bind(reader),
       resource, charge, retain, prepared: false, preparationAttempted: false, modelClaimed: false, lost: false};
     const token = Object.freeze({}) as OriginalTrainingCopyReservations;
     usedCopyOwners.add(owner); usedCopySources.add(original); copyReservations.set(token, record); return token;
   } catch {throw storageUnavailable();}
+}
+
+/** Private layout data, never a capacity owner, callback or readiness grant. */
+export interface OriginalTrainingWorkerConfiguration {
+  readonly profileFingerprint: string;
+  readonly inputCopy: OriginalTrainingSourceReservation["configuration"];
+  readonly outputFamily: {readonly maximumCopyBytes: number;
+    readonly outputs: readonly OriginalTrainingSourceReservation["configuration"][]};
+}
+
+/** Bind before any charge or Model-adapter claim. Only that exact adapter can
+ * later carry these original bytes through the existing creation-time pipe. */
+export function bindOriginalTrainingWorkerConfiguration(token: OriginalTrainingCopyReservations,
+  configuration: OriginalTrainingWorkerConfiguration): void {
+  const record = copyRecord(token);
+  storageNeed(!record.lost && !record.modelClaimed && !record.preparationAttempted && !record.flight &&
+    !record.workerConfiguration && Object.values(record.states).every(phase => phase === "bound"));
+  const raw = data(configuration, ["profileFingerprint", "inputCopy", "outputFamily"]);
+  storageNeed(typeof raw.profileFingerprint === "string" && /^sha256:[a-f0-9]{64}$/.test(raw.profileFingerprint));
+  const inputCopy = sourceCopyConfiguration(raw.inputCopy);
+  const output = data(raw.outputFamily, ["maximumCopyBytes", "outputs"]);
+  storageNeed(inputCopy.maximumCopyBytes === record.limits.inputs && output.maximumCopyBytes === record.limits["worker-output"] &&
+    Array.isArray(output.outputs) && output.outputs.length >= 1 && output.outputs.length <= 16);
+  const outputs = output.outputs.map(sourceCopyConfiguration);
+  const sum = outputs.reduce((total, row) => total + row.maximumCopyBytes, 0);
+  storageNeed(Number.isSafeInteger(sum) && sum <= record.limits["worker-output"] &&
+    new Set(outputs.map(row => row.freshParent.toLowerCase())).size === 1);
+  const roots = [record.configuration, inputCopy, ...outputs].map(row =>
+    path.win32.resolve(row.freshParent, row.freshName).toLowerCase());
+  storageNeed(roots.every((root, index) => roots.every((other, at) => index === at ||
+    root !== other && !root.startsWith(other + "\\") && !other.startsWith(root + "\\"))));
+  const definitionDigest = "sha256:" + createHash("sha256").update(JSON.stringify(record.original.definition)).digest("hex");
+  const body = Buffer.from(JSON.stringify({schema: "original-training-worker-configuration-v1", definitionDigest,
+    storageScopeDigest: record.scopeDigest, profileFingerprint: raw.profileFingerprint,
+    inputCopy, outputFamily: {maximumCopyBytes: output.maximumCopyBytes, outputs}, limits: record.limits,
+    maximumReservedBytes: record.maximumReservedBytes}), "utf8");
+  storageNeed(body.length > 0 && body.length <= 16 * 1024);
+  record.workerConfiguration = Object.freeze({schema: "original-training-worker-configuration-envelope-v1",
+    encoding: "base64", byteCount: body.length, sha256: "sha256:" + createHash("sha256").update(body).digest("hex"),
+    data: body.toString("base64")});
 }
 /** One original flight owns this sequence, whether prepared explicitly or by
  * the actual Model charge. Never nest a public preparation flight here. */
@@ -241,7 +283,7 @@ export function originalTrainingModelCopyReservation(token: OriginalTrainingCopy
   const matching = (purpose?: "source-charge" | "retain") => {
     const context = reservationContext.getStore();
     storageNeed(!!context && context.original === record.original && context.observed === record.observed &&
-      (purpose === undefined || context.purpose === purpose));
+      context.workerConfiguration === record.workerConfiguration && (purpose === undefined || context.purpose === purpose));
     resourceCurrent(record);
     if (!record.prepared) {
       // The original controller may request definition/charge metadata before
@@ -251,7 +293,7 @@ export function originalTrainingModelCopyReservation(token: OriginalTrainingCopy
     } else storageNeed(otherCopyRoles.every(role => record.states[role] === "charged" ||
       context.purpose === "retain" && record.states[role] === "retained"));
   };
-  return Object.freeze({configuration: record.configuration,
+  const adapter: OriginalTrainingSourceReservation = Object.freeze({configuration: record.configuration,
     assertCurrent() {matching();},
     chargeSourceCopy(bytes: number) {
       matching("source-charge"); storageNeed(bytes === record.limits.model);
@@ -263,6 +305,8 @@ export function originalTrainingModelCopyReservation(token: OriginalTrainingCopy
       });
     },
     retainSourceCopy(bytes: number) {matching("retain"); storageNeed(bytes === record.limits.model); return copyOperation(record, () => retainCopy(record, "model"));}});
+  modelCopyAdapters.set(adapter, record);
+  return adapter;
 }
 declare const sourceLaunchBrand: unique symbol;
 export interface OriginalTrainingSourceLaunch {readonly [sourceLaunchBrand]: true}
@@ -289,10 +333,14 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
   need(!!reservation && typeof reservation === "object" && !types.isProxy(reservation));
   const property = Object.getOwnPropertyDescriptor(reservation, "configuration"); need(!!property && "value" in property);
   const config = sourceCopyConfiguration(property.value), maximum = config.maximumCopyBytes;
+  const copyOwner = modelCopyAdapters.get(reservation);
+  if (copyOwner?.workerConfiguration) need(copyOwner.original === original && copyOwner.observed === observed &&
+    copyOwner.modelClaimed && !copyOwner.lost);
   need(observed.files.reduce((sum, row) => sum + row.sizeBytes, 0) <= maximum);
   const assertReservation = method(reservation, "assertCurrent"), charge = method(reservation, "chargeSourceCopy"), retain = method(reservation, "retainSourceCopy");
-  const effectContext = {original, observed, purpose: "effect" as const}, retainContext = {original, observed, purpose: "retain" as const};
-  const definitionContext = {original, observed, purpose: "source-definition" as const}, chargeContext = {original, observed, purpose: "source-charge" as const};
+  const originalContext = {original, observed, workerConfiguration: copyOwner?.workerConfiguration};
+  const effectContext = {...originalContext, purpose: "effect" as const}, retainContext = {...originalContext, purpose: "retain" as const};
+  const definitionContext = {...originalContext, purpose: "source-definition" as const}, chargeContext = {...originalContext, purpose: "source-charge" as const};
   const reservationCurrent = (purpose: ReservationPurpose = "effect") => {
     const context = purpose === "retain" ? retainContext : purpose === "source-definition" ? definitionContext :
       purpose === "source-charge" ? chargeContext : effectContext;
@@ -313,7 +361,9 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
   // graph. Re-serialization in another runtime is not the digest authority.
   const definitionBytes = Buffer.from(JSON.stringify(definition), "utf8"); need(definitionBytes.length <= 128 * 1024);
   const definitionDigest = "sha256:" + createHash("sha256").update(definitionBytes).digest("hex");
-  const descriptor = Object.freeze({schema: "windows-original-model-graph-v1", definitionDigest, modelId: observed.modelRecordId,
+  const descriptor = Object.freeze({schema: copyOwner?.workerConfiguration ? "windows-original-model-graph-v2" : "windows-original-model-graph-v1",
+    ...(copyOwner?.workerConfiguration ? {trainingConfiguration: copyOwner.workerConfiguration} : {}),
+    definitionDigest, modelId: observed.modelRecordId,
     modelUpdatedAt: observed.modelUpdatedAt, logicalPath: observed.logicalPath, sourcePath: observed.logicalPath,
     ...config, files: Object.freeze(observed.files.map(row => Object.freeze({...row})))});
   let state: "bound" | "charging" | "charged" | "allocated" | "sealed" | "created" | "dispatched" | "retaining" | "retained" | "lost" = "bound", copies = 0, busy = false;
@@ -361,7 +411,9 @@ export function bindOriginalTrainingSourceLaunch(original: OriginalTrainingCaptu
 /** Redeem once by the original native launcher, never from a wire descriptor. */
 export function captureOriginalTrainingSourceLaunch(token: OriginalTrainingSourceLaunch, bootstrapRequired = false) {
   need(typeof bootstrapRequired === "boolean");
-  const owner = sourceLaunches.get(token); need(!!owner && !owner.claimed); owner.claimed = true;
+  const owner = sourceLaunches.get(token); need(!!owner && !owner.claimed);
+  need(owner.descriptor.schema !== "windows-original-model-graph-v2" || bootstrapRequired);
+  owner.claimed = true;
   owner.bootstrapRequired = bootstrapRequired;
   return Object.freeze({descriptor: owner.descriptor, definitionByteCount: owner.definitionByteCount,
     readDefinition: owner.readDefinition.bind(owner), acknowledge: owner.acknowledge.bind(owner)});

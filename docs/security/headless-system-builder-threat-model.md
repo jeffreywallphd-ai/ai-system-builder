@@ -3408,3 +3408,25 @@ supply those missing proofs, permanent process/Job retirement or Save authority.
 Synthetic focused cases use inert Native replies and loader only. All physical,
 actual-host and complete training qualifications remain pending; no model
 accuracy, byte credit, new policy limit or public activation is inferred.
+
+
+### Correlated original worker configuration
+
+The new optional layout is data, not authority. Only the genuine all-role copy
+record may bind it, once and before charge/Model claim; only its exact registered
+adapter can attach it. An internal context check refuses execution through a
+copied wrapper that loses the original configuration. Preserve existing caller,
+Model revision, source observation and all-role charge-before-ACK controls.
+
+The private v2 envelope bounds decoded original UTF-8 JSON at 16 KiB and verifies
+its bytes/digest, exact keys, duplicate-free parsing, original definition and Job
+profile, all-role totals and disjoint Windows layout. Preflight complete boot and
+bootstrap-header bounds before file effects; keep actual 64 KiB wire limits.
+The genuine worker source/lease association returns copied metadata without IO,
+getters, admission or file preparation. Foreign/used leases and changed original
+bindings cannot supply that view. Keep v1 and default producer absence unchanged.
+
+These local controlled cases grant no real exclusive capacity, stable Native
+fence, resource token, readiness, producer activation, protected parent/crash
+custody, permanent retirement, Save or host qualification. Those remain pending;
+no model accuracy, physical Native effects or full-system tests are performed.

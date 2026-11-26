@@ -2652,3 +2652,25 @@ and a controlled loader. These checks do not qualify physical readiness. Default
 producer configuration stays absent. Real measured capacity, original resource
 transport, protected parent/crash custody, exact worker/Job retirement, Save and
 actual host qualification remain pending; no model accuracy is rerun.
+
+
+## Original worker configuration data
+
+The optional model-graph v2 descriptor transports the original all-role layout
+through the existing controller/bootstrap pipe. The exact envelope hashes the
+original decoded UTF-8 bytes, at most 16 KiB. Duplicate JSON keys, malformed UTF-8
+or base64, wrong digests/definition/profile, inconsistent limits and colliding or
+nested Windows namespaces are refused. Whole boot and bootstrap frames remain
+bounded at 64 KiB; the controller preflights the header bound before file effects.
+
+`read_original_training_worker_configuration` requires the genuine unentered
+Model lease and unchanged original source/configuration association. It returns
+a deep copy without Native calls, admission, file preparation or mutation. V1
+returns no configuration; there is no path/JSON fallback. This metadata is not a
+reservation, readiness or producer activation. Real shared/durable quota and
+mutation fencing, protected parent/crash custody, retirement and host execution
+remain separate pending work. Inert ABI tests create no real files or model.
+
+The passive copy keeps the original nonblocking lease lock until final
+unentered/quiet-owner checks pass. It rechecks after helpers, including legitimate
+same-thread borrow reentry, and refuses metadata after real lease consumption.
