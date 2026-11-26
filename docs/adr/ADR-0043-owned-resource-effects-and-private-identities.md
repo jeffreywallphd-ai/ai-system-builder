@@ -61,6 +61,16 @@ authorization and negative evidence; this decision grants no blanket admission.
 
 ## Verification and Consequences
 
+The user-approved2026-11-26 training-result replacement uses one private protected
+container in the existing Node parent, as specified in
+[Private Training Result Container](../architecture/training-result-container.md).
+The final file ACL, original capabilities and explicit data/metadata limits stay.
+This replaces only fresh result-directory construction, which real Windows tests
+refused before payload. It does not authorize historical-data access, parent ACL
+changes, new privileges/identities, recovery, quota credit or default activation.
+Actual parent/crash/global-reservation and host evidence remains mandatory; a
+live component pass is not a weaker supported mode.
+
 Resumable local-file publication implements this boundary through private
 task/file-scoped intents, pre-reservation bounded content verification, a single
 acknowledged exclusive writing transition, durable byte acknowledgement and one

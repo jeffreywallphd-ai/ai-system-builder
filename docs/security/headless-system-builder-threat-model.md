@@ -3505,31 +3505,33 @@ original session; a refused result remains unconfirmed and never becomes a void
 acknowledgement. An isolated ordinary-Node failure-policy fixture verifies no
 private rejection escapes and no startup/release follows.
 
-The opt-in Windows Node-parent custodian is a private native ABI, not a public
-app/tool capability. Strict primitives, bounded inventories and module-tagged
-environment-bound owners precede finite effects. The current candidate creates
-fresh objects with the unchanged final World/OWNER_RIGHTS descriptor and verifies
-actual creator rights without WRITE_DAC, exact owner/ACL/control, identity and
-secondary control-only denial. All allocated empty entries must match before
-payload. No weaker construction ACL, privilege, identity, service or permission
-transition is added. Original root child creation and data/read/delete capability
-are unresolved physical checks; absent rights refuse before data.
-Earlier real setter failures (observed missing WRITE_DAC/access denied) stay
-retained. There is no historical-tree access, ACL reset, adoption, recovery or
-quota credit. Pending/unknown original operations and lost readers retain owners.
-Known cleanup uses only the exact original same-episode creators after fencing.
-The synthetic-file driver is explicit-only and requires current completed/reviewed
-source. Exact source/binary/Node images, allowlisted child environments, original
-regular single-link lock identities, atomic admission and actual child/job closure
-are mandatory; final validation rechecks the full accepted source/review.
-Eight finite checks cover original child creation, final protection, secondary
-control/path/ADS denial, data/read/reader and cleanup. Private numeric diagnostics
-(stage/sub-step/status/access/match bits) emit no SID, path, payload, descriptor
-or raw exception and grant no authority. No automatic retry or history deletion.
-Source-only contracts/ABI supply no physical, crash, original SDK/controller,
-product quota, receiver/Save, packaging or host proof. This is a cooperative
-controlled-environment component; hostile races/toolchain/host compromise remain
-outside its qualification. See ADR0043/0047 and the runtime architecture.
+The optional Node-parent native result custodian uses the user-approved single
+protected container format. See the fixed codec and limits in
+`docs/architecture/training-result-container.md`. It is private and default-off.
+The complete copied bounded group/role/name inventory, safe derived offsets and
+metadata/rounding charge pass before effects. Exact final file permissions apply
+at creation; actual original grant0x13019f, identity, single link/default stream,
+empty EOF and complete allocation precede private metadata. No directory child
+insertion, ACL transition, new identity, privilege or service is used. Final row,
+header/index/padding/prefix/footer readback precedes logical readers; the footer
+is an integrity field, never authorization or original ownership.
+
+One original operation/buffer and reader lease remain owned through actual
+retirement. No timeout/GC/marker releases unknown custody or accounting. Known
+cleanup uses only same-episode creator handles with no pathname delete or credit.
+Four earlier directory failures and their trees stay untouched. The explicit
+synthetic-file profile still requires completed reviewed exact source, binary and
+Node identity, clean loaders, original regular locks, child/job closure and final
+source verification. It emits finite diagnostics only and never retries itself.
+
+The container does not protect the caller parent by itself. Parent DELETE_CHILD,
+ADS/injection/substitution and post-host-exit retention, actual global capacity,
+protected durable ownership/accounting, original SDK/controller/worker/Job exit,
+receiver metadata binding, review/Save and both hosts still need evidence before
+enablement. No parent ACL/provisioning change, old-data adoption, recovery or
+weaker live-only fallback is authorized. No-file checks and a live component
+pass cannot replace these proofs. Host compromise remains outside this bounded
+controlled-environment component; see ADR0043/0047 and the runtime architecture.
 
 The private result receiver accepts an optional trusted full-inventory preparation
 method. It captures the passive method before startup, validates the worker's

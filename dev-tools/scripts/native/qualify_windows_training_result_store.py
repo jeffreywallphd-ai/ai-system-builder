@@ -25,8 +25,8 @@ import build_windows_model_file_identity as fixed
 SCRIPT=Path(__file__).resolve();ROOT=SCRIPT.parents[3]
 NAMESPACE=ROOT/'artifacts/tmp/native-training-result-files'
 FIXTURE='modules/adapters/runtime/python/tests/windows-training-result-store.native.integration.test.mjs'
-PROFILE='windows-native-training-result-files-v1'
-CHECKS=['original-root-child-creation','empty-inventory-sealed','secondary-control-open-denied','path-mutation-denied','ordered-bounded-writes','verified-native-read','reader-prevents-discard','original-creator-cleanup']
+PROFILE='windows-native-training-result-container-v1'
+CHECKS=['final-permission-container-creation','complete-inventory-sealed','secondary-control-open-denied','path-and-stream-mutation-denied','ordered-bounded-writes','verified-logical-reads','reader-prevents-discard','original-creator-cleanup']
 SOURCES=(build.SOURCE.relative_to(ROOT).as_posix(),FIXTURE,SCRIPT.relative_to(ROOT).as_posix(),build.SCRIPT.relative_to(ROOT).as_posix(),build.POLICY.relative_to(ROOT).as_posix())
 MAX_RUNS=8
 

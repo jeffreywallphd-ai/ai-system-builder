@@ -21,6 +21,12 @@ proceed within those boundaries. Native and controlled qualification remain
 pending; design approval does not grant physical file effects or legacy data
 ownership, waive dependency findings, or admit unsupported routes.
 
+The user-approved2026-11-26 private training-result container direction is ready
+for bounded source implementation under ADR-0043. See
+[the fixed format and scope](../architecture/training-result-container.md).
+Actual parent/crash/shared-reservation and host evidence remains pending.
+No parent provisioning, permission change or weaker live-only mode is authorized.
+
 | Area                                                                                        | Readiness         | Authority and boundary                                                                                                                                                                                                               | Agent action                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Repository shape and dependency direction                                                   | ready             | ADR-0001 and `docs/architecture/module-dependency-rules.md`                                                                                                                                                                          | Follow the existing layers; changing dependency direction requires an ADR update or successor.                                                                                                                                                                            |

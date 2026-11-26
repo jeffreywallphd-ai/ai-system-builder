@@ -2,14 +2,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmdirSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../../../..');
 const enabled=process.argv.includes('--native-feature-child');
-const checks=['original-root-child-creation','empty-inventory-sealed','secondary-control-open-denied','path-mutation-denied','ordered-bounded-writes','verified-native-read','reader-prevents-discard','original-creator-cleanup'];
+const checks=['final-permission-container-creation','complete-inventory-sealed','secondary-control-open-denied','path-and-stream-mutation-denied','ordered-bounded-writes','verified-logical-reads','reader-prevents-discard','original-creator-cleanup'];
 const sha=value=>createHash('sha256').update(value).digest('hex');
 let api,store;
 const emptyDiagnostics=()=>({sealStep:0,nativeStatus:0,permissionBits:0,permissionControl:0,grantedAccess:0});
@@ -19,7 +19,7 @@ async function run() {
   const runPath=process.argv[3]; assert.match(runPath,/^artifacts\/tmp\/native-training-result-files\/[a-f0-9]{32}$/);
   const folder=resolve(root,runPath); assert.equal(realpathSync(folder),folder); assert(!lstatSync(folder).isSymbolicLink());
   const request=JSON.parse(readFileSync(resolve(folder,'node-request.json'),'utf8'));
-  assert.equal(request.profile,'windows-native-training-result-files-v1');
+  assert.equal(request.profile,'windows-native-training-result-container-v1');
   assert.equal(realpathSync(process.execPath),realpathSync(request.node.path));
   assert.equal(sha(readFileSync(process.execPath)),request.node.sha256);
   assert.equal(process.versions.node,request.node.version);
@@ -38,14 +38,16 @@ async function run() {
   api=createRequire(import.meta.url)(binary);
   store=api.createStore(parent,publication,sha('synthetic-native-training-result-file-fixture-v1'),2,8300,16384,32768,10000);
   const values=[Buffer.from('tiny-config'),Buffer.alloc(8300,0x5a)];
-  const inventory=Buffer.alloc(12+44*values.length); inventory.write('ASBTRS01'); inventory.writeUInt32LE(values.length,8);
-  values.forEach((value,index)=>{const offset=12+44*index; inventory.writeUInt32LE(index,offset); inventory.writeBigUInt64LE(BigInt(value.length),offset+4); Buffer.from(sha(value),'hex').copy(inventory,offset+12);});
+  const inventory=Buffer.alloc(12+48*values.length); inventory.write('ASBTRS02'); inventory.writeUInt32LE(values.length,8);
+  values.forEach((value,index)=>{const offset=12+48*index; inventory.writeUInt32LE(index,offset); inventory.writeUInt16LE(0,offset+4);inventory[offset+6]=2;inventory[offset+7]=index?9:1;inventory.writeBigUInt64LE(BigInt(value.length),offset+8); Buffer.from(sha(value),'hex').copy(inventory,offset+16);});
   await api.prepare(store,inventory); assert.equal(api.inspect(store).prepared,true);
-  const dataRoot=resolve(parent,publication);
+  const dataRoot=resolve(parent,publication+'.asbtr');
   // Existing controls must reject new path writes; do not alter permissions.
-  for(const target of [resolve(dataRoot,'foreign.bin'),resolve(dataRoot,'0.bin'),dataRoot+':foreign',resolve(dataRoot,'0.bin')+':foreign']) {
+  for(const target of [dataRoot,dataRoot+':foreign']) {
     assert.throws(()=>writeFileSync(target,Buffer.from('denied')),error=>['EACCES','EPERM','EBUSY'].includes(error.code));
   }
+  assert.throws(()=>readFileSync(dataRoot),error=>['EACCES','EPERM','EBUSY'].includes(error.code));
+  assert.throws(()=>renameSync(parent,parent+'-moved'),error=>['EACCES','EPERM','EBUSY'].includes(error.code));
   const denied=call=>assert.throws(call,{code:'TRAINING_RESULT_STORE_DENIED'});
   denied(()=>api.append(store,1,Buffer.from('x')));
   denied(()=>api.append(store,0,Buffer.alloc(8193)));

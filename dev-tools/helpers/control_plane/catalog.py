@@ -734,6 +734,11 @@ NATIVE_TRAINING_FILE_FEATURE = (
     "dev-tools/scripts/native/tests/test_qualify_windows_training_result_store.py",
 )
 NATIVE_TRAINING_FILE_SCOPE = NATIVE_TRAINING_RESULT_SCOPE + NATIVE_TRAINING_FILE_FEATURE
+NATIVE_TRAINING_CONTAINER_DOCUMENTS = (
+    "docs/architecture/training-result-container.md",
+    "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md",
+    "docs/adr/decision-readiness.md",
+)
 NATIVE_TRAINING_FILE_REQUIRED = NATIVE_TRAINING_FILE_FEATURE + tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (0, 1, 2, 3, 5, 6, 7, 11, 12))
 
 PUBLISHED_FORM_CHECKS = {
@@ -4820,7 +4825,10 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     native_store = PUBLISHED_FORM_CHECKS["native-training-result-store-abi"]
     native_feature = PUBLISHED_FORM_CHECKS["native-training-result-files-contract"]
     closed_native = (set(paths) <= set(NATIVE_TRAINING_RESULT_SCOPE)
-        or set(paths) <= set(NATIVE_TRAINING_FILE_SCOPE) and _automatic_files_available(root, native_feature))
+        or set(paths) <= set(NATIVE_TRAINING_FILE_SCOPE) and _automatic_files_available(root, native_feature)
+        or set(paths) <= set(NATIVE_TRAINING_FILE_SCOPE + NATIVE_TRAINING_CONTAINER_DOCUMENTS)
+            and _automatic_files_available(root, native_feature)
+            and _automatic_files_available(root, {"automatic_required_files": NATIVE_TRAINING_CONTAINER_DOCUMENTS}))
     if (paths and closed_native
             and set(paths).intersection(NATIVE_TRAINING_RESULT_CORE + NATIVE_TRAINING_FILE_FEATURE)
             and _automatic_files_available(root, native_store)):

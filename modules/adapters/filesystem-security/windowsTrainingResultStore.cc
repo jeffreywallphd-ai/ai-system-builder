@@ -39,10 +39,10 @@ void js(napi_status status) { need(status == napi_ok); }
 bool valid(HANDLE h) { return h != nullptr && h != INVALID_HANDLE_VALUE; }
 
 struct Row {
-    uint64_t size = 0, written = 0, allocation = 0;
+    uint64_t size = 0, written = 0, offset = 0;
+    uint16_t group = 0;
+    unsigned char role = 0, name = 0;
     std::array<unsigned char, 32> sha{};
-    std::array<unsigned char, 24> identity{};
-    HANDLE handle = INVALID_HANDLE_VALUE;
     bool finished = false;
 };
 struct Frame {
@@ -70,15 +70,17 @@ struct Store {
     std::atomic<uint32_t> stage{0}; // Private finite diagnostic; never authority.
     std::atomic<uint32_t> sealStep{0}, sealStatus{0}, permissionBits{0}, permissionControl{0}, sealAccess{0};
     std::vector<HANDLE> ancestors;
-    HANDLE token = INVALID_HANDLE_VALUE, root = INVALID_HANDLE_VALUE, receipt = INVALID_HANDLE_VALUE;
-    std::array<unsigned char, 24> rootIdentity{};
+    HANDLE token = INVALID_HANDLE_VALUE, container = INVALID_HANDLE_VALUE;
+    std::array<unsigned char, 24> containerIdentity{};
     std::vector<unsigned char> principal, sealedAcl;
     std::vector<Row> rows;
+    std::vector<unsigned char> prefix, footer;
+    uint64_t payloadBytes = 0, footerOffset = 0, physicalLength = 0, currentLength = 0, physicalAllocation = 0;
+    std::atomic<bool> finalized{false};
     std::shared_ptr<Frame> frame;
     std::shared_ptr<Operation> unacknowledged;
     WorkFrame* unretiredFrame = nullptr; // Retained if native work deletion fails.
-    uint64_t allocationUnit = 0, metadataAllocation = 0;
-    Row receiptFacts;
+    uint64_t allocationUnit = 0;
     bool effects = false;
 };
 struct Reader { std::shared_ptr<Store> store; uint32_t index; uint64_t offset = 0; bool closed = false; };
@@ -87,6 +89,7 @@ std::mutex registryMutex;
 std::vector<std::shared_ptr<Store>> registry;
 
 uint32_t u32(const unsigned char* p) { uint32_t v; std::memcpy(&v, p, 4); return v; }
+uint16_t u16(const unsigned char* p) { uint16_t v; std::memcpy(&v, p, 2); return v; }
 uint64_t u64(const unsigned char* p) { uint64_t v; std::memcpy(&v, p, 8); return v; }
 template<class T> void bytes(std::vector<unsigned char>& out, const T& value) {
     const auto* p = reinterpret_cast<const unsigned char*>(&value); out.insert(out.end(), p, p + sizeof(value));
@@ -228,9 +231,7 @@ HANDLE open(Store& s, HANDLE parent, const std::wstring& name, bool directory, b
     const HANDLE result = f.handle;
     // Register the returned creator BEFORE any inspecting native call.
     if (!fresh) s.ancestors.push_back(result);
-    else if (directory) s.root = result;
-    else if (s.rows.size() > 0 && std::all_of(s.rows.begin(), s.rows.end(), [](const Row& r){ return valid(r.handle); })) s.receipt = result;
-    else { auto row = std::find_if(s.rows.begin(), s.rows.end(), [](const Row& r){ return !valid(r.handle); }); need(row != s.rows.end()); row->handle = result; }
+    else { need(!directory && !valid(s.container)); s.container = result; }
     s.frame.reset(); kind(result, directory);
     if(fresh) { creatorAccess(s,result,access); s.sealStep=3; permissions(s,result); }
     return result;
@@ -249,15 +250,16 @@ void verifySealed(Store& s,HANDLE h,HANDLE parent,const std::wstring& name,bool 
     if(static_cast<uint32_t>(status)!=0xC0000022U || valid(f.handle)) {s.sealStatus=static_cast<uint32_t>(status);throw Denied{};}
     s.frame.reset(); s.sealStep=5; need(identity(h)==id); permissions(s,h); s.sealStep=6;
 }
-void facts(Store& s, Row& r, uint64_t expectedSize) {
-    kind(r.handle, false); FILE_STANDARD_INFO info{};
-    need(GetFileInformationByHandleEx(r.handle, FileStandardInfo, &info, sizeof(info)) && !info.DeletePending && !info.Directory && info.NumberOfLinks == 1
-        && info.EndOfFile.QuadPart == static_cast<LONGLONG>(expectedSize) && info.AllocationSize.QuadPart >= 0 && static_cast<uint64_t>(info.AllocationSize.QuadPart) <= r.allocation);
+void facts(Store& s) {
+    kind(s.container, false); FILE_STANDARD_INFO info{};
+    need(GetFileInformationByHandleEx(s.container, FileStandardInfo, &info, sizeof(info)) && !info.DeletePending && !info.Directory && info.NumberOfLinks == 1
+        && info.EndOfFile.QuadPart == static_cast<LONGLONG>(s.currentLength) && info.AllocationSize.QuadPart >= 0
+        && static_cast<uint64_t>(info.AllocationSize.QuadPart) == s.physicalAllocation);
     alignas(8) std::array<unsigned char,4096> stream{};
-    need(GetFileInformationByHandleEx(r.handle, FileStreamInfo, stream.data(), static_cast<DWORD>(stream.size())));
-    need(u32(stream.data()) == 0 && u32(stream.data()+4) == 14 && u64(stream.data()+8) == expectedSize
+    need(GetFileInformationByHandleEx(s.container, FileStreamInfo, stream.data(), static_cast<DWORD>(stream.size())));
+    need(u32(stream.data()) == 0 && u32(stream.data()+4) == 14 && u64(stream.data()+8) == s.currentLength
          && u64(stream.data()+16) == static_cast<uint64_t>(info.AllocationSize.QuadPart) && std::memcmp(stream.data()+24,L"::$DATA",14) == 0);
-    need(identity(r.handle) == r.identity); permissions(s,r.handle);
+    need(identity(s.container) == s.containerIdentity); permissions(s,s.container);
 }
 void seek(HANDLE handle, uint64_t offset) { LARGE_INTEGER distance{}; distance.QuadPart = static_cast<LONGLONG>(offset); need(SetFilePointerEx(handle,distance,nullptr,FILE_BEGIN)); }
 void write(HANDLE handle, const unsigned char* data, size_t size) {
@@ -276,6 +278,34 @@ struct Hash {
     std::array<unsigned char,32> finish() { std::array<unsigned char,32> out{}; need(BCryptFinishHash(hash,out.data(),32,0) == 0); return out; }
     ~Hash() { if (hash) BCryptDestroyHash(hash); if (algorithm) BCryptCloseAlgorithmProvider(algorithm,0); }
 };
+uint64_t add(uint64_t a,uint64_t b) { need(a<=safeInteger && b<=safeInteger-a); return a+b; }
+uint64_t align8(uint64_t value) { return add(value,7)&~uint64_t{7}; }
+template<class T> void put(std::vector<unsigned char>& out,size_t offset,T value) {
+    need(offset<=out.size() && sizeof(value)<=out.size()-offset); std::memcpy(out.data()+offset,&value,sizeof(value));
+}
+std::array<unsigned char,32> hashBytes(const unsigned char* data,size_t length) {
+    Hash hash; for(size_t p=0;p<length;p+=chunkBytes) hash.add(data+p,std::min(chunkBytes,length-p)); return hash.finish();
+}
+void layout(Store& s,std::vector<Row>& rows,uint64_t total) {
+    // Explicit little-endian Windows x64 codec; never a serialized C++ struct.
+    const uint64_t prefixBytes=256+64*rows.size(); uint64_t cursor=prefixBytes;
+    for(auto& row:rows) { row.offset=align8(cursor); cursor=add(row.offset,row.size); }
+    const auto footerOffset=align8(cursor), physicalLength=add(footerOffset,256);
+    need(physicalLength>=total && physicalLength-total<=s.maximumMetadata);
+    std::vector<unsigned char> prefix(static_cast<size_t>(prefixBytes),0);
+    for(uint32_t i=0;i<rows.size();++i) {
+        const auto& row=rows[i];const size_t at=256+64*static_cast<size_t>(i);
+        put(prefix,at,i);put(prefix,at+4,row.group);prefix[at+6]=row.role;prefix[at+7]=row.name;
+        put(prefix,at+8,row.offset);put(prefix,at+16,row.size);std::memcpy(prefix.data()+at+24,row.sha.data(),32);
+    }
+    const auto indexHash=hashBytes(prefix.data()+256,prefix.size()-256);
+    std::memcpy(prefix.data(),"ASBTRC01",8);put(prefix,8,uint32_t{1});put(prefix,12,uint32_t{256});
+    for(size_t i=0;i<16;++i) prefix[16+i]=static_cast<unsigned char>((nibble(s.publication[2*i])<<4)|nibble(s.publication[2*i+1]));
+    std::memcpy(prefix.data()+32,s.scope.data(),32);put(prefix,64,static_cast<uint32_t>(rows.size()));put(prefix,68,uint32_t{64});
+    put(prefix,72,prefixBytes-256);put(prefix,80,total);put(prefix,88,footerOffset);put(prefix,96,physicalLength);
+    std::memcpy(prefix.data()+104,indexHash.data(),32);
+    s.prefix=std::move(prefix);s.payloadBytes=total;s.footerOffset=footerOffset;s.physicalLength=physicalLength;
+}
 enum class Action { prepare, append, finish, read, discard };
 struct Operation {
     napi_env env; napi_deferred deferred = nullptr; napi_async_work work = nullptr;
@@ -283,106 +313,91 @@ struct Operation {
     uint32_t index = 0, maximum = 0; std::vector<unsigned char> data;
     ULONGLONG started = 0; bool success = false, entered = false;
     void guard(bool allowFence = false) { need(!store->uncertain && !store->closed && (allowFence || !store->fenced) && GetTickCount64()-started < store->maximumMs); }
-    void namespaceMatches(bool complete) {
-        auto& s=*store; std::vector<bool> seen(s.rows.size()+1,false); size_t count=0;
-        alignas(8) std::array<unsigned char,65536> page{};
-        static_assert(offsetof(FILE_ID_EXTD_DIR_INFO,FileName)==88);
-        for(unsigned pass=0;pass<4;++pass) {
-            guard(); page.fill(0);
-            if(!GetFileInformationByHandleEx(s.root,pass==0?FileIdExtdDirectoryRestartInfo:FileIdExtdDirectoryInfo,page.data(),static_cast<DWORD>(page.size()))) {
-                need(GetLastError()==ERROR_NO_MORE_FILES && count==seen.size()); return;
-            }
-            size_t offset=0;
-            for(size_t row=0;row<fileLimit+3;++row) {
-                need(offset+88<=page.size()); const auto* entry=reinterpret_cast<const FILE_ID_EXTD_DIR_INFO*>(page.data()+offset);
-                need(entry->FileNameLength>0 && entry->FileNameLength%2==0 && entry->FileNameLength<=510 && offset+88+entry->FileNameLength<=page.size());
-                std::wstring name(entry->FileName,entry->FileNameLength/2);
-                if(name!=L"." && name!=L"..") {
-                    const auto expected=[&]() -> size_t {
-                        if(name==L"receipt.bin") return s.rows.size();
-                        for(size_t i=0;i<s.rows.size();++i) if(name==std::to_wstring(i)+L".bin") return i;
-                        throw Denied{};
-                    }();
-                    need(!seen[expected] && (entry->FileAttributes & ~(FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE))==0 && entry->ReparsePointTag==0 && entry->EaSize==0);
-                    const Row& original=expected==s.rows.size()?s.receiptFacts:s.rows[expected];
-                    need(std::memcmp(entry->FileId.Identifier,original.identity.data()+8,16)==0
-                        && entry->EndOfFile.QuadPart==static_cast<LONGLONG>(complete?original.size:0)
-                        && entry->AllocationSize.QuadPart>=0 && static_cast<uint64_t>(entry->AllocationSize.QuadPart)<=original.allocation);
-                    seen[expected]=true; ++count;
-                }
-                if(entry->NextEntryOffset==0) break;
-                need(entry->NextEntryOffset%8==0 && entry->NextEntryOffset>=88+entry->FileNameLength && offset+entry->NextEntryOffset<page.size()); offset+=entry->NextEntryOffset;
-                need(row<fileLimit+2);
-            }
-        }
-        throw Denied{};
+    void readExact(unsigned char* destination,size_t size) {
+        guard(action==Action::read); DWORD count=0; need(size<=chunkBytes && ReadFile(store->container,destination,static_cast<DWORD>(size),&count,nullptr) && count==size);
     }
-    void metadataFacts() {
-        auto& s=*store; kind(s.root,true); need(identity(s.root)==s.rootIdentity); permissions(s,s.root);
-        FILE_STANDARD_INFO info{}; need(GetFileInformationByHandleEx(s.root,FileStandardInfo,&info,sizeof(info)) && info.Directory && !info.DeletePending
-            && info.AllocationSize.QuadPart>=0 && static_cast<uint64_t>(info.AllocationSize.QuadPart)<=s.maximumMetadata-s.metadataAllocation);
-        // A named directory stream is not an enumerated child. Reject it too;
-        // unsupported or oversized stream queries never become a clean tree.
-        alignas(8) std::array<unsigned char,4096> streams{};
-        if(GetFileInformationByHandleEx(s.root,FileStreamInfo,streams.data(),static_cast<DWORD>(streams.size()))) {
-            need(u32(streams.data())==0 && (u32(streams.data()+4)==0 || (u32(streams.data()+4)==14 && std::memcmp(streams.data()+24,L"::$DATA",14)==0))
-                && u64(streams.data()+8)==0 && u64(streams.data()+16)==0);
-        } else need(GetLastError()==ERROR_HANDLE_EOF);
+    void verifyBytes(uint64_t offset,const std::vector<unsigned char>& expected) {
+        seek(store->container,offset);std::array<unsigned char,chunkBytes> part{};
+        for(size_t p=0;p<expected.size();p+=chunkBytes) {
+            const size_t count=std::min(chunkBytes,expected.size()-p);readExact(part.data(),count);
+            need(std::memcmp(part.data(),expected.data()+p,count)==0);
+        }
+    }
+    std::array<unsigned char,32> hashRange(uint64_t offset,uint64_t length) {
+        seek(store->container,offset);Hash hash;std::array<unsigned char,chunkBytes> part{};
+        while(length) {const auto count=static_cast<size_t>(std::min<uint64_t>(length,chunkBytes));readExact(part.data(),count);hash.add(part.data(),count);length-=count;}
+        return hash.finish();
+    }
+    void appendPhysical(const unsigned char* content,size_t size) {
+        auto& s=*store;guard();need(size>0 && size<=chunkBytes && add(s.currentLength,size)<=s.physicalLength);facts(s);
+        seek(s.container,s.currentLength);guard();write(s.container,content,size);s.currentLength=add(s.currentLength,size);facts(s);
+    }
+    void padTo(uint64_t offset) {
+        auto& s=*store;need(offset>=s.currentLength && offset-s.currentLength<=7 && offset<=s.footerOffset);
+        if(offset!=s.currentLength) {std::array<unsigned char,8> zeros{};appendPhysical(zeros.data(),static_cast<size_t>(offset-s.currentLength));}
+    }
+    std::array<unsigned char,32> verifyPrefix() {
+        auto& s=*store;need(s.currentLength==s.footerOffset);seek(s.container,0);Hash all;
+        std::array<unsigned char,chunkBytes> part{};uint64_t cursor=0;
+        auto observe=[&](uint64_t size,const unsigned char* expected,bool zeros,Hash* rowHash) {
+            uint64_t offset=0;
+            while(offset<size) {
+                const auto count=static_cast<size_t>(std::min<uint64_t>(size-offset,chunkBytes));readExact(part.data(),count);
+                if(expected) need(std::memcmp(part.data(),expected+static_cast<size_t>(offset),count)==0);
+                if(zeros) need(std::all_of(part.begin(),part.begin()+count,[](unsigned char value){return value==0;}));
+                all.add(part.data(),count);if(rowHash)rowHash->add(part.data(),count);offset+=count;cursor=add(cursor,count);
+            }
+        };
+        observe(s.prefix.size(),s.prefix.data(),false,nullptr);
+        for(const auto& row:s.rows) {
+            need(row.offset>=cursor && row.offset-cursor<=7);observe(row.offset-cursor,nullptr,true,nullptr);
+            Hash hash;observe(row.size,nullptr,false,&hash);need(hash.finish()==row.sha);
+        }
+        need(s.footerOffset>=cursor && s.footerOffset-cursor<=7);observe(s.footerOffset-cursor,nullptr,true,nullptr);
+        need(cursor==s.footerOffset);return all.finish();
     }
     void prepare() {
-        auto& s = *store; guard(); s.stage=1; principal(s); s.stage=2;
-        need(GetDriveTypeW(s.parent.substr(0,3).c_str()) == DRIVE_FIXED);
-        HANDLE parent = open(s,nullptr,L"\\??\\" + s.parent.substr(0,3),true,false);
-        wchar_t filesystem[32]{}; DWORD flags = 0;
-        need(GetVolumeInformationByHandleW(parent,nullptr,0,nullptr,nullptr,&flags,filesystem,32) && std::wcscmp(filesystem,L"NTFS") == 0 && (flags & FILE_PERSISTENT_ACLS));
-        for (size_t start=3; start<s.parent.size();) {
-            guard(); const auto end=s.parent.find(L'\\',start); parent=open(s,parent,s.parent.substr(start,end==std::wstring::npos?end:end-start),true,false);
-            if (end==std::wstring::npos) break; start=end+1;
+        auto& s=*store;guard();s.stage=1;principal(s);s.stage=2;
+        need(GetDriveTypeW(s.parent.substr(0,3).c_str())==DRIVE_FIXED);
+        HANDLE parent=open(s,nullptr,L"\\??\\"+s.parent.substr(0,3),true,false);
+        wchar_t filesystem[32]{};DWORD flags=0;
+        need(GetVolumeInformationByHandleW(parent,nullptr,0,nullptr,nullptr,&flags,filesystem,32) && std::wcscmp(filesystem,L"NTFS")==0 && (flags&FILE_PERSISTENT_ACLS));
+        for(size_t start=3;start<s.parent.size();) {
+            guard();const auto end=s.parent.find(L'\\',start);parent=open(s,parent,s.parent.substr(start,end==std::wstring::npos?end:end-start),true,false);
+            if(end==std::wstring::npos)break;start=end+1;
         }
-        s.stage=3; need(s.frame == nullptr); s.frame=std::make_shared<Frame>(); auto& query=*s.frame; auto& volume=query.volume;
-        need(NtQueryVolumeInformationFile(parent,&query.io,&volume,sizeof(volume),3) == 0 && query.io.Status == 0 && query.io.Information == sizeof(volume)
-            && volume.sectors >= 1 && volume.sectors <= 65536 && volume.bytes >= 512 && volume.bytes <= 65536 && volume.available.QuadPart >= 0 && volume.available.QuadPart <= volume.total.QuadPart);
-        s.allocationUnit=static_cast<uint64_t>(volume.sectors)*volume.bytes; need(s.allocationUnit <= 1024*1024 && (s.allocationUnit & (s.allocationUnit-1)) == 0);
-        uint64_t allocated=0; for (auto& row:s.rows) { row.allocation=(row.size+s.allocationUnit-1)/s.allocationUnit*s.allocationUnit; need(row.allocation <= s.maximumTotal-allocated); allocated+=row.allocation; }
-        const uint64_t metadata=116+68*s.rows.size(); s.metadataAllocation=(metadata+s.allocationUnit-1)/s.allocationUnit*s.allocationUnit;
-        // Reserve the complete explicit metadata bound, then measure root and
-        // receipt allocations before bytes. Free observation is NOT a quota.
-        const uint64_t metadataUnits=(s.maximumMetadata+s.allocationUnit-1)/s.allocationUnit;
-        need(s.metadataAllocation+s.allocationUnit <= s.maximumMetadata && allocated/s.allocationUnit+metadataUnits <= static_cast<uint64_t>(volume.available.QuadPart));
-        s.frame.reset();
-        guard(); s.stage=4; open(s,parent,s.publication,true,true); s.rootIdentity=identity(s.root); s.stage=5;
-        for (uint32_t i=0;i<s.rows.size();++i) { guard(); auto h=open(s,s.root,std::to_wstring(i)+L".bin",false,true,s.rows[i].allocation); s.rows[i].identity=identity(h); }
-        guard(); open(s,s.root,L"receipt.bin",false,true,s.metadataAllocation);
-        s.receiptFacts.handle=s.receipt; s.receiptFacts.allocation=s.metadataAllocation; s.receiptFacts.size=metadata; s.receiptFacts.identity=identity(s.receipt);
-        // Every entry had FINAL permissions at creation. No setter, privilege
-        // or weaker construction ACL is used. Verify the entire empty inventory
-        // and secondary-control denial before the first private payload write.
-        s.stage=6;
-        for(uint32_t i=0;i<s.rows.size();++i) { guard(); verifySealed(s,s.rows[i].handle,s.root,std::to_wstring(i)+L".bin",false); }
-        verifySealed(s,s.receipt,s.root,L"receipt.bin",false);
-        verifySealed(s,s.root,s.ancestors.back(),s.publication,true);
-        s.stage=7; for (auto& row:s.rows) { guard(); facts(s,row,0); }
-        facts(s,s.receiptFacts,0); metadataFacts(); namespaceMatches(false); s.prepared=true; s.stage=8;
+        s.stage=3;need(s.frame==nullptr);s.frame=std::make_shared<Frame>();auto& query=*s.frame;auto& volume=query.volume;
+        need(NtQueryVolumeInformationFile(parent,&query.io,&volume,sizeof(volume),3)==0 && query.io.Status==0 && query.io.Information==sizeof(volume)
+            && volume.sectors>=1 && volume.sectors<=65536 && volume.bytes>=512 && volume.bytes<=65536
+            && volume.available.QuadPart>=0 && volume.available.QuadPart<=volume.total.QuadPart);
+        s.allocationUnit=static_cast<uint64_t>(volume.sectors)*volume.bytes;
+        need(s.allocationUnit<=1024*1024 && (s.allocationUnit&(s.allocationUnit-1))==0);
+        s.physicalAllocation=add(s.physicalLength,s.allocationUnit-1)/s.allocationUnit*s.allocationUnit;
+        need(s.physicalAllocation<=safeInteger && s.physicalAllocation>=s.payloadBytes
+            && s.physicalAllocation-s.payloadBytes<=s.maximumMetadata
+            && s.physicalAllocation/s.allocationUnit<=static_cast<uint64_t>(volume.available.QuadPart));
+        // Observed free space and this preallocation are not the shared quota.
+        // A trusted app still needs actual reservation and qualified parent custody.
+        s.frame.reset();guard();s.stage=4;open(s,parent,s.publication+L".asbtr",false,true,s.physicalAllocation);
+        s.containerIdentity=identity(s.container);s.stage=6;
+        verifySealed(s,s.container,s.ancestors.back(),s.publication+L".asbtr",false);
+        s.stage=7;facts(s);guard(); // Original grant/identity/default-stream/allocation precede private metadata.
+        for(size_t p=0;p<s.prefix.size();p+=chunkBytes) appendPhysical(s.prefix.data()+p,std::min(chunkBytes,s.prefix.size()-p));
+        need(FlushFileBuffers(s.container));verifyBytes(0,s.prefix);facts(s);guard();s.prepared=true;s.stage=8;
     }
     void finish() {
-        auto& s=*store; auto& r=s.rows[index]; guard(); s.stage=10; need(r.written==r.size && FlushFileBuffers(r.handle)); facts(s,r,r.size); seek(r.handle,0);
-        Hash hash; std::array<unsigned char,chunkBytes> part{}; uint64_t remaining=r.size;
-        while (remaining) { guard(); DWORD count=0; const DWORD request=static_cast<DWORD>(std::min<uint64_t>(remaining,chunkBytes)); need(ReadFile(r.handle,part.data(),request,&count,nullptr) && count>0 && count<=request); hash.add(part.data(),count); remaining-=count; }
-        DWORD eof=0; need(ReadFile(r.handle,part.data(),1,&eof,nullptr) && eof==0 && hash.finish()==r.sha); facts(s,r,r.size);
-        r.finished=true; s.complete.fetch_add(1);
-        if (s.complete==s.rows.size()) {
-            s.stage=11;
-            std::vector<unsigned char> receipt{'A','S','B','T','R','S','0','1'};
-            for (size_t i=0;i<s.publication.size();i+=2) receipt.push_back(static_cast<unsigned char>((nibble(s.publication[i])<<4)|nibble(s.publication[i+1])));
-            receipt.insert(receipt.end(),s.scope.begin(),s.scope.end()); receipt.insert(receipt.end(),s.rootIdentity.begin(),s.rootIdentity.end()); bytes(receipt,static_cast<uint32_t>(s.rows.size()));
-            for (uint32_t i=0;i<s.rows.size();++i) { bytes(receipt,i); bytes(receipt,s.rows[i].size); receipt.insert(receipt.end(),s.rows[i].sha.begin(),s.rows[i].sha.end()); receipt.insert(receipt.end(),s.rows[i].identity.begin(),s.rows[i].identity.end()); }
-            Hash check; for (size_t p=0;p<receipt.size();p+=chunkBytes) check.add(receipt.data()+p,std::min(chunkBytes,receipt.size()-p)); const auto sha=check.finish(); receipt.insert(receipt.end(),sha.begin(),sha.end());
-            need(receipt.size()<=s.metadataAllocation); seek(s.receipt,0);
-            for (size_t p=0;p<receipt.size();p+=chunkBytes) { guard(); write(s.receipt,receipt.data()+p,std::min(chunkBytes,receipt.size()-p)); }
-            need(FlushFileBuffers(s.receipt)); seek(s.receipt,0); std::vector<unsigned char> reread(receipt.size()); size_t offset=0;
-            while(offset<reread.size()) { guard(); DWORD count=0; const DWORD request=static_cast<DWORD>(std::min(chunkBytes,reread.size()-offset)); need(ReadFile(s.receipt,reread.data()+offset,request,&count,nullptr) && count>0 && count<=request); offset+=count; }
-            need(reread==receipt); facts(s,s.receiptFacts,receipt.size()); metadataFacts(); namespaceMatches(true);
-        }
+        auto& s=*store;auto& row=s.rows[index];guard();s.stage=10;
+        need(row.written==row.size && s.currentLength==add(row.offset,row.size) && FlushFileBuffers(s.container));facts(s);
+        need(hashRange(row.offset,row.size)==row.sha);facts(s);row.finished=true;s.complete.fetch_add(1);
+        if(s.complete!=s.rows.size()) {padTo(s.rows[index+1].offset);return;}
+        s.stage=11;padTo(s.footerOffset);const auto contentHash=verifyPrefix();
+        std::vector<unsigned char> footer(256,0);std::memcpy(footer.data(),"ASBTRF01",8);
+        put(footer,8,uint32_t{1});put(footer,12,uint32_t{256});put(footer,16,s.physicalLength);put(footer,24,static_cast<uint32_t>(s.rows.size()));
+        std::memcpy(footer.data()+32,s.prefix.data()+104,32);std::memcpy(footer.data()+64,contentHash.data(),32);
+        std::memcpy(footer.data()+96,s.prefix.data()+16,16);std::memcpy(footer.data()+112,s.scope.data(),32);
+        appendPhysical(footer.data(),footer.size());need(FlushFileBuffers(s.container));facts(s);
+        need(hashRange(0,s.footerOffset)==contentHash);verifyBytes(s.footerOffset,footer);facts(s);
+        need(s.currentLength==s.physicalLength);s.footer=std::move(footer);guard();s.finalized=true;
     }
     void discard() {
         auto& s=*store; guard(true); need(s.fenced && s.readers==0 && !s.uncertain && s.frame==nullptr);
@@ -390,7 +405,7 @@ struct Operation {
         auto remove=[&](HANDLE& h) { if (!valid(h)) return; guard(true); FILE_DISPOSITION_INFO disposition{TRUE}; need(SetFileInformationByHandle(h,FileDispositionInfo,&disposition,sizeof(disposition))); need(CloseHandle(h)); h=INVALID_HANDLE_VALUE; };
         // Only exact original creators from this live episode. No path deletion,
         // old-root adoption, ACL restoration or accounting credit exists here.
-        for(auto& row:s.rows) remove(row.handle); remove(s.receipt); remove(s.root);
+        remove(s.container);
         for(auto i=s.ancestors.rbegin();i!=s.ancestors.rend();++i) { guard(true); need(CloseHandle(*i)); *i=INVALID_HANDLE_VALUE; }
         if(valid(s.token)) { need(CloseHandle(s.token)); s.token=INVALID_HANDLE_VALUE; }
         s.closed=true; s.stage=14; std::lock_guard lock(registryMutex); registry.erase(std::remove(registry.begin(),registry.end(),store),registry.end());
@@ -400,12 +415,12 @@ struct Operation {
         try {
             if(action==Action::prepare) prepare();
             else if(action==Action::discard) discard();
-            else if(action==Action::append) { guard(); store->stage=9; auto& row=store->rows[index]; facts(*store,row,row.written); seek(row.handle,row.written); guard(); write(row.handle,data.data(),data.size()); row.written+=data.size(); guard(); facts(*store,row,row.written); }
+            else if(action==Action::append) { guard(); store->stage=9; auto& row=store->rows[index]; need(store->currentLength==add(row.offset,row.written)); appendPhysical(data.data(),data.size()); row.written=add(row.written,data.size()); guard(); }
             else if(action==Action::finish) finish();
             else {
-                guard(true); store->stage=12; auto& r=store->rows[reader->index]; facts(*store,r,r.size); seek(r.handle,reader->offset); data.resize(static_cast<size_t>(std::min<uint64_t>(maximum,r.size-reader->offset)));
-                if(!data.empty()) { DWORD count=0; need(ReadFile(r.handle,data.data(),static_cast<DWORD>(data.size()),&count,nullptr) && count==data.size()); reader->offset+=count; }
-                guard(true); facts(*store,r,r.size);
+                guard(true); store->stage=12; need(store->finalized); auto& r=store->rows[reader->index]; need(reader->offset<=r.size);facts(*store);seek(store->container,add(r.offset,reader->offset));data.resize(static_cast<size_t>(std::min<uint64_t>(maximum,r.size-reader->offset)));
+                if(!data.empty()) { readExact(data.data(),data.size());reader->offset+=data.size(); }
+                guard(true);facts(*store);
             }
             if(action!=Action::discard) guard(action==Action::read);
             success=true;
@@ -444,7 +459,12 @@ napi_value queue(napi_env env, std::unique_ptr<Operation> op) {
                 settled=settled && napi_delete_async_work(env,original->work)==napi_ok;
             }
             if(settled) owner->pending=false;
-            else { owner->uncertain=true; owner->fenced=true; owner->unacknowledged=original; }
+            else {
+                owner->uncertain=true; owner->fenced=true; owner->unacknowledged=original;
+                // The original async-work data slot cannot be freed while
+                // its settlement/deletion outcome is unknown, even after IO.
+                owner->unretiredFrame=frame.release();
+            }
         },frame.get(),&original->work));
         js(napi_queue_async_work(env,original->work)); frame.release(); return promise;
     } catch(...) {
@@ -470,10 +490,18 @@ napi_value create(napi_env env,napi_callback_info info) {
 napi_value prepare(napi_env env,napi_callback_info info) {
     try {
         const auto a=args(env,info,2); auto s=unbox<Store>(env,a[0],storeTag); need(s->env==env && !s->pending && !s->prepared && !s->fenced && !s->effects && s->rows.empty());
-        const auto data=buffer(env,a[1],12,12+44*fileLimit); need(std::memcmp(data.data(),"ASBTRS01",8)==0); const uint32_t count=u32(data.data()+8);
-        need(count>0 && count<=s->maximumFiles && data.size()==12+44*count); std::vector<Row> rows; uint64_t total=0;
-        for(uint32_t i=0;i<count;++i) { const auto* p=data.data()+12+44*i; Row row; need(u32(p)==i); row.size=u64(p+4); need(row.size>0 && row.size<=s->maximumFile && row.size<=s->maximumTotal-total); total+=row.size; std::memcpy(row.sha.data(),p+12,32); rows.push_back(row); }
-        need(116+68*count<=s->maximumMetadata); auto op=std::make_unique<Operation>(); op->env=env; op->store=s; op->action=Action::prepare; s->rows=std::move(rows); return queue(env,std::move(op));
+        const auto data=buffer(env,a[1],12,12+48*fileLimit);need(std::memcmp(data.data(),"ASBTRS02",8)==0);const uint32_t count=u32(data.data()+8);
+        need(count>0 && count<=s->maximumFiles && data.size()==12+48*count);std::vector<Row> rows;uint64_t total=0;uint16_t group=0;
+        std::array<std::array<bool,14>,256> seen{};
+        for(uint32_t i=0;i<count;++i) {
+            const auto* p=data.data()+12+48*i;Row row;need(u32(p)==i);row.group=u16(p+4);row.role=p[6];row.name=p[7];row.size=u64(p+8);
+            need(row.group<256 && (row.group==group || i>0 && row.group==static_cast<uint32_t>(group)+1)
+                && (i>0 || row.group==0) && (row.role==1 || row.role==2) && row.name>=1 && row.name<=13
+                && !seen[row.group][row.name] && row.size>0 && row.size<=s->maximumFile && row.size<=s->maximumTotal-total);
+            seen[row.group][row.name]=true;group=row.group;total=add(total,row.size);std::memcpy(row.sha.data(),p+16,32);rows.push_back(row);
+        }
+        need(std::all_of(rows.begin(),rows.end(),[&](const Row& row){return row.role==(row.group==group?2:1);}));
+        layout(*s,rows,total);auto op=std::make_unique<Operation>();op->env=env;op->store=s;op->action=Action::prepare;s->rows=std::move(rows);return queue(env,std::move(op));
     } catch(...) { return failure(env); }
 }
 napi_value append(napi_env env,napi_callback_info info) {
@@ -502,7 +530,7 @@ napi_value inspect(napi_env env,napi_callback_info info) {
     } catch(...) { return failure(env); }
 }
 napi_value openReader(napi_env env,napi_callback_info info) {
-    try { auto a=args(env,info,2); auto s=unbox<Store>(env,a[0],storeTag); need(s->env==env && s->prepared && !s->pending && !s->closed && !s->uncertain && s->complete==s->rows.size() && s->readers==0);
+    try { auto a=args(env,info,2); auto s=unbox<Store>(env,a[0],storeTag); need(s->env==env && s->prepared && s->finalized && !s->pending && !s->closed && !s->uncertain && s->complete==s->rows.size() && s->readers==0);
         const auto index=static_cast<uint32_t>(number(env,a[1],0,s->rows.size()-1)); auto reader=std::make_shared<Reader>(); reader->store=s; reader->index=index; auto value=box(env,reader,readerTag); s->readers=1; return value;
     } catch(...) { return failure(env); }
 }

@@ -48,6 +48,14 @@ class NativeTrainingStoreRoutingTests(unittest.TestCase):
         self.assertEqual(selected['native-training-result-files']['argv'],[sys.executable,'-B',catalog.NATIVE_TRAINING_FILE_FEATURE[1],'--run'])
         self.assertIn('test_control_plane_windows_training_result_store.',checks['control-plane']['argv'])
 
+    def test_container_document_scope_keeps_abi_contracts_and_explicit_file_boundary(self):
+        checks=self.select(list(catalog.NATIVE_TRAINING_FILE_SCOPE + catalog.NATIVE_TRAINING_CONTAINER_DOCUMENTS))
+        self.assertIn('native-training-result-store-abi',checks)
+        self.assertIn('native-training-result-files-contract',checks)
+        self.assertNotIn('native-training-result-files',checks)
+        self.assertEqual(checks['focused-tests']['argv'],['node',self.scope[2]])
+        self.assertIn('test_control_plane_windows_training_result_store.',checks['control-plane']['argv'])
+
     def test_missing_native_file_contract_support_preserves_generic_fallback(self):
         with tempfile.TemporaryDirectory() as name:
             root=Path(name)

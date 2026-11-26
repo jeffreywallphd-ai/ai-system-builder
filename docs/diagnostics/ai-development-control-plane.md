@@ -3591,11 +3591,14 @@ Windows fixture after a current completed Source Work and separate review.
 The fixture binds source/binary/Node, clears ambient loaders, validates original
 single-link OS locks, serializes count/create and observes original child exit
 and job closure. Final validation rechecks the complete accepted source/review.
-Eight checks cover root child creation, empty final protection, secondary control
-opens, path/ADS writes, ordered data, reads, reader lifetime and creator cleanup.
+Eight checks cover the approved single-file container, complete inventory,
+secondary control opens, path/ADS mutation, ordered data, logical reads, reader
+lifetime and creator cleanup. The input is `ASBTRS02`; the physical codec is in
+`docs/architecture/training-result-container.md`. Its approved architecture
+documents stay inside the closed source-check route, with missing-file fallback.
 Private numeric diagnostics reject unknown fields, booleans, invalid ranges and
 unmasked control bits. They contain no path, SID, payload or raw exception and
-cannot supply readiness or a technical pass. Earlier post-creation permission
-failures remain retained. The final-DACL-at-creation candidate still needs real
-capability proof. File/crash, app capacity, original SDK/controller, receiver,
+cannot supply readiness or a technical pass. All four directory permission
+failures remain retained. The container candidate still needs real capability
+proof. Parent/file/crash, app capacity, original SDK/controller, receiver,
 Save and host qualification remain distinct; no parent or storage credit follows.

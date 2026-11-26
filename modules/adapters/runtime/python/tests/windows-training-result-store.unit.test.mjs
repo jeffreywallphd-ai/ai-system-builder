@@ -70,11 +70,25 @@ test('real compiled private ABI rejects forged handles and invalid input before 
   for(const fake of [{}, {...store}, JSON.parse(JSON.stringify(store)), new Proxy(store,{})]) {
     for(const call of [()=>api.inspect(fake),()=>api.fence(fake),()=>api.prepare(fake,Buffer.alloc(12)),()=>api.openReader(fake,0),()=>api.read(fake,1),()=>api.discard(fake)]) denied(call);
   }
-  for(const malformed of [Buffer.alloc(0),Buffer.alloc(12),new Uint8Array(12),Buffer.concat([Buffer.from('ASBTRS01'),Buffer.alloc(4)]),Buffer.alloc(12+44*257)]) denied(()=>api.prepare(store,malformed));
-  const inventory=Buffer.alloc(56); inventory.write('ASBTRS01'); inventory.writeUInt32LE(1,8);
+  for(const malformed of [Buffer.alloc(0),Buffer.alloc(12),new Uint8Array(12),Buffer.concat([Buffer.from('ASBTRS01'),Buffer.alloc(4)]),Buffer.alloc(12+48*257)]) denied(()=>api.prepare(store,malformed));
+  const inventory=Buffer.alloc(60); inventory.write('ASBTRS02'); inventory.writeUInt32LE(1,8); inventory[18]=2;inventory[19]=1;
   denied(()=>api.prepare(store,inventory)); // zero-byte file cannot dispatch
-  inventory.writeUInt32LE(1,12); inventory.writeBigUInt64LE(1n,16); denied(()=>api.prepare(store,inventory));
-  inventory.writeUInt32LE(0,12); inventory.writeBigUInt64LE(8193n,16); denied(()=>api.prepare(store,inventory));
+  inventory.writeUInt32LE(1,12); inventory.writeBigUInt64LE(1n,20); denied(()=>api.prepare(store,inventory));
+  inventory.writeUInt32LE(0,12); inventory.writeBigUInt64LE(8193n,20); denied(()=>api.prepare(store,inventory));
+  inventory.writeBigUInt64LE(1n,20);
+  for(const [offset,value] of [[16,1],[18,0],[18,1],[18,3],[19,0],[19,14]]) {
+    const malformed=Buffer.from(inventory);malformed[offset]=value;denied(()=>api.prepare(store,malformed));
+  }
+  const duplicate=Buffer.alloc(108);duplicate.write('ASBTRS02');duplicate.writeUInt32LE(2,8);
+  for(let i=0;i<2;i++){const at=12+48*i;duplicate.writeUInt32LE(i,at);duplicate[at+6]=2;duplicate[at+7]=1;duplicate.writeBigUInt64LE(1n,at+8);}
+  denied(()=>api.prepare(store,duplicate)); // duplicate name in the same group
+  const metadataStore=api.createStore(config[0],config[1],config[2],256,1,256,4096,1000);
+  const many=Buffer.alloc(12+48*256);many.write('ASBTRS02');many.writeUInt32LE(256,8);
+  for(let i=0;i<256;i++){const at=12+48*i,group=Math.floor(i/13);many.writeUInt32LE(i,at);many.writeUInt16LE(group,at+4);many[at+6]=group===19?2:1;many[at+7]=i%13+1;many.writeBigUInt64LE(1n,at+8);}
+  denied(()=>api.prepare(metadataStore,many));assert.equal(api.inspect(metadataStore).stage,0);api.fence(metadataStore);await api.discard(metadataStore);
+  const overflowStore=api.createStore(config[0],config[1],config[2],2,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,16384,1000);
+  const overflow=Buffer.from(duplicate);overflow[67]=9;overflow.writeBigUInt64LE(BigInt(Number.MAX_SAFE_INTEGER)-2048n,20);overflow.writeBigUInt64LE(2048n,68);
+  denied(()=>api.prepare(overflowStore,overflow));assert.equal(api.inspect(overflowStore).stage,0);api.fence(overflowStore);await api.discard(overflowStore);
   assert.equal(api.inspect(store).uncertain,false,'Parser denials must not claim a native operation occurred.');
   for(const call of [()=>api.append(store,0,Buffer.from('x')),()=>api.finishFile(store,0),()=>api.openReader(store,0),()=>api.read(store,1),()=>api.closeReader(store),()=>api.discard(store)]) denied(call);
   api.fence(store); denied(()=>api.prepare(store,inventory));

@@ -331,8 +331,11 @@ Original regular single-link OS locks guard atomic admission and worker lifetime
 Final source stability and original child/job closure are mandatory. Strict
 numeric stage/sub-step/status/access/permission fields are diagnostic only.
 Earlier failures and trees stay retained without automatic retry, ACL reset,
-old-tree adoption or storage credit. Final-DACL creator capability, training and
-host qualification remain separate. Unknown/missing/mixed source paths preserve
+old-tree adoption or storage credit. The approved single-file container uses the
+fixed `ASBTRS02` complete logical inventory and exact physical codec described in
+`docs/architecture/training-result-container.md`. Its narrow architecture docs
+are covered by the closed source profile. Actual container/parent/crash/capacity,
+training and host qualification remain separate. Unknown/missing/mixed source paths preserve
 conservative generic verification; a partial profile never borrows a pass.
 
 ### Bounded supporting-work records

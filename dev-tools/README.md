@@ -2380,8 +2380,11 @@ Only explicit `--run` performs the small file fixture, after current completed a
 separately reviewed source. The driver binds source/binary/Node image, sanitizes
 child loaders, validates original single-link locks and serializes admission.
 Final source/review, original child exit and job closure are checked. Eight named
-capability checks include root child creation, secondary control/path/ADS denial,
-original writes/reads and cleanup. Numeric diagnostics contain no path, SID or
-payload and grant no authority. Earlier permission-transition failures stay
-retained. Final-DACL creation and all original capabilities still require actual
-Windows qualification; no model, full app, crash recovery or parent pass follows.
+capability checks cover one final-permission container, complete inventory,
+secondary control/path/ADS denial, ordered writes, logical readers and cleanup.
+The fixed input is `ASBTRS02`; see the versioned physical layout in
+`docs/architecture/training-result-container.md`. Numeric diagnostics contain no
+path, SID or payload and grant no authority. All four directory failures remain
+retained. The container still requires actual Windows qualification; parent,
+crash, shared capacity, original worker, receiver/Save and host proof stay separate.
+No model, full-app or parent pass follows from this component.

@@ -3761,28 +3761,30 @@ The session retains the actual operation and observation, and malformed outcomes
 remain unconfirmed. No supplied then/species hook or global rejection-policy
 handler is needed. This profile adds no physical resource or settlement proof.
 
-The private `windowsTrainingResultStore.cc` adapter retains fresh result creators
-in the existing Node host through async Node-API operations. It starts no service,
-changes no original controller retirement and is off by default. The trusted
-caller still supplies current authority and an actual shared reservation.
-Fresh objects receive the unchanged final owner/ACL/protected controls in their
-creating call. The original creator profile excludes WRITE_DAC. Actual grants,
-identity, exact descriptor, secondary control-open denial and the complete empty
-allocated inventory must be checked before payload. This avoids the setter-based
-transition which real fixtures found impossible with the observed creator grant.
-All earlier failures and trees remain; this candidate is not yet physically
-qualified. Original root child creation, data writes/reads and deletion must pass
-on Windows, with no weaker ACL fallback if unsupported.
-Sequential writes finish with flush/SHA-256 readback. Original-capability readers
-replace path reads while creators remain held. Fencing is not completion; unknown
-IO and lost readers retain custody. Same-episode known cleanup credits no capacity.
-The explicit synthetic-file driver requires completed/reviewed current source,
-fixed binary/Node inputs, clean loader environment, original single-link admission
-and worker locks, actual child/job closure and final complete-source revalidation.
-Only finite numeric diagnostics leave its private inspect/result path. No-file
-ABI/contracts do not execute the real fixture. Native crash, global quota/durable
-accounting, original SDK/controller, receiver/Save, packaging and host qualification
-remain pending. The Windows construction candidate stays within ADR0043/0047.
+The optional `windowsTrainingResultStore.cc` adapter now uses one fresh protected
+container in the existing Node parent, following the user-approved replacement in
+[Private Training Result Container](training-result-container.md). The final file
+owner/ACL/protected controls and original grant0x13019f stay unchanged. A complete
+copied group/role/name/size/hash inventory, checked aligned offsets, exact logical
+payload and metadata/rounding limits precede file effects. The original exclusive
+preallocated file must pass identity, single-link/default-stream/empty-EOF/full
+allocation, exact permissions and secondary-control denial before private metadata.
+It needs no result-directory child insertion or permission transition.
+
+Ordered bounded writes and complete row/index/padding/prefix/footer verification
+precede finalized-only logical readers. Original buffers, pending operations and
+lost readers keep their owner; fencing is not retirement. Known same-episode
+original-handle deletion credits no global capacity. The explicit small fixture
+remains source/review/binary/Node bound with clean loaders, original locks, child/
+job closure and final full-source verification. No-file ABI supplies no actual
+file pass. All four failed directory tests and their data stay untouched.
+
+This physical candidate remains unqualified. A file DACL does not prove parent
+namespace protection or post-host-exit custody. Actual global reservation and
+protected durable accounting, parent/ADS/injection/crash controls, full receiver
+role/name binding, SDK/controller/worker retirement, review/Save, packaging and
+hosts still need evidence. The format adds no process, identity, privilege,
+recovery policy or default activation, and permits no weaker live-only mode.
 
 Before releasing the first result byte, the original receiver can call the trusted
 storage port's optional `preparePublication`. It captures the method before

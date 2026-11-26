@@ -1,0 +1,118 @@
+# Private Training Result Container
+
+- Status: current
+- Related decisions: ADR-0043 and ADR-0047
+- Qualification: physical and host checks pending; accepted direction is not a test pass
+- Authority: user-approved protected-file replacement, 2026-11-26; ADR-0043 and ADR-0047
+- Verification: focused compiled ABI and contracts, then explicit Windows component qualification
+
+## Boundary
+
+The optional Node-parent custodian stores one fresh publication in one exclusive
+`.asbtr` file. It keeps the original file handle and exposes logical entry readers.
+It creates no result directory or child files. Existing failed directory trees
+are never opened, migrated, adopted or removed. Default hosts remain unavailable.
+
+The trusted application still owns current actor/workspace/task approval, actual
+shared reservations and qualified parent custody. A path, scope digest, header,
+footer, configuration or successful component test grants none of that authority.
+There is no new service, process, identity, privilege, engine or dependency.
+
+## Fixed Codec
+
+All integers are explicitly encoded little-endian. No C++ structure is serialized.
+The private input starts with `ASBTRS02` and a 32-bit row count. Each 48-byte row has
+index32, group16, role8, name8, length64 and 32 expected SHA-256 bytes. Indices are
+consecutive. Groups start at 0 and advance by at most 1. Earlier groups are
+checkpoints (role 1); the final group is the candidate (role 2). Names are unique
+within a group. Lengths are positive and bounded. The complete copied inventory
+and derived layout must pass before any filesystem effect.
+
+The fixed 1-based name ordinals are:
+
+1. `config.json`
+2. `generation_config.json`
+3. `tokenizer.json`
+4. `tokenizer_config.json`
+5. `special_tokens_map.json`
+6. `added_tokens.json`
+7. `vocab.json`
+8. `merges.txt`
+9. `model.safetensors`
+10. `adapter_config.json`
+11. `adapter_model.safetensors`
+12. `serialization_manifest.json`
+13. `training-run.json`
+
+These labels select no physical path or executable loader. The file name is only
+the trusted fresh 32-hex publication plus `.asbtr` under the configured parent.
+Input version1, unknown tags, duplicate names and malformed sizes are refused.
+
+The physical version1 format is 256-byte header, complete index with 64 bytes per row,
+ordered payloads at derived 8-byte-aligned offsets, zero gaps, then 256-byte footer.
+Every addition, alignment, total and allocation calculation is checked. No caller
+supplies offsets. Reserved fields and padding are zero; trailing data is refused.
+
+| Header offset | Meaning |
+| --- | --- |
+| 0 /8 /12 | `ASBTRC01`, version32=1, header size32=256 |
+| 16 /32 | Publication16 bytes, scope digest32 bytes |
+| 64 /68 | Row count32, row size32=64 |
+| 72 /80 /88 /96 | Index bytes64, logical payload bytes64, footer offset64, physical length64 |
+| 104 /136 | Index SHA-25632 bytes,120 zero reserved bytes |
+
+| Row offset | Meaning |
+| --- | --- |
+| 0 /4 /6 /7 | Index32, group16, role8, name ordinal8 |
+| 8 /16 /24 /56 | Derived offset64, length64, expected SHA-25632 bytes,8 zero bytes |
+
+| Footer offset | Meaning |
+| --- | --- |
+| 0 /8 /12 | `ASBTRF01`, version32=1, footer size32=256 |
+| 16 /24 /28 | Physical length64, row count32, zero32 |
+| 32 /64 | Index SHA-25632 bytes, preceding-content SHA-25632 bytes |
+| 96 /112 /144 | Publication16 bytes, scope32 bytes,112 zero bytes |
+
+The footer hash excludes the footer itself. There is no arbitrary archive reader,
+historical reopen or extraction API. Existing raw model directories are unchanged.
+
+## Original Capability and Accounting
+
+The existing final owner/World/OWNER_RIGHTS DACL and protected controls apply at
+file creation. Actual original grant 0x13019f, exact permissions, identity, single
+link, default stream, empty EOF and measured full allocation precede private
+metadata writes. Secondary control opens must be denied. No ACL transition or
+weaker initial policy is used. Original non-delete-sharing ancestors pin live
+names; they do not establish protection after a host crash.
+
+The single physical allocation includes 512 fixed bytes, 64 per row, actual zero
+padding, payloads and NTFS allocation rounding. Everything except logical payload
+is charged to the explicit metadata limit. Available-volume observation is checked
+before creation; it is not a shared reservation. All existing global role charges
+remain the application coordinator's responsibility and stay retained.
+
+Writes are ordered and at most 8 KiB. Each row is flushed and hash-checked. Final
+verification reads the actual header/index, zero gaps and every row hash, then
+writes and flushes the footer. A subsequent prefix digest, exact footer and
+EOF/identity/stream/allocation readback must match. Per-row completion is distinct
+from a finalized container. Only a finalized container admits logical readers.
+
+One original operation and one reader lease are permitted. Logical reads cannot
+cross entry boundaries. Fencing, deadlines, GC and lost replies do not retire
+pending IO or lost readers. Known cleanup uses only the same original creator
+after fencing and reader/IO closure, then closes its original ancestors. It
+grants no global cleanup credit and never deletes by a pathname.
+
+## Qualification and Composition
+
+The no-file ABI tests include invalid names/groups/roles, duplicate rows, metadata
+limits and safe-integer layout overflow. Actual files require the explicit small
+source/review-bound Windows profile after the source checkpoint. Earlier failures
+remain recorded. No model accuracy tests are repeated for this workflow work.
+
+Full receiver role/name binding, current application authority, actual shared
+capacity, parent deletion/rename/ADS/injection protection, durable ownership and
+post-host-exit retention, SDK/controller/Job retirement, review/Save and both hosts
+still need their own evidence. A file DACL alone does not protect its parent or
+prove crash custody. No parent ACL/provisioning change or live-only fallback is
+authorized by this format. Unsupported protection keeps product activation denied.
