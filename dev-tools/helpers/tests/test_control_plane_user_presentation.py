@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from control_plane.common import digest
-from control_plane.projection import (CHUNK_REFERENCE_FORMAT, PAGE_SIZES, REVIEW_MAX_BYTES, chunk_reference,
+from control_plane.projection import (CHUNK_REFERENCE_FORMAT, PAGE_SIZES, REVIEW_MAX_BYTES, _planning_copy, chunk_reference,
     encode_review_projection, expanded_review_work_items, project, review_content, roadmap_chunk_work_items)
 from control_plane.records import Records
 from control_plane.user_presentation import (REFERENCE, REFERENCE_MAX_BYTES, REFERENCE_MAX_ROWS, SUPPORT_REFERENCE,
@@ -316,6 +316,9 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
         with patch('control_plane.projection.Records.load', side_effect=lambda: Records.empty()):
             technical = review_content(repository, compact_work_items=True, paginated=True)
             user = apply_user_descriptions(repository, copy.deepcopy(technical))
+            # Optional planning metrics may be omitted to fit a response. Compare
+            # all required public facts through that existing display boundary.
+            public_technical = _planning_copy(technical, omit=True)
             # Whole-response clients retain their original exact byte refusal.
             for compact in (False, True):
                 raw = review_content(repository, compact_work_items=compact)
@@ -324,8 +327,12 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
                         project(repository, compact_work_items=compact)
                 else:
                     legacy = project(repository, compact_work_items=compact)
-                    self.assertEqual(legacy['roadmaps'], technical['roadmaps'])
-                    self.assertEqual(expanded_review_work_items(legacy), expanded_review_work_items(technical))
+                    encoded = encode_review_projection(legacy)
+                    self.assertNotIn(b'"_planning_ancestry":', encoded)
+                    self.assertNotIn(b'"_planning_story_ancestry":', encoded)
+                    public_legacy = _planning_copy(legacy, omit=True)
+                    self.assertEqual(public_legacy['roadmaps'], public_technical['roadmaps'])
+                    self.assertEqual(expanded_review_work_items(public_legacy), expanded_review_work_items(public_technical))
         self.assertEqual(technical['work_item_format'], CHUNK_REFERENCE_FORMAT)
         self.assertEqual(user['work_item_format'], CHUNK_REFERENCE_FORMAT)
         self.assertEqual(technical['diagnostics'], [])

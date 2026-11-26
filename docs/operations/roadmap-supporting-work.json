@@ -1,1 +1,90 @@
-{"schema_version":"roadmap-supporting-work-v2","agent_only_roadmaps":["functionality-optimization","system-builder-canvas-reliability","security-findings-refresh","asset-experience-layered-customization","data-management-quality-and-usability","optional-constrained-json-generation","optional-low-memory-inference","comprehensive-ui-automation","headless-skills-ui-takeover"],"criterion_labels":[{"roadmap_id":"system-builder-canvas-reliability","increment_id":"measured-canvas-responsiveness","criterion_id":"reference-and-accessibility-qualification","title":"Automated reference performance and accessibility"},{"roadmap_id":"functionality-optimization","increment_id":"qualified-user-and-model-outcomes","criterion_id":"accessibility-outcomes-qualified","title":"Automated desktop and thin-client accessibility"},{"roadmap_id":"optional-low-memory-inference","increment_id":"optional-bounded-offload","criterion_id":"measured-low-memory-model-outcomes","title":"Actual optional offload execution and cleanup"}],"successors":[{"roadmap_id":"security-vulnerability-remediation","successor_roadmap_id":"security-findings-refresh","summary":"Merged into security-findings-refresh as the sole execution owner. Preserved legacy history and exact criterion crosswalk are available inside that roadmap; no duplicate backlog or inherited completion.","consolidation_path":"docs/security/security-roadmap-consolidation.json"},{"roadmap_id":"systems-run-workflow-active-source","successor_roadmap_id":"systems-publish-runtime-lifecycle","summary":"Unapproved standalone Run and Test proposal absorbed by completed Publish lifecycle; all security and active-source concerns remain with their existing owners.","consolidation_path":"docs/operations/retired-run-test-roadmap.json"}],"link_files":[{"path":"docs/operations/roadmap-supporting-work/links-0001.json","content_digest":"012d3eeb61139ac73fa038133943cb14502a249e2b425c3f71307b6d6541a4f8"},{"path":"docs/operations/roadmap-supporting-work/links-0002.json","content_digest":"c7ad00d54739129307b63cb205e183be96ab402fb6fc865f47e09f4875620d56"},{"path":"docs/operations/roadmap-supporting-work/links-0003.json","content_digest":"0c9bcf6577998acdfbdd4eed2e6d4c9793ac38018606b38b5b72bd0196526647"},{"path":"docs/operations/roadmap-supporting-work/links-0004.json","content_digest":"2e2e14ac18a65d32ad5c0d1930a33917b8d2292cf3221cd3e7aae6deff0e76c7"},{"path":"docs/operations/roadmap-supporting-work/links-0005.json","content_digest":"8fecc7a2078ef7756f1daf346966359e2187b5a628de3bbce696cb4fcb8433dd"},{"path":"docs/operations/roadmap-supporting-work/links-0006.json","content_digest":"489edac39dfd5a7ea5e49c42fbbd6b6b053c7d2ca6047c8eeff53898f42e695c"},{"path":"docs/operations/roadmap-supporting-work/links-0007.json","content_digest":"87eb5e55345a53712dcb7a3b11925de51f741cda095dc561a4883c9f31deb3db"},{"path":"docs/operations/roadmap-supporting-work/links-0008.json","content_digest":"520c725c9730328bf7be460fd82e6de99c66361f4968bb8fa7da5be3a06c49fb"},{"path":"docs/operations/roadmap-supporting-work/links-0009.json","content_digest":"a4d87822ffe5d3b19c559875b87e703403c5e0108b1b63900b6400e1464a11bb"},{"path":"docs/operations/roadmap-supporting-work/links-0010.json","content_digest":"f54c2c2b6fa61f8d5142b29a13a89d49958e5b26b05abbf6718ce35450c50936"}]}
+{
+  "schema_version": "roadmap-supporting-work-v2",
+  "agent_only_roadmaps": [
+    "functionality-optimization",
+    "system-builder-canvas-reliability",
+    "security-findings-refresh",
+    "asset-experience-layered-customization",
+    "data-management-quality-and-usability",
+    "optional-constrained-json-generation",
+    "optional-low-memory-inference",
+    "comprehensive-ui-automation",
+    "headless-skills-ui-takeover"
+  ],
+  "criterion_labels": [
+    {
+      "roadmap_id": "system-builder-canvas-reliability",
+      "increment_id": "measured-canvas-responsiveness",
+      "criterion_id": "reference-and-accessibility-qualification",
+      "title": "Automated reference performance and accessibility"
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "accessibility-outcomes-qualified",
+      "title": "Automated desktop and thin-client accessibility"
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "title": "Actual optional offload execution and cleanup"
+    }
+  ],
+  "successors": [
+    {
+      "roadmap_id": "security-vulnerability-remediation",
+      "successor_roadmap_id": "security-findings-refresh",
+      "summary": "Merged into security-findings-refresh as the sole execution owner. Preserved legacy history and exact criterion crosswalk are available inside that roadmap; no duplicate backlog or inherited completion.",
+      "consolidation_path": "docs/security/security-roadmap-consolidation.json"
+    },
+    {
+      "roadmap_id": "systems-run-workflow-active-source",
+      "successor_roadmap_id": "systems-publish-runtime-lifecycle",
+      "summary": "Unapproved standalone Run and Test proposal absorbed by completed Publish lifecycle; all security and active-source concerns remain with their existing owners.",
+      "consolidation_path": "docs/operations/retired-run-test-roadmap.json"
+    }
+  ],
+  "link_files": [
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0001.json",
+      "content_digest": "012d3eeb61139ac73fa038133943cb14502a249e2b425c3f71307b6d6541a4f8"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0002.json",
+      "content_digest": "c7ad00d54739129307b63cb205e183be96ab402fb6fc865f47e09f4875620d56"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0003.json",
+      "content_digest": "0c9bcf6577998acdfbdd4eed2e6d4c9793ac38018606b38b5b72bd0196526647"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0004.json",
+      "content_digest": "2e2e14ac18a65d32ad5c0d1930a33917b8d2292cf3221cd3e7aae6deff0e76c7"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0005.json",
+      "content_digest": "8fecc7a2078ef7756f1daf346966359e2187b5a628de3bbce696cb4fcb8433dd"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0006.json",
+      "content_digest": "489edac39dfd5a7ea5e49c42fbbd6b6b053c7d2ca6047c8eeff53898f42e695c"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0007.json",
+      "content_digest": "87eb5e55345a53712dcb7a3b11925de51f741cda095dc561a4883c9f31deb3db"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0008.json",
+      "content_digest": "520c725c9730328bf7be460fd82e6de99c66361f4968bb8fa7da5be3a06c49fb"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0009.json",
+      "content_digest": "a4d87822ffe5d3b19c559875b87e703403c5e0108b1b63900b6400e1464a11bb"
+    },
+    {
+      "path": "docs/operations/roadmap-supporting-work/links-0010.json",
+      "content_digest": "4667689b545cc0463be56693d9af026490a477bab4ab87ac581e791c72c330f3"
+    }
+  ]
+}

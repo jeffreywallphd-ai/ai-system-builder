@@ -305,6 +305,7 @@ SUPPORT_REGISTRY_SCOPE = (
     "dev-tools/helpers/README.md",
     "docs/operations/roadmap-user-support-descriptions.json",
     "dev-tools/helpers/tests/test_control_plane_pagination.py",
+    "dev-tools/helpers/tests/test_control_plane_user_presentation.py",
 ) + tuple(f"docs/operations/roadmap-supporting-work/links-{i:04d}.json" for i in range(1, 17))
 SUPPORT_REGISTRY_TESTS = (
     "test_control_plane_supporting_work.", "test_control_plane_support.",
