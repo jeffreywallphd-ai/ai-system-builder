@@ -18,7 +18,7 @@ feature=importlib.util.module_from_spec(spec);spec.loader.exec_module(feature)
 
 class NativeFeatureContractTests(unittest.TestCase):
     def diagnostics(self):return {'sealStep':0,'nativeStatus':0,'permissionBits':0,'permissionControl':0,'grantedAccess':0}
-    def result(self):return {'kind':'native-file-result','passed':True,'cleanup_passed':True,'stage':14,'diagnostics':self.diagnostics(),'checks':feature.CHECKS.copy()}
+    def result(self):return {'kind':'native-file-result','passed':True,'cleanup_passed':True,'stage':14,'diagnostics':self.diagnostics(),'fixture_step':16,'failure_code':0,'os_error_code':0,'checks':feature.CHECKS.copy()}
 
     def test_exact_success_requires_all_eight_real_feature_checks_and_cleanup(self):
         value=self.result();self.assertEqual(feature.decode_result(json.dumps(value)),value)
@@ -27,11 +27,35 @@ class NativeFeatureContractTests(unittest.TestCase):
             with self.subTest(field=field),self.assertRaises(ValueError):feature.decode_result(json.dumps(invalid))
 
     def test_failed_or_forged_replies_never_claim_closure_or_emit_payload_fields(self):
-        failed={'kind':'native-file-result','passed':False,'cleanup_passed':False,'stage':6,'diagnostics':self.diagnostics(),'checks':[]}
+        failed={'kind':'native-file-result','passed':False,'cleanup_passed':False,'stage':6,'diagnostics':self.diagnostics(),'fixture_step':5,'failure_code':1,'os_error_code':0,'checks':[]}
         self.assertEqual(feature.decode_result(json.dumps(failed)),failed)
         for wrong in [{**failed,'checks':feature.CHECKS},{**failed,'cleanup_passed':True},{**failed,'stage':True},{**failed,'private_path':'must not enter result'},{**failed,'passed':1}]:
             with self.subTest(wrong=wrong),self.assertRaises(ValueError):feature.decode_result(json.dumps(wrong))
         with self.assertRaises(ValueError):feature.decode_result('x'*16385)
+
+    def test_fixture_diagnostics_reject_ambiguous_types_ranges_and_pass_combinations(self):
+        for key,value in [('fixture_step',True),('fixture_step',17),('failure_code',6),('failure_code',-1),('os_error_code',11),('os_error_code',True),('fixture_step',15),('failure_code',1),('os_error_code',4)]:
+            invalid=self.result();invalid[key]=value
+            with self.subTest(key=key,value=value),self.assertRaises(ValueError):feature.decode_result(json.dumps(invalid))
+        invalid={**self.result(),'passed':False,'cleanup_passed':False,'checks':[],'failure_code':2,'os_error_code':4}
+        self.assertEqual(feature.decode_result(json.dumps(invalid)),invalid)
+        for code in (0,1,2,3):
+            invalid['os_error_code']=code
+            with self.assertRaises(ValueError):feature.decode_result(json.dumps(invalid))
+        with self.assertRaises(ValueError):feature.decode_result('{"kind":"native-file-result","kind":"native-file-result"}')
+        with self.assertRaises(ValueError):feature.decode_result('{"kind":NaN}')
+
+    def test_passive_filesystem_denial_classifier_distinguishes_allowed_mutation_and_error_codes(self):
+        node=feature.shutil.which('node');self.assertIsNotNone(node)
+        program="""import assert from 'node:assert/strict';
+import {classifyFilesystemDenial as classify} from './modules/adapters/runtime/python/tests/windows-training-result-store.native.integration.test.mjs';
+assert.deepEqual(classify(false,undefined),{failure_code:1,os_error_code:0});
+for(const code of ['EACCES','EPERM','EBUSY'])assert.deepEqual(classify(true,code),{failure_code:0,os_error_code:0});
+for(const [code,expected] of [['ENOENT',4],['EINVAL',5],['EEXIST',6],['ENOTEMPTY',7],['ENOSPC',8],['EIO',9],['untrusted private text',10],[undefined,10],[{},10]])assert.deepEqual(classify(true,code),{failure_code:2,os_error_code:expected});
+assert.throws(()=>classify('true','EACCES'));
+"""
+        result=feature.subprocess.run([node,'--input-type=module','-e',program],cwd=feature.ROOT,env=feature.child_environment(Path(node)),capture_output=True,text=True,timeout=10)
+        self.assertEqual(result.returncode,0,'Passive denial classification must pass without native loading or filesystem fixture effects.')
 
     def test_numeric_diagnostics_deny_payload_fields_boolean_and_out_of_range_values(self):
         for key,value in [('sealStep',7),('nativeStatus',2**32),('permissionBits',16),('permissionControl',0x150d),('permissionControl',1),('permissionControl',2),('grantedAccess',-1),('sealStep',True),('path','must-not-appear')]:

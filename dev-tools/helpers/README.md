@@ -351,3 +351,10 @@ denial, fixed paths, nonredirected entries, full digest and complete global
 validation precede any decoration. Publish all files together and restart an old
 server for the new reader. Missing evidence remains unavailable; this format
 cannot complete work, qualify parents or grant source-currentness or authority.
+
+The explicit container-v2 test reports finite `fixture_step`, `failure_code` and
+`os_error_code` values. The diagnostic guide maps each step and category; no raw
+filesystem error text or payload is logged. An unexpectedly permitted operation
+is a failure, distinct from an unsupported error code. Success requires the full
+exact assertion/cleanup sequence, while the parent separately proves process,
+job and source outcomes. No mutation is reversed and no test retries itself.

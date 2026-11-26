@@ -3541,3 +3541,12 @@ unknown operation, timeout or stale permission cannot issue that ACK. Pending
 preparation survives local abort in IO accounting; only its actual settlement
 retires the operation. No worker frame selects a backend or supplies permission.
 This closes an ordering gap, not the separate native protection/capacity gap.
+
+The explicit container fixture distinguishes each filesystem denial assertion
+with a fixed numeric step and finite failure/OS categories. Unexpected success
+and an unexpected error remain distinct failures. The child emits no raw error
+message, path or private payload. Strict parsing rejects unknown/duplicate keys,
+nonfinite values, boolean/range errors and contradictory pass combinations. A
+failed mutation stops without reversing, inspecting or cleaning retained files.
+The unchanged parent independently checks actual original process/job closure
+and current reviewed source. Diagnostic success is never authority or custody.

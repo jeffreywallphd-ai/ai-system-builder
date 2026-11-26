@@ -25,7 +25,7 @@ import build_windows_model_file_identity as fixed
 SCRIPT=Path(__file__).resolve();ROOT=SCRIPT.parents[3]
 NAMESPACE=ROOT/'artifacts/tmp/native-training-result-files'
 FIXTURE='modules/adapters/runtime/python/tests/windows-training-result-store.native.integration.test.mjs'
-PROFILE='windows-native-training-result-container-v1'
+PROFILE='windows-native-training-result-container-v2'
 CHECKS=['final-permission-container-creation','complete-inventory-sealed','secondary-control-open-denied','path-and-stream-mutation-denied','ordered-bounded-writes','verified-logical-reads','reader-prevents-discard','original-creator-cleanup']
 SOURCES=(build.SOURCE.relative_to(ROOT).as_posix(),FIXTURE,SCRIPT.relative_to(ROOT).as_posix(),build.SCRIPT.relative_to(ROOT).as_posix(),build.POLICY.relative_to(ROOT).as_posix())
 MAX_RUNS=8
@@ -108,14 +108,22 @@ def reviewed_source():
 
 def decode_result(raw):
     if not isinstance(raw,str) or len(raw.encode('utf-8'))>16384: raise ValueError('Bounded native result unavailable.')
-    value=json.loads(raw)
-    if not isinstance(value,dict) or set(value)!={'kind','passed','cleanup_passed','stage','diagnostics','checks'} or value['kind']!='native-file-result': raise ValueError('Native result schema differs.')
+    def unique(pairs):
+        value={}
+        for key,item in pairs:
+            if key in value:raise ValueError('Duplicate native result field.')
+            value[key]=item
+        return value
+    value=json.loads(raw,object_pairs_hook=unique,parse_constant=lambda _:(_ for _ in ()).throw(ValueError('Nonfinite native result.')))
+    if not isinstance(value,dict) or set(value)!={'kind','passed','cleanup_passed','stage','diagnostics','fixture_step','failure_code','os_error_code','checks'} or value['kind']!='native-file-result': raise ValueError('Native result schema differs.')
     if type(value['passed']) is not bool or type(value['cleanup_passed']) is not bool or type(value['stage']) is not int or not 0<=value['stage']<=14: raise ValueError('Native result types differ.')
     diagnostic=value['diagnostics'];limits={'sealStep':6,'nativeStatus':2**32-1,'permissionBits':15,'permissionControl':0x150c,'grantedAccess':2**32-1}
     if not isinstance(diagnostic,dict) or set(diagnostic)!=set(limits) or any(type(diagnostic[k]) is not int or not 0<=diagnostic[k]<=limit for k,limit in limits.items()):raise ValueError('Private diagnostic schema differs.')
     if diagnostic['permissionControl'] & ~0x150c:raise ValueError('Private permission-control mask differs.')
-    if value['passed'] and (not value['cleanup_passed'] or value['stage']!=14 or value['checks']!=CHECKS): raise ValueError('Native result coverage incomplete.')
-    if not value['passed'] and (value['cleanup_passed'] or value['checks']!=[]): raise ValueError('Failed native result overclaims closure.')
+    if any(type(value[k]) is not int or not 0<=value[k]<=limit for k,limit in {'fixture_step':16,'failure_code':5,'os_error_code':10}.items()):raise ValueError('Fixture diagnostic bounds differ.')
+    if value['passed'] and (not value['cleanup_passed'] or value['stage']!=14 or value['checks']!=CHECKS or value['fixture_step']!=16 or value['failure_code']!=0 or value['os_error_code']!=0): raise ValueError('Native result coverage incomplete.')
+    if not value['passed'] and (value['cleanup_passed'] or value['checks']!=[] or value['failure_code']==0): raise ValueError('Failed native result overclaims closure.')
+    if (value['failure_code']==2 and not 4<=value['os_error_code']<=10) or (value['failure_code']!=2 and value['os_error_code']!=0):raise ValueError('Fixture error combination differs.')
     return value
 
 
@@ -197,6 +205,7 @@ def run_locked(args,folder,expected,current,job):
     result={'kind':'result','qualification':'passed' if passed else 'failed','cleanup_passed':bool(passed and report['cleanup_passed']),
         'stage':report['stage'] if report else 0,'checks':report['checks'] if passed else [],'node_exit_code':exit_code,'source_stable':stable,
         'diagnostics':report['diagnostics'] if report else {'sealStep':0,'nativeStatus':0,'permissionBits':0,'permissionControl':0,'grantedAccess':0},
+        'fixture':{key:report[key] if report else fallback for key,fallback in [('fixture_step',0),('failure_code',5),('os_error_code',0)]},
         'compiler_job':observations['after_final_input_check'],'scope':'synthetic native component files only; no model or parent qualification'}
     (folder/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result),flush=True)

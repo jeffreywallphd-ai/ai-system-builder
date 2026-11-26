@@ -3602,3 +3602,22 @@ cannot supply readiness or a technical pass. All four directory permission
 failures remain retained. The container candidate still needs real capability
 proof. Parent/file/crash, app capacity, original SDK/controller, receiver,
 Save and host qualification remain distinct; no parent or storage credit follows.
+
+The container-v2 fixture records `fixture_step`, `failure_code` and `os_error_code`
+as bounded integers. Steps1/2/3 are input checks, local setup and native prepare;
+4 is the main-file write refusal;5 the named-stream write refusal;6 the secondary
+read refusal;7 the parent rename refusal;8/9 invalid row/oversize append refusal;
+10 genuine writes;11 fencing;12/13 the two readers;14 original cleanup;15 parent
+identity/empty removal;16 complete. Failure0 means no child-fixture failure,
+1 an unexpectedly allowed mutation,2 an unexpected OS error,3 an assertion,
+4 the native storage refusal and5 another unavailable result. OS0 means none;
+4..9 mean ENOENT, EINVAL, EEXIST, ENOTEMPTY, ENOSPC and EIO;10 means other.
+Recognized EACCES/EPERM/EBUSY refusals leave both error fields zero.
+
+Only step16/error0 plus every actual assertion and cleanup can form a successful
+child report. The strict codec rejects duplicate keys, nonfinite or unknown
+fields, booleans, invalid ranges and contradictory success/error combinations.
+The parent still independently verifies process/job/source outcomes; fixture
+error0 alone cannot pass qualification. An unexpected mutation stops immediately
+without reverse rename, stream cleanup, ACL changes or another attempt. No raw
+error text, private path or data is emitted. Earlier failed files stay untouched.
