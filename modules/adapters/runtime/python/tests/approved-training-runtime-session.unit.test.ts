@@ -3,6 +3,10 @@ import test, {type TestContext} from "node:test";
 import {lstat, mkdir, mkdtemp, realpath, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {EventEmitter} from "node:events";
+import {createHash} from "node:crypto";
+import {spawnSync} from "node:child_process";
+import {runInNewContext} from "node:vm";
+import {pathToFileURL} from "node:url";
 import {PassThrough} from "node:stream";
 import path from "node:path";
 import {createOriginalTrainingPort, ORIGINAL_TRAINING_CAPABILITY, type OriginalTrainingOwnedChannel, type OriginalTrainingCapture} from "../client/approvedTrainingTaskSession";
@@ -17,6 +21,8 @@ import {bindOriginalTrainingCopyReservations, originalTrainingModelCopyReservati
 import type {OriginalTrainingExitConfiguration} from "../client/approvedTrainingTaskSession";
 import {createFilesystemTrainingResultFileByteStorageAdapter} from "../../../storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
 import type {OrganizationId} from "../../../../contracts/organization";
+import {createInMemoryStructuredDocumentStore} from "../../../persistence/shared";
+import {createStructuredTrainingStorageBudget} from "../../../persistence/model";
 
 const id = "11111111-1111-4111-8111-111111111111", workspace = "22222222-2222-4222-8222-222222222222" as WorkspaceId;
 const profile = {profileId: "inert-only", profileFingerprint: "sha256:" + "a".repeat(64)};
@@ -91,7 +97,7 @@ function definition(): ApprovedLocalTrainingDefinition {
 function staged(): ApprovedLocalTrainingStagedInput {
   return {payload: definition().request, recipe: {path: "inert/recipe", digest: profile.profileFingerprint, sizeBytes: 4}, outputDirectory: "inert/output"};
 }
-function fixture() {
+function fixture(options: Partial<Parameters<typeof createOriginalTrainingPort>[0]> = {}) {
   let current = true, permission = true, releases = 0;
   const calls: string[] = [];
   const f = {calls, captures: 0, hook: undefined as undefined | ((action: string) => Promise<unknown> | unknown),
@@ -113,9 +119,9 @@ function fixture() {
       return {binding, record: {requestId: id, taskType: "train-model", status: f.status, progress: {batch: 1}, metadata: {workspaceId: workspace},
         ...(f.status === "succeeded" ? {data: {runId: id, status: "succeeded"}} : {})}};
     }};
-  const port = createOriginalTrainingPort({captureChannel: async () => {f.captures++; return channel;}, reserve: () => () => {releases++;}});
+  const port = createOriginalTrainingPort({captureChannel: async () => {f.captures++; return channel;}, reserve: () => () => {releases++;}, ...options});
   const session = port.createSession(definition(), {isCurrent: () => current, stillAllowed: async () => permission})!;
-  return {...f, session, channel, get releases() {return releases;}, get status() {return f.status;}, set status(value: string) {f.status = value;},
+  return {...f, session, channel, get captures() {return f.captures;}, get releases() {return releases;}, get status() {return f.status;}, set status(value: string) {f.status = value;},
     get retirement() {return f.retirement;}, set retirement(value: string) {f.retirement = value;},
     get workerClosed() {return f.workerClosed;}, set workerClosed(value: boolean) {f.workerClosed = value;},
     get workerRetirements() {return f.workerRetirements;}, get unusedReleases() {return f.unusedReleases;},
@@ -123,6 +129,172 @@ function fixture() {
     get hook(): typeof f.hook {return f.hook;}, set hook(value: typeof f.hook) {f.hook = value;},
     get before(): typeof f.before {return f.before;}, set before(value: typeof f.before) {f.before = value;}};
 }
+
+test("original storage budget preparation blocks capture and retirement until its actual operation finishes", async () => {
+  let entered!: () => void, finish!: () => void, attempts = 0;
+  const issued = new Promise<void>(resolve => {entered = resolve;}), pendingBudget = new Promise<void>(resolve => {finish = resolve;});
+  const f = fixture({async prepareStorageBudget(original) {
+    attempts++; assert.equal(original.definition.requestId, id); assert.ok(Object.isFrozen(original.definition));
+    entered(); await pendingBudget;
+  }});
+  assert.equal(attempts, 0); assert.equal(f.captures, 0);
+  const preparing = f.session.prepare(); await issued;
+  assert.equal(f.captures, 0); assert.deepEqual(f.calls, []);
+  assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
+  await assert.rejects(() => f.session.prepare()); assert.equal(attempts, 1);
+  finish(); assert.equal(await preparing, "ready"); assert.equal(f.captures, 1);
+  assert.deepEqual(f.calls, ["prepare"]); assert.equal(attempts, 1);
+});
+
+test("budget preparation precedes every output factory for both original retirement protocols", async () => {
+  for (const retirementProtocol of [undefined, "original-exit-ready-v1"] as const) {
+    let entered!: () => void, finish!: () => void;
+    const issued = new Promise<void>(resolve => {entered = resolve;}), pendingBudget = new Promise<void>(resolve => {finish = resolve;});
+    const order: string[] = [];
+    const f = fixture({...(retirementProtocol ? {retirementProtocol} : {}),
+      async prepareStorageBudget() {order.push("budget-issued"); entered(); await pendingBudget; order.push("budget-finished");},
+      createOutputStorage() {order.push("output-factory"); throw Error("synthetic stop after ordering boundary");}});
+    assert.deepEqual(order, []);
+    const preparing = f.session.prepare(); await issued;
+    assert.deepEqual(order, ["budget-issued"]); assert.equal(await f.session.settle(), false);
+    finish(); assert.equal(await preparing, "unconfirmed");
+    assert.deepEqual(order, ["budget-issued", "budget-finished", "output-factory"]);
+    assert.equal(f.captures, 0); assert.equal(f.releases, 0); assert.equal(await f.session.settle(), false);
+  }
+});
+
+test("unknown or malformed budget preparation cannot become a factory call, retry or released owner", async () => {
+  const functions = [
+    async () => {throw Error("synthetic original budget rejection");},
+    async () => true,
+  ];
+  for (const retirementProtocol of [undefined, "original-exit-ready-v1"] as const) {
+    for (const prepareStorageBudget of functions) {
+      let factories = 0;
+      const f = fixture({...(retirementProtocol ? {retirementProtocol} : {}), prepareStorageBudget: prepareStorageBudget as never,
+        createOutputStorage() {factories++; throw Error("must not create output");}});
+      assert.equal(await f.session.prepare(), "unconfirmed"); await assert.rejects(() => f.session.prepare());
+      assert.equal(await f.session.settle(), false); assert.equal(f.captures, 0);
+      assert.equal(f.releases, 0); assert.equal(factories, 0);
+    }
+  }
+});
+
+test("permission withdrawal during original budget preparation prevents output and startup", async () => {
+  let entered!: () => void, finish!: () => void, factories = 0;
+  const issued = new Promise<void>(resolve => {entered = resolve;}), pendingBudget = new Promise<void>(resolve => {finish = resolve;});
+  const f = fixture({async prepareStorageBudget() {entered(); await pendingBudget;},
+    createOutputStorage() {factories++; throw Error("must not create output");}});
+  const preparing = f.session.prepare(); await issued; f.deny(); finish();
+  assert.equal(await preparing, "unconfirmed"); assert.equal(f.captures, 0); assert.equal(factories, 0);
+  assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
+  await assert.rejects(() => f.session.start(staged(), () => true));
+});
+
+test("Stop fences a pending budget before renewed permission and cannot later resume startup", async () => {
+  for (const retirementProtocol of [undefined, "original-exit-ready-v1"] as const) {
+    let entered!: () => void, finish!: () => void, factories = 0;
+    const issued = new Promise<void>(resolve => {entered = resolve;}), pendingBudget = new Promise<void>(resolve => {finish = resolve;});
+    const f = fixture({...(retirementProtocol ? {retirementProtocol} : {}),
+      async prepareStorageBudget() {entered(); await pendingBudget;},
+      createOutputStorage() {factories++; throw Error("must not create output");}});
+    const preparing = f.session.prepare(); await issued;
+    await assert.rejects(() => f.session.cancel()); finish();
+    assert.equal(await preparing, "unconfirmed"); assert.equal(f.captures, 0); assert.equal(factories, 0);
+    assert.equal(await f.session.settle(), false); assert.equal(f.releases, 0);
+  }
+});
+
+test("budget function is captured passively with the original receiver and definition", async () => {
+  const base = fixture(); let held: OriginalTrainingCapture | undefined, oldCalls = 0, newCalls = 0;
+  const options = {reserve(original: OriginalTrainingCapture) {held = original; return () => {};},
+    async prepareStorageBudget(original: OriginalTrainingCapture) {assert.equal(this, options); assert.equal(original, held); oldCalls++;},
+    async captureChannel() {return base.channel;}};
+  const port = createOriginalTrainingPort(options);
+  const session = port.createSession(definition(), {isCurrent: () => true, stillAllowed: async () => true})!;
+  assert.equal(oldCalls, 0);
+  options.prepareStorageBudget = async () => {newCalls++; throw Error("replacement must not run");};
+  assert.equal(await session.prepare(), "ready"); assert.equal(oldCalls, 1); assert.equal(newCalls, 0);
+  let getters = 0;
+  const malformed = {...options}; Object.defineProperty(malformed, "prepareStorageBudget", {enumerable: true, get() {getters++; return options.prepareStorageBudget;}});
+  assert.throws(() => createOriginalTrainingPort(malformed)); assert.equal(getters, 0);
+});
+
+test("invalid private budget functions refuse before creating a reservation", () => {
+  let reserves = 0, invocations = 0;
+  const foreignState = {called: false};
+  const foreign = runInNewContext("(async function(){called=true;throw Error('synthetic foreign rejection')})", foreignState);
+  const unsupported = [() => {invocations++; return undefined;},
+    () => {invocations++; return Object.defineProperty(Promise.reject(Error("synthetic prebuilt rejection")), "then",
+      {get() {throw Error("must not invoke getter");}});},
+    () => {invocations++; return Object.defineProperty(Promise.reject(Error("synthetic constructor rejection")), "constructor",
+      {get() {throw Error("must not invoke getter");}});},
+    (async () => {invocations++;}).bind({}), foreign,
+    async function* () {invocations++; yield undefined;},
+    new Proxy(async () => {}, {apply() {invocations++; throw Error("must not invoke proxy");}})];
+  for (const value of [null, true, {}, ...unsupported]) {
+    assert.throws(() => createOriginalTrainingPort({prepareStorageBudget: value as never,
+      reserve() {reserves++; return () => {};}, async captureChannel() {throw Error("must not capture");}}));
+  }
+  assert.equal(reserves, 0); assert.equal(invocations, 0); assert.equal(foreignState.called, false);
+});
+
+test("a rejected native budget operation with an own-then hook stays observed without host error leakage", () => {
+  // Isolate one-use async-hooks instrumentation; no process rejection handler
+  // changes the ordinary Node failure policy. The old barrier exits nonzero.
+  const script = `
+import assert from 'node:assert/strict';
+import {createHook} from 'node:async_hooks';
+const {createOriginalTrainingPort}=await import(process.argv[1]);
+const definition=JSON.parse(process.argv[2]);
+let selected, getters=0, captures=0, releases=0;
+async function budgetGetterRejectionOperation(){throw Error('synthetic private budget rejection reason');}
+const hook=createHook({init(_id,type,_trigger,resource){
+  if(type==='PROMISE'&&!selected&&new Error().stack.includes('budgetGetterRejectionOperation')){
+    selected=resource;
+    Object.defineProperty(resource,'then',{get(){getters++;throw Error('must not invoke supplied then');}});
+  }
+}}).enable();
+const session=createOriginalTrainingPort({prepareStorageBudget:budgetGetterRejectionOperation,
+  reserve(){return()=>{releases++;};},async captureChannel(){captures++;throw Error('must not capture');}
+}).createSession(definition,{isCurrent:()=>true,stillAllowed:async()=>true});
+const status=await session.prepare();hook.disable();
+await new Promise(resolve=>setTimeout(resolve,25));
+assert.ok(selected);assert.equal(status,'unconfirmed');assert.equal(await session.settle(),false);
+assert.equal(getters,0);assert.equal(captures,0);assert.equal(releases,0);
+console.log(JSON.stringify({status,getters,captures,releases}));`;
+  const environment = {...process.env}; delete environment.NODE_TEST_CONTEXT;
+  const moduleUrl = pathToFileURL(path.resolve("modules/adapters/runtime/python/client/approvedTrainingTaskSession.ts")).href;
+  const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script, "--", moduleUrl, JSON.stringify(definition())],
+    {env: environment, cwd: process.cwd(), encoding: "utf8", windowsHide: true, timeout: 15000, maxBuffer: 65536});
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr.includes("synthetic private budget rejection reason"), false);
+  assert.deepEqual(JSON.parse(result.stdout.trim()), {status: "unconfirmed", getters: 0, captures: 0, releases: 0});
+});
+
+test("actual configured-store debit completes before output setup and is retained after setup failure", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const policy = {poolId: "synthetic-original-training-pool", profileFingerprint: profile.profileFingerprint,
+    maximumBytes: 500, maximumOrganizationBytes: 500, maximumPrincipalBytes: 500,
+    maximumReservations: 2, maximumOrganizationReservations: 2, maximumPrincipalReservations: 2};
+  const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  const namespace = "model/training/storage-budget/pools-v1", poolKey = hash([policy.poolId]);
+  await documents.writeDocument(namespace, poolKey, {schema: "training-storage-budget-pool-v1", policyDigest: "sha256:" + hash(policy),
+    reservedBytes: 0, reservationCount: 0, organizations: []}); // Explicit synthetic provisioning only.
+  const budget = createStructuredTrainingStorageBudget({documents, policy, authorize: async () => true});
+  const order: string[] = [];
+  const f = fixture({async prepareStorageBudget(original) {
+    const value = original.definition;
+    const result = await budget.reserve({scope: {...value.owner, organizationId: value.owner.organizationId as OrganizationId,
+      workspaceId: value.workspaceId, requestId: value.requestId}, definitionDigest: "sha256:" + hash(value),
+      storageScopeDigest: "sha256:" + "b".repeat(64), profileFingerprint: policy.profileFingerprint,
+      limits: {model: 10, inputs: 10, "worker-output": 10, "parent-output": 10, overhead: 10}, maximumReservedBytes: 100}, {isCurrent: () => true});
+    assert.equal(result.kind, "reserved"); order.push("budget-committed");
+  }, createOutputStorage() {order.push("output-factory"); throw Error("synthetic no physical output construction");}});
+  assert.equal(await f.session.prepare(), "unconfirmed"); assert.deepEqual(order, ["budget-committed", "output-factory"]);
+  assert.equal(await f.session.settle(), false); assert.equal(f.captures, 0); assert.equal(f.releases, 0);
+  assert.equal((await documents.readDocument<{reservedBytes: number}>(namespace, poolKey))!.value.reservedBytes, 100);
+});
 
 test("synchronous creation reserves before capture, then original accepted task retires permanently", async () => {
   const f = fixture(); assert.deepEqual(f.calls, []);

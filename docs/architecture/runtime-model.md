@@ -3715,3 +3715,32 @@ the profile. This connection is not installed by a default or boot path and
 supplies no capacity, readiness, protected parent/crash custody, global retirement,
 Save or host qualification. Its inert-ABI integration checks exercise the original
 finite file workflow without actual filesystem/model or quality tests.
+
+### Original storage preparation before effects
+
+The optional private `prepareStorageBudget` operation runs under the original
+session's preparing/operations latch, after current business permission and before
+any output-storage factory or channel/startup capture. Capture the original
+function and receiver passively; synchronous `reserve` still holds the owner
+before any await. Await only its original plain native Promise, without supplied
+constructor/then hooks, and require a void completion plus fresh permission and
+currentness. No preparation callback runs during `createSession`.
+
+Pending or unknown preparation fences both retirement protocols and the original
+execution slot. Reentry cannot start another preparation. Stop fences this
+pre-channel path locally before checking renewed business permission, and late
+completion cannot restart effects. Existing callers without the option retain
+their previous behavior. This orders an owned operation; it is not a capacity,
+Native provenance, readiness or cleanup witness. Actual all-role reservation,
+qualified source/producer composition, parent/crash custody and permanent
+retirement remain separately required, with no default Root activation or credit.
+
+The qualified callback shape is an unbound current-realm native async function,
+checked before invocation. Bound, proxy, generator, foreign-realm and arbitrary
+prebuilt-Promise suppliers are unsupported. Retain original Promise/async
+intrinsics. After verifying the original Promise and safe data-constructor path,
+attach an owned internal await-observer before denying an own-then hook. Both
+fulfilment and rejection are consumed; private rejection reasons are discarded.
+The session retains the actual operation and observation, and malformed outcomes
+remain unconfirmed. No supplied then/species hook or global rejection-policy
+handler is needed. This profile adds no physical resource or settlement proof.

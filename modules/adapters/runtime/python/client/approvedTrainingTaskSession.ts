@@ -61,6 +61,13 @@ export function captureOriginalTrainingModelReader(original: OriginalTrainingCap
 const unavailable = () => new Error("The original private training session is unavailable.");
 const need = (value: unknown): void => {if (value !== true) throw unavailable();};
 const copy = <T>(value: T): T => capturePassiveModelData(value) as T;
+// This private profile accepts a fresh current-realm async operation, never an
+// arbitrary supplier of prebuilt/subclass/foreign Promise objects. Keep the
+// actual intrinsics, not mutable global aliases or user .then/species hooks.
+const budgetPromise = Promise, budgetPromisePrototype = Promise.prototype;
+const budgetAsyncPrototype = Object.getPrototypeOf(async function originalBudgetProfile() {});
+const budgetIsAsync = types.isAsyncFunction, budgetIsGenerator = types.isGeneratorFunction, budgetIsPromise = types.isPromise;
+type BudgetObservation = {kind: "completed"; value: unknown} | {kind: "failed"};
 const exact = (raw: unknown, keys: readonly string[]) => {
   const value = readStrictPassiveRecord(copy(raw), keys);
   need(Object.keys(value).length === keys.length); return value;
@@ -77,13 +84,20 @@ export function captureTrainingProfile(raw: OriginalTrainingProfile): OriginalTr
 export function createOriginalTrainingPort(options: {
   captureChannel: (original: OriginalTrainingCapture) => Promise<OriginalTrainingOwnedChannel>;
   reserve: (original: OriginalTrainingCapture) => (() => void) | undefined;
+  /** Unbound current-realm native async function only. Completion orders effects; it is not
+   * Native capacity/readiness or permission to release retained disk debits. */
+  prepareStorageBudget?: (original: OriginalTrainingCapture) => Promise<void>;
   /** Trusted private composition only; no default host or wire-supplied storage. */
   createOutputStorage?: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
   retirementProtocol?: "original-exit-ready-v1";
 }): ApprovedLocalModelTrainingPort {
   need(!types.isProxy(options));
-  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol"]);
+  const capturedOptions = readStrictPassiveRecord(options, ["captureChannel", "reserve", "createOutputStorage", "retirementProtocol", "prepareStorageBudget"]);
   const capture = options.captureChannel, reserve = options.reserve, outputFactory = capturedOptions.createOutputStorage;
+  const prepareStorageBudget = capturedOptions.prepareStorageBudget;
+  need(prepareStorageBudget === undefined || typeof prepareStorageBudget === "function" && !types.isProxy(prepareStorageBudget)
+    && budgetIsAsync(prepareStorageBudget) && !budgetIsGenerator(prepareStorageBudget)
+    && Object.getPrototypeOf(prepareStorageBudget) === budgetAsyncPrototype);
   need(outputFactory === undefined || typeof outputFactory === "function" && !types.isProxy(outputFactory));
   const exitReady = capturedOptions.retirementProtocol === "original-exit-ready-v1";
   need(capturedOptions.retirementProtocol === undefined || exitReady);
@@ -147,6 +161,8 @@ export function createOriginalTrainingPort(options: {
     let cached: RuntimeTaskRecord | undefined, cancellation: boolean | undefined;
     let output: ReturnType<typeof createOriginalTrainingOutputReceiver> | undefined;
     let outputSetupUnknown = false, outputStarted = false, outputAborted = false;
+    let storageBudgetSetupUnknown = false, storageBudgetWithdrawn = false;
+    let storageBudgetOperation: Promise<unknown> | undefined, storageBudgetObservation: Promise<BudgetObservation> | undefined;
     let parentFenced = false;
     const abortOutput = () => {if (outputFactory) {outputAborted = true; output?.abort();}};
     const send = async (action: string, input?: unknown, dispatch?: () => void) => {
@@ -171,7 +187,7 @@ export function createOriginalTrainingPort(options: {
     const settleExitReady = async () => {
       if (phase === "settled") return true;
       if (releaseAttempted) return false; // An unknown accepted release cannot be repeated or healed.
-      if (operations || closing || !remoteRetired && closeAttempted || outputSetupUnknown) return false;
+      if (operations || closing || !remoteRetired && closeAttempted || outputSetupUnknown || storageBudgetSetupUnknown) return false;
       if (phase === "bound") {
         // No factory, startup or other IO was dispatched. Fence before release reentry.
         closing = true; parentFenced = true; phase = "unconfirmed";
@@ -222,6 +238,29 @@ export function createOriginalTrainingPort(options: {
       async prepare() {
         need(phase === "bound"); phase = "preparing"; source.stage = "preparing"; operations++;
         try {
+          if (prepareStorageBudget) {
+            await permission(); need(!storageBudgetWithdrawn && !closing);
+            // The original returned session already owns the operation before
+            // the trusted function can issue asynchronous storage admission.
+            storageBudgetSetupUnknown = true;
+            const pending: unknown = Reflect.apply(prepareStorageBudget as Function, options, [originalCapture]);
+            need(budgetIsPromise(pending)); storageBudgetOperation = pending as Promise<unknown>;
+            need(Object.getPrototypeOf(pending) === budgetPromisePrototype
+              && Object.getOwnPropertyDescriptor(pending, "constructor") === undefined
+              && Object.getOwnPropertyDescriptor(budgetPromisePrototype, "constructor")?.value === budgetPromise);
+            // Observe the real operation BEFORE denying an own-then hook.
+            // Same-intrinsic await uses the internal reaction, without reading
+            // that hook or a supplied species. Catch and discard private reasons.
+            storageBudgetObservation = (async (): Promise<BudgetObservation> => {
+              try {return {kind: "completed", value: await storageBudgetOperation};}
+              catch {return {kind: "failed"};}
+            })();
+            need(Object.getOwnPropertyDescriptor(pending, "then") === undefined);
+            const completed = await storageBudgetObservation;
+            need(completed.kind === "completed" && completed.value === undefined); current(); await permission();
+            need(!storageBudgetWithdrawn && !closing && phase === "preparing");
+            storageBudgetSetupUnknown = false;
+          }
           if (outputFactory) {
             // The returned session already owns retirement before composition can reenter.
             outputSetupUnknown = true; need(!outputAborted);
@@ -235,7 +274,8 @@ export function createOriginalTrainingPort(options: {
             if (exitReady) need(output.inspectIoRetirement().storagePhase === "open");
             need(!outputAborted); current(); outputSetupUnknown = false;
           }
-          await permission(); const original = await capture.call(options, originalCapture); current();
+          await permission(); need(!storageBudgetWithdrawn);
+          const original = await capture.call(options, originalCapture); current();
           const identity = copy(original.identity), assertCurrent = original.assertCurrent, sendOriginal = original.send;
           const retireOriginalWorker = original.retireOriginalWorker, releaseOriginalUnused = original.releaseUnusedWorker;
           need(typeof retireOriginalWorker === "function" && typeof releaseOriginalUnused === "function");
@@ -248,6 +288,7 @@ export function createOriginalTrainingPort(options: {
           channel = Object.freeze({identity, assertCurrent: () => assertCurrent.call(original),
             send: (endpoint: string, body: unknown, dispatch?: () => void) => sendOriginal.call(original, endpoint, body, dispatch)});
           channel.assertCurrent();
+          need(!storageBudgetWithdrawn);
           await permission();
           const reply = exact(await channel.send("/training/original/prepare", {identity: channel.identity, definition}, current), ["binding", "phase"]);
           const candidate = exact(reply.binding, ["runtimeId", "workerStartedAt", "profileId", "profileFingerprint", "requestId", "workspaceId", "sessionId"]);
@@ -301,6 +342,7 @@ export function createOriginalTrainingPort(options: {
       },
       async cancel() {
         // Local fencing requires no current business permission and proves no IO settlement.
+        if (prepareStorageBudget && phase === "preparing" && !channel) storageBudgetWithdrawn = true;
         abortOutput();
         await permission();
         if (phase === "settled" || remoteRetired || parentFenced) return {requestId: definition.requestId, status: cached?.status ?? "cancelled", cancelled: cancellation === true};
@@ -316,7 +358,7 @@ export function createOriginalTrainingPort(options: {
       async settle() {
         if (exitReady) return settleExitReady();
         if (phase === "settled") return true;
-        if (outputSetupUnknown || outputStarted && !output?.isComplete()) return false;
+        if (storageBudgetSetupUnknown || outputSetupUnknown || outputStarted && !output?.isComplete()) return false;
         if (operations || (!remoteRetired && closeAttempted) || closing) return false;
         if (phase === "bound") {phase = "settled"; release(); return true;}
         if (!binding) return false; // Lost preparation cannot adopt a record by ID.

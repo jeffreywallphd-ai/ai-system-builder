@@ -3465,3 +3465,30 @@ readiness. A valid restored database may still be stale; actual host anti-rollba
 protected pool provenance, single-store/all-producer composition and original
 cleanup/credit require separate qualification before activation. Default hosts
 remain unconfigured, and this component cannot complete the storage task or parent.
+
+### Original budget preparation ordering
+
+The private original-session option `prepareStorageBudget` is trusted host
+composition, never public task data. Capture it without getters or proxy calls.
+The original synchronous reservation and operations latch own its actual pending
+operation before invocation. Current permission precedes it; only a genuine plain
+Promise with void completion and fresh permission/currentness may precede output
+setup or channel/startup capture. Refuse thenables, substituted promise hooks,
+invalid acknowledgements and second attempts without invoking their getters.
+
+Pending/rejected/malformed preparation cannot release the original slot through
+either retirement protocol. Stop fences pre-channel preparation before permission
+renewal; late completion grants no new effect. This is a sequencing/lifetime
+control only. It creates no Native capacity, identity, ownership, readiness,
+default producer, cleanup credit or task/parent qualification. The actual outer
+storage/producer, protected crash/custody and permanent-retirement proofs remain.
+
+Only an ordinary unbound current-realm native async function is supported for this
+new unused option. Refuse unsupported/foreign suppliers before they can create an
+unowned rejection. Keep original async/Promise intrinsics and validate the safe
+original constructor path. Install an internal await-observer before refusing an
+own-then property, consuming rejection without invoking that getter, species or
+a global process error handler. Retain the actual operation/observer under the
+original session; a refused result remains unconfirmed and never becomes a void
+acknowledgement. An isolated ordinary-Node failure-policy fixture verifies no
+private rejection escapes and no startup/release follows.

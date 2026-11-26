@@ -1455,3 +1455,27 @@ unchanged. The genuine unentered worker lease exposes a copied private metadata
 view only: no callbacks, IO, readiness or resource authority. Real quota/fence,
 producer activation, protected result/crash custody, retirement, Save and actual
 host qualification remain pending; no default host uses the new binding.
+
+Original session composition may explicitly supply `prepareStorageBudget` before
+any output factory or channel/startup capture. Synchronous reservation still owns
+the returned session before this function can issue asynchronous work. The actual
+native Promise must complete with `undefined`, and fresh permission/currentness
+must pass before effects. Pending, rejected or malformed preparation cannot retry
+or release the original execution slot under either retirement protocol. Stop
+fences the new preparation path before renewed permission; a late reply cannot
+resume startup. Promise subclasses/accessor hooks and thenables cannot substitute
+for the fixed operation. Ordinary callers without this option are unchanged.
+
+Supply an unbound current-realm native async function. General functions returning
+prebuilt promises, bound/foreign functions, proxies and async generators are
+refused before invocation. Capture the original Promise/async intrinsics. A safe
+original Promise receives an internal await-observer before an own-then property
+is denied, so an already rejected operation cannot escape as an unhandled private
+error. Keep the operation/observer with the original session; denial still grants
+no acknowledgement, retry or settlement. No process-wide rejection handler is used.
+
+This unused trusted sequencing hook supplies no physical capacity, Native
+provenance, readiness, producer activation or cleanup credit. Actual outer budget,
+source/copy ownership, protected parent/crash custody, retirement, Save and host
+qualification remain pending. Focused fixtures use controlled callbacks and the
+real configured-store budget adapter, with no model or Native execution.
