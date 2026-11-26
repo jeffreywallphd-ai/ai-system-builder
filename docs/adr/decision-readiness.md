@@ -26,8 +26,19 @@ for bounded source implementation under ADR-0043. See
 [the fixed format and scope](../architecture/training-result-container.md).
 Actual parent/crash/shared-reservation and host evidence remains pending.
 Fresh private result READ_DATA denial enforces the approved original-reader
-boundary; actual original-reader compatibility remains unqualified. No parent
-provisioning/ACL change, broader grant or weaker live-only mode is authorized.
+boundary. The historical tiny Windows file-component fixture passed original
+reads and its other declared checks at the recorded source; integrated custody
+and current-candidate/host qualification remain separate.
+
+The user's later2026-11-26 approval permits protection and qualification of NEW
+exclusively app-owned result folders in the same custodian process/account,
+without administrator privileges, a new service, additional process or identity.
+This supersedes the file-only exclusion only for fresh parent provisioning/ACLs.
+Existing folders, failed data and permissions stay untouched. Require actual
+creation/control/file/rename/deletion, accounting and crash checks before admission;
+unknown writers or retained control handles never imply a stable fence. Source
+work may proceed inside that boundary. No particular mechanism, broader authority,
+weaker live-only mode, recovery, quota credit or default activation is inferred.
 
 | Area                                                                                        | Readiness         | Authority and boundary                                                                                                                                                                                                               | Agent action                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

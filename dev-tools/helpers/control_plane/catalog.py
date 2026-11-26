@@ -740,6 +740,11 @@ NATIVE_TRAINING_CONTAINER_DOCUMENTS = (
     "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md",
     "docs/adr/decision-readiness.md",
 )
+NATIVE_TRAINING_DOCUMENT_SCOPE = tuple(
+    path for path in NATIVE_TRAINING_RESULT_SCOPE + NATIVE_TRAINING_CONTAINER_DOCUMENTS
+    if path.endswith(".md")
+)
+NATIVE_TRAINING_DOCUMENT_ROUTING_CORE = tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (6, 7))
 NATIVE_TRAINING_FILE_REQUIRED = NATIVE_TRAINING_FILE_FEATURE + tuple(NATIVE_TRAINING_RESULT_SCOPE[i] for i in (0, 1, 2, 3, 5, 6, 7, 11, 12))
 
 PUBLISHED_FORM_CHECKS = {
@@ -4840,6 +4845,24 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             focused_check["argv"] = ["node", NATIVE_TRAINING_RESULT_SCOPE[2]]
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None and "control-plane" not in explicit_required:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_windows_training_result_store.", "-k", "test_control_plane_focused."]
+    native_docs = bool(paths) and set(paths) <= set(NATIVE_TRAINING_DOCUMENT_SCOPE)
+    native_doc_routing = (set(NATIVE_TRAINING_DOCUMENT_ROUTING_CORE) <= set(paths)
+        <= set(NATIVE_TRAINING_DOCUMENT_SCOPE + NATIVE_TRAINING_DOCUMENT_ROUTING_CORE))
+    if (native_docs or native_doc_routing) and _automatic_files_available(root, native_store):
+        focused_check = next((check for check in selected if check["id"] == "focused-tests"), None)
+        if focused_check is not None:
+            # The native README has no tests in its own adapter directory.
+            # Its existing passive contracts live with the runtime. No native
+            # module is loaded and no file-effect qualification is inferred.
+            focused_check["argv"] = ["node", NATIVE_TRAINING_RESULT_SCOPE[2]]
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None and (native_doc_routing or "control-plane" not in explicit_required):
+            # Only this exact catalog/regression pair plus known documentation
+            # receives the closed routing regression set. Other code/mixed or
+            # unavailable-support changes retain their previous guards.
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_windows_training_result_store.", "-k", "test_control_plane_focused."]

@@ -1,6 +1,16 @@
 
 ## Numeric capture at coding-session initialization
 
+Known native-training documentation changes, including the filesystem adapter
+README, use the existing passive runtime contracts rather than scanning that
+adapter directory for nonexistent tests. The exact catalog/routing-test pair
+with those known documents runs both complete existing native and focused-routing
+regression modules. Native code changes retain build/compiled ABI checks; mixed,
+unknown or unavailable-support scopes retain conservative fallback. Actual file
+effects still require their separate explicit check and authority. A document or
+passive contract pass never supplies Native, parent, current-candidate or host
+qualification.
+
 Planning attribution is separately opt-in: deploy all v3 readers before running
 `usage enable-scopes` for a shared store. Ordinary Work hooks keep v2 until then.
 `usage scope-summary` reads exact prospective story/increment/roadmap scopes and

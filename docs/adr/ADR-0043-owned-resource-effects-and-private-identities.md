@@ -74,6 +74,26 @@ changes, new privileges/identities, recovery, quota credit or default activation
 Actual parent/crash/global-reservation and host evidence remains mandatory; a
 live component pass is not a weaker supported mode.
 
+The user's later approval on2026-11-26 extends that direction to protection and
+qualification of newly created, exclusively app-owned result folders. This
+supersedes only the preceding exclusion of parent provisioning/ACL changes for
+those fresh folders. The custodian uses the same existing app process and account,
+with no administrator privileges, new service, additional process or identity.
+Existing folders, failed data and their permissions remain outside this authority.
+Creation, original file access, denied foreign control/write/rename/deletion,
+bounded disk accounting and crash/retention behavior require actual qualification
+before activation. Unknown prior writers or retained control handles cannot be
+assumed absent; a path check or read-only ACL is not a stable protection fence.
+No physical mechanism, weaker live-only mode, historical recovery, quota credit or
+default host activation is inferred from this approval or a source test pass.
+
+The historical small Windows file-component run
+`8c3de43d01e54b0f854593a32c4611c9` passed its eight declared file checks at its
+recorded source, including original reads and cleanup. Its completed measurement
+Work is `headless-native-training-result-container-file-qualification-r4`.
+This component evidence does not qualify the new parent design, current full
+candidate, shared physical capacity, producer, crash/retirement or either host.
+
 Resumable local-file publication implements this boundary through private
 task/file-scoped intents, pre-reservation bounded content verification, a single
 acknowledged exclusive writing transition, durable byte acknowledgement and one

@@ -2,8 +2,8 @@
 
 - Status: current
 - Related decisions: ADR-0043 and ADR-0047
-- Qualification: physical and host checks pending; accepted direction is not a test pass
-- Authority: user-approved protected-file replacement, 2026-11-26; ADR-0043 and ADR-0047
+- Qualification: historical small file-component pass; integrated parent/custody and hosts pending
+- Authority: user-approved protected-file replacement and later fresh-parent protection, 2026-11-26; ADR-0043 and ADR-0047
 - Verification: focused compiled ABI and contracts, then explicit Windows component qualification
 
 ## Boundary
@@ -17,6 +17,16 @@ The trusted application still owns current actor/workspace/task approval, actual
 shared reservations and qualified parent custody. A path, scope digest, header,
 footer, configuration or successful component test grants none of that authority.
 There is no new service, process, identity, privilege, engine or dependency.
+
+The user's later approval permits protecting newly created, exclusively app-owned
+holding folders in this same custodian process and account, without administrator
+privileges. Only fresh folders are eligible; existing folders, failed data and
+their permissions remain untouched. This extends the earlier file-only direction,
+not its physical qualification. The actual implementation must prove creation and
+file access, refusal of foreign control/write/rename/deletion, bounded accounting
+and crash/retention behavior before activation. Unknown writers or pre-existing
+control handles cannot be dismissed; a path check or read-only ACL is insufficient.
+No particular protection mechanism or weaker fallback is selected by this approval.
 
 ## Fixed Codec
 
@@ -162,6 +172,16 @@ limits and safe-integer layout overflow. Actual files require the explicit small
 source/review-bound Windows profile after the source checkpoint. Earlier failures
 remain recorded. No model accuracy tests are repeated for this workflow work.
 
+Historical run `8c3de43d01e54b0f854593a32c4611c9` passed its eight declared
+Windows file checks: final creation permissions, complete inventory, secondary
+control/read refusals, path/stream mutation refusals, ordered writes, original
+logical reads, reader lifetime and original-handle cleanup. The completed reviewed
+measurement Work is `headless-native-training-result-container-file-qualification-r4`;
+the supporting-work registry retains its exact receipt/review. This is evidence at
+the recorded source, not current full-candidate, parent, producer or host readiness.
+The earlier failed directories/containers and the restricted-run shutdown gap
+remain recorded and receive no cleanup or capacity credit.
+
 The receiver's optional preparation passes its validated frozen group/role/name
 inventory before data. A private native adapter implements logical byte/owner
 dispatch, but qualified native loading and actual producer/host composition still
@@ -170,5 +190,7 @@ Current application authority, actual shared
 capacity, parent deletion/rename/ADS/injection protection, durable ownership and
 post-host-exit retention, SDK/controller/Job retirement, review/Save and both hosts
 still need their own evidence. A file DACL alone does not protect its parent or
-prove crash custody. No parent ACL/provisioning change or live-only fallback is
-authorized by this format. Unsupported protection keeps product activation denied.
+prove crash custody. Fresh parent provisioning/protection is now authorized only
+within the later approval above; its actual proof remains pending. No historical
+ACL change, recovery or live-only fallback is authorized by this format.
+Unsupported protection keeps product activation denied.
