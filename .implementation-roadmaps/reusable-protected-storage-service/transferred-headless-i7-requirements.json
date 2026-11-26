@@ -1,0 +1,149 @@
+{
+  "schema": "proposed-headless-i7-storage-transfer-v1",
+  "authorityRef": "user-separate-reusable-storage-and-finish-headless-i7-20261126",
+  "proposalOnly": true,
+  "source": {
+    "roadmapId": "headless-skills-ui-takeover",
+    "incrementId": "models-training-and-generation",
+    "sourceIncrementDigest": "92c47e349eeb5921d02322d59ee3c2b3d45085ab823fc4e476515a3d66812ae9",
+    "sourcePlanDigest": "2d7e66ce9957753dee8e56212de1fc9ef562625593f21646a1d4f75f1164f920",
+    "completedTasksPreserved": 66
+  },
+  "destinationRoadmap": "reusable-protected-storage-service",
+  "requirements": [
+    {
+      "originalTaskId": "reserve-shared-training-storage",
+      "transferredScope": "Full stronger storage obligation",
+      "destinationCriteria": [
+        "protected-windows-custodian/physical-shared-capacity",
+        "domain-storage-adoption/training-retained-capacity"
+      ],
+      "retainedI7Scope": "I7 retains finite per-job limits and honest available-space/capacity admission under its revised ordinary profile; no hostile-peer, durable anti-rollback or hard global guarantee is claimed.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "compose-original-training-producer",
+      "transferredScope": "Only stronger protected-file/service capability composition",
+      "destinationCriteria": [
+        "domain-storage-adoption/training-original-composition"
+      ],
+      "retainedI7Scope": "I7 still must compose and execute the actual approved producer/controller/SDK/worker with exact request, permissions, current limits, supported profile and original lifecycle through a replaceable ordinary storage port.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "retain-protected-training-results-through-exit",
+      "transferredScope": "Strict exclusive custody through crash/restart, strong pool retention and cleanup-only credit",
+      "destinationCriteria": [
+        "protected-windows-custodian/native-custody-profile",
+        "protected-windows-custodian/crash-and-retention",
+        "domain-storage-adoption/training-retained-capacity"
+      ],
+      "retainedI7Scope": "I7 retains ordinary owned-path containment, close/retirement, failure retention, no duplicate effects, no unknown-data deletion and actual original process/Job lifecycle; it cannot claim service-level peer isolation or crash custody.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "connect-training-candidate-review-and-history",
+      "transferredScope": "Reintegration proof only when protected service results are selected",
+      "destinationCriteria": [
+        "domain-storage-adoption/review-and-save-lineage"
+      ],
+      "retainedI7Scope": "I7 retains review, complete lineage and evaluation software with controlled metrics. No real quality scoring is reintroduced.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "save-approved-trained-model",
+      "transferredScope": "Protected-service byte/candidate binding proof only",
+      "destinationCriteria": [
+        "domain-storage-adoption/review-and-save-lineage"
+      ],
+      "retainedI7Scope": "I7 retains separate Save approval, exact current actor/workspace/candidate, immutable metadata lineage, lost-reply handling and no duplicate registration.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "run-approved-fine-tuning",
+      "transferredScope": "Stronger protected-storage profile qualification only",
+      "destinationCriteria": [
+        "domain-storage-adoption/training-original-composition",
+        "host-operations-qualification/desktop-managed-journeys"
+      ],
+      "retainedI7Scope": "I7 retains an actual bounded approved run, progress/checkpoints/history, hardware/resource refusal and separate Save.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "evaluate-trained-model-candidate",
+      "transferredScope": "No quality requirement transfer",
+      "destinationCriteria": [
+        "domain-storage-adoption/review-and-save-lineage"
+      ],
+      "retainedI7Scope": "I7 retains deterministic controlled evaluation software and baseline/lineage review; accepted model accuracy remains closed and is not rescheduled.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "generate-and-import-model-output",
+      "transferredScope": "Reusable adapter adoption only",
+      "destinationCriteria": [
+        "domain-storage-adoption/all-domain-capabilities"
+      ],
+      "retainedI7Scope": "I7 retains actual supported generation, current permissions, bounded resources, private prompts and separate approved save/import.",
+      "outcome": "pending-new-roadmap-not-passed"
+    },
+    {
+      "originalTaskId": "qualify-model-workflows-on-hosts",
+      "transferredScope": "Stronger service/native/capacity/crash profile qualification only",
+      "destinationCriteria": [
+        "host-operations-qualification/desktop-managed-journeys",
+        "host-operations-qualification/resource-and-support-matrix"
+      ],
+      "retainedI7Scope": "I7 retains actual Desktop/Managed app/MCP workflows for its ordinary revised storage profile, original task/reply identity, consent/revoke, resource refusal, recovery and owned cleanup; no mock execution or service dependency.",
+      "outcome": "pending-new-roadmap-not-passed"
+    }
+  ],
+  "preservedSupport": [
+    "The 66 completed tasks and their exact definitions/order/evidence stay in Headless history; no new service task is completed by copying them.",
+    "Reuse qualified narrow components after inspecting current contracts: bounded serializers/readers, original task/IO/worker/Job ownership, purpose binding, finite inventory, result receiver, reserved-budget transactions and explicit Save.",
+    "Historical small native file fixture proves only its declared file component at its recorded source. Fresh parent construction failure and unsupported stronger custody remain failures/gaps; no historical protected tree is inspected.",
+    "Headless completion never supplies this service's Native capacity, protected ledger, anti-rollback, broker, crash, installer or host pass."
+  ],
+  "sourceChangeAuthority": "Root owns a separately reviewed fixed-target governed scope amendment. This proposal edits no active Headless roadmap, completed definition, evidence, approval or test policy.",
+  "crossRoadmapDependency": "None. I7 may qualify and close against its explicitly revised ordinary storage profile before this service is implemented. Service migration uses the existing typed seam later.",
+  "originalRetiredPendingDefinitions": [
+    {
+      "criteriaIds": [
+        "training-and-generation-quality",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "id": "reserve-shared-training-storage",
+      "outcome": "Use measured shared storage and durable exclusive reservations for the original Model and input copies, worker results, parent results and overhead. Apply the existing declared limits and accounting policy. Refuse competing, insufficient or uncertain capacity, retain charges across cancellation and crashes, and return capacity only after proven owned cleanup. Connect the existing purpose binder to this real reservation instead of treating configuration or callback acknowledgements as capacity proof.",
+      "title": "Reserve shared storage for training"
+    },
+    {
+      "criteriaIds": [
+        "training-and-generation-quality",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "id": "compose-original-training-producer",
+      "outcome": "Carry the original controller purpose allocations and trusted configuration to the exact worker. Compose the existing protected file owner, implemented OriginalTrainingFileResources bridge and fixed training pipeline in a concrete trusted producer with its qualified profile. Preserve original request identity, current permissions, one-use admission and existing resource limits. Refuse missing or changed transport/configuration and keep unsupported default hosts unavailable until qualified.",
+      "title": "Connect the protected training worker"
+    },
+    {
+      "criteriaIds": [
+        "training-and-generation-quality",
+        "model-runtime-hosts",
+        "security-model-supply-and-limits"
+      ],
+      "id": "retain-protected-training-results-through-exit",
+      "outcome": "Connect the existing parent receiver and local IO barriers to protected checkpoint and candidate custody, including interrupted transfer and crash recovery. Integrate original Model/input/SDK/reader/controller cleanup with exact original worker and empty-Job retirement. Keep both result copies and their charges after IO closure, worker readiness and process/Job retirement. Only separate proof from the original cleanup owner under the existing policy may authorize cleanup or capacity credit. Retain uncertain outcomes without duplicate effects or a Save claim.",
+      "title": "Protect training results through shutdown"
+    }
+  ],
+  "originalRetiredPendingDigests": {
+    "reserve-shared-training-storage": "6f3428fc93742d6dac19c62927a2cd23e11a07abdd460a936d1492f1ca5af687",
+    "compose-original-training-producer": "e14e36a8fbd734c9fa87ca07a0894eef9f9c2eed36b06b61e73ab0085be61df0",
+    "retain-protected-training-results-through-exit": "9a855bdd3163ed6d52bd40164bb41be843b1da57afc773cc6756223568e1c23b"
+  },
+  "sourceProposalDigest": "a98add6f8ee0885e09d081011566d160ce135d1e28267d44ba6fcb92cf978262",
+  "qualificationStatus": "All transferred stronger obligations remain pending and unqualified. Existing components are scoped support only.",
+  "strictModeAvailability": "The exclusive service-backed profile remains unavailable until separately implemented and qualified. The explicitly selected ordinary I7 local profile is distinct and cannot silently satisfy a request for exclusive custody."
+}

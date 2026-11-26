@@ -1,0 +1,588 @@
+{
+  "blockers": [],
+  "chunks": [],
+  "completion": null,
+  "completionSuite": "all",
+  "createdAt": "2026-11-26T20:17:22Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "On 2026-11-26 the user explicitly selected Shared interfaces; protected service only where needed (Recommended) in the root agent's architecture-choice response. This approves design direction only. This roadmap, service implementation, installation, service start, OS identity changes and privileged maintenance are not approved.",
+      "approvedAt": "2026-11-26T20:17:24Z",
+      "approvedFingerprint": "fd67eac7fcc1fbc0e2622bf088f4098c415ab22255be8c266329bfad519a216f",
+      "context": "App-wide reuse does not require every byte to cross a privileged boundary. Strict exclusive custody exceeds the old same-account construction boundary. The user selected Shared interfaces; protected service only where needed on 2026-11-26. This accepts roadmap design direction only, not implementation, installation or any specific account/token/broker mechanism.",
+      "id": "storage-custody-topology",
+      "options": [
+        {
+          "consequences": [
+            "Initial installation and privileged maintenance are separately approved",
+            "Unprovisioned or unqualified protected operations remain unavailable; ordinary eligible operations can use their existing profile",
+            "A successor ADR must prove the full account/token/process/root/broker and binary/SCM policy before service code or installation"
+          ],
+          "id": "typed-adapters-with-protected-custodian",
+          "label": "Typed adapters with a protected custodian",
+          "recommended": true,
+          "summary": "Reuse existing local and managed storage through narrow typed ports. Add a least-privilege Windows custodian for protection profiles that require it. Keep each domain's rules and logical capabilities explicit.",
+          "tradeoffs": [
+            "Preserves ordinary zero-service local use and existing managed storage",
+            "Requires an explicit adapter capability matrix and one additional qualified Windows deployment boundary"
+          ]
+        },
+        {
+          "consequences": [
+            "Broader outage and deployment impact",
+            "Still needs separate managed adapters and domain authorization",
+            "Adds authority and operational cost where stronger custody is unnecessary"
+          ],
+          "id": "custodian-for-all-local-bytes",
+          "label": "Custodian for all local bytes",
+          "recommended": false,
+          "summary": "Route all local byte storage through one separately installed custodian, while keeping domain APIs distinct.",
+          "tradeoffs": [
+            "One local operational authority",
+            "Requires migration and installation for ordinary artifacts, datasets and Context use"
+          ]
+        },
+        {
+          "consequences": [
+            "Requires a different roadmap scope or a later custodian successor",
+            "Must retain strict custody, durable protection and related physical qualification as unresolved",
+            "Cannot advertise original-only storage protection"
+          ],
+          "id": "in-process-only",
+          "label": "Existing process only",
+          "recommended": false,
+          "summary": "Unify reuse through current in-process adapters and keep strict same-account hostile-peer custody unavailable.",
+          "tradeoffs": [
+            "Smallest deployment change",
+            "Cannot deliver the transferred stronger protected-parent requirements with the currently established mechanism"
+          ]
+        }
+      ],
+      "proposalFingerprint": "fd67eac7fcc1fbc0e2622bf088f4098c415ab22255be8c266329bfad519a216f",
+      "question": "Should the reusable storage layer use existing adapters by default and a separately installed Windows custodian only when stronger protection is required?",
+      "selectedOptionId": "typed-adapters-with-protected-custodian",
+      "status": "approved",
+      "title": "Choose where stronger storage protection runs"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Planning only. No service implementation, installation, account creation, privilege change, native probe or historical protected-data access.",
+      "Keep each domain's catalog, lineage, save, retention and deletion authority separate. Reuse family-specific ports and established OS/database components.",
+      "Headless increment 7 must be independently closable under its separately governed revised scope. No cross-roadmap completion gate may be introduced.",
+      "Completed component evidence and all failures remain historical scoped support. New service, physical quota, crash, broker, producer and host claims need fresh exact-target qualification.",
+      "No model quality/accuracy rerun. Evaluation software uses deterministic controlled metrics; real supported storage/worker/resource checks remain technical.",
+      "Local SQLite and managed PostgreSQL stay structured persistence. Do not put model weights in relational records, invent a database engine or select a new cloud/object supplier.",
+      "Use the fewest cohesive increments. All acceptance criteria are agent-executable. Human installation authority is a named gate, never a test criterion or a fictitious pass."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-11-26T20:17:23Z",
+    "securityImpact": {
+      "abuseCases": [
+        "Same-account client impersonates the app or replays a stale approved request",
+        "Another process retains WRITE_DAC, duplicate handles, parent DELETE_CHILD or path substitution authority",
+        "Service binary, DLL, configuration, broker or SCM settings are replaced",
+        "Crash, missing ledger or restored valid snapshot grants duplicate effects or capacity credit",
+        "Concurrent producers exhaust disk through uncharged metadata, copies, temporary files, hardlinks, streams or sparse allocation",
+        "Cross-domain, organization or workspace identifiers read or delete foreign bytes",
+        "Migration or rollback adopts unknown historical data or downgrades protected content"
+      ],
+      "assets": [
+        "Owned artifact, dataset, RAG, model, checkpoint, generated and offload bytes",
+        "Private metadata, exact application approvals, retention and accounting integrity",
+        "Custodian executable, configuration, process token and protected namespace"
+      ],
+      "controls": [
+        "Family-specific ports and purpose-scoped opaque capabilities; no arbitrary path, shell, generic command or client-supplied authorization API",
+        "Existing application authorization and separate review/Save remain authoritative; broker requests bind exact operation, actor, tenant, workspace, purpose, digest, incarnation and one-use issuance",
+        "ADR selects and proves account, service SID, restricted token, own-process policy, process-object rights, root ACLs and authenticated channel together",
+        "Protected binary/dependency/configuration/update chain and explicit SCM permissions; separately approved initial installation and privileged maintenance",
+        "Reserve full physical peak across one authoritative all-producer pool, protect ledger provenance, retain uncertainty, release only after original cleanup proof",
+        "Fail closed on missing, stale, unavailable, rollback-ambiguous or unsupported authority; keep stronger content inaccessible on rollback",
+        "Bounded streams and concurrency, sanitized audit and failures, current policy at effect boundaries"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Administrator/kernel compromise is outside the nonprivileged local peer boundary; document this explicitly in the accepted ADR",
+        "A distinct service SID or SQLite transaction alone proves neither original-only broker authority nor anti-rollback",
+        "Initial installation and later privileged maintenance require separately authorized host actions; no install or service start is authorized by roadmap publication",
+        "Untested platforms, filesystems, hosts, native profiles and physical capacity remain unavailable, never simulated passes",
+        "Historical protected data, failed trees, ACLs and unknown ownership are excluded from all discovery and automated recovery"
+      ],
+      "summary": "The proposed storage design changes custody, OS identity, broker authority, durable accounting, crash recovery, migration and public failure boundaries. This draft grants no physical or privileged effect.",
+      "trustBoundaries": [
+        "Untrusted UI/API/IPC requests to domain authorization and typed storage ports",
+        "Application-approved operation to independently authenticated local custodian",
+        "Original producer and reader capabilities to protected files and durable ledger",
+        "Managed tenant context to PostgreSQL metadata and organization-isolated bytes",
+        "Separately authorized installer or maintainer to SCM, binaries, tokens and roots"
+      ],
+      "verification": [
+        "Agent-run contract, domain isolation, malformed and resource-bound tests",
+        "Actual Windows original-access and hostile peer/retained-handle denial matrix on fresh synthetic roots",
+        "Actual process, service and host crash/restart fault injection with bytes and ledger retained",
+        "Exact installed binary/token/SCM/root/channel witness and source-bound independent review",
+        "Desktop and Managed application journeys with exact receipts and no real model quality scoring"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Specialized families; structured records remain separate from bytes.",
+        "title": "Persistence and storage separation",
+        "url": "docs/adr/ADR-0004-persistence-and-storage-separation.md"
+      },
+      {
+        "note": "Reuse existing streams, publication, organization scoping, root transactions and reserve-only Model budgets.",
+        "title": "Current storage and accounting architecture",
+        "url": "docs/architecture/persistence-and-storage.md"
+      },
+      {
+        "note": "Native effects, exclusive provenance, aggregate admission and uncertain retention remain unqualified where not actually proved.",
+        "title": "Owned effects and private identities",
+        "url": "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      },
+      {
+        "note": "Preserve 66 completed task records; transfer only named stronger unfinished storage obligations.",
+        "title": "Headless source scope",
+        "url": ".implementation-roadmaps/headless-skills-ui-takeover/state.json"
+      },
+      {
+        "note": "Preserve original-task, exact approval, private streams, uncertain effects and separate Save.",
+        "title": "Headless threat model",
+        "url": "docs/security/headless-system-builder-threat-model.md"
+      },
+      {
+        "note": "Reuse 12 GiB profile and original lease semantics; accepted accuracy stays closed and historical slots stay untouched.",
+        "title": "Optional offload boundary",
+        "url": "docs/adr/ADR-0045-optional-bounded-model-offloading.md"
+      },
+      {
+        "note": "Managed principal and organization authorization, RLS, tenant byte isolation, local zero-service baseline.",
+        "title": "Tenancy authority",
+        "url": "docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md"
+      },
+      {
+        "note": "A service SID changes token SID lists; it is distinct from an account choice and is not complete isolation proof.",
+        "title": "Service token SID",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-service_sid_info"
+      },
+      {
+        "note": "SCM creates the service process token in an account security context.",
+        "title": "Service account",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/services/service-user-accounts"
+      },
+      {
+        "note": "Installation, configuration, start and stop require distinct protected authority.",
+        "title": "Service control permissions",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/services/service-security-and-access-rights"
+      },
+      {
+        "note": "A pipe DACL authenticates access to the pipe, not current application approval; avoid accidental pipe-instance creation rights.",
+        "title": "Named pipe permissions",
+        "url": "https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipe-security-and-access-rights"
+      },
+      {
+        "note": "WAL readers and writer share one host; checkpoint and durability choices are explicit. It does not supply a hostile rollback fence.",
+        "title": "SQLite WAL",
+        "url": "https://sqlite.org/wal.html"
+      }
+    ],
+    "summary": "The app already has specialized object/repository storage, bounded verified streaming, private Context/Training byte ports, SQLite/PostgreSQL metadata and reserve-only Model accounting. Reuse these seams. The fresh same-account original-only parent design has no complete supported qualified mechanism: the final-descriptor layout denied child creation, while mutable construction admits retained-control risks. The user directs a separate app-wide storage roadmap and continued Headless increment 7 closure with simpler replaceable storage. The service proposal preserves the stronger unmet storage work rather than treating transfer as a pass."
+  },
+  "evidence": [],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "1601b1acbb7d78a12b40b954e14b87ad9ae2a5d6ddc5d451e395b023bb10ba63",
+      "recordedAt": "2026-11-26T20:17:23Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "4a72382400be91f5a7a68097346a22ec50d68debed43e45e5a476e9de0771229",
+      "recordedAt": "2026-11-26T20:17:23Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "d7ad72d9329d7267e635f291040a88c4999aa67cb034e9fa777533e1c72e14b8",
+      "recordedAt": "2026-11-26T20:17:24Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "cf6d13ad70c9e443183accdf01cb951935a0fa71ed37193ea9076530ecf1f928",
+      "recordedAt": "2026-11-26T20:17:25Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Application consumers use existing family-specific ports. A capability matrix states object, repository, generated-file and read-lease semantics. Public contracts accept opaque scoped identities, never caller paths, commands, runtime handles or provider credentials.",
+          "id": "typed-family-reuse",
+          "qualification": "local"
+        },
+        {
+          "description": "Artifact upload and reviewed Context result save use the shared implementation through their own ports. Their present media/size bounds, metadata transactions, review controls, no-overwrite and unknown-effect behavior remain intact.",
+          "id": "first-domain-workflows",
+          "qualification": "local"
+        },
+        {
+          "description": "All reads and writes enforce exact size/hash, finite chunk/count/time/concurrency and cancellation bounds. Captured original operations remain owned through close. Stop, timeout or missing acknowledgements cannot grant retry, adoption, deletion or accounting credit.",
+          "id": "bounded-byte-lifecycle",
+          "qualification": "local"
+        },
+        {
+          "description": "Durable byte acknowledgement precedes domain metadata activation. Existing root-owned transactions commit each catalog/binding/receipt atomically. Byte and database effects are not claimed to be one atomic transaction. Exact lost-reply reconciliation cannot duplicate registration or recreate unknown bytes.",
+          "id": "metadata-commit-boundary",
+          "qualification": "local"
+        },
+        {
+          "description": "Current principal, organization and workspace authority reaches each layer. Cross-owner and missing scope deny before I/O. Public results and audit summaries omit content, secrets, paths, commands and native errors.",
+          "id": "scope-and-error-isolation",
+          "qualification": "local"
+        },
+        {
+          "description": "Agent tests and independent technical review cover the storage authority delta, malformed requests, resource denial, adapter failure, migration and secure rollback. Document the ordinary profile's cooperative local limits and stronger-custody exclusions.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Approved storage architecture delta and capability matrix",
+        "Reusable bounded stream, opaque lease and storage-instance primitives behind existing ports",
+        "Artifact upload and Context save integration with current adapters",
+        "Versioned metadata and fault-recovery rules using existing SQLite/PostgreSQL transactions",
+        "Focused tests, threat-model delta and storage/host README updates"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Windows service or privileged effects",
+        "Strong hostile-peer custody or physical global quota claims",
+        "New provider suppliers, remote synchronization or cloud object store",
+        "Changes to domain approval, sharing or retention policy"
+      ],
+      "id": "reusable-local-storage",
+      "number": 1,
+      "objective": "Deliver reusable local storage with artifact upload and reviewed Context output as its first consumers. Preserve their different limits, publication rules and catalog ownership.",
+      "plan": null,
+      "research": [],
+      "rollback": "Select the prior ordinary adapter only for content written under that same ordinary profile. Retain acknowledged or uncertain bytes and metadata. Refuse to downgrade protected content or replay unknown effects.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Use one storage layer through the existing app ports",
+      "verification": [
+        "Run existing storage-family invariants, object/stream, ingestion, Context publisher/save-owner, SQLite transaction and organization-isolation regressions with focused selectors.",
+        "Add contract-substitution, stream-failure, late-close, conflict, uncertain-acknowledgement and wrong-owner tests at the owning seam.",
+        "Run docs:check and architecture:check after the complete increment, and affected host build checks where composition changes; reserve aggregate suites until all roadmap increments are implemented."
+      ],
+      "workPackages": [
+        {
+          "id": "family-storage",
+          "outcome": "Existing family-specific ports share bounded byte and lifecycle primitives without a universal storage API.",
+          "title": "Reuse typed storage capabilities"
+        },
+        {
+          "id": "first-consumers",
+          "outcome": "Two real domains use replaceable adapters under their existing application owners.",
+          "title": "Connect artifacts and Context"
+        },
+        {
+          "id": "metadata-lifecycle",
+          "outcome": "Explicit acknowledgements, idempotency and retention connect byte effects to domain-owned metadata.",
+          "title": "Keep metadata and bytes consistent"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "The accepted ADR and executable policy tests prove the chosen service account, service SID, restricted token/privileges, own-process policy, process/thread/token/handle rights, root ACLs, broker authentication and permitted original clients together. Neither a service SID, PID, executable name, user token nor connected pipe alone grants application approval.",
+          "id": "security-custodian-identity",
+          "qualification": "local"
+        },
+        {
+          "description": "Each finite broker operation binds authoritative current app approval, original principal/tenant/workspace/purpose, manifest/digests, issuance and incarnation. Reject same-account spoofing, foreign clients, replay, changed policy, channel replacement and unknown outcomes before effects. No arbitrary file path, command, general impersonation or unrestricted handle duplication API exists.",
+          "id": "broker-exact-authority",
+          "qualification": "local"
+        },
+        {
+          "description": "On the declared Windows/filesystem profile, actual original create/read/write/publish/retire operations succeed and unrelated peer opens/control/write/rename/delete/substitute/link/stream operations fail as specified, including retained-handle and parent DELETE_CHILD attacks from before construction. Private creator or reader handles and process identity remain continuous. No pathname or final-DACL observation is substituted for capability provenance.",
+          "id": "native-custody-profile",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "One configured protected pool includes every producer and all five training roles, byte copies, metadata, filesystem rounding, temporary bytes and overhead. Actual concurrent allocation and exhaustion measurements prove explicit bounds. Unknown retained usage consumes its ceiling. Missing or stale ledgers and rollback-ambiguous snapshots cannot mint capacity; exact original cleanup proof is required for credit.",
+          "id": "physical-shared-capacity",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Actual client, worker, custodian and host interruption/restart tests at each durable transition preserve protected bytes, exact ownership and charges. Lost create/write/commit/delete replies cannot authorize retries, adoption, byte disclosure or credit. Recovery inspects only service-created fresh synthetic fixtures with proven lineage; unknown or historical data stays untouched.",
+          "id": "crash-and-retention",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Build, binary/DLL/configuration/updater integrity and SCM create/config/start/stop/control rights are verified. Initial privileged installation and later privileged maintenance use separately authorized bounded operations. Ordinary use never silently elevates. Uninstalled, changed or unqualified hosts deny this protected capability.",
+          "id": "security-service-maintenance",
+          "qualification": "local"
+        },
+        {
+          "description": "Broker messages, handles, streams, requests, queue, memory, disk, time and process lifetimes are bounded and measured for the declared profile. Protocol cancellation and service drain retain original unsettled work; resource or audit failure is sanitized and fail closed.",
+          "id": "custodian-runtime-bounds",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Successor ADR and canonical threat-model delta with exact Windows support profile",
+        "Reproducible custodian build and bounded installation/maintenance package",
+        "Local authenticated closed broker and protected storage adapter",
+        "Protected durable ledger using established database/OS facilities",
+        "Agent-run Windows denial, crash and physical capacity reports with exact source/binary/environment identities"
+      ],
+      "dependsOn": [
+        "reusable-local-storage"
+      ],
+      "excluded": [
+        "Administrator/kernel compromise resistance",
+        "Historical protected-tree recovery, adoption, ACL repair or deletion",
+        "Unqualified non-Windows/filesystem profiles",
+        "LocalSystem by default, remote broker, generic file/command service or automatic elevation",
+        "A new database, cryptographic protocol or storage engine where existing qualified components fit"
+      ],
+      "id": "protected-windows-custodian",
+      "number": 2,
+      "objective": "Deliver a separately provisioned least-privilege Windows storage profile that can preserve fresh exclusively owned bytes against unrelated nonprivileged peers through service and app restarts. Qualify it with synthetic storage operations before any model integration.",
+      "plan": null,
+      "research": [],
+      "rollback": "Disable new protected admission and drain or retain original work and debits. Preserve protected bytes and compatible readers. Do not uninstall, weaken ACLs, reset ledgers, adopt historical data or switch protected content to ordinary adapters. Privileged repair/removal needs separate authority.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Protect new storage under a separate Windows custodian",
+      "verification": [
+        "Use an isolated approved Windows qualification environment and fresh synthetic roots only. Agent-driven tests produce exact binary/source/token/SCM/root/broker witnesses and nonprivileged hostile-peer denial results.",
+        "Inject crashes and lost acknowledgements at every publication/accounting/retirement transition; compare protected objects and exact retained ledger state after restart.",
+        "Measure concurrent physical allocation and exhaustion under fixed configured limits, with sparse/compressed/alternate-stream, metadata and copy effects either prevented or explicitly charged.",
+        "Run focused native ABI/service/broker/ledger denial and lifecycle tests plus changed-source architecture/docs/dependency/build checks. A separately authorized install is a prerequisite, not a human acceptance test."
+      ],
+      "workPackages": [
+        {
+          "id": "custodian-boundary",
+          "outcome": "An accepted successor ADR and exact native/service policy bind account, token, process, binary, root and broker authority.",
+          "title": "Establish the custodian boundary"
+        },
+        {
+          "id": "protected-bytes",
+          "outcome": "Only original purpose-scoped operations can create, read, publish and retire fresh protected storage.",
+          "title": "Store and read protected bytes"
+        },
+        {
+          "id": "durable-capacity",
+          "outcome": "One protected authoritative pool accounts for all producers and retains uncertain ownership and charges.",
+          "title": "Preserve physical capacity and crash state"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Inventory every byte-storage consumer and assign an owning domain, family port, size class, mutability, publication/save gate, lifetime, retention/deletion authority and supported adapter. Exercise artifacts, dataset versions, RAG files, model weights, checkpoints, generated outputs and offload with representative bounded streams. Unknown capability combinations deny instead of silently downgrading.",
+          "id": "all-domain-capabilities",
+          "qualification": "local"
+        },
+        {
+          "description": "Dataset immutability/splits, RAG activation/query lineage, exact model revisions and reference-only shared/imported caches, generated result review, checkpoint retention and cached-generator offload leases remain with their existing owners. Deleting a record does not grant byte deletion; storage cannot broaden application permissions.",
+          "id": "domain-policy-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "Actual original controller purpose allocations, approved trusted configuration, protected model/input/SDK/reader/output capabilities and the existing worker pipeline bind to one producer. Complete receiver delivery, independent original worker exit and empty-Job retirement are required. Unknown startup, transfer or close retains original resources and both result copies; no duplicate attempt or Save follows.",
+          "id": "training-original-composition",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "The measured shared protected pool reserves original model/input copies, worker results, parent results and overhead before admission. Cancellation, IO closure, worker/Job exit or readiness never release retained results or charges. Only the exact original cleanup owner and proven physical cleanup can grant capacity credit.",
+          "id": "training-retained-capacity",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "The existing cached completion/progress readers review only the exact finalized candidate with base Model, Dataset, recipe, hardware, task and output lineage. Save still needs separate current authorization and an exact metadata transaction. Decline, withdrawal, substitution, unknown commit or lost replies cannot duplicate registration or adopt unknown bytes.",
+          "id": "review-and-save-lineage",
+          "qualification": "local"
+        },
+        {
+          "description": "An explicit scoped versioned migration accepts only proven exclusively owned eligible content and preserves rollback records. Unsupported, shared, imported, historical failed or unknown content remains reference-only or inaccessible. Startup neither scans/adopts unknown trees nor moves or changes existing ACLs.",
+          "id": "migration-without-adoption",
+          "qualification": "local"
+        },
+        {
+          "description": "Agent tests and separate technical review cover each domain adapter, cross-domain/tenant/workspace denial, malicious metadata, private-field redaction, retained resources, rollback and failure recovery. No accepted model accuracy or real output-quality scoring is rerun or claimed as service evidence.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Capability/lifecycle/retention matrix for all app storage consumers",
+        "Dataset/Context/RAG/model/generated/offload adapters over reusable storage",
+        "Protected training source/result and accounting composition",
+        "Explicit owned-content migration and reference-only external cache policy",
+        "Domain regression, real worker/Job lifecycle and no-quality-score qualification evidence"
+      ],
+      "dependsOn": [
+        "protected-windows-custodian"
+      ],
+      "excluded": [
+        "Headless increment 7 completion dependency or retroactive pass",
+        "Real model quality/accuracy scoring or changed model acceptance policy",
+        "New training engines/loaders, implicit offload or broader process cancellation",
+        "Historical protected content access or automatic migration",
+        "Domain sharing, licensing, retention or approval-policy changes"
+      ],
+      "id": "domain-storage-adoption",
+      "number": 3,
+      "objective": "Connect datasets, RAG, models, checkpoints, generated output and optional offload through the same reusable seams. Complete the transferred stronger training storage integration under its own qualification without reopening Headless increment 7 or accepted model quality.",
+      "plan": null,
+      "research": [],
+      "rollback": "Disable the new domain adapter profile and retain its exact protected objects, metadata, lineage and charges. Ordinary adapters may resume only for data already governed by their prior ordinary profile. Preserve migrated source/rollback records; do not recopy unknown results or downgrade stronger content.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Use the storage layer across app domains",
+      "verification": [
+        "Run focused actual domain adapters and application-owner regressions, including existing Dataset/Context/Model/Generated-output/Offload lifecycle tests and storage contract invariants.",
+        "Run the actual installed supported original producer/controller/SDK/worker/Job storage journey using approved existing fixtures; verify IO, result copies, final delivery, exact exit and retained accounting, without real quality scoring.",
+        "Exercise candidate review, separate Save, lost replies and substitution in both host compositions; a storage mock cannot qualify native or runtime evidence.",
+        "Test explicit migration and rollback on synthetic known-owned data, plus historical/unknown/shared references that deny effects. Run affected docs/architecture/build/dependency gates only."
+      ],
+      "workPackages": [
+        {
+          "id": "domain-adapters",
+          "outcome": "Domain adapters select declared capabilities and preserve their own ownership, size, publication and retention rules.",
+          "title": "Connect domain-specific storage"
+        },
+        {
+          "id": "training-storage",
+          "outcome": "The original producer, receiver, worker and Job integrate protected sources/results, reservations and independent Save.",
+          "title": "Complete stronger training storage"
+        },
+        {
+          "id": "explicit-migration",
+          "outcome": "Versioned references and explicit bounded migration preserve old data and support secure rollback.",
+          "title": "Migrate only authorized owned data"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Desktop and Managed hosts select concrete approved adapters at composition. Missing installation, changed binary/policy, unsupported filesystem, unqualified physical capacity or missing tenant authority deny the affected capability. Thin clients receive only opaque resources and safe readiness reasons; no root, credential or local path crosses the public boundary.",
+          "id": "host-selection-readiness",
+          "qualification": "local"
+        },
+        {
+          "description": "The existing Managed profile uses authoritative OIDC membership/current capabilities, PostgreSQL RLS and organization-derived byte containment. Actual two-tenant tests prove cross-owner denial, noisy-neighbor bounds and dedicated-placement refusal. Do not place SQLite WAL on a network share or invent desktop/server synchronization.",
+          "id": "managed-tenant-storage",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Agent-run actual packaged Desktop and Managed browser/API/MCP journeys create, stream, review, separately save, read and retain/delete only exact authorized test resources. Test missing service, withdrawal, interrupted transfer, restart and cleanup with the selected profile. App approval/window consent remain independent. Real execution cannot be replaced by a mock or parsed reply.",
+          "id": "desktop-managed-journeys",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Authorized fresh-environment backup/restore, upgrade, failed maintenance and rollback tests preserve exact byte/metadata/ledger generations, owner isolation and retained charges. A valid older database/backup does not mint current ownership or capacity. Unknown or corrupt state stays inaccessible. Retention and deletion require the owning domain's exact policy and original proof.",
+          "id": "operational-recovery-integrity",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Actual profile measurements report stream throughput/latency, memory/handles, storage peak, queue/concurrency and cleanup/restart behavior against explicit predeclared acceptance bounds. Supported Windows/filesystem/host versions are named; unqualified platforms, managed-native protection or scale stay unavailable. Numeric declarations and sampled usage are not hard quota proof.",
+          "id": "resource-and-support-matrix",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "All changed threat boundaries, installer/SCM and broker integrity, dependency provenance, tenant isolation, redaction, denial paths, secure rollback and residual risks receive current independent technical review. All transferred obligations have exact owner/evidence links. No historical component or Headless closure is promoted into a service pass.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Desktop and Managed storage composition and capability/readiness reporting",
+        "Existing PostgreSQL and organization-local byte adapter integration without a new remote storage supplier",
+        "Operator provisioning/maintenance, backup, restore, repair, retention and upgrade runbooks",
+        "Automated host and storage qualification reports with candidate-bound independent reviews",
+        "Final documentation, exact transfer reconciliation and aggregate standard/end-to-end/AI evidence"
+      ],
+      "dependsOn": [
+        "domain-storage-adoption"
+      ],
+      "excluded": [
+        "Production deployment or mutations without separate authority",
+        "Automatic install, service start, privileged upgrade/repair/removal or new credentials",
+        "Desktop/server synchronization, new remote broker, new cloud/object vendor or cross-organization sharing",
+        "Administrator/kernel compromise guarantee, unqualified platforms/scale, retrospective old-data cleanup",
+        "Manual user studies or human security sign-off as technical acceptance tests"
+      ],
+      "id": "host-operations-qualification",
+      "number": 4,
+      "objective": "Qualify real Desktop and Managed application composition, provisioning readiness, bounded maintenance, backup/recovery and storage resource limits. Publish support only for profiles with current evidence.",
+      "plan": null,
+      "research": [],
+      "rollback": "Withdraw only unqualified profiles and new admission. Keep original work, protected data, old compatible readers, metadata and accounting intact. Do not recover availability by disabling authorization, reverting ACLs, resetting pools or restoring stale generations as current authority.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Qualify supported hosts and storage operations",
+      "verification": [
+        "Use actual packaged Desktop and isolated Managed PostgreSQL/browser/API/MCP fixtures and installed supported Windows custodian, with separately authorized privileged prerequisites and fresh synthetic data.",
+        "Execute failure, restore, upgrade, withdrawal, two-tenant, capacity, retained-result and drain/restart matrices; record exact source/binary/policy/environment identities and no real model quality scoring.",
+        "After all implementation tasks in all increments are complete, run npm run test:all once plus applicable docs:check, architecture:check, agent-support:check, security:dependencies and host builds. The AI suite is included because this roadmap integrates Model/Context/offload storage; it supplies no new accuracy pass.",
+        "Complete exact increment and overall Work receipts and separate-invocation reviews; pending controlled results prevent final roadmap closure and final approval."
+      ],
+      "workPackages": [
+        {
+          "id": "host-adapters",
+          "outcome": "Hosts select approved adapters with exact current readiness and existing organization security.",
+          "title": "Compose Desktop and Managed storage"
+        },
+        {
+          "id": "storage-operations",
+          "outcome": "Bounded diagnostics, maintenance, backup/restore and upgrades preserve ownership, accounting and protected data.",
+          "title": "Operate and recover storage safely"
+        },
+        {
+          "id": "qualification",
+          "outcome": "Actual host, filesystem, resource, failure and restart evidence support truthful capabilities.",
+          "title": "Qualify declared support"
+        }
+      ]
+    }
+  ],
+  "name": "Reusable Protected Storage Service",
+  "objective": "Provide reusable, typed storage capabilities across the app. Preserve each domain's authority and lifecycle. Add an independently qualified protected Windows custodian for operations that need exclusive custody, and transfer the stronger unfinished Headless increment 7 storage obligations without making this roadmap a dependency of that increment.",
+  "paths": {
+    "report": "docs/tmp/reusable-protected-storage-service-implementation-report.md",
+    "roadmap": "docs/reusable-protected-storage-service-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/reusable-protected-storage-service/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": null,
+  "schemaVersion": 1,
+  "slug": "reusable-protected-storage-service",
+  "status": "roadmap-review",
+  "updatedAt": "2026-11-26T20:17:25Z"
+}
