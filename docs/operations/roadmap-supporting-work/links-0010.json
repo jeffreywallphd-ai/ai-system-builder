@@ -625,6 +625,330 @@
         "Agent work remains for actual shared capacity, durable parent/crash protection, the complete original producer and worker/SDK/Job retirement, application candidate/history/Save and real hosts. File acknowledgements alone are not final receiver delivery or task success.",
         "Previous failures and retained data remain unchanged. Existing model accuracy outcomes stay closed. This support record runs no model test or physical native fixture and authorizes no retry or publication."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-original-training-completed-delivery-record",
+      "work_criteria": [
+        "final-acknowledged-original-delivery",
+        "incomplete-delivery-never-becomes-proof",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "3f244cf4a0768cbebed1f927c6cc8bad132c6b54416f418bcc5d48dc26506efe",
+      "review_digest": "8d173d4052af592adc0c3ca85231ca4422bddfa94c4576c452d0f1cce43339af",
+      "scope": "The original receiver retains immutable completed-delivery facts only after final acknowledgement, exact scope and original IO closure. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-original-training-completed-delivery-record",
+      "work_criteria": [
+        "final-acknowledged-original-delivery",
+        "incomplete-delivery-never-becomes-proof",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "3f244cf4a0768cbebed1f927c6cc8bad132c6b54416f418bcc5d48dc26506efe",
+      "review_digest": "8d173d4052af592adc0c3ca85231ca4422bddfa94c4576c452d0f1cce43339af",
+      "scope": "The original receiver retains immutable completed-delivery facts only after final acknowledgement, exact scope and original IO closure. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-original-training-completed-delivery-record",
+      "work_criteria": [
+        "final-acknowledged-original-delivery",
+        "incomplete-delivery-never-becomes-proof",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "3f244cf4a0768cbebed1f927c6cc8bad132c6b54416f418bcc5d48dc26506efe",
+      "review_digest": "8d173d4052af592adc0c3ca85231ca4422bddfa94c4576c452d0f1cce43339af",
+      "scope": "The original receiver retains immutable completed-delivery facts only after final acknowledgement, exact scope and original IO closure. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-bounded-local-training-model-copy-and-check-routing",
+      "work_criteria": [
+        "verified-original-local-copy",
+        "local-copy-denial-and-lifetime",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "8125764d482c224e2142a81f321aa0732dba283a0cb44ed0cce5f9c34925f4aa",
+      "review_digest": "33782a3438734a33f458d7efde74248aa1aa26c978ff66a9592799153438ef8b",
+      "scope": "The replaceable local Model-copy backend verifies exact selected files, hashes, current actor/request, finite limits, disk headroom and original source/destination IO. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-bounded-local-training-model-copy-and-check-routing",
+      "work_criteria": [
+        "verified-original-local-copy",
+        "local-copy-denial-and-lifetime",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "8125764d482c224e2142a81f321aa0732dba283a0cb44ed0cce5f9c34925f4aa",
+      "review_digest": "33782a3438734a33f458d7efde74248aa1aa26c978ff66a9592799153438ef8b",
+      "scope": "The replaceable local Model-copy backend verifies exact selected files, hashes, current actor/request, finite limits, disk headroom and original source/destination IO. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-bounded-local-training-model-copy-and-check-routing",
+      "work_criteria": [
+        "verified-original-local-copy",
+        "local-copy-denial-and-lifetime",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "8125764d482c224e2142a81f321aa0732dba283a0cb44ed0cce5f9c34925f4aa",
+      "review_digest": "33782a3438734a33f458d7efde74248aa1aa26c978ff66a9592799153438ef8b",
+      "scope": "The replaceable local Model-copy backend verifies exact selected files, hashes, current actor/request, finite limits, disk headroom and original source/destination IO. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-bounded-local-training-worker-producer",
+      "work_criteria": [
+        "explicit-local-worker-execution",
+        "local-inputs-limits-and-retirement",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "1b3bbb04b9a84d1db06c13e8722a22e9ebf8189ff7055f2c02198fa5ab28501e",
+      "review_digest": "b2d1eae310c53a1f148f304feb595be25f57896c288b30b4ad3f789b58efba82",
+      "scope": "The explicit local worker producer uses the fixed safe offline loader and verifies staged model/data/recipe files, original request identity and finite local output limits. Controlled component checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-bounded-local-training-worker-producer",
+      "work_criteria": [
+        "explicit-local-worker-execution",
+        "local-inputs-limits-and-retirement",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "1b3bbb04b9a84d1db06c13e8722a22e9ebf8189ff7055f2c02198fa5ab28501e",
+      "review_digest": "b2d1eae310c53a1f148f304feb595be25f57896c288b30b4ad3f789b58efba82",
+      "scope": "The explicit local worker producer uses the fixed safe offline loader and verifies staged model/data/recipe files, original request identity and finite local output limits. Controlled component checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-bounded-local-training-worker-producer",
+      "work_criteria": [
+        "explicit-local-worker-execution",
+        "local-inputs-limits-and-retirement",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "1b3bbb04b9a84d1db06c13e8722a22e9ebf8189ff7055f2c02198fa5ab28501e",
+      "review_digest": "b2d1eae310c53a1f148f304feb595be25f57896c288b30b4ad3f789b58efba82",
+      "scope": "The explicit local worker producer uses the fixed safe offline loader and verifies staged model/data/recipe files, original request identity and finite local output limits. Controlled component checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-bounded-local-training-owned-startup",
+      "work_criteria": [
+        "owned-local-startup",
+        "bounded-fixed-worker-bootstrap",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "3d92f271192d01411e706cb11a02044a8b9d4150b52aadc268d2db110dde2ab1",
+      "review_digest": "d2e0d42676b42f01c6b5975d20e1b6fc2d4da1e74941113bc47077d7b7bf2da1",
+      "scope": "The explicit installed-only local startup binds the original admission profile and current worker nonce through the existing original Windows Job/process guards. Inherited selectors, worker adoption and mixed Native/local mode are refused. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-bounded-local-training-owned-startup",
+      "work_criteria": [
+        "owned-local-startup",
+        "bounded-fixed-worker-bootstrap",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "3d92f271192d01411e706cb11a02044a8b9d4150b52aadc268d2db110dde2ab1",
+      "review_digest": "d2e0d42676b42f01c6b5975d20e1b6fc2d4da1e74941113bc47077d7b7bf2da1",
+      "scope": "The explicit installed-only local startup binds the original admission profile and current worker nonce through the existing original Windows Job/process guards. Inherited selectors, worker adoption and mixed Native/local mode are refused. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-bounded-local-training-owned-startup",
+      "work_criteria": [
+        "owned-local-startup",
+        "bounded-fixed-worker-bootstrap",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "3d92f271192d01411e706cb11a02044a8b9d4150b52aadc268d2db110dde2ab1",
+      "review_digest": "d2e0d42676b42f01c6b5975d20e1b6fc2d4da1e74941113bc47077d7b7bf2da1",
+      "scope": "The explicit installed-only local startup binds the original admission profile and current worker nonce through the existing original Windows Job/process guards. Inherited selectors, worker adoption and mixed Native/local mode are refused. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-bounded-local-model-copy-session-composition",
+      "work_criteria": [
+        "exact-local-copy-session-binding",
+        "local-owner-retirement-and-refusal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e364295daa7614dbfce855c102db7ee5afdb621540e0f0d604c1f953ba5eab79",
+      "review_digest": "30849c5ef9141e6bd7b2831f8f58e7c5627d4e25c10d5c8fe29ef841d31f44eb",
+      "scope": "The local foundation binds original Model selection, verified copy, private manifest and guarded startup to the same original training session. Known copy cleanup requires original worker/Job retirement and Node IO closure; unknown operations remain owned. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-bounded-local-model-copy-session-composition",
+      "work_criteria": [
+        "exact-local-copy-session-binding",
+        "local-owner-retirement-and-refusal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e364295daa7614dbfce855c102db7ee5afdb621540e0f0d604c1f953ba5eab79",
+      "review_digest": "30849c5ef9141e6bd7b2831f8f58e7c5627d4e25c10d5c8fe29ef841d31f44eb",
+      "scope": "The local foundation binds original Model selection, verified copy, private manifest and guarded startup to the same original training session. Known copy cleanup requires original worker/Job retirement and Node IO closure; unknown operations remain owned. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-bounded-local-model-copy-session-composition",
+      "work_criteria": [
+        "exact-local-copy-session-binding",
+        "local-owner-retirement-and-refusal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e364295daa7614dbfce855c102db7ee5afdb621540e0f0d604c1f953ba5eab79",
+      "review_digest": "30849c5ef9141e6bd7b2831f8f58e7c5627d4e25c10d5c8fe29ef841d31f44eb",
+      "scope": "The local foundation binds original Model selection, verified copy, private manifest and guarded startup to the same original training session. Known copy cleanup requires original worker/Job retirement and Node IO closure; unknown operations remain owned. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-bounded-local-result-publication-inventory",
+      "work_criteria": [
+        "exact-local-output-inventory",
+        "bounded-output-refusal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "be7d2448f6ff636fdf8752272446539938df9060159ee7a7e300e3613339d37d",
+      "review_digest": "f89bec8673bc53066549864310d39b10eb07ba6f7e14897537ac69a27ec1d06f",
+      "scope": "The explicit local result-publication wrapper matches the complete captured file inventory and actor/request to ordered size/hash/media acknowledgements, current permission and disk headroom. Finalized historical inventory requires a permanent fence and known closed original IO. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-bounded-local-result-publication-inventory",
+      "work_criteria": [
+        "exact-local-output-inventory",
+        "bounded-output-refusal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "be7d2448f6ff636fdf8752272446539938df9060159ee7a7e300e3613339d37d",
+      "review_digest": "f89bec8673bc53066549864310d39b10eb07ba6f7e14897537ac69a27ec1d06f",
+      "scope": "The explicit local result-publication wrapper matches the complete captured file inventory and actor/request to ordered size/hash/media acknowledgements, current permission and disk headroom. Finalized historical inventory requires a permanent fence and known closed original IO. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-bounded-local-result-publication-inventory",
+      "work_criteria": [
+        "exact-local-output-inventory",
+        "bounded-output-refusal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "be7d2448f6ff636fdf8752272446539938df9060159ee7a7e300e3613339d37d",
+      "review_digest": "f89bec8673bc53066549864310d39b10eb07ba6f7e14897537ac69a27ec1d06f",
+      "scope": "The explicit local result-publication wrapper matches the complete captured file inventory and actor/request to ordered size/hash/media acknowledgements, current permission and disk headroom. Finalized historical inventory requires a permanent fence and known closed original IO. Focused checks and independent review passed.",
+      "limitations": [
+        "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
+        "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
+      ]
     }
   ]
 }
