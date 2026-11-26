@@ -1479,3 +1479,14 @@ provenance, readiness, producer activation or cleanup credit. Actual outer budge
 source/copy ownership, protected parent/crash custody, retirement, Save and host
 qualification remain pending. Focused fixtures use controlled callbacks and the
 real configured-store budget adapter, with no model or Native execution.
+
+The result storage port may also provide private `preparePublication`. The
+receiver captures it before startup. After validating the whole wire manifest,
+it supplies a detached frozen inventory of file indices, media types, sizes and
+hashes, plus the configured publication and exact total. The original preparation
+operation must return `undefined` under current permission and deadline before
+the manifest ACK releases any file data. Preparation is never repeated per file.
+Timeout, abort and withdrawn authority cannot acknowledge late completion. The
+actual operation remains tracked until its original settlement; malformed promise
+suppliers stay unknown. Ports without this optional method remain compatible.
+This sequencing seam proves no physical protection, reservation, custody or Save.

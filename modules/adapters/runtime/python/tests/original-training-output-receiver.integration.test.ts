@@ -452,6 +452,90 @@ function directReceiver(f: Awaited<ReturnType<typeof fixture>>, hooks: {
     acknowledge: hooks.acknowledge ?? (async sequence => {assert.equal(sequence, ack + 1); ack++; return true;})});
 }
 
+test("complete frozen inventory is prepared once before the manifest ACK releases any file data", async () => {
+  const f = await fixture(), gate = deferred(), entered = deferred(); let preparations = 0, reads = 0;
+  try {
+    f.storage.preparePublication = async (inventory, context) => {
+      preparations++; assert.equal(context.workspaceId, workspace); assert.ok(Object.isFrozen(context));
+      assert.equal(inventory.publicationId, publicationId); assert.equal(inventory.totalBytes, f.input.bytes.reduce((n, b) => n + b.length, 0));
+      assert.ok(Object.isFrozen(inventory)); assert.ok(Object.isFrozen(inventory.files));
+      assert.deepEqual(inventory.files, f.input.files.map(file => ({fileIndex: file.fileIndex,
+        mediaType: file.name.endsWith(".json") ? "application/json" : "application/octet-stream",
+        expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256})));
+      assert.ok(inventory.files.every(Object.isFrozen));
+      assert.throws(() => {(inventory.files[0] as any).expectedSizeBytes++;});
+      entered.resolve(); await gate.promise;
+    };
+    const receiver = directReceiver(f, {read: async () => {reads++; return {phase: "active", acknowledged: 0, frame: f.input.rows[0]};},
+      acknowledge: async () => {f.acks.push(1); throw Error("stop after preparation");}});
+    f.storage.preparePublication = async () => {throw Error("replacement must not run");};
+    receiver.start(); await entered.promise; await tick();
+    assert.equal(reads, 1); assert.deepEqual(f.acks, []); assert.equal(f.published, 0);
+    assert.equal(receiver.inspectIoRetirement().pendingOperations, 1);
+    gate.resolve(); await until(() => receiver.inspectIoRetirement().drainFinished);
+    assert.equal(preparations, 1); assert.deepEqual(f.acks, [1]); assert.equal(f.published, 0);
+  } finally {gate.resolve(); await f.close();}
+});
+
+test("optional inventory preparation preserves the complete original-session publication flow", async () => {
+  const f = await fixture(); let preparations = 0;
+  try {
+    f.storage.preparePublication = async () => {preparations++; assert.equal(f.published, 0); assert.deepEqual(f.acks, []);};
+    await f.start(); await until(() => f.completed); await tick();
+    assert.equal(preparations, 1); assert.equal(f.published, 4); assert.equal(await f.session.settle(), true);
+  } finally {await f.close();}
+});
+
+for (const mode of ["reject", "malformed-result", "thenable"] as const) {
+  test(`inventory preparation ${mode} cannot release the first data frame or retry`, async () => {
+    const f = await fixture(false, true); let preparations = 0, thenCalls = 0;
+    try {
+      f.storage.preparePublication = (mode === "thenable" ? (() => {preparations++; return {then() {thenCalls++;}};}) :
+        (async () => {preparations++; if (mode === "reject") throw Error("private preparation detail"); return true;})) as never;
+      const receiver = directReceiver(f, {acknowledge: async sequence => {f.acks.push(sequence); return true;}});
+      receiver.start(); await until(() => receiver.inspectIoRetirement().drainFinished); receiver.abort();
+      assert.equal(receiver.isComplete(), false); assert.deepEqual(f.acks, []); assert.equal(f.published, 0);
+      assert.equal(preparations, 1); assert.equal(thenCalls, 0); assert.throws(() => receiver.start());
+      assert.equal(receiver.inspectIoRetirement().pendingOperations, mode === "thenable" ? 1 : 0);
+      if (mode === "thenable") assert.equal(receiver.inspectIoRetirement().phase, "unconfirmed");
+    } finally {await f.close();}
+  });
+}
+
+for (const mode of ["abort", "deadline", "permission-withdrawn"] as const) {
+  test(`inventory preparation retains its actual operation after ${mode} without a late data ACK`, async () => {
+    const f = await fixture(false, true), gate = deferred(), entered = deferred(); let permission = true, preparations = 0;
+    try {
+      if (mode === "deadline") (f.configuration as any).maximumDurationMs = 15;
+      f.storage.preparePublication = async () => {preparations++; entered.resolve(); await gate.promise;};
+      const receiver = directReceiver(f, {assertAllowed: async () => {assert.equal(permission, true);},
+        acknowledge: async sequence => {f.acks.push(sequence); return true;}});
+      receiver.start(); await entered.promise;
+      if (mode === "deadline") await new Promise(resolve => setTimeout(resolve, 40));
+      else if (mode === "abort") receiver.abort();
+      else permission = false;
+      assert.equal(receiver.inspectIoRetirement().pendingOperations, 1);
+      assert.notEqual(receiver.inspectIoRetirement().phase, "closed"); assert.deepEqual(f.acks, []);
+      gate.resolve(); await until(() => receiver.inspectIoRetirement().drainFinished && receiver.inspectIoRetirement().pendingOperations === 0); receiver.abort();
+      assert.equal(receiver.inspectIoRetirement().pendingOperations, 0); assert.equal(receiver.isComplete(), false);
+      assert.deepEqual(f.acks, []); assert.equal(f.published, 0); assert.equal(preparations, 1);
+      assert.equal(receiver.inspectIoRetirement().phase, "closed");
+    } finally {gate.resolve(); await f.close();}
+  });
+}
+
+test("invalid manifest and preparation accessors are rejected before invoking preparation", async () => {
+  const f = await fixture(); let invoked = 0;
+  try {
+    Object.defineProperty(f.storage, "preparePublication", {configurable: true, enumerable: true, get() {invoked++; throw Error("must not run");}});
+    assert.throws(() => directReceiver(f)); assert.equal(invoked, 0);
+    Object.defineProperty(f.storage, "preparePublication", {value: async () => {invoked++;}});
+    f.input.rows[0]!.files[0].name = "not-approved.exe";
+    const receiver = directReceiver(f); receiver.start(); await until(() => receiver.inspectIoRetirement().drainFinished);
+    assert.equal(invoked, 0); assert.equal(f.published, 0); assert.equal(receiver.isComplete(), false);
+  } finally {await f.close();}
+});
+
 test("tracked real publication closes locally only after its permanent fence; methods were captured", async () => {
   const f = await fixture(true, true);
   try {

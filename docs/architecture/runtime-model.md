@@ -3783,3 +3783,13 @@ Only finite numeric diagnostics leave its private inspect/result path. No-file
 ABI/contracts do not execute the real fixture. Native crash, global quota/durable
 accounting, original SDK/controller, receiver/Save, packaging and host qualification
 remain pending. The Windows construction candidate stays within ADR0043/0047.
+
+Before releasing the first result byte, the original receiver can call the trusted
+storage port's optional `preparePublication`. It captures the method before
+startup and sends only the complete validated, detached, frozen inventory and
+configured publication context. The original preparation Promise must settle with
+exactly `undefined`, with fresh permission/currentness checks, before the manifest
+ACK. Abort and deadline fence the effect without retiring pending IO. A late
+completion cannot resume delivery. Legacy ports retain the previous path. This
+ordering capability supplies no physical allocation, custody, capacity or Save
+proof; those remain the selected backend and coordinator's separate obligations.

@@ -23,6 +23,20 @@ export interface TrainingResultFileIoRetirement {
  * Neither this capability nor a stream may come from a client command.
  * Stored bytes are not a registered Model, artifact catalog entry or Save. */
 export interface TrainingResultFileByteStoragePort {
+  /** Optional trusted complete-inventory preparation. Called once after wire
+   * validation, before the first manifest acknowledgement permits file bytes.
+   * The caller tracks the original operation through abort/deadline. Returning
+   * undefined confirms only this local preparation, never capacity or custody. */
+  preparePublication?(input: {
+    readonly publicationId: string;
+    readonly totalBytes: number;
+    readonly files: readonly Readonly<{
+      fileIndex: number;
+      mediaType: "application/json" | "application/octet-stream";
+      expectedSizeBytes: number;
+      expectedSha256: string;
+    }>[];
+  }, context: ApplicationRequestContext): Promise<void>;
   /** Optional trusted composition; capture before publishing. Older two-method
    * ports supply no failure-path IO proof. This grants no retry/delete/credit. */
   captureIoRetirement?(input: {readonly publicationId: string}, context: ApplicationRequestContext): TrainingResultFileIoRetirement;

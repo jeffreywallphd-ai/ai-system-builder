@@ -85,8 +85,10 @@ export function createOriginalTrainingOutputReceiver(options: {
   need(Object.keys(configuration).length === 7);
   const {storage, publicationId, maximumFiles, maximumFileBytes, maximumTotalBytes, maximumDurationMs} = configuration;
   need(!!storage && typeof storage === "object" && !types.isProxy(storage));
-  const port = readStrictPassiveRecord(storage, ["publishResultFile", "inspectPublication", "captureIoRetirement"]);
+  const port = readStrictPassiveRecord(storage, ["publishResultFile", "inspectPublication", "captureIoRetirement", "preparePublication"]);
   const publish = port.publishResultFile;
+  const prepare = port.preparePublication;
+  need(prepare === undefined || typeof prepare === "function" && !types.isProxy(prepare));
   need(typeof publish === "function" && !types.isProxy(publish) && typeof port.inspectPublication === "function" &&
     typeof publicationId === "string" && /^[a-f0-9]{32}$/.test(publicationId) &&
     positive(maximumFiles) && maximumFiles <= 256 && positive(maximumFileBytes) && positive(maximumTotalBytes) &&
@@ -228,7 +230,17 @@ export function createOriginalTrainingOutputReceiver(options: {
     return {files, totalBytes: sum};
   };
   const receive = async () => {
-    const header = await nextFrame(), declared = manifest(header); await ack(header);
+    const header = await nextFrame(), declared = manifest(header);
+    if (prepare !== undefined) {
+      const inventory = Object.freeze({publicationId: publicationId as string, totalBytes: declared.totalBytes,
+        files: Object.freeze(declared.files.map(file => Object.freeze({fileIndex: file.fileIndex,
+          mediaType: file.name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
+          expectedSizeBytes: file.sizeBytes, expectedSha256: file.sha256})))});
+      // The manifest ACK releases the worker's first data frame. Preparation
+      // must finish under current authority before that release, never per file.
+      need(await effect(() => Reflect.apply(prepare as Function, storage, [inventory, context])) === undefined);
+    }
+    await ack(header);
     for (const file of declared.files) {
       let offset = 0, eof: Record<string, unknown> | undefined, iterated = false, busy = false;
       const stream = async function* () {
