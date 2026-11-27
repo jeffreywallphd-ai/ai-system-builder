@@ -24,5 +24,20 @@
   "task_completed": false,
   "model_called": false,
   "output_imported": false,
-  "parent_qualified": false
+  "parent_qualified": false,
+  "application_owner_support": {
+    "work_id": "headless-image-generation-request-scope",
+    "scope": "Original headed image owner pins caller workspace/organization and minted task identity through asynchronous dispatch/read/reconciliation.",
+    "test_file": "modules/application/use-cases/image-generation/tests/generate-image.use-case.unit.test.ts",
+    "new_cases": 12,
+    "reproduced_failures_before_fix": 9,
+    "complete_file_cases": 22,
+    "assurance": "Real image authority and lifecycle software with controlled runtime records only. Current receipt/review govern; no model/image output, import, Headless root, task or parent pass.",
+    "preserved_verification": {
+      "receipt_digest": "757ab7b3f77a9090feb00e1f3005a13ac9f1e0140990e3abc9c329966dfca9d7",
+      "result": "All seven intended feature checks passed; an unintended generic fallback failed with one reported test failure. Its result is preserved, not claimed as full-system qualification.",
+      "routing_correction": "Map the accompanying application README to the fixed image source closure and assert that this exact closed scope does not select broad generic testing. Unknown, missing source and explicit generic requests retain conservative coverage.",
+      "scope_limit": "Do not rerun broader testing during this feature pass. Combined/full-system qualification remains pending at the approved final boundary."
+    }
+  }
 }

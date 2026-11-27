@@ -39,18 +39,20 @@ export class GenerateImageUseCase {
     context?: ApplicationRequestContext,
     lifecycle?: ReturnType<OwnedTaskReconcilerService["reserve"]>,
   ): Promise<StartRuntimeTaskResult> {
-    if (!isWorkspaceId(context?.workspaceId)) {
+    const workspaceId = context?.workspaceId;
+    const organizationId = context?.organizationId;
+    if (!isWorkspaceId(workspaceId)) {
       throw new Error("Workspace id is required for image generation.");
     }
     request = snapshotBoundedImageGenerationRequest(request);
 
     const taskRequestId = this.dependencies.createRequestId?.() ?? randomUUID();
-    const ownership = await this.dependencies.taskAuthority.reserve(taskRequestId, context.workspaceId);
+    const ownership = await this.dependencies.taskAuthority.reserve(taskRequestId, workspaceId);
     try {
     const resolvedModel =
       await this.dependencies.modelCheckpointResolver?.resolveCheckpoint({
         selectedModel: request.model,
-        workspaceId: context.workspaceId,
+        workspaceId,
         taskTag: "text-to-image",
       });
     const { runtimeDeviceMode: _ignoredRuntimeDeviceMode, ...safeEngineHints } =
@@ -74,8 +76,8 @@ export class GenerateImageUseCase {
       taskType: TaskType.IMAGE_GENERATION,
       payload,
       requestId: taskRequestId,
-      workspaceId: context.workspaceId,
-      metadata: { workspaceId: context.workspaceId, ...(context.organizationId ? { organizationId: context.organizationId } : {}) },
+      workspaceId,
+      metadata: { workspaceId, ...(organizationId ? { organizationId } : {}) },
     });
 
     if (result.requestId !== taskRequestId) throw new Error("Image generation task acceptance identity is invalid.");
@@ -83,9 +85,10 @@ export class GenerateImageUseCase {
     lifecycle?.start(async () => {
       // Internal cleanup observes only the accepted request; it does not publish
       // image assets or depend on a renderer retaining current write authority.
-      const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(result.requestId);
-      return !("recordType" in record) && record.workspaceId === context.workspaceId && (record.status === "succeeded" || record.status === "failed" || record.status === "cancelled");
-    }, () => this.dependencies.runtimeTaskRegistry.cancelTask(result.requestId), async () => {});
+      const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(taskRequestId);
+      return !("recordType" in record) && record.requestId === taskRequestId && record.taskType === TaskType.IMAGE_GENERATION &&
+        record.workspaceId === workspaceId && (record.status === "succeeded" || record.status === "failed" || record.status === "cancelled");
+    }, () => this.dependencies.runtimeTaskRegistry.cancelTask(taskRequestId), async () => {});
     return result;
     } catch (error) { ownership.release(); lifecycle?.release(); throw error; }
   }
@@ -94,9 +97,10 @@ export class GenerateImageUseCase {
     requestId: string,
     context?: ApplicationRequestContext,
   ): Promise<RuntimeTaskStatusRecord> {
-    await this.dependencies.taskAuthority.assertOwned(requestId, context?.workspaceId, "read");
+    const workspaceId = context?.workspaceId;
+    await this.dependencies.taskAuthority.assertOwned(requestId, workspaceId, "read");
     const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
-    if (!("recordType" in record) && (record.requestId !== requestId || record.workspaceId !== context?.workspaceId || record.taskType !== TaskType.IMAGE_GENERATION)) throw new Error("Image generation task was not found in this workspace.");
+    if (!("recordType" in record) && (record.requestId !== requestId || record.workspaceId !== workspaceId || record.taskType !== TaskType.IMAGE_GENERATION)) throw new Error("Image generation task was not found in this workspace.");
     return record;
   }
 

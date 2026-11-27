@@ -1439,6 +1439,63 @@
         "Task72 actual training and prior retirement remain pending a safe restart. No fresh lease or retry is granted.",
         "Another checkout may lack local completion records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-image-generation-intent",
+      "work_criteria": [
+        "closed-image-intent",
+        "privacy-and-capability-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "be4f1a467ec36bd2585145a71693fe853b9801e6b153d5e2c413cd20ed39e422",
+      "review_digest": "3f54a9c2a18894cba8b5422f0a71ee717b4bb7ded951486757cba39f6e484d39",
+      "scope": "Standalone private image intent is complete at commitca90fd2c. Forty-eight controlled contract cases and strict consumers verify copied/frozen exact metadata, existing numeric ceilings and privacy/authority denials. All4 current checks passed with independent review.",
+      "limitations": [
+        "No public operation, model/image generation, output import, Task74 or parent qualification.",
+        "Prompt digests are correlation metadata, not anonymization or permission; original owners and real-host wiring remain pending.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-image-generation-intent",
+      "work_criteria": [
+        "closed-image-intent",
+        "privacy-and-capability-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "be4f1a467ec36bd2585145a71693fe853b9801e6b153d5e2c413cd20ed39e422",
+      "review_digest": "3f54a9c2a18894cba8b5422f0a71ee717b4bb7ded951486757cba39f6e484d39",
+      "scope": "Standalone private image intent is complete at commitca90fd2c. Forty-eight controlled contract cases and strict consumers verify copied/frozen exact metadata, existing numeric ceilings and privacy/authority denials. All4 current checks passed with independent review.",
+      "limitations": [
+        "No public operation, model/image generation, output import, Task74 or parent qualification.",
+        "Prompt digests are correlation metadata, not anonymization or permission; original owners and real-host wiring remain pending.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-image-generation-intent",
+      "work_criteria": [
+        "closed-image-intent",
+        "privacy-and-capability-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "be4f1a467ec36bd2585145a71693fe853b9801e6b153d5e2c413cd20ed39e422",
+      "review_digest": "3f54a9c2a18894cba8b5422f0a71ee717b4bb7ded951486757cba39f6e484d39",
+      "scope": "Standalone private image intent is complete at commitca90fd2c. Forty-eight controlled contract cases and strict consumers verify copied/frozen exact metadata, existing numeric ceilings and privacy/authority denials. All4 current checks passed with independent review.",
+      "limitations": [
+        "No public operation, model/image generation, output import, Task74 or parent qualification.",
+        "Prompt digests are correlation metadata, not anonymization or permission; original owners and real-host wiring remain pending.",
+        "Another checkout may lack local completion records."
+      ]
     }
   ]
 }

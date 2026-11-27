@@ -1,5 +1,13 @@
 # Runtime Model
 
+The original image application owner pins workspace/organization primitives
+before asynchronous authorization, model resolution and readiness. Dispatch,
+status validation and owned lifecycle callbacks retain the original task ID and
+workspace. Reconciliation requires matching request, workspace and image task
+type before terminal status settles the lease. Mutating caller context or the
+returned acceptance object cannot redirect these effects. This shared repair
+improves headed behavior without granting new Headless dispatch or host proof.
+
 The standalone Headless `models.generate-image` intent describes bounded
 text-to-image settings and a timestamped registered Model. It reuses the existing
 image contract's numeric ceilings, which do not prove runtime compatibility or

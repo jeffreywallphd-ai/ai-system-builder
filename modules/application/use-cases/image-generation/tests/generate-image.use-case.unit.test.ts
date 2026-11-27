@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import assert from "node:assert/strict";
 
 import {
   describe,
@@ -13,6 +14,9 @@ import {
 } from "../../../../contracts/runtime";
 import type { RuntimeTaskRegistryPort } from "../../../ports/runtime";
 import { GenerateImageUseCase } from "../generate-image.use-case";
+import {ImageGenerationTaskAuthorityService} from "../../../services/image/image-generation-task-authority.service";
+import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
+import type {ApplicationRequestContext} from "../../../ports";
 
 function createRuntimeTaskRegistryFake(): RuntimeTaskRegistryPort {
   return {
@@ -282,3 +286,102 @@ describe("GenerateImageUseCase", () => {
 function createUseCase(dependencies: Omit<ConstructorParameters<typeof GenerateImageUseCase>[0], "taskAuthority" | "createRequestId">) {
   return new GenerateImageUseCase({ ...dependencies, createRequestId: () => "img-req-1", taskAuthority: { reserve: async () => ({ accept() {}, release() {} }), assertOwned: async () => {} } as never });
 }
+
+function scopedImageFixture(taskReconciler?: OwnedTaskReconcilerService) {
+  type Stage = "authority" | "model" | "readiness" | "read";
+  const context: ApplicationRequestContext = {workspaceId: "workspace-a", organizationId: "org-a" as never, principalId: "principal-a"};
+  const state = {mutateAt: "" as Stage | "", allowed: true, runtimeReads: 0, statusWorkspace: "workspace-a",
+    statusRequest: "img-req-1", statusType: TaskType.IMAGE_GENERATION};
+  const starts: Parameters<RuntimeTaskRegistryPort["startTask"]>[0][] = [];
+  const readRequests: string[] = [], cancelRequests: string[] = [];
+  const startReply = {requestId: "img-req-1", status: "queued" as const};
+  const modelScopes: {workspaceId?: string}[] = [];
+  const mutate = () => {context.workspaceId = "workspace-b"; context.organizationId = "org-b" as never;};
+  const stage = (value: Stage) => {if (state.mutateAt === value) mutate();};
+  const taskAuthority = new ImageGenerationTaskAuthorityService({
+    organizationContextProvider: {getCurrentOrganizationContext: () => ({organizationId: "org-a", principalId: "principal-a"})} as never,
+    workspaceRepository: {readWorkspace: async (workspaceId: string) => ({workspaceId, status: "active"})} as never,
+    workspaceAuthorization: {async authorizeWorkspaceOperation(input) {
+      if (!state.allowed) throw Error("Synthetic access denial");
+      stage(input.operation === "image-generation.read" ? "read" : "authority");
+    }},
+  });
+  const runtimeTaskRegistry: RuntimeTaskRegistryPort = {
+    async startTask(command) {starts.push(command); return startReply;},
+    async getTaskStatus(requestId) {readRequests.push(requestId); state.runtimeReads++; return {requestId: state.statusRequest,
+      workspaceId: state.statusWorkspace as never, taskType: state.statusType, status: "succeeded", concurrencyClass: "unknown"};},
+    async cancelTask(requestId) {cancelRequests.push(requestId); return {requestId: "img-req-1", status: "cancelled", cancelled: true};},
+    async listTasks() {return {tasks: []};},
+  };
+  const useCase = new GenerateImageUseCase({taskAuthority, runtimeTaskRegistry, taskReconciler, createRequestId: () => "img-req-1",
+    modelCheckpointResolver: {async resolveCheckpoint(input) {modelScopes.push({...input}); stage("model"); return {checkpoint: "synthetic.safetensors"};}},
+    runtimeCapabilityGuard: {async requireCapabilityReady() {stage("readiness"); return createRuntimeCapabilityStatus({capabilityId: "image-generation", status: "ready"});}},
+  });
+  const start = () => useCase.startImageGeneration({prompt: "Synthetic image prompt", width: 64, height: 64, steps: 1}, context);
+  return {context, state, starts, modelScopes, useCase, start, mutate, startReply, readRequests, cancelRequests};
+}
+
+for (const stage of ["authority", "model", "readiness"] as const) {
+  it(`image caller scope remains original through ${stage} await`, async () => {
+    const f = scopedImageFixture(); f.state.mutateAt = stage;
+    await f.start();
+    assert.equal(f.context.workspaceId, "workspace-b"); assert.equal(f.context.organizationId, "org-b");
+    assert.equal(f.modelScopes[0].workspaceId, "workspace-a");
+    assert.equal(f.starts.length, 1); assert.equal(f.starts[0].workspaceId, "workspace-a");
+    assert.deepEqual(f.starts[0].metadata, {workspaceId: "workspace-a", organizationId: "org-a"});
+    const payload = f.starts[0].payload;
+    assert.ok(payload && typeof payload === "object" && "model" in payload);
+    assert.equal(payload.model, "synthetic.safetensors");
+  });
+}
+
+it("image caller scope mutation cannot reject the original authorized read", async () => {
+  const f = scopedImageFixture(); await f.start(); f.state.mutateAt = "read";
+  const result = await f.useCase.readImageGeneration("img-req-1", f.context);
+  assert.equal(f.context.workspaceId, "workspace-b");
+  assert.equal("workspaceId" in result && result.workspaceId, "workspace-a");
+});
+
+for (const wrong of ["workspace", "request", "type"] as const) {
+  it(`image caller scope cannot admit a foreign runtime ${wrong}`, async () => {
+    const f = scopedImageFixture(); await f.start(); f.state.mutateAt = "read";
+    if (wrong === "workspace") f.state.statusWorkspace = "workspace-b";
+    if (wrong === "request") f.state.statusRequest = "img-foreign";
+    if (wrong === "type") f.state.statusType = TaskType.MODEL_TRAINING;
+    await assert.rejects(f.useCase.readImageGeneration("img-req-1", f.context), /not found/);
+  });
+}
+
+for (const wrong of ["workspace", "request", "type"] as const) {
+  it(`image owned reconciliation retains the original task when runtime ${wrong} differs`, async () => {
+    const lifecycle = new OwnedTaskReconcilerService();
+    try {
+      const f = scopedImageFixture(lifecycle); await f.start(); f.mutate();
+      if (wrong === "workspace") f.state.statusWorkspace = "workspace-b";
+      if (wrong === "request") f.state.statusRequest = "img-foreign";
+      if (wrong === "type") f.state.statusType = TaskType.MODEL_TRAINING;
+      await lifecycle.reconcileNow(); assert.equal(lifecycle.status.pending, 1);
+      f.state.statusWorkspace = "workspace-a"; f.state.statusRequest = "img-req-1"; f.state.statusType = TaskType.IMAGE_GENERATION;
+      await lifecycle.reconcileNow(); assert.equal(lifecycle.status.pending, 0);
+    } finally {lifecycle.stopObservation();}
+  });
+}
+
+it("image current policy denial still precedes runtime start and read", async () => {
+  const deniedStart = scopedImageFixture(); deniedStart.state.allowed = false;
+  await assert.rejects(deniedStart.start(), /forbidden/);
+  assert.equal(deniedStart.starts.length, 0); assert.equal(deniedStart.modelScopes.length, 0);
+  const deniedRead = scopedImageFixture(); await deniedRead.start(); deniedRead.state.allowed = false;
+  await assert.rejects(deniedRead.useCase.readImageGeneration("img-req-1", deniedRead.context), /forbidden/);
+  assert.equal(deniedRead.state.runtimeReads, 0);
+});
+
+it("image owned lifecycle keeps original runtime id after accepted-reply mutation", async () => {
+  const lifecycle = new OwnedTaskReconcilerService();
+  try {
+    const f = scopedImageFixture(lifecycle); await f.start(); f.startReply.requestId = "img-foreign";
+    await lifecycle.cancelAndReconcile();
+    assert.deepEqual(f.cancelRequests, ["img-req-1"]); assert.deepEqual(f.readRequests, ["img-req-1"]);
+    assert.equal(lifecycle.status.pending, 0);
+  } finally {lifecycle.stopObservation();}
+});

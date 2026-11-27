@@ -1,5 +1,16 @@
 # Headless System Builder threat model
 
+### Original image task scope
+
+The image use case owns original primitive workspace/organization facts before
+authority/model/readiness awaits. Subsequent caller-context mutation cannot
+change model resolution, runtime metadata, status validation or lifecycle scope.
+Callbacks poll and cancel the minted original request ID, not a mutable runtime
+acceptance object. Terminal reconciliation requires the same request, workspace
+and image task type. Current original workspace authorization remains mandatory.
+Tests use the real image authority and lifecycle owner with controlled runtime
+records; they supply no actual image generation, import or public-host proof.
+
 ### Private image-generation intent
 
 Treat the standalone image intent as untrusted data. Strict passive decoding

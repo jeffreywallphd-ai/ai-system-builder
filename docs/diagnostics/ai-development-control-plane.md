@@ -1,6 +1,14 @@
 
 ## Numeric capture at coding-session initialization
 
+The `headless-image-generation-owner-unit` profile runs the complete original
+image use-case, real image-authority, owned-lifecycle and image-contract unit
+files. Its strict type companion checks the same source closure. Only exact
+use-case edits activate this profile; shared-only, unknown, unavailable and
+explicit generic impact keep conservative coverage. The closed source/catalog
+repair runs the image routing and focused-runner modules. These controlled
+software checks start no model or Native worker and enable no Headless dispatch.
+
 Private original-task training Save uses `headless-training-save-owner-unit` and
 its strict type companion. They execute the whole Save owner, original training
 owner, execution bridge and task-book files with controlled storage/runtime

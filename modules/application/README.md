@@ -1,5 +1,13 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Image generation captures original workspace/organization before authority,
+Model and readiness awaits. Runtime dispatch and owned reconciliation use these
+primitive facts and the original minted request ID. Changed caller context or
+accepted reply objects cannot redirect polling/cancellation, disclose a foreign
+workspace result or settle a different task. Reconciliation also checks task type.
+Existing workspace authorization, request bounds and headed features are retained.
+This repair does not enable a Headless generation operation or qualify a model.
+
 `TrainingResultRetainedFileVerificationPort` provides private current-file
 observations under separately captured read authority. It verifies original
 finalized file metadata with bounded streaming and actual handle closure. This
