@@ -17,6 +17,19 @@ are read-only; a distinct owning-transaction fence serializes publication agains
 approval changes. The run-step frame is copied and matched to the exact prepared
 effect. No public product Root is activated by this private protocol.
 
+Both private host composers now connect that protocol to the original training
+task book. Separate `allowModelTrainingSave` configuration enables proposals,
+current status and ordered execution; it does not follow from training/download
+configuration. Trusted popup/chat approval owners receive only the original
+candidate-review callback. File review stays outside metadata transactions;
+current Model/reader policy and accepted lineage stay in supplied owners.
+Positive decisions recheck current candidate proof. An existing authorized
+approval view can revoke without rereading candidate files. Missing factories,
+changed authority, host withdrawal or unknown outcomes cannot select another
+task or ordinary Save. Controlled Core/SQLite host fixtures cover both channels
+and modes, replay, lost replies and withdrawal cleanup. Actual product Root and
+transport activation plus real runtime/host qualification remain pending.
+
 The private original training task book can bind one separate Save session.
 It rechecks accepted actor/client/workspace/host/task/proposal lineage and
 combines that lookup with fresh exact Save controls. The original App factory

@@ -4088,6 +4088,24 @@ This uses ADR-0049 account/dependency trust, not hostile same-account protection
 or a reserved physical quota. Product proposal/step/Root and real-host
 qualification remain pending; controlled sessions qualify no actual model run.
 
+Private Desktop and Managed host composers now integrate separately approved
+trained Save with their original accepted task book. Require explicit
+`allowModelTrainingSave`, complete training ownership and the original host
+lifetime; training/download flags cannot enable Save. Popup/chat approval owners
+take the original private candidate-review callback, never caller candidate data.
+Prepare stored or proposed current-file observations outside metadata work,
+then validate accepted lineage and current Model/reader scopes in supplied owners.
+Positive decisions require that current proof. Authorized revocation from an
+existing view does not need another file review. Preserve all older protocols.
+
+Both ordered step composers use the separate Save publisher and original binding.
+Original scope, caller lifetime and host policy remain enforced across awaits.
+Lost publication replies reconcile without another copy; withdrawal before
+publication can retire only the known fresh copy under independent cleanup proof.
+Controlled Core/SQLite host tests qualify this composition, not actual model
+training or file copies. Public product Root/transport and real-host qualification
+remain separate; ADR-0049 local-account trust and resource limits are unchanged.
+
 The product host composition must still bind the original app Save capability and
 require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does

@@ -1173,6 +1173,25 @@
         "Stored-plan and product host wiring plus current qualification remain pending. No model accuracy test was repeated and no protected service, physical quota or external publication authority is granted.",
         "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-trained-model-save-plan-step",
+      "work_criteria": [
+        "stored-exact-save-review",
+        "approved-save-step-and-fence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "45b6a799f3092eacc388f80a73b4f6eb735b9b8e2e12c4338199798a531c3871",
+      "review_digest": "7502f544f7c30e7d35fb88bafc323f3719afc5c01630ba787aa3d34a86d5e7e1",
+      "scope": "Separate trained Save approvals and ordered steps use strict stored records, original candidate review and atomic publication. Focused Core/SQLite tests cover both channels and modes, revocation, replay and dependency capture. Independent review passed before commit 71e639e.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task 71, Increment 7, the roadmap or real host qualification.",
+        "Product host wiring plus current qualification remain pending. No model accuracy test was repeated and no protected service, physical quota or external publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
+      ]
     }
   ]
 }

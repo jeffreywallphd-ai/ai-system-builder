@@ -3886,3 +3886,24 @@ publication writes the existing approval fence in its owning transaction, while
 inspection/reconciliation does no fence mutation. Match the detached run-step
 frame to the prepared exact effect and refuse unrelated transient payloads.
 Private protocol tests supply no public activation, physical-model or parent pass.
+
+Private Desktop/Managed trained Save integration is security-relevant: protected
+assets are original candidate bytes, Model records and approval/task lineage.
+The requester is the same accepted client/actor/workspace/host; an independently
+authorized popup/chat user grants exact Save. Explicit host configuration and an
+original in-process review callback are required. JSON cannot enable the family
+or supply the original task, storage, candidate proof or a permission grant.
+
+Current-file review occurs outside metadata transactions. Positive approval and
+publication recheck accepted lineage and current Model/reader policy through
+the supplied owner. Existing authorized views may revoke without fresh byte
+proof. Preserve original methods, source and host/request lifetimes through waits;
+another client, missing owner, changed candidate or retired membership cannot
+start a copy. Approval revocation during a copy prevents Model publication.
+Lost replies cannot repeat the copy or registration. Independent cleanup remains
+limited to the exclusive known fresh copy and the original App closure guard.
+Core/SQLite host fixtures cover both channels/modes, these denials and original
+training compatibility. Disable the private gate/callback to roll back; retain
+saved definitions, receipts and uncertain bytes. Actual Root/transport, runtime
+and physical-file qualification remain pending. This adds no protected service,
+hostile same-account guarantee, reserved quota, provider or model-quality claim.

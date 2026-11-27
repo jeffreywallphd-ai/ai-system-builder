@@ -4,7 +4,8 @@ import {captureHeadlessTrainingMethod, copyHeadlessTrainingPlanInput, composeOwn
   composeOwnedHeadlessTrainingBusinessPolicy, authorizeOwnedHeadlessTrainingWorkspace, HEADLESS_TRAINING_REVIEW_SCOPES} from "../../shared/composition/headlessTrainingPlanInputs";
 import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions, type OriginalTrainingCompletionQueryResult,
   type OriginalTrainingCandidateQueryResult} from "../../shared/composition/headlessModelTrainingTasks";
-import {readStructuredHeadlessTrainingPlanPermission, type BindModelTrainingReviews} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import {readStructuredHeadlessTrainingPlanPermission, readStructuredHeadlessTrainingSavePlanPermission,
+  readStructuredHeadlessTrainingSavePlanReview, type BindModelTrainingReviews} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {compileHeadlessContextQueryInputs, runPreparedHeadlessContextQuery, composeOwnedHeadlessContextQueryPolicy,
   type HeadlessContextQueryOwner} from "../../shared/composition/headlessContextQueryExecution";
 import { createHash } from "node:crypto";
@@ -17,7 +18,8 @@ import {
   readStructuredHeadlessLocalFileSelection, readStructuredHeadlessProviderFileSelection,
 } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import type { HeadlessFileSelectionResult, HeadlessLocalFileSelection } from "../../../application/ports/ingestion/headless-local-file-selection.port";
-import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels, prepareStructuredHeadlessPlanStepWithTraining } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import { prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels, prepareStructuredHeadlessPlanStepWithTraining,
+  prepareStructuredHeadlessPlanStepWithTrainingSave } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {runPreparedHeadlessModelDownload, composeOwnedHeadlessModelDownloadPolicy, type StartHeadlessModelDownload}
   from "../../shared/composition/headlessModelDownloadExecution";
 import {isHeadlessReadCurrent} from "../../shared/composition/headlessReadCurrent";
@@ -49,7 +51,8 @@ import {compileHeadlessContextPlanInputs, compileHeadlessContextModelBindings, r
 import {compileHeadlessContextResultInputs, runPreparedHeadlessContextResult, type HeadlessContextResultOwner}
   from "../../shared/composition/headlessContextResults";
 import {prepareHeadlessModelReferenceSaveReviews, runPreparedHeadlessModelReferenceSave,
-  type HeadlessModelReferenceSaveOwner} from "../../shared/composition/headlessModelReferenceSave";
+  prepareHeadlessModelTrainingSaveReviews, prepareStoredHeadlessModelTrainingSaveReviews, runPreparedHeadlessTrainedModelSave,
+  type HeadlessTrainingSaveOriginalReviewer, type HeadlessModelReferenceSaveOwner} from "../../shared/composition/headlessModelReferenceSave";
 
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
@@ -81,6 +84,8 @@ export function composeManagedHeadlessPlanReview(options: {
   readonly getModelTrainingInputs?: GetHeadlessModelTrainingInputs;
   readonly getModelTrainingStart?: OriginalTrainingRunOptions["resolveStart"];
   readonly getModelTrainingReaders?: OriginalTrainingRunOptions["getReaders"];
+  /** Separate private Save admission. Training consent never enables this. */
+  readonly allowModelTrainingSave?: boolean;
   /** Private opt-in. Both callbacks are required; host lifetime is not an HTTP lifetime. */
   readonly getModelDownloadStart?: () => Promise<StartHeadlessModelDownload | undefined>;
   readonly isModelHostCurrent?: () => boolean;
@@ -110,10 +115,34 @@ export function composeManagedHeadlessPlanReview(options: {
   const trainingHostCurrent = captureHeadlessTrainingMethod<() => boolean>(options, "isModelHostCurrent");
   const trainingTasks = getModelTrainingInputs && getModelTrainingStart && getModelTrainingReaders && trainingHostCurrent
     ? createOriginalHeadlessTrainingTaskOwner() : undefined;
+  const allowTrainingSave = options.allowModelTrainingSave === true && trainingTasks !== undefined;
   const isModelHostCurrent = options.isModelHostCurrent;
   const getModelDownloadStart = platform.publishWithStableReads && typeof isModelHostCurrent === "function" ? options.getModelDownloadStart : undefined;
   const peekModelDownloadTasks = platform.publishWithStableReads && typeof isModelHostCurrent === "function" ? options.peekModelDownloadTasks : undefined;
   const peekModelReferenceSave = platform.publishWithStableReads && typeof isModelHostCurrent === "function" ? options.peekModelReferenceSave : undefined;
+
+  function trainingSaveQuery(target: Parameters<HeadlessTrainingSaveOriginalReviewer>[0], taskId: string, current: () => boolean) {
+    const scope = Object.freeze(copyHeadlessTrainingPlanInput(target.scope));
+    const live = () => {
+      try {
+        const active = readTrainingContext?.();
+        return allowTrainingSave && isHeadlessReadCurrent(current) && isHeadlessReadCurrent(trainingHostCurrent) &&
+          target.hostIncarnationId === hostIncarnationId && active?.organizationId === scope.organizationId && active.principalId === scope.principalId;
+      } catch {return false;}
+    };
+    return {documents: platform, hostIncarnationId, scope, isCurrent: live,
+      request: {version: "aisb-headless-v1", operation: "models.training-task", input: {hostIncarnationId,
+        workspaceId: scope.workspaceId, selection: {kind: "task", taskId}}},
+      authorize: async (owner: StructuredDocumentStore) => live() && await authorizeOwnedHeadlessTrainingWorkspace(owner, rootDirectory,
+        placement, scope, live) && live()};
+  }
+  const reviewTrainingSaveCandidate: HeadlessTrainingSaveOriginalReviewer | undefined = allowTrainingSave ? async (incomingTarget, incoming, current) => {
+    try {
+      const target = Object.freeze(copyHeadlessTrainingPlanInput(incomingTarget)), request = copyHeadlessTrainingPlanInput(incoming);
+      if (request.input.hostIncarnationId !== hostIncarnationId || request.input.workspaceId !== target.scope.workspaceId) return forbidden;
+      return await trainingTasks!.reviewCandidate(trainingSaveQuery(target, request.input.taskId, current));
+    } catch {return unavailable;}
+  } : undefined;
 
   function captureTrainingRegistration(registration: ManagedPlanReviewRegistration): ManagedPlanReviewRegistration {
     const originalCurrent = captureHeadlessTrainingMethod<() => boolean>(registration, "isCurrent");
@@ -238,7 +267,8 @@ export function composeManagedHeadlessPlanReview(options: {
       const preparesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "models.download");
       const preparesModelSave = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "models.save-download");
       const preparesTraining = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "models.train");
-      let readsModel = false, readsTraining = false;
+      const preparesTrainingSave = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "models.save-training");
+      let readsModel = false, readsTraining = false, readsTrainingSave = false;
       const savesFile = request.operation === "plan.submit" &&
         request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
           step.operation === "data.prepare-local-dataset" || step.operation === "data.save-prepared-dataset" ||
@@ -246,6 +276,7 @@ export function composeManagedHeadlessPlanReview(options: {
       const usesModel = request.operation === "plan.submit" && request.proposal.requests.some(step => step.operation === "context.generate-rag" || step.operation === "context.query");
       if (request.operation === "plan.submit" && request.proposal.requests.some(step =>
         step.operation === "models.train" ? !getModelTrainingInputs :
+        step.operation === "models.save-training" ? !reviewTrainingSaveCandidate :
         step.operation === "models.save-download" ? !peekModelReferenceSave || registration.modelSourceRead !== true :
         step.operation === "models.download" ? !getModelSourcePreview || registration.modelSourceRead !== true :
         step.operation === "context.query" ? !getContextQueryOwner :
@@ -260,7 +291,7 @@ export function composeManagedHeadlessPlanReview(options: {
       const trainingScopes = [...reviewScopes, "artifact:read"] as const;
       const sourceScopes = [...reviewScopes, "provider-credential:use", ...(preparesTraining ? ["artifact:read"] as const : [])] as const;
       const access = admit(request.target, request.operation, registration, isOpen,
-        preparesModel ? sourceScopes : preparesTraining ? trainingScopes : preparesModelSave ? reviewScopes : baseScopes);
+        preparesModel ? sourceScopes : preparesTraining || preparesTrainingSave ? trainingScopes : preparesModelSave ? reviewScopes : baseScopes);
       if (!access) return forbidden;
       const { target, scope, authorizeOwned } = access;
       const modelReviewAccess = getModelSourcePreview || peekModelReferenceSave ? admit(request.target, request.operation, registration, isOpen, reviewScopes) : undefined;
@@ -273,10 +304,11 @@ export function composeManagedHeadlessPlanReview(options: {
         } catch {return false;}
       };
       const current = () => access.current() && (!(preparesModel || preparesModelSave || readsModel) || registration.modelSourceRead === true) &&
-        (!preparesModelSave || isHeadlessReadCurrent(isModelHostCurrent)) && (!(preparesTraining || readsTraining) || trainingCurrent());
+        (!preparesModelSave || isHeadlessReadCurrent(isModelHostCurrent)) && (!(preparesTraining || readsTraining || preparesTrainingSave || readsTrainingSave) || trainingCurrent()) &&
+        (!(preparesTrainingSave || readsTrainingSave) || isHeadlessReadCurrent(trainingHostCurrent));
       const canUse = async () => current() && await access.authorizeCurrent() &&
         (!readsModel || await modelReviewAccess?.authorizeCurrent() === true) &&
-        (!readsTraining || await trainingReviewAccess?.authorizeCurrent() === true) && current();
+        (!(readsTraining || readsTrainingSave) || await trainingReviewAccess?.authorizeCurrent() === true) && current();
       const { organizationId, principalId, registeredClientId } = scope;
       const action = request.operation === "plan.submit" ? "propose" : "read";
       try {
@@ -305,6 +337,14 @@ export function composeManagedHeadlessPlanReview(options: {
           peekOwner: peekModelReferenceSave!}) : undefined;
         if (savePreparation && !savePreparation.ok) return savePreparation;
         const preparedSaves = savePreparation?.ok ? savePreparation : undefined;
+        const trainedSavePreparation = preparesTrainingSave ? await prepareHeadlessModelTrainingSaveReviews({target,
+          requests: request.operation === "plan.submit" ? request.proposal.requests : [], isCurrent: current, stillAllowed: canUse,
+          reviewOriginalTask: selected => reviewTrainingSaveCandidate!(target, selected, current)}) : undefined;
+        if (trainedSavePreparation && !trainedSavePreparation.ok) return trainedSavePreparation;
+        const preparedTrainedSaves = trainedSavePreparation?.ok ? trainedSavePreparation : request.operation === "plan.status" && reviewTrainingSaveCandidate
+          ? await prepareStoredHeadlessModelTrainingSaveReviews({documents: platform, target, isCurrent: current,
+            authorizeOwned: async owner => trainingCurrent() && await trainingReviewAccess?.authorizeOwned(owner) === true && current(),
+            reviewOriginalTask: reviewTrainingSaveCandidate}) : undefined;
         const reviews = createStructuredHeadlessPlanReviewRepository(platform, async (owner, actual, requested) => {
           const stored = actual.scope;
           if (!(requested === action && actual.hostIncarnationId === hostIncarnationId && actual.fingerprint === target.fingerprint &&
@@ -314,19 +354,29 @@ export function composeManagedHeadlessPlanReview(options: {
           if (requested === "read") {
             const partition = owner.forOrganization(organizationId);
             const modelPermissions = await readStructuredHeadlessPlanModelPermission(partition, target);
-            const trainingPermissions = !modelPermissions && getModelTrainingInputs
+            const savePermissions = !modelPermissions && allowTrainingSave
+              ? await readStructuredHeadlessTrainingSavePlanPermission(partition, target, async () => current()) : undefined;
+            const trainingPermissions = !modelPermissions && (!savePermissions || savePermissions.requiresTrainingInputs) && getModelTrainingInputs
               ? await readStructuredHeadlessTrainingPlanPermission(partition, target, async () => current()) : undefined;
-            const permissions = modelPermissions ?? trainingPermissions;
+            const permissions = modelPermissions ?? savePermissions ?? trainingPermissions;
             if (!permissions || !current()) return false;
+            if (savePermissions) {
+              readsTrainingSave = true; if (savePermissions.requiresModelSourceRead) readsModel = true;
+              if (!preparedTrainedSaves || !current() || await trainingReviewAccess?.authorizeOwned(owner) !== true) return false;
+              const stored = await readStructuredHeadlessTrainingSavePlanReview(partition, target, async () => current());
+              if (!stored) return false;
+              for (const selected of stored.requests) if (selected.operation === "models.save-training" &&
+                !await preparedTrainedSaves.validate(partition, selected)) return false;
+            }
             if (trainingPermissions) {
               readsTraining = true; if (trainingPermissions.requiresModelSourceRead) readsModel = true;
               if (!trainingCurrent() || await trainingReviewAccess?.authorizeOwned(owner) !== true) return false;
               const metadata = composeOwnedHeadlessTrainingMetadata(owner, rootDirectory, trainingPlacement, target, current);
               if (!await verifyStoredHeadlessTrainingReviewInputs(metadata)) return false;
-            } else if (permissions.requiresModelWrite) readsModel = true;
+            } else if (!savePermissions && permissions.requiresModelWrite) readsModel = true;
           }
           return current() && (!readsModel || await modelReviewAccess?.authorizeOwned(owner) === true) &&
-            (!readsTraining || await trainingReviewAccess?.authorizeOwned(owner) === true) && current();
+            (!(readsTraining || readsTrainingSave) || await trainingReviewAccess?.authorizeOwned(owner) === true) && current();
         }, Date.now, async documents => request.operation === "plan.submit" &&
           validateHeadlessPlanSavedSources(documents, scope.workspaceId, request.proposal.requests, current, async step => {
             if (!finalize || !current()) return false;
@@ -364,12 +414,13 @@ export function composeManagedHeadlessPlanReview(options: {
             return compiled?.prepared.name === selected.input.name;
           }, async selected => Boolean(getContextQueryOwner && await compileHeadlessContextQueryInputs(documents, rootDirectory,
             selected, scope, async () => current())), preparedModels?.validate,
-            preparedSaves ? selected => preparedSaves.validate(documents, selected) : undefined, preparedTraining?.validate), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart), Boolean(getDatasetResults), Boolean(getContextStart), Boolean(getContextStart),
+            preparedSaves ? selected => preparedSaves.validate(documents, selected) : undefined, preparedTraining?.validate,
+            preparedTrainedSaves ? selected => preparedTrainedSaves.validate(documents, selected) : undefined), Boolean(finalize), Boolean(finalizeProvider), Boolean(getDatasetStart), Boolean(getDatasetResults), Boolean(getContextStart), Boolean(getContextStart),
           getContextStart ? (partition, requests) => compileHeadlessContextModelBindings(rootDirectory, partition, requests, scope, async () => current()) : undefined,
           Boolean(peekContextResults), Boolean(getContextQueryOwner), preparedModels?.bind, Boolean(getModelSourcePreview), Boolean(peekModelReferenceSave),
-          {bind: bindTraining, allowStored: Boolean(getModelTrainingInputs)});
+          {bind: bindTraining, allowStored: Boolean(getModelTrainingInputs)}, {allowNew: allowTrainingSave, allowStored: allowTrainingSave});
         const outcome = request.operation === "plan.submit"
-          ? await reviews.propose({ target, isCurrent: () => current() && (preparedSaves?.isCurrent() ?? true), proposal: {
+          ? await reviews.propose({ target, isCurrent: () => current() && (preparedSaves?.isCurrent() ?? true) && (preparedTrainedSaves?.isCurrent() ?? true), proposal: {
               ...request.proposal.scope,
               steps: request.proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })),
             } })
@@ -406,13 +457,13 @@ export function composeManagedHeadlessPlanReview(options: {
       const trainingAccess = trainingTasks ? admitWorkspace(request.input, request.operation, registration, isOpen, HEADLESS_TRAINING_REVIEW_SCOPES) : undefined;
       try {
         if (!await access.authorizeCurrent()) return { result: forbidden };
-        const prepare = trainingTasks ? prepareStructuredHeadlessPlanStepWithTraining
+        const prepare = allowTrainingSave ? prepareStructuredHeadlessPlanStepWithTrainingSave : trainingTasks ? prepareStructuredHeadlessPlanStepWithTraining
           : getModelDownloadStart || peekModelReferenceSave ? prepareStructuredHeadlessPlanStepWithModels : prepareStructuredHeadlessPlanStep;
         const prepared = await prepare(platform, {
           target, approvalRevision, step, isCurrent: current,
         }, async (owner, _scope, operation) => {
           if (operation?.operation === "models.download" || operation?.operation === "models.save-download") {isModelStep = true; return current() && await downloadAccess?.authorizeOwned(owner) === true && current();}
-          if (operation?.operation === "models.train") {isModelStep = true; isTrainingStep = true; return current() && await trainingAccess?.authorizeOwned(owner) === true && current();}
+          if (operation?.operation === "models.train" || operation?.operation === "models.save-training") {isModelStep = true; isTrainingStep = true; return current() && await trainingAccess?.authorizeOwned(owner) === true && current();}
           return operation?.operation === "context.query" ? Boolean(await queryAccess?.authorizeOwned(owner)) : operation?.operation === "context.generate-rag" ? Boolean(await modelAccess?.authorizeOwned(owner)) :
           operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source" ||
           operation?.operation === "data.prepare-local-dataset" || operation?.operation === "data.save-prepared-dataset" || operation?.operation === "context.generate-pack" || operation?.operation === "context.save-result"
@@ -437,8 +488,15 @@ export function composeManagedHeadlessPlanReview(options: {
             compileHeadlessContextQueryInputs(owner.forOrganization(scope.organizationId), rootDirectory, selected, scope,
               async () => current() && await queryAccess.authorizeOwned(owner)) : undefined, Boolean(getModelDownloadStart), Boolean(peekModelReferenceSave),
           trainingTasks ? (owner, selected, taskScope) => compileHeadlessTrainingStepMetadata({owner, rootDirectory, placement,
-            target: {...target, scope: taskScope}, request: selected, isCurrent: current}) : undefined);
+            target: {...target, scope: taskScope}, request: selected, isCurrent: current}) : undefined, allowTrainingSave);
         if (!prepared || !prepared.isCurrent() || question !== undefined && prepared.kind !== "context-query") return { result: forbidden };
+        if (prepared.kind === "model-training-save") {
+          if (!allowTrainingSave || !trainingTasks || !trainingAccess) return {result: forbidden};
+          return runPreparedHeadlessTrainedModelSave({documents: platform, rootDirectory, prepared, request,
+            canUse: async () => current() && await trainingAccess.authorizeCurrent() && current(), bindOriginalTask: (effect, control) => trainingTasks.bindSave(
+              trainingSaveQuery(effect.target, effect.taskId, current),
+              {saveId: effect.key, candidateDigest: effect.candidateDigest, name: effect.name}, control)});
+        }
         if (prepared.kind === "model-training") {
           if (!trainingTasks || !trainingAccess || !getModelTrainingStart || !getModelTrainingReaders || !trainingHostCurrent) return {result: forbidden};
           return trainingTasks.runPrepared({prepared, request, context: scope,
@@ -560,6 +618,7 @@ export function composeManagedHeadlessPlanReview(options: {
   }
 
   return Object.assign(handlers.execute, {
+    reviewTrainingSaveCandidate,
     allowLocalFileSave: Boolean(finalize),
     allowProviderFileSave: Boolean(finalizeProvider),
     allowLocalDatasetPreparation: Boolean(getDatasetStart),

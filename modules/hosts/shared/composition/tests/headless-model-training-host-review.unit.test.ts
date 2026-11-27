@@ -26,7 +26,8 @@ import {ReadHeadlessModelTrainingModelUseCase} from "../../../../application/use
 import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/use-cases/model/headless-model-training-dataset.use-case";
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
 import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl, ApprovedLocalTrainingCompletionReview,
-  ApprovedLocalTrainingCandidateReview} from "../../../../application/ports/model";
+  ApprovedLocalTrainingCandidateReview, ApprovedLocalTrainingSaveRequest, ReviewedGeneratedModelControl,
+  ApprovedLocalTrainingSaveSession} from "../../../../application/ports/model";
 import {readModelTrainingExecutionHistory, type ModelTrainingResult} from "../../../../contracts/model";
 import {composeHeadlessModelMetadata} from "../headlessModelMetadata";
 import type {OriginalTrainingRunOptions} from "../headlessModelTrainingTasks";
@@ -56,9 +57,15 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
   });
   const base = database?.documents ?? createInMemoryStructuredDocumentStore(), transaction = base.runInOwnedTransaction!.bind(base);
   let transactionDepth = 0;
+  const transactionFaults = {dropWhen: undefined as ((value: unknown) => boolean) | undefined, dropped: 0};
   const platform = Object.create(base) as StructuredDocumentStore;
-  Object.defineProperty(platform, "runInOwnedTransaction", {value: async <T,>(visit: (owner: StructuredDocumentStore) => Promise<T>, fence: () => void) =>
-    transaction(async owner => {transactionDepth++; try {return await visit(owner);} finally {transactionDepth--; }}, fence)});
+  Object.defineProperty(platform, "runInOwnedTransaction", {value: async <T,>(visit: (owner: StructuredDocumentStore) => Promise<T>, fence: () => void) => {
+    const result = await transaction(async owner => {transactionDepth++; try {return await visit(owner);} finally {transactionDepth--; }}, fence);
+    if (transactionFaults.dropWhen?.(result)) {
+      transactionFaults.dropWhen = undefined; transactionFaults.dropped++; throw new Error("Synthetic lost committed metadata reply.");
+    }
+    return result;
+  }});
   const managedPlatform = Object.create(platform) as StructuredDocumentStore;
   Object.defineProperty(managedPlatform, "publishWithStableReads", {value: async (check: (owner: StructuredDocumentStore) => Promise<boolean>, publish: () => boolean) =>
     platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {})});
@@ -160,11 +167,11 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     const owner = composeDesktopHeadlessPlanReview(options);
     return {owner, options};
   }
-  function desktopApprovals(enabled = true) {
+  function desktopApprovals(enabled = true, extension: Partial<Parameters<typeof composeDesktopHeadlessPlanApprovals>[0]> = {}) {
     return composeDesktopHeadlessPlanApprovals({hostIncarnationId,
       identity: {organizationId, principalId, principalDisplayName: "Synthetic", createdAt: at, updatedAt: at},
       platform, rootDirectory: directory, isOpen: () => state.hostOpen, allowModelTrainingReview: enabled,
-      capturePlanReviewClients: async () => [{registeredClientId, isCurrent: () => state.current}]});
+      capturePlanReviewClients: async () => [{registeredClientId, isCurrent: () => state.current}], ...extension});
   }
   function managed(enabled = true, stable = true, extension: Partial<Parameters<typeof composeManagedHeadlessPlanReview>[0]> = {}) {
     const options: Parameters<typeof composeManagedHeadlessPlanReview>[0] = {hostIncarnationId, platform: stable ? managedPlatform : platform,
@@ -176,13 +183,15 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     return {owner: composeManagedHeadlessPlanReview(options), options};
   }
   const browserDocument = {hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID()};
-  function managedApprovals(enabled = true, stable = true) {
+  function managedApprovals(enabled = true, stable = true, extension: Partial<Parameters<typeof composeManagedHeadlessPlanApprovals>[0]> = {}) {
     return composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId: registeredClientId,
-      platform: stable ? managedPlatform : platform, rootDirectory: directory, contexts, placement, allowModelTrainingReview: enabled});
+      platform: stable ? managedPlatform : platform, rootDirectory: directory, contexts, placement, allowModelTrainingReview: enabled, ...extension});
   }
   const execution = {starts: 0, reads: 0, cancels: 0, resolutions: 0, readerFactories: 0,
     completionEnabled: false, completionReads: 0, onCompletion: undefined as (() => Promise<void>) | undefined,
     candidateEnabled: false, candidateReads: 0, onCandidate: undefined as (() => Promise<void>) | undefined,
+    saveEnabled: false, saveBinds: 0, saveWrites: 0, saveDiscards: 0,
+    onSave: undefined as (() => Promise<void>) | undefined,
     transformCandidate: undefined as ((value: unknown) => unknown) | undefined,
     currentState: "running" as ModelTrainingResult["status"], onStart: undefined as (() => Promise<void>) | undefined,
     onRead: undefined as (() => Promise<void>) | undefined, onCancel: undefined as (() => Promise<void>) | undefined,
@@ -221,6 +230,7 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
         candidate: {requestedName: _request.output.outputModelName, artifactForm: "adapter", serializationFormat: "adapter-safetensors", recordedSizeBytes: null},
         comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked", runtimeReadiness: "not-checked",
           hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"};
+      let lastCandidate: Extract<ApprovedLocalTrainingCandidateReview, {kind: "ready"}> | undefined;
       return {kind: "accepted", value: {runId: admission.requestId, status: "running"},
         task: {requestId: admission.requestId, workspaceId,
           async read(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.reads++; await execution.onRead?.(); return summary();},
@@ -244,13 +254,37 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
               retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest},
               candidateDigest: "sha256:" + hash({requestId: admission.requestId, workspaceId,
                 owner: {organizationId, principalId, clientId: registeredClientId, hostIncarnationId}, history, manifestDigest})};
+            lastCandidate = value;
             return (execution.transformCandidate ? execution.transformCandidate(value) : value) as ApprovedLocalTrainingCandidateReview;
+          }} : {}),
+          ...(execution.saveEnabled ? {createSaveSession(request: ApprovedLocalTrainingSaveRequest, control: ReviewedGeneratedModelControl): ApprovedLocalTrainingSaveSession | undefined {
+            assert.equal(transactionDepth, 0); execution.saveBinds++;
+            if (!lastCandidate || request.candidateDigest !== lastCandidate.candidateDigest) return;
+            const candidate = clone(lastCandidate); let fenced = false, ready = false;
+            const session: ApprovedLocalTrainingSaveSession = {
+              async write() {
+                assert.equal(this, session); assert.equal(transactionDepth, 0); execution.saveWrites++;
+                await execution.onSave?.();
+                assert.ok(!fenced && control.isCurrent() && await control.stillAllowed()); ready = true;
+                // This inert capability tests host dispatch and atomic metadata.
+                // Real private copy bytes/closure are qualified by the App/adapter tests.
+                return {schema: "approved-training-save-preparation-v1", taskId: admission.requestId, workspaceId,
+                  saveId: request.saveId, name: request.name, candidate,
+                  storage: {storageProfile: "bounded-local-v1", localPath: join(directory, "controlled-copy"),
+                    candidateDigest: candidate.candidateDigest, fileCount: candidate.retainedFiles.files.length, totalBytes: candidate.retainedFiles.totalBytes}};
+              },
+              fence() {assert.equal(this, session); fenced = true;},
+              isCurrent() {assert.equal(this, session); return !fenced && state.hostOpen;},
+              inspect() {assert.equal(this, session); return {phase: ready ? "ready" : "bound", fenced, pendingOperations: 0, ioClosed: true};},
+              async discard() {assert.equal(this, session); execution.saveDiscards++; return control.mayDiscard();},
+            };
+            return session;
           }} : {})}};
     };
   };
   const executionOptions = {systems: {composeHeadlessAuthoring() {assert.fail("Training must not dispatch ordinary authoring.");}},
     getModelTrainingStart, getModelTrainingReaders, isModelHostCurrent: () => state.hostOpen};
-  return {platform, documents, directory, scope, target, parsed, proposal, model, models, version, metadata, bindings,
+  return {platform, documents, directory, scope, target, parsed, proposal, model, models, version, metadata, bindings, transactionFaults,
     state, inputs, prepared, save, changeDataset, authorization, workspaces, contexts, placement, repositories, membership, at,
     desktop, desktopApprovals, managed, managedApprovals, managedPlatform, browserDocument, execution, executionOptions, retrieved,
     actor: {organizationId, principalId}, selection: {workspaceId, registeredClientId, fingerprint: target.fingerprint},
@@ -552,10 +586,10 @@ test(`${storage}/${host}: proposal captures the original metadata factory and re
   assert.equal(await readStructuredHeadlessTrainingPlanReview(g.documents, g.target, async () => true), undefined);
 });
 
-async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite", host: "Desktop" | "Managed") {
+async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite", host: "Desktop" | "Managed", enableSave = false) {
   const f = await fixture(t, storage, 1, false, true), current = () => f.state.current;
-  const desktop = host === "Desktop" ? f.desktop(true, f.executionOptions) : undefined;
-  const managed = host === "Managed" ? f.managed(true, true, f.executionOptions) : undefined;
+  const desktop = host === "Desktop" ? f.desktop(true, {...f.executionOptions, allowModelTrainingSave: enableSave}) : undefined;
+  const managed = host === "Managed" ? f.managed(true, true, {...f.executionOptions, allowModelTrainingSave: enableSave}) : undefined;
   const submitted = desktop ? await desktop.owner.execute(f.submit, f.grant, async () => f.grant)
     : await managed!.owner(f.submit, f.registration, current);
   assert.ok(submitted.ok, JSON.stringify(submitted));
@@ -594,6 +628,154 @@ async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite"
     ? desktop.owner.readTrainingCandidate!(query("read", selection), f.grant, async () => f.grant)
     : managed!.owner.readTrainingCandidate!(query("read", selection), f.registration, current);
   return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion, review, candidate};
+}
+
+async function trainedSaveHost(t: TestContext, storage: "Core" | "SQLite", host: "Desktop" | "Managed", enableSave = true, sessionCapability = true) {
+  const f = await executableTrainingHost(t, storage, host, enableSave), current = () => f.state.current && f.state.readCurrent;
+  f.execution.candidateEnabled = true; f.execution.saveEnabled = sessionCapability;
+  assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+  const candidate = await f.candidate(); assert.ok(candidate.ok && candidate.value.kind === "ready");
+  const proposal = {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId,
+    steps: [{operation: "models.save-training", idempotencyKey: randomUUID(), name: "Saved support adapter",
+      taskId: candidate.value.requestId, candidateDigest: candidate.value.candidateDigest}]};
+  const parsed = parseHeadlessBuildPlanProposal(proposal, f.target.hostIncarnationId,
+    {allowLocalFileSave: false, allowModelTrainingSave: true}); assert.ok(parsed.ok);
+  const target = {...f.target, fingerprint: hash(parsed.preview)};
+  const submit = readHeadlessPlanReviewAgentRequest({version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit",
+    input: {...proposal, fingerprint: target.fingerprint}}, target.hostIncarnationId,
+    {allowLocalFileSave: false, allowModelTrainingSave: true}); assert.ok(submit.ok);
+  const status = {operation: "plan.status" as const, target: {hostIncarnationId: target.hostIncarnationId,
+    workspaceId: f.scope.workspaceId, fingerprint: target.fingerprint}};
+  const selection = {...f.selection, fingerprint: target.fingerprint};
+  const reviewer = f.desktopHost?.owner.reviewTrainingSaveCandidate ?? f.managedHost?.owner.reviewTrainingSaveCandidate;
+  const desktopApprovals = f.desktopApprovals(true, {reviewTrainingSaveCandidate: reviewer});
+  const managedApprovals = f.managedApprovals(true, true, {reviewTrainingSaveCandidate: reviewer});
+  const caller = (channel: "app-popup" | "authenticated-chat") => ({channel, isCurrent: current});
+  const post = () => f.desktopHost ? f.desktopHost.owner.execute(submit.request, f.grant, async () => f.grant)
+    : f.managedHost!.owner(submit.request, f.registration, current);
+  const read = () => f.desktopHost ? f.desktopHost.owner.execute(status, f.grant, async () => f.grant)
+    : f.managedHost!.owner(status, f.registration, current);
+  async function open(channel: "app-popup" | "authenticated-chat" = "app-popup") {
+    if (f.desktopHost) {const result = await desktopApprovals.open(selection, caller(channel)); assert.ok(result.ok, JSON.stringify(result)); return undefined;}
+    const result = await managedApprovals({operation: "open", document: f.browserDocument, selection}, f.actor, current, current, channel);
+    assert.ok(result.ok && "value" in result && result.value && typeof result.value === "object" && "viewId" in result.value, JSON.stringify(result));
+    return result.value.viewId;
+  }
+  async function decide(viewId: string | undefined, decision: {kind: "approve"; mode: "whole-plan"} | {kind: "approve"; mode: "each-change"; step: number} | {kind: "revoke"},
+    channel: "app-popup" | "authenticated-chat" = "app-popup", expectedRevision = 1) {
+    if (f.desktopHost) return desktopApprovals.decide(selection, {fingerprint: target.fingerprint, expectedRevision, decision}, caller(channel));
+    assert.ok(viewId);
+    return managedApprovals({operation: "decide", document: f.browserDocument, decision: {selection, viewId, expectedRevision, decision}},
+      f.actor, current, current, channel);
+  }
+  const step = {...f.step, input: {...f.step.input, fingerprint: target.fingerprint}};
+  const save = (incoming = step) => f.desktopHost ? f.desktopHost.owner.runStep!(incoming, f.grant, async () => f.grant)
+    : f.managedHost!.owner.runStep!(incoming, f.registration, current);
+  return {...f, target, selection, proposal, submit: submit.request, status, post, read, openSave: open, decideSave: decide,
+    saveStep: step, save, desktopSaveApprovals: desktopApprovals, managedSaveApprovals: managedApprovals};
+}
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const)
+for (const channel of ["app-popup", "authenticated-chat"] as const) for (const mode of ["whole-plan", "each-change"] as const)
+test(`${storage}/${host}/${channel}/${mode}: separate trained Save uses original task and one atomic Model publication`, async t => {
+  const f = await trainedSaveHost(t, storage, host);
+  await inspectServiceScopes(["artifact:write", "provider-credential:use"], async () => {
+    assert.ok((await f.post()).ok); assert.ok((await f.read()).ok);
+    assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+    assert.equal((await f.save()).result.ok, false, "Training consent grants no Save permission.");
+    const view = await f.openSave(channel), approval = await f.decideSave(view,
+      mode === "whole-plan" ? {kind: "approve", mode} : {kind: "approve", mode, step: 1}, channel);
+    assert.ok(approval.ok, JSON.stringify(approval));
+    const saved = await f.save(); assert.ok(saved.result.ok, JSON.stringify(saved));
+    assert.ok("operation" in saved.result.value && saved.result.value.operation === "models.save-training");
+    assert.equal(saved.result.value.kind, "committed");
+    const model = await f.models.readRecordedModel!(f.scope.workspaceId, saved.result.value.reference.modelRecordId);
+    assert.equal(model?.displayName, "Saved support adapter");
+    assert.ok("publishIfCurrent" in saved && typeof saved.publishIfCurrent === "function");
+    let publications = 0; assert.equal(await saved.publishIfCurrent(() => {publications++; return true;}), true); assert.equal(publications, 1);
+    const again = await f.save(); assert.ok(again.result.ok); assert.equal(again.result.value.kind, "replayed");
+    assert.equal(f.execution.saveBinds, 1); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.starts, 1);
+    assert.equal(f.execution.resolutions, 1); assert.equal(f.execution.saveDiscards, 0);
+    assert.doesNotMatch(JSON.stringify(saved.result), /localPath|training-results|private|history|files/);
+  });
+});
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: training-only configuration cannot enable trained Save`, async t => {
+    const f = await trainedSaveHost(t, storage, host, false);
+    assert.equal((await f.post()).ok, false); assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+  });
+  test(`${storage}/${host}: stale current candidate denies positive Save approval while authorized revocation remains`, async t => {
+    const f = await trainedSaveHost(t, storage, host); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); f.execution.transformCandidate = () => ({kind: "not-ready"});
+    const revoked = await f.decideSave(view, {kind: "revoke"}); assert.ok(revoked.ok, JSON.stringify(revoked));
+    assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+    const second = await trainedSaveHost(t, storage, host); assert.ok((await second.post()).ok);
+    const secondView = await second.openSave(); second.execution.transformCandidate = () => ({kind: "not-ready"});
+    assert.equal((await second.decideSave(secondView, {kind: "approve", mode: "whole-plan"})).ok, false);
+    assert.equal(second.execution.saveBinds, 0); assert.equal(second.execution.saveWrites, 0);
+  });
+  test(`${storage}/${host}: unconfigured approval owners refuse a stored trained Save`, async t => {
+    const f = await trainedSaveHost(t, storage, host); assert.ok((await f.post()).ok);
+    const current = () => true;
+    const result = host === "Desktop" ? await f.desktopApprovals().open(f.selection, {channel: "app-popup", isCurrent: current})
+      : await f.managedApprovals()({operation: "open", document: f.browserDocument, selection: f.selection}, f.actor, current, current);
+    assert.equal(result.ok, false); assert.equal(f.execution.saveBinds, 0);
+  });
+  test(`${storage}/${host}: trained Save lost publication reply reconciles without another original copy`, async t => {
+    const f = await trainedSaveHost(t, storage, host); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    f.transactionFaults.dropWhen = value => !!value && typeof value === "object" && "kind" in value && value.kind === "committed" && "reference" in value;
+    const saved = await f.save(); assert.ok(saved.result.ok, JSON.stringify(saved));
+    assert.equal(saved.result.value.kind, "replayed"); assert.equal(f.transactionFaults.dropped, 1);
+    assert.ok((await f.save()).result.ok); assert.equal(f.execution.saveBinds, 1); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.saveDiscards, 0);
+  });
+  test(`${storage}/${host}: retired Model authority during trained Save prevents publication and cleans only the controlled fresh copy`, async t => {
+    const f = await trainedSaveHost(t, storage, host); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    f.execution.onSave = async () => {await f.repositories.memberships.saveMembership({...f.membership, status: "suspended"});};
+    const saved = await f.save(); assert.equal(saved.result.ok, false); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.saveDiscards, 1);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-save-sources"), []);
+  });
+  test(`${storage}/${host}: a missing original Save capability never falls back to ordinary Model saving or another task`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, false); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    assert.equal((await f.save()).result.ok, false); assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+    assert.equal(f.execution.starts, 1); assert.equal(f.execution.resolutions, 1);
+  });
+  test(`${storage}/${host}: a trained Save approval revoked during copy cannot publish a Model`, async t => {
+    const f = await trainedSaveHost(t, storage, host); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    const revocationView = await f.openSave();
+    f.execution.onSave = async () => {assert.ok((await f.decideSave(revocationView, {kind: "revoke"}, "app-popup", 2)).ok);};
+    assert.equal((await f.save()).result.ok, false); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.saveDiscards, 1);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+  });
+  test(`${storage}/${host}: host loss during trained Save candidate review grants no proposal or copy`, async t => {
+    const f = await trainedSaveHost(t, storage, host); f.execution.onCandidate = async () => {f.state.hostOpen = false;};
+    assert.equal((await f.post()).ok, false); assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+  });
+  test(`${storage}/${host}: another registered client cannot review or save the original training task`, async t => {
+    const f = await trainedSaveHost(t, storage, host), count = f.execution.candidateReads, registeredClientId = randomUUID();
+    const result = f.desktopHost ? await f.desktopHost.owner.execute(f.submit, {...f.grant, registeredClientId}, async () => ({...f.grant, registeredClientId}))
+      : await f.managedHost!.owner(f.submit, {...f.registration, registeredClientId}, () => true);
+    assert.equal(result.ok, false); assert.equal(f.execution.candidateReads, count); assert.equal(f.execution.saveBinds, 0);
+  });
+  for (const change of ["actor", "task", "candidate", "workspace", "host"] as const)
+    test(`${storage}/${host}: trained Save refuses foreign ${change} before original copy`, async t => {
+      const f = await trainedSaveHost(t, storage, host), request = clone(f.submit);
+      if (change === "actor") await f.repositories.memberships.saveMembership({...f.membership, status: "suspended"});
+      if (change === "workspace") Object.assign(request.target, {workspaceId: createWorkspaceId("workspace.foreign")});
+      if (change === "host") {const other = randomUUID(); assert.ok(isHeadlessHostIncarnationId(other)); Object.assign(request.target, {hostIncarnationId: other});}
+      if (request.operation !== "plan.submit") assert.fail();
+      const selected = request.proposal.requests[0]; assert.ok(selected.operation === "models.save-training");
+      if (change === "task") Object.assign(selected.input, {taskId: randomUUID()});
+      if (change === "candidate") Object.assign(selected.input, {candidateDigest: "sha256:" + "f".repeat(64)});
+      const result = f.desktopHost ? await f.desktopHost.owner.execute(request, f.grant, async () => f.grant)
+        : await f.managedHost!.owner(request, f.registration, () => true);
+      assert.equal(result.ok, false); assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+    });
 }
 
 for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {

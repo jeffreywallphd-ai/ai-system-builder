@@ -16,11 +16,15 @@ import {copyHeadlessModelPlanData} from "./headlessModelDownloadReview";
 import type {prepareStructuredHeadlessPlanStepWithModels, prepareStructuredHeadlessPlanStepWithTrainingSave} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {readStrictPassiveRecord} from "../../../contracts/shared";
 import {readStructuredTrainingPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
+import {readStructuredHeadlessTrainingSavePlanReview} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import type {ApprovedLocalTrainingSaveSession, ApprovedLocalTrainingSavePreparation, ReviewedGeneratedModelControl} from "../../../application/ports/model";
 import {observeMalformedOriginalTrainingSaveReturn, type OriginalTrainingSaveQueryResult,
   type OriginalTrainingCandidateQueryResult} from "./headlessModelTrainingTasks";
 
 export type HeadlessModelReferenceSaveOwner = Pick<ModelDownloadTasksUseCase, "peekApprovedSourceRegistration">;
+/** Trusted in-process bridge to the host's original accepted task book. */
+export type HeadlessTrainingSaveOriginalReviewer = (target: HeadlessPlanReviewTarget,
+  request: HeadlessModelTrainingSavePlanRequest, isCurrent: () => boolean) => Promise<OriginalTrainingCandidateQueryResult>;
 type PreparedModelReferenceStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStepWithModels>>>, {kind: "model-reference"}>;
 function freeze<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) freeze(child); Object.freeze(value);}
@@ -32,6 +36,35 @@ function captureTrainingSaveMethod<F extends (...args: any[]) => any>(owner: obj
   if (!d || !("value" in d) || typeof d.value !== "function" || types.isProxy(d.value))
     throw new Error("The original trained Model Save method is unavailable.");
   return ((...args: unknown[]) => Reflect.apply(d.value, owner, args)) as F;
+}
+
+/** Read only the exact saved definition in metadata, then ask the original task
+ * for current file proof outside that transaction. No file list is persisted. */
+export async function prepareStoredHeadlessModelTrainingSaveReviews(options: {
+  readonly documents: StructuredDocumentStore; readonly target: HeadlessPlanReviewTarget;
+  readonly isCurrent: () => boolean;
+  readonly authorizeOwned: (owner: StructuredDocumentStore) => Promise<boolean>;
+  readonly reviewOriginalTask: HeadlessTrainingSaveOriginalReviewer;
+}) {
+  try {
+    const {documents} = options, target = freeze(copyHeadlessModelPlanData(options.target)) as HeadlessPlanReviewTarget;
+    if (documents.organizationId !== undefined || !documents.runInOwnedTransaction) return;
+    const transaction = documents.runInOwnedTransaction.bind(documents),
+      originalCurrent = captureTrainingSaveMethod<typeof options.isCurrent>(options, "isCurrent"),
+      authorize = captureTrainingSaveMethod<typeof options.authorizeOwned>(options, "authorizeOwned"),
+      review = captureTrainingSaveMethod<typeof options.reviewOriginalTask>(options, "reviewOriginalTask");
+    const current = () => isHeadlessReadCurrent(originalCurrent);
+    const protect = () => {if (!current()) throw new Error("The trained Save review ended.");};
+    const allowed = async () => transaction(async owner => current() && await authorize(owner) === true && current(), protect);
+    const stored = await transaction(async owner => {
+      if (!current() || await authorize(owner) !== true || !current()) return;
+      return readStructuredHeadlessTrainingSavePlanReview(owner.forOrganization(target.scope.organizationId), target, async () => current());
+    }, protect);
+    if (!stored || !current()) return;
+    const proof = await prepareHeadlessModelTrainingSaveReviews({target, requests: stored.requests, isCurrent: current,
+      stillAllowed: allowed, reviewOriginalTask: request => review(target, request, current)});
+    return proof.ok ? proof : undefined;
+  } catch {return;}
 }
 
 /** Current original candidate observation occurs outside metadata transactions.

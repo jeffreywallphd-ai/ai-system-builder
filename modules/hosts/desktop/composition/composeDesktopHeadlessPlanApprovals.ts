@@ -3,7 +3,10 @@ import {
   listStructuredHeadlessPlanReviews,
   readStructuredHeadlessPlanModelPermission,
   readStructuredHeadlessTrainingPlanPermission,
+  readStructuredHeadlessTrainingSavePlanPermission,
+  readStructuredHeadlessTrainingSavePlanReview,
 } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import {prepareStoredHeadlessModelTrainingSaveReviews, type HeadlessTrainingSaveOriginalReviewer} from "../../shared/composition/headlessModelReferenceSave";
 import {captureHeadlessTrainingMethod, copyHeadlessTrainingPlanInput, composeOwnedHeadlessTrainingMetadata,
   verifyStoredHeadlessTrainingReviewInputs, HEADLESS_TRAINING_REVIEW_SCOPES, trainingReviewNeedsFreshMetadata} from "../../shared/composition/headlessTrainingPlanInputs";
 import {createTenantPlacementConfig} from "../../../contracts/config";
@@ -50,13 +53,17 @@ export function composeDesktopHeadlessPlanApprovals(options: {
   readonly allowModelDownloadReview?: boolean;
   readonly allowModelReferenceSaveReview?: boolean;
   readonly allowModelTrainingReview?: boolean;
+  /** Original private host task book; never a caller-supplied candidate. */
+  readonly reviewTrainingSaveCandidate?: HeadlessTrainingSaveOriginalReviewer;
 }) {
   const { hostIncarnationId, identity: configuredIdentity, platform, rootDirectory, isOpen: configuredIsOpen,
     capturePlanReviewClients: configuredCaptureClients, now = Date.now } = options;
   const allowModelTraining = options.allowModelTrainingReview === true;
-  const identity = allowModelTraining ? Object.freeze(copyHeadlessTrainingPlanInput(configuredIdentity)) : configuredIdentity;
-  const isOpen = allowModelTraining ? captureHeadlessTrainingMethod<() => boolean>(options, "isOpen") ?? (() => false) : configuredIsOpen;
-  const capturePlanReviewClients = allowModelTraining
+  const reviewTrainingSaveCandidate = captureHeadlessTrainingMethod<HeadlessTrainingSaveOriginalReviewer>(options, "reviewTrainingSaveCandidate");
+  const allowTrainingSave = reviewTrainingSaveCandidate !== undefined, strictCapture = allowModelTraining || allowTrainingSave;
+  const identity = strictCapture ? Object.freeze(copyHeadlessTrainingPlanInput(configuredIdentity)) : configuredIdentity;
+  const isOpen = strictCapture ? captureHeadlessTrainingMethod<() => boolean>(options, "isOpen") ?? (() => false) : configuredIsOpen;
+  const capturePlanReviewClients = strictCapture
     ? captureHeadlessTrainingMethod<CapturePlanReviewClients>(options, "capturePlanReviewClients") ?? (async () => []) : configuredCaptureClients;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan approvals require the platform transaction owner.");
@@ -84,26 +91,43 @@ export function composeDesktopHeadlessPlanApprovals(options: {
 
   function reviewSelection(incoming: DesktopPlanReviewSelection, caller: DesktopPlanReviewCaller, kind: "read" | "decide", freshMetadata = true) {
     let selection = incoming;
-    if (allowModelTraining) {try {selection = copyHeadlessTrainingPlanInput(incoming);} catch {return;}}
+    if (strictCapture) {try {selection = copyHeadlessTrainingPlanInput(incoming);} catch {return;}}
     const { workspaceId, registeredClientId, fingerprint } = selection;
     if (!isWorkspaceId(workspaceId) || !isDesktopHeadlessClientId(registeredClientId) ||
         typeof fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(fingerprint)) return;
     let requesterCurrent: (() => boolean) | undefined;
-    const originalCaller = allowModelTraining ? captureHeadlessTrainingMethod<() => boolean>(caller, "isCurrent") : undefined;
-    const current = () => isOpen() && (allowModelTraining ? originalCaller?.() === true : caller.isCurrent()) && (requesterCurrent?.() ?? true);
+    const originalCaller = strictCapture ? captureHeadlessTrainingMethod<() => boolean>(caller, "isCurrent") : undefined;
+    const current = () => isOpen() && (strictCapture ? originalCaller?.() === true : caller.isCurrent()) && (requesterCurrent?.() ?? true);
     const target: HeadlessPlanReviewTarget = {
       hostIncarnationId, fingerprint, scope: { organizationId, principalId, workspaceId, registeredClientId },
     };
-    async function canAccess(owner: StructuredDocumentStore) {
+    let saveProof: Awaited<ReturnType<typeof prepareStoredHeadlessModelTrainingSaveReviews>>;
+    async function canAccess(owner: StructuredDocumentStore, preparingSave = false) {
       if (!await authorize(owner, workspaceId, kind, current)) return false;
       const partition = owner.forOrganization(organizationId);
       const modelPermissions = await readStructuredHeadlessPlanModelPermission(partition, target);
-      const trainingPermissions = !modelPermissions && allowModelTraining
+      const savePermissions = !modelPermissions && allowTrainingSave
+        ? await readStructuredHeadlessTrainingSavePlanPermission(partition, target, async () => current()) : undefined;
+      const trainingPermissions = !modelPermissions && (!savePermissions || savePermissions.requiresTrainingInputs) && allowModelTraining
         ? await readStructuredHeadlessTrainingPlanPermission(partition, target, async () => current()) : undefined;
-      const permissions = modelPermissions ?? trainingPermissions;
-      if (!permissions || !current() || (permissions.requiresModelRead && !await authorize(owner, workspaceId, kind, current, true))) return false;
+      const permissions = modelPermissions ?? savePermissions ?? trainingPermissions;
+      if (!permissions || !current() || (!savePermissions && permissions.requiresModelRead && !await authorize(owner, workspaceId, kind, current, true))) return false;
       if (permissions.requiresModelWrite && !await authorize(owner, workspaceId, kind, current, false, false, true)) return false;
       if (permissions.requiresArtifactWrite && !await authorize(owner, workspaceId, kind, current, permissions.requiresModelRead, true)) return false;
+      if (savePermissions) {
+        if (savePermissions.requiresTrainingInputs && !trainingPermissions) return false;
+        const stored = await readStructuredHeadlessTrainingSavePlanReview(partition, target, async () => current());
+        if (!stored || !await authorize(owner, workspaceId, kind, current, false, false, false, true)) return false;
+        const usesContextModel = stored.requests.some(r => r.operation === "context.generate-rag" || r.operation === "context.query");
+        const writesArtifact = stored.requests.some(r => r.operation === "data.save-local-source" || r.operation === "data.save-provider-source" ||
+          r.operation === "data.prepare-local-dataset" || r.operation === "data.save-prepared-dataset" ||
+          r.operation === "context.generate-pack" || r.operation === "context.generate-rag" || r.operation === "context.save-result");
+        if ((usesContextModel || writesArtifact) && !await authorize(owner, workspaceId, kind, current, usesContextModel, writesArtifact)) return false;
+        if (freshMetadata && !preparingSave) {
+          if (!saveProof || !saveProof.isCurrent()) return false;
+          for (const request of stored.requests) if (request.operation === "models.save-training" && !await saveProof.validate(partition, request)) return false;
+        }
+      }
       if (trainingPermissions) {
         if (!await authorize(owner, workspaceId, kind, current, false, false, false, true)) return false;
         if (freshMetadata) {
@@ -115,7 +139,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       const clients = await capturePlanReviewClients(owner.forOrganization(organizationId), workspaceId);
       const requester = clients.find(client => client.registeredClientId === registeredClientId);
       if (!requester || !current()) return false;
-      requesterCurrent = allowModelTraining ? captureHeadlessTrainingMethod<() => boolean>(requester, "isCurrent") : requester.isCurrent;
+      requesterCurrent = strictCapture ? captureHeadlessTrainingMethod<() => boolean>(requester, "isCurrent") : requester.isCurrent;
       if (!requesterCurrent) return false;
       return current();
     }
@@ -123,7 +147,12 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       action === kind && actual.hostIncarnationId === hostIncarnationId && actual.fingerprint === fingerprint &&
       actual.scope.organizationId === organizationId && actual.scope.principalId === principalId &&
       actual.scope.workspaceId === workspaceId && actual.scope.registeredClientId === registeredClientId &&
-      await canAccess(owner), now, options.allowModelDownloadReview === true, options.allowModelReferenceSaveReview === true, allowModelTraining);
+      await canAccess(owner), now, options.allowModelDownloadReview === true, options.allowModelReferenceSaveReview === true, allowModelTraining, allowTrainingSave);
+    async function prepare() {
+      if (!reviewTrainingSaveCandidate || !freshMetadata) return;
+      saveProof = await prepareStoredHeadlessModelTrainingSaveReviews({documents: platform, target, isCurrent: current,
+        authorizeOwned: owner => canAccess(owner, true), reviewOriginalTask: reviewTrainingSaveCandidate});
+    }
     async function verify() {
       try {
         const allowed = await ownedTransaction(canAccess, () => {
@@ -132,7 +161,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
         return allowed && current();
       } catch { return false; }
     }
-    return { target, store, current, verify };
+    return { target, store, current, verify, prepare };
   }
 
   return {
@@ -150,7 +179,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
         if (!result.ok) return result;
         if (!current()) return forbidden;
         const observedAt = now();
-        const liveClients = new Map(clients.map(client => [client.registeredClientId, allowModelTraining
+        const liveClients = new Map(clients.map(client => [client.registeredClientId, strictCapture
           ? captureHeadlessTrainingMethod<() => boolean>(client, "isCurrent") : client.isCurrent]));
         return { ok: true, requests: result.requests.filter(entry =>
           entry.expiresAt > observedAt && liveClients.get(entry.registeredClientId)?.() === true) } as const;
@@ -160,6 +189,7 @@ export function composeDesktopHeadlessPlanApprovals(options: {
       const review = reviewSelection(selection, caller, "read");
       if (!review) return forbidden;
       try {
+        await review.prepare();
         const result = await review.store.read({ target: review.target, isCurrent: review.current });
         if (!await review.verify() || !review.current()) return forbidden;
         if (result.ok && result.snapshot.state.expiresAt <= now()) return { ok: false, code: "expired" } as const;
@@ -168,10 +198,11 @@ export function composeDesktopHeadlessPlanApprovals(options: {
     },
     async decide(selection: DesktopPlanReviewSelection, incoming: unknown, caller: DesktopPlanReviewCaller) {
       let raw = incoming;
-      if (allowModelTraining) {try {raw = copyHeadlessTrainingPlanInput(incoming);} catch {return {ok: false, code: "invalid"} as const;}}
+      if (strictCapture) {try {raw = copyHeadlessTrainingPlanInput(incoming);} catch {return {ok: false, code: "invalid"} as const;}}
       const channel = caller.channel;
-      const review = reviewSelection(selection, caller, "decide", !allowModelTraining || trainingReviewNeedsFreshMetadata(raw));
+      const review = reviewSelection(selection, caller, "decide", !strictCapture || trainingReviewNeedsFreshMetadata(raw));
       if (!review) return forbidden;
+      await review.prepare();
       const result = await new HeadlessBuildPlanReviewUseCase(review.store, now).decide(raw, hostIncarnationId, review.target.scope, {
         organizationId, principalId, channel,
         isCurrent: review.current, canDecide: async actual =>
