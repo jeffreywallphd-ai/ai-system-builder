@@ -1,10 +1,38 @@
 import { constants } from "node:fs";
-import { copyFile, mkdir, readdir, stat } from "node:fs/promises";
+import { copyFile, mkdir, open, readdir, stat } from "node:fs/promises";
+import {createHash} from "node:crypto";
 import { extname, join } from "node:path";
 
 import type { ModelRegistryPort, ModelCheckpointResolverPort } from "../../../application/ports/model";
 
 const CHECKPOINT_EXTENSIONS = [".safetensors", ".ckpt"] as const;
+
+export class CheckpointReadCloseUnconfirmedError extends Error {
+  constructor() {super("Checkpoint read closure is unconfirmed.");}
+}
+
+/** Stream a regular file with constant memory and detect mutation during reading.
+ * Exact-profile callers separately reject aliased paths and supply pinned bounds. */
+export async function checkpointFileDigest(file: string, maximumBytes: number, assertCurrent: () => void = () => {}) {
+  assertCurrent(); const handle = await open(file, "r");
+  try {
+    const before = await handle.stat({bigint: true});
+    if (!before.isFile() || !Number.isSafeInteger(maximumBytes) || maximumBytes < 0 || before.size > BigInt(maximumBytes)) throw Error("Checkpoint bytes are unavailable.");
+    const hash = createHash("sha256"), buffer = Buffer.alloc(64 * 1024); let size = 0;
+    for (;;) {
+      assertCurrent(); const read = await handle.read(buffer, 0, buffer.length, null);
+      size += read.bytesRead;
+      if (size > maximumBytes) throw Error("Checkpoint bytes exceed their bound.");
+      if (!read.bytesRead) break;
+      hash.update(buffer.subarray(0, read.bytesRead));
+    }
+    const after = await handle.stat({bigint: true}); assertCurrent();
+    if (before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeNs !== after.mtimeNs || BigInt(size) !== before.size) throw Error("Checkpoint bytes changed.");
+    return {sha256: hash.digest("hex"), byteLength: size};
+  } finally {
+    try {await handle.close();} catch {throw new CheckpointReadCloseUnconfirmedError();}
+  }
+}
 
 function normalize(value: string | undefined): string | undefined {
   const v = value?.trim();
@@ -39,11 +67,14 @@ async function ensureComfyUiVisibleCheckpoint(input: {
   const preferredTargetPath = join(input.checkpointDirectory, input.checkpointName);
   try {
     const existing = await stat(preferredTargetPath);
-    if (existing.isFile()) {
+    const source = await stat(input.sourceFilePath);
+    if (existing.isFile() && source.isFile() && existing.size === source.size &&
+        (await checkpointFileDigest(input.sourceFilePath, source.size)).sha256 ===
+        (await checkpointFileDigest(preferredTargetPath, source.size)).sha256) {
       input.log?.({ event: "image-generation.model-checkpoint-resolution.sync.skipped", reason: "already-exists", targetPath: preferredTargetPath });
       return input.checkpointName;
     }
-  } catch {}
+  } catch (error) {if (error instanceof CheckpointReadCloseUnconfirmedError) throw error;}
 
   let targetName = input.checkpointName;
   let targetPath = preferredTargetPath;

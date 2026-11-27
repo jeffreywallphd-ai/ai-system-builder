@@ -1760,6 +1760,24 @@
         "No checkpoint-byte/runtime/supply proof, generation dispatch, import, public host or Task74/parent pass.",
         "Future original approval and exact execution owners must recheck selection. Another checkout may lack exact local records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-image-approved-start-fences",
+      "work_criteria": [
+        "original-approved-start-admission",
+        "retained-original-custody-and-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "0ca21c654b92de25013231b013b9b7a9e38a8692b4c2c6eb9c56f4e143bee33e",
+      "review_digest": "1734fc869ae79e3c189e3229a52ff441325a2bfc5cae8133d45a511aec19b765",
+      "scope": "At commit890f2835, six focused checks and independent review qualified the original approved-image handoff seam, closed post-await timing finding and retained accepted task custody.",
+      "limitations": [
+        "Source seam only; no actual checkpoint-byte/runtime/model proof, generation/import, public activation or Task74/parent pass.",
+        "The trusted resolver and future public approval owner must supply exact original selection and current authority. Another checkout may lack local records."
+      ]
     }
   ]
 }

@@ -4039,3 +4039,24 @@ continuation. A scheduling sweep withdraws authority at every observed policy
 await and checks for zero late reservation/resolver/readiness/dispatch effects.
 Shutdown during the final policy wait must also prevent dispatch through the
 original reconciler acceptance check.
+
+Checkpoint filename equality does not prove selected-model identity. Ordinary
+cache hits now require streamed byte equality. Private delegated resolution
+additionally requires exact Model point identity/timestamp and a predeclared
+safe-file size/SHA256; it never computes approval from discovered bytes. The
+trusted caller must bind that reference through exact plan approval. Alias, source
+substitution, byte/disk bounds, corrupt target and current-policy failure refuse
+with a fixed error. Registered private fields are selected without evaluating
+unrelated accessors. Publication is exclusive and never overwrites existing data.
+Only original new staging is removed after IO closure and root/file identity
+checks. Published verified cache bytes remain retained, including when later
+authority is withdrawn; no unconfirmed cache ownership is released. ADR49 trusts
+the signed-in account and installed dependencies. These checks do not supply a
+hostile same-account fence, global physical quota or runtime/parent qualification.
+
+A failed verification-read close is not proof of retirement. The private resolver
+retains staging after any unconfirmed original copy/read/write close or staging
+identity failure and fences later invocations. Tests inject real held original
+verification-reader, copy-reader and copy-writer close failures and prove no
+staging unlink or new attempt; only test-owned handles are later closed by the
+test. This supplies bounded software evidence, not historical cleanup authority.

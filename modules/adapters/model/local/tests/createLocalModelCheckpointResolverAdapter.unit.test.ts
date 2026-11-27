@@ -176,4 +176,17 @@ describe("createLocalModelCheckpointResolverAdapter", () => {
     expect(await adapter.resolveCheckpoint({selectedModel: "present-model"})).toEqual({checkpoint: "model.safetensors"});
     expect(await readFile(join(comfyDir, "model.safetensors"), "utf8")).toBe("same synthetic checkpoint");
   });
+
+  it("does not reuse a different model merely because its checkpoint filename matches", async () => {
+    const modelDir = await tempDir("model-cache-mismatch-");
+    const comfyDir = await tempDir("comfy-cache-mismatch-");
+    await writeFile(join(modelDir, "model.safetensors"), "selected bytes");
+    await writeFile(join(comfyDir, "model.safetensors"), "different data");
+    const adapter = createLocalModelCheckpointResolverAdapter({
+      modelRegistry: registryWith({modelRecordId: "selected-model", localPath: modelDir}), comfyUiCheckpointDirectory: comfyDir,
+    });
+    expect(await adapter.resolveCheckpoint({selectedModel: "selected-model"})).toEqual({checkpoint: "model-01.safetensors"});
+    expect(await readFile(join(comfyDir, "model.safetensors"), "utf8")).toBe("different data");
+    expect(await readFile(join(comfyDir, "model-01.safetensors"), "utf8")).toBe("selected bytes");
+  });
 });

@@ -3744,3 +3744,12 @@ The exact owner/port/catalog/controller change scope runs the two complete relat
 controller modules. It starts no model, runtime or Native process. Feature-only
 application changes need the image profiles, not an explicit unrelated controller
 suite. Approved-start source tests cannot grant public execution or parent closure.
+
+The fixed image-owner checks also include both checkpoint adapters and their
+actual temporary-file regressions. Exact source/test/port presence is required.
+Byte mismatch, point-read/reference substitution, aliases, disk/stream bounds,
+current withdrawal and owned staging cleanup are software file tests, not model
+loads. The closed adapter/catalog/controller scope selects only the related
+image and focused-runner controller modules. Missing/unknown inputs retain the
+conservative fallback. Do not infer actual generation, public host or parent
+qualification from these source checks.

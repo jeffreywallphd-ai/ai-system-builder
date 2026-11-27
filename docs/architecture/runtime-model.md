@@ -4235,3 +4235,16 @@ The approved image fence separates asynchronous policy authorization from the
 synchronous current assertion. Effect owners call both, in order, with the
 assertion in their own continuation before reservation, resolver, readiness or
 dispatch. The final runtime handoff also checks original lifecycle acceptance.
+
+Private image checkpoint resolution is separate from the ordinary label-based
+resolver. An exact registered Model reference plus predeclared file size/hash
+controls a streamed verified copy into the existing checkpoint cache. Current
+record and policy are rechecked before exclusive publication. The approval owner
+must bind the file reference before invoking this adapter. It returns only a
+content-addressed checkpoint basename. Temporary IO closes before owned staging
+cleanup; published cache entries follow existing retained cache lifetime. No
+runtime, public generation or physical storage-isolation claim follows.
+
+The private checkpoint resolver retains one active invocation and refuses
+additional work after unconfirmed original IO/staging retirement. Copy and
+verification-read closure are both required before removing owned staging.

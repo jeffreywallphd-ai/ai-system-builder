@@ -90,5 +90,33 @@
       "result": "Source checks passed but independent review requested changes; not accepted.",
       "correction": "Separate async authorization from immediate synchronous current checks in every effect continuation; pass both operations to nested resolver and recheck lifecycle before runtime dispatch. Scheduling-sweep and shutdown regressions added."
     }
+  },
+  "checkpoint_binding_support": {
+    "work_id": "headless-image-exact-checkpoint-binding",
+    "test_files": [
+      "modules/adapters/model/local/tests/createLocalModelCheckpointResolverAdapter.unit.test.ts",
+      "modules/adapters/model/local/tests/createApprovedImageCheckpointResolverAdapter.unit.test.ts"
+    ],
+    "scope": "Streamed ordinary cache-byte equality and private exact registered-model/file-reference resolution with exclusive verified publication and owned staging cleanup.",
+    "trust_profile": "ADR49 bounded-local, signed-in-account trusted; no physical quota or hostile same-account protection.",
+    "limitations": [
+      "Synthetic temporary bytes exercise file software; no real weights are parsed, loaded or executed.",
+      "Exact approval owner must bind the predeclared file size/hash before invoking the private resolver; public plan/host activation remains pending.",
+      "Verified published cache entries are retained under existing cache lifetime, not deleted as staging.",
+      "No Task74/75, runtime, image-quality, actual generation/import or parent pass."
+    ],
+    "preserved_verification": {
+      "receipt_digest": "40753868386f2ffe498cf5b93e86579d1cde1ec8d28a22510d756939246591fa",
+      "result": "Six groups passed; strict image types and its controller failed because a synthetic fixture used an unsupported serialization enum. No acceptance.",
+      "review_advisory_sha256": "6246276647f01037a2eea362b9084c6f8a67ec98bc54d8e1b23b67ea42418421",
+      "finding": "retain-staging-on-unconfirmed-verification-close",
+      "correction": "Correct the synthetic unsupported enum; track original copy/verification closure and owned staging retirement, preserve unconfirmed staging and refuse another resolver invocation. Inject all three original close failures; deny overlapping point-read work.",
+      "narrow_test_fixture_correction": "A hostile async-provider Proxy keeps Promise then-assimilation inert, while every data trap remains forbidden. Original failed isolated test was diagnostic only.",
+      "followup": {
+        "receipt_digest": "a2d75c8efb001d91330a4f57a1f9f5715c8cecd7d47be92a56273e7279f5293e",
+        "result": "Actual checkpoint/image unit groups, ordinary types, documentation, agent-support and architecture passed; strict image types and controller failed on generic Proxy fixture inference. No acceptance.",
+        "correction": "Explicitly preserve original Model and task-tag array types in the hostile Proxy fixtures. Narrow adapter/test strict types passed after correction; all current checks still required."
+      }
+    }
   }
 }

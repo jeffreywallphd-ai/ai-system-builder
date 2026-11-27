@@ -122,3 +122,27 @@ is deliberately absent from production model composition and public exports.
 Owner/DACL facts are private observations, not ownership or effect authority.
 New child creation remains possible. Delete/reveal, protected publication,
 stable retained-tree accounting and safe offload restart remain unavailable.
+
+Image checkpoint cache reuse now compares streamed source/target byte digests
+before accepting an existing basename. Different bytes select a fresh exclusive
+collision name; no existing checkpoint is overwritten. Identical entries retain
+ordinary behavior, with additional streamed verification on cache hits.
+
+The private approved image resolver uses an exact registered Model point read and
+a predeclared workspace/record/timestamp, safetensors basename, byte length and
+SHA256. The caller must bind that reference to the exact approved intent before
+execution. No inventory, label/search, provider or default-model fallback exists.
+It copies with64KiB buffers, verifies current source/target bytes, rechecks the
+original record and current async/sync policy, enforces declared byte/free-disk
+limits and publishes exclusively into an existing plain checkpoint directory.
+Only identity-owned staging is removed after confirmed writer/reader closure.
+Verified published cache entries remain retained because other tasks may reference
+them. This is ADR49 trusted-account local storage, with no physical quota, hostile
+same-account isolation, model-load, runtime or public-host qualification claim.
+
+Verification reads participate in the private resolver retirement state. Any
+unconfirmed original copy/verification handle close or owned-staging retirement
+keeps staging retained and denies another invocation on that resolver. One
+in-flight invocation retains the slot until it settles. There is no reset or
+automatic recovery. Controlled tests explicitly close only their injected
+original handles before removing their fresh test roots.

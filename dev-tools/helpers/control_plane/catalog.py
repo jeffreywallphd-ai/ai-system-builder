@@ -269,12 +269,18 @@ IMAGE_GENERATION_OWNER_REQUIRED = (
     "modules/application/use-cases/image-generation/tests/prepare-headless-image-request.unit.test.ts",
 )
 IMAGE_GENERATION_ADMISSION_PORT = "modules/application/ports/image/approved-image-generation.port.ts"
-IMAGE_GENERATION_OWNER_SUPPORT = IMAGE_GENERATION_OWNER_REQUIRED + (IMAGE_GENERATION_ADMISSION_PORT,)
+IMAGE_CHECKPOINT_REQUIRED = (
+    "modules/adapters/model/local/createLocalModelCheckpointResolverAdapter.ts",
+    "modules/adapters/model/local/tests/createLocalModelCheckpointResolverAdapter.unit.test.ts",
+    "modules/adapters/model/local/createApprovedImageCheckpointResolverAdapter.ts",
+    "modules/adapters/model/local/tests/createApprovedImageCheckpointResolverAdapter.unit.test.ts",
+)
+IMAGE_GENERATION_OWNER_SUPPORT = IMAGE_GENERATION_OWNER_REQUIRED + (IMAGE_GENERATION_ADMISSION_PORT,) + IMAGE_CHECKPOINT_REQUIRED
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
     "docs/security/headless-system-builder-threat-model.md", "docs/operations/headless-generation-feature.json",
-    "docs/operations/roadmap-supporting-work/links-0010.json", "docs/diagnostics/ai-development-control-plane.md")
+    "docs/operations/roadmap-supporting-work/links-0010.json", "docs/diagnostics/ai-development-control-plane.md", "modules/adapters/README.md") + IMAGE_CHECKPOINT_REQUIRED
 
 STORY_TASK_SCOPE = (
     "dev-tools/helpers/control_plane/candidate.py", "dev-tools/helpers/control_plane/work.py",
@@ -1046,15 +1052,15 @@ PUBLISHED_FORM_CHECKS = {
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") + TRAINING_EVALUATION_REQUIRED,
     },
     "headless-image-generation-owner-unit": {
-        "automatic_sources": IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_ADMISSION_PORT,),
+        "automatic_sources": IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_ADMISSION_PORT,) + IMAGE_CHECKPOINT_REQUIRED,
         "automatic_required_files": IMAGE_GENERATION_OWNER_SUPPORT,
-        "sources": IMAGE_GENERATION_OWNER_SUPPORT + ("modules/application/README.md",),
+        "sources": IMAGE_GENERATION_OWNER_SUPPORT + ("modules/application/README.md", "modules/adapters/README.md"),
         "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--")
-            + IMAGE_GENERATION_OWNER_REQUIRED[1::2],
+            + IMAGE_GENERATION_OWNER_REQUIRED[1::2] + IMAGE_CHECKPOINT_REQUIRED[1::2],
     },
     "headless-image-generation-owner-types": {
         "companion_to": "headless-image-generation-owner-unit",
-        "sources": IMAGE_GENERATION_OWNER_SUPPORT + ("modules/application/README.md",),
+        "sources": IMAGE_GENERATION_OWNER_SUPPORT + ("modules/application/README.md", "modules/adapters/README.md"),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") + IMAGE_GENERATION_OWNER_SUPPORT,
     },
@@ -5002,7 +5008,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 *[part for name in ("test_control_plane_headless_training_host_approval.", "test_control_plane_headless_training_execution.",
                     "test_control_plane_headless_training_owner.", "test_control_plane_focused.") for part in ("-k", name)]]
     if ({"dev-tools/helpers/control_plane/catalog.py", IMAGE_GENERATION_OWNER_CONTROLLER} <= set(paths)
-            and (set(IMAGE_GENERATION_OWNER_REQUIRED[:2]) <= set(paths) or set(IMAGE_GENERATION_OWNER_REQUIRED[-2:]) <= set(paths))
+            and (set(IMAGE_GENERATION_OWNER_REQUIRED[:2]) <= set(paths) or set(IMAGE_GENERATION_OWNER_REQUIRED[-2:]) <= set(paths)
+                or set(IMAGE_CHECKPOINT_REQUIRED[:2]) <= set(paths) or set(IMAGE_CHECKPOINT_REQUIRED[-2:]) <= set(paths))
             and set(paths) <= set(IMAGE_GENERATION_OWNER_SCOPE) and "focused-tests" not in explicit_required
             and _automatic_files_available(root, {"automatic_required_files": IMAGE_GENERATION_OWNER_SUPPORT + (IMAGE_GENERATION_OWNER_CONTROLLER,)})):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)

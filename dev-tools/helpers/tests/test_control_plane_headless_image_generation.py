@@ -19,11 +19,12 @@ class ImageGenerationOwnerRoutingTests(unittest.TestCase):
         return {row["id"]: row for row in catalog.plan(root or self.root, list(paths), list(required), "a" * 64)["selected"]}
 
     def test_original_owner_edits_select_related_authority_lifecycle_contract_and_strict_checks(self):
-        for path in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2] + catalog.IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (catalog.IMAGE_GENERATION_ADMISSION_PORT,):
+        for path in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2] + catalog.IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (catalog.IMAGE_GENERATION_ADMISSION_PORT,) + catalog.IMAGE_CHECKPOINT_REQUIRED:
             rows = self.select([path])
             for name in self.profiles: self.assertIn(name, rows)
             self.assertNotIn("focused-tests", rows)
             for test in catalog.IMAGE_GENERATION_OWNER_REQUIRED[1::2]: self.assertIn(test, rows[self.profiles[0]]["argv"])
+            for test in catalog.IMAGE_CHECKPOINT_REQUIRED[1::2]: self.assertIn(test, rows[self.profiles[0]]["argv"])
             self.assertIn("--strict", rows[self.profiles[1]]["argv"])
             self.assertIn(catalog.IMAGE_GENERATION_ADMISSION_PORT, rows[self.profiles[1]]["argv"])
             self.assertNotIn("headless-training-bounded-feature", rows)
