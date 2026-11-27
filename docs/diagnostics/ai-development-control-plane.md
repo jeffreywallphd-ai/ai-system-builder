@@ -3702,3 +3702,11 @@ existing App and public-codec regressions and cannot launch the real training
 check. The exact source/controller scope has bounded fallback tests; unknown,
 missing/nonregular support or explicit generic requests retain conservative
 coverage. No model accuracy, Native or physical-host pass follows from this profile.
+
+The bounded training observation companion uses inert redacted-success, current
+checkpoint, lineage and error-privacy fixtures. Version 3 actual-run diagnostics
+are written after the cleanup hook and distinguish terminal/assertion state from
+original worker/IO closure, application cleanup and new-root removal. Zero sampled
+intermediate progress is retained for fast completion. None of these source checks
+rearms the consumed trial or supplies actual training, cleanup or model accuracy
+qualification. The driver rejects malformed counts and raw/unknown fields.

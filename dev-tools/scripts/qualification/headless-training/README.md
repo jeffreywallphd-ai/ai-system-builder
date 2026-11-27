@@ -62,3 +62,21 @@ retain their files. Historical input, staging, stop records and ACLs stay intact
 Missing prerequisites and failed checks are failures, never skips or stand-ins.
 Paired public Desktop/browser journeys and final roadmap qualification are later
 checks. The existing Desktop Tiny journey remains historical evidence.
+
+The fresh attempt was consumed. Its aggregate test failed; the diagnostic confirmed
+original worker and IO closure before the afterhook, but did not establish the
+terminal training status or final root removal. Do not rerun or rearm that record.
+A source correction preserves the App pending-review redaction and checks
+checkpoints in the separately verified current candidate inventory. Pipeline and
+task identities remain distinct. A fast one-step completion can have zero sampled
+intermediate progress; record that count honestly rather than impose a delay.
+Controlled progress tests are separate evidence, not an observed live event.
+
+Version 3 diagnostics add finite assertion stages, terminal status, sampled counts,
+current verified checkpoint/file counts and a closed runtime error category. The
+only recognized runtime failure code is `private_training_failed`; other codes
+become `unclassified`, with no message or details. The afterhook writes the new
+record after attempted cleanup, even when cleanup fails. Application cleanup and
+new-root removal become true only after their actual awaited actions. Child
+success alone, a version 2 record or pre-cleanup retirement cannot qualify cleanup.
+The observation unit tests are inert; source discovery cannot run the real trial.

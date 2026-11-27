@@ -52,6 +52,19 @@
         "owner_closure_confirmed": false
       },
       "finding": "App data and output stages were siblings of the permitted root. The containment guard rejects them. A separately reproduced daemon buffered-stdin shutdown failure is also applicable to the controller; it does not prove the historical run retired."
+    },
+    {
+      "source_digest": "045df2c168360c5c0cbead29bc002e30f9aa2db6048c295dbbcc952c63c24aa2",
+      "receipt_digest": "7a492d694beeb92e3259c9e16523dcc226fbc419c9537d70c223aa8b3fcc6129",
+      "result": "admitted-test-failed-undifferentiated-assertion",
+      "diagnostics": {
+        "phase": "training",
+        "worker_retirement_confirmed": true,
+        "owner_closure_confirmed": true,
+        "terminal_training_status": "not-recorded",
+        "final_root_removal": "not-recorded"
+      },
+      "finding": "Test demanded checkpoints before App current review, although the pending result intentionally removes them. A fast run can also finish between polls. Existing evidence does not establish which assertion failed or whether actual training succeeded."
     }
   ],
   "source_repairs": [
@@ -61,9 +74,9 @@
     "Retain bounded append-only closed diagnostic facts and all earlier failed evidence."
   ],
   "remaining_qualification": [
-    "Actual fine-tuning, progress, checkpoint/current-candidate results and original new-run IO/worker retirement remain unqualified.",
-    "The prior failed run and its retained files remain unconfirmed. Source tests and process absence supply no historical cleanup or retirement credit.",
-    "The user approved one guarded prospective fresh trial without reboot. Qualify and review the guard before that separate actual task-outcome Work. No accuracy test or download is included."
+    "Original actual training success, current checkpoint/candidate results and final new-root removal still need a newly authorized guarded test. The consumed attempt confirmed worker/IO retirement before afterhook only.",
+    "Prior unconfirmed attempts and retained files remain unchanged. No old-tree inspection, adoption or cleanup credit.",
+    "The test now preserves App redaction and verifies current inventory; v3 finite status/count/cleanup diagnostics need source qualification. No automatic retry or model quality test."
   ],
   "operator_decision": {
     "authority_ref": "user-approved-fresh-tiny-trial-20261127",
@@ -73,10 +86,11 @@
     "prior_retirement": "unconfirmed",
     "prior_cleanup_authorized": false,
     "guard_work_id": "headless-training-fresh-review-binding-fix",
-    "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2"
+    "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2",
+    "actual_attempt_consumed": true
   },
   "fresh_trial_guard": {
-    "status": "source-qualification-pending",
+    "status": "source-qualified-at-4528da56-actual-attempt-consumed",
     "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
     "maximum_attempts": 1,
     "retained_logical_bytes_per_old_attempt": 33554432,

@@ -140,22 +140,34 @@ def new_diagnostic(root, before):
     name = added.pop(); need(re.fullmatch(r"[a-f0-9]{32}\.json", name) is not None, "fresh-trial.diagnostic-name")
     row = read_record(root, directory / name, 2048)
     need(isinstance(row, dict) and set(row) == {"schema", "phase", "startup", "sourceFactories", "outputFactories", "startCode",
-         "workerRetirementConfirmed", "ownerClosureConfirmed", "modelQualityTested", "interpretation"}, "fresh-trial.diagnostic-schema")
-    need(row["schema"] == "bounded-training-feature-diagnostic-v2" and row["phase"] in {
-         "configured", "approved-start", "training", "current-candidate", "complete"} and row["startup"] in {
+         "workerRetirementConfirmed", "ownerClosureConfirmed", "modelQualityTested", "interpretation", "terminalStatus", "runtimeErrorCode", "observations", "progressObservations",
+         "checkpoints", "outputFiles", "applicationCleanupConfirmed", "newRootRemoved"}, "fresh-trial.diagnostic-schema")
+    need(row["schema"] == "bounded-training-feature-diagnostic-v3" and row["phase"] in {
+         "configured", "approved-start", "training", "terminal-status", "current-candidate", "candidate-lineage",
+         "checkpoint-inventory", "approval-replay", "input-integrity", "complete"} and row["startup"] in {
          "not-started", "spawned", "owned-ready", "health-ready", "startup-timeout", "process-exit", "process-error", "stop-complete"},
          "fresh-trial.diagnostic-state")
     need(all(type(row[k]) is int and 0 <= row[k] <= 64 for k in ("sourceFactories", "outputFactories")) and
          all(type(row[k]) is bool for k in ("workerRetirementConfirmed", "ownerClosureConfirmed")) and
          row["modelQualityTested"] is False and row["interpretation"] == "diagnostic-only-not-qualification" and
          row["startCode"] in START_FAILURE_CODES | {None}, "fresh-trial.diagnostic-facts")
+    need(row["terminalStatus"] in {"not-observed", "queued", "running", "succeeded", "failed", "cancelled", "unclassified"} and
+         row["runtimeErrorCode"] in {None, "private_training_failed", "unclassified"} and
+         all(type(row[k]) is int and 0 <= row[k] <= 10000 for k in ("observations", "progressObservations")) and
+         row["progressObservations"] <= row["observations"] and
+         all(type(row[k]) is int and 0 <= row[k] <= 32 for k in ("checkpoints", "outputFiles")) and
+         row["checkpoints"] <= row["outputFiles"] and
+         all(type(row[k]) is bool for k in ("applicationCleanupConfirmed", "newRootRemoved")), "fresh-trial.diagnostic-observations")
     return row
 
 
 def qualified_result(attempt, stable, diagnostic):
     return stable is True and attempt["status"] == "passed" and diagnostic is not None and diagnostic["phase"] == "complete" and \
         diagnostic["startCode"] is None and diagnostic["sourceFactories"] == 1 and diagnostic["outputFactories"] == 1 and \
-        diagnostic["workerRetirementConfirmed"] is True and diagnostic["ownerClosureConfirmed"] is True
+        diagnostic["workerRetirementConfirmed"] is True and diagnostic["ownerClosureConfirmed"] is True and \
+        diagnostic["terminalStatus"] == "succeeded" and diagnostic["runtimeErrorCode"] is None and \
+        diagnostic["checkpoints"] > 0 and diagnostic["outputFiles"] > 0 and \
+        diagnostic["applicationCleanupConfirmed"] is True and diagnostic["newRootRemoved"] is True
 
 
 def main():

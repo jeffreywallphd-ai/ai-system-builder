@@ -14,6 +14,7 @@ import {createFilesystemLocalTrainingModelCopyStorage} from "../../../../modules
 import {createFilesystemLocalTrainingResultPublication} from "../../../../modules/adapters/storage/filesystem/artifact-store/createFilesystemTrainingResultFileByteStorageAdapter";
 import type {TrainingResultFileIoRetirement} from "../../../../modules/application/ports/model";
 import {createOrganizationId} from "../../../../modules/contracts/organization";
+import {completeTrainingCleanup, observeTrainingResult, requireTrainingCandidate, trainingObservation, type TrainingObservationStage} from "./bounded-training-observation";
 
 const GiB = 1024 ** 3, MiB = 1024 ** 2;
 // Existing generated, non-download Tiny input, not a quality benchmark.
@@ -74,7 +75,9 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
   const evidenceFile = path.join(evidenceDirectory, randomBytes(16).toString("hex") + ".json");
   const parent = await plainPath(path.resolve(".local-codex/t"), true), root = await realpath(await mkdtemp(path.join(parent, "bt-")));
   const identity = await lstat(root, {bigint: true}), copyRoot = path.join(root, "copy"), outputRoot = path.join(root, "output"), selected = path.join(root, "selected");
-  let hostCurrent = true, retired = false, sourceFactories = 0, outputFactories = 0, phase = "configured", startup = "not-started";
+  let hostCurrent = true, retired = false, sourceFactories = 0, outputFactories = 0, startup = "not-started";
+  let phase: TrainingObservationStage = "configured";
+  const facts = trainingObservation();
   let startCode: string | null = null;
   const copies: ReturnType<typeof createFilesystemLocalTrainingModelCopyStorage>[] = [];
   const publications: ReturnType<typeof createFilesystemLocalTrainingResultPublication>[] = [];
@@ -86,15 +89,25 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
     ioOwners.every(owner => {const value = owner.inspect(); return value.phase === "closed" && value.pendingOperations === 0 && !value.publicationUnconfirmed;}) &&
     publications.every(owner => {const value = owner.originalOwner.inspectVerification(); return value.phase === "idle" && value.pendingOperations === 0 && value.openFiles === 0;});}
   t.after(async () => {
+    try {
     if (!retired) {await runtime?.supervisor.stop(); retired = true;}
     hostCurrent = false;
     if (!closed()) throw Error("Owned training IO remains unconfirmed; fresh fixture retained.");
     // The application owns its nested child and restores process TEMP first.
     // The outer owner must never remove that child ahead of its identity check.
-    await applicationCleanup?.();
+    await completeTrainingCleanup(facts, applicationCleanup, async () => {
     const current = await lstat(root, {bigint: true}); assert.ok(current.isDirectory() && !current.isSymbolicLink());
     assert.equal(current.dev, identity.dev); assert.equal(current.ino, identity.ino); assert.equal(await realpath(root), root); assert.equal(path.dirname(root), parent);
     await rm(root, {recursive: true});
+    });
+    } finally {
+      let ownerClosureConfirmed = false; try {ownerClosureConfirmed = closed();} catch { /* Unknown remains false. */ }
+      const evidence = {schema: "bounded-training-feature-diagnostic-v3", phase, startup, sourceFactories, outputFactories, startCode,
+        workerRetirementConfirmed: retired, ownerClosureConfirmed, modelQualityTested: false,
+        interpretation: "diagnostic-only-not-qualification", ...facts};
+      const bytes = JSON.stringify(evidence) + "\n"; assert.ok(Buffer.byteLength(bytes) <= 2048);
+      await writeFile(evidenceFile, bytes, {flag: "wx"});
+    }
   });
   await mkdir(copyRoot); await mkdir(outputRoot); await mkdir(selected);
   // The acquisition record is not a model file. Prepare only the six exact
@@ -154,48 +167,39 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
     if (!started.result.ok) startCode = started.result.code;
     assert.equal(started.result.ok, true, "Original approved training did not start."); assert.ok(f.retained);
     const control = {isCurrent: () => true, stillAllowed: async () => true};
-    let result = await f.retained.task.read(control), observations = 0, progressObservations = 0;
-    const observe = () => {observations++; if (result.progress && (typeof result.progress.stage === "string" && result.progress.stage.length > 0 ||
-      typeof result.progress.batch === "number" || typeof result.progress.epoch === "number")) progressObservations++;};
-    observe(); phase = "training";
+    let result = await f.retained.task.read(control);
+    observeTrainingResult(facts, result); phase = "training";
     const deadline = Date.now() + 600000;
     while (["queued", "running"].includes(result.status) && Date.now() < deadline) {
-      await new Promise(resolve => setTimeout(resolve, 200)); result = await f.retained.task.read(control); observe();
+      await new Promise(resolve => setTimeout(resolve, 200)); result = await f.retained.task.read(control); observeTrainingResult(facts, result);
     }
+    phase = "terminal-status";
     assert.equal(result.status, "succeeded", "Bounded Tiny training did not succeed.");
-    assert.ok(progressObservations > 0, "No actual training progress was observed."); assert.equal(sourceFactories, 1); assert.equal(outputFactories, 1);
-    assert.ok(result.checkpoints && result.checkpoints.length > 0, "The requested one-step checkpoint was not recorded.");
+    // Fast completion may occur between polls. Do not invent sampled progress,
+    // delay the worker or read deliberately redacted pending-review checkpoints.
+    assert.equal(sourceFactories, 1); assert.equal(outputFactories, 1);
     phase = "current-candidate";
     const completion = await f.retained.task.reviewCompletion!(control); assert.equal(completion.kind, "ready");
-    const candidate = await f.retained.task.reviewCandidate!(control); assert.equal(candidate.kind, "ready");
+    const candidate = requireTrainingCandidate(result, await f.retained.task.reviewCandidate!(control), f.retained.task.requestId, facts, value => {phase = value;});
     if (candidate.kind === "ready") {
-      assert.equal(candidate.history.requestId, f.retained.task.requestId); assert.ok(candidate.execution);
-      assert.equal(candidate.execution.runId, result.generatedModelCandidate?.generatedFromRunId); assert.ok(candidate.execution.durationMs >= 0);
-      assert.ok(candidate.execution.hardware.devices.includes("cpu")); assert.ok(candidate.retainedFiles.files.length > 0);
-      assert.ok(candidate.retainedFiles.files.some(row => row.role === "checkpoint"));
-      assert.ok(candidate.retainedFiles.files.some(row => row.role === "candidate"));
+      assert.ok(candidate.execution);
       assert.equal(candidate.history.provenance.datasetId, f.version.datasetId); assert.equal(candidate.history.provenance.versionDigest, f.version.versionDigest);
       assert.equal(candidate.history.registration, "requires-separate-approval"); assert.equal(candidate.history.comparison.state, "not-recorded");
       assert.equal(candidate.history.verification.outputQuality, "not-evaluated");
-      t.diagnostic(JSON.stringify({schema: "bounded-training-feature-observation-v1", observations, progressObservations,
-        checkpoints: result.checkpoints.length, outputFiles: candidate.retainedFiles.files.length, durationMs: candidate.execution.durationMs,
+      t.diagnostic(JSON.stringify({schema: "bounded-training-feature-observation-v1", observations: facts.observations, progressObservations: facts.progressObservations,
+        checkpoints: facts.checkpoints, outputFiles: facts.outputFiles, durationMs: candidate.execution.durationMs,
         device: "cpu", quality: "not-tested", registration: "requires-separate-approval"}));
     }
     // The fixture Model registry rejects any automatic generated-Model write.
+    phase = "approval-replay";
     await f.run(); assert.equal(sourceFactories, 1); assert.equal(outputFactories, 1);
+    phase = "input-integrity";
     for (const [name, [size, digest]] of Object.entries(inputFiles)) assert.equal(await digestFile(path.join(model, name), MiB, size), digest);
     phase = "complete";
   } catch (error) {
     t.diagnostic(JSON.stringify({schema: "bounded-training-feature-failure-v1", phase, startup, sourceFactories, outputFactories})); throw error;
   } finally {
-    try {await foundation.supervisor.stop(); retired = true;} finally {
-      let ownerClosureConfirmed = false; try {ownerClosureConfirmed = closed();} catch { /* Preserve unknown closure. */ }
-      const evidence = {schema: "bounded-training-feature-diagnostic-v2", phase, startup, sourceFactories, outputFactories, startCode,
-        workerRetirementConfirmed: retired, ownerClosureConfirmed, modelQualityTested: false,
-        interpretation: "diagnostic-only-not-qualification"};
-      const bytes = JSON.stringify(evidence) + "\n"; assert.ok(Buffer.byteLength(bytes) <= 2048);
-      await writeFile(evidenceFile, bytes, {flag: "wx"});
-    }
+    await foundation.supervisor.stop(); retired = true;
   }
   assert.equal(closed(), true, "Original worker and IO did not retire.");
 });
