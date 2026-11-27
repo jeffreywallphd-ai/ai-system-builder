@@ -3819,3 +3819,12 @@ proof of current files, closed IO, runtime readiness, license rights or quality.
 No provider, filesystem, Native/service or deletion operation is introduced.
 Original retained bytes remain owned until the true publication/cleanup outcome
 is known; this component supplies no parent or real-host qualification.
+
+Training display-label review distinguishes ordinary model vocabulary from
+credential and private-content formats. A narrow producer-compatible label
+allowance preserves safe legacy labels and real credential, assignment,
+bearer, path/URL, control, private-key, oversized opaque-token and structured
+payload denials. Labels stay literal untrusted text; no text grants permission,
+executes instructions, selects a path or proves current candidate integrity.
+Cached/current completion and Core/SQLite registry fixtures check this boundary
+without running a model or changing original-task and separate Save authority.

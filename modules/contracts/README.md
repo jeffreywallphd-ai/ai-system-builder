@@ -14,6 +14,12 @@ summary cannot satisfy that mode, and a cached request rejects an unsolicited
 current summary. Closed codecs exclude private inventory locators and preserve
 historical verification labels, separate Save and unchecked quality/readiness.
 
+Training display names accept ordinary producer-compatible labels such as
+"Token classifier" and "Prompt safety model". This field-specific allowance
+keeps safe legacy names and actual credential, assignment, bearer, path/URL,
+control, private-key, oversized opaque-token and structured-payload denials.
+Names are literal data, never instructions, paths, permissions or Save proof.
+
 The private training task family defines separate `models.training-task` and
 `models.cancel-training` codecs. Both use the exact task or approved-plan-step
 selector, with copied host and workspace identity. Download support does not

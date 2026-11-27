@@ -106,6 +106,29 @@ const currentValue = () => ({...completionValue(), currentCandidate: {verificati
   candidateDigest: "sha256:" + "d".repeat(64), manifestDigest: "sha256:" + "e".repeat(64),
   fileCount: 3, candidateFileCount: 3, totalBytes: 9, execution: {state: "not-recorded"}}});
 
+for (const name of ["Prompt safety model", "Token classifier", "Workflow assistant", "Command classifier", "Credential detector",
+  "Legacy label: phase one"]) test(`training completion preserves literal display label: ${name}`, () => {
+  for (const [value, input] of [[completionValue(), completionRequest().input], [currentValue(), currentRequest().input]] as const) {
+    value.candidate.requestedName = name;
+    const reply = {ok: true, operation: "models.review-training", value};
+    const parsed = readHeadlessTrainingCompletionResult(reply, input); assert.ok(parsed.ok);
+    assert.equal(parsed.value.candidate.requestedName, name);
+    value.candidate.requestedName = "Changed later";
+    assert.equal(parsed.value.candidate.requestedName, name);
+  }
+});
+
+for (const name of ["hf_" + "A".repeat(24), "api_key=synthetic", "token = synthetic", "Authorization=synthetic",
+  "authentication=synthetic", "Authorization: synthetic",
+  "private key=synthetic", "signed url=synthetic", "Bearer synthetic", "C:\\private\\candidate", "../candidate", "https://example.invalid/model", "Prompt\nmodel",
+  "-----BEGIN PRIVATE KEY-----", "Prompt " + "A".repeat(80), "{prompt model}", "[workflow model]",
+  " Prompt model ", "Prompt " + "x ".repeat(58)]) test(`training completion refuses unsafe display label ${JSON.stringify(name)}`, () => {
+  for (const [value, input] of [[completionValue(), completionRequest().input], [currentValue(), currentRequest().input]] as const) {
+    value.candidate.requestedName = name;
+    assert.equal(readHeadlessTrainingCompletionResult({ok: true, operation: "models.review-training", value}, input).ok, false);
+  }
+});
+
 test("current training review is explicit, detached and cannot downgrade to cached history", () => {
   const raw = currentRequest(), parsed = readHeadlessTrainingCompletionRequest(raw, host); assert.ok(parsed.ok);
   assert.equal(parsed.request.input.mode, "current-files");

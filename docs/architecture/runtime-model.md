@@ -4033,6 +4033,14 @@ records. A lost reply is resolved through read-only inspection, never another
 Model mutation. Original history, measured-only reports and runtime-not-checked
 state remain distinct from actual model-quality or readiness qualification.
 
+Training completion treats the requested model name as literal display data.
+Ordinary producer-compatible labels can contain model vocabulary such as
+"Token classifier" or "Prompt safety model". The field-specific extension
+retains safe historical labels and actual credential, assignment, bearer,
+path/URL, control, private-key, oversized opaque-token and structured-payload
+denials. Other passive metadata filters, wire shapes, digests, current-file
+mode and task/Save authority remain unchanged. Registry Save reuses this codec.
+
 The owning composition must still bind the original app Save capability and
 require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does

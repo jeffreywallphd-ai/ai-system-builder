@@ -280,14 +280,14 @@ test("save retains its original synchronous host callback; replacement and async
 const TRAINED_SAVES = "headless/models/training-saves", TRAINED_SOURCES = "headless/models/training-save-sources";
 /** Metadata-only fixture. No worker, model bytes, filesystem copy or quality
  * measurement is performed or qualified by this synthetic preparation. */
-async function trainingFixture(t: TestContext, storage: "Core" | "SQLite", options: {adapter?: boolean; localBase?: boolean; accepted?: boolean; checkpoints?: boolean} = {}) {
+async function trainingFixture(t: TestContext, storage: "Core" | "SQLite", options: {adapter?: boolean; localBase?: boolean; accepted?: boolean; checkpoints?: boolean; name?: string} = {}) {
   const f = await fixture(t, storage);
   const base = JSON.parse(JSON.stringify((await f.registry.registerDownloadedModel({workspaceId: f.scope.workspaceId, modelRecordId: "model.training-base", displayName: "Training base",
     source: "huggingface", provider: "huggingface", ...(options.localBase ? {} : {modelId: "fixture/base"}), artifactForm: "full-model",
     localPath: path.join(f.directory, "metadata-only-base"), inferenceMode: "causal", serializationFormat: "safetensors", taskTags: ["chat"]})).model)) as ModelInventoryRecord;
   const at = base.updatedAt ?? base.createdAt, versionDigest = "sha256:" + "c".repeat(64), recipeDigest = "sha256:" + "d".repeat(64);
   const parsed = readHeadlessModelTrainingPlanRequest({version: "aisb-headless-v1", operation: "models.train", input: {
-    hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, idempotencyKey: randomUUID(), name: "Synthetic training result",
+    hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, idempotencyKey: randomUUID(), name: options.name ?? "Synthetic training result",
     model: {modelRecordId: base.modelRecordId, updatedAt: at}, dataset: {datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest},
     training: {trainingTask: "llm-instruction", method: options.adapter ? "lora" : "full-finetune", commonParameters: {maxSteps: 1, batchSize: 1}}}}, f.host);
   assert.ok(parsed.ok); const request = parsed.request;
@@ -348,6 +348,14 @@ function resealTrainingCandidate(f: Awaited<ReturnType<typeof trainingFixture>>,
 }
 
 for (const engine of ["Core", "SQLite"] as const) {
+  for (const name of ["Prompt safety model", "Token classifier", "Workflow assistant"]) test(`${engine}: trained Model Save preserves ordinary label ${name}`, async t => {
+    const f = await trainingFixture(t, engine, {name}), saved = await f.commit();
+    assert.equal(saved.created, true);
+    const row = (await f.rows()).find(r => r.modelRecordId === saved.reference.modelRecordId)!;
+    const lineage = row.metadata!.headlessTraining as {history: {candidate: {requestedName: string}}};
+    assert.equal(lineage.history.candidate.requestedName, name);
+    assert.equal((await f.inspect()).kind, "committed"); f.noEffects();
+  });
   for (const adapter of [false, true]) test(`${engine}: trained ${adapter ? "adapter" : "full Model"} commits exact lineage once and replays without effects`, async t => {
     const f = await trainingFixture(t, engine, {adapter, checkpoints: true}), saved = await f.commit(); assert.equal(saved.created, true);
     const rows = await f.rows(); assert.equal(rows.length, 2); const row = rows.find(r => r.modelRecordId === saved.reference.modelRecordId)!;

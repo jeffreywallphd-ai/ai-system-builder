@@ -165,6 +165,16 @@ export interface HeadlessTrainingCompletionValue {
   readonly registration: "requires-separate-approval";
 }
 const completionFailures = [...readFailures, "headless.source-not-ready"] as const;
+/** Labels are literal display data. Ordinary model vocabulary is not a secret;
+ * keep the producer's filename-safe bounds and actual disclosure denials. */
+function isSafeTrainingDisplayLabel(name: string): boolean {
+  if (hasKnownPassiveCredential(name) || /[\u0000-\u001f\u007f]/.test(name) ||
+    /\b(?:secret|token|password|credential|api[_ -]?key|private[_ -]?key|signed[_ -]?url|authorization|authentication)\s*[=:]/i.test(name) ||
+    /\bbearer\s+\S+|-----BEGIN\s|^\s*[\[{]|[A-Za-z0-9+/]{80,}={0,2}/i.test(name)) return false;
+  if (!isUnsafePassiveText(name)) return true; // Preserve safe historical labels.
+  return name.length <= 120 && name === name.trim() && name !== "." && name !== ".." &&
+    /^[^\\/:*?"<>|\u0000-\u001f\u007f]+$/.test(name);
+}
 export type HeadlessTrainingCompletionResult =
   | {readonly ok: true; readonly operation: "models.review-training"; readonly value: HeadlessTrainingCompletionValue}
   | {readonly ok: false; readonly code: typeof completionFailures[number]};
@@ -202,7 +212,7 @@ export function readHeadlessTrainingCompletionValue(raw: unknown): HeadlessTrain
         !integer(p.trainingInputCount, 1, 16) || !integer(p.validationInputCount, 0, 16) || p.trainingInputCount + p.validationInputCount > 16 ||
         !integer(p.inputBytes, 1, 256 * 1024 ** 2) || !integer(p.recipeBytes, 1, 512 * 1024) || p.inputBytes + p.recipeBytes > 256 * 1024 ** 2) return;
     const c = exact(value.candidate, ["requestedName", "artifactForm", "serializationFormat", "recordedSizeBytes"]);
-    if (typeof c.requestedName !== "string" || !c.requestedName.trim() || c.requestedName.length > 200 || isUnsafePassiveText(c.requestedName) ||
+    if (typeof c.requestedName !== "string" || !c.requestedName.trim() || c.requestedName.length > 200 || !isSafeTrainingDisplayLabel(c.requestedName) ||
         ![null, "adapter", "merged-model", "full-model", "checkpoint"].includes(c.artifactForm as never) ||
         ![null, "safetensors", "sharded-safetensors", "adapter-safetensors"].includes(c.serializationFormat as never) ||
         c.recordedSizeBytes !== null && !integer(c.recordedSizeBytes, 0, Number.MAX_SAFE_INTEGER)) return;
