@@ -34,3 +34,10 @@ cleanup. Live sets are bounded, with no per-frame history. Default callers retai
 their existing behavior and the training adapter's original two-method surface.
 Closed IO does not clear uncertain publication or byte accounting, prove Native
 custody/capacity, or authorize retry, delete, credit, Save or worker retirement.
+
+The bounded-local wrapper keeps failed publication separate from unknown IO.
+After fencing, a late original permission/write operation must actually return
+and its handles must close before IO reports closed. Invalid callback or Promise
+contracts stay unconfirmed. A corrupt or denied publication remains failed and
+retained even when its execution resources can retire through the original
+worker and receiver barriers. It cannot produce a finalized file inventory.

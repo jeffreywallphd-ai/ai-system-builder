@@ -210,7 +210,8 @@ test("local publication retains a late permission operation after its outward de
       await assert.rejects(preparation); assert.ok(retirement.inspect().pendingOperations > 0);
       assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
       permission.resolve(); await untilNative(() => retirement.inspect().pendingOperations === 0);
-      assert.equal(retirement.inspect().phase, "unconfirmed"); assert.deepEqual(await readdir(root), []);
+      assert.equal(retirement.inspect().phase, "closed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+      assert.deepEqual(await readdir(root), []);
       await assert.rejects(adapter.storage.preparePublication!(f.inventory(), f.actor));
     } finally {permission.resolve();}
   });
@@ -218,7 +219,9 @@ test("local publication retains a late permission operation after its outward de
 
 test("local publication stops on withdrawn authority and refuses duplicate acknowledged files", async () => {
   for (const mode of ["permission", "current", "duplicate", "corrupt"] as const) await fixture(async root => {
-    const f = localPublicationFixture(root), adapter = f.make(); await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    const f = localPublicationFixture(root), adapter = f.make();
+    const retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+    await adapter.storage.preparePublication!(f.inventory(), f.actor);
     if (mode === "permission") f.state.allowed = false;
     if (mode === "current") f.state.current = false;
     if (mode === "duplicate") assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, true);
@@ -226,6 +229,10 @@ test("local publication stops on withdrawn authority and refuses duplicate ackno
     assert.equal((await adapter.storage.publishResultFile(packet, f.actor)).ok, false);
     adapter.originalOwner.fencePublication(); assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
     assert.equal(adapter.storage.inspectPublication().phase, "unconfirmed");
+    assert.equal(retirement.inspect().phase, "closed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+    const declared = retirement.inspect().declaredPayloadBytes;
+    assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, false);
+    assert.equal(retirement.inspect().declaredPayloadBytes, declared);
   });
 });
 
@@ -241,12 +248,31 @@ test("local publication retains a pending original writer after its outward dead
       assert.equal((await write).ok, false); assert.ok(retirement.inspect().pendingOperations > 0);
       assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
       finish.resolve(); await untilNative(() => retirement.inspect().pendingOperations === 0);
-      assert.equal(retirement.inspect().phase, "unconfirmed");
+      assert.equal(retirement.inspect().phase, "closed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
       await assert.rejects(readFile(path.join(root, "organizations", f.actor.organizationId, key(0))));
       assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
     } finally {finish.resolve();}
   });
 });
+
+for (const mode of ["thenable", "own-then", "own-constructor", "current-promise"] as const) {
+  test(`local publication retains an unknown ${mode} contract after fencing`, async () => {
+    await fixture(async root => {
+      const f = localPublicationFixture(root); let hooks = 0;
+      const original = Promise.resolve();
+      if (mode === "own-then") Object.defineProperty(original, "then", {get() {hooks++; throw Error("must not execute");}});
+      if (mode === "own-constructor") Object.defineProperty(original, "constructor", {get() {hooks++; throw Error("must not execute");}});
+      if (mode === "current-promise") f.options.control.assertCurrent = (() => original) as unknown as () => void;
+      else f.options.control.assertAllowed = () => mode === "thenable" ? ({then() {hooks++;}} as unknown as Promise<void>) : original;
+      const adapter = f.make(), retirement = adapter.storage.captureIoRetirement!({publicationId}, f.actor);
+      await assert.rejects(adapter.storage.preparePublication!(f.inventory(), f.actor)); await tickNative();
+      assert.equal(retirement.inspect().phase, "unconfirmed"); assert.equal(retirement.inspect().publicationUnconfirmed, true);
+      assert.throws(() => adapter.originalOwner.inspectFinalizedFiles(f.actor));
+      await assert.rejects(adapter.storage.preparePublication!(f.inventory(), f.actor));
+      assert.equal(hooks, 0); assert.deepEqual(await readdir(root), []);
+    });
+  });
+}
 
 test("local publication refuses malformed configuration and manifests without invoking hooks", async () => {
   await fixture(async root => {

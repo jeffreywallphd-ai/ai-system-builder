@@ -1341,15 +1341,19 @@ test("local output retains a malformed native factory Promise and observes its s
   } finally {reject(Error("synthetic private factory failure"));}
 });
 
-test("local output preserves a corrupt publication without success, repeated transfer or cleanup credit", async t => {
+test("local output retires known-ended execution while retaining a corrupt publication without storage credit", async t => {
   const f = await boundedLocalFoundation(t, {output: true, corruptOutput: true});
   assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
   await waitForLocalOutput(() => f.resultOwner!.storage.inspectPublication().phase === "unconfirmed");
   f.succeed(); const record = await f.session.read(); assert.equal(record.status, "failed"); assert.equal(record.data, undefined);
-  assert.equal(await f.session.settle(), false); assert.equal(f.controller.stops, 1);
+  assert.equal(await f.session.settle(), true); assert.equal(f.controller.stops, 1);
   assert.throws(() => f.resultOwner!.originalOwner.inspectFinalizedFiles(localOutputContext()));
-  const count = f.calls.length; assert.equal(await f.session.settle(), false); assert.equal(f.calls.length, count);
+  const count = f.calls.length; assert.equal(await f.session.settle(), true); assert.equal(f.calls.length, count);
+  assert.equal(f.resultIo!.inspect().phase, "closed"); assert.equal(f.resultIo!.inspect().publicationUnconfirmed, true);
+  assert.equal((await f.session.read()).status, "failed"); assert.equal(f.calls.length, count);
   assert.ok(f.resultOwner!.storage.inspectPublication().declaredPayloadBytes > 0);
+  assert.deepEqual(await readFile(path.join(f.outputRoot, "organizations", "org", "workspaces", workspace,
+    "artifacts", "training-results", "c".repeat(32), "0")), f.outputValues[0]);
 });
 
 test("local output stop retains the original pending read until its own response returns", async t => {

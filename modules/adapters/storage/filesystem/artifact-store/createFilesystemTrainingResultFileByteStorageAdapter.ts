@@ -198,11 +198,16 @@ export function createFilesystemLocalTrainingResultPublication(options: {
   const io = base.captureIoRetirement!({publicationId}, scope);
   let inventory: ReturnType<typeof captureTrainingResultInventory> | undefined;
   let preparing = false, prepareAttempted = false, retirementCaptured = false, fenced = false, uncertain = false;
+  // Failed publication is permanent, but is not proof that original IO is
+  // still running. Only an invalid/unknown operation contract prevents known
+  // original returns and handle closes from establishing execution quiescence.
+  let unknownOperation = false;
   let deadline = 0, acknowledged = 0, attempted = 0, declared = 0;
   const pending = new Set<object>();
   const current = () => {
     need(!fenced && !uncertain && deadline > Date.now());
     const result: unknown = Reflect.apply(assertCurrent, settings.control, []);
+    if (result !== undefined) unknownOperation = true;
     if (types.isPromise(result) && !types.isProxy(result) && Object.getPrototypeOf(result) === Promise.prototype &&
         !Object.getOwnPropertyDescriptor(result, "constructor")) void (async () => {try {await result;} catch {}})();
     need(result === undefined);
@@ -213,11 +218,11 @@ export function createFilesystemLocalTrainingResultPublication(options: {
     let original: Promise<T>;
     try {original = action(); token.original = original; need(types.isPromise(original) && !types.isProxy(original) &&
       Object.getPrototypeOf(original) === Promise.prototype && !Object.getOwnPropertyDescriptor(original, "constructor"));}
-    catch {uncertain = true; throw new Error("Private training publication is unavailable.");}
+    catch {uncertain = true; unknownOperation = true; throw new Error("Private training publication is unavailable.");}
     const observation = (async () => {try {return {ok: true, value: await original};}
       catch {return {ok: false, value: undefined};} finally {pending.delete(token);}})();
     token.observation = observation;
-    if (Object.getOwnPropertyDescriptor(original, "then")) {uncertain = true; throw new Error("Private training publication is unavailable.");}
+    if (Object.getOwnPropertyDescriptor(original, "then")) {uncertain = true; unknownOperation = true; throw new Error("Private training publication is unavailable.");}
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const result = await Promise.race([observation, new Promise<never>((_, reject) => {
@@ -235,7 +240,7 @@ export function createFilesystemLocalTrainingResultPublication(options: {
   const fence = () => {fenced = true; io.fencePublication();};
   const inspect = () => {
     const state = io.inspect();
-    return Object.freeze({...state, phase: uncertain ? "unconfirmed" as const : preparing || pending.size ? "pending" as const : state.phase,
+    return Object.freeze({...state, phase: unknownOperation ? "unconfirmed" as const : preparing || pending.size ? "pending" as const : state.phase,
       pendingOperations: state.pendingOperations + pending.size, publicationUnconfirmed: state.publicationUnconfirmed || uncertain});
   };
   const storage: TrainingResultFileByteStoragePort = Object.freeze({
