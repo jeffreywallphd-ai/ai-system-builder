@@ -3,9 +3,9 @@
   "roadmap_id": "headless-skills-ui-takeover",
   "increment_id": "models-training-and-generation",
   "task_id": "evaluate-trained-model-candidate",
-  "owning_work_id": "headless-candidate-comparison-review",
-  "scope": "Recorded candidate-comparison review software through original Core/SQLite approved inputs, application cache, accepted task book and public completion decoder.",
-  "evidence_policy": "Feature matrix only. The exact current Work receipt and separate accepted review qualify this supporting software outcome; this file grants no task or parent pass.",
+  "owning_work_id": "headless-candidate-evaluation-task-qualification",
+  "scope": "Fixed-baseline candidate comparison/review software through original Core/SQLite approved inputs, application cache, original task book and public completion decoder, with separately qualified real Task72 candidate/hardware provenance.",
+  "evidence_policy": "The exact completed task-outcome Work receipt and separate review qualify evaluation/review software under the approved workflow-only testing policy. This feature matrix is declarative; no real model quality score or public host/parent pass.",
   "test_file": "modules/hosts/shared/composition/tests/headless-model-training-evaluation.unit.test.ts",
   "controlled_cases": 26,
   "preserved_failed_verification": {
@@ -23,8 +23,16 @@
     "Review never redispatches training or automatically saves the candidate."
   ],
   "limitations": [
-    "All comparison metrics are deterministic software fixtures. No model is loaded, evaluated or scored.",
-    "This support supplies no actual candidate-file, hardware, model-quality or public-host qualification and does not complete Task 73.",
-    "Task 72 real training and failed-run retirement remain pending. Source repair at commit 76a6311f does not grant a fresh lease or retry."
-  ]
+    "All comparison metrics are deterministic software fixtures. No real model is evaluated or scored. This is the approved evaluation-software acceptance policy, not a claim about learned model quality.",
+    "Real candidate, hardware and owned cleanup are supplied only by the separately accepted Task72 run at its exact Source. Controlled metrics must not be attributed to that real model.",
+    "Public Desktop/Managed host delivery and generation/import remain separate Task74/75 requirements and prevent parent qualification.",
+    "Historical failed runs and old unknown owners remain preserved. Review requires separate approval before saving a generated Model."
+  ],
+  "real_candidate_support": {
+    "work_id": "headless-bounded-training-cpu-verification-20261127",
+    "source_digest": "71bf4c75d9b832a41286ef4b199bd4667d823c3ca741a601cb532682929b14ff",
+    "receipt_digest": "018359d65848c0d8ed51cc5c2c5f287c1040d2739186c233e84d27e61275b1e3",
+    "review_digest": "447631d71ba6e3500de281f7bad666dc45c92f2a78a171617c8b0490b2dff735",
+    "facts": "Real CPU training,12verified files/5checkpoint files, original task/model/data/pipeline correlation and confirmed new cleanup. No comparison score was computed for this candidate."
+  }
 }

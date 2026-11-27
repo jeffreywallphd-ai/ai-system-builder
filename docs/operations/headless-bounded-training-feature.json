@@ -3,8 +3,8 @@
   "roadmap_id": "headless-skills-ui-takeover",
   "increment_id": "models-training-and-generation",
   "task_id": "run-approved-fine-tuning",
-  "owning_work_id": "headless-bounded-training-feature",
-  "evidence_policy": "Feature definition and failed history only. Qualification requires the exact current executed owning Work receipt and separate accepted review. Source repair supplies no actual training or past retirement pass.",
+  "owning_work_id": "headless-bounded-training-cpu-verification-20261127",
+  "evidence_policy": "The exact completed task-outcome Work, current executed receipt and separate accepted review qualified Task72 at the recorded Source. Historical failures remain unchanged. Public hosts and parent qualification remain separate.",
   "test_file": "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts",
   "check_id": "headless-training-bounded-feature",
   "input_profile": "existing-generated-tiny-qwen2-v1",
@@ -31,7 +31,7 @@
     "No protected storage service, physical disk quota, historical recovery, parent or whole-roadmap pass is supplied."
   ],
   "source_support_work_id": "headless-bounded-training-fixture-and-shutdown",
-  "status": "technical-check-pending",
+  "status": "qualified-at-recorded-source",
   "failed_attempts": [
     {
       "source_digest": "4f6032d221caee29bc8f73b7dd5768fae83ac569b738c2a49239e975c3eb2c2f",
@@ -242,6 +242,22 @@
     "prior_four_cleanup_checks_passed": true,
     "policy": "Private qualification child explicitly selects CPU through ACCELERATE_USE_CPU=true and CUDA/HIP masks=-1; product defaults and required CPU assertion remain.",
     "admission": "Only the remaining second candidate attempt; exact preceding version5result/source/cleanup required. Two further newly authorized attempts are not admitted here.",
-    "qualification": "pending-actual-current-verification"
+    "qualification": "passed-at-recorded-source"
+  },
+  "qualified_outcome": {
+    "source_digest": "71bf4c75d9b832a41286ef4b199bd4667d823c3ca741a601cb532682929b14ff",
+    "receipt_digest": "018359d65848c0d8ed51cc5c2c5f287c1040d2739186c233e84d27e61275b1e3",
+    "review_digest": "447631d71ba6e3500de281f7bad666dc45c92f2a78a171617c8b0490b2dff735",
+    "terminal_status": "succeeded",
+    "device": "cpu",
+    "verified_output_files": 12,
+    "checkpoint_files": 5,
+    "sampled_progress_observations": 25,
+    "worker_retirement_confirmed": true,
+    "io_closure_confirmed": true,
+    "application_cleanup_confirmed": true,
+    "new_root_removed": true,
+    "model_quality_tested": false,
+    "scope": "One original approved Core Tiny training task only. No automatic Save, public host or parent pass; old unconfirmed ownership stays retained."
   }
 }
