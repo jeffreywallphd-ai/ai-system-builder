@@ -30,8 +30,9 @@ export type OriginalTrainingRunOptions = Omit<Run, "retainTask">;
 export type OwnedHeadlessTrainingTaskReader = (query: {readonly scope: HeadlessOperationScope;
   readonly selection: HeadlessTrainingTaskReadRequest["input"]["selection"];
   readonly isCurrent: () => boolean}) => Promise<unknown>;
-/** Only the captured original completion cache; no task observation or fallback. */
-export type OwnedHeadlessTrainingCompletionReader = OwnedHeadlessTrainingTaskReader;
+/** Cache-only unless current-files is explicit; no task observation or fallback. */
+export type OwnedHeadlessTrainingCompletionReader = (query: Parameters<OwnedHeadlessTrainingTaskReader>[0] &
+  {readonly mode?: "current-files"}) => Promise<unknown>;
 export interface OriginalTrainingTaskQuery {
   readonly documents: StructuredDocumentStore;
   readonly hostIncarnationId: string;
@@ -340,7 +341,8 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const same = () => current() && slots.get(originalKey) === slot && slot.task === task;
       const fresh = async () => {const value = await admit(); return !!value && same() && isDeepStrictEqual(value, admitted);};
       const caller: ApprovedLocalTrainingControl = Object.freeze({isCurrent: same, stillAllowed: fresh});
-      if (action === "review-candidate") {
+      const currentMode = action === "read-completion" && "mode" in parsed.request.input && parsed.request.input.mode === "current-files";
+      if (action === "review-candidate" || currentMode) {
         if (!task.reviewCandidate || slot.candidateRead) return unavailable;
         const reading: NonNullable<Slot["candidateRead"]> = {pending: true, unknown: false}; slot.candidateRead = reading;
         let operation: Promise<ApprovedLocalTrainingCandidateReview>;
@@ -359,6 +361,16 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
         if (!await fresh() || !same()) return forbidden;
         const value = currentCandidate(owned, task.requestId, originalScope, host, admitted.proposalDigest, slot);
         if (!await fresh() || !same()) return forbidden;
+        if (currentMode) {
+          if (value.kind !== "ready") return {ok: false, code: "headless.source-not-ready"};
+          const {kind: _kind, requestId: _requestId, ...history} = value.history;
+          const files = value.retainedFiles;
+          return readHeadlessTrainingCompletionResult({ok: true, operation: "models.review-training",
+            value: {...history, taskId: task.requestId, plan: admitted.plan, currentCandidate: {
+              verification: files.verification, candidateDigest: value.candidateDigest, manifestDigest: files.manifestDigest,
+              fileCount: files.files.length, candidateFileCount: files.files.filter(file => file.role === "candidate").length,
+              totalBytes: files.totalBytes, execution: value.execution ? {state: "recorded", report: value.execution} : {state: "not-recorded"}}}}, parsed.request.input);
+        }
         return {ok: true, value};
       }
       if (action === "review" || action === "read-completion") {

@@ -488,6 +488,27 @@ test("withholds prepared session identifiers if conversation permission is lost 
     forbidden);
 });
 
+test("Desktop training review forwards only explicit current mode and rechecks read permission", async () => {
+  const taskId = "3bed6953-7df5-4e0b-a0db-2b4a2a02ac41";
+  const current: DesktopHeadlessReadGrant = {...grant, registeredClientId: taskId, planReview: true,
+    operations: [...new Set([...grant.operations, "models.review-training" as const])], isCurrent: () => true, isReadCurrent: () => true};
+  let allowed = true, revoke = false, expected: "current-files" | undefined, calls = 0;
+  const read = composeDesktopHeadlessReads({hostIncarnationId, identity: grant,
+    workspaceRepository: {async readWorkspace() {return {workspaceId, organizationId, status: "active", displayName: "Synthetic", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {if (requiredScopes.includes("model:read") && !allowed) throw Error("Synthetic denial.");}},
+    getUseCases() {assert.fail("No system or runtime factory.");}, isOpen: () => true,
+    async readTrainingReview(query) {
+      calls++; assert.equal(query.mode, expected); assert.equal(Object.prototype.hasOwnProperty.call(query, "mode"), expected !== undefined);
+      assert.equal(query.scope.workspaceId, workspaceId); assert.equal(query.isCurrent(), true);
+      if (revoke) allowed = false;
+      return {ok: false, code: "headless.source-not-ready"};
+    }});
+  const query = () => request("models.review-training", {hostIncarnationId, workspaceId,
+    selection: {kind: "task", taskId}, ...(expected ? {mode: expected} : {})});
+  for (expected of [undefined, "current-files"] as const) assert.deepEqual(await read(query(), async () => current), {ok: false, code: "headless.source-not-ready"});
+  revoke = true; assert.deepEqual(await read(query(), async () => current), forbidden); assert.equal(calls, 3);
+});
+
 test("Desktop query task publication rechecks ModelRead after the task result returns", async () => {
   let modelAllowed = true, modelChecks = 0, opens = 0;
   const taskId = "3bed6953-7df5-4e0b-a0db-2b4a2a02ac41";

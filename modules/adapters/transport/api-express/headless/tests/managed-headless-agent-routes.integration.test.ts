@@ -204,6 +204,8 @@ test("managed plan routes admit only exact proposals, status and an approved ste
         if (trainingReviewMode === "denied") return {ok: false, code: "headless.forbidden"};
         const value = recordedTrainingHistory(workspaceId, acceptedDatasetTaskId, {fingerprint: acceptedModelPlanFingerprint, step: 1});
         return {ok: true, operation: trainingReviewMode === "tag" ? "models.task" : request.operation, value: {...value,
+          ...((request.input.mode === "current-files" && trainingReviewMode !== "downgrade") || trainingReviewMode === "unsolicited"
+            ? {currentCandidate: {...currentTrainingSummary(), ...(trainingReviewMode === "private-current" ? {files: ["PRIVATE"]} : {})}} : {}),
           ...(trainingReviewMode === "workspace" ? {workspaceId: "workspace.foreign"} : {}),
           ...(trainingReviewMode === "task" ? {taskId: randomUUID()} : {}),
           ...(trainingReviewMode === "plan" ? {plan: {...value.plan, step: 2}} : {}),
@@ -494,7 +496,19 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     for (const mode of ["denied", "withdraw"]) {
       trainingReviewMode = mode; assert.equal((await request(trainingReviewRequest, "fixture-plan", readRouteForReview)).status, 403); current = true;
     }
+    trainingReviewMode = "valid";
+    const currentTrainingRequest = {...trainingReviewRequest, input: {...trainingReviewRequest.input, mode: "current-files"}};
+    const currentTraining = await request(currentTrainingRequest, "fixture-plan", readRouteForReview);
+    assert.equal(currentTraining.status, 200); assert.deepEqual(currentTraining.body.value.currentCandidate, currentTrainingSummary());
+    for (const mode of ["downgrade", "private-current"]) {
+      trainingReviewMode = mode;
+      const result = await request(currentTrainingRequest, "fixture-plan", readRouteForReview);
+      assert.equal(result.status, 503); assert.deepEqual(result.body, {ok: false, code: "headless.unavailable"});
+    }
+    trainingReviewMode = "unsolicited";
+    assert.equal((await request(trainingReviewRequest, "fixture-plan", readRouteForReview)).status, 503);
     const beforeBadTrainingReview = trainingReviewCalls;
+    assert.equal((await request({...currentTrainingRequest, input: {...currentTrainingRequest.input, mode: "cached"}}, "fixture-plan", readRouteForReview)).status, 400);
     assert.equal((await request({...trainingReviewRequest, input: {...trainingReviewRequest.input,
       selection: {kind: "task", taskId: acceptedDatasetTaskId, path: "PRIVATE"}}}, "fixture-plan", readRouteForReview)).status, 400);
     assert.equal(trainingReviewCalls, beforeBadTrainingReview); trainingReviewMode = "valid";
@@ -978,6 +992,10 @@ test("exact managed requests respect authentication, framing, authority lifetime
   }
 });
 
+function currentTrainingSummary() {
+  return {verification: "sha256-current-local-v1", candidateDigest: "sha256:" + "d".repeat(64), manifestDigest: "sha256:" + "e".repeat(64),
+    fileCount: 3, candidateFileCount: 3, totalBytes: 9, execution: {state: "not-recorded"}} as const;
+}
 function recordedTrainingHistory(workspace: unknown, taskId: string, plan: {fingerprint: string; step: number}) {
   return {workspaceId: workspace, taskId, plan: {...plan}, provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-21T00:00:00.000Z",
     datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64),

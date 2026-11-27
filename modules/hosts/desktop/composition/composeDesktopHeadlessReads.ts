@@ -291,7 +291,8 @@ export function composeDesktopHeadlessReads(dependencies: {
           if (!reader || !await allowed()) return forbidden;
           const result = decode(copyHeadlessModelPlanData(await reader({
             scope: Object.freeze({...identity, workspaceId, registeredClientId: clientId}),
-            selection: input.selection, isCurrent: trainingCurrent})), input);
+            selection: input.selection, isCurrent: trainingCurrent,
+            ...(operation === "models.review-training" && "mode" in input && input.mode === "current-files" ? {mode: "current-files" as const} : {})})), input);
           return await allowed() ? result : forbidden;
         }
         case "models.review-download": {

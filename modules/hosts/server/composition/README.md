@@ -1,5 +1,12 @@
 # Server host composition
 
+The configured `models.review-training` read forwards explicit `current-files`
+mode to the original candidate owner. Omitted mode remains cache-only. Preserve
+the captured registration/host lifetime, fresh ModelRead and original-client
+workspace lineage before and after IO. Independently correlate the finite
+reply with its mode; missing current support cannot use cache or runtime
+fallback. No private inventory locators, Save or readiness grant are returned.
+
 The private `readTrainingCompletion` entry calls only the original task book's
 cached review. Capture the original registration, host/document lifetime and
 current read policy exactly as for progress, and recheck them before disclosure.

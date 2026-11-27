@@ -239,6 +239,31 @@ test("managed discovery and saved reads remain scoped to the same host, principa
   assert.deepEqual(await pending, {ok: false, code: "headless.forbidden"});
 });
 
+test("Managed training review forwards only explicit current mode and rechecks read permission", async () => {
+  const organizationId = createOrganizationId("org.synthetic"), workspaceId = createWorkspaceId("workspace.synthetic"), principalId = "principal.synthetic";
+  const hostIncarnationId = "a1242a53-b265-4338-a2e2-bc24b65cd381" as HeadlessHostIncarnationId, taskId = randomUUID();
+  const at = "2026-11-18T00:00:00.000Z";
+  let allowed = true, revoke = false, expected: "current-files" | undefined, calls = 0;
+  const read = composeManagedAgentReads({hostIncarnationId, contexts: {getCurrentOrganizationContext: () => ({organizationId, principalId})},
+    workspaces: {async readWorkspace() {return {workspaceId, organizationId, status: "active", displayName: "Synthetic", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {if (requiredScopes.includes("model:read") && !allowed) throw Error("Synthetic denial.");}},
+    systems: {listTemplates() {assert.fail("No system factory.");}, read() {assert.fail("No system factory.");}},
+    async readTrainingReview(query) {
+      calls++; assert.equal(query.mode, expected); assert.equal(Object.prototype.hasOwnProperty.call(query, "mode"), expected !== undefined);
+      assert.equal(query.scope.workspaceId, workspaceId); assert.equal(query.isCurrent(), true);
+      if (revoke) allowed = false;
+      return {ok: false, code: "headless.source-not-ready"};
+    }});
+  const actor = {organizationId, principalId, registeredClientId: taskId, purpose: "plan-review" as const, isCurrent: () => true};
+  for (expected of [undefined, "current-files"] as const) assert.deepEqual(await read({version: HEADLESS_CONTRACT_VERSION,
+    operation: "models.review-training", input: {hostIncarnationId, workspaceId, selection: {kind: "task", taskId}, ...(expected ? {mode: expected} : {})}}, actor, () => true),
+    {ok: false, code: "headless.source-not-ready"});
+  revoke = true;
+  assert.deepEqual(await read({version: HEADLESS_CONTRACT_VERSION, operation: "models.review-training",
+    input: {hostIncarnationId, workspaceId, selection: {kind: "task", taskId}, mode: "current-files"}}, actor, () => true),
+    {ok: false, code: "headless.forbidden"}); assert.equal(calls, 3);
+});
+
 test("Managed query task publication rechecks ModelRead after the task result returns", async () => {
   let modelAllowed = true, modelChecks = 0, opens = 0;
   const organizationId = createOrganizationId("org.synthetic"), workspaceId = createWorkspaceId("workspace.synthetic"), principalId = "principal.synthetic";

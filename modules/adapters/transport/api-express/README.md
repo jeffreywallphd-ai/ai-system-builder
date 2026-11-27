@@ -1,5 +1,12 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Configured training review accepts explicit `current-files` mode under the
+existing authenticated read route and original client/workspace policy. Keep
+an independent copied request proof and correlate the returned mode and finite
+summary. Reject cached downgrade, unsolicited current data and private file
+locators. Default review remains cache-only; no new route, Save or runtime
+authority is introduced.
+
 The managed headless agent adapter declares exact POST read and author routes
 under the existing organization API policy. The host must provide active
 handlers before the routes accept an agent. A distinct verified client,

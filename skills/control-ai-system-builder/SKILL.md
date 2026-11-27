@@ -30,7 +30,10 @@ execution and recovery. Open it before preparing a plan.
 
 For saved model selection or review of a completed download, read
 [Recorded model metadata](references/models.md). Completion review is a read;
-it grants no current file, registry-save or runtime authority.
+omitted mode reads cached history. The guide's explicit `current-files` mode can
+observe existing settled training files through their original owner. Neither
+mode grants registry-save, runtime, readiness or quality authority. Install the
+guide and generated tool catalog from the same revision before using that mode.
 Use `aisb_model_metadata` only on a plan-review connection that advertises the
 matching read operation. Inventory and exact-record reads start no model or
 download and prove no readiness, license, supply verification or output quality.

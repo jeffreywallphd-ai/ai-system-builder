@@ -4,7 +4,8 @@ import {isWorkspaceId, type WorkspaceId} from "../workspace";
 import {normalizeDatasetId, normalizeDatasetVersionId, normalizeDatasetVersionDigest} from "../dataset";
 import {DATASET_PREPARATION_TASK_TYPES} from "../runtime";
 import {isHeadlessModelRecordId, isHeadlessModelTimestamp} from "./headless-model-metadata";
-import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, type ModelTrainingMethod, type ModelTrainingStatus} from "../model";
+import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, readModelTrainingExecutionHistory,
+  type ModelTrainingExecutionHistory, type ModelTrainingMethod, type ModelTrainingStatus} from "../model";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 import {readHeadlessModelTaskSelection, type HeadlessModelTaskSelection} from "./headless-model-task";
 
@@ -121,12 +122,21 @@ export function readHeadlessTrainingTaskValue(raw: unknown, cancellation = false
   } catch {return;}
 }
 
-/** Historical training completion metadata, never current file or execution authority.
+/** Cached history by default; current file observation requires explicit mode.
  * This codec does not advertise or enable a transport operation. */
 export interface HeadlessTrainingCompletionRequest {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
   readonly operation: "models.review-training";
-  readonly input: HeadlessTrainingTaskReadRequest["input"];
+  readonly input: HeadlessTrainingTaskReadRequest["input"] & {readonly mode?: "current-files"};
+}
+export interface HeadlessTrainingCurrentCandidateSummary {
+  readonly verification: "sha256-current-local-v1";
+  readonly candidateDigest: string;
+  readonly manifestDigest: string;
+  readonly fileCount: number;
+  readonly candidateFileCount: number;
+  readonly totalBytes: number;
+  readonly execution: {readonly state: "not-recorded"} | {readonly state: "recorded"; readonly report: ModelTrainingExecutionHistory};
 }
 export interface HeadlessTrainingCompletionValue {
   readonly workspaceId: WorkspaceId;
@@ -150,6 +160,8 @@ export interface HeadlessTrainingCompletionValue {
     readonly interpretation: "measurement-only"}};
   readonly verification: {readonly inputs: "recorded-not-rechecked"; readonly retainedFiles: "not-checked";
     readonly runtimeReadiness: "not-checked"; readonly hardware: "not-recorded"; readonly outputQuality: "not-evaluated"};
+  /** Current original-owner observation only; no locators or Save authority. */
+  readonly currentCandidate?: HeadlessTrainingCurrentCandidateSummary;
   readonly registration: "requires-separate-approval";
 }
 const completionFailures = [...readFailures, "headless.source-not-ready"] as const;
@@ -160,14 +172,19 @@ export function readHeadlessTrainingCompletionRequest(raw: unknown, host: Headle
   try {
     const outer = exact(copyBoundedPassiveData(raw), ["version", "operation", "input"]);
     if (outer.operation !== "models.review-training") return invalid;
-    const parsed = readHeadlessTrainingTaskReadRequest({...outer, operation: "models.training-task"}, host);
+    const input = readStrictPassiveRecord(outer.input, ["hostIncarnationId", "workspaceId", "selection", "mode"]);
+    if (input.mode !== undefined && input.mode !== "current-files" || Object.keys(input).length !== (input.mode === undefined ? 3 : 4)) return invalid;
+    const {mode, ...target} = input;
+    const parsed = readHeadlessTrainingTaskReadRequest({...outer, operation: "models.training-task", input: target}, host);
     if (!parsed.ok) return parsed;
-    return {ok: true, request: Object.freeze({...parsed.request, operation: "models.review-training" as const})} as const;
+    return {ok: true, request: Object.freeze({...parsed.request, operation: "models.review-training" as const,
+      input: Object.freeze({...parsed.request.input, ...(mode === "current-files" ? {mode: "current-files" as const} : {})})})} as const;
   } catch {return invalid;}
 }
 export function readHeadlessTrainingCompletionValue(raw: unknown): HeadlessTrainingCompletionValue | undefined {
   try {
-    const value = exact(copyBoundedPassiveData(raw), ["workspaceId", "taskId", "plan", "provenance", "candidate", "comparison", "verification", "registration"]);
+    const value = readStrictPassiveRecord(copyBoundedPassiveData(raw), ["workspaceId", "taskId", "plan", "provenance", "candidate", "comparison", "verification", "registration", "currentCandidate"]);
+    if (Object.keys(value).length !== (value.currentCandidate === undefined ? 8 : 9)) return;
     const plan = exact(value.plan, ["fingerprint", "step"]);
     if (!isWorkspaceId(value.workspaceId) || !isHeadlessHostIncarnationId(value.taskId) ||
         !readHeadlessModelTaskSelection({kind: "plan-step", ...plan}) || value.registration !== "requires-separate-approval") return;
@@ -201,7 +218,19 @@ export function readHeadlessTrainingCompletionValue(raw: unknown): HeadlessTrain
     const v = exact(value.verification, ["inputs", "retainedFiles", "runtimeReadiness", "hardware", "outputQuality"]);
     if (v.inputs !== "recorded-not-rechecked" || v.retainedFiles !== "not-checked" || v.runtimeReadiness !== "not-checked" ||
         v.hardware !== "not-recorded" || v.outputQuality !== "not-evaluated") return;
-    return value as unknown as HeadlessTrainingCompletionValue;
+    if (value.currentCandidate === undefined) return value as unknown as HeadlessTrainingCompletionValue;
+    const current = exact(value.currentCandidate, ["verification", "candidateDigest", "manifestDigest", "fileCount", "candidateFileCount", "totalBytes", "execution"]);
+    if (current.verification !== "sha256-current-local-v1" || !digest(current.candidateDigest) || !digest(current.manifestDigest) || !integer(current.fileCount, 3, 256) ||
+        !integer(current.candidateFileCount, 3, current.fileCount as number) || !integer(current.totalBytes, current.fileCount as number, Number.MAX_SAFE_INTEGER)) return;
+    const observation = readStrictPassiveRecord(current.execution, ["state", "report"]);
+    let execution: HeadlessTrainingCurrentCandidateSummary["execution"];
+    if (observation.state === "not-recorded" && Object.keys(observation).length === 1) execution = {state: "not-recorded"};
+    else {
+      if (observation.state !== "recorded" || Object.keys(observation).length !== 2) return;
+      const report = readModelTrainingExecutionHistory(observation.report); if (!report) return;
+      execution = {state: "recorded", report};
+    }
+    return {...value, currentCandidate: {...current, execution}} as unknown as HeadlessTrainingCompletionValue;
   } catch {return;}
 }
 /** Repeat correlation independently at each broker boundary; copy before awaits. */
@@ -215,7 +244,8 @@ export function readHeadlessTrainingCompletionResult(raw: unknown,
       ? {ok: false, code: outer.code as typeof completionFailures[number]} : unavailable;
     if (outer.ok !== true || outer.operation !== "models.review-training" || Object.keys(outer).length !== 3) return unavailable;
     const value = readHeadlessTrainingCompletionValue(outer.value), selection = target.request.input.selection;
-    if (!value || value.workspaceId !== target.request.input.workspaceId || (selection.kind === "task" ? value.taskId !== selection.taskId
+    if (!value || Boolean(value.currentCandidate) !== (target.request.input.mode === "current-files") ||
+      value.workspaceId !== target.request.input.workspaceId || (selection.kind === "task" ? value.taskId !== selection.taskId
       : value.plan.fingerprint !== selection.fingerprint || value.plan.step !== selection.step)) return unavailable;
     return {ok: true, operation: "models.review-training", value};
   } catch {return unavailable;}

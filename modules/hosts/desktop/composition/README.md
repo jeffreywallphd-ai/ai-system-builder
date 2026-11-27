@@ -1,5 +1,12 @@
 # Desktop host composition
 
+The configured `models.review-training` read keeps omitted mode cache-only.
+Explicit `current-files` mode forwards to the original settled candidate owner,
+with the same captured grant lifetime and fresh read permission. Decode and
+correlate the copied reply against the original mode before disclosure. A
+missing current capability never falls back to cache, runtime or a new factory.
+Only a finite path-free summary crosses this boundary; Save remains separate.
+
 The private `readTrainingCompletion` entry reuses the original task book's
 settled-cache review. Use the same captured read lifetime and fresh original
 grant checks as progress reads, then recheck policy before returning data.

@@ -1439,6 +1439,10 @@
                         "additionalProperties": false
                       }
                     ]
+                  },
+                  "mode": {
+                    "type": "string",
+                    "const": "current-files"
                   }
                 },
                 "required": [

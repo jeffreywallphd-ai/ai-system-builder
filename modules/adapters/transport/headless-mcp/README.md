@@ -1,9 +1,18 @@
 # Local desktop tools over MCP
 
-`aisb_model_workflow` keeps the existing31-tool catalog. Its strict selector is
-`source`, `task` or `plan-step`. Source inspection maps to
+The existing `completed-training` selector optionally accepts
+`mode: current-files`. Omitted mode reads only cached history. Explicit mode
+uses the original settled candidate reader and returns verified digests,
+bounded counts/bytes and optional reported runtime facts, with no cache
+fallback. HTTP and MCP repeat request/reply correlation. The selector adds no
+tool, public root, model execution, private locator, readiness, quality or Save
+authority. Update the portable guide and generated catalog together.
+
+`aisb_model_workflow` keeps the existing31-tool catalog. Its strict selectors
+cover `source`, download `task`/`plan-step`, `completed-download`, `training-task`
+and `completed-training`. Source inspection maps to
 `models.preview-source` and may contact Hugging Face using the existing guarded
-credential path. The other selectors map to `models.task`: finite original
+credential path. Download `task`/`plan-step` map to `models.task`: finite original
 accepted task state and percentage, without discovery, private messages or new
 work. Check running host operations first; absent retained-owner bindings are
 not advertised. The SDK independently validates copied request/reply identity.

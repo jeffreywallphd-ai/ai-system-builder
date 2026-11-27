@@ -584,8 +584,9 @@ async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite"
   const completion = (selection?: Parameters<typeof query>[1]) => desktop
     ? desktop.owner.readTrainingCompletion!(query("read", selection), f.grant, async () => f.grant)
     : managed!.owner.readTrainingCompletion!(query("read", selection), f.registration, current);
-  const review = (selection?: Parameters<typeof query>[1]) => {
-    const request = {...query("read", selection), operation: "models.review-training"};
+  const review = (selection?: Parameters<typeof query>[1], mode?: "current-files") => {
+    const target = query("read", selection);
+    const request = {...target, operation: "models.review-training", input: {...target.input, ...(mode ? {mode} : {})}};
     return desktop ? desktop.owner.readTrainingReview!(request, f.grant, async () => f.grant)
       : managed!.owner.readTrainingReview!(request, f.registration, current);
   };
@@ -658,6 +659,51 @@ const currentExecution = () => ({schema: "model-training-execution-v1", runId: "
   startedAt: "2026-11-27T00:00:00.000Z", completedAt: "2026-11-27T00:00:01.000Z", durationMs: 950,
   hardware: {devices: ["cpu"], precisions: ["float32"], logicalCpuCount: 4,
     pythonVersion: "3.12.8", pytorchVersion: "2.7.0", transformersVersion: "4.52.0"}, interpretation: "reported-runtime-facts"});
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: explicit current broker review keeps cache and private file observations separate`, async t => {
+    const f = await executableTrainingHost(t, storage, host); f.execution.candidateEnabled = true; f.execution.completionEnabled = true;
+    f.execution.transformCandidate = value => resealControlledCandidate({...value as object, execution: currentExecution()}, f);
+    assert.ok((await f.run()).result.ok);
+    assert.deepEqual(await f.review(undefined, "current-files"), {ok: false, code: "headless.source-not-ready"});
+    assert.equal(f.execution.completionReads, 0);
+    f.execution.currentState = "succeeded";
+    const cached = await f.review(); assert.ok(cached.ok); const cacheReads = f.execution.completionReads;
+    const current = await f.review(undefined, "current-files"); assert.ok(current.ok && current.operation === "models.review-training");
+    if (!current.ok || current.operation !== "models.review-training") throw Error("Missing current broker result.");
+    assert.equal(current.value.currentCandidate?.verification, "sha256-current-local-v1");
+    assert.equal(current.value.currentCandidate?.fileCount, 3); assert.equal(current.value.currentCandidate?.candidateFileCount, 3);
+    assert.equal(current.value.currentCandidate?.totalBytes, 9);
+    assert.deepEqual(current.value.currentCandidate?.execution, {state: "recorded", report: currentExecution()});
+    assert.equal(current.value.verification.retainedFiles, "not-checked", "Historical fields retain their scope.");
+    assert.equal(current.value.registration, "requires-separate-approval");
+    assert.equal(f.execution.completionReads, cacheReads); assert.equal(f.execution.reads, 0); assert.equal(f.execution.starts, 1);
+    assert.doesNotMatch(JSON.stringify(current), /publicationId|workspaces\/.*artifacts|localPath|outputDirectory|expectedSha256|privatePath/);
+    assert.deepEqual(await f.review({kind: "task", taskId: f.execution.admission!.requestId}, "current-files"), current);
+  });
+}
+
+test("current broker review has no cache fallback when the original candidate capability is missing", async t => {
+  const f = await executableTrainingHost(t, "Core", "Managed"); f.execution.completionEnabled = true;
+  assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+  assert.ok((await f.review()).ok); const count = f.execution.completionReads;
+  assert.deepEqual(await f.review(undefined, "current-files"), {ok: false, code: "headless.unavailable"});
+  assert.equal(f.execution.completionReads, count); assert.equal(f.execution.candidateReads, 0); assert.equal(f.execution.reads, 0);
+});
+
+test("current broker preserves missing execution facts and stored comparison without asserting quality", async t => {
+  const f = await executableTrainingHost(t, "Core", "Desktop"); f.execution.candidateEnabled = true;
+  const report = {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32, sampleCount: 2,
+    baselineLoss: 1.25, trainedLoss: 1.5, lossDelta: 0.25, interpretation: "measurement-only"};
+  f.execution.transformCandidate = value => {const raw = value as any; raw.history.comparison = {state: "recorded", report}; return resealControlledCandidate(raw, f);};
+  assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+  const result = await f.review(undefined, "current-files"); assert.ok(result.ok && result.operation === "models.review-training");
+  if (result.ok && result.operation === "models.review-training") {
+    assert.deepEqual(result.value.currentCandidate?.execution, {state: "not-recorded"});
+    assert.deepEqual(result.value.comparison, {state: "recorded", report}); assert.equal(result.value.verification.outputQuality, "not-evaluated");
+  }
+  assert.equal(f.execution.reads, 0);
+});
 
 for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
   test(`${storage}/${host}: current candidate independently binds the optional execution report`, async t => {

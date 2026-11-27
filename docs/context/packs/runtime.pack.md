@@ -67,7 +67,7 @@
   to explicit source no-candidate results; load, decoder, output, inference,
   dependency, and unexpected runtime failures stop with sanitized reason codes. Exact download pins require worker support and confirmation. Private Model source inspection is bounded provider metadata, not byte, license or runtime qualification. Public preview uses current-policy controls and a4second profile within existing5second transports; no download or runtime grant follows.
 - Desktop IPC and authenticated server HTTP expose the same asynchronous start/read/cancel lifecycle. Workspace ownership is recorded at start and every status read or cancellation must fail closed for another workspace.
-- Model training emits progress for every completed microbatch. Private current review binds optional execution facts to the original pipeline and candidate digest; cached history is unchanged. Runtime success
+- Model training emits progress for every completed microbatch. Explicit models.review-training mode current-files binds verified file summaries and optional execution facts to the original owner; omitted mode remains cache-only. Reports grant no Save, readiness or quality authority. Runtime success
   remains staged until an explicit workspace-scoped save or discard action;
   pending-review responses are path-free, save performs registration/storage or
   publication once, and discard removes staged runtime output. Desktop offers

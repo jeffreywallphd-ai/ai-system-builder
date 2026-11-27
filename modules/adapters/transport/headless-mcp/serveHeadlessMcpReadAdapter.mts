@@ -229,7 +229,7 @@ function addSystemBuilderTools(server: McpServer) {
       return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
     });
     server.registerTool("aisb_model_workflow", {
-      description: "Inspect a Hugging Face source, poll original download/training progress, or review cached completion history by exact task or plan-step. For progress use training-task (models.training-task); for recorded training results use completed-training (models.review-training). Require the corresponding advertised operation and original plan-review client/workspace. Training-result review reads only the original settled cache: no task polling, runtime/files or fallback. It returns historical Model/Dataset/recipe/candidate references and optional previously recorded finite comparison marked measurement-only; it performs no scoring or quality test. Files/readiness/hardware/quality remain unchecked or unrecorded; saving needs separate approval. Polling sends no unsolicited messages to an idle model. Source inspection can contact Hugging Face with the configured credential; completed-download returns historical source metadata. No prompts, samples, paths, raw errors/logs, quality acceptance, new model/download, cancellation or registry save. Unknown grants no retry. Saved inventory stays in aisb_model_metadata.",
+      description: "Inspect a Hugging Face source, poll original download/training progress, or review cached completion history by exact task or plan-step. For progress use training-task (models.training-task); for recorded training results use completed-training (models.review-training). Require the corresponding advertised operation and original plan-review client/workspace. Omitted training-review mode reads only the original settled cache. Explicit completed-training mode current-files observes existing settled candidate files through their original owner, with no cache fallback. It returns verified digests/counts/bytes and optional bounded reported execution facts; no private inventory locators. Neither mode polls/settles/starts training, evaluates a model or grants Save. It returns historical Model/Dataset/recipe/candidate references and optional previously recorded finite comparison marked measurement-only; it performs no scoring or quality test. Cached history keeps files/readiness/hardware/quality unchecked or unrecorded; current observation still grants no readiness, resource or quality proof. Saving needs separate approval. Polling sends no unsolicited messages to an idle model. Source inspection can contact Hugging Face with the configured credential; completed-download returns historical source metadata. No prompts, samples, paths, raw errors/logs, quality acceptance, new model/download, cancellation or registry save. Unknown grants no retry. Saved inventory stays in aisb_model_metadata.",
       inputSchema: z.strictObject({...workspaceTarget, selection: z.discriminatedUnion("kind", [
         z.strictObject({kind: z.literal("source"), modelId: z.string().min(3).max(193), revision: z.string().regex(/^[a-f0-9]{40}$/).optional()}),
         z.strictObject({kind: z.literal("task"), taskId: hostIncarnationId}),
@@ -237,13 +237,13 @@ function addSystemBuilderTools(server: McpServer) {
           step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS)}),
         z.strictObject({kind: z.literal("completed-download"), task: ownedModelSelection}),
         z.strictObject({kind: z.literal("training-task"), task: ownedModelSelection}),
-        z.strictObject({kind: z.literal("completed-training"), task: ownedModelSelection}),
+        z.strictObject({kind: z.literal("completed-training"), task: ownedModelSelection, mode: z.literal("current-files").optional()}),
       ])}),
       annotations: {...queryHints, openWorldHint: true},
     }, ({selection, ...target}, context) => {
       if (selection.kind === "completed-training") {
         const parsed = headless.readHeadlessTrainingCompletionRequest({version, operation: "models.review-training",
-          input: {...target, selection: selection.task}}, target.hostIncarnationId as HeadlessHostIncarnationId);
+          input: {...target, selection: selection.task, ...(selection.mode ? {mode: selection.mode} : {})}}, target.hostIncarnationId as HeadlessHostIncarnationId);
         return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
       }
       if (selection.kind === "training-task") {

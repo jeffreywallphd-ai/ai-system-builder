@@ -949,6 +949,78 @@
         "These are reviewed component results, not task, increment, actual training, current file/readiness, separately approved Save or host qualification.",
         "ADR-0049 trusts the signed-in OS user and installed dependencies. Hostile same-account isolation, protected shared quotas and protected restart remain pending in the separate storage-service roadmap. Accepted model-quality checks are not repeated."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-current-training-candidate-host-review",
+      "work_criteria": [
+        "original-current-candidate-host-review",
+        "current-reader-lifetime-and-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "259bad98b6cc6edb748ac03c9d6cf0f1a51588f74e72a04a2f8ea97f25351d62",
+      "review_digest": "981b2605677b40ccbc6ed23389eec5bcd8aa02705ba8a86e129777ef26f3427e",
+      "scope": "Original private host review binds current files and complete accepted history to original task, actor and current permission.",
+      "limitations": [
+        "This records a reviewed code component. It does not complete Task70, Increment7 or the roadmap, and does not prove a real app run.",
+        "Fresh full-task qualification is recorded separately. Model accuracy checks were not repeated. Saving a trained model needs separate app-user approval; physical quotas and protected storage are outside this evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-execution-history-contract",
+      "work_criteria": [
+        "bounded-execution-history-contract",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d9604da34ffa3672955da8d69efc54b32fc8604dae344beed9b64da2699bde79",
+      "review_digest": "c5952145b2ab84b4ea163c825a52b1bae528e9e6ea04749585fca570b3c70f7f",
+      "scope": "The closed Model execution report bounds timing, device/precision and software facts; reports are descriptive data.",
+      "limitations": [
+        "This records a reviewed code component. It does not complete Task70, Increment7 or the roadmap, and does not prove a real app run.",
+        "Fresh full-task qualification is recorded separately. Model accuracy checks were not repeated. Saving a trained model needs separate app-user approval; physical quotas and protected storage are outside this evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-execution-history-verification",
+      "work_criteria": [
+        "actual-start-and-end-history",
+        "bounded-runtime-facts",
+        "bounded-exact-worker-verification",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "1121a90a643baa4cb380efb0224b3ab1e5bc578ccb97c88df0d33a4a54ae54fe",
+      "review_digest": "8af9019a46d14eaad619709b58f0d80837f171e26b1f7609accb27fb07c23172",
+      "scope": "The existing private-local pipeline records truthful bounded execution history; focused worker and routing checks preserve application and Native limits.",
+      "limitations": [
+        "This records a reviewed code component. It does not complete Task70, Increment7 or the roadmap, and does not prove a real app run.",
+        "Fresh full-task qualification is recorded separately. Model accuracy checks were not repeated. Saving a trained model needs separate app-user approval; physical quotas and protected storage are outside this evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-execution-history-consumption",
+      "work_criteria": [
+        "original-execution-history-bound",
+        "current-host-history-decoded",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "15a90ad70ae3e56f87126b8768cd487b55b0edff43ad2ed58250618d1ccd5484",
+      "review_digest": "572d0efe882ed2353e80556892eece4a20c4b862aa3a814480408ad869a8dd22",
+      "scope": "Original application and host review bind a copied execution report to the preserved pipeline ID and current candidate digest; legacy cache and ordinary identity behavior remain compatible.",
+      "limitations": [
+        "This records a reviewed code component. It does not complete Task70, Increment7 or the roadmap, and does not prove a real app run.",
+        "Fresh full-task qualification is recorded separately. Model accuracy checks were not repeated. Saving a trained model needs separate app-user approval; physical quotas and protected storage are outside this evidence."
+      ]
     }
   ]
 }

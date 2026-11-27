@@ -111,6 +111,24 @@ test("portable completed-download review separates historical facts from current
   assert.ok(tool && JSON.stringify(tool.inputSchema).includes('"completed-download"'));
 });
 
+test("portable training review keeps current-file mode explicit and replaces no permission or quality grant", () => {
+  const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8").replace(/\s+/g, " ");
+  const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8").replace(/\s+/g, " ");
+  for (const text of ["selection.mode: current-files", "original settled candidate reader", "never falls back to cached history",
+    "currentCandidate", "no private file locators", "original pipeline ID", "not-recorded", "separate approval", "same repository revision"])
+    assert.ok(guide.includes(text), text);
+  assert.ok(skill.includes("explicit `current-files`"));
+  assert.ok(skill.includes("guide and generated tool catalog from the same revision"));
+  const reference = JSON.parse(readFileSync("skills/control-ai-system-builder/references/mcp-tools.json", "utf8"));
+  const tool = reference.tools.find((row: {name: string}) => row.name === "aisb_model_workflow");
+  const options = tool.inputSchema.properties.selection.oneOf;
+  const training = options.find((row: any) => row.properties.kind.const === "completed-training");
+  assert.deepEqual(training.properties.mode, {type: "string", const: "current-files"});
+  assert.equal(training.required.includes("mode"), false);
+  assert.equal(training.additionalProperties, false);
+  assert.ok(reference.modes.every((mode: {tools: string[]}) => mode.tools.length <= 32));
+});
+
 test("portable Context guidance and discovery separate metadata from execution and model readiness", () => {
   const skill = readFileSync("skills/control-ai-system-builder/SKILL.md", "utf8");
   const guide = readFileSync("skills/control-ai-system-builder/references/context-inputs.md", "utf8");

@@ -1,3 +1,9 @@
+Configured training review readers forward explicit `current-files` mode to
+the original candidate owner. The shared task book reuses its current read
+slot and policy, returning only digests/counts/bytes and bounded execution facts.
+Default completion remains cache-only. Missing or not-ready current support
+has no cache, factory or runtime fallback; no public root is enabled here.
+
 Private current-candidate review independently decodes optional Model execution
 history and includes it in the original-owner candidate digest. The application
 binds its pipeline identity; the host keeps the accepted task UUID, client,
@@ -15,8 +21,9 @@ Permission or lineage loss prevents disclosure. No path, log or raw training
 material is returned. Stored report numbers are measurement-only, with quality,
 current file/resource checks and hardware qualification still unclaimed.
 This is an internal host read, not a new public selector or response codec.
-Public transport integration, protected output retention, Save and actual-host
-qualification remain pending. Existing progress and Stop responses are unchanged.
+Product root activation, separately approved Save and actual-host qualification
+remain pending. Stronger protected storage stays in its separate roadmap.
+Existing progress and Stop responses are unchanged.
 
 The private `createOriginalHeadlessTrainingTaskOwner` wraps the existing training
 bridge. It reserves a bounded slot before awaiting the original start resolver

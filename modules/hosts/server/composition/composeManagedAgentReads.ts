@@ -156,7 +156,8 @@ export function composeManagedAgentReads(options: {
         const result = decode(copyHeadlessModelPlanData(await reader({
           scope: Object.freeze({organizationId: identity.organizationId, principalId: identity.principalId,
             workspaceId: input.workspaceId, registeredClientId: identity.registeredClientId}),
-          selection: input.selection, isCurrent: trainingCurrent})), input);
+          selection: input.selection, isCurrent: trainingCurrent,
+          ...(operation === "models.review-training" && "mode" in input && input.mode === "current-files" ? {mode: "current-files" as const} : {})})), input);
         return await allowed() ? result : denied;
       }
       if (operation === "models.review-download") {

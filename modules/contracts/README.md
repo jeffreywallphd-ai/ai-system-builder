@@ -1,5 +1,12 @@
 # Contracts
 
+Training completion defaults to cached history. An explicit `current-files`
+mode requires a current original-owner candidate summary: verified digests,
+bounded counts/bytes and optional descriptive Model execution facts. A missing
+summary cannot satisfy that mode, and a cached request rejects an unsolicited
+current summary. Closed codecs exclude private inventory locators and preserve
+historical verification labels, separate Save and unchecked quality/readiness.
+
 The private training task family defines separate `models.training-task` and
 `models.cancel-training` codecs. Both use the exact task or approved-plan-step
 selector, with copied host and workspace identity. Download support does not

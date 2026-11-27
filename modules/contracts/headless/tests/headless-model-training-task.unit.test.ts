@@ -101,6 +101,44 @@ const completionValue = () => ({workspaceId: workspace, taskId: task, plan: {fin
   comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked",
     runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"});
 
+const currentRequest = () => ({...completionRequest(), input: {...completionRequest().input, mode: "current-files" as const}});
+const currentValue = () => ({...completionValue(), currentCandidate: {verification: "sha256-current-local-v1",
+  candidateDigest: "sha256:" + "d".repeat(64), manifestDigest: "sha256:" + "e".repeat(64),
+  fileCount: 3, candidateFileCount: 3, totalBytes: 9, execution: {state: "not-recorded"}}});
+
+test("current training review is explicit, detached and cannot downgrade to cached history", () => {
+  const raw = currentRequest(), parsed = readHeadlessTrainingCompletionRequest(raw, host); assert.ok(parsed.ok);
+  assert.equal(parsed.request.input.mode, "current-files");
+  raw.input.selection.taskId = host;
+  assert.equal(parsed.request.input.selection.kind === "task" && parsed.request.input.selection.taskId, task);
+  assert.ok(Object.isFrozen(parsed.request.input));
+  assert.equal(parseHeadlessReadRequest(currentRequest(), host).ok, true);
+  assert.equal(readHeadlessTrainingTaskReadRequest({...currentRequest(), operation: "models.training-task"}, host).ok, false);
+  const reply = {ok: true, operation: "models.review-training", value: currentValue()};
+  assert.deepEqual(readHeadlessTrainingCompletionResult(reply, currentRequest().input), reply);
+  assert.equal(readHeadlessTrainingCompletionResult(reply, completionRequest().input).ok, false);
+  assert.equal(readHeadlessTrainingCompletionResult({...reply, value: completionValue()}, currentRequest().input).ok, false);
+  const detached = readHeadlessTrainingCompletionResult(reply, currentRequest().input); assert.ok(detached.ok);
+  reply.value.currentCandidate.fileCount = 200;
+  assert.equal(detached.value.currentCandidate?.fileCount, 3);
+  assert.equal(readHeadlessTrainingCompletionRequest({...currentRequest(), input: {...currentRequest().input, mode: "cached"}}, host).ok, false);
+});
+
+for (const variant of ["digest", "file-count", "candidate-count", "bytes", "locator", "verification", "execution", "quality"] as const) {
+  test(`current training review rejects ${variant} claims and private fields`, () => {
+    const value: any = currentValue(), current = value.currentCandidate;
+    if (variant === "digest") current.manifestDigest = "not-a-digest";
+    if (variant === "file-count") current.fileCount = 257;
+    if (variant === "candidate-count") current.candidateFileCount = 4;
+    if (variant === "bytes") current.totalBytes = 2;
+    if (variant === "locator") current.files = [{key: "private-locator"}];
+    if (variant === "verification") current.verification = "trusted";
+    if (variant === "execution") current.execution = {state: "recorded", report: {runId: "missing-rest"}};
+    if (variant === "quality") current.outputQuality = "passed";
+    assert.equal(readHeadlessTrainingCompletionResult({ok: true, operation: "models.review-training", value}, currentRequest().input).ok, false);
+  });
+}
+
 test("cached training completion codecs preserve copied history and keep active controls separate", () => {
   const source = completionRequest(), parsed = readHeadlessTrainingCompletionRequest(source, host); assert.ok(parsed.ok);
   source.input.selection.taskId = host;

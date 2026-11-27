@@ -169,6 +169,27 @@ generated tool catalog from the same revision.
 
 ## Review a completed training result
 
+The default read returns cached history. To check the existing candidate files,
+set `selection.mode: current-files` on the same `completed-training` selector.
+The host must advertise `models.review-training`. Keep the original task or
+plan-step, registered client, host and workspace. This mode calls only the
+original settled candidate reader; it never falls back to cached history.
+If that reader is missing, denied or not ready, report the returned limitation.
+Do not start a model, retry training or substitute another task.
+
+An explicit current-file result adds `currentCandidate`: the current SHA-256
+verification label, candidate and manifest digests, file counts and total bytes.
+It contains no private file locators. Its optional execution report contains
+bounded recorded timing and runtime facts, bound to the original pipeline ID.
+Missing facts stay `not-recorded`. The original historical `verification`
+fields retain their historical meaning; current observation is a separate
+summary. Neither observation nor recorded comparison is readiness, resource
+admission, output-quality acceptance or permission to save. Saving still needs
+separate approval. Install this guide and its generated catalog together from
+the same repository revision; an old catalog cannot request the new mode.
+
+For the default cached read:
+
 1. Check that the host advertises `models.review-training`. Use
    `aisb_model_workflow` with `selection.kind: completed-training` and
    `selection.task`. Select the original task ID or plan fingerprint and step.
@@ -188,10 +209,12 @@ generated tool catalog from the same revision.
    separate approval. Unknown or stale history grants no retry or new task.
 
 The app returns no prompts, training rows, paths, raw worker output, logs or
-private errors. This cached read starts no model or provider. It does not reopen
+private errors. The default cached read starts no model or provider. It does not reopen
 model weights, training data or candidate artifacts. It still reads permission
 and accepted-task records from the app's storage.
-The original private review API remains separate. Install this guide and the
+Current-file mode reads the original retained candidate under fresh permission;
+it does not poll or settle a runtime. Private inventory stays within the host.
+Install this guide and the
 complete generated tool reference from the same repository revision. Existing
 source, download, progress and cancellation selectors remain available under
 their own permissions; no additional MCP tool is added.

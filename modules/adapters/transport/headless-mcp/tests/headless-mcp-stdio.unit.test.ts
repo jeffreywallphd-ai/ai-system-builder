@@ -232,6 +232,8 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
         const payload = JSON.stringify(trainingReviewMode === "not-ready" ? {ok: false, code: "headless.source-not-ready"}
           : trainingReviewMode === "denied" ? {ok: false, code: "headless.forbidden"} : {
           ok: true, operation: trainingReviewMode === "tag" ? "models.task" : input.operation, value: {...value,
+            ...((input.input.mode === "current-files" && trainingReviewMode !== "downgrade") || trainingReviewMode === "unsolicited"
+              ? {currentCandidate: {...currentTrainingSummary(), ...(trainingReviewMode === "private-current" ? {files: ["PRIVATE"]} : {})}} : {}),
             ...(trainingReviewMode === "measured" ? {comparison: recordedTrainingMeasurement()} : {}),
             ...(trainingReviewMode === "task" ? {taskId: randomUUID()} : {}),
             ...(trainingReviewMode === "plan" ? {plan: {...value.plan, step: 2}} : {}),
@@ -540,6 +542,22 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           value: recordedTrainingHistory(workspaceId, modelTaskValue.taskId, modelTaskValue.plan)});
       assert.equal(requests.at(-1)?.url, "/api/headless/agent/read");
     }
+    for (const task of [{kind: "task", taskId: modelTaskValue.taskId}, {kind: "plan-step", ...modelTaskValue.plan}]) {
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-training", task, mode: "current-files"}}})), {ok: true, operation: "models.review-training",
+          value: {...recordedTrainingHistory(workspaceId, modelTaskValue.taskId, modelTaskValue.plan), currentCandidate: currentTrainingSummary()}});
+    }
+    for (const mode of ["downgrade", "private-current"]) {
+      trainingReviewMode = mode;
+      assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+        selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId}, mode: "current-files"}}})),
+        {ok: false, code: "headless.unavailable"});
+    }
+    trainingReviewMode = "unsolicited";
+    assert.deepEqual(resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId}}}})), {ok: false, code: "headless.unavailable"});
+    assert.equal((await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
+      selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId}, mode: "cached"}}})).isError, true);
     trainingReviewMode = "measured";
     const measuredTraining = resultText(await planner.callTool({name: "aisb_model_workflow", arguments: {...planBase,
       selection: {kind: "completed-training", task: {kind: "task", taskId: modelTaskValue.taskId}}}}));
@@ -1972,6 +1990,10 @@ test("does not queue no-ID traffic while the SDK pump has not retired an admitte
   }
 });
 
+function currentTrainingSummary() {
+  return {verification: "sha256-current-local-v1", candidateDigest: "sha256:" + "d".repeat(64), manifestDigest: "sha256:" + "e".repeat(64),
+    fileCount: 3, candidateFileCount: 3, totalBytes: 9, execution: {state: "not-recorded"}} as const;
+}
 function recordedTrainingHistory(workspace: unknown, taskId: string, plan: {fingerprint: string; step: number}) {
   return {workspaceId: workspace, taskId, plan: {...plan}, provenance: {modelRecordId: "model.synthetic", modelUpdatedAt: "2026-11-21T00:00:00.000Z",
     datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64),

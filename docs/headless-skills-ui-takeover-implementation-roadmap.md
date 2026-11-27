@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-27T00:36:22Z`
+- Updated: `2026-11-27T12:58:10Z`
 
 ## Objective
 
@@ -450,7 +450,7 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Execute an exact approved download (`execute-approved-model-download`): complete
   - Connect downloads and owned task controls (`monitor-and-cancel-model-download`): complete
   - Review and save the completed model (`review-and-save-downloaded-model`): complete
-- **Fine-tune and evaluate**: 64 of 68 tasks complete
+- **Fine-tune and evaluate**: 65 of 68 tasks complete
   - Review fine-tuning inputs and settings (`review-fine-tuning-inputs-and-settings`): complete
   - Prepare training data and local loading controls (`prepare-local-training-files-and-load-policy`): complete
   - Inspect the selected local model files (`inspect-local-training-model-files`): complete
@@ -515,7 +515,7 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Use replaceable bounded local training storage (`bind-pluggable-local-training-storage`): complete
   - Connect the local training worker (`compose-local-training-producer`): complete
   - Retain verified local results through shutdown (`retain-verified-local-training-results`): complete
-  - Connect candidate review and evaluation history (`connect-training-candidate-review-and-history`): planned
+  - Connect candidate review and evaluation history (`connect-training-candidate-review-and-history`): complete
   - Save a separately approved trained model (`save-approved-trained-model`): planned
   - Run a bounded fine-tuning task (`run-approved-fine-tuning`): planned
   - Evaluate and review the trained candidate (`evaluate-trained-model-candidate`): planned
