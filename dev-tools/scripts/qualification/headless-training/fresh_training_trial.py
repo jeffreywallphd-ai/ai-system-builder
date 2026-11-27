@@ -17,15 +17,16 @@ from control_plane.execution import execute
 from control_plane.records import Records
 from control_plane.work import Work
 
-GUARD_WORK = "headless-training-candidate-diagnostic-guard"
-TRIAL_WORK = "headless-bounded-training-candidate-diagnostic-20261127"
-DIRECTORY = ".local-codex/headless-training-candidate-diagnostic-20261127"
-AUTHORITY_REF = "user-approved-two-candidate-attempts-20261127-first-diagnostic"
-PREVIOUS_ATTEMPT_WORK = "headless-bounded-training-short-cache-verification-20261127"
+GUARD_WORK = "headless-training-explicit-cpu-verification-guard"
+TRIAL_WORK = "headless-bounded-training-cpu-verification-20261127"
+DIRECTORY = ".local-codex/headless-training-cpu-verification-20261127"
+AUTHORITY_REF = "user-approved-two-candidate-attempts-20261127-second-verification"
+PREVIOUS_ATTEMPT_WORK = "headless-bounded-training-candidate-diagnostic-20261127"
+PRIOR_CACHE_WORK = "headless-bounded-training-short-cache-verification-20261127"
 PRIOR_STAGE_WORK = "headless-bounded-training-safe-stage-diagnostic-20261127"
-PREVIOUS_ATTEMPT_SOURCE = "32f120eeb8c53f02c90618e4a80f22df5db9d8f9ad650fb59b2aa986d899b9e5"
-PREVIOUS_ATTEMPT_RESULT = ".local-codex/headless-training-short-cache-verification-20261127/result.json"
-PREVIOUS_ATTEMPT_DIGEST = "367a976ab886ced9be092fdcf39390c3422dc0092b617e6870741d4d5ae17ee5"
+PREVIOUS_ATTEMPT_SOURCE = "9af83ab600eafc7d8a2d844a0f26b47e1a2d42bfdcff6376941421aac97885cb"
+PREVIOUS_ATTEMPT_RESULT = ".local-codex/headless-training-candidate-diagnostic-20261127/result.json"
+PREVIOUS_ATTEMPT_DIGEST = "bc64ee84fa5332c78ec3e95b4c772b2fcc170096f953d0f89f892d427d8cd77c"
 PRIOR_CORRECTED_WORK = "headless-bounded-training-corrected-observation-20261127"
 PRIOR_FRESH_WORK = "headless-bounded-training-fresh-attempt-20261127-r2"
 RUNNER = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
@@ -35,8 +36,9 @@ PRIOR = ["cb215d3c3409542e88860920fb889e4ad9baf8d9b859a1c3052f63a462084d41",
          "7a492d694beeb92e3259c9e16523dcc226fbc419c9537d70c223aa8b3fcc6129",
          "06641de84df50609608ec6b3cd0e41d244281209ec4966c20eb0f4b39798c4bf",
          "1423b9672845ff345e8eebf9446353c49933eaff2d6e30a76a16eff2cc027105",
-         "4d76e9b3b0b7aec99a66fb443274fd65fc4033f36852470a90a7bf203361067a"]
-PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK, PRIOR_CORRECTED_WORK, PRIOR_STAGE_WORK, PREVIOUS_ATTEMPT_WORK)
+         "4d76e9b3b0b7aec99a66fb443274fd65fc4033f36852470a90a7bf203361067a",
+         "7d38c03e89567910d569987ccb2de982709a24593a1d5dec1bb5f49c1caf8e7c"]
+PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK, PRIOR_CORRECTED_WORK, PRIOR_STAGE_WORK, PRIOR_CACHE_WORK, PREVIOUS_ATTEMPT_WORK)
 LIMITS = {"process_memory_bytes": 2 * 1024**3, "job_memory_bytes": 4 * 1024**3,
           "maximum_active_processes": 32, "maximum_duration_ms": 690000,
           "task_duration_seconds": 600, "model_copy_bytes": 1024**2, "output_bytes": 4 * 1024**2}
@@ -212,7 +214,7 @@ def validate_previous_attempt_cleanup(root):
     need(result.get("source_digest") == PREVIOUS_ATTEMPT_SOURCE and result.get("source_stable") is True and
          result.get("model_quality_tested") is False and result.get("status") == "failed", "fresh-trial.diagnostic-proof-source")
     facts = result.get("diagnostic")
-    need(isinstance(facts, dict) and facts.get("schema") == "bounded-training-feature-diagnostic-v4" and
+    need(isinstance(facts, dict) and facts.get("schema") == "bounded-training-feature-diagnostic-v5" and
          facts.get("modelQualityTested") is False and
          all(facts.get(key) is True for key in ("workerRetirementConfirmed", "ownerClosureConfirmed",
              "applicationCleanupConfirmed", "newRootRemoved")), "fresh-trial.diagnostic-proof-closure")

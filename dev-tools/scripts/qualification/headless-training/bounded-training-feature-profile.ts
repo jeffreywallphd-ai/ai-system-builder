@@ -1,6 +1,12 @@
 import path from "node:path";
 
 export const BOUNDED_TRAINING_TEMP_PREFIX = "bt-";
+/** Fixed child-only qualification policy. No product device defaults or ambient
+ * process settings change. Transformers/Accelerate explicitly selects CPU. */
+export const BOUNDED_TRAINING_CPU_ENVIRONMENT = Object.freeze({
+  ACCELERATE_USE_CPU: "true", CUDA_VISIBLE_DEVICES: "-1", HIP_VISIBLE_DEVICES: "-1",
+  OMP_NUM_THREADS: "1", MKL_NUM_THREADS: "1",
+});
 /** Windows Datasets cache locks repeat the cache path in their filename. Keep
  * this qualification root short without disabling locks or changing limits.
  * The caller must still verify every parent component and own the new root. */

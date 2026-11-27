@@ -15,7 +15,7 @@ import {createFilesystemLocalTrainingResultPublication} from "../../../../module
 import type {TrainingResultFileIoRetirement} from "../../../../modules/application/ports/model";
 import {createOrganizationId} from "../../../../modules/contracts/organization";
 import {completeTrainingCleanup, observeTrainingResult, requireTrainingCandidate, trainingObservation, type TrainingObservationStage} from "./bounded-training-observation";
-import {boundedTrainingTempParent, BOUNDED_TRAINING_TEMP_PREFIX} from "./bounded-training-feature-profile";
+import {boundedTrainingTempParent, BOUNDED_TRAINING_TEMP_PREFIX, BOUNDED_TRAINING_CPU_ENVIRONMENT} from "./bounded-training-feature-profile";
 
 const GiB = 1024 ** 3, MiB = 1024 ** 2;
 // Existing generated, non-download Tiny input, not a quality benchmark.
@@ -125,7 +125,7 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
   Object.assign(environment, {TEMP: root, TMP: root, PYTHONDONTWRITEBYTECODE: "1", PYTHONNOUSERSITE: "1",
     PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(port), HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1",
     HF_DATASETS_OFFLINE: "1", HF_HOME: path.join(root, "hf"), PIP_NO_INDEX: "1", PIP_DISABLE_PIP_VERSION_CHECK: "1",
-    CUDA_VISIBLE_DEVICES: "", HIP_VISIBLE_DEVICES: "", OMP_NUM_THREADS: "1", MKL_NUM_THREADS: "1"});
+    ...BOUNDED_TRAINING_CPU_ENVIRONMENT});
   const foundation = createPythonRuntimeAdapterFoundation({client: {baseUrl: "http://127.0.0.1:" + port},
     supervisor: {command: python, args: ["main.py"], cwd: worker, env: environment, startupTimeoutMs: 60000,
       requiredCapabilities: [ORIGINAL_TRAINING_CAPABILITY],

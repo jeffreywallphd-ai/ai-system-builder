@@ -1686,6 +1686,24 @@
         "No raw candidate identifiers, reports, paths, prompts or model accuracy checks are supplied. No automatic retry authority.",
         "Historical failures/ownership remain. Another checkout may lack local records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-candidate-diagnostic-guard",
+      "work_criteria": [
+        "short-owned-cache-root",
+        "conditional-second-admission",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "31f5b4bbd79d6fb384cb79beda619fce565b92b18b07a8160e86fefa677923e4",
+      "review_digest": "c67631cd635b2a3d061b2dc77d7be6be347f35e0f9832b38a98a8ecd3d65cb6c",
+      "scope": "At commitd43d035, seven focused source checks and independent review qualified first-candidate admission. The actual training/current-file/cleanup observations are recorded separately.",
+      "limitations": [
+        "Source support only; the actual trial failed the CPU assertion and does not close Task72.",
+        "No model accuracy, download, historical cleanup or parent pass. Another checkout may lack local records."
+      ]
     }
   ]
 }

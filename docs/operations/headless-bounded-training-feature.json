@@ -231,5 +231,17 @@
     "scope": "Separate finite candidate assertion phases, original-identity-gated file counts and seven nullable boolean facts. Preserve all original assertions and the32fileactualbound.",
     "actual_candidate_result": "not-yet-qualified",
     "model_run_authorized": false
+  },
+  "cpu_profile_correction": {
+    "work_id": "headless-training-explicit-cpu-verification-guard",
+    "reason": "The original candidate diagnostic passed all identity/current-file/execution assertions except CPU-device presence. The actual alternative device is unknown.",
+    "prior_receipt_digest": "7d38c03e89567910d569987ccb2de982709a24593a1d5dec1bb5f49c1caf8e7c",
+    "observed_files": 12,
+    "observed_checkpoint_files": 5,
+    "prior_training_succeeded": true,
+    "prior_four_cleanup_checks_passed": true,
+    "policy": "Private qualification child explicitly selects CPU through ACCELERATE_USE_CPU=true and CUDA/HIP masks=-1; product defaults and required CPU assertion remain.",
+    "admission": "Only the remaining second candidate attempt; exact preceding version5result/source/cleanup required. Two further newly authorized attempts are not admitted here.",
+    "qualification": "pending-actual-current-verification"
   }
 }

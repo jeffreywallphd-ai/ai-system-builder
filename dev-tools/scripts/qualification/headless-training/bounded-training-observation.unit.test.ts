@@ -1,12 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {completeTrainingCleanup, observeTrainingResult, requireTrainingCandidate, trainingObservation, type TrainingObservationStage} from "./bounded-training-observation";
-import {boundedTrainingTempParent, BOUNDED_TRAINING_TEMP_PREFIX} from "./bounded-training-feature-profile";
+import {boundedTrainingTempParent, BOUNDED_TRAINING_TEMP_PREFIX, BOUNDED_TRAINING_CPU_ENVIRONMENT} from "./bounded-training-feature-profile";
 import type {ModelTrainingResult} from "../../../../modules/contracts/model/model-training";
 import type {ApprovedLocalTrainingCandidateReview} from "../../../../modules/application/ports/model/approved-local-model-training.port";
 
 const result = {runId: "task-id", status: "succeeded", reviewPending: true,
   generatedModelCandidate: {generatedFromRunId: "pipeline-id"}} as ModelTrainingResult;
+test("CPU qualification is explicit, immutable and overrides ambient accelerator settings without mutating them", () => {
+  const before = {...process.env};
+  const ambient = {ACCELERATE_USE_CPU: "false", CUDA_VISIBLE_DEVICES: "0", HIP_VISIBLE_DEVICES: "0", OMP_NUM_THREADS: "8"};
+  const child = {...ambient, ...BOUNDED_TRAINING_CPU_ENVIRONMENT};
+  assert.deepEqual(child, {ACCELERATE_USE_CPU: "true", CUDA_VISIBLE_DEVICES: "-1", HIP_VISIBLE_DEVICES: "-1",
+    OMP_NUM_THREADS: "1", MKL_NUM_THREADS: "1"});
+  assert.ok(Object.isFrozen(BOUNDED_TRAINING_CPU_ENVIRONMENT));
+  assert.equal(ambient.ACCELERATE_USE_CPU, "false");
+  assert.deepEqual({...process.env}, before);
+});
 test("qualification cache uses only a short canonical local Windows temp parent", () => {
   assert.equal(boundedTrainingTempParent("C:\\Users\\example\\AppData\\Local"), "C:\\Users\\example\\AppData\\Local\\Temp");
   const boundary = "C:\\" + "a".repeat(42);

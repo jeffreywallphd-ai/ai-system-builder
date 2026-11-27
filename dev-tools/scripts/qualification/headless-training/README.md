@@ -157,3 +157,18 @@ result/source and its four original cleanup facts before consumption. All six
 failed aggregate receipts retain original owners and conservative charges. The
 second is unavailable in this guard and needs a separately reviewed fix/guard
 after confirmed preceding cleanup. No accuracy test or automatic retry is added.
+
+The first detailed candidate attempt verified12files, including5checkpoint files,
+and every identity, pipeline and duration assertion. Training and all four cleanup
+checks passed. Only reported CPU use failed; the reported alternative device is
+unknown. The test now explicitly sets ACCELERATE_USE_CPU=true and CUDA/HIP masks
+to -1 in its private child environment. The installed Transformers4.51.3 device
+selection supports this setting. Fixed thread counts remain1. No product defaults,
+caller environment, device assertion or resource limits change.
+
+The current guard admits only the remaining second candidate verification after
+the exact preceding version5result/source and all four original cleanup facts.
+Seven failed aggregate receipts retain original owners and charges. The latest
+user authorization also allows up to two additional verifications; these are not
+enabled by this one-use guard. Source tests are inert. No accuracy or download
+checks are added. Missing proof or replay denies without touching old files.
