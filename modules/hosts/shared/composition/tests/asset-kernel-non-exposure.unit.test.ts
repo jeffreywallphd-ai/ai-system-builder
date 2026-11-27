@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, posix, relative } from "node:path";
 import { describe, it } from "node:test";
+import ts from "typescript";
 
 const REPO_ROOT = process.cwd();
 
@@ -32,6 +33,111 @@ function sourceFilesUnder(relativeDir: string): readonly { path: string; source:
 function combinedSource(relativeDir: string): string {
   return sourceFilesUnder(relativeDir).map((file) => `\n// ${file.path}\n${file.source}`).join("\n");
 }
+
+type SourceFile = { path: string; source: string };
+const SHARED_COMPOSITION = "modules/hosts/shared/composition/";
+const ASSET_METADATA_ENTRY = /\/compose(?:Asset|InternalAsset|LocalAsset|ResourceBackedViewProviders)[^/]*\.[cm]?[jt]sx?$/i;
+const ASSET_METADATA_RULES = [
+  ["outer-layer-import", /from\s+["'][^"']*(?:apps\/|adapters\/transport|api-express|ipc-electron|electron|express|preload|renderer|thin-client|runtime\/.*adapter|provider-client|huggingface|openai)[^"']*["']/i],
+  ["storage-or-runtime-operation", /\b(?:readdir|opendir|glob|walkDir|scanResources|scanArtifacts|scanModels|scanDatasets|readBytes|readResourceBytes|fetch\(|createRuntime|startRuntime|probeRuntime|installRuntime|repairRuntime)\b/i],
+  ["model-workflow", /\b(?:PrepareTrainingDataset|DatasetPreparationUseCase|ModelTrainingPort|ModelValidationPort|ModelPublisherPort|TrainModelUseCase|ValidateModelUseCase|PublishModelUseCase|discoverModels|includeDiscovered:\s*true)\b/i],
+] as const;
+
+// Asset metadata helpers must remain descriptor-only. Other shared features may
+// legitimately compose Model workflows; their files are not Asset entrypoints.
+// Follow dependencies so moving forbidden behavior into a neutral helper cannot
+// evade this assertion. Use only the finite repository source inventory.
+function assetMetadataClosure(inventory: readonly SourceFile[]): readonly SourceFile[] {
+  const files = new Map(inventory.map((file) => [file.path.replace(/\\/g, "/"), file]));
+  const pending = [...files.keys()].filter((path) => ASSET_METADATA_ENTRY.test(path));
+  assert.ok(pending.length > 0, "Asset metadata entrypoints must be present");
+  const visited = new Set<string>();
+  while (pending.length) {
+    const path = pending.pop()!;
+    if (visited.has(path)) continue;
+    visited.add(path);
+    const file = files.get(path)!;
+    const parsed = ts.createSourceFile(path, file.source, ts.ScriptTarget.Latest, true);
+    const follow = (specifier: string) => {
+      if (!specifier.startsWith(".")) return;
+      const target = posix.normalize(posix.join(posix.dirname(path), specifier));
+      if (!target.startsWith(SHARED_COMPOSITION)) return;
+      const stem = target.replace(/\.[cm]?jsx?$/, "");
+      const resolved = [target, ...[".ts", ".tsx", ".js", ".mjs", ".cjs"].map((ext) => stem + ext),
+        ...[".ts", ".tsx", ".js"].map((ext) => target + "/index" + ext)].find((name) => files.has(name));
+      assert.ok(resolved, `Unresolved Asset metadata dependency in ${path}`);
+      pending.push(resolved);
+    };
+    const visit = (node: ts.Node) => {
+      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+        follow(node.moduleSpecifier.text);
+      } else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
+        assert.ok(node.moduleReference.expression && ts.isStringLiteral(node.moduleReference.expression), `Nonliteral Asset metadata dependency in ${path}`);
+        follow(node.moduleReference.expression.text);
+      } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteral(node.argument.literal)) {
+        follow(node.argument.literal.text);
+      } else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        ts.isIdentifier(node.expression) && node.expression.text === "require")) {
+        assert.ok(node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0]), `Nonliteral Asset metadata dependency in ${path}`);
+        follow((node.arguments[0] as ts.StringLiteral).text);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(parsed);
+  }
+  return [...visited].sort().map((path) => files.get(path)!);
+}
+
+function assetMetadataViolations(files: readonly SourceFile[]): readonly { path: string; rule: string }[] {
+  return files.flatMap((file) => ASSET_METADATA_RULES.filter(([, pattern]) => pattern.test(file.source))
+    .map(([rule]) => ({ path: file.path.replace(/\\/g, "/"), rule })));
+}
+
+describe("Asset metadata boundary source selection", () => {
+  const file = (name: string, source: string): SourceFile => ({ path: SHARED_COMPOSITION + name, source });
+  it("does not apply Asset metadata restrictions to unrelated shared features", () => {
+    const selected = assetMetadataClosure([
+      file("composeLocalAssetKernel.ts", 'import { descriptor } from "./neutral";'),
+      file("neutral.ts", "export const descriptor = {};"),
+      file("headlessModelTrainingExecution.ts", "type Owner = TrainModelUseCase;"),
+    ]);
+    assert.equal(selected.length, 2);
+    assert.deepEqual(assetMetadataViolations(selected), []);
+  });
+  for (const [name, source] of [
+    ["import", 'import { value } from "./neutral.js";'],
+    ["re-export", 'export * from "./neutral";'],
+    ["dynamic import", 'const read = () => import("./neutral");'],
+    ["require", 'const value = require("./neutral");'],
+    ["import equals", 'import value = require("./neutral");'],
+    ["export import equals", 'export import value = require("./neutral");'],
+    ["type import", 'type Value = import("./neutral").Value;'],
+  ]) {
+    it(`includes a forbidden neutral helper reached through ${name}, including cycles`, () => {
+      const selected = assetMetadataClosure([
+        file("composeAssetImplementationKernel.ts", source),
+        file("neutral.ts", 'export * from "./composeAssetImplementationKernel"; type Value = TrainModelUseCase;'),
+      ]);
+      assert.deepEqual(assetMetadataViolations(selected), [{ path: SHARED_COMPOSITION + "neutral.ts", rule: "model-workflow" }]);
+    });
+  }
+  it("refuses missing entrypoints, unresolved local dependencies and nonliteral loading", () => {
+    assert.throws(() => assetMetadataClosure([file("neutral.ts", "")]), /entrypoints/);
+    assert.throws(() => assetMetadataClosure([file("composeLocalAssetKernel.ts", 'import "./missing";')]), /Unresolved/);
+    assert.throws(() => assetMetadataClosure([file("composeLocalAssetKernel.ts", "import(target);")]), /Nonliteral/);
+  });
+  it("retains every existing forbidden rule with concise file/rule diagnostics", () => {
+    assert.deepEqual(assetMetadataViolations([
+      file("first.ts", 'import value from "../../../adapters/transport/api-express";'),
+      file("second.ts", "readBytes;"),
+      file("third.ts", "ModelTrainingPort;"),
+    ]), [
+      { path: SHARED_COMPOSITION + "first.ts", rule: "outer-layer-import" },
+      { path: SHARED_COMPOSITION + "second.ts", rule: "storage-or-runtime-operation" },
+      { path: SHARED_COMPOSITION + "third.ts", rule: "model-workflow" },
+    ]);
+  });
+});
 
 describe("Asset Kernel public non-exposure boundaries", () => {
   it("keeps accepted package lifecycle controls bounded and marketplace/registry behavior out of public surfaces", () => {
@@ -159,16 +265,13 @@ describe("Asset Kernel public non-exposure boundaries", () => {
   });
 
   it("keeps application asset services and shared host helpers free of forbidden outer-layer imports and storage scans", () => {
-    const source = [
-      combinedSource("modules/application/services/asset"),
-      combinedSource("modules/application/services/asset-packs"),
-      combinedSource("modules/application/use-cases/asset"),
-      combinedSource("modules/hosts/shared/composition"),
-    ].join("\n");
-
-    assert.doesNotMatch(source, /from\s+["'][^"']*(?:apps\/|adapters\/transport|api-express|ipc-electron|electron|express|preload|renderer|thin-client|runtime\/.*adapter|provider-client|huggingface|openai)[^"']*["']/i);
-    assert.doesNotMatch(source, /\b(?:readdir|opendir|glob|walkDir|scanResources|scanArtifacts|scanModels|scanDatasets|readBytes|readResourceBytes|fetch\(|createRuntime|startRuntime|probeRuntime|installRuntime|repairRuntime)\b/i);
-    assert.doesNotMatch(source, /\b(?:PrepareTrainingDataset|DatasetPreparationUseCase|ModelTrainingPort|ModelValidationPort|ModelPublisherPort|TrainModelUseCase|ValidateModelUseCase|PublishModelUseCase|discoverModels|includeDiscovered:\s*true)\b/i);
+    const files = [
+      ...sourceFilesUnder("modules/application/services/asset"),
+      ...sourceFilesUnder("modules/application/services/asset-packs"),
+      ...sourceFilesUnder("modules/application/use-cases/asset"),
+      ...assetMetadataClosure(sourceFilesUnder("modules/hosts/shared/composition")),
+    ];
+    assert.deepEqual(assetMetadataViolations(files), []);
   });
 
   it("allows public Phase 4 exposure only for four approved mutation operations", () => {

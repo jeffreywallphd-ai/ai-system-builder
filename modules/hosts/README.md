@@ -101,6 +101,12 @@ cancellation, registry save, readiness or native/provider/parent pass.
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The Asset metadata non-exposure test applies its existing descriptor-only rules
+to all application Asset metadata sources and the shared Asset composition
+entrypoints with their transitive local shared dependencies. It does not apply
+Asset-only Model restrictions to unrelated shared features. Dependency selection
+has negative fixtures; failures identify the file and rule without dumping source.
+
 Private Model execution now selects the exact stored approved step in both hosts
 and reuses the existing source runner/application owner outside transactions.
 Once selection identifies a Model step, every captured reservation, issue and
