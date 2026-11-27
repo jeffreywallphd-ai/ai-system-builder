@@ -1,0 +1,52 @@
+{
+  "schema_version": "headless-training-save-feature-evidence-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "models-training-and-generation",
+  "task_id": "save-approved-trained-model",
+  "task_definition_digest": "7de69d07210d91315f20459081631d65b88150951acbf4b0838b6d9b96313785",
+  "owning_work_id": "headless-trained-model-save-task-qualification",
+  "scope": "Local trained Model Save software, from a controlled accepted original task through current approval, the actual application Save owner, real bounded file copies and atomic Model publication.",
+  "evidence_policy": "Descriptive feature matrix only. Task completion requires the exact current owning Work receipt and separate accepted review. This file grants no parent or current-source pass by itself.",
+  "test_file": "modules/hosts/shared/composition/tests/headless-model-training-host-review.unit.test.ts",
+  "matrix": {
+    "hosts": ["private-desktop-composition", "private-managed-composition"],
+    "metadata_engines": ["Core", "SQLite"],
+    "approval_channels": ["app-popup", "authenticated-chat"],
+    "approval_modes": ["whole-plan", "each-change"],
+    "physical_save_cases": 32,
+    "physical_positive_pairs": ["app-popup/whole-plan", "authenticated-chat/each-change"],
+    "controlled_metadata_positive_pairs": ["app-popup/whole-plan", "app-popup/each-change", "authenticated-chat/whole-plan", "authenticated-chat/each-change"]
+  },
+  "real_components": [
+    "Original accepted task book and current source/actor/workspace/host lookup",
+    "Stored separate Save approval and exact ordered step",
+    "Application createApprovedTrainingSaveOwner",
+    "createLocalGeneratedModelStorageAdapter private reviewed-copy session",
+    "Current policy and atomic Model, causal receipt and original-task index"
+  ],
+  "verified_behaviors": [
+    "Separate positive approval is required; declined training-only or unconfigured flows cannot copy or register.",
+    "Exact selected file bytes are copied and registered with immutable task/candidate lineage; unselected original data stays untouched.",
+    "Normal model labels remain literal data through the real application owner and Model registration.",
+    "Real file IO is closed before registration and before fixture cleanup; original and copy owners remain available for final checks.",
+    "Current candidate drift, foreign identity, stale recorded base version, host withdrawal and insufficient copy capacity cannot publish a Model.",
+    "Approval revoked after destination bytes exist prevents publication and permits cleanup only of the known fresh copy.",
+    "Lost committed replies and replay retain one registered copy without another writer or candidate read.",
+    "Issued publication failure conservatively retains the closed copy; source staging and original files are preserved."
+  ],
+  "fixture_limits": {
+    "maximum_files": 13,
+    "maximum_total_bytes": 4194304,
+    "maximum_copy_duration_ms": 10000,
+    "minimum_free_bytes": 0,
+    "physical_quota_enforced": false,
+    "scope": "Disposable tiny synthetic test files only. The one-byte negative case tests refusal. These values do not change product or model-memory policy."
+  },
+  "remaining_qualification": [
+    "Actual model training, generated model readiness, hardware and original runtime/worker retirement remain in the later model workflow tasks.",
+    "Actual public product Root, MCP/transport and paired app UI journeys remain in qualify-model-workflows-on-hosts.",
+    "The synthetic safetensors-named bytes are not loaded as a model and establish no output-quality, license or supplier qualification.",
+    "ADR-0049 local account/dependency trust remains; protected-service isolation, hostile same-account protection and physical quota are not claimed.",
+    "Increment and overall roadmap qualification remain separate."
+  ]
+}

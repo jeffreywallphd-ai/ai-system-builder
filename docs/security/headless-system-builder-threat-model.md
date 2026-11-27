@@ -3907,3 +3907,18 @@ training compatibility. Disable the private gate/callback to roll back; retain
 saved definitions, receipts and uncertain bytes. Actual Root/transport, runtime
 and physical-file qualification remain pending. This adds no protected service,
 hostile same-account guarantee, reserved quota, provider or model-quality claim.
+
+The complete local Save task is checked with both host compositions, the actual
+application Save owner and real filesystem copying. Only fresh, small synthetic
+fixtures are used. Protect original bytes, exact candidate/actor/approval lineage
+and Model records; check drift, declined/withdrawn authority, copy limits, stale
+base versions and lost replies. Revocation after destination bytes are written
+must prevent publication and clean only known fresh owned entries after actual
+IO closure. Issued or uncertain publication keeps its closed copy retained.
+Fixture cleanup verifies the original temporary-root identity and all real copy
+owners' closed IO before removing that exclusive test data. No historical data,
+ACL, service or product limit changes. The controlled original training task and
+synthetic safetensors-named bytes grant no real training, model-quality, hardware,
+public-host or parent qualification. Use the
+[versioned feature matrix](../operations/headless-training-save-task-qualification.json)
+with current receipts/review; declarations alone never qualify the task.

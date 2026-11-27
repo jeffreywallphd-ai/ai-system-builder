@@ -30,6 +30,15 @@ task or ordinary Save. Controlled Core/SQLite host fixtures cover both channels
 and modes, replay, lost replies and withdrawal cleanup. Actual product Root and
 transport activation plus real runtime/host qualification remain pending.
 
+The trained Save feature fixtures now also join the actual application Save
+owner and filesystem adapter to both private host workflows. They use fresh
+synthetic files, verify copied bytes and closed IO, preserve unselected originals,
+and exercise revocation after destination writes, drift, capacity refusal, stale
+base versions and lost-reply replay. The controlled original training task is not
+a real model run. See the versioned
+[Save task evidence matrix](../../docs/operations/headless-training-save-task-qualification.json).
+Actual training/public transport/UI and parent qualification stay separate.
+
 The private original training task book can bind one separate Save session.
 It rechecks accepted actor/client/workspace/host/task/proposal lineage and
 combines that lookup with fresh exact Save controls. The original App factory

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
-import {lstat, mkdtemp, realpath, rm} from "node:fs/promises";
+import type {BigIntStats} from "node:fs";
+import {lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {dirname, join} from "node:path";
 import test, {type TestContext} from "node:test";
@@ -16,6 +17,8 @@ import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../.
 import {createStructuredOrganizationRepositories} from "../../../../adapters/persistence/organization";
 import {createLocalWorkspaceRepository} from "../../../../adapters/persistence/workspace";
 import {createLocalModelRegistryAdapter} from "../../../../adapters/persistence/model";
+import {createLocalGeneratedModelStorageAdapter} from "../../../../adapters/model/local/createLocalGeneratedModelStorageAdapter";
+import {createApprovedTrainingSaveOwner} from "../../../../application/use-cases/model/create-approved-training-save-owner";
 import {createStructuredDatasetVersionRepository} from "../../../../adapters/persistence/dataset-version";
 import {DATASET_VERSION_NAMESPACE} from "../../../../adapters/persistence/dataset-version/createStructuredDatasetVersionRepository";
 import {createStructuredHeadlessPlanReviewRepository, readStructuredHeadlessPlanModelPermission,
@@ -27,7 +30,7 @@ import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/u
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
 import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl, ApprovedLocalTrainingCompletionReview,
   ApprovedLocalTrainingCandidateReview, ApprovedLocalTrainingSaveRequest, ReviewedGeneratedModelControl,
-  ApprovedLocalTrainingSaveSession} from "../../../../application/ports/model";
+  ApprovedLocalTrainingSaveSession, ReviewedGeneratedModelStorageSession} from "../../../../application/ports/model";
 import {readModelTrainingExecutionHistory, type ModelTrainingResult} from "../../../../contracts/model";
 import {composeHeadlessModelMetadata} from "../headlessModelMetadata";
 import type {OriginalTrainingRunOptions} from "../headlessModelTrainingTasks";
@@ -46,13 +49,17 @@ const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(valu
 async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 | 2 = 1, emptyTags = false, executionData = false) {
   const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(join(boundary, "tapproval-")));
   const identity = await lstat(directory, {bigint: true});
+  const physicalSessions: ApprovedLocalTrainingSaveSession[] = [], physicalCopies: ReviewedGeneratedModelStorageSession[] = [];
   const database = storage === "SQLite" ? await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: directory})}) : undefined;
   t.after(async () => {
+    for (const session of physicalSessions) {assert.equal(session.inspect().ioClosed, true); assert.equal(session.inspect().pendingOperations, 0);}
+    for (const session of physicalCopies) {assert.equal(session.inspect().ioClosed, true); assert.equal(session.inspect().openFiles, 0);}
     await database?.close();
     const current = await lstat(directory, {bigint: true});
     assert.equal(dirname(directory), boundary); assert.equal(await realpath(directory), directory);
     assert.ok(current.isDirectory() && !current.isSymbolicLink()); assert.equal(current.dev, identity.dev); assert.equal(current.ino, identity.ino);
-    // Only this fresh document-only fixture exists here. No model or worker.
+    // Only this fresh metadata and optional synthetic-copy fixture exists here.
+    // All actual copy IO is closed above; no worker or loaded model exists.
     await rm(directory, {recursive: true});
   });
   const base = database?.documents ?? createInMemoryStructuredDocumentStore(), transaction = base.runInOwnedTransaction!.bind(base);
@@ -80,6 +87,7 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
   const documents = platform.forOrganization(organizationId), workspaces = createLocalWorkspaceRepository({rootDirectory: directory, documents});
   await workspaces.saveWorkspace({organizationId, workspaceId, displayName: "Synthetic", status: "active", createdAt: at, updatedAt: at});
   const state = {current: true, readCurrent: true, hostOpen: true, ambient: true, denied: new Set<SecurityScope>(), scopes: [] as SecurityScope[][],
+    registryNow: at,
     preparations: 0, beforePolicy: undefined as (() => Promise<void>) | undefined, onFactory: undefined as (() => Promise<void>) | undefined,
     afterPreview: undefined as (() => Promise<void>) | undefined};
   const contexts = {getCurrentOrganizationContext: () => state.ambient ? {organizationId, principalId} : undefined};
@@ -93,7 +101,7 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     await applicationAuthorization.authorizeWorkspaceOperation(input);
   }};
   const models = createLocalModelRegistryAdapter({documents, rootDirectory: directory, filePath: join(directory, "nonexistent-models.json"),
-    discovery: {enabled: false}, now: () => at});
+    discovery: {enabled: false}, now: () => state.registryNow});
   await models.registerDownloadedModel({workspaceId, modelRecordId: "model.synthetic", displayName: "PRIVATE-MODEL-LABEL", source: "local",
     provider: "huggingface", artifactForm: "full-model", modelId: "fixture/base", localPath: "PRIVATE-MODEL-PATH",
     inferenceMode: "causal", serializationFormat: "safetensors", taskTags: emptyTags ? [] : ["chat", "text-generation"],
@@ -191,7 +199,10 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
     completionEnabled: false, completionReads: 0, onCompletion: undefined as (() => Promise<void>) | undefined,
     candidateEnabled: false, candidateReads: 0, onCandidate: undefined as (() => Promise<void>) | undefined,
     saveEnabled: false, saveBinds: 0, saveWrites: 0, saveDiscards: 0,
+    physicalSave: false, copyMaximumBytes: 4 * 1024 ** 2,
+    physicalSource: undefined as string | undefined, physicalCopyRoot: undefined as string | undefined,
     onSave: undefined as (() => Promise<void>) | undefined,
+    onCopyPolicy: undefined as (() => Promise<void>) | undefined,
     transformCandidate: undefined as ((value: unknown) => unknown) | undefined,
     currentState: "running" as ModelTrainingResult["status"], onStart: undefined as (() => Promise<void>) | undefined,
     onRead: undefined as (() => Promise<void>) | undefined, onCancel: undefined as (() => Promise<void>) | undefined,
@@ -231,6 +242,53 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
         comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked", runtimeReadiness: "not-checked",
           hardware: "not-recorded", outputQuality: "not-evaluated"}, registration: "requires-separate-approval"};
       let lastCandidate: Extract<ApprovedLocalTrainingCandidateReview, {kind: "ready"}> | undefined;
+      const physicalContents = new Map<string, Buffer>([["adapter_config.json", Buffer.from("{}")],
+        ["adapter_model.safetensors", Buffer.from("synthetic adapter weights")], ["tokenizer.json", Buffer.from("{}")]]);
+      if (execution.physicalSave) {
+        execution.physicalSource = join(directory, "original-synthetic-result"); execution.physicalCopyRoot = join(directory, "private-model-copies");
+        await mkdir(execution.physicalSource); await mkdir(execution.physicalCopyRoot);
+        for (const [name, bytes] of physicalContents) await writeFile(join(execution.physicalSource, name), bytes, {flag: "wx"});
+      }
+      const reviewCandidate = async (control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview> => {
+        assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.candidateReads++;
+        await execution.onCandidate?.();
+        if (execution.currentState !== "succeeded") return {kind: "not-ready"};
+        const files = await Promise.all([...physicalContents.keys()].map(async (name, fileIndex) => {
+          const bytes = execution.physicalSave ? await readFile(join(execution.physicalSource!, name)) : undefined;
+          return {fileIndex, groupIndex: 0, name, role: "candidate" as const,
+            mediaType: name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
+            expectedSizeBytes: bytes?.length ?? 3,
+            expectedSha256: bytes ? "sha256:" + createHash("sha256").update(bytes).digest("hex") : "sha256:" + "b".repeat(64),
+            key: `workspaces/${workspaceId}/artifacts/training-results/${"a".repeat(32)}/${fileIndex}`};
+        }));
+        const snapshot = {schema: "training-result-finalized-files-v1" as const, publicationId: "a".repeat(32),
+          totalBytes: files.reduce((n, row) => n + row.expectedSizeBytes, 0), files};
+        const manifestDigest = "sha256:" + hash(snapshot), history = clone(completion);
+        const value: ApprovedLocalTrainingCandidateReview = {kind: "ready", requestId: admission.requestId, workspaceId, history,
+          retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest},
+          candidateDigest: "sha256:" + hash({requestId: admission.requestId, workspaceId,
+            owner: {organizationId, principalId, clientId: registeredClientId, hostIncarnationId}, history, manifestDigest})};
+        lastCandidate = value;
+        return (execution.transformCandidate ? execution.transformCandidate(value) : value) as ApprovedLocalTrainingCandidateReview;
+      };
+      const storage = execution.physicalSave ? createLocalGeneratedModelStorageAdapter({env: {HF_HUB_CACHE: join(directory, "unused-ordinary-cache")},
+        reviewedStorage: {rootDirectory: execution.physicalCopyRoot!, maximumFiles: 13, maximumTotalBytes: execution.copyMaximumBytes,
+          maximumDurationMs: 10000, minimumFreeBytes: 0}}) : undefined;
+      const originalCreateStorage = storage?.createReviewedSession?.bind(storage);
+      const physicalSave = originalCreateStorage ? createApprovedTrainingSaveOwner({taskId: admission.requestId,
+        context: {organizationId, principalId, workspaceId}, isOriginalCurrent: () => state.hostOpen && execution.currentState === "succeeded",
+        stillOriginalAllowed: admission.control.stillAllowed, review: reviewCandidate,
+        sourceDirectory: async () => execution.physicalSource!,
+        createStorage(request, context, control) {
+          assert.equal(transactionDepth, 0);
+          const session = originalCreateStorage(request, context, {isCurrent: () => control.isCurrent(), mayDiscard: () => control.mayDiscard(),
+            async stillAllowed() {await execution.onCopyPolicy?.(); return control.stillAllowed();}}); if (!session) return;
+          physicalCopies.push(session);
+          return {storageProfile: session.storageProfile,
+            async write() {execution.saveWrites++; await execution.onSave?.(); return session.write();},
+            fence: () => session.fence(), inspect: () => session.inspect(),
+            async discard() {execution.saveDiscards++; return session.discard();}};
+        }}) : undefined;
       return {kind: "accepted", value: {runId: admission.requestId, status: "running"},
         task: {requestId: admission.requestId, workspaceId,
           async read(control) {assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.reads++; await execution.onRead?.(); return summary();},
@@ -239,26 +297,10 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
             assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.completionReads++;
             await execution.onCompletion?.(); return execution.currentState === "succeeded" ? clone(completion) : {kind: "not-ready"};
           }} : {}),
-          ...(execution.candidateEnabled ? {async reviewCandidate(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview> {
-            assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.candidateReads++;
-            await execution.onCandidate?.();
-            if (execution.currentState !== "succeeded") return {kind: "not-ready"};
-            const files = ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"].map((name, fileIndex) => ({
-              fileIndex, groupIndex: 0, name, role: "candidate" as const,
-              mediaType: name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
-              expectedSizeBytes: 3, expectedSha256: "sha256:" + "b".repeat(64),
-              key: `workspaces/${workspaceId}/artifacts/training-results/${"a".repeat(32)}/${fileIndex}`}));
-            const snapshot = {schema: "training-result-finalized-files-v1" as const, publicationId: "a".repeat(32), totalBytes: 9, files};
-            const manifestDigest = "sha256:" + hash(snapshot), history = clone(completion);
-            const value: ApprovedLocalTrainingCandidateReview = {kind: "ready", requestId: admission.requestId, workspaceId, history,
-              retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest},
-              candidateDigest: "sha256:" + hash({requestId: admission.requestId, workspaceId,
-                owner: {organizationId, principalId, clientId: registeredClientId, hostIncarnationId}, history, manifestDigest})};
-            lastCandidate = value;
-            return (execution.transformCandidate ? execution.transformCandidate(value) : value) as ApprovedLocalTrainingCandidateReview;
-          }} : {}),
+          ...(execution.candidateEnabled ? {reviewCandidate} : {}),
           ...(execution.saveEnabled ? {createSaveSession(request: ApprovedLocalTrainingSaveRequest, control: ReviewedGeneratedModelControl): ApprovedLocalTrainingSaveSession | undefined {
             assert.equal(transactionDepth, 0); execution.saveBinds++;
+            if (physicalSave) {const session = physicalSave(request, control); if (session) physicalSessions.push(session); return session;}
             if (!lastCandidate || request.candidateDigest !== lastCandidate.candidateDigest) return;
             const candidate = clone(lastCandidate); let fenced = false, ready = false;
             const session: ApprovedLocalTrainingSaveSession = {
@@ -285,7 +327,7 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
   const executionOptions = {systems: {composeHeadlessAuthoring() {assert.fail("Training must not dispatch ordinary authoring.");}},
     getModelTrainingStart, getModelTrainingReaders, isModelHostCurrent: () => state.hostOpen};
   return {platform, documents, directory, scope, target, parsed, proposal, model, models, version, metadata, bindings, transactionFaults,
-    state, inputs, prepared, save, changeDataset, authorization, workspaces, contexts, placement, repositories, membership, at,
+    state, inputs, prepared, save, changeDataset, authorization, workspaces, contexts, placement, repositories, membership, at, physicalSessions, physicalCopies,
     desktop, desktopApprovals, managed, managedApprovals, managedPlatform, browserDocument, execution, executionOptions, retrieved,
     actor: {organizationId, principalId}, selection: {workspaceId, registeredClientId, fingerprint: target.fingerprint},
     grant, registration, submit: submit.request, status: status.request};
@@ -630,13 +672,15 @@ async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite"
   return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion, review, candidate};
 }
 
-async function trainedSaveHost(t: TestContext, storage: "Core" | "SQLite", host: "Desktop" | "Managed", enableSave = true, sessionCapability = true) {
+async function trainedSaveHost(t: TestContext, storage: "Core" | "SQLite", host: "Desktop" | "Managed", enableSave = true, sessionCapability = true,
+  physical?: {maximumBytes?: number; name?: string}) {
   const f = await executableTrainingHost(t, storage, host, enableSave), current = () => f.state.current && f.state.readCurrent;
   f.execution.candidateEnabled = true; f.execution.saveEnabled = sessionCapability;
+  f.execution.physicalSave = physical !== undefined; f.execution.copyMaximumBytes = physical?.maximumBytes ?? 4 * 1024 ** 2;
   assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
   const candidate = await f.candidate(); assert.ok(candidate.ok && candidate.value.kind === "ready");
   const proposal = {hostIncarnationId: f.target.hostIncarnationId, workspaceId: f.scope.workspaceId,
-    steps: [{operation: "models.save-training", idempotencyKey: randomUUID(), name: "Saved support adapter",
+    steps: [{operation: "models.save-training", idempotencyKey: randomUUID(), name: physical?.name ?? "Saved support adapter",
       taskId: candidate.value.requestId, candidateDigest: candidate.value.candidateDigest}]};
   const parsed = parseHeadlessBuildPlanProposal(proposal, f.target.hostIncarnationId,
     {allowLocalFileSave: false, allowModelTrainingSave: true}); assert.ok(parsed.ok);
@@ -661,7 +705,7 @@ async function trainedSaveHost(t: TestContext, storage: "Core" | "SQLite", host:
     assert.ok(result.ok && "value" in result && result.value && typeof result.value === "object" && "viewId" in result.value, JSON.stringify(result));
     return result.value.viewId;
   }
-  async function decide(viewId: string | undefined, decision: {kind: "approve"; mode: "whole-plan"} | {kind: "approve"; mode: "each-change"; step: number} | {kind: "revoke"},
+  async function decide(viewId: string | undefined, decision: {kind: "approve"; mode: "whole-plan"} | {kind: "approve"; mode: "each-change"; step: number} | {kind: "revoke" | "deny" | "cancel"},
     channel: "app-popup" | "authenticated-chat" = "app-popup", expectedRevision = 1) {
     if (f.desktopHost) return desktopApprovals.decide(selection, {fingerprint: target.fingerprint, expectedRevision, decision}, caller(channel));
     assert.ok(viewId);
@@ -776,6 +820,113 @@ for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop"
         : await f.managedHost!.owner(request, f.registration, () => true);
       assert.equal(result.ok, false); assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
     });
+}
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const)
+for (const [channel, mode] of [["app-popup", "whole-plan"], ["authenticated-chat", "each-change"]] as const)
+test(`${storage}/${host}/${channel}/${mode}: physical trained Save joins original App ownership, exact file copy and Model publication`, async t => {
+  const name = channel === "app-popup" ? "Prompt safety model" : "Token classifier";
+  const f = await trainedSaveHost(t, storage, host, true, true, {name}); assert.ok((await f.post()).ok);
+  const view = await f.openSave(channel); assert.ok((await f.decideSave(view,
+    mode === "whole-plan" ? {kind: "approve", mode} : {kind: "approve", mode, step: 1}, channel)).ok);
+  await writeFile(join(f.execution.physicalSource!, "checkpoint-not-selected"), "retained unselected synthetic bytes", {flag: "wx"});
+  const saved = await f.save(); assert.ok(saved.result.ok, JSON.stringify(saved));
+  assert.ok("operation" in saved.result.value && saved.result.value.operation === "models.save-training");
+  const model = await f.models.readRecordedModel!(f.scope.workspaceId, saved.result.value.reference.modelRecordId); assert.ok(model?.localPath);
+  assert.equal(model.displayName, name);
+  assert.equal(dirname(model.localPath), f.execution.physicalCopyRoot); assert.notEqual(model.localPath, f.execution.physicalSource);
+  const names = ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"].sort();
+  assert.deepEqual((await readdir(model.localPath)).sort(), names);
+  assert.deepEqual((await readdir(f.execution.physicalSource!)).sort(), [...names, "checkpoint-not-selected"].sort());
+  assert.equal(await readFile(join(f.execution.physicalSource!, "checkpoint-not-selected"), "utf8"), "retained unselected synthetic bytes");
+  const identities: BigIntStats[] = [];
+  for (const name of names) {
+    const source: Buffer = await readFile(join(f.execution.physicalSource!, name)), copied: Buffer = await readFile(join(model.localPath, name));
+    assert.deepEqual(copied, source); identities.push(await lstat(join(model.localPath, name), {bigint: true}));
+  }
+  assert.equal(f.physicalSessions.length, 1); assert.equal(f.physicalCopies.length, 1);
+  assert.equal(f.physicalSessions[0].inspect().phase, "ready"); assert.equal(f.physicalSessions[0].inspect().ioClosed, true);
+  assert.equal(f.physicalCopies[0].inspect().ioClosed, true); assert.equal(f.physicalCopies[0].inspect().physicalQuotaEnforced, false);
+  const reads = f.execution.candidateReads, again = await f.save(); assert.ok(again.result.ok); assert.equal(again.result.value.kind, "replayed");
+  assert.equal(f.execution.candidateReads, reads); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.saveBinds, 1);
+  assert.equal((await readdir(f.execution.physicalCopyRoot!)).length, 1);
+  for (const [index, name] of names.entries()) {
+    const current: BigIntStats = await lstat(join(model.localPath, name), {bigint: true});
+    assert.equal(current.dev, identities[index].dev); assert.equal(current.ino, identities[index].ino);
+  }
+  assert.doesNotMatch(JSON.stringify(saved.result), /localPath|private-model-copies|original-synthetic-result|history|files/);
+});
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: declining physical trained Save grants no copy or registration`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, true, {}); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "deny"})).ok);
+    assert.equal((await f.save()).result.ok, false); assert.equal(f.execution.saveBinds, 0); assert.equal(f.execution.saveWrites, 0);
+    assert.deepEqual(await readdir(f.execution.physicalCopyRoot!), []); assert.equal((await readdir(f.execution.physicalSource!)).length, 3);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+  });
+  test(`${storage}/${host}: physical trained Save resource refusal creates no copy or Model`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, true, {maximumBytes: 1}); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    assert.equal((await f.save()).result.ok, false); assert.equal(f.execution.saveWrites, 0);
+    assert.deepEqual(await readdir(f.execution.physicalCopyRoot!), []);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+    assert.equal(f.physicalSessions[0].inspect().ioClosed, true);
+  });
+  test(`${storage}/${host}: physical trained Save refuses changed source bytes without deleting them`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, true, {}); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    f.execution.onSave = async () => {await writeFile(join(f.execution.physicalSource!, "adapter_model.safetensors"), "changed synthetic weights");};
+    assert.equal((await f.save()).result.ok, false);
+    assert.equal(await readFile(join(f.execution.physicalSource!, "adapter_model.safetensors"), "utf8"), "changed synthetic weights");
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+    assert.equal(f.physicalCopies[0].inspect().ioClosed, true); assert.equal(f.execution.saveWrites, 1);
+  });
+  test(`${storage}/${host}: physical trained Save revocation cleans the known fresh copy and retains original files`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, true, {}); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    const revokeView = await f.openSave();
+    let sawWrittenCopy = false;
+    f.execution.onCopyPolicy = async () => {
+      if (sawWrittenCopy) return;
+      for (const leaf of await readdir(f.execution.physicalCopyRoot!)) {
+        assert.match(leaf, /^\.model-copy-[a-f0-9]{32}$/);
+        const path = join(f.execution.physicalCopyRoot!, leaf);
+        for (const file of await readdir(path)) if ((await lstat(join(path, file))).size > 0) {
+          sawWrittenCopy = true;
+          assert.ok((await f.decideSave(revokeView, {kind: "revoke"}, "app-popup", 2)).ok); return;
+        }
+      }
+    };
+    assert.equal((await f.save()).result.ok, false); assert.equal(f.execution.saveDiscards, 1);
+    assert.equal(sawWrittenCopy, true); assert.equal(f.execution.saveWrites, 1);
+    assert.deepEqual(await readdir(f.execution.physicalCopyRoot!), []);
+    assert.equal((await readdir(f.execution.physicalSource!)).length, 3);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+    assert.equal(f.physicalSessions[0].inspect().ioClosed, true);
+  });
+  test(`${storage}/${host}: physical trained Save lost reply keeps one registered copy and original closed owners`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, true, {}); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    f.transactionFaults.dropWhen = value => !!value && typeof value === "object" && "kind" in value && value.kind === "committed" && "reference" in value;
+    const saved = await f.save(); assert.ok(saved.result.ok, JSON.stringify(saved)); assert.equal(saved.result.value.kind, "replayed");
+    assert.ok((await f.save()).result.ok); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.saveBinds, 1);
+    assert.equal((await readdir(f.execution.physicalCopyRoot!)).length, 1); assert.equal(f.physicalCopies.length, 1);
+    assert.equal(f.physicalCopies[0].inspect().ioClosed, true); assert.equal(f.physicalSessions[0].inspect().ioClosed, true);
+    assert.equal(f.execution.saveDiscards, 0);
+  });
+  test(`${storage}/${host}: physical trained Save rechecks the recorded base revision and retains a copy after issued publication fails`, async t => {
+    const f = await trainedSaveHost(t, storage, host, true, true, {}); assert.ok((await f.post()).ok);
+    const view = await f.openSave(); assert.ok((await f.decideSave(view, {kind: "approve", mode: "whole-plan"})).ok);
+    f.state.registryNow = "2026-11-24T00:00:00.000Z";
+    await f.models.updateModelRecord!({workspaceId: f.scope.workspaceId, modelRecordId: f.model.modelRecordId, patch: {displayName: "Changed base model"}});
+    assert.notEqual((await f.models.readRecordedModel!(f.scope.workspaceId, f.model.modelRecordId))!.updatedAt, f.model.updatedAt);
+    assert.equal((await f.save()).result.ok, false); assert.equal(f.execution.saveWrites, 1); assert.equal(f.execution.saveDiscards, 0);
+    assert.equal((await readdir(f.execution.physicalCopyRoot!)).length, 1);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-saves"), []);
+    assert.deepEqual(await f.documents.listDocuments("headless/models/training-save-sources"), []);
+    assert.equal(f.physicalSessions[0].inspect().ioClosed, true);
+  });
 }
 
 for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {

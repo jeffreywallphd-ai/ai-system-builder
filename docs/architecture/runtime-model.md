@@ -4106,6 +4106,17 @@ Controlled Core/SQLite host tests qualify this composition, not actual model
 training or file copies. Public product Root/transport and real-host qualification
 remain separate; ADR-0049 local-account trust and resource limits are unchanged.
 
+Local Save qualification also composes the actual application Save owner and
+reviewed filesystem adapter through both private hosts. Fresh synthetic files
+exercise real copy/hash/closure and atomic metadata, including late revocation,
+selected-file-only copying, source drift, capacity refusal, stale base version,
+conservative retention after issued publication failure and read-only replay.
+The original training task is controlled; no model is loaded or scored. The
+[feature evidence matrix](../operations/headless-training-save-task-qualification.json)
+describes this local task scope. Only its current Work receipt and separate review
+can close that task. Real training, public host/UI and parent qualification remain
+in their existing later tasks.
+
 The product host composition must still bind the original app Save capability and
 require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does

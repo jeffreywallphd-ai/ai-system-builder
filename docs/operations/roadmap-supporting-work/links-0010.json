@@ -1192,6 +1192,25 @@
         "Product host wiring plus current qualification remain pending. No model accuracy test was repeated and no protected service, physical quota or external publication authority is granted.",
         "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-trained-model-save-hosts",
+      "work_criteria": [
+        "host-save-review-and-approval",
+        "original-host-save-execution",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e0ab5bc52faaf6b5f3ab7bf8d1c9be6bf4a7e4fdddc262d2c641f092e7c6fdfb",
+      "review_digest": "4123f6cc8c5c440a8940938afcfb90ba953a25d91548c165e3b0e3c7c636f91a",
+      "scope": "Desktop and Managed private hosts connect exact trained Save approvals to the original accepted task and atomic Model publication. Focused tests cover both channels and modes, source/actor/host refusal, revocation, lost replies and cleanup limits. Independent review passed before commit 718c92b.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task 71, Increment 7, the roadmap or real host qualification.",
+        "Actual product Root/transport and physical-copy host qualification plus current Task 71 qualification remain pending. No model accuracy test was repeated and no protected service, physical quota or external publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
+      ]
     }
   ]
 }
