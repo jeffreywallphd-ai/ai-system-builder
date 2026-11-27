@@ -133,38 +133,38 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         self.assertFalse((self.directory / "used.json").exists())
 
     def first_diagnostic_fixture(self):
-        result = {"source_digest": guard.FIRST_DIAGNOSTIC_SOURCE, "source_stable": True, "model_quality_tested": False, "status": "failed",
+        result = {"source_digest": guard.PREVIOUS_ATTEMPT_SOURCE, "source_stable": True, "model_quality_tested": False, "status": "failed",
             "diagnostic": {"schema": "bounded-training-feature-diagnostic-v4", "modelQualityTested": False,
                 "workerRetirementConfirmed": True, "ownerClosureConfirmed": True, "applicationCleanupConfirmed": True, "newRootRemoved": True}}
-        target = self.root / guard.FIRST_DIAGNOSTIC_RESULT; target.parent.mkdir(parents=True, exist_ok=True)
+        target = self.root / guard.PREVIOUS_ATTEMPT_RESULT; target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(result)); return result, target
 
     def test_second_attempt_requires_exact_original_diagnostic_shutdown_and_cleanup(self):
         result, target = self.first_diagnostic_fixture()
-        with patch.object(guard, "FIRST_DIAGNOSTIC_DIGEST", guard.digest(result)):
-            guard.validate_first_diagnostic_cleanup(self.root)
+        with patch.object(guard, "PREVIOUS_ATTEMPT_DIGEST", guard.digest(result)):
+            guard.validate_previous_attempt_cleanup(self.root)
             target.write_text(json.dumps({**result, "source_stable": False}))
-            with self.assertRaises(guard.AdmissionError): guard.validate_first_diagnostic_cleanup(self.root)
+            with self.assertRaises(guard.AdmissionError): guard.validate_previous_attempt_cleanup(self.root)
         for key in ("workerRetirementConfirmed", "ownerClosureConfirmed", "applicationCleanupConfirmed", "newRootRemoved"):
             bad = copy.deepcopy(result); bad["diagnostic"][key] = False; target.write_text(json.dumps(bad))
-            with patch.object(guard, "FIRST_DIAGNOSTIC_DIGEST", guard.digest(bad)):
-                with self.assertRaises(guard.AdmissionError): guard.validate_first_diagnostic_cleanup(self.root)
+            with patch.object(guard, "PREVIOUS_ATTEMPT_DIGEST", guard.digest(bad)):
+                with self.assertRaises(guard.AdmissionError): guard.validate_previous_attempt_cleanup(self.root)
         for bad in ({**result, "source_stable": False}, {**result, "source_digest": "b" * 64}, {**result, "model_quality_tested": True}):
             target.write_text(json.dumps(bad))
-            with patch.object(guard, "FIRST_DIAGNOSTIC_DIGEST", guard.digest(bad)):
-                with self.assertRaises(guard.AdmissionError): guard.validate_first_diagnostic_cleanup(self.root)
+            with patch.object(guard, "PREVIOUS_ATTEMPT_DIGEST", guard.digest(bad)):
+                with self.assertRaises(guard.AdmissionError): guard.validate_previous_attempt_cleanup(self.root)
         self.assertFalse((self.directory / "used.json").exists())
 
     def test_main_accepts_canonical_review_and_calls_one_inert_child_only(self):
         first, _ = self.first_diagnostic_fixture()
         work, receipt = self.canonical_review_fixture()
-        prior = [{"qualification": "failed", "case": n} for n in (1, 2, 3, 4, 5)]
+        prior = [{"qualification": "failed", "case": n} for n in (1, 2, 3, 4, 5, 6)]
         for row in prior: row["receipt_digest"] = guard.digest(row)
         references = [row["receipt_digest"] for row in prior]
         (self.directory / "authorization.json").write_text(json.dumps({**self.authorization, "prior_receipts": references}))
         python = self.root / "inert-python"; python.write_text("never executed")
         model = self.root / "inert-model"; model.mkdir()
-        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": prior[2:3]}, guard.PRIOR_CORRECTED_WORK: {"receipts": prior[3:4]}, guard.FIRST_DIAGNOSTIC_WORK: {"receipts": prior[4:]}, guard.TRIAL_WORK: {
+        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": prior[2:3]}, guard.PRIOR_CORRECTED_WORK: {"receipts": prior[3:4]}, guard.PRIOR_STAGE_WORK: {"receipts": prior[4:5]}, guard.PREVIOUS_ATTEMPT_WORK: {"receipts": prior[5:]}, guard.TRIAL_WORK: {
             "status": "active", "claim": {"owned": True}, "spec": {"task_targets": [{"task_id": "run-approved-fine-tuning", "coverage": "task-outcome"}]}}}}
         def inert_child(root, command):
             self.assertEqual(command["argv"], ["node", "--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", guard.RUNNER])
@@ -177,7 +177,7 @@ class FreshTinyAdmissionTests(unittest.TestCase):
             (directory / ("9" * 32 + ".json")).write_text(json.dumps(row))
             return {"status": "passed", "exit_code": 0, "duration_ms": 1, "output": {}}
         with patch.object(guard, "ROOT", self.root), patch.object(guard, "PRIOR", references), \
-                patch.object(guard, "FIRST_DIAGNOSTIC_DIGEST", guard.digest(first)), \
+                patch.object(guard, "PREVIOUS_ATTEMPT_DIGEST", guard.digest(first)), \
                 patch.object(guard, "snapshot", return_value={"source_digest": self.source}), \
                 patch.object(guard, "Records") as records, patch.object(guard, "Work") as owner, \
                 patch.object(guard, "execute", side_effect=inert_child) as execute, \
@@ -195,10 +195,10 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         self.assertFalse(result["model_quality_tested"])
 
     def test_all_prior_failures_remain_bound_to_original_work_and_integrity(self):
-        rows = [{"qualification": "failed", "case": n} for n in (1, 2, 3, 4, 5)]
+        rows = [{"qualification": "failed", "case": n} for n in (1, 2, 3, 4, 5, 6)]
         for row in rows: row["receipt_digest"] = guard.digest(row)
         references = [r["receipt_digest"] for r in rows]
-        state = {"work_items": {guard.PRIOR_WORK: {"receipts": rows[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": rows[2:3]}, guard.PRIOR_CORRECTED_WORK: {"receipts": rows[3:4]}, guard.FIRST_DIAGNOSTIC_WORK: {"receipts": rows[4:]}}}
+        state = {"work_items": {guard.PRIOR_WORK: {"receipts": rows[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": rows[2:3]}, guard.PRIOR_CORRECTED_WORK: {"receipts": rows[3:4]}, guard.PRIOR_STAGE_WORK: {"receipts": rows[4:5]}, guard.PREVIOUS_ATTEMPT_WORK: {"receipts": rows[5:]}}}
         with patch.object(guard, "PRIOR", references):
             guard.validate_prior_receipts(state)
             for owner in set(guard.PRIOR_OWNERS):
@@ -212,9 +212,9 @@ class FreshTinyAdmissionTests(unittest.TestCase):
                 if mutation == "passed": bad["work_items"][guard.PRIOR_FRESH_WORK]["receipts"][0]["qualification"] = "passed"
                 with self.assertRaises((guard.AdmissionError, StopIteration, KeyError)): guard.validate_prior_receipts(bad)
         self.assertEqual(guard.PRIOR_FRESH_WORK, "headless-bounded-training-fresh-attempt-20261127-r2")
-        self.assertEqual(guard.DIRECTORY, ".local-codex/headless-training-short-cache-verification-20261127")
-        self.assertEqual(len(guard.PRIOR), 5)
-        self.assertEqual(guard.AUTHORITY_REF, "user-approved-two-tiny-attempts-20261127-second-verification")
+        self.assertEqual(guard.DIRECTORY, ".local-codex/headless-training-candidate-diagnostic-20261127")
+        self.assertEqual(len(guard.PRIOR), 6)
+        self.assertEqual(guard.AUTHORITY_REF, "user-approved-two-candidate-attempts-20261127-first-diagnostic")
         self.assertNotEqual(guard.DIRECTORY, ".local-codex/headless-training-fresh-trial-20261127")
 
     def test_only_new_closed_diagnostics_are_disclosed_and_raw_fields_deny(self):

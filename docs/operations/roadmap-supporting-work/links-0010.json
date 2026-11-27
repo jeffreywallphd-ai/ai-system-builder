@@ -1667,6 +1667,25 @@
         "Actual diagnostic cleanup was separately observed. Only one further reviewed-fix verification is authorized and must prove that exact first cleanup.",
         "No model accuracy, historical cleanup or third attempt is supplied. Another checkout may lack local records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-candidate-assertion-diagnostics",
+      "work_criteria": [
+        "exact-candidate-assertion-facts",
+        "closed-diagnostic-guard",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "98e7fbdd3d5c58bce510f10437fab9340c118246d8f28faedac28ca73733cff5",
+      "review_digest": "c169024953796b95a7b98fe6e2a22056baf4a7af546ae06749a60fdf4e549d5b",
+      "scope": "At commit7c510e5f, version5candidate diagnostics passed seven focused checks and independent review. Individual finite assertion facts preserve current-file/CPU/pipeline/32file requirements and identity-gated inventory counts.",
+      "limitations": [
+        "Source observability only. Prior actual training succeeded but aggregate candidate verification failed; no Task72/parent pass.",
+        "No raw candidate identifiers, reports, paths, prompts or model accuracy checks are supplied. No automatic retry authority.",
+        "Historical failures/ownership remain. Another checkout may lack local records."
+      ]
     }
   ]
 }

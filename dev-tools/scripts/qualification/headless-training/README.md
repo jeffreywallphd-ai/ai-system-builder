@@ -148,3 +148,12 @@ counts can represent the private contract's256filebound, while a passing actual
 test still requires at most32files. Unknown/false/missing facts cannot qualify.
 Historical version4 first-diagnostic proof is read separately by its exact digest
 and remains unchanged. Version5 is source observability, not a candidate pass.
+
+The user separately approved up to two candidate-focused attempts after successful
+training: a detailed diagnostic, then verification of a reviewed fix if needed.
+The current guard admits only the first, through a new fixed directory/reference
+and current reviewed source/task. It now requires the exact most recent short-cache
+result/source and its four original cleanup facts before consumption. All six
+failed aggregate receipts retain original owners and conservative charges. The
+second is unavailable in this guard and needs a separately reviewed fix/guard
+after confirmed preceding cleanup. No accuracy test or automatic retry is added.

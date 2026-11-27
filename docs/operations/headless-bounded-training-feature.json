@@ -125,29 +125,27 @@
   ],
   "remaining_qualification": [
     "AtSource32f120 actual training succeeded with87progress observations and all new cleanup. Aggregate verification failed in candidate-lineage; exact candidate assertion remains unknown.",
-    "Preserve required current checkpoint/candidate/hardware/pipeline checks and expose finite individual diagnostics. No further actual attempt is authorized.",
+    "Version5 individual candidate checks preserve all requirements. The user separately approved up to two candidate attempts; only the first can be admitted here after exact preceding cleanup and reviewed current source. No accuracy checks.",
     "Earlier unknown owners/files remain retained. No candidate, Task72, public-host or parent pass follows from the failed aggregate receipt."
   ],
   "operator_decision": {
-    "authority_ref": "user-approved-two-tiny-attempts-20261127",
-    "approved": "Up to two guarded Tiny attempts: diagnostic, then verification of a reviewed fix if needed. The second requires confirmed first-run shutdown and cleanup.",
+    "authority_ref": "user-approved-two-candidate-attempts-20261127",
+    "approved": "Up to two candidate-focused attempts: detailed diagnostic, then reviewed-fix verification if needed. Another attempt requires confirmed preceding cleanup.",
     "maximum_attempts": 2,
-    "current_attempt_ordinal": 2,
-    "actual_attempt_consumed": true,
-    "guard_work_id": "headless-training-short-cache-verification-guard",
-    "actual_trial_work_id": "headless-bounded-training-short-cache-verification-20261127",
+    "current_attempt_ordinal": 1,
+    "actual_attempt_consumed": false,
+    "guard_work_id": "headless-training-candidate-diagnostic-guard",
+    "actual_trial_work_id": "headless-bounded-training-candidate-diagnostic-20261127",
     "second_attempt_available_in_current_guard": false,
     "restart_required": false,
-    "prior_cleanup_authorized": false,
-    "diagnostic_attempt_consumed": true,
-    "verification_attempt_consumed": true
+    "prior_cleanup_authorized": false
   },
   "fresh_trial_guard": {
-    "status": "both-approved-attempts-consumed-training-succeeded-candidate-qualification-pending",
+    "status": "candidate-first-diagnostic-source-qualification-pending",
     "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
     "maximum_attempts": 1,
     "retained_logical_bytes_per_old_attempt": 33554432,
-    "old_attempts": 5,
+    "old_attempts": 6,
     "fresh_logical_reservation_bytes": 33554432,
     "minimum_free_bytes_in_addition": 134217728,
     "physical_quota_asserted": false,
@@ -193,6 +191,20 @@
       "actual_attempt_consumed": true,
       "guard_work_id": "headless-training-corrected-observation-trial-guard",
       "actual_trial_work_id": "headless-bounded-training-corrected-observation-20261127"
+    },
+    {
+      "authority_ref": "user-approved-two-tiny-attempts-20261127",
+      "approved": "Up to two guarded Tiny attempts: diagnostic, then verification of a reviewed fix if needed. The second requires confirmed first-run shutdown and cleanup.",
+      "maximum_attempts": 2,
+      "current_attempt_ordinal": 2,
+      "actual_attempt_consumed": true,
+      "guard_work_id": "headless-training-short-cache-verification-guard",
+      "actual_trial_work_id": "headless-bounded-training-short-cache-verification-20261127",
+      "second_attempt_available_in_current_guard": false,
+      "restart_required": false,
+      "prior_cleanup_authorized": false,
+      "diagnostic_attempt_consumed": true,
+      "verification_attempt_consumed": true
     }
   ],
   "safe_failure_projection": {
