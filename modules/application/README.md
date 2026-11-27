@@ -209,3 +209,12 @@ without echoing text. The helper is not registered in a public host or tool.
 Malformed UTF-16 surrogate sequences are rejected before UTF-8 hashing; otherwise
 different source strings could collapse to replacement-character bytes. Valid
 surrogate pairs, replacement characters, whitespace and normalization remain exact.
+
+Private training failures may arrive inside the original worker result rather
+than its outer status. The App projects a fixed failure code/message and only
+known pipeline-stage/error-category labels from an exact failed task result.
+Foreign run IDs, wrong status, unknown error shapes and raw exception content
+cannot supply those labels. Unknowns remain generic. Original settlement and
+cleanup still precede terminal delivery; ordinary registry training and cancellation
+keep their existing behavior. No exception messages, paths or training text are
+returned by this private failure projection.

@@ -38,6 +38,30 @@ const PRIVATE_TRAINING_MEDIA: Readonly<Record<string, string>> = {"application/x
   "application/json": "json", "text/json": "json", "text/csv": "csv", "application/csv": "csv",
   "application/x-parquet": "parquet", "application/vnd.apache.parquet": "parquet"};
 const privateUnavailable = () => new Error("The original private training task is unavailable.");
+
+export const PRIVATE_TRAINING_FAILURE_STAGES = Object.freeze(["purpose-mapping", "diffusion-delegate", "vision-delegate",
+  "initializing", "base-model-resolution", "dataset-loading", "model-loading", "sequence-length", "tokenization",
+  "adapter-configuration", "training-arguments", "training-loop", "serialization", "validation", "serialization-manifest",
+  "run-metadata", "generated-candidate", "completion-report"] as const);
+export const PRIVATE_TRAINING_FAILURE_TYPES = Object.freeze(["ValueError", "RuntimeError", "TypeError", "MemoryError",
+  "ImportError", "ModuleNotFoundError", "OSError", "AttributeError", "KeyError", "IndexError", "AssertionError", "OtherError"] as const);
+
+function safePrivateTrainingFailure(record: RuntimeTaskRecord): NonNullable<ModelTrainingResult["error"]> {
+  const generic = {code: "private_training_failed", message: "The private training task could not finish."};
+  if (record.error?.code === "private_training_output_unconfirmed") return {
+    code: "private_training_output_unconfirmed", message: "The training result files could not be confirmed."};
+  try {
+    const data = readStrictPassiveRecord(record.data, ["runId", "status", "outputDirectory", "outputModelName", "outputModel",
+      "generatedModelCandidate", "metrics", "checkpoints", "logs", "validationReportPath", "warnings", "error"]);
+    if (data.runId !== record.requestId || data.status !== "failed") return generic;
+    const error = readStrictPassiveRecord(data.error, ["code", "message", "details"]);
+    if (error.code !== "training_failed") return generic;
+    const details = readStrictPassiveRecord(error.details, ["method", "trainingTask", "stage", "errorType"]);
+    return {...generic, details: {
+      stage: PRIVATE_TRAINING_FAILURE_STAGES.some(stage => stage === details.stage) ? details.stage as string : "unclassified",
+      errorType: PRIVATE_TRAINING_FAILURE_TYPES.some(type => type === details.errorType) ? details.errorType as string : "OtherError"}};
+  } catch {return generic;}
+}
 const privateDigest = (bytes: Uint8Array) => "sha256:" + createHash("sha256").update(bytes).digest("hex");
 const isPrivateDigest = (value: unknown): value is string => typeof value === "string" && /^sha256:[a-f0-9]{64}$/.test(value);
 const isPrivateId = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -980,7 +1004,8 @@ export class TrainModelUseCase {
       const terminal = normalizeModelTrainingResult({
         runId: requestId,
         status: statusRecord.status,
-        ...(statusRecord.error ? { error: statusRecord.error } : {}),
+        ...(privateOwner && statusRecord.status === "failed" ? {error: safePrivateTrainingFailure(statusRecord)} :
+          statusRecord.error ? {error: statusRecord.error} : {}),
       });
       this.registeredResultsByRequestId.set(requestId, terminal);
       return terminal;

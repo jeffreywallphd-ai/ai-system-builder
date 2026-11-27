@@ -39,8 +39,12 @@ test("diagnostics count progress without copying text or arbitrary error details
   observeTrainingResult(facts, {...result, status: "failed", error: {code: "private_training_failed", message: "synthetic private text"}});
   assert.equal(facts.progressObservations, 1); assert.equal(facts.terminalStatus, "failed");
   assert.equal(facts.runtimeErrorCode, "private_training_failed");
+  observeTrainingResult(facts, {...result, error: {code: "private_training_failed", message: "synthetic private text",
+    details: {stage: "model-loading", errorType: "ImportError", raw: "synthetic private text"}}});
+  assert.equal(facts.runtimeFailureStage, "model-loading"); assert.equal(facts.runtimeFailureType, "ImportError");
   observeTrainingResult(facts, {...result, error: {code: "synthetic private text", message: "synthetic private text"}});
   assert.equal(facts.runtimeErrorCode, "unclassified"); assert.ok(!JSON.stringify(facts).includes("synthetic private text"));
+  assert.equal(facts.runtimeFailureStage, "unclassified"); assert.equal(facts.runtimeFailureType, "OtherError");
 });
 test("cleanup facts become true after original actions, and failures preserve unknown removal", async () => {
   for (const failure of ["none", "application", "root"]) {

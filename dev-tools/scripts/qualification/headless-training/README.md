@@ -89,3 +89,15 @@ retains three 32 MiB logical charges and reserves one more. All original limits,
 current source/review/task checks and v3 post-cleanup requirements remain. This
 is exactly one new attempt, not a reusable retry permission. Source checks execute
 only inert admission and observation tests before the separate actual Work.
+
+The corrected trial also failed. Unlike the old diagnostic, its version 3 record
+proved failed terminal status after five progress samples, original worker/IO
+retirement, application cleanup and new-root removal. No candidate check was
+reached. Its permission is consumed; do not retry or rearm it.
+
+Version 4 adds only allowlisted pipeline-stage and error-category labels. The App
+previously dropped a loader failure returned inside result data when the outer
+status had no error. It now projects fixed safe categories from the exact original
+failed task result. Raw exception messages, paths, logs and arbitrary class names
+stay private. Generic/unknown labels remain possible and supply no diagnosis or
+pass. Source fixtures exercise this reporting path without loading a model.

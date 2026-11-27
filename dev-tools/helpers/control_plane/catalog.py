@@ -246,6 +246,9 @@ TRAINING_FRESH_GUARD_SCOPE = (TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST,TR
     "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json",
     "docs/architecture/runtime-model.md", "docs/security/headless-system-builder-threat-model.md",
     "docs/diagnostics/ai-development-control-plane.md", "docs/operations/roadmap-supporting-work/links-0010.json")
+TRAINING_FAILURE_SOURCE_SCOPE = TRAINING_FRESH_GUARD_SCOPE + (
+    "modules/application/use-cases/model/train-model.use-case.ts",
+    "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts", "modules/application/README.md")
 TRAINING_EVALUATION_SCOPE = (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE, TRAINING_START_CONTROLLER_TEST,
     "dev-tools/helpers/control_plane/catalog.py", "docs/operations/headless-training-evaluation-feature.json",
     "docs/operations/headless-bounded-training-feature.json", "docs/operations/roadmap-supporting-work/links-0010.json",
@@ -5004,14 +5007,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[part for name in ("test_control_plane_headless_image_generation.", "test_control_plane_focused.") for part in ("-k", name)]]
-    if ({TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST} <= set(paths) <= set(TRAINING_FRESH_GUARD_SCOPE)
+    if ({TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST} <= set(paths) <= set(TRAINING_FAILURE_SOURCE_SCOPE)
             and "focused-tests" not in explicit_required
             and _automatic_files_available(root, {"automatic_required_files": (
                 TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE, TRAINING_START_CONTROLLER_TEST,
-                TRAINING_FRESH_REVIEW_PRODUCER) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS})):
+                TRAINING_FRESH_REVIEW_PRODUCER) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS + (
+                    TRAINING_FAILURE_SOURCE_SCOPE[-3:-1] if TRAINING_FAILURE_SOURCE_SCOPE[-3] in paths else ())})):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None:
             filters = ("test_control_plane_headless_training_trial.", "test_control_plane_focused.") + (
+                ("test_control_plane_headless_training_owner.",) if "modules/application/use-cases/model/train-model.use-case.ts" in paths else ()) + (
                 ("test_control_plane_headless_training_host_approval.",) if TRAINING_START_CONTROLLER_TEST in paths else ())
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",

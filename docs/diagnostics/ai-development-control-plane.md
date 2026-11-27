@@ -3710,3 +3710,11 @@ original worker/IO closure, application cleanup and new-root removal. Zero sampl
 intermediate progress is retained for fast completion. None of these source checks
 rearms the consumed trial or supplies actual training, cleanup or model accuracy
 qualification. The driver rejects malformed counts and raw/unknown fields.
+
+Version 4 bounded training diagnostics add fixed pipeline-stage/error categories
+from the original App failure projection. A returned loader failure cannot lose
+all error context merely because its error was nested in result data. Closed
+category tests and related original-owner regressions supply source evidence only.
+Raw errors and private result data never enter these diagnostics. The failed
+corrected trial remains consumed; its version 3 evidence proved only failed
+terminal status/progress and new-root cleanup, not successful fine-tuning.

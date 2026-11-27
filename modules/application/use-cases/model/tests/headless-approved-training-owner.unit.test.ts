@@ -12,6 +12,7 @@ import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, App
   ApprovedLocalTrainingControl, ApprovedLocalTrainingStart, ApprovedLocalTrainingModelReader, TrainingResultVerifiedFiles, GeneratedModelStoragePort} from "../../../ports/model";
 import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
 import {TrainModelUseCase} from "../train-model.use-case";
+import {PRIVATE_TRAINING_FAILURE_STAGES, PRIVATE_TRAINING_FAILURE_TYPES} from "../train-model.use-case";
 
 const digest = (value: Uint8Array) => "sha256:" + createHash("sha256").update(value).digest("hex");
 const text = (value: string) => new TextEncoder().encode(value);
@@ -762,3 +763,41 @@ test("Approved local training owner supplies the original dispatch fence through
   assert.equal(f.state.settles, 1); assert.equal(f.reconciler.status.pending, 0);
   assert.deepEqual(await readdir(f.root), ["model"]);
 });
+
+for (const stage of PRIVATE_TRAINING_FAILURE_STAGES) {
+  test("private returned failure preserves safe stage " + stage + " without raw result data", async t => {
+    const f = await fixture(t); await f.accepted();
+    f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING,
+      status: "failed", concurrencyClass: "unknown", data: {runId: f.requestId, status: "failed",
+        outputDirectory: "C:/synthetic-private/output", logs: ["synthetic private text"], error: {
+          code: "training_failed", message: "synthetic private text", details: {stage, errorType: "ValueError", method: "lora", trainingTask: "llm-instruction"}}}});
+    const result = await f.read(); assert.equal(result.status, "failed");
+    assert.deepEqual(result.error, {code: "private_training_failed", message: "The private training task could not finish.", details: {stage, errorType: "ValueError"}});
+    assert.doesNotMatch(JSON.stringify(result), /synthetic|outputDirectory|logs|llm-instruction/);
+    assert.deepEqual(await f.read(), result); assert.equal(f.state.starts, 1);
+  });
+}
+for (const errorType of PRIVATE_TRAINING_FAILURE_TYPES) {
+  test("private returned failure preserves finite error category " + errorType, async t => {
+    const f = await fixture(t); await f.accepted();
+    f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING,
+      status: "failed", concurrencyClass: "unknown", data: {runId: f.requestId, status: "failed",
+        error: {code: "training_failed", message: "synthetic private text", details: {stage: "training-loop", errorType}}}});
+    assert.deepEqual((await f.read()).error?.details, {stage: "training-loop", errorType});
+  });
+}
+for (const variant of ["unknown", "foreign-run", "wrong-status", "extra-details", "outer-only", "output-failure"]) {
+  test("private failure ignores raw data: " + variant, async t => {
+    const f = await fixture(t); await f.accepted();
+    const data = {runId: variant === "foreign-run" ? "foreign" : f.requestId, status: variant === "wrong-status" ? "succeeded" : "failed",
+      error: {code: "training_failed", message: "synthetic private text", details: {stage: "synthetic private text", errorType: "synthetic private text",
+        ...(variant === "extra-details" ? {raw: "synthetic private text"} : {})}}};
+    f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING,
+      status: "failed", concurrencyClass: "unknown", ...(variant === "outer-only" ? {} : {data}),
+      error: {code: variant === "output-failure" ? "private_training_output_unconfirmed" : "synthetic private text", message: "synthetic private text"}});
+    const error = (await f.read()).error!; assert.ok(error); assert.doesNotMatch(JSON.stringify(error), /synthetic|foreign|raw/);
+    if (variant === "unknown") assert.deepEqual(error.details, {stage: "unclassified", errorType: "OtherError"});
+    else assert.equal(error.details, undefined);
+    assert.equal(error.code, variant === "output-failure" ? "private_training_output_unconfirmed" : "private_training_failed");
+  });
+}

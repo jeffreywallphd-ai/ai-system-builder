@@ -37,6 +37,12 @@ START_FAILURE_CODES = frozenset({"headless.invalid-request", "headless.unsupport
     "headless.unavailable", "headless.invalid-edit-batch", "headless.stale-revision", "headless.operation-unconfirmed",
     "headless.idempotency-conflict", "headless.idempotency-expired", "headless.operation-capacity", "headless.not-started"})
 
+FAILURE_STAGES = frozenset({"purpose-mapping", "diffusion-delegate", "vision-delegate", "initializing", "base-model-resolution",
+    "dataset-loading", "model-loading", "sequence-length", "tokenization", "adapter-configuration", "training-arguments",
+    "training-loop", "serialization", "validation", "serialization-manifest", "run-metadata", "generated-candidate", "completion-report", "unclassified"})
+FAILURE_TYPES = frozenset({"ValueError", "RuntimeError", "TypeError", "MemoryError", "ImportError", "ModuleNotFoundError", "OSError",
+    "AttributeError", "KeyError", "IndexError", "AssertionError", "OtherError"})
+
 
 class AdmissionError(ValueError):
     pass
@@ -145,8 +151,8 @@ def new_diagnostic(root, before):
     row = read_record(root, directory / name, 2048)
     need(isinstance(row, dict) and set(row) == {"schema", "phase", "startup", "sourceFactories", "outputFactories", "startCode",
          "workerRetirementConfirmed", "ownerClosureConfirmed", "modelQualityTested", "interpretation", "terminalStatus", "runtimeErrorCode", "observations", "progressObservations",
-         "checkpoints", "outputFiles", "applicationCleanupConfirmed", "newRootRemoved"}, "fresh-trial.diagnostic-schema")
-    need(row["schema"] == "bounded-training-feature-diagnostic-v3" and row["phase"] in {
+         "checkpoints", "outputFiles", "applicationCleanupConfirmed", "newRootRemoved", "runtimeFailureStage", "runtimeFailureType"}, "fresh-trial.diagnostic-schema")
+    need(row["schema"] == "bounded-training-feature-diagnostic-v4" and row["phase"] in {
          "configured", "approved-start", "training", "terminal-status", "current-candidate", "candidate-lineage",
          "checkpoint-inventory", "approval-replay", "input-integrity", "complete"} and row["startup"] in {
          "not-started", "spawned", "owned-ready", "health-ready", "startup-timeout", "process-exit", "process-error", "stop-complete"},
@@ -162,6 +168,8 @@ def new_diagnostic(root, before):
          all(type(row[k]) is int and 0 <= row[k] <= 32 for k in ("checkpoints", "outputFiles")) and
          row["checkpoints"] <= row["outputFiles"] and
          all(type(row[k]) is bool for k in ("applicationCleanupConfirmed", "newRootRemoved")), "fresh-trial.diagnostic-observations")
+    need(row["runtimeFailureStage"] in FAILURE_STAGES | {None} and row["runtimeFailureType"] in FAILURE_TYPES | {None},
+         "fresh-trial.diagnostic-failure-category")
     return row
 
 
@@ -170,6 +178,7 @@ def qualified_result(attempt, stable, diagnostic):
         diagnostic["startCode"] is None and diagnostic["sourceFactories"] == 1 and diagnostic["outputFactories"] == 1 and \
         diagnostic["workerRetirementConfirmed"] is True and diagnostic["ownerClosureConfirmed"] is True and \
         diagnostic["terminalStatus"] == "succeeded" and diagnostic["runtimeErrorCode"] is None and \
+        diagnostic["runtimeFailureStage"] is None and diagnostic["runtimeFailureType"] is None and \
         diagnostic["checkpoints"] > 0 and diagnostic["outputFiles"] > 0 and \
         diagnostic["applicationCleanupConfirmed"] is True and diagnostic["newRootRemoved"] is True
 

@@ -65,6 +65,22 @@
         "final_root_removal": "not-recorded"
       },
       "finding": "Test demanded checkpoints before App current review, although the pending result intentionally removes them. A fast run can also finish between polls. Existing evidence does not establish which assertion failed or whether actual training succeeded."
+    },
+    {
+      "source_digest": "5aa9edae7531805c54a664f160241d8f4183dd90518eb0d1dcfe607aa4fc1c22",
+      "receipt_digest": "06641de84df50609608ec6b3cd0e41d244281209ec4966c20eb0f4b39798c4bf",
+      "result": "actual-task-failed-new-root-cleanup-confirmed",
+      "diagnostics": {
+        "terminal_status": "failed",
+        "observations": 6,
+        "progress_observations": 5,
+        "worker_retirement_confirmed": true,
+        "owner_closure_confirmed": true,
+        "application_cleanup_confirmed": true,
+        "new_root_removed": true,
+        "runtime_error_code": null
+      },
+      "finding": "Original worker returned a failed loader result inside data. App terminal mapping discarded nested data.error and lost safe stage/type. Underlying loader failure is unknown; no training success claimed."
     }
   ],
   "source_repairs": [
@@ -74,9 +90,9 @@
     "Retain bounded append-only closed diagnostic facts and all earlier failed evidence."
   ],
   "remaining_qualification": [
-    "Original actual training success, current checkpoint/candidate results and final new-root removal still need a newly authorized guarded test. The consumed attempt confirmed worker/IO retirement before afterhook only.",
-    "Prior unconfirmed attempts and retained files remain unchanged. No old-tree inspection, adoption or cleanup credit.",
-    "One corrected guarded attempt is separately approved. Qualify its current guard before actual execution; do not reset or rearm the old admission. No model quality test."
+    "Actual original successful fine-tuning and checkpoint/candidate review remain unqualified. The most recent attempt failed; it confirmed new cleanup and five sampled progress observations.",
+    "Earlier unconfirmed owners/files remain retained. Latest exact new-root removal supplies no historical cleanup credit.",
+    "Source-only safe nested-error projection and v4 diagnostics are being qualified. No further actual trial is authorized; no model accuracy test."
   ],
   "operator_decision": {
     "authority_ref": "user-approved-corrected-observation-tiny-trial-20261127",
@@ -84,12 +100,12 @@
     "restart_required": false,
     "process_to_stop": null,
     "prior_cleanup_authorized": false,
-    "actual_attempt_consumed": false,
+    "actual_attempt_consumed": true,
     "guard_work_id": "headless-training-corrected-observation-trial-guard",
     "actual_trial_work_id": "headless-bounded-training-corrected-observation-20261127"
   },
   "fresh_trial_guard": {
-    "status": "corrected-observation-source-qualification-pending",
+    "status": "corrected-attempt-consumed-failed-cleanup-confirmed",
     "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
     "maximum_attempts": 1,
     "retained_logical_bytes_per_old_attempt": 33554432,
@@ -130,5 +146,11 @@
       "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2",
       "actual_attempt_consumed": true
     }
-  ]
+  ],
+  "safe_failure_projection": {
+    "work_id": "headless-training-safe-failure-observation",
+    "diagnostic_schema": "bounded-training-feature-diagnostic-v4",
+    "scope": "Fixed original-task error/stage/type projection, not raw runtime errors or training success.",
+    "underlying_failure_cause": "not-established"
+  }
 }
