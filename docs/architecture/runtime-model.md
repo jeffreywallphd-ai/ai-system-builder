@@ -4061,15 +4061,34 @@ consent. Bind the retained original App factory once, capture the returned sessi
 methods/receiver, and preserve independent cleanup permission. Concurrent or
 malformed attempts cannot renew the original factory. Unknown returned owners
 stay retained; only safely observable ordinary native rejections are consumed,
-without invoking supplied hooks. This bridge performs no copy or registry
-mutation. Native constructor data equal to the intrinsic constructor or undefined
+without invoking supplied hooks. Native constructor data equal to the intrinsic constructor or undefined
 can be observed through the unchanged intrinsic species path; active/custom
 constructor, species and thenable hooks are not invoked. No observation supplies
-retry, cleanup or original IO closure credit. The bridge performs no registry
-mutation and claims no IO closure; the App Save owner and publication composition
+retry, cleanup or original IO closure credit. The bridge performs no copy or
+registry mutation and claims no IO closure; the App Save owner and publication composition
 retain those responsibilities. Unconfigured product hosts stay unavailable.
 
-The owning composition must still bind the original app Save capability and
+Private trained-Model publication composes the exclusive original task-book Save
+session and exact Save/ModelRead/Write policy. Binding and file copying stay
+outside retriable metadata transactions. Retain original native operations and
+capture immutable preparation before metadata waits. Publish the Model, causal
+receipt and original-task index in one owning transaction, with fresh accepted
+lineage/policy checks and a final synchronous source/lifetime fence. Lost replies
+permit read-only reconciliation, never another copy or mutation. Unknown native
+returns remain retained and safely observable rejections invoke no supplied hooks.
+
+The independent cleanup decision is limited to that exclusive original fresh
+copy: publication must never have been issued, bind/write operations must have
+settled without uncertainty, and causal/source metadata must still be absent in
+the owning transaction. Cleanup does not require the expired write caller and
+still goes through the original App's actual IO-closure/known-entry guard. Any
+issued or uncertain publication permanently denies this owner's cleanup. Source
+staging, registered Models and unknown historical bytes are never deleted here.
+This uses ADR-0049 account/dependency trust, not hostile same-account protection
+or a reserved physical quota. Product proposal/step/Root and real-host
+qualification remain pending; controlled sessions qualify no actual model run.
+
+The product host composition must still bind the original app Save capability and
 require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does
 not independently requalify file contents or IO retirement, delete files, grant

@@ -1135,6 +1135,25 @@
         "Original-task Save integration, atomic publication wiring and current host checks remain pending. No model accuracy test was repeated. No protected service, reserved quota or publication authority is granted.",
         "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-original-save-bridge",
+      "work_criteria": [
+        "original-accepted-save-binding",
+        "private-save-lifetime-and-cleanup",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "bda73a4674c059afecb195e7a34889b55410924e97a7294385903608c74ec355",
+      "review_digest": "24de6178db876f798e3e31d803c858d27c500380af60afc9d9f851de012293cb",
+      "scope": "The app can find the original accepted training task for a separate Save request. It retains one binding attempt and keeps cleanup separate from write permission. Core/SQLite and failure checks passed independent review before commit ac7822e.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task 71, Increment 7, the roadmap or real host qualification.",
+        "Publication wiring, product host activation and current qualification remain pending. No model accuracy test was repeated and no physical quota, protected service or external publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
+      ]
     }
   ]
 }

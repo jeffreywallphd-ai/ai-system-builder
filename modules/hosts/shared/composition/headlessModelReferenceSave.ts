@@ -1,16 +1,21 @@
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
 import {captureModelReferenceSaveEffect, commitStructuredModelReferenceSave, inspectStructuredModelReferenceSave,
-  type ModelReferenceSaveEffect} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelReferenceStore";
+  captureModelTrainingSaveEffect, commitStructuredModelTrainingSave, inspectStructuredModelTrainingSave,
+  type ModelReferenceSaveEffect, type ModelTrainingSaveEffect} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelReferenceStore";
 import {readStructuredOwnedModelPlanTaskSourceDigest} from "../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
 import type {ModelDownloadTasksUseCase} from "../../../application/use-cases/model/model-download-tasks.use-case";
 import {isHeadlessReadCurrent} from "./headlessReadCurrent";
-import {isDeepStrictEqual} from "node:util";
+import {isDeepStrictEqual, types} from "node:util";
 import {createHash} from "node:crypto";
 import type {HeadlessPlanReviewTarget} from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import {readHeadlessModelReferenceSavePlanRequest, readHeadlessPlanStepResult, type HeadlessBuildPlanRequest,
   type HeadlessModelReferenceSavePlanRequest, type HeadlessPlanStepRequest} from "../../../contracts/headless";
 import {copyHeadlessModelPlanData} from "./headlessModelDownloadReview";
 import type {prepareStructuredHeadlessPlanStepWithModels} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import {readStrictPassiveRecord} from "../../../contracts/shared";
+import {readStructuredTrainingPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
+import type {ApprovedLocalTrainingSaveSession, ApprovedLocalTrainingSavePreparation, ReviewedGeneratedModelControl} from "../../../application/ports/model";
+import {observeMalformedOriginalTrainingSaveReturn, type OriginalTrainingSaveQueryResult} from "./headlessModelTrainingTasks";
 
 export type HeadlessModelReferenceSaveOwner = Pick<ModelDownloadTasksUseCase, "peekApprovedSourceRegistration">;
 type PreparedModelReferenceStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStepWithModels>>>, {kind: "model-reference"}>;
@@ -167,4 +172,134 @@ export async function runPreparedHeadlessModelReferenceSave(options: {
   return {result: readHeadlessPlanStepResult({ok: true, value: {kind: saved.created ? "committed" : "replayed", operation: "models.save-download",
     reference: saved.reference, fingerprint, approvalRevision, step, expiresAt: prepared.expiresAt}}, request.input,
     {allowLocalFileSave: false, allowModelReferenceSave: true}), publishIfCurrent: prepared.publishIfCurrent};
+}
+
+/** Private publication owner. bindOriginalTask must use the exclusive retained
+ * task-book capability, never reconstruct a task or expose its session elsewhere.
+ * Original copy IO is outside retriable metadata transactions. */
+export function composeHeadlessTrainedModelSave(options: {
+  readonly documents: StructuredDocumentStore; readonly rootDirectory: string;
+  readonly effect: ModelTrainingSaveEffect; readonly isCurrent: () => boolean;
+  readonly authorizeExactSave: (owner: StructuredDocumentStore, effect: ModelTrainingSaveEffect) => Promise<boolean>;
+  readonly bindOriginalTask: (effect: ModelTrainingSaveEffect, control: ReviewedGeneratedModelControl) => Promise<OriginalTrainingSaveQueryResult>;
+  readonly now?: () => number;
+}) {
+  const {documents, rootDirectory, isCurrent, authorizeExactSave, bindOriginalTask} = options;
+  const effect = captureModelTrainingSaveEffect(options.effect), now = options.now ?? Date.now;
+  if (documents.organizationId !== undefined || !documents.runInOwnedTransaction ||
+    [isCurrent, authorizeExactSave, bindOriginalTask, now].some(f => typeof f !== "function" || types.isProxy(f)))
+    throw new Error("Trained Model Save requires the original owner and exact consent.");
+  const transaction = documents.runInOwnedTransaction.bind(documents), current = () => isHeadlessReadCurrent(isCurrent);
+  const failed = () => new Error("The original trained Model Save is unavailable.");
+  const need = (condition: unknown) => {if (condition !== true) throw failed();};
+  const record = (raw: unknown, keys: readonly string[]) => {if (types.isProxy(raw)) throw failed(); return readStrictPassiveRecord(raw, keys);};
+  function capture<F extends (...args: any[]) => any>(owner: object, key: string): F {
+    need(!!owner && !types.isProxy(owner));
+    const d = Object.getOwnPropertyDescriptor(owner, key);
+    need(!!d && "value" in d && typeof d.value === "function" && !types.isProxy(d.value));
+    return ((...args: unknown[]) => Reflect.apply(d!.value, owner, args)) as F;
+  }
+  const retained: {kind: "bind" | "write" | "cleanup" | "sync"; original: unknown; settled: boolean; uncertain: boolean; observation?: unknown}[] = [];
+  let attempted = false, publicationIssued = false, fenceAttempted = false, cleanupAttempted = false, cleaned = false;
+  let session: ApprovedLocalTrainingSaveSession | undefined, write: ApprovedLocalTrainingSaveSession["write"] | undefined,
+    fence: ApprovedLocalTrainingSaveSession["fence"] | undefined, sourceCurrent: ApprovedLocalTrainingSaveSession["isCurrent"] | undefined,
+    discard: ApprovedLocalTrainingSaveSession["discard"] | undefined;
+  const uncertain = () => retained.some(r => r.uncertain);
+  function unknown(raw: unknown, kind: "bind" | "write" | "cleanup" | "sync") {
+    retained.push({kind, original: raw, settled: false, uncertain: true, observation: observeMalformedOriginalTrainingSaveReturn(raw)});
+  }
+  async function invoke<T>(kind: "bind" | "write" | "cleanup", operation: () => Promise<T>): Promise<T> {
+    let original: Promise<T>;
+    try {original = operation();} catch {unknown(undefined, kind); throw failed();}
+    if (!types.isPromise(original) || types.isProxy(original) || Object.getPrototypeOf(original) !== Promise.prototype ||
+      Object.getOwnPropertyDescriptor(original, "then") || Object.getOwnPropertyDescriptor(original, "constructor")) {
+      unknown(original, kind); throw failed();
+    }
+    const owned = {kind, original, settled: false, uncertain: false}; retained.push(owned);
+    try {return await original;} finally {owned.settled = true;}
+  }
+  function sourceLive() {
+    try {
+      if (!current() || !session || !sourceCurrent || uncertain()) return false;
+      const value = sourceCurrent();
+      if (types.isPromise(value)) {unknown(value, "sync"); return false;}
+      if (typeof value !== "boolean") {unknown(value, "sync"); return false;}
+      return value === true;
+    } catch {unknown(undefined, "sync"); return false;}
+  }
+  function fenceSource() {
+    if (!fence || fenceAttempted) return; fenceAttempted = true;
+    try {const value = fence(); if (value !== undefined) unknown(value, "sync");}
+    catch {unknown(undefined, "sync");}
+  }
+  async function authorized(owner: StructuredDocumentStore) {
+    if (!current() || await authorizeExactSave(owner, effect) !== true || !current()) return;
+    const partition = owner.forOrganization(effect.target.scope.organizationId);
+    return await readStructuredTrainingPlanTaskLineage(partition, effect.target.scope, effect.target.hostIncarnationId, effect.taskId) && current()
+      ? partition : undefined;
+  }
+  const protect = () => need(current());
+  async function inspect() {
+    return transaction(async owner => {
+      const partition = await authorized(owner); if (!partition) return;
+      const result = await inspectStructuredModelTrainingSave(partition, effect);
+      return await authorized(owner) ? result : undefined;
+    }, protect);
+  }
+  // Independent cleanup of this exclusive fresh copy only. No write-caller
+  // expiry can grant it; any issued/uncertain publication permanently denies it.
+  const neverIssued = () => !!session && !publicationIssued && !uncertain() &&
+    retained.every(r => r.kind === "cleanup" || r.settled);
+  async function mayDiscard() {
+    try {
+      if (!neverIssued()) return false;
+      const absent = await transaction(async owner => (await inspectStructuredModelTrainingSave(
+        owner.forOrganization(effect.target.scope.organizationId), effect)).kind === "absent", () => need(neverIssued()));
+      return absent && neverIssued();
+    } catch {return false;}
+  }
+  async function discardUnpublished() {
+    fenceSource();
+    if (cleaned) return true;
+    if (cleanupAttempted || !discard || !await mayDiscard()) return false;
+    if (cleanupAttempted) return false;
+    cleanupAttempted = true;
+    try {cleaned = await invoke("cleanup", discard) === true; return cleaned;}
+    catch {return false;}
+  }
+  return Object.freeze({discardUnpublished, async save() {
+    try {
+      const existing = await inspect(); if (!existing || !current()) return;
+      if (existing.kind === "committed") return {...existing, created: false};
+      if (attempted) return; attempted = true;
+      const reply = record(await invoke("bind", () => bindOriginalTask(effect, Object.freeze({isCurrent: current,
+        stillAllowed: async () => Boolean(await transaction(authorized, protect)), mayDiscard}))), ["ok", "value", "code"]);
+      if (reply.ok !== true || Object.keys(reply).length !== 2) return;
+      session = reply.value as ApprovedLocalTrainingSaveSession;
+      try {
+        need(Object.keys(record(session, ["write", "fence", "isCurrent", "inspect", "discard"])).length === 5);
+        fence = capture(session, "fence"); discard = capture(session, "discard");
+        write = capture(session, "write"); sourceCurrent = capture(session, "isCurrent");
+      } catch {unknown(session, "sync"); throw failed();}
+      need(current());
+      const preparation = freeze(copyHeadlessModelPlanData(await invoke("write", write))) as ApprovedLocalTrainingSavePreparation;
+      need(sourceLive());
+      const result = await transaction(async owner => {
+        const partition = await authorized(owner); need(!!partition && sourceLive());
+        // This latch is monotonic across callback retries and lost replies.
+        publicationIssued = true;
+        const saved = await commitStructuredModelTrainingSave(partition!, rootDirectory, effect, preparation, now());
+        need(sourceLive() && !!await authorized(owner)); return saved;
+      }, () => need(sourceLive()));
+      return current() ? result : undefined;
+    } catch {
+      fenceSource();
+      if (publicationIssued) {
+        try {const saved = await inspect(); return saved?.kind === "committed" && current() ? {...saved, created: false} : undefined;}
+        catch {return;}
+      }
+      await discardUnpublished();
+      return;
+    }
+  }});
 }

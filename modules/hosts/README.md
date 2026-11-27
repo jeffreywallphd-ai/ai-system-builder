@@ -1,3 +1,13 @@
+Private trained-Model publication binds one exclusive original task-book Save
+session outside metadata transactions. It captures original methods and native
+operations, copies private preparation before waits, and commits Model, causal
+receipt and original-task index together under current exact Save/ModelRead/Write
+and source fences. Lost replies reconcile read-only. Only a never-issued
+publication with absent causal/source metadata can permit original fresh-copy
+cleanup, independently of write expiry and still subject to the App closure guard.
+Issued/uncertain publication or unknown IO keeps bytes retained. The original
+staging is never deleted here. Product host/Root qualification remains pending.
+
 The private original training task book can bind one separate Save session.
 It rechecks accepted actor/client/workspace/host/task/proposal lineage and
 combines that lookup with fresh exact Save controls. The original App factory

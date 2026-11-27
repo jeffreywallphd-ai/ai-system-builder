@@ -3847,10 +3847,25 @@ exact Save controls. Capture data and original callback receivers before waits.
 One synchronous original App binding attempt is retained per task, including
 missing or malformed outcomes; concurrent lookup cannot create another writer.
 Unknown returned owners grant no cleanup/closure credit. Observe safely supported
-ordinary native Promise rejections without supplied hooks. Session methods remain
-bound to the original owner. Safe constructor data values use the verified
+ordinary native Promise rejections without supplied hooks. Safe constructor data values use the verified
 intrinsic species path; active/custom constructor/species and thenable hooks are
-refused without invocation. Observation grants no retry or cleanup credit. Methods remain
+refused without invocation. Observation grants no retry or cleanup credit. Session methods remain
 bound to the original owner, and independent no-reference cleanup authority does
 not expire with write consent. This private bridge does not read/copy files,
 register a Model, start a runtime or establish Native/service or parent proof.
+
+Private trained-Model publication reuses an exclusive original task-book session;
+no caller may reconstruct a task or share that session with another publisher.
+Require exact separate Save/ModelRead/Write and accepted original lineage, retain
+native operations and capture preparation before metadata waits. File IO stays
+outside retriable transactions. Atomic Model/receipt/source publication rechecks
+authority and uses a final synchronous original source/lifetime fence. Lost
+replies reconcile read-only; failures never repeat copies or mutations.
+
+Only a never-issued publication, settled known bind/write operations and absent
+causal/source metadata can grant independent cleanup of that original fresh copy.
+The App must still prove actual IO closure and unchanged owned entries. Cleanup
+can outlive write consent but never grants deletion of source staging, registered
+Models or historical data. Issued/uncertain publication and unknown IO deny it.
+This composes ADR-0049 account/dependency trust, not protected-service isolation
+or reserved quota. Product activation and actual-host qualification remain pending.

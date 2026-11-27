@@ -16,7 +16,8 @@ import {reserveStructuredTrainingPlanTask, issueStructuredTrainingPlanTask, acce
 import {createLocalModelRegistryAdapter} from "../../../../adapters/persistence/model/createLocalModelRegistryAdapter";
 import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
 import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
-import type {ApprovedModelSourceRegistrationPreparation, ApprovedLocalTrainingSavePreparation} from "../../../../application/ports/model";
+import type {ApprovedModelSourceRegistrationPreparation, ApprovedLocalTrainingSavePreparation,
+  ApprovedLocalTrainingSaveSession, ReviewedGeneratedModelControl} from "../../../../application/ports/model";
 import {canonicalHeadlessModelTrainingInputs} from "../../../../application/use-cases/model/headless-model-training-plan.use-case";
 import {isHeadlessHostIncarnationId, readHeadlessModelDownloadPlanRequest, readHeadlessModelTrainingPlanRequest,
   readHeadlessModelTrainingInputsValue, type HeadlessHostIncarnationId} from "../../../../contracts/headless";
@@ -24,7 +25,7 @@ import {readModelDownloadSource, readModelTrainingExecutionHistory, type ModelIn
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
-import {composeHeadlessModelReferenceSave} from "../headlessModelReferenceSave";
+import {composeHeadlessModelReferenceSave, composeHeadlessTrainedModelSave} from "../headlessModelReferenceSave";
 
 const SAVES = "headless/models/reference-saves", SOURCES = "headless/models/reference-save-sources";
 const sha = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -346,6 +347,141 @@ function resealTrainingCandidate(f: Awaited<ReturnType<typeof trainingFixture>>,
   Object.assign(p.candidate.retainedFiles, {manifestDigest}); Object.assign(p.candidate, {candidateDigest}); Object.assign(p.storage, {candidateDigest});
   return {...f.effect, candidateDigest};
 }
+
+/** Real metadata transactions/lineage with one controlled App session. No file
+ * copy, model execution, accuracy measurement or physical closure is qualified. */
+async function orchestratedTrainingFixture(t: TestContext, storage: "Core" | "SQLite") {
+  const f = await trainingFixture(t, storage);
+  const state = {current: true, allowed: true, sourceCurrent: true, bound: false, bindRequests: 0, writes: 0, fences: 0, discards: 0,
+    closed: true, failWrite: false, throwWrite: false, malformedWrite: false, hooks: 0,
+    onWrite: undefined as (() => Promise<void>) | undefined,
+    onAuthorize: undefined as (() => void) | undefined, preparation: undefined as ApprovedLocalTrainingSavePreparation | undefined,
+    changePreparation: undefined as ((p: ApprovedLocalTrainingSavePreparation) => ApprovedLocalTrainingSavePreparation) | undefined};
+  let control: ReviewedGeneratedModelControl | undefined, session: ApprovedLocalTrainingSaveSession | undefined;
+  const compose = (effect = f.effect) => composeHeadlessTrainedModelSave({documents: f.root, rootDirectory: f.directory, effect,
+    isCurrent: () => state.current, now: () => 10,
+    authorizeExactSave: async (owner, actual) => {
+      assert.equal(owner.organizationId, undefined); assert.equal(owner.runInOwnedTransaction, undefined);
+      assert.deepEqual(actual, captureModelTrainingSaveEffect(effect)); state.onAuthorize?.(); return state.allowed;
+    }, async bindOriginalTask(actual, capturedControl) {
+      state.bindRequests++; assert.deepEqual(actual, captureModelTrainingSaveEffect(effect));
+      assert.ok(Object.isFrozen(actual.target.scope)); if (state.bound) return {ok: false, code: "headless.unavailable"};
+      state.bound = true; control = capturedControl;
+      session = {
+        write() {
+          assert.equal(this, session); state.writes++;
+          if (state.throwWrite) throw new Error("Synthetic unknown synchronous writer outcome");
+          if (state.malformedWrite) {
+            const p = Promise.reject(new Error("Synthetic malformed writer"));
+            Object.defineProperty(p, "constructor", {value: Promise});
+            Object.defineProperty(p, "then", {value: () => {state.hooks++; assert.fail("No own writer hook.");}}); return p as never;
+          }
+          return (async () => {
+            await state.onWrite?.();
+            if (state.failWrite || state.fences > 0 || !capturedControl.isCurrent() || !await capturedControl.stillAllowed()) throw new Error("Synthetic copy refusal");
+            state.preparation = structuredClone(f.preparation);
+            return state.changePreparation?.(state.preparation) ?? state.preparation;
+          })();
+        },
+        fence() {assert.equal(this, session); state.fences++;},
+        isCurrent() {assert.equal(this, session); return state.sourceCurrent && state.fences === 0;},
+        inspect() {assert.equal(this, session); return {phase: "ready", fenced: state.fences > 0, pendingOperations: 0, ioClosed: state.closed};},
+        async discard() {assert.equal(this, session); state.discards++; return state.closed && await capturedControl.mayDiscard();},
+      };
+      return {ok: true, value: session};
+    }});
+  return {...f, saveState: state, composeSave: compose, saveControl: () => control!, saveSession: () => session!};
+}
+
+for (const engine of ["Core", "SQLite"] as const) {
+  test(`${engine}: original trained Save composes one copy and atomic Model/receipt then replays read-only`, async t => {
+    const f = await orchestratedTrainingFixture(t, engine), owner = f.composeSave();
+    const [a, b] = await Promise.all([owner.save(), owner.save()]);
+    assert.equal([a, b].filter(r => r?.created).length, 1); assert.equal(f.saveState.writes, 1); assert.equal(f.saveState.bindRequests, 1);
+    const replay = await f.composeSave().save(); assert.equal(replay?.created, false);
+    assert.equal((await f.rows()).length, 2); assert.equal((await f.partition.listDocuments(TRAINED_SAVES)).length, 1);
+    assert.equal((await f.partition.listDocuments(TRAINED_SOURCES)).length, 1); assert.equal(f.saveState.bindRequests, 1);
+    assert.equal(await owner.discardUnpublished(), false); assert.equal(f.saveState.discards, 0);
+    assert.doesNotMatch(JSON.stringify(replay), /localPath|metadata-only|private|history|files/); f.noEffects();
+  });
+  test(`${engine}: lost trained Save reply reconciles without a second original copy or mutation`, async t => {
+    const f = await orchestratedTrainingFixture(t, engine); f.state.dropReply = true;
+    const owner = f.composeSave(), result = await owner.save(); assert.ok(result); assert.equal(result.created, false);
+    assert.equal(f.saveState.writes, 1); assert.equal(f.saveState.bindRequests, 1); assert.equal((await f.rows()).length, 2);
+    assert.equal(await owner.discardUnpublished(), false); assert.equal(f.saveState.discards, 0); f.noEffects();
+  });
+  test(`${engine}: final trained source fence rolls back registry and keeps possibly published bytes`, async t => {
+    const f = await orchestratedTrainingFixture(t, engine); f.state.beforeCommit = () => {f.saveState.sourceCurrent = false;};
+    const owner = f.composeSave(); assert.equal(await owner.save(), undefined); await f.unchanged();
+    assert.equal(await owner.discardUnpublished(), false); assert.equal(f.saveState.discards, 0); assert.equal(f.saveState.fences, 1);
+  });
+  test(`${engine}: expired write consent permits only independent known-unpublished cleanup`, async t => {
+    const f = await orchestratedTrainingFixture(t, engine); f.saveState.onWrite = async () => {f.saveState.current = false;};
+    const owner = f.composeSave(); assert.equal(await owner.save(), undefined); await f.unchanged();
+    assert.equal(f.saveState.discards, 1); assert.equal(await f.saveControl().mayDiscard(), true);
+    assert.equal(await owner.discardUnpublished(), true); assert.equal(f.saveState.discards, 1);
+  });
+  test(`${engine}: unresolved original copy closure prevents cleanup and repeat execution`, async t => {
+    const f = await orchestratedTrainingFixture(t, engine); f.saveState.failWrite = true; f.saveState.closed = false;
+    const owner = f.composeSave(); assert.equal(await owner.save(), undefined); await f.unchanged();
+    assert.equal(f.saveState.discards, 1); assert.equal(await owner.discardUnpublished(), false);
+    assert.equal(await owner.save(), undefined); assert.equal(f.saveState.bindRequests, 1); assert.equal(f.saveState.writes, 1);
+  });
+  test(`${engine}: preparation and original methods are captured before later metadata waits`, async t => {
+    const f = await orchestratedTrainingFixture(t, engine);
+    f.saveState.onAuthorize = () => {
+      if (f.saveState.preparation) {
+        Object.assign(f.saveState.preparation.storage, {localPath: "https://example.invalid/changed"});
+        f.saveSession().isCurrent = () => assert.fail("No replaced source callback.");
+      }
+    };
+    const saved = await f.composeSave().save(); assert.ok(saved);
+    const row = (await f.rows()).find(r => r.modelRecordId === saved.reference.modelRecordId)!;
+    assert.equal(row.localPath, f.preparation.storage.localPath); assert.equal(row.displayName, f.effect.name); f.noEffects();
+  });
+}
+
+for (const variant of ["denied", "foreign-client", "foreign-principal", "foreign-workspace", "foreign-task"] as const)
+  test(`trained Save orchestration refuses ${variant} before original binding`, async t => {
+    const f = await orchestratedTrainingFixture(t, "Core"); let e = structuredClone(f.effect);
+    if (variant === "denied") f.saveState.allowed = false;
+    if (variant === "foreign-client") e = {...e, target: {...e.target, scope: {...e.target.scope, registeredClientId: randomUUID()}}};
+    if (variant === "foreign-principal") e = {...e, target: {...e.target, scope: {...e.target.scope, principalId: "principal.other"}}};
+    if (variant === "foreign-workspace") e = {...e, target: {...e.target, scope: {...e.target.scope, workspaceId: createWorkspaceId("workspace.other")}}};
+    if (variant === "foreign-task") e = {...e, taskId: randomUUID()};
+    assert.equal(await f.composeSave(e).save(), undefined); assert.equal(f.saveState.bindRequests, 0); await f.unchanged();
+  });
+
+test("malformed original write rejection is observed without hooks, cleanup or renewal", async t => {
+  const f = await orchestratedTrainingFixture(t, "Core"); f.saveState.malformedWrite = true;
+  const owner = f.composeSave(); assert.equal(await owner.save(), undefined); await new Promise<void>(resolve => setImmediate(resolve));
+  assert.equal(await owner.discardUnpublished(), false); assert.equal(await owner.save(), undefined);
+  assert.equal(f.saveState.hooks, 0); assert.equal(f.saveState.discards, 0); assert.equal(f.saveState.writes, 1); await f.unchanged();
+});
+
+test("a synchronous writer throw supplies no IO closure or cleanup authority", async t => {
+  const f = await orchestratedTrainingFixture(t, "Core"); f.saveState.throwWrite = true;
+  const owner = f.composeSave(); assert.equal(await owner.save(), undefined);
+  assert.equal(await owner.discardUnpublished(), false); assert.equal(f.saveState.discards, 0);
+  assert.equal(f.saveState.writes, 1); await f.unchanged();
+});
+
+test("forged trained preparation cannot register a Model or earn cleanup after publication issue", async t => {
+  const f = await orchestratedTrainingFixture(t, "Core");
+  f.saveState.changePreparation = p => ({...p, candidate: {...p.candidate, candidateDigest: "sha256:" + "a".repeat(64)}});
+  const owner = f.composeSave(); assert.equal(await owner.save(), undefined); await f.unchanged();
+  assert.equal(await owner.discardUnpublished(), false); assert.equal(f.saveState.discards, 0);
+});
+
+test("pending original write remains owned through an outward cleanup request", async t => {
+  const f = await orchestratedTrainingFixture(t, "Core"); let release!: () => void, started!: () => void;
+  const gate = new Promise<void>(resolve => {release = resolve;}), entered = new Promise<void>(resolve => {started = resolve;});
+  t.after(release); f.saveState.onWrite = async () => {started(); await gate;};
+  const owner = f.composeSave(), saving = owner.save(); await entered;
+  assert.deepEqual(await Promise.all([owner.discardUnpublished(), owner.discardUnpublished()]), [false, false]);
+  assert.equal(f.saveState.discards, 0); release(); assert.equal(await saving, undefined);
+  assert.equal(f.saveState.discards, 1); assert.equal(f.saveState.writes, 1); await f.unchanged();
+});
 
 for (const engine of ["Core", "SQLite"] as const) {
   for (const name of ["Prompt safety model", "Token classifier", "Workflow assistant"]) test(`${engine}: trained Model Save preserves ordinary label ${name}`, async t => {

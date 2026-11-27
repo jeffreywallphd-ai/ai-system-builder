@@ -100,7 +100,7 @@ const OriginalPromise = Promise, originalThen = Promise.prototype.then;
 const originalSpecies = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
 /** Observe only an ordinary native rejection, without invoking supplied hooks.
  * An unsupported return stays retained and can never earn retry/cleanup credit. */
-function observeMalformedSaveFactory(value: unknown): unknown {
+export function observeMalformedOriginalTrainingSaveReturn(value: unknown): unknown {
   try {
     if (!value || types.isProxy(value) || !types.isPromise(value) || Object.getPrototypeOf(value) !== OriginalPromise.prototype) return;
     const own = Object.getOwnPropertyDescriptor(value, "constructor"), inherited = Object.getOwnPropertyDescriptor(OriginalPromise.prototype, "constructor"),
@@ -397,7 +397,7 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
         try {
           const original = task.createSaveSession(save, Object.freeze({isCurrent: live, stillAllowed: allowed, mayDiscard: cleanup}));
           retained.original = original;
-          if (original && types.isPromise(original)) retained.observation = observeMalformedSaveFactory(original);
+          if (original && types.isPromise(original)) retained.observation = observeMalformedOriginalTrainingSaveReturn(original);
           else if (original) {
             need(Object.keys(record(original, ["write", "fence", "isCurrent", "inspect", "discard"])).length === 5);
             const write = capture<ApprovedLocalTrainingSaveSession["write"]>(original, "write"), fence = capture<ApprovedLocalTrainingSaveSession["fence"]>(original, "fence"),
