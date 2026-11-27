@@ -3727,3 +3727,12 @@ verification admission requires the exact first-diagnostic record and confirmed
 original cleanup before its one-use marker. The fixed source checks still exclude
 actual training; JSON-only probe observations diagnose the path failure and do
 not grant successful training or parent qualification.
+
+Version 5 Tiny diagnostics separate each current-candidate assertion and preserve
+verified inventory counts before execution-report checks. Only fixed stages,
+nullable booleans and bounded counts are disclosed. Foreign request/history
+identity fails before inventory counts. Every original current-file, pipeline,
+CPU and cleanup assertion still applies; the actual32filelimit is unchanged.
+The earlier actual training success/progress/cleanup remains positive evidence
+at its recorded source, while the failed aggregate receipt leaves Task72 pending.
+Both approved attempts are consumed; source tests never rearm them.

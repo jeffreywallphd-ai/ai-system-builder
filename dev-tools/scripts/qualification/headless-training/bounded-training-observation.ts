@@ -4,10 +4,15 @@ import type {ApprovedLocalTrainingCandidateReview} from "../../../../modules/app
 import {PRIVATE_TRAINING_FAILURE_STAGES, PRIVATE_TRAINING_FAILURE_TYPES} from "../../../../modules/application/use-cases/model/train-model.use-case";
 
 export type TrainingObservationStage = "configured" | "approved-start" | "training" | "terminal-status" |
-  "current-candidate" | "candidate-lineage" | "checkpoint-inventory" | "approval-replay" | "input-integrity" | "complete";
+  "current-candidate" | "candidate-readiness" | "candidate-request" | "candidate-history" | "checkpoint-inventory" |
+  "candidate-execution" | "candidate-pipeline" | "candidate-duration" | "candidate-device" | "approval-replay" | "input-integrity" | "complete";
 export function trainingObservation() {
   return {terminalStatus: "not-observed", runtimeErrorCode: null as string | null,
     runtimeFailureStage: null as string | null, runtimeFailureType: null as string | null,
+    candidateReady: null as boolean | null, candidateRequestMatches: null as boolean | null,
+    candidateHistoryMatches: null as boolean | null, executionRecorded: null as boolean | null,
+    executionPipelineMatches: null as boolean | null, executionDurationValid: null as boolean | null,
+    executionCpuRecorded: null as boolean | null,
     observations: 0, progressObservations: 0, checkpoints: 0, outputFiles: 0,
     applicationCleanupConfirmed: false, newRootRemoved: false};
 }
@@ -31,18 +36,29 @@ export function observeTrainingResult(facts: TrainingObservation, result: ModelT
 }
 export function requireTrainingCandidate(result: ModelTrainingResult, candidate: ApprovedLocalTrainingCandidateReview,
   requestId: string, facts: TrainingObservation, stage: (value: TrainingObservationStage) => void) {
-  stage("candidate-lineage");
+  stage("candidate-readiness"); facts.candidateReady = candidate.kind === "ready";
   assert.equal(candidate.kind, "ready");
   if (candidate.kind !== "ready") throw Error("Current candidate unavailable.");
-  assert.equal(candidate.requestId, requestId); assert.equal(candidate.history.requestId, requestId);
-  assert.ok(candidate.execution);
-  assert.equal(candidate.execution.runId, result.generatedModelCandidate?.generatedFromRunId);
-  assert.ok(candidate.execution.durationMs >= 0); assert.ok(candidate.execution.hardware.devices.includes("cpu"));
+  stage("candidate-request"); facts.candidateRequestMatches = candidate.requestId === requestId;
+  assert.equal(facts.candidateRequestMatches, true);
+  stage("candidate-history"); facts.candidateHistoryMatches = candidate.history.requestId === requestId;
+  assert.equal(facts.candidateHistoryMatches, true);
   stage("checkpoint-inventory");
   facts.outputFiles = candidate.retainedFiles.files.length;
+  assert.ok(facts.outputFiles <= 256, "Current candidate inventory exceeds the private contract bound.");
   facts.checkpoints = candidate.retainedFiles.files.filter(row => row.role === "checkpoint").length;
   assert.ok(facts.outputFiles > 0 && facts.outputFiles <= 32);
   assert.ok(facts.checkpoints > 0, "The current verified inventory has no checkpoint.");
   assert.ok(candidate.retainedFiles.files.some(row => row.role === "candidate"));
+  stage("candidate-execution"); facts.executionRecorded = candidate.execution !== undefined;
+  assert.ok(candidate.execution);
+  stage("candidate-pipeline");
+  facts.executionPipelineMatches = typeof candidate.execution.runId === "string" && candidate.execution.runId.length > 0 &&
+    candidate.execution.runId === result.generatedModelCandidate?.generatedFromRunId;
+  assert.equal(facts.executionPipelineMatches, true);
+  stage("candidate-duration"); facts.executionDurationValid = Number.isFinite(candidate.execution.durationMs) && candidate.execution.durationMs >= 0;
+  assert.equal(facts.executionDurationValid, true);
+  stage("candidate-device"); facts.executionCpuRecorded = candidate.execution.hardware.devices.includes("cpu");
+  assert.equal(facts.executionCpuRecorded, true);
   return candidate;
 }

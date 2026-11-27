@@ -131,3 +131,20 @@ canonical digest/source/stability, and requires original worker, IO, App and roo
 cleanup facts. All five failed receipts retain their original Work ownership and
 conservative charges. Missing, changed or incomplete proof denies; there is no
 third attempt, reset or historical cleanup. Source tests never start a model.
+
+The second approved verification reached successful training with 87 progress
+observations and confirmed worker/IO/App/root cleanup. Its overall test failed in
+the grouped candidate-lineage assertions. The old zero file counts mean those
+counts were not yet recorded; they do not prove missing files. Both approved
+attempts are now consumed, and no further model run is authorized.
+
+Version 5 separates candidate readiness, request identity, history identity,
+verified inventory, execution presence, pipeline correlation, duration and CPU
+device into fixed stages. Seven nullable boolean facts distinguish unobserved,
+passed and failed assertions without recording identities or raw reports. Counts
+are recorded only after original request/history identity checks, and before
+execution-report assertions. Every original assertion remains required. Diagnostic
+counts can represent the private contract's256filebound, while a passing actual
+test still requires at most32files. Unknown/false/missing facts cannot qualify.
+Historical version4 first-diagnostic proof is read separately by its exact digest
+and remains unchanged. Version5 is source observability, not a candidate pass.

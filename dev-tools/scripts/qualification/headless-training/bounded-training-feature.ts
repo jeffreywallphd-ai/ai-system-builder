@@ -104,7 +104,7 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
     });
     } finally {
       let ownerClosureConfirmed = false; try {ownerClosureConfirmed = closed();} catch { /* Unknown remains false. */ }
-      const evidence = {schema: "bounded-training-feature-diagnostic-v4", phase, startup, sourceFactories, outputFactories, startCode,
+      const evidence = {schema: "bounded-training-feature-diagnostic-v5", phase, startup, sourceFactories, outputFactories, startCode,
         workerRetirementConfirmed: retired, ownerClosureConfirmed, modelQualityTested: false,
         interpretation: "diagnostic-only-not-qualification", ...facts};
       const bytes = JSON.stringify(evidence) + "\n"; assert.ok(Buffer.byteLength(bytes) <= 2048);

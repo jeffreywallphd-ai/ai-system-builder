@@ -169,9 +169,9 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         def inert_child(root, command):
             self.assertEqual(command["argv"], ["node", "--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", guard.RUNNER])
             directory = root / ".local-codex/headless-training-feature"; directory.mkdir()
-            row = {"schema": "bounded-training-feature-diagnostic-v4", "phase": "complete", "startup": "stop-complete",
+            row = {"schema": "bounded-training-feature-diagnostic-v5", "phase": "complete", "startup": "stop-complete",
                 "sourceFactories": 1, "outputFactories": 1, "startCode": None, "workerRetirementConfirmed": True,
-                "ownerClosureConfirmed": True, "modelQualityTested": False, "interpretation": "diagnostic-only-not-qualification", "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None,
+                "ownerClosureConfirmed": True, "modelQualityTested": False, "interpretation": "diagnostic-only-not-qualification", **{key: True for key in guard.CANDIDATE_FACTS}, "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None,
                 "observations": 1, "progressObservations": 0, "checkpoints": 1, "outputFiles": 2,
                 "applicationCleanupConfirmed": True, "newRootRemoved": True}
             (directory / ("9" * 32 + ".json")).write_text(json.dumps(row))
@@ -220,10 +220,10 @@ class FreshTinyAdmissionTests(unittest.TestCase):
     def test_only_new_closed_diagnostics_are_disclosed_and_raw_fields_deny(self):
         directory = self.root / ".local-codex/headless-training-feature"; directory.mkdir()
         old = "1" * 32 + ".json"; (directory / old).write_text("not read")
-        row = {"schema": "bounded-training-feature-diagnostic-v4", "phase": "approved-start", "startup": "health-ready",
+        row = {"schema": "bounded-training-feature-diagnostic-v5", "phase": "approved-start", "startup": "health-ready",
             "sourceFactories": 1, "outputFactories": 1, "startCode": "headless.not-started",
             "workerRetirementConfirmed": False, "ownerClosureConfirmed": False, "modelQualityTested": False,
-            "interpretation": "diagnostic-only-not-qualification", "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None,
+            "interpretation": "diagnostic-only-not-qualification", **{key: True for key in guard.CANDIDATE_FACTS}, "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None,
                 "observations": 1, "progressObservations": 0, "checkpoints": 1, "outputFiles": 2,
                 "applicationCleanupConfirmed": True, "newRootRemoved": True}
         target = directory / ("2" * 32 + ".json"); target.write_text(json.dumps(row))
@@ -241,10 +241,10 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         self.assertEqual(guard.START_FAILURE_CODES, declared); self.assertEqual(len(declared), 12)
         directory = self.root / ".local-codex/headless-training-feature"; directory.mkdir()
         target = directory / ("3" * 32 + ".json")
-        row = {"schema": "bounded-training-feature-diagnostic-v4", "phase": "complete", "startup": "stop-complete",
+        row = {"schema": "bounded-training-feature-diagnostic-v5", "phase": "complete", "startup": "stop-complete",
             "sourceFactories": 1, "outputFactories": 1, "startCode": None,
             "workerRetirementConfirmed": True, "ownerClosureConfirmed": True, "modelQualityTested": False,
-            "interpretation": "diagnostic-only-not-qualification", "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None,
+            "interpretation": "diagnostic-only-not-qualification", **{key: True for key in guard.CANDIDATE_FACTS}, "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None,
                 "observations": 1, "progressObservations": 0, "checkpoints": 1, "outputFiles": 2,
                 "applicationCleanupConfirmed": True, "newRootRemoved": True}
         for code in sorted(declared):
@@ -260,6 +260,13 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         target.write_text(json.dumps({**row, "startCode": "headless.synthetic-private-error"}))
         with self.assertRaises(guard.AdmissionError): guard.new_diagnostic(self.root, set())
 
+    def test_candidate_diagnostic_phases_match_fixed_typescript_producer(self):
+        source = (REPO / catalog.TRAINING_OBSERVATION).read_text(encoding="utf8")
+        body = re.search(r"export type TrainingObservationStage = (.*?);", source, re.S)
+        self.assertIsNotNone(body)
+        self.assertEqual(set(re.findall(r'"([a-z-]+)"', body[1])), guard.DIAGNOSTIC_PHASES)
+        self.assertEqual(len(guard.CANDIDATE_FACTS), 7)
+
     def test_failure_category_allowlists_match_original_application_projection(self):
         source = (REPO / "modules/application/use-cases/model/train-model.use-case.ts").read_text(encoding="utf8")
         for name, expected in (("STAGES", guard.FAILURE_STAGES - {"unclassified"}), ("TYPES", guard.FAILURE_TYPES)):
@@ -270,17 +277,17 @@ class FreshTinyAdmissionTests(unittest.TestCase):
     def test_final_cleanup_and_current_checkpoint_facts_are_required(self):
         directory = self.root / ".local-codex/headless-training-feature"; directory.mkdir()
         target = directory / ("4" * 32 + ".json")
-        row = {"schema": "bounded-training-feature-diagnostic-v4", "phase": "complete", "startup": "stop-complete",
+        row = {"schema": "bounded-training-feature-diagnostic-v5", "phase": "complete", "startup": "stop-complete",
             "sourceFactories": 1, "outputFactories": 1, "startCode": None, "workerRetirementConfirmed": True,
             "ownerClosureConfirmed": True, "modelQualityTested": False, "interpretation": "diagnostic-only-not-qualification",
-            "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None, "observations": 1, "progressObservations": 0,
+            **{key: True for key in guard.CANDIDATE_FACTS}, "terminalStatus": "succeeded", "runtimeErrorCode": None, "runtimeFailureStage": None, "runtimeFailureType": None, "observations": 1, "progressObservations": 0,
             "checkpoints": 1, "outputFiles": 2, "applicationCleanupConfirmed": True, "newRootRemoved": True}
         for patch_row in ({"newRootRemoved": False}, {"applicationCleanupConfirmed": False}, {"checkpoints": 0},
-                {"terminalStatus": "failed"}, {"runtimeErrorCode": "private_training_failed"}, {"runtimeFailureStage": "training-loop"}, {"runtimeFailureType": "ValueError"}):
+                {"terminalStatus": "failed"}, {"runtimeErrorCode": "private_training_failed"}, {"runtimeFailureStage": "training-loop"}, {"runtimeFailureType": "ValueError"}, {"outputFiles": 33}, *[{key: False} for key in guard.CANDIDATE_FACTS], *[{key: None} for key in guard.CANDIDATE_FACTS]):
             target.write_text(json.dumps({**row, **patch_row}))
             self.assertFalse(guard.qualified_result({"status": "passed"}, True, guard.new_diagnostic(self.root, set())))
         for patch_row in ({"runtimeErrorCode": "private text"}, {"terminalStatus": "private text"},
-                {"progressObservations": 2}, {"outputFiles": 33}, {"newRootRemoved": 1}, {"runtimeFailureStage": "private text"}, {"runtimeFailureType": "private text"}):
+                {"progressObservations": 2}, {"outputFiles": 257}, {"newRootRemoved": 1}, {"candidateReady": 1}, {"runtimeFailureStage": "private text"}, {"runtimeFailureType": "private text"}):
             target.write_text(json.dumps({**row, **patch_row}))
             with self.assertRaises(guard.AdmissionError): guard.new_diagnostic(self.root, set())
 

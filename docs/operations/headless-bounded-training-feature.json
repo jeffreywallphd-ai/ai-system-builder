@@ -98,6 +98,23 @@
         "new_root_removed": true
       },
       "finding": "The repository-nested qualification cache exceeds Windows dataset-library path limits. Same synthetic JSON data and installed reader pass in a short fresh Windows temporary root; no model loaded for that diagnosis."
+    },
+    {
+      "source_digest": "32f120eeb8c53f02c90618e4a80f22df5db9d8f9ad650fb59b2aa986d899b9e5",
+      "receipt_digest": "4d76e9b3b0b7aec99a66fb443274fd65fc4033f36852470a90a7bf203361067a",
+      "result": "training-succeeded-aggregate-candidate-assertion-failed",
+      "diagnostics": {
+        "terminal_status": "succeeded",
+        "observations": 88,
+        "progress_observations": 87,
+        "failed_phase": "candidate-lineage",
+        "candidate_assertion": "not-recorded",
+        "worker_retirement_confirmed": true,
+        "owner_closure_confirmed": true,
+        "application_cleanup_confirmed": true,
+        "new_root_removed": true
+      },
+      "finding": "Short cache fixed dataset loading. Actual training succeeded, but the grouped candidate-lineage assertions failed before file counts were recorded. Do not infer which assertion or whether optional hardware history was present."
     }
   ],
   "source_repairs": [
@@ -107,9 +124,9 @@
     "Retain bounded append-only closed diagnostic facts and all earlier failed evidence."
   ],
   "remaining_qualification": [
-    "Actual successful original Tiny fine-tuning, checkpoints and current candidate review remain unqualified.",
-    "The first safe-stage diagnostic confirmed all new cleanup; its exact result/source/digest now conditions the one remaining approved verification. No third attempt or accuracy check.",
-    "Earlier unknown owners/files remain retained. Cache probes and source checks supply no actual training or parent pass."
+    "AtSource32f120 actual training succeeded with87progress observations and all new cleanup. Aggregate verification failed in candidate-lineage; exact candidate assertion remains unknown.",
+    "Preserve required current checkpoint/candidate/hardware/pipeline checks and expose finite individual diagnostics. No further actual attempt is authorized.",
+    "Earlier unknown owners/files remain retained. No candidate, Task72, public-host or parent pass follows from the failed aggregate receipt."
   ],
   "operator_decision": {
     "authority_ref": "user-approved-two-tiny-attempts-20261127",
@@ -119,14 +136,14 @@
     "actual_attempt_consumed": true,
     "guard_work_id": "headless-training-short-cache-verification-guard",
     "actual_trial_work_id": "headless-bounded-training-short-cache-verification-20261127",
-    "second_attempt_available_in_current_guard": "only-after-current-reviewed-fix-and-exact-first-cleanup-proof",
+    "second_attempt_available_in_current_guard": false,
     "restart_required": false,
     "prior_cleanup_authorized": false,
     "diagnostic_attempt_consumed": true,
-    "verification_attempt_consumed": false
+    "verification_attempt_consumed": true
   },
   "fresh_trial_guard": {
-    "status": "short-cache-second-verification-source-qualification-pending",
+    "status": "both-approved-attempts-consumed-training-succeeded-candidate-qualification-pending",
     "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
     "maximum_attempts": 1,
     "retained_logical_bytes_per_old_attempt": 33554432,
@@ -195,5 +212,12 @@
     "native_job": false,
     "probe_cleanup_confirmed": true,
     "source_fix": "Own a short local per-user Windows Temp root; maximum new-root characters60. Preserve locks, input data, runtime limits and original cleanup."
+  },
+  "candidate_diagnostics": {
+    "work_id": "headless-training-candidate-assertion-diagnostics",
+    "schema": "bounded-training-feature-diagnostic-v5",
+    "scope": "Separate finite candidate assertion phases, original-identity-gated file counts and seven nullable boolean facts. Preserve all original assertions and the32fileactualbound.",
+    "actual_candidate_result": "not-yet-qualified",
+    "model_run_authorized": false
   }
 }

@@ -50,6 +50,12 @@ FAILURE_STAGES = frozenset({"purpose-mapping", "diffusion-delegate", "vision-del
 FAILURE_TYPES = frozenset({"ValueError", "RuntimeError", "TypeError", "MemoryError", "ImportError", "ModuleNotFoundError", "OSError",
     "AttributeError", "KeyError", "IndexError", "AssertionError", "OtherError"})
 
+DIAGNOSTIC_PHASES = frozenset({"configured", "approved-start", "training", "terminal-status", "current-candidate",
+    "candidate-readiness", "candidate-request", "candidate-history", "checkpoint-inventory", "candidate-execution",
+    "candidate-pipeline", "candidate-duration", "candidate-device", "approval-replay", "input-integrity", "complete"})
+CANDIDATE_FACTS = frozenset({"candidateReady", "candidateRequestMatches", "candidateHistoryMatches", "executionRecorded",
+    "executionPipelineMatches", "executionDurationValid", "executionCpuRecorded"})
+
 
 class AdmissionError(ValueError):
     pass
@@ -158,10 +164,8 @@ def new_diagnostic(root, before):
     row = read_record(root, directory / name, 2048)
     need(isinstance(row, dict) and set(row) == {"schema", "phase", "startup", "sourceFactories", "outputFactories", "startCode",
          "workerRetirementConfirmed", "ownerClosureConfirmed", "modelQualityTested", "interpretation", "terminalStatus", "runtimeErrorCode", "observations", "progressObservations",
-         "checkpoints", "outputFiles", "applicationCleanupConfirmed", "newRootRemoved", "runtimeFailureStage", "runtimeFailureType"}, "fresh-trial.diagnostic-schema")
-    need(row["schema"] == "bounded-training-feature-diagnostic-v4" and row["phase"] in {
-         "configured", "approved-start", "training", "terminal-status", "current-candidate", "candidate-lineage",
-         "checkpoint-inventory", "approval-replay", "input-integrity", "complete"} and row["startup"] in {
+         "checkpoints", "outputFiles", "applicationCleanupConfirmed", "newRootRemoved", "runtimeFailureStage", "runtimeFailureType"} | CANDIDATE_FACTS, "fresh-trial.diagnostic-schema")
+    need(row["schema"] == "bounded-training-feature-diagnostic-v5" and row["phase"] in DIAGNOSTIC_PHASES and row["startup"] in {
          "not-started", "spawned", "owned-ready", "health-ready", "startup-timeout", "process-exit", "process-error", "stop-complete"},
          "fresh-trial.diagnostic-state")
     need(all(type(row[k]) is int and 0 <= row[k] <= 64 for k in ("sourceFactories", "outputFactories")) and
@@ -172,11 +176,12 @@ def new_diagnostic(root, before):
          row["runtimeErrorCode"] in {None, "private_training_failed", "unclassified"} and
          all(type(row[k]) is int and 0 <= row[k] <= 10000 for k in ("observations", "progressObservations")) and
          row["progressObservations"] <= row["observations"] and
-         all(type(row[k]) is int and 0 <= row[k] <= 32 for k in ("checkpoints", "outputFiles")) and
+         all(type(row[k]) is int and 0 <= row[k] <= 256 for k in ("checkpoints", "outputFiles")) and
          row["checkpoints"] <= row["outputFiles"] and
          all(type(row[k]) is bool for k in ("applicationCleanupConfirmed", "newRootRemoved")), "fresh-trial.diagnostic-observations")
     need(row["runtimeFailureStage"] in FAILURE_STAGES | {None} and row["runtimeFailureType"] in FAILURE_TYPES | {None},
          "fresh-trial.diagnostic-failure-category")
+    need(all(row[key] is None or type(row[key]) is bool for key in CANDIDATE_FACTS), "fresh-trial.diagnostic-candidate-facts")
     return row
 
 
@@ -186,7 +191,8 @@ def qualified_result(attempt, stable, diagnostic):
         diagnostic["workerRetirementConfirmed"] is True and diagnostic["ownerClosureConfirmed"] is True and \
         diagnostic["terminalStatus"] == "succeeded" and diagnostic["runtimeErrorCode"] is None and \
         diagnostic["runtimeFailureStage"] is None and diagnostic["runtimeFailureType"] is None and \
-        diagnostic["checkpoints"] > 0 and diagnostic["outputFiles"] > 0 and \
+        diagnostic["checkpoints"] > 0 and 0 < diagnostic["outputFiles"] <= 32 and \
+        all(diagnostic[key] is True for key in CANDIDATE_FACTS) and \
         diagnostic["applicationCleanupConfirmed"] is True and diagnostic["newRootRemoved"] is True
 
 

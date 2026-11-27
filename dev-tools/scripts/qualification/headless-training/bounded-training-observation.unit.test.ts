@@ -27,7 +27,10 @@ test("redacted fast success uses verified checkpoint inventory and distinct pipe
   assert.equal(result.checkpoints, undefined); assert.equal(facts.progressObservations, 0);
   requireTrainingCandidate(result, candidate(), "task-id", facts, stage => stages.push(stage));
   assert.equal(facts.checkpoints, 1); assert.equal(facts.outputFiles, 2);
-  assert.deepEqual(stages, ["candidate-lineage", "checkpoint-inventory"]);
+  assert.deepEqual(stages, ["candidate-readiness", "candidate-request", "candidate-history", "checkpoint-inventory",
+    "candidate-execution", "candidate-pipeline", "candidate-duration", "candidate-device"]);
+  for (const key of ["candidateReady", "candidateRequestMatches", "candidateHistoryMatches", "executionRecorded",
+    "executionPipelineMatches", "executionDurationValid", "executionCpuRecorded"] as const) assert.equal(facts[key], true);
   assert.equal(facts.newRootRemoved, false); assert.equal(facts.applicationCleanupConfirmed, false);
 });
 test("pending/stale or wrong original candidate cannot qualify", () => {
@@ -35,6 +38,31 @@ test("pending/stale or wrong original candidate cannot qualify", () => {
     {...candidate(), history: {requestId: "other"}}, {...candidate(), execution: undefined},
     {...candidate(), execution: {...candidate().execution, runId: "task-id"}}]) {
     assert.throws(() => requireTrainingCandidate(result, value as ApprovedLocalTrainingCandidateReview, "task-id", trainingObservation(), () => {}));
+  }
+});
+test("foreign candidate identity fails before recording any private file count", () => {
+  const facts = trainingObservation(), stages: TrainingObservationStage[] = [];
+  assert.throws(() => requireTrainingCandidate(result, {...candidate(), requestId: "foreign"}, "task-id", facts, value => stages.push(value)));
+  assert.deepEqual(stages, ["candidate-readiness", "candidate-request"]);
+  assert.equal(facts.candidateRequestMatches, false); assert.equal(facts.outputFiles, 0); assert.equal(facts.checkpoints, 0);
+  assert.equal(facts.executionRecorded, null);
+});
+test("verified file counts survive a missing execution report without claiming a pass", () => {
+  const facts = trainingObservation(), stages: TrainingObservationStage[] = [];
+  assert.throws(() => requireTrainingCandidate(result, {...candidate(), execution: undefined}, "task-id", facts, value => stages.push(value)));
+  assert.equal(stages[stages.length - 1], "candidate-execution"); assert.equal(facts.executionRecorded, false);
+  assert.equal(facts.outputFiles, 2); assert.equal(facts.checkpoints, 1); assert.equal(facts.executionPipelineMatches, null);
+});
+test("pipeline, duration and device refusals have distinct finite facts", () => {
+  for (const [patch, finalStage, field] of [
+    [{runId: "other"}, "candidate-pipeline", "executionPipelineMatches"],
+    [{durationMs: -1}, "candidate-duration", "executionDurationValid"],
+    [{hardware: {...candidate().execution!.hardware, devices: ["cuda"]}}, "candidate-device", "executionCpuRecorded"],
+  ] as const) {
+    const facts = trainingObservation(), stages: TrainingObservationStage[] = [];
+    assert.throws(() => requireTrainingCandidate(result, {...candidate(), execution: {...candidate().execution!, ...patch}} as ApprovedLocalTrainingCandidateReview,
+      "task-id", facts, value => stages.push(value)));
+    assert.equal(stages[stages.length - 1], finalStage); assert.equal(facts[field], false); assert.equal(facts.outputFiles, 2);
   }
 });
 test("unverified result checkpoint claims cannot replace current checkpoint or candidate files", () => {
