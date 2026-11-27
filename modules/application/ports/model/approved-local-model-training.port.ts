@@ -1,4 +1,4 @@
-import type {ModelTrainingRequest, ModelTrainingResult} from "../../../contracts/model";
+import type {ModelTrainingRequest, ModelTrainingResult, ModelTrainingExecutionHistory} from "../../../contracts/model";
 import type {WorkspaceId} from "../../../contracts/workspace";
 import type {RuntimeTaskRecord, CancelRuntimeTaskResult} from "../../../contracts/runtime";
 import type {ApplicationRequestContext} from "../application-request-context";
@@ -147,6 +147,8 @@ export type ApprovedLocalTrainingCandidateReview = {readonly kind: "not-ready"} 
   readonly workspaceId: WorkspaceId;
   readonly history: Extract<ApprovedLocalTrainingCompletionReview, {kind: "ready"}>;
   readonly retainedFiles: TrainingResultVerifiedFiles;
+  /** Original pipeline facts, not task UUID, resource proof or Save authority. */
+  readonly execution?: ModelTrainingExecutionHistory;
   /** Exact original scope/history/content identity, never approval authority. */
   readonly candidateDigest: string;
 };

@@ -9,6 +9,8 @@ import {isOrganizationId} from "../../../contracts/organization";
 import {
   normalizeModelTrainingRequest,
   normalizeModelTrainingResult,
+  readModelTrainingExecutionHistory,
+  type ModelTrainingExecutionHistory,
   type ModelTrainingRequest,
   type ModelTrainingResult,
   type ModelTrainingProgress,
@@ -631,6 +633,15 @@ export class TrainModelUseCase {
   private async reviewPrivateTrainingCandidate(owner: PrivateTrainingOwner, control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview> {
     const history = this.reviewPrivateTrainingCompletion(owner), verify = owner.session?.verifyRetainedFiles;
     if (history.kind !== "ready" || !verify) return {kind: "not-ready"};
+    const source = this.pendingResultsByRequestId.get(owner.definition.requestId)?.generatedModelCandidate;
+    let execution: ModelTrainingExecutionHistory | undefined;
+    if (source?.metadata?.executionHistory !== undefined) {
+      // The worker preserves its pipeline ID separately from the task UUID.
+      // Own and validate the report before any current-file or policy await.
+      if (typeof source.generatedFromRunId !== "string") throw privateUnavailable();
+      execution = readModelTrainingExecutionHistory(copyPrivateTrainingData(source.metadata.executionHistory), source.generatedFromRunId);
+      if (!execution) throw privateUnavailable();
+    }
     const adapter = ["lora", "qlora"].includes(owner.definition.request.method);
     if (history.candidate.artifactForm !== (adapter ? "adapter" : "full-model") ||
         history.candidate.serializationFormat !== null && history.candidate.serializationFormat !== (adapter ? "adapter-safetensors" : "safetensors"))
@@ -684,8 +695,9 @@ export class TrainModelUseCase {
     if (raw.manifestDigest !== manifestDigest) throw privateUnavailable();
     const retainedFiles: TrainingResultVerifiedFiles = Object.freeze({...snapshot, verification: "sha256-current-local-v1", manifestDigest});
     const candidateDigest = "sha256:" + createHash("sha256").update(JSON.stringify({requestId: owner.definition.requestId,
-      workspaceId: owner.definition.workspaceId, owner: owner.definition.owner, history, manifestDigest})).digest("hex");
-    return {kind: "ready", requestId: owner.definition.requestId, workspaceId: owner.definition.workspaceId, history, retainedFiles, candidateDigest};
+      workspaceId: owner.definition.workspaceId, owner: owner.definition.owner, history, ...(execution ? {execution} : {}), manifestDigest})).digest("hex");
+    return {kind: "ready", requestId: owner.definition.requestId, workspaceId: owner.definition.workspaceId, history, retainedFiles,
+      ...(execution ? {execution} : {}), candidateDigest};
   }
 
   /** Cache and original definition only. In particular, do not call readOwned:
@@ -1075,7 +1087,10 @@ export class TrainModelUseCase {
       generatedModelCandidate: runtimeTrainingResult.generatedModelCandidate
         ? {
             ...runtimeTrainingResult.generatedModelCandidate,
-            generatedFromRunId: statusRecord.requestId,
+            // Private local delivery preserves the original pipeline identity;
+            // the surrounding runId and owner remain the accepted task UUID.
+            generatedFromRunId: this.privateTrainingOwners.has(statusRecord.requestId)
+              ? runtimeTrainingResult.generatedModelCandidate.generatedFromRunId : statusRecord.requestId,
           }
         : undefined,
     });

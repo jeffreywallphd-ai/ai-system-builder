@@ -13,7 +13,7 @@ import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessTrai
   type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue, type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {isOrganizationId} from "../../../contracts/organization";
-import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, type ModelTrainingStatus} from "../../../contracts/model";
+import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, readModelTrainingExecutionHistory, type ModelTrainingStatus} from "../../../contracts/model";
 import {DATASET_PREPARATION_TASK_TYPES} from "../../../contracts/runtime";
 import {normalizeDatasetId, normalizeDatasetVersionId, normalizeDatasetVersionDigest} from "../../../contracts/dataset";
 import {copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord} from "../../../contracts/shared";
@@ -139,9 +139,11 @@ function scope(raw: unknown): HeadlessOperationScope {
 }
 function currentCandidate(raw: unknown, taskId: string, owner: HeadlessOperationScope, host: string,
   proposalDigest: string, original: Pick<Slot, "binding" | "request">): ApprovedLocalTrainingCandidateReview {
-  const row = record(raw, ["kind", "requestId", "workspaceId", "history", "retainedFiles", "candidateDigest"]);
+  const row = record(raw, ["kind", "requestId", "workspaceId", "history", "retainedFiles", "candidateDigest", "execution"]);
   if (row.kind === "not-ready") {need(Object.keys(row).length === 1); return {kind: "not-ready"};}
-  need(row.kind === "ready" && Object.keys(row).length === 6 && row.requestId === taskId && row.workspaceId === owner.workspaceId);
+  const execution = row.execution === undefined ? undefined : readModelTrainingExecutionHistory(row.execution);
+  need((row.execution === undefined || execution) && row.kind === "ready" && Object.keys(row).length === (execution ? 7 : 6) &&
+    row.requestId === taskId && row.workspaceId === owner.workspaceId);
   const history = completion(row.history, taskId, owner.workspaceId, proposalDigest);
   need(history.kind === "ready"); if (history.kind !== "ready") throw failed();
   const source = original.request.input, inputs = original.binding.inputs;
@@ -185,10 +187,11 @@ function currentCandidate(raw: unknown, taskId: string, owner: HeadlessOperation
   const hash = (value: unknown) => "sha256:" + createHash("sha256").update(JSON.stringify(value)).digest("hex");
   const manifestDigest = hash(snapshot); need(inventory.manifestDigest === manifestDigest);
   const candidateDigest = hash({requestId: taskId, workspaceId: owner.workspaceId,
-    owner: {organizationId: owner.organizationId, principalId: owner.principalId, clientId: owner.registeredClientId, hostIncarnationId: host}, history, manifestDigest});
+    owner: {organizationId: owner.organizationId, principalId: owner.principalId, clientId: owner.registeredClientId, hostIncarnationId: host}, history,
+    ...(execution ? {execution} : {}), manifestDigest});
   need(row.candidateDigest === candidateDigest);
   return {kind: "ready", requestId: taskId, workspaceId: owner.workspaceId, history,
-    retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest}, candidateDigest};
+    retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest}, ...(execution ? {execution} : {}), candidateDigest};
 }
 function key(owner: HeadlessOperationScope, host: string, fingerprint: string, step: number) {
   need(isHeadlessHostIncarnationId(host) && /^[a-f0-9]{64}$/.test(fingerprint) && Number.isSafeInteger(step) && step > 0);

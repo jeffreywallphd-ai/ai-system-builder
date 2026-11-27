@@ -117,6 +117,52 @@ async function candidateFixture(t: TestContext) {
   f.state.status = "succeeded"; await f.reconcile(); return {...f, accepted};
 }
 
+const executionHistory = () => ({schema: "model-training-execution-v1", runId: "pipeline-original",
+  startedAt: "2026-11-27T00:00:00.000Z", completedAt: "2026-11-27T00:00:01.000Z", durationMs: 950,
+  hardware: {devices: ["cpu"], precisions: ["float32"], logicalCpuCount: 4,
+    pythonVersion: "3.12.8", pytorchVersion: "2.7.0", transformersVersion: "4.52.0"}, interpretation: "reported-runtime-facts"});
+
+async function executionCandidate(t: TestContext, report: unknown, pipelineId: string | null = "pipeline-original") {
+  const f = await fixture(t, {verification: true}), accepted = await f.accepted();
+  f.state.status = "succeeded";
+  f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING,
+    status: "succeeded", concurrencyClass: "unknown", data: {runId: f.requestId, status: "succeeded", outputDirectory: f.staged!.outputDirectory,
+      generatedModelCandidate: {displayName: "Synthetic candidate", artifactForm: "adapter", serializationFormat: "adapter-safetensors",
+        localPath: f.staged!.outputDirectory, ...(pipelineId === null ? {} : {generatedFromRunId: pipelineId}), metadata: {executionHistory: report}}}});
+  await f.reconcile(); return {...f, accepted};
+}
+
+test("current candidate binds execution to the original pipeline while cached task history stays unchanged", async t => {
+  const report = executionHistory(), f = await executionCandidate(t, report), before = {...f.state};
+  assert.notEqual(f.requestId, report.runId);
+  const result = await f.accepted.task.reviewCandidate!(f.readControl);
+  assert.equal(result.kind, "ready"); if (result.kind !== "ready") throw Error("Missing controlled candidate.");
+  assert.deepEqual(result.execution, report);
+  const owner = {organizationId: f.admission.organizationId, principalId: f.admission.principalId,
+    clientId: f.admission.clientId, hostIncarnationId: f.admission.hostIncarnationId};
+  assert.equal(result.candidateDigest, "sha256:" + createHash("sha256").update(JSON.stringify({requestId: f.requestId,
+    workspaceId: f.workspaceId, owner, history: result.history, execution: result.execution, manifestDigest: result.retainedFiles.manifestDigest})).digest("hex"));
+  assert.equal(f.state.verifies, before.verifies + 1); assert.equal(f.state.reads, before.reads); assert.equal(f.state.settles, before.settles);
+  const cached = await f.accepted.task.reviewCompletion!(f.readControl); assert.equal(cached.kind, "ready");
+  if (cached.kind === "ready") {assert.equal(cached.verification.hardware, "not-recorded"); assert.equal("execution" in cached, false);}
+  report.hardware.devices[0] = "cuda";
+  const again = await f.accepted.task.reviewCandidate!(f.readControl);
+  assert.equal(again.kind, "ready"); if (again.kind === "ready") assert.deepEqual(again.execution?.hardware.devices, ["cpu"]);
+});
+
+for (const variant of ["missing-source", "foreign-run", "extra-field", "duration"] as const) {
+  test(`current execution history denies ${variant} before current-file IO without changing historical cache`, async t => {
+    const report: Record<string, unknown> = executionHistory();
+    if (variant === "foreign-run") report.runId = "pipeline-foreign";
+    if (variant === "extra-field") report.privatePath = "not-a-report-field";
+    if (variant === "duration") report.durationMs = -1;
+    const f = await executionCandidate(t, report, variant === "missing-source" ? null : "pipeline-original");
+    await assert.rejects(f.accepted.task.reviewCandidate!(f.readControl)); assert.equal(f.state.verifies, 0);
+    assert.equal((await f.accepted.task.reviewCompletion!(f.readControl)).kind, "ready");
+    assert.equal(f.state.starts, 1);
+  });
+}
+
 test("current candidate review combines original settled history and verified content without ordinary runtime effects", async t => {
   const f = await candidateFixture(t), before = {...f.state};
   const result = await f.accepted.task.reviewCandidate!(f.readControl);

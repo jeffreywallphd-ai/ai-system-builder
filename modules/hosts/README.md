@@ -1,3 +1,10 @@
+Private current-candidate review independently decodes optional Model execution
+history and includes it in the original-owner candidate digest. The application
+binds its pipeline identity; the host keeps the accepted task UUID, client,
+workspace and current read policy. Reports remain descriptive facts. Missing
+reports retain compatibility, and historical cached completion is unchanged.
+No public activation, Save, readiness, resource or quality authority is added.
+
 Private `reviewCompletion` reuses the original accepted training task book and
 its existing selection and current read policy. The bridge and book capture the
 optional original method and receiver before acceptance waits. An absent method

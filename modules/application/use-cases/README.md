@@ -1,5 +1,13 @@
 # Application Use Cases
 
+Private current-candidate review can include a bounded execution report. The
+application preserves the candidate's original pipeline ID separately from the
+owned task UUID and validates a copied report against that pipeline ID before
+reading current files. The candidate digest includes any report. Missing legacy
+reports remain unrecorded; historical completion and ordinary result identity
+behavior are unchanged. Reported facts grant no resource, readiness, quality or
+Save authority.
+
 The original private training task has an optional `reviewCompletion` read.
 `TrainModelUseCase` returns only settled, cached pending-result history and the
 immutable approved Model, Dataset version, recipe and proposal references. It

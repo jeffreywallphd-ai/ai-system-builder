@@ -27,7 +27,7 @@ import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/u
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
 import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl, ApprovedLocalTrainingCompletionReview,
   ApprovedLocalTrainingCandidateReview} from "../../../../application/ports/model";
-import type {ModelTrainingResult} from "../../../../contracts/model";
+import {readModelTrainingExecutionHistory, type ModelTrainingResult} from "../../../../contracts/model";
 import {composeHeadlessModelMetadata} from "../headlessModelMetadata";
 import type {OriginalTrainingRunOptions} from "../headlessModelTrainingTasks";
 import {version as datasetFixture} from "../../../../application/use-cases/dataset-version/tests/headless-dataset-metadata.fixture";
@@ -641,13 +641,54 @@ for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop"
 }
 
 function resealControlledCandidate(value: any, f: Awaited<ReturnType<typeof executableTrainingHost>>) {
+  // Match the application owner's canonical Model report representation.
+  // Preserve malformed fixture values so the host must independently deny them.
+  if (value.execution) value.execution = readModelTrainingExecutionHistory(value.execution) ?? value.execution;
   const {schema, publicationId, totalBytes, files} = value.retainedFiles;
   const manifestDigest = "sha256:" + hash({schema, publicationId, totalBytes, files});
   value.retainedFiles.manifestDigest = manifestDigest;
   value.candidateDigest = "sha256:" + hash({requestId: value.requestId, workspaceId: value.workspaceId,
     owner: {organizationId: f.scope.organizationId, principalId: f.scope.principalId,
-      clientId: f.scope.registeredClientId, hostIncarnationId: f.target.hostIncarnationId}, history: value.history, manifestDigest});
+      clientId: f.scope.registeredClientId, hostIncarnationId: f.target.hostIncarnationId}, history: value.history,
+    ...(value.execution ? {execution: value.execution} : {}), manifestDigest});
   return value;
+}
+
+const currentExecution = () => ({schema: "model-training-execution-v1", runId: "pipeline-original",
+  startedAt: "2026-11-27T00:00:00.000Z", completedAt: "2026-11-27T00:00:01.000Z", durationMs: 950,
+  hardware: {devices: ["cpu"], precisions: ["float32"], logicalCpuCount: 4,
+    pythonVersion: "3.12.8", pytorchVersion: "2.7.0", transformersVersion: "4.52.0"}, interpretation: "reported-runtime-facts"});
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: current candidate independently binds the optional execution report`, async t => {
+    const f = await executableTrainingHost(t, storage, host); f.execution.candidateEnabled = true;
+    f.execution.transformCandidate = value => resealControlledCandidate({...value as object, execution: currentExecution()}, f);
+    assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+    const result = await f.candidate(); assert.ok(result.ok && result.value.kind === "ready");
+    if (!result.ok || result.value.kind !== "ready") throw Error("Missing controlled execution report.");
+    assert.notEqual(result.value.requestId, result.value.execution?.runId);
+    assert.deepEqual(result.value.execution, currentExecution());
+    assert.equal(result.value.history.verification.hardware, "not-recorded");
+    assert.equal(result.value.history.verification.outputQuality, "not-evaluated");
+    assert.equal(result.value.history.registration, "requires-separate-approval");
+    assert.equal(f.execution.starts, 1); assert.equal(f.execution.reads, 0);
+  });
+}
+
+for (const variant of ["unbound-digest", "extra-field", "duration", "clock"] as const) {
+  test(`current candidate refuses ${variant} execution history at the host boundary`, async t => {
+    const f = await executableTrainingHost(t, "Core", "Desktop"); f.execution.candidateEnabled = true;
+    f.execution.transformCandidate = value => {
+      const raw = value as any; raw.execution = currentExecution();
+      if (variant === "extra-field") raw.execution.privatePath = "not-a-report-field";
+      if (variant === "duration") raw.execution.durationMs = -1;
+      if (variant === "clock") raw.execution.completedAt = "2026-11-26T00:00:00.000Z";
+      return variant === "unbound-digest" ? raw : resealControlledCandidate(raw, f);
+    };
+    assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+    assert.deepEqual(await f.candidate(), {ok: false, code: "headless.unavailable"});
+    assert.equal(f.execution.starts, 1); assert.equal(f.execution.reads, 0);
+  });
 }
 
 for (const variant of ["task", "workspace", "history", "model", "dataset", "recipe", "training-task", "name", "foreign-key", "role", "group", "required-file", "size", "duplicate-name",
