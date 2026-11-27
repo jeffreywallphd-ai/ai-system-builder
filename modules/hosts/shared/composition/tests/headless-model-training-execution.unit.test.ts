@@ -16,7 +16,7 @@ import {ReadHeadlessModelMetadataUseCase} from "../../../../application/use-case
 import {TrainModelUseCase} from "../../../../application/use-cases/model/train-model.use-case";
 import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
 import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingControl,
-  ApprovedLocalTrainingModelReader} from "../../../../application/ports/model";
+  ApprovedLocalTrainingModelReader, ApprovedLocalTrainingSaveSession, ReviewedGeneratedModelControl} from "../../../../application/ports/model";
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
@@ -523,6 +523,112 @@ function taskQuery(f: Awaited<ReturnType<typeof fixture>>, operation: "models.tr
     authorize: async () => f.state.allowed, request: {version: HEADLESS_CONTRACT_VERSION, operation,
       input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.definition!.requestId}}}};
 }
+
+/** Actual accepted task/metadata lineage, controlled private session only.
+ * These tests never copy files, register a Model or run/score a real model. */
+async function bookSaveFixture(t: TestContext, engine: "Core" | "SQLite" = "Core",
+  variant: "normal" | "missing" | "async-reject" | "own-then" | "own-constructor" | "undefined-constructor" | "active-constructor" | "custom-constructor" | "thenable" | "throw" | "getter" = "normal") {
+  const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f);
+  const originalStart = await options.resolveStart(); assert.ok(originalStart);
+  const state = {binds: 0, writes: 0, fences: 0, cleanups: 0, hooks: 0, writeCurrent: true, writeAllowed: true, cleanupAllowed: true};
+  let received: unknown, receivedControl: ReviewedGeneratedModelControl | undefined, originalOwner: any, originalSession: ApprovedLocalTrainingSaveSession | undefined;
+  const started = await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const accepted = await originalStart(...args); if (accepted.kind !== "accepted") return accepted;
+    const owner = {...accepted.task, createSaveSession(request: unknown, control: ReviewedGeneratedModelControl) {
+      assert.equal(this, owner); state.binds++; received = request; receivedControl = control;
+      if (variant === "missing") return undefined;
+      if (variant === "throw") throw new Error("Synthetic factory throw");
+      if (variant === "async-reject") return Promise.reject(new Error("Synthetic malformed factory rejection")) as never;
+      if (variant === "own-then") {
+        const p = Promise.reject(new Error("Synthetic malformed factory rejection with own hook"));
+        Object.defineProperty(p, "then", {value: () => {state.hooks++; assert.fail("No supplied then hook.");}}); return p as never;
+      }
+      if (variant === "own-constructor" || variant === "undefined-constructor") {
+        const p = Promise.reject(new Error("Synthetic malformed factory rejection with safe data constructor"));
+        Object.defineProperty(p, "constructor", {value: variant === "own-constructor" ? Promise : undefined}); return p as never;
+      }
+      if (variant === "active-constructor" || variant === "custom-constructor") {
+        const p = Promise.resolve(undefined);
+        Object.defineProperty(p, "constructor", variant === "active-constructor"
+          ? {get() {state.hooks++; assert.fail("No active constructor.");}}
+          : {value: {[Symbol.species]: () => {state.hooks++; assert.fail("No custom species.");}}}); return p as never;
+      }
+      if (variant === "thenable") return {then() {state.hooks++; assert.fail("No supplied thenable hook.");}} as never;
+      const session: ApprovedLocalTrainingSaveSession = {
+        write() {assert.equal(this, session); state.writes++; return Promise.reject(new Error("Controlled session has no file writer"));},
+        fence() {assert.equal(this, session); state.fences++;},
+        isCurrent() {assert.equal(this, session); return state.fences === 0;},
+        inspect() {assert.equal(this, session); return {phase: "bound", fenced: state.fences > 0, pendingOperations: 0, ioClosed: true};},
+        async discard() {assert.equal(this, session); state.cleanups++; return await control.mayDiscard();},
+      };
+      if (variant === "getter") Object.defineProperty(session, "write", {enumerable: true, get() {state.hooks++; assert.fail("No active session getter.");}});
+      originalSession = session; return session;
+    }};
+    originalOwner = owner; return {...accepted, task: owner};
+  }});
+  assert.ok(started.result.ok);
+  const request = {saveId: randomUUID(), candidateDigest: "sha256:" + "a".repeat(64), name: "Token classifier"};
+  const control: ReviewedGeneratedModelControl = {isCurrent: () => state.writeCurrent,
+    stillAllowed: async () => state.writeAllowed, mayDiscard: async () => state.cleanupAllowed};
+  return {f, book, state, request, control, owner: () => originalOwner, session: () => originalSession,
+    received: () => received, receivedControl: () => receivedControl};
+}
+
+for (const engine of ["Core", "SQLite"] as const) test(engine + ": original Save binding captures exact data, receiver and separate controls", async t => {
+  const b = await bookSaveFixture(t, engine), expected = {...b.request};
+  b.owner().createSaveSession = () => assert.fail("No replaced original factory.");
+  const bound = await b.book.bindSave({...taskQuery(b.f), authorize: async () => {b.request.name = "Changed after capture"; return b.f.state.allowed;}}, b.request, b.control);
+  assert.ok(bound.ok); assert.deepEqual(b.received(), expected); assert.equal(b.state.binds, 1); assert.equal(b.state.writes, 0);
+  b.session()!.inspect = () => assert.fail("No replaced session method.");
+  assert.equal(bound.value.inspect().phase, "bound");
+  assert.equal(await b.receivedControl()!.stillAllowed(), true);
+  b.f.state.allowed = false;
+  assert.equal(await b.receivedControl()!.stillAllowed(), false, "Original accepted lineage/policy is checked again.");
+  b.f.state.allowed = true; b.state.writeAllowed = false;
+  assert.equal(await b.receivedControl()!.stillAllowed(), false, "Separate Save policy is checked again.");
+  b.state.writeAllowed = true; b.state.writeCurrent = false;
+  assert.equal(bound.value.isCurrent(), false); assert.equal(await b.receivedControl()!.stillAllowed(), false);
+  assert.throws(() => bound.value.write()); assert.equal(b.state.writes, 0);
+  assert.equal(await bound.value.discard(), true, "Independent no-reference cleanup does not expire with write consent.");
+  b.state.cleanupAllowed = false; assert.equal(await bound.value.discard(), false);
+  assert.deepEqual(await b.book.bindSave(taskQuery(b.f), {...expected, saveId: randomUUID()}, b.control),
+    {ok: false, code: "headless.unavailable"});
+  assert.equal(b.state.binds, 1); assert.equal(b.f.state.starts, 1);
+});
+
+for (const variant of ["foreign-client", "foreign-principal", "foreign-workspace", "foreign-host", "wrong-task", "denied", "save-denied", "ended-save", "malformed-request", "active-control"] as const)
+  test(`original Save binding refuses ${variant} before invoking its retained factory`, async t => {
+    const b = await bookSaveFixture(t); let query = taskQuery(b.f), request = b.request, control = b.control;
+    if (variant === "foreign-client") query = {...query, scope: {...query.scope, registeredClientId: randomUUID()}};
+    if (variant === "foreign-principal") query = {...query, scope: {...query.scope, principalId: "principal.other"}};
+    if (variant === "foreign-workspace") query = {...query, scope: {...query.scope, workspaceId: createWorkspaceId("workspace.other")}};
+    if (variant === "foreign-host") query = {...query, hostIncarnationId: randomUUID()};
+    if (variant === "wrong-task") query = {...query, request: {...query.request as any, input: {...(query.request as any).input, selection: {kind: "task", taskId: randomUUID()}}}};
+    if (variant === "denied") b.f.state.allowed = false;
+    if (variant === "save-denied") b.state.writeAllowed = false;
+    if (variant === "ended-save") b.state.writeCurrent = false;
+    if (variant === "malformed-request") request = {...request, candidateDigest: "unknown"};
+    if (variant === "active-control") control = Object.defineProperty({...control}, "isCurrent", {enumerable: true,
+      get() {b.state.hooks++; assert.fail("No active Save control.");}});
+    assert.equal((await b.book.bindSave(query, request, control)).ok, false); assert.equal(b.state.binds, 0);
+    assert.equal(b.state.hooks, 0); assert.equal(b.state.writes, 0); assert.equal(b.state.cleanups, 0);
+  });
+
+for (const variant of ["missing", "async-reject", "own-then", "own-constructor", "undefined-constructor", "active-constructor", "custom-constructor", "thenable", "throw", "getter"] as const) test(`original Save binding retains ${variant} attempt without renewal or cleanup credit`, async t => {
+  const b = await bookSaveFixture(t, "Core", variant);
+  assert.deepEqual(await b.book.bindSave(taskQuery(b.f), b.request, b.control), {ok: false, code: "headless.unavailable"});
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.deepEqual(await b.book.bindSave(taskQuery(b.f), {...b.request, saveId: randomUUID()}, b.control), {ok: false, code: "headless.unavailable"});
+  assert.equal(b.state.binds, 1); assert.equal(b.state.hooks, 0); assert.equal(b.state.writes, 0); assert.equal(b.state.cleanups, 0);
+  assert.equal(b.receivedControl()!.isCurrent(), false); assert.equal(await b.receivedControl()!.stillAllowed(), false);
+  assert.ok((await b.book.read(taskQuery(b.f))).ok, "Ordinary original-task progress is preserved.");
+});
+
+test("concurrent original Save binding permits one factory and cannot turn lookup into a second attempt", async t => {
+  const b = await bookSaveFixture(t);
+  const results = await Promise.all([b.book.bindSave(taskQuery(b.f), b.request, b.control), b.book.bindSave(taskQuery(b.f), b.request, b.control)]);
+  assert.equal(results.filter(r => r.ok).length, 1); assert.equal(b.state.binds, 1); assert.equal(b.state.writes, 0);
+});
 test("current review book captures the original callback/receiver and copies replies before later policy waits", async t => {
   const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f), start = await options.resolveStart();
   let calls = 0, originalOwner: any, reply: any;

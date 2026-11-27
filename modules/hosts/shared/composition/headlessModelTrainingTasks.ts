@@ -1,4 +1,4 @@
-/** Private original-task controls. No Root, worker, generic task or Save owner. */
+/** Private original-task controls. No Root, worker or generic task fallback. */
 import {isDeepStrictEqual, types} from "node:util";
 import {createHash} from "node:crypto";
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
@@ -6,11 +6,13 @@ import {readStructuredOwnedTrainingPlanTask, readStructuredOwnedTrainingPlanTask
   readStructuredOwnedTrainingPlanTaskProposalDigest, readStructuredTrainingPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
 import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask, ApprovedLocalTrainingCompletionReview,
-  ApprovedLocalTrainingCandidateReview, TrainingResultVerifiedFiles} from "../../../application/ports/model";
+  ApprovedLocalTrainingCandidateReview, TrainingResultVerifiedFiles, ApprovedLocalTrainingSaveRequest,
+  ApprovedLocalTrainingSaveSession, ReviewedGeneratedModelControl} from "../../../application/ports/model";
 import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessTrainingTaskRequest,
   readHeadlessTrainingTaskValue, isHeadlessModelRecordId, isHeadlessModelTimestamp,
   readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult, type HeadlessTrainingCompletionResult,
-  type HeadlessTrainingTaskResult, type HeadlessTrainingTaskValue, type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
+  readHeadlessModelTrainingSavePlanRequest, type HeadlessTrainingTaskResult,
+  type HeadlessTrainingTaskValue, type HeadlessTrainingTaskReadRequest} from "../../../contracts/headless";
 import {isWorkspaceId} from "../../../contracts/workspace";
 import {isOrganizationId} from "../../../contracts/organization";
 import {MODEL_TRAINING_STATUSES, MODEL_TRAINING_METHODS, readModelTrainingExecutionHistory, type ModelTrainingStatus} from "../../../contracts/model";
@@ -47,6 +49,10 @@ export type OriginalTrainingCompletionQueryResult = {readonly ok: true; readonly
 /** Private current observation. Inventory locators must never cross transport. */
 export type OriginalTrainingCandidateQueryResult = {readonly ok: true; readonly value: ApprovedLocalTrainingCandidateReview} |
   Extract<HeadlessTrainingTaskResult, {ok: false}>;
+/** Private capability only. Never serialize this result or infer file closure. */
+export type OriginalTrainingSaveQueryResult = {readonly ok: true; readonly value: ApprovedLocalTrainingSaveSession} |
+  Extract<HeadlessTrainingTaskResult, {ok: false}>;
+interface SaveBinding {readonly request: ApprovedLocalTrainingSaveRequest; readonly control: ReviewedGeneratedModelControl;}
 interface Slot {
   readonly scope: HeadlessOperationScope;
   readonly selection: Selection;
@@ -59,6 +65,7 @@ interface Slot {
   cancellationAttempted: boolean;
   candidateRead?: {pending: boolean; unknown: boolean; original?: Promise<ApprovedLocalTrainingCandidateReview>;
     observation?: Promise<unknown>};
+  saveBinding?: {original?: unknown; observation?: unknown; session?: ApprovedLocalTrainingSaveSession};
 }
 const forbidden = {ok: false, code: "headless.forbidden"} as const;
 const unavailable = {ok: false, code: "headless.unavailable"} as const;
@@ -88,6 +95,21 @@ function optionalRead(owner: ApprovedLocalTrainingTask, key: "reviewCompletion" 
       return capture<NonNullable<ApprovedLocalTrainingTask[typeof key]>>(owner, key);
   }
   return undefined;
+}
+const OriginalPromise = Promise, originalThen = Promise.prototype.then;
+const originalSpecies = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+/** Observe only an ordinary native rejection, without invoking supplied hooks.
+ * An unsupported return stays retained and can never earn retry/cleanup credit. */
+function observeMalformedSaveFactory(value: unknown): unknown {
+  try {
+    if (!value || types.isProxy(value) || !types.isPromise(value) || Object.getPrototypeOf(value) !== OriginalPromise.prototype) return;
+    const own = Object.getOwnPropertyDescriptor(value, "constructor"), inherited = Object.getOwnPropertyDescriptor(OriginalPromise.prototype, "constructor"),
+      species = Object.getOwnPropertyDescriptor(OriginalPromise, Symbol.species);
+    if (own && (!("value" in own) || own.value !== undefined && own.value !== OriginalPromise) ||
+      !inherited || !("value" in inherited) || inherited.value !== OriginalPromise || !species ||
+      species.get !== originalSpecies?.get || species.set !== originalSpecies?.set || species.value !== originalSpecies?.value) return;
+    return Reflect.apply(originalThen, value, [() => undefined, () => undefined]);
+  } catch {return;}
 }
 function completion(raw: unknown, taskId: string, workspaceId: string, proposalDigest: string): ApprovedLocalTrainingCompletionReview {
   const full = (value: unknown, fields: readonly string[]) => {
@@ -304,10 +326,24 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
   function control(raw: OriginalTrainingTaskQuery, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
   function control(raw: OriginalTrainingTaskQuery, action: "review-candidate"): Promise<OriginalTrainingCandidateQueryResult>;
   function control(raw: OriginalTrainingTaskQuery, action: "read-completion"): Promise<HeadlessTrainingCompletionResult>;
+  function control(raw: OriginalTrainingTaskQuery, action: "bind-save", binding: SaveBinding): Promise<OriginalTrainingSaveQueryResult>;
   function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
-  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review" | "read-completion" | "review-candidate"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | OriginalTrainingCandidateQueryResult | HeadlessTrainingCompletionResult> {
+  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review" | "read-completion" | "review-candidate" | "bind-save",
+    rawBinding?: SaveBinding): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | OriginalTrainingCandidateQueryResult | HeadlessTrainingCompletionResult | OriginalTrainingSaveQueryResult> {
     let effectPossible = false;
     try {
+      let save: ApprovedLocalTrainingSaveRequest | undefined, saveControl: ReviewedGeneratedModelControl | undefined;
+      if (action === "bind-save") {
+        const binding = record(rawBinding, ["request", "control"]); need(Object.keys(binding).length === 2);
+        const request = record(copyHeadlessModelPlanData(binding.request), ["saveId", "candidateDigest", "name"]);
+        need(Object.keys(request).length === 3);
+        save = Object.freeze(request) as unknown as ApprovedLocalTrainingSaveRequest;
+        const owner = binding.control as ReviewedGeneratedModelControl;
+        need(Object.keys(record(owner, ["isCurrent", "stillAllowed", "mayDiscard"])).length === 3);
+        saveControl = Object.freeze({isCurrent: capture<ReviewedGeneratedModelControl["isCurrent"]>(owner, "isCurrent"),
+          stillAllowed: capture<ReviewedGeneratedModelControl["stillAllowed"]>(owner, "stillAllowed"),
+          mayDiscard: capture<ReviewedGeneratedModelControl["mayDiscard"]>(owner, "mayDiscard")});
+      }
       const fields = record(raw, ["documents", "hostIncarnationId", "scope", "request", "isCurrent", "authorize"]);
       const originalScope = scope(fields.scope), host = fields.hostIncarnationId;
       if (!isHeadlessHostIncarnationId(host)) return forbidden;
@@ -342,6 +378,42 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const same = () => current() && slots.get(originalKey) === slot && slot.task === task;
       const fresh = async () => {const value = await admit(); return !!value && same() && isDeepStrictEqual(value, admitted);};
       const caller: ApprovedLocalTrainingControl = Object.freeze({isCurrent: same, stillAllowed: fresh});
+      if (action === "bind-save") {
+        if (!save || !saveControl || !task.createSaveSession || slot.saveBinding) return unavailable;
+        const parsedSave = readHeadlessModelTrainingSavePlanRequest({version: parsed.request.version, operation: "models.save-training",
+          input: {hostIncarnationId: host, workspaceId: originalScope.workspaceId, taskId: task.requestId,
+            idempotencyKey: save.saveId, candidateDigest: save.candidateDigest, name: save.name}}, host);
+        if (!parsedSave.ok) return parsedSave;
+        const currentSave = saveControl.isCurrent, allowedSave = saveControl.stillAllowed, cleanup = saveControl.mayDiscard;
+        let bindingOpen = true;
+        const live = () => bindingOpen && same() && isHeadlessReadCurrent(currentSave);
+        const allowed = async () => live() && await fresh() && await allowedSave() === true && live();
+        if (!await allowed() || !live()) return forbidden;
+        // Claim the original binding only after policy, but before its factory.
+        // Reentrant/concurrent callers cannot renew a possibly consumed attempt.
+        if (slot.saveBinding) return unavailable;
+        const retained: NonNullable<Slot["saveBinding"]> = {}; slot.saveBinding = retained;
+        let session: ApprovedLocalTrainingSaveSession | undefined;
+        try {
+          const original = task.createSaveSession(save, Object.freeze({isCurrent: live, stillAllowed: allowed, mayDiscard: cleanup}));
+          retained.original = original;
+          if (original && types.isPromise(original)) retained.observation = observeMalformedSaveFactory(original);
+          else if (original) {
+            need(Object.keys(record(original, ["write", "fence", "isCurrent", "inspect", "discard"])).length === 5);
+            const write = capture<ApprovedLocalTrainingSaveSession["write"]>(original, "write"), fence = capture<ApprovedLocalTrainingSaveSession["fence"]>(original, "fence"),
+              inspect = capture<ApprovedLocalTrainingSaveSession["inspect"]>(original, "inspect"), discard = capture<ApprovedLocalTrainingSaveSession["discard"]>(original, "discard"),
+              sessionCurrent = capture<ApprovedLocalTrainingSaveSession["isCurrent"]>(original, "isCurrent");
+            session = Object.freeze({write() {need(live()); return write();}, inspect,
+              fence() {bindingOpen = false; return fence();},
+              discard() {bindingOpen = false; return discard();},
+              isCurrent: () => live() && isHeadlessReadCurrent(sessionCurrent)});
+          }
+        } catch { /* Retain the consumed factory attempt; no closure inference. */ }
+        if (!session) {bindingOpen = false; return unavailable;}
+        retained.session = session;
+        if (!live()) {session.fence(); return forbidden;}
+        return {ok: true, value: session};
+      }
       const currentMode = action === "read-completion" && "mode" in parsed.request.input && parsed.request.input.mode === "current-files";
       if (action === "review-candidate" || currentMode) {
         if (!task.reviewCandidate || slot.candidateRead) return unavailable;
@@ -406,5 +478,7 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
     cancel: (query: OriginalTrainingTaskQuery) => control(query, "cancel"),
     readCompletion: (query: OriginalTrainingTaskQuery) => control(query, "read-completion"),
     reviewCompletion: (query: OriginalTrainingTaskQuery) => control(query, "review"),
-    reviewCandidate: (query: OriginalTrainingTaskQuery) => control(query, "review-candidate")});
+    reviewCandidate: (query: OriginalTrainingTaskQuery) => control(query, "review-candidate"),
+    bindSave: (query: OriginalTrainingTaskQuery, request: ApprovedLocalTrainingSaveRequest, controlOwner: ReviewedGeneratedModelControl) =>
+      control(query, "bind-save", {request, control: controlOwner})});
 }

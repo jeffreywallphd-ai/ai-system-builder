@@ -1078,6 +1078,63 @@
         "Further exact Save approval and integration checks remain pending. Accepted model accuracy tests were not repeated. No physical quota, protected service or publication authority is granted.",
         "Another checkout may not contain the local completion records. This link never supplies a current-source or parent qualification pass."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-trained-model-registry-save",
+      "work_criteria": [
+        "trained-model-causal-commit",
+        "trained-save-replay-and-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "466c18e00fed2b258926aaa60e0ab0bdc5b1ed41d8c1c0d455633938e53ccc12",
+      "review_digest": "5c5afa6c465eea2a7acad106fc3c8b7138998892569e823540cfbc6024ef0135",
+      "scope": "A private save transaction creates the trained Model and its task receipt together. Core and SQLite tests cover exact provenance, changed records, rollback and lost replies. Independent review passed before commit 72d572e.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task 71, Increment 7, the roadmap or real host qualification.",
+        "Original-task Save integration, atomic publication wiring and current host checks remain pending. No model accuracy test was repeated. No protected service, reserved quota or publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-label-compatibility",
+      "work_criteria": [
+        "producer-labels-remain-reviewable",
+        "label-redaction-and-data-boundary",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "cdc9ecddb94c4dbf9efb923a3bd9e6e12323ef1aba5cbc078a8dfef5f90571c7",
+      "review_digest": "b59c817e66fce7d871c9efa0676f0e9aa3951d8a3b4ba3cdd41f627bf13f66fd",
+      "scope": "Ordinary model names now stay readable when results are reviewed and saved. Tests retain credential, path and private-content refusal in both storage backends. Independent review passed before commit 7585141.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task 71, Increment 7, the roadmap or real host qualification.",
+        "Original-task Save integration, atomic publication wiring and current host checks remain pending. No model accuracy test was repeated. No protected service, reserved quota or publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-trained-model-save-approval",
+      "work_criteria": [
+        "exact-separate-save-preview",
+        "save-consent-in-popup-and-chat",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "faa6fdc84f33997bd2e5022ac5efe155239b0644d4d197f01bfd1fafd043c9c9",
+      "review_digest": "2c2bbafb2c13599875179865d80446e6b78a895781d134c7b7de7e745e4299ce",
+      "scope": "The existing popup and chat can show a separate request to save an exact trained candidate. Both approval modes show the task, fingerprint, name and local copy permissions. Unconfigured execution remains unavailable. Focused tests and independent review passed before commit 2334dc7.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task 71, Increment 7, the roadmap or real host qualification.",
+        "Original-task Save integration, atomic publication wiring and current host checks remain pending. No model accuracy test was repeated. No protected service, reserved quota or publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
+      ]
     }
   ]
 }

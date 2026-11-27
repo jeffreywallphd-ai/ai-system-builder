@@ -4053,6 +4053,22 @@ unchecked license/quality. Path-free closed saved references correlate Model,
 task, workspace and candidate. Unconfigured host/store paths explicitly refuse;
 this proposal/UI component enables no runtime, original-owner copy or Root.
 
+The original training task book exposes private `bindSave`, not a transport
+operation. Detach exact Save identity/name/candidate and capture its control
+receivers before waits. Point-read accepted original actor/client/workspace/host
+lineage and proposal, then combine fresh original policy with separate Save
+consent. Bind the retained original App factory once, capture the returned session
+methods/receiver, and preserve independent cleanup permission. Concurrent or
+malformed attempts cannot renew the original factory. Unknown returned owners
+stay retained; only safely observable ordinary native rejections are consumed,
+without invoking supplied hooks. This bridge performs no copy or registry
+mutation. Native constructor data equal to the intrinsic constructor or undefined
+can be observed through the unchanged intrinsic species path; active/custom
+constructor, species and thenable hooks are not invoked. No observation supplies
+retry, cleanup or original IO closure credit. The bridge performs no registry
+mutation and claims no IO closure; the App Save owner and publication composition
+retain those responsibilities. Unconfigured product hosts stay unavailable.
+
 The owning composition must still bind the original app Save capability and
 require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does

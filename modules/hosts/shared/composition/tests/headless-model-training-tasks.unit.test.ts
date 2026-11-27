@@ -27,8 +27,10 @@ test("missing accepted training lineage cannot be turned into a generic task loo
   assert.deepEqual(await book.read({...base, request}), {ok: false, code: "headless.forbidden"});
   assert.deepEqual(await book.reviewCompletion({...base, request}), {ok: false, code: "headless.forbidden"});
   assert.deepEqual(await book.reviewCandidate({...base, request}), {ok: false, code: "headless.forbidden"});
+  assert.deepEqual(await book.bindSave({...base, request}, {saveId: randomUUID(), candidateDigest: "sha256:" + "a".repeat(64), name: "Model"},
+    {isCurrent: () => true, stillAllowed: async () => true, mayDiscard: async () => true}), {ok: false, code: "headless.forbidden"});
   assert.deepEqual(await book.cancel({...base, request: {...request, operation: "models.cancel-training"}}), {ok: false, code: "headless.forbidden"});
-  assert.equal(authorizations, 4);
+  assert.equal(authorizations, 5);
   const count = authorizations;
   assert.deepEqual(await book.read({...base, request: {...request, operation: "models.task"}}), {ok: false, code: "headless.invalid-request"});
   assert.equal(authorizations, count);

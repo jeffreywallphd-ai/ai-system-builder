@@ -3840,3 +3840,17 @@ storage/source paths deny this family. Proposal and UI support do not establish
 current files, original task ownership, consent, registry commit or cleanup proof.
 Original-owner orchestration and real-host qualification remain separate work;
 ADR-0049 signed-in account/dependency trust and no reserved quota remain explicit.
+
+Private task-book Save binding requires accepted original actor, client,
+workspace, host, task and proposal lineage under current policy, plus distinct
+exact Save controls. Capture data and original callback receivers before waits.
+One synchronous original App binding attempt is retained per task, including
+missing or malformed outcomes; concurrent lookup cannot create another writer.
+Unknown returned owners grant no cleanup/closure credit. Observe safely supported
+ordinary native Promise rejections without supplied hooks. Session methods remain
+bound to the original owner. Safe constructor data values use the verified
+intrinsic species path; active/custom constructor/species and thenable hooks are
+refused without invocation. Observation grants no retry or cleanup credit. Methods remain
+bound to the original owner, and independent no-reference cleanup authority does
+not expire with write consent. This private bridge does not read/copy files,
+register a Model, start a runtime or establish Native/service or parent proof.

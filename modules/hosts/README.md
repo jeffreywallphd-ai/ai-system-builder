@@ -1,3 +1,15 @@
+The private original training task book can bind one separate Save session.
+It rechecks accepted actor/client/workspace/host/task/proposal lineage and
+combines that lookup with fresh exact Save controls. The original App factory
+and returned session methods keep their original receivers. A missing, malformed
+or consumed factory has no ordinary Save/runtime fallback. Unknown factory returns
+remain retained; safely observable native rejections are consumed without supplied
+hooks. Independent cleanup permission is preserved after write consent ends.
+Safe native constructor data values use the checked intrinsic species path;
+active/custom constructor or thenable hooks are refused without invocation.
+This bridge does no file IO or registration and proves no original IO closure;
+actual App copy ownership and atomic metadata publication remain separate duties.
+
 Configured training review readers forward explicit `current-files` mode to
 the original candidate owner. The shared task book reuses its current read
 slot and policy, returning only digests/counts/bytes and bounded execution facts.
