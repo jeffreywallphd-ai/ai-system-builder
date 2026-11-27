@@ -1629,6 +1629,25 @@
         "The prepared generation request contains private text and must not be persisted in plans or diagnostics.",
         "Another checkout may lack local completion records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-safe-failure-observation",
+      "work_criteria": [
+        "safe-original-failure-projection",
+        "bounded-diagnostic-and-closure-evidence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ca500aedb88ded61dda68b791a6e6eda59040d1f960d180c4b8276d865331161",
+      "review_digest": "7e8dde03f9a69e204804b56750401b381dcd5ca72f09a42f43f0b410d4c789bc",
+      "scope": "At commit40f75688, original failed task results retain only a fixed error code/message and finite stage/type labels. Eleven focused checks passed with independent review.",
+      "limitations": [
+        "Source support only. The actual loader failure is still unknown; Task72 and parent qualification remain pending.",
+        "No raw errors, paths, user text or model accuracy checks are supplied. No further actual run is granted by this link.",
+        "The latest failed trial proved its own cleanup only; earlier unknown owners remain retained. Another checkout may lack local records."
+      ]
     }
   ]
 }

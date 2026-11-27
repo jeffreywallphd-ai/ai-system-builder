@@ -92,24 +92,26 @@
   "remaining_qualification": [
     "Actual original successful fine-tuning and checkpoint/candidate review remain unqualified. The most recent attempt failed; it confirmed new cleanup and five sampled progress observations.",
     "Earlier unconfirmed owners/files remain retained. Latest exact new-root removal supplies no historical cleanup credit.",
-    "Source-only safe nested-error projection and v4 diagnostics are being qualified. No further actual trial is authorized; no model accuracy test."
+    "Qualify and review the first diagnostic admission before actual execution. One further verification is approved only after a reviewed fix and confirmed diagnostic cleanup; it is unavailable in this guard. No accuracy testing."
   ],
   "operator_decision": {
-    "authority_ref": "user-approved-corrected-observation-tiny-trial-20261127",
-    "approved": "One corrected guarded Tiny attempt after guard source testing and independent review; clean only new files after confirmed original shutdown.",
+    "authority_ref": "user-approved-two-tiny-attempts-20261127",
+    "approved": "Up to two guarded Tiny attempts: diagnostic, then verification of a reviewed fix if needed. The second requires confirmed first-run shutdown and cleanup.",
+    "maximum_attempts": 2,
+    "current_attempt_ordinal": 1,
+    "actual_attempt_consumed": false,
+    "guard_work_id": "headless-training-safe-stage-diagnostic-guard",
+    "actual_trial_work_id": "headless-bounded-training-safe-stage-diagnostic-20261127",
+    "second_attempt_available_in_current_guard": false,
     "restart_required": false,
-    "process_to_stop": null,
-    "prior_cleanup_authorized": false,
-    "actual_attempt_consumed": true,
-    "guard_work_id": "headless-training-corrected-observation-trial-guard",
-    "actual_trial_work_id": "headless-bounded-training-corrected-observation-20261127"
+    "prior_cleanup_authorized": false
   },
   "fresh_trial_guard": {
-    "status": "corrected-attempt-consumed-failed-cleanup-confirmed",
+    "status": "safe-stage-diagnostic-source-qualification-pending",
     "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
     "maximum_attempts": 1,
     "retained_logical_bytes_per_old_attempt": 33554432,
-    "old_attempts": 3,
+    "old_attempts": 4,
     "fresh_logical_reservation_bytes": 33554432,
     "minimum_free_bytes_in_addition": 134217728,
     "physical_quota_asserted": false,
@@ -145,6 +147,16 @@
       "guard_work_id": "headless-training-fresh-review-binding-fix",
       "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2",
       "actual_attempt_consumed": true
+    },
+    {
+      "authority_ref": "user-approved-corrected-observation-tiny-trial-20261127",
+      "approved": "One corrected guarded Tiny attempt after guard source testing and independent review; clean only new files after confirmed original shutdown.",
+      "restart_required": false,
+      "process_to_stop": null,
+      "prior_cleanup_authorized": false,
+      "actual_attempt_consumed": true,
+      "guard_work_id": "headless-training-corrected-observation-trial-guard",
+      "actual_trial_work_id": "headless-bounded-training-corrected-observation-20261127"
     }
   ],
   "safe_failure_projection": {

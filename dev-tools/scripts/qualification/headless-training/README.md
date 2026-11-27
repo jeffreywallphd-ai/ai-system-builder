@@ -101,3 +101,12 @@ status had no error. It now projects fixed safe categories from the exact origin
 failed task result. Raw exception messages, paths, logs and arbitrary class names
 stay private. Generic/unknown labels remain possible and supply no diagnosis or
 pass. Source fixtures exercise this reporting path without loading a model.
+
+After the safe failure projection was committed, the user approved up to two
+additional attempts: a diagnostic and, if needed, a verification after a reviewed
+fix. This guard enables only the first in a new fixed directory/reference. All
+four prior failed receipts are checked under their original owners and charged
+conservatively. The existing consumed records stay untouched. The second is not
+implemented or admitted by this source: it needs separately reviewed current
+source and exact proof that the diagnostic worker, IO, App and root cleanup closed.
+No automatic retry, new model, accuracy test or limit increase is permitted.

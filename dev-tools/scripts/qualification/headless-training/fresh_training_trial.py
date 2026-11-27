@@ -17,17 +17,19 @@ from control_plane.execution import execute
 from control_plane.records import Records
 from control_plane.work import Work
 
-GUARD_WORK = "headless-training-corrected-observation-trial-guard"
-TRIAL_WORK = "headless-bounded-training-corrected-observation-20261127"
-DIRECTORY = ".local-codex/headless-training-corrected-observation-trial-20261127"
-AUTHORITY_REF = "user-approved-corrected-observation-tiny-trial-20261127"
+GUARD_WORK = "headless-training-safe-stage-diagnostic-guard"
+TRIAL_WORK = "headless-bounded-training-safe-stage-diagnostic-20261127"
+DIRECTORY = ".local-codex/headless-training-safe-stage-diagnostic-20261127"
+AUTHORITY_REF = "user-approved-two-tiny-attempts-20261127-first-diagnostic"
+PRIOR_CORRECTED_WORK = "headless-bounded-training-corrected-observation-20261127"
 PRIOR_FRESH_WORK = "headless-bounded-training-fresh-attempt-20261127-r2"
 RUNNER = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
 PRIOR_WORK = "headless-bounded-training-feature"
 PRIOR = ["cb215d3c3409542e88860920fb889e4ad9baf8d9b859a1c3052f63a462084d41",
          "bf7abd87829766f0795638ab8fb8c7f098ba95c6aaaea34e289660bcf72bb093",
-         "7a492d694beeb92e3259c9e16523dcc226fbc419c9537d70c223aa8b3fcc6129"]
-PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK)
+         "7a492d694beeb92e3259c9e16523dcc226fbc419c9537d70c223aa8b3fcc6129",
+         "06641de84df50609608ec6b3cd0e41d244281209ec4966c20eb0f4b39798c4bf"]
+PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK, PRIOR_CORRECTED_WORK)
 LIMITS = {"process_memory_bytes": 2 * 1024**3, "job_memory_bytes": 4 * 1024**3,
           "maximum_active_processes": 32, "maximum_duration_ms": 690000,
           "task_duration_seconds": 600, "model_copy_bytes": 1024**2, "output_bytes": 4 * 1024**2}

@@ -134,13 +134,13 @@ class FreshTinyAdmissionTests(unittest.TestCase):
 
     def test_main_accepts_canonical_review_and_calls_one_inert_child_only(self):
         work, receipt = self.canonical_review_fixture()
-        prior = [{"qualification": "failed", "case": n} for n in (1, 2, 3)]
+        prior = [{"qualification": "failed", "case": n} for n in (1, 2, 3, 4)]
         for row in prior: row["receipt_digest"] = guard.digest(row)
         references = [row["receipt_digest"] for row in prior]
         (self.directory / "authorization.json").write_text(json.dumps({**self.authorization, "prior_receipts": references}))
         python = self.root / "inert-python"; python.write_text("never executed")
         model = self.root / "inert-model"; model.mkdir()
-        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": prior[2:]}, guard.TRIAL_WORK: {
+        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": prior[2:3]}, guard.PRIOR_CORRECTED_WORK: {"receipts": prior[3:]}, guard.TRIAL_WORK: {
             "status": "active", "claim": {"owned": True}, "spec": {"task_targets": [{"task_id": "run-approved-fine-tuning", "coverage": "task-outcome"}]}}}}
         def inert_child(root, command):
             self.assertEqual(command["argv"], ["node", "--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", guard.RUNNER])
@@ -170,12 +170,15 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         self.assertFalse(result["model_quality_tested"])
 
     def test_all_prior_failures_remain_bound_to_original_work_and_integrity(self):
-        rows = [{"qualification": "failed", "case": n} for n in (1, 2, 3)]
+        rows = [{"qualification": "failed", "case": n} for n in (1, 2, 3, 4)]
         for row in rows: row["receipt_digest"] = guard.digest(row)
         references = [r["receipt_digest"] for r in rows]
-        state = {"work_items": {guard.PRIOR_WORK: {"receipts": rows[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": rows[2:]}}}
+        state = {"work_items": {guard.PRIOR_WORK: {"receipts": rows[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": rows[2:3]}, guard.PRIOR_CORRECTED_WORK: {"receipts": rows[3:]}}}
         with patch.object(guard, "PRIOR", references):
             guard.validate_prior_receipts(state)
+            for owner in set(guard.PRIOR_OWNERS):
+                bad = copy.deepcopy(state); bad["work_items"][owner]["receipts"] = []
+                with self.assertRaises(StopIteration): guard.validate_prior_receipts(bad)
             for mutation in ("missing", "wrong-owner", "tampered", "passed"):
                 bad = copy.deepcopy(state)
                 if mutation == "missing": bad["work_items"][guard.PRIOR_FRESH_WORK]["receipts"] = []
@@ -184,7 +187,9 @@ class FreshTinyAdmissionTests(unittest.TestCase):
                 if mutation == "passed": bad["work_items"][guard.PRIOR_FRESH_WORK]["receipts"][0]["qualification"] = "passed"
                 with self.assertRaises((guard.AdmissionError, StopIteration, KeyError)): guard.validate_prior_receipts(bad)
         self.assertEqual(guard.PRIOR_FRESH_WORK, "headless-bounded-training-fresh-attempt-20261127-r2")
-        self.assertEqual(guard.DIRECTORY, ".local-codex/headless-training-corrected-observation-trial-20261127")
+        self.assertEqual(guard.DIRECTORY, ".local-codex/headless-training-safe-stage-diagnostic-20261127")
+        self.assertEqual(len(guard.PRIOR), 4)
+        self.assertEqual(guard.AUTHORITY_REF, "user-approved-two-tiny-attempts-20261127-first-diagnostic")
         self.assertNotEqual(guard.DIRECTORY, ".local-codex/headless-training-fresh-trial-20261127")
 
     def test_only_new_closed_diagnostics_are_disclosed_and_raw_fields_deny(self):
