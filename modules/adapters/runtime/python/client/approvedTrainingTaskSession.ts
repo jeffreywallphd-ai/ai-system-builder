@@ -2,13 +2,15 @@
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingControl, ApprovedLocalTrainingDefinition,
   ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingModelReader,
   ApprovedLocalTrainingModelSelection} from "../../../../application/ports/model";
-import type {BoundedLocalTrainingModelSource} from "../../../../application/ports/model";
+import type {BoundedLocalTrainingModelSource, TrainingResultRetainedFileVerificationPort, TrainingResultVerifiedFiles} from "../../../../application/ports/model";
+import type {ApplicationRequestContext} from "../../../../application/ports/application-request-context";
 import type {RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {TaskType} from "../../../../contracts/runtime";
 import {readStrictPassiveRecord} from "../../../../contracts/shared";
 import {capturePassiveModelData} from "./modelDownloadManifest";
 import {mapTaskStatusResponse} from "../protocol/pythonRuntimeHttpProtocol";
-import {types} from "node:util";
+import {isDeepStrictEqual, types} from "node:util";
+import {createHash} from "node:crypto";
 import path from "node:path";
 import {createOriginalTrainingOutputReceiver, type OriginalTrainingOutputStorage} from "./originalTrainingOutputReceiver";
 
@@ -38,6 +40,11 @@ export interface OriginalTrainingCapture {
 export interface OriginalTrainingExitConfiguration {
   readonly retirementProtocol: "original-exit-ready-v1";
   readonly createOutputStorage: (original: OriginalTrainingCapture) => OriginalTrainingOutputStorage;
+}
+/** Local-only optional capability. Strip it before the unchanged receiver DTO;
+ * strict Native/default output configurations keep their existing shape. */
+export interface OriginalBoundedLocalTrainingOutputStorage extends OriginalTrainingOutputStorage {
+  readonly retainedFiles?: TrainingResultRetainedFileVerificationPort;
 }
 type CaptureSource = {reserved: boolean; stage: "bound" | "preparing" | "closed";
   reader?: () => Promise<ApprovedLocalTrainingModelSelection>; lost: boolean};
@@ -182,6 +189,11 @@ export function createOriginalTrainingPort(options: {
     let output: ReturnType<typeof createOriginalTrainingOutputReceiver> | undefined;
     let outputSetupUnknown = false, outputStarted = false, outputAborted = false;
     const outputSetup: {original?: unknown; observation?: Promise<unknown>} = {};
+    let retainedFiles: {owner: object; verify: Function; inspect: Function; context: ApplicationRequestContext;
+      publicationId: string; maximumDurationMs: number} | undefined;
+    let reviewing = false, reviewUnknown = false;
+    const reviewPending = new Set<{original?: unknown; observation?: Promise<unknown>}>();
+    let reviewAttempt: {original?: Promise<unknown>} | undefined;
     let storageBudgetSetupUnknown = false, storageBudgetWithdrawn = false;
     let storageBudgetOperation: Promise<unknown> | undefined, storageBudgetObservation: Promise<BudgetObservation> | undefined;
     let parentFenced = false;
@@ -218,6 +230,76 @@ export function createOriginalTrainingPort(options: {
       cached = localOutputStatus(copy({...response, taskType: TaskType.MODEL_TRAINING, workspaceId: definition.workspaceId,
         progress: response.progress ? {details: response.progress} : undefined,
         status: response.status as RuntimeTaskRecord["status"], concurrencyClass: "gpu-exclusive"} as RuntimeTaskRecord));
+    };
+    const verifyRetainedFiles = async (rawReadControl: ApprovedLocalTrainingControl): Promise<TrainingResultVerifiedFiles> => {
+      need(localStorage && !!retainedFiles && phase === "settled" && localWorkerRetired && remoteRetired &&
+        releaseAttempted && cached?.status === "succeeded" && output?.isComplete() && !reviewing && !reviewUnknown && !reviewAttempt);
+      need(!!rawReadControl && !types.isProxy(rawReadControl));
+      const fields = readStrictPassiveRecord(rawReadControl, ["isCurrent", "stillAllowed"]);
+      need(Object.keys(fields).length === 2 && Object.values(fields).every(value => typeof value === "function" && !types.isProxy(value)));
+      const readerCurrent = fields.isCurrent as Function, readerAllowed = fields.stillAllowed as Function, original = retainedFiles!;
+      const deadline = Date.now() + original.maximumDurationMs; let expired = false;
+      reviewing = true; const attempt: {original?: Promise<unknown>} = {}; reviewAttempt = attempt;
+      const observe = async <T>(action: () => Promise<T>): Promise<T> => {
+        const token: {original?: unknown; observation?: Promise<unknown>} = {}; need(reviewPending.size < 8); reviewPending.add(token);
+        let pending: Promise<T>;
+        try {pending = action(); token.original = pending;
+          need(types.isPromise(pending) && !types.isProxy(pending) && Object.getPrototypeOf(pending) === budgetPromisePrototype &&
+            !Object.getOwnPropertyDescriptor(pending, "constructor"));}
+        catch {reviewUnknown = true; throw unavailable();}
+        const observed = (async () => {try {return {ok: true, value: await pending};}
+          catch {return {ok: false, value: undefined};} finally {reviewPending.delete(token);}})();
+        token.observation = observed;
+        if (Object.getOwnPropertyDescriptor(pending, "then")) {reviewUnknown = true; throw unavailable();}
+        const result = await observed; need(result.ok); return result.value as T;
+      };
+      const check = () => {
+        need(!expired && !reviewUnknown && Date.now() < deadline && retainedFiles === original && phase === "settled" &&
+          localWorkerRetired && remoteRetired && cached?.status === "succeeded"); current();
+        const value: unknown = Reflect.apply(readerCurrent, rawReadControl, []);
+        if (typeof value !== "boolean") {reviewUnknown = true; reviewPending.add({original: value});}
+        if (types.isPromise(value)) {
+          if (!types.isProxy(value) && Object.getPrototypeOf(value) === budgetPromisePrototype && !Object.getOwnPropertyDescriptor(value, "constructor"))
+            void (async () => {try {await value;} catch {}})();
+        }
+        need(value === true && !expired && Date.now() < deadline);
+      };
+      const permit = async () => {check(); await observe(() => permission()); check();
+        need(await observe(() => Reflect.apply(readerAllowed, rawReadControl, [])) === true); check();};
+      const idle = () => {
+        const value: unknown = Reflect.apply(original.inspect, original.owner, []);
+        if (types.isPromise(value)) {reviewUnknown = true; reviewPending.add({original: value});
+          if (!types.isProxy(value) && Object.getPrototypeOf(value) === budgetPromisePrototype && !Object.getOwnPropertyDescriptor(value, "constructor"))
+            void (async () => {try {await value;} catch {}})();}
+        const state = exact(value, ["phase", "pendingOperations", "openFiles"]);
+        need(state.phase === "idle" && state.pendingOperations === 0 && state.openFiles === 0);
+      };
+      const work = (async () => {
+        try {
+          await permit(); need(parentIoClosed()); idle();
+          const delivered = output!.inspectCompletedDelivery();
+          need(!!delivered && delivered.requestId === definition.requestId && delivered.workspaceId === definition.workspaceId &&
+            delivered.publicationId === original.publicationId);
+          const snapshot = Object.freeze({schema: "training-result-finalized-files-v1" as const, publicationId: original.publicationId,
+            totalBytes: delivered!.totalBytes, files: Object.freeze(delivered!.files.map(file => Object.freeze({fileIndex: file.fileIndex,
+              groupIndex: file.groupIndex, name: file.name, role: file.role, mediaType: file.mediaType,
+              expectedSizeBytes: file.expectedSizeBytes, expectedSha256: file.expectedSha256,
+              key: `workspaces/${definition.workspaceId}/artifacts/training-results/${original.publicationId}/${file.fileIndex}`})))});
+          const raw = await observe(() => Reflect.apply(original.verify, original.owner, [original.context,
+            Object.freeze({assertCurrent: check, assertAllowed: permit})]));
+          const observed = copy(raw); // Own data before any later policy wait.
+          await permit(); idle(); check(); need(parentIoClosed());
+          const expected = Object.freeze({...snapshot, verification: "sha256-current-local-v1" as const,
+            manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(snapshot)).digest("hex")});
+          need(isDeepStrictEqual(observed, expected)); return expected;
+        } catch {throw unavailable();}
+        finally {reviewing = false; if (!reviewUnknown) reviewAttempt = undefined;}
+      })();
+      attempt.original = work;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {return await Promise.race([work, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {expired = true; reject(unavailable());}, Math.max(1, deadline - Date.now()));
+      })]);} finally {if (timer) clearTimeout(timer);}
     };
     const settleLocalOutput = async () => {
       if (phase === "settled") return true;
@@ -342,18 +424,31 @@ export function createOriginalTrainingPort(options: {
               outputSetup.observation = (async () => {try {await configuration;} catch {}})();
             } else if (types.isPromise(configuration)) void Promise.prototype.then.call(configuration, undefined, () => {});
             need(!types.isPromise(configuration) && !outputAborted && phase === "preparing");
+            let receiverConfiguration = configuration;
             if (localOutputLimits) {
               need(!!configuration && !types.isProxy(configuration));
               const row = readStrictPassiveRecord(configuration, ["storage", "context", "publicationId", "maximumFiles",
-                "maximumFileBytes", "maximumTotalBytes", "maximumDurationMs"]);
+                "maximumFileBytes", "maximumTotalBytes", "maximumDurationMs", "retainedFiles"]);
+              need(Object.keys(row).length === (row.retainedFiles === undefined ? 7 : 8));
               need(typeof row.maximumTotalBytes === "number" && Number.isSafeInteger(row.maximumTotalBytes) && row.maximumTotalBytes > 0
                 && row.maximumTotalBytes <= localOutputLimits.maximumTotalBytes && typeof row.maximumDurationMs === "number"
                 && Number.isSafeInteger(row.maximumDurationMs) && row.maximumDurationMs > 0 && row.maximumDurationMs <= localOutputLimits.maximumDurationMs);
               const context = readStrictPassiveRecord(row.context, ["requestId", "correlationId", "organizationId", "principalId", "workspaceId"]);
               need(context.requestId === definition.requestId && context.workspaceId === definition.workspaceId &&
                 context.organizationId === definition.owner.organizationId && context.principalId === definition.owner.principalId);
+              if (row.retainedFiles !== undefined) {
+                need(!!row.retainedFiles && typeof row.retainedFiles === "object" && !types.isProxy(row.retainedFiles));
+                const methods = readStrictPassiveRecord(row.retainedFiles, ["verifyFinalizedFiles", "inspectVerification"]);
+                need(Object.keys(methods).length === 2 && Object.values(methods).every(value => typeof value === "function" && !types.isProxy(value)) &&
+                  !types.isAsyncFunction(methods.inspectVerification) && !types.isGeneratorFunction(methods.inspectVerification));
+                retainedFiles = Object.freeze({owner: row.retainedFiles as object, verify: methods.verifyFinalizedFiles as Function,
+                  inspect: methods.inspectVerification as Function, context: Object.freeze({...context}),
+                  publicationId: row.publicationId as string, maximumDurationMs: row.maximumDurationMs as number});
+              }
+              const {retainedFiles: _retained, ...receiver} = row;
+              receiverConfiguration = Object.freeze(receiver) as unknown as OriginalTrainingOutputStorage;
             }
-            output = createOriginalTrainingOutputReceiver({configuration, definition,
+            output = createOriginalTrainingOutputReceiver({configuration: receiverConfiguration, definition,
               assertCurrent() {current(); need(!outputAborted && !!channel); channel!.assertCurrent();}, assertAllowed: permission,
               read: async () => (await send("output-read")).output,
               acknowledge: async sequence => (await send("output-ack", sequence)).acknowledged});
@@ -517,6 +612,7 @@ export function createOriginalTrainingPort(options: {
         } catch {phase = "unconfirmed"; return false;}
         finally {operations--; closing = false;}
       },
+      ...(localOutputLimits ? {verifyRetainedFiles} : {}),
     });
     return session;
   }});

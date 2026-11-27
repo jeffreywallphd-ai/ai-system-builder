@@ -59,7 +59,7 @@ export interface OriginalBoundedLocalTrainingConfiguration {
     source: BoundedLocalTrainingModelSource; context: ApplicationRequestContext;
     control: {assertCurrent(): void; assertAllowed(): Promise<void>; assertCleanupAllowed(): Promise<void>}}>) => BoundedLocalTrainingModelCopyStoragePort;
   /** Original private result capability only; no public activation or Save. */
-  readonly createOutputStorage?: OriginalTrainingExitConfiguration["createOutputStorage"];
+  readonly createOutputStorage?: (original: OriginalTrainingCapture) => import("./client/approvedTrainingTaskSession").OriginalBoundedLocalTrainingOutputStorage;
 }
 
 export interface PythonRuntimeAdapterFoundation {

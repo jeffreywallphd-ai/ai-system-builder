@@ -13,7 +13,8 @@ import {createOriginalTrainingPort, ORIGINAL_TRAINING_CAPABILITY, type OriginalT
 import {createPythonRuntimeHttpClient} from "../client/createPythonRuntimeHttpClient";
 import {createPythonRuntimeAdapterFoundation} from "../createPythonRuntimePort";
 import {OWNED_RUNTIME_READY_PREFIX} from "../supervisor/ownedPythonRuntimeProof";
-import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput, TrainingResultFileIoRetirement} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingDefinition, ApprovedLocalTrainingStagedInput, TrainingResultFileIoRetirement,
+  TrainingResultRetainedFileVerificationPort} from "../../../../application/ports/model";
 import {TaskType} from "../../../../contracts/runtime";
 import type {WorkspaceId} from "../../../../contracts/workspace";
 import type {OriginalTrainingSourceReservationFactory, OriginalTrainingSourceReservation} from "../client/originalTrainingModelSource";
@@ -1117,6 +1118,7 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
   storage?: OriginalBoundedLocalTrainingConfiguration["createModelCopy"]; selectionAfterCopy?: () => Promise<void>;
   observeMs?: number; autoRetire?: boolean; output?: boolean; corruptOutput?: boolean;
   outputFactory?: OriginalBoundedLocalTrainingConfiguration["createOutputStorage"];
+  verification?: boolean; verificationPort?: TrainingResultRetainedFileVerificationPort; outputDurationMs?: number;
   holdOutputRead?: () => Promise<void>; holdFinalOutputAck?: () => Promise<void>} = {}) {
   const root = await realpath(await mkdtemp(path.join(await realpath(tmpdir()), "local-training-composition-")));
   const original = await lstat(root, {bigint: true}), model = path.join(root, "selected"), staging = path.join(root, "staging");
@@ -1126,7 +1128,7 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
   let storageOwner: ReturnType<typeof createFilesystemLocalTrainingModelCopyStorage> | undefined;
   let resultOwner: ReturnType<typeof createFilesystemLocalTrainingResultPublication> | undefined;
   let resultIo: TrainingResultFileIoRetirement | undefined;
-  let outputFactories = 0, outputAcknowledged = 0;
+  let outputFactories = 0, outputAcknowledged = 0, verificationCalls = 0;
   const publicationId = "c".repeat(32), outputRoot = path.join(root, "results"); await mkdir(outputRoot);
   const controller = inertNativeController(() => {live = true;});
   // This fixture explicitly supplies the final synthetic retirement frame.
@@ -1205,7 +1207,7 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
       if (options.outputFactory) return Reflect.apply(options.outputFactory, configuration, [original]);
       const context = Object.freeze({requestId: original.definition.requestId, workspaceId: original.definition.workspaceId,
         organizationId: createOrganizationId(original.definition.owner.organizationId), principalId: original.definition.owner.principalId});
-      const limits = {maximumFiles: 6, maximumFileBytes: 4096, maximumTotalBytes: 8192, minimumFreeBytes: 1024, maximumDurationMs: 5000};
+      const limits = {maximumFiles: 6, maximumFileBytes: 4096, maximumTotalBytes: 8192, minimumFreeBytes: 1024, maximumDurationMs: options.outputDurationMs ?? 5000};
       const publication = createFilesystemLocalTrainingResultPublication({rootDirectory: outputRoot, publicationId, context, limits,
         control: {assertCurrent: () => original.assertCurrent(), assertAllowed: () => original.assertAllowed()}});
       resultOwner = publication;
@@ -1213,7 +1215,12 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
         const captured = publication.storage.captureIoRetirement!(input, supplied); resultIo = captured; return captured;
       }});
       return {storage, context, publicationId, maximumFiles: limits.maximumFiles, maximumFileBytes: limits.maximumFileBytes,
-        maximumTotalBytes: limits.maximumTotalBytes, maximumDurationMs: limits.maximumDurationMs};
+        maximumTotalBytes: limits.maximumTotalBytes, maximumDurationMs: limits.maximumDurationMs,
+        ...(options.verification || options.verificationPort ? {retainedFiles: options.verificationPort ?? {
+          verifyFinalizedFiles(...args: Parameters<TrainingResultRetainedFileVerificationPort["verifyFinalizedFiles"]>) {
+            verificationCalls++; return publication.originalOwner.verifyFinalizedFiles(...args);
+          }, inspectVerification: publication.originalOwner.inspectVerification,
+        }} : {})};
     }} : {})};
   const port = foundation.createBoundedLocalTrainingPort!(configuration), selected = definition();
   (selected.request.baseModel as any).localPath = model;
@@ -1228,6 +1235,7 @@ async function boundedLocalFoundation(t: TestContext, options: {prepare?: "ready
   });
   return {foundation, configuration, session, selected, port, reader, control, controller, calls, model, staging, outputRoot, outputFiles, outputValues, outputFrames,
     get outputFactories() {return outputFactories;}, get outputAcknowledged() {return outputAcknowledged;},
+    get verificationCalls() {return verificationCalls;},
     get resultOwner() {return resultOwner;}, get resultIo() {return resultIo;},
     get factories() {return factories;}, get reads() {return reads;}, get storagePhase() {return storagePhase;}, get storageState() {return storageOwner?.inspect();}, get cleanupGranted() {return cleanupGranted;}, deny() {permitted = false;}, succeed() {status = "succeeded";}};
 }
@@ -1238,6 +1246,138 @@ async function waitForLocalOutput(check: () => boolean) {
   assert.equal(check(), true, "Local output fixture did not reach its expected bounded phase.");
 }
 const localOutputContext = () => ({requestId: id, workspaceId: workspace, organizationId: createOrganizationId("org"), principalId: "actor"});
+
+const candidateReadControl = () => ({isCurrent: () => true, stillAllowed: async () => true});
+async function completedLocalCandidate(t: TestContext, options: Parameters<typeof boundedLocalFoundation>[1] = {}) {
+  const f = await boundedLocalFoundation(t, {output: true, verification: true, ...options});
+  assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
+  await waitForLocalOutput(() => f.outputAcknowledged === f.outputFrames.length); await new Promise(resolve => setTimeout(resolve, 5));
+  f.succeed(); assert.equal((await f.session.read()).status, "succeeded"); assert.equal(await f.session.settle(), true); return f;
+}
+
+test("local candidate verification requires completed original delivery and actual worker retirement", async t => {
+  const f = await boundedLocalFoundation(t, {output: true, verification: true, autoRetire: false});
+  await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(f.verificationCalls, 0);
+  assert.equal(await f.session.prepare(), "ready"); await f.session.start(staged(), () => true);
+  await waitForLocalOutput(() => f.outputAcknowledged === f.outputFrames.length); await new Promise(resolve => setTimeout(resolve, 5)); f.succeed();
+  await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(await f.session.settle(), false);
+  await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(f.verificationCalls, 0);
+  f.controller.closeWithProof(); assert.equal(await f.session.settle(), true);
+  const calls = f.calls.length, result = await f.session.verifyRetainedFiles!(candidateReadControl());
+  assert.equal(result.files.length, 6); assert.equal(result.verification, "sha256-current-local-v1");
+  assert.ok(Object.isFrozen(result) && Object.isFrozen(result.files) && result.files.every(Object.isFrozen));
+  assert.equal(result.publicationId, "c".repeat(32)); assert.equal(f.calls.length, calls); assert.equal(f.controller.starts, 1);
+  assert.equal((await f.session.verifyRetainedFiles!(candidateReadControl())).manifestDigest, result.manifestDigest);
+  assert.equal(f.calls.length, calls); assert.equal(f.verificationCalls, 2);
+  assert.doesNotMatch(JSON.stringify(result), /local-training-composition|selected|[A-Z]:\\|encoded/);
+});
+
+test("local candidate verification has no fallback for missing configured verifier or failed output", async t => {
+  const missing = await completedLocalCandidate(t, {verification: false});
+  const before = missing.calls.length; await assert.rejects(missing.session.verifyRetainedFiles!(candidateReadControl()));
+  assert.equal(missing.calls.length, before); assert.equal(missing.verificationCalls, 0);
+  const failed = await boundedLocalFoundation(t, {output: true, verification: true, corruptOutput: true});
+  assert.equal(await failed.session.prepare(), "ready"); await failed.session.start(staged(), () => true);
+  await waitForLocalOutput(() => failed.resultOwner!.storage.inspectPublication().phase === "unconfirmed"); failed.succeed();
+  assert.equal((await failed.session.read()).status, "failed"); assert.equal(await failed.session.settle(), true);
+  await assert.rejects(failed.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(failed.verificationCalls, 0);
+});
+
+for (const denial of ["caller-current", "caller-policy", "original-policy"] as const) {
+  test(`local candidate verification refuses ${denial} without resolving file verification`, async t => {
+    const f = await completedLocalCandidate(t), control = candidateReadControl(), before = f.calls.length;
+    if (denial === "caller-current") control.isCurrent = () => false;
+    if (denial === "caller-policy") control.stillAllowed = async () => false;
+    if (denial === "original-policy") f.deny();
+    await assert.rejects(f.session.verifyRetainedFiles!(control)); assert.equal(f.verificationCalls, 0); assert.equal(f.calls.length, before);
+  });
+}
+
+test("local candidate verification rejects changed retained bytes without another worker or transfer", async t => {
+  const f = await completedLocalCandidate(t), before = f.calls.length;
+  await writeFile(path.join(f.outputRoot, "organizations", "org", "workspaces", workspace, "artifacts", "training-results", "c".repeat(32), "0"),
+    Buffer.alloc(f.outputValues[0]!.length));
+  await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(f.calls.length, before); assert.equal(f.controller.starts, 1);
+  assert.equal((await f.session.read()).status, "succeeded", "Historical success does not imply current file verification.");
+});
+
+for (const changed of ["publication", "hash", "scope-key", "digest"] as const) {
+  test(`local candidate verification refuses substituted ${changed} facts`, async t => {
+    let f!: Awaited<ReturnType<typeof boundedLocalFoundation>>;
+    const port: TrainingResultRetainedFileVerificationPort = {
+      async verifyFinalizedFiles(...args) {
+        const actual = await f.resultOwner!.originalOwner.verifyFinalizedFiles(...args), files = actual.files.map(file => ({...file}));
+        if (changed === "hash") files[0]!.expectedSha256 = "sha256:" + "0".repeat(64);
+        if (changed === "scope-key") files[0]!.key = "workspaces/other/artifacts/training-results/" + "c".repeat(32) + "/0";
+        return {...actual, files, ...(changed === "publication" ? {publicationId: "d".repeat(32)} : {}),
+          ...(changed === "digest" ? {manifestDigest: "sha256:" + "0".repeat(64)} : {})};
+      }, inspectVerification: () => f.resultOwner!.originalOwner.inspectVerification(),
+    };
+    f = await completedLocalCandidate(t, {verificationPort: port}); const before = f.calls.length;
+    await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(f.calls.length, before);
+  });
+}
+
+test("local candidate verification captures its original port methods before startup waits", async t => {
+  let f!: Awaited<ReturnType<typeof boundedLocalFoundation>>;
+  const port: TrainingResultRetainedFileVerificationPort = {
+    verifyFinalizedFiles: (...args) => f.resultOwner!.originalOwner.verifyFinalizedFiles(...args),
+    inspectVerification: () => f.resultOwner!.originalOwner.inspectVerification(),
+  };
+  f = await completedLocalCandidate(t, {verificationPort: port});
+  port.verifyFinalizedFiles = async () => {throw Error("replacement must not execute");};
+  port.inspectVerification = () => {throw Error("replacement must not execute");};
+  assert.equal((await f.session.verifyRetainedFiles!(candidateReadControl())).verification, "sha256-current-local-v1");
+});
+
+test("local candidate verification retains a late caller permission without file or retry effects", {timeout: 5000}, async t => {
+  const f = await completedLocalCandidate(t, {outputDurationMs: 300}); let entered = false, release!: () => void;
+  const wait = new Promise<void>(resolve => {release = resolve;}), before = f.calls.length;
+  try {
+    const pending = f.session.verifyRetainedFiles!({isCurrent: () => true, async stillAllowed() {entered = true; await wait; return true;}});
+    await waitForLocalOutput(() => entered); await assert.rejects(pending);
+    await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(f.verificationCalls, 0);
+    release(); await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal((await f.session.verifyRetainedFiles!(candidateReadControl())).verification, "sha256-current-local-v1");
+    assert.equal(f.calls.length, before);
+  } finally {release();}
+});
+
+test("local candidate verification retains a malformed original native Promise without running its hooks", async t => {
+  let reject!: (error: Error) => void, hooks = 0;
+  const original = new Promise<never>((_, no) => {reject = no;});
+  Object.defineProperty(original, "then", {get() {hooks++; throw Error("must not execute");}});
+  const f = await completedLocalCandidate(t, {verificationPort: {
+    verifyFinalizedFiles: () => original, inspectVerification: () => ({phase: "idle", pendingOperations: 0, openFiles: 0}),
+  }});
+  try {
+    await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl()));
+    reject(Error("synthetic private verifier failure")); await new Promise(resolve => setTimeout(resolve, 10));
+    await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(hooks, 0);
+  } finally {reject(Error("synthetic private verifier failure"));}
+});
+
+test("local candidate verification refuses an accessor capability before worker or file effects", async t => {
+  let hooks = 0;
+  const f = await boundedLocalFoundation(t, {outputFactory(original) {
+    const configuration = {storage: {}, context: {requestId: original.definition.requestId, workspaceId: original.definition.workspaceId,
+      organizationId: createOrganizationId(original.definition.owner.organizationId), principalId: original.definition.owner.principalId},
+      publicationId: "c".repeat(32), maximumFiles: 6, maximumFileBytes: 4096, maximumTotalBytes: 8192, maximumDurationMs: 5000};
+    return Object.defineProperty(configuration, "retainedFiles", {enumerable: true, get() {hooks++; throw Error("must not execute");}}) as any;
+  }});
+  assert.equal(await f.session.prepare(), "unconfirmed"); assert.equal(hooks, 0);
+  assert.equal(f.controller.starts, 0); assert.equal(f.factories, 0); assert.equal(f.outputAcknowledged, 0);
+});
+
+test("local candidate verification retains an async-shaped inspection without file reads", async t => {
+  let verifies = 0;
+  const f = await completedLocalCandidate(t, {verificationPort: {
+    verifyFinalizedFiles: async () => {verifies++; throw Error("must not execute");},
+    inspectVerification: (() => Promise.resolve({phase: "idle", pendingOperations: 0, openFiles: 0})) as any,
+  }});
+  await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl()));
+  await assert.rejects(f.session.verifyRetainedFiles!(candidateReadControl())); assert.equal(verifies, 0);
+});
 
 test("local output joins real result files to its original session and keeps them through worker retirement", async t => {
   const f = await boundedLocalFoundation(t, {output: true});

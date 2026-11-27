@@ -3927,3 +3927,17 @@ failed reads can be checked again only through a new authorized call. This is a
 cooperative current observation, not protected custody, model loading, quality,
 worker retirement or Save. Session/application/host candidate review must still
 compose these facts with original successful retirement and complete lineage.
+
+Original local output composition can additionally capture a private retained-file
+verification port. Its own methods, receiver and context are fixed before awaits;
+the capability is removed before the unchanged output-receiver DTO is parsed.
+Only successful completed original delivery plus permanent worker/IO retirement
+allows the optional session review. Fresh original business and caller read
+controls surround the bounded action and flow into the file verifier. The session
+owns pending original review operations through outward deadlines and rejects
+invalid callback/Promise contracts without retry credit. It validates all returned
+files against its own receiver inventory. The digest is SHA-256 of JSON finalized
+fields in order: schema, publicationId, totalBytes, files; each file uses fileIndex,
+groupIndex, name, role, mediaType, expectedSizeBytes, expectedSha256, key. Immutable
+path-free observations supply no readiness, evaluation or Save. Application/host
+history and current-candidate integration remain separate pending work.

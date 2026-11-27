@@ -148,3 +148,9 @@ Studio application entry points require the existing current-workspace read/writ
 Derived customization workflow and target-catalog entry points use current workspace authority and own their requests before awaits. Semantic patch validation alone retains some nested values; request capture deep-copies the validated result. Shared readiness wrappers and the direct workflow/catalog retain independent admission. Exact base, source, review and revision checks remain; publication uses the transaction described above.
 
 Customization target lists use a fresh per-operation view of exact definition identities. The existing ordered repository seam reads at most 250 unique references per call; ports without it retain one in-flight single read. Only the four primitive summary fields are retained before later batch or single-read waits. The 343-definition cohort requires two batch reads, while exact detail preserves its full body/source checks and avoids a duplicate definition lookup. This is request-count evidence, not whole-host latency or live pool qualification.
+
+The optional original local session can bind current-file verification after
+successful completed delivery and actual worker/IO retirement. It requires fresh
+original and caller read controls, bounds the review lifetime and compares all
+returned facts with its original receiver inventory. This private capability
+still needs application/history/host composition; it grants no Save authority.

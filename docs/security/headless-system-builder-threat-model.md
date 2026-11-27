@@ -3715,3 +3715,14 @@ close or callback contracts refuse another attempt. Fixed safe failures disclose
 no path, bytes or private exception. Verification performs no mutation, model
 load, provider access or Save, and cannot qualify task retirement or output
 quality. The trusted-user boundary and stronger storage-service work remain.
+
+The original local session captures an optional retained-file verifier only from
+its trusted synchronous output factory. It strips that capability before the
+unchanged receiver configuration and exposes no wire-selected callback. Current
+review needs successful final delivery, actual original worker/IO retirement and
+fresh original/caller read authority. Compare every returned scope/file/size/hash
+and canonical inventory digest with original receiver facts. Retain pending
+original review calls through deadlines; unknown operation contracts prevent a
+new review. Fixed failures disclose no raw paths, bytes or private exceptions.
+No review can restart training, repeat transfer, use a generic runtime lookup,
+register a candidate, authorize Save or qualify the stronger storage service.

@@ -2,6 +2,7 @@ import type {ModelTrainingRequest, ModelTrainingResult} from "../../../contracts
 import type {WorkspaceId} from "../../../contracts/workspace";
 import type {RuntimeTaskRecord, CancelRuntimeTaskResult} from "../../../contracts/runtime";
 import type {ApplicationRequestContext} from "../application-request-context";
+import type {TrainingResultVerifiedFiles} from "./training-result-file-byte-storage.port";
 
 /** Internal replaceable storage for the explicitly trusted-local profile.
  * Paths stay between the owning adapter and safe local loader, never API/IPC
@@ -115,6 +116,10 @@ export interface ApprovedLocalTrainingSession {
   read(): Promise<RuntimeTaskRecord>;
   cancel(): Promise<CancelRuntimeTaskResult>;
   settle(): Promise<boolean>;
+  /** Optional private current observation, only after original successful
+   * delivery and permanent worker/IO retirement. Fresh caller/original read
+   * authority remains mandatory. This never starts work or grants Save. */
+  verifyRetainedFiles?(control: ApprovedLocalTrainingControl): Promise<TrainingResultVerifiedFiles>;
 }
 export interface ApprovedLocalModelTrainingPort {
   /** Synchronous binding only: no IO, acquisition or task start. Undefined
