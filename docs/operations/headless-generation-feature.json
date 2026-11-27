@@ -72,5 +72,23 @@
       "result": "Interrupted without a qualifying receipt after an inherited explicit controller check selected broad coverage. No model or Native effects.",
       "correction": "Use only feature/type/docs/architecture profiles for this application-only source scope; control-plane sources are unchanged. Correct missing displayName and optional taskTags declarations in the synthetic typed fixture."
     }
+  },
+  "approved_start_support": {
+    "work_id": "headless-image-approved-start-fences",
+    "port": "modules/application/ports/image/approved-image-generation.port.ts",
+    "scope": "Trusted internal original-use-case current admission across reservation, exact resolver, readiness and runtime dispatch; no generic resolver fallback.",
+    "test_file": "modules/application/use-cases/image-generation/tests/generate-image.use-case.unit.test.ts",
+    "limitations": [
+      "Controlled original authority/runtime records only; no actual generation/worker, exact checkpoint-byte proof or public host activation.",
+      "The trusted resolver must prove original selected bytes and call the supplied fence at nested file/runtime effect handoffs. No generic filename-based resolver satisfies this port.",
+      "Original accepted task custody is retained; output disclosure/import remain separately authorized. No Task74/75 or parent pass."
+    ],
+    "preserved_review": {
+      "receipt_digest": "293af3bdb9045010d0022ca7c56a2201dd2a83f8c864c2b8a7e828086dc93e36",
+      "review_digest": "b980e23f71e9832e5ca7843049c41e762650940d7815f2fcb2ee5673b509ea2a",
+      "finding": "post-await-image-start-fence-gap",
+      "result": "Source checks passed but independent review requested changes; not accepted.",
+      "correction": "Separate async authorization from immediate synchronous current checks in every effect continuation; pass both operations to nested resolver and recheck lifecycle before runtime dispatch. Scheduling-sweep and shutdown regressions added."
+    }
   }
 }

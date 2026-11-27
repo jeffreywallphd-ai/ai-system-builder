@@ -1742,6 +1742,24 @@
         "No real model accuracy, before/after quality score or learned-capability claim.",
         "No public host, generation/import or parent qualification. Another checkout may lack local records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-image-current-model-preparation-reviewed",
+      "work_criteria": [
+        "current-recorded-image-model",
+        "immutable-private-selection-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "f5805cd539679f475cb5d13135f164199eab41720f92fb10afe556b2374c248b",
+      "review_digest": "25512e1531cca12eaf74ab37146b5785a080afd7f27f2d000a6884212739f8e7",
+      "scope": "At commit6ef5694b, private recorded-only image Model selection passed five focused checks and independent review using original current metadata readers and immutable transient input.",
+      "limitations": [
+        "No checkpoint-byte/runtime/supply proof, generation dispatch, import, public host or Task74/parent pass.",
+        "Future original approval and exact execution owners must recheck selection. Another checkout may lack exact local records."
+      ]
     }
   ]
 }

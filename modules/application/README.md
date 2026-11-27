@@ -228,3 +228,22 @@ supply verification or permission. The private request contains prompt text and
 sets only the registered Model ID. Do not persist it or expose it publicly.
 Original approval, exact file selection, runtime admission and separate import
 remain required before physical generation. No public tool registers this helper.
+
+The original image owner exposes `startApprovedImageGeneration` only for a trusted
+internal `ApprovedImageGenerationAdmission`. Host approval/current-policy owners
+supply the callbacks and exact registered-checkpoint resolver; JSON and booleans
+cannot supply them. The ordinary headed method is unchanged. The owner detaches
+request/scope before waits, checks current authority before reservation, checkpoint
+preparation, readiness and dispatch, and passes the same fence into resolver
+handoffs. Missing, changed or malformed admission and non-safetensors checkpoint
+replies deny with fixed errors. It never falls back to the generic resolver.
+After runtime acceptance the original authority/lifecycle retains custody even
+if outward permission is withdrawn. Public disclosure and separate import need
+their own current approvals. No host activates this new internal method yet.
+
+At every approved image handoff, await the fence authorization and then call its
+synchronous `assertCurrent` in the effect-owning continuation immediately before
+the effect. A check inside an awaited helper leaves a microtask gap. Exact
+checkpoint resolvers receive both operations in a frozen typed fence and must
+follow the same rule. The final dispatch also synchronously checks that the
+original task lifecycle is still accepting work.

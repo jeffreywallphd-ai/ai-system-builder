@@ -19,12 +19,13 @@ class ImageGenerationOwnerRoutingTests(unittest.TestCase):
         return {row["id"]: row for row in catalog.plan(root or self.root, list(paths), list(required), "a" * 64)["selected"]}
 
     def test_original_owner_edits_select_related_authority_lifecycle_contract_and_strict_checks(self):
-        for path in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2] + catalog.IMAGE_GENERATION_OWNER_REQUIRED[-2:]:
+        for path in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2] + catalog.IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (catalog.IMAGE_GENERATION_ADMISSION_PORT,):
             rows = self.select([path])
             for name in self.profiles: self.assertIn(name, rows)
             self.assertNotIn("focused-tests", rows)
             for test in catalog.IMAGE_GENERATION_OWNER_REQUIRED[1::2]: self.assertIn(test, rows[self.profiles[0]]["argv"])
             self.assertIn("--strict", rows[self.profiles[1]]["argv"])
+            self.assertIn(catalog.IMAGE_GENERATION_ADMISSION_PORT, rows[self.profiles[1]]["argv"])
             self.assertNotIn("headless-training-bounded-feature", rows)
             self.assertFalse(any("test:all" in arg for row in rows.values() for arg in row["argv"]))
 
@@ -42,7 +43,7 @@ class ImageGenerationOwnerRoutingTests(unittest.TestCase):
             self.assertIn("focused-tests", rows); self.assertNotIn("-k", rows["control-plane"]["argv"])
 
     def test_missing_and_nonregular_inputs_disable_controller_narrowing_and_preserve_coverage(self):
-        required = catalog.IMAGE_GENERATION_OWNER_REQUIRED + (catalog.IMAGE_GENERATION_OWNER_CONTROLLER,)
+        required = catalog.IMAGE_GENERATION_OWNER_SUPPORT + (catalog.IMAGE_GENERATION_OWNER_CONTROLLER,)
         self.assertLessEqual(len(required), 16)
         with tempfile.TemporaryDirectory(prefix="image-owner-routing-") as directory:
             root = Path(directory)

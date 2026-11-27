@@ -4222,3 +4222,16 @@ Saved safetensors image metadata must remain identical across both reads and
 current actor/policy fences. This is recorded-only preparation. Original runtime
 readiness, exact checkpoint bytes, generation approval and separate output-import
 approval remain execution-owned. It enables no public generation or model effect.
+
+Delegated image starts share `GenerateImageUseCase` with ordinary image tasks.
+The trusted internal admission port binds current policy and an exact registered
+checkpoint resolver, which receives the same fence for its nested effects. The
+owner checks before reservation and every resolver/readiness/dispatch handoff.
+No generic resolver fallback or public callback/boolean grant is permitted.
+Original accepted-task custody survives later revocation. Actual checkpoint-byte
+proof, host activation and separately approved import remain pending.
+
+The approved image fence separates asynchronous policy authorization from the
+synchronous current assertion. Effect owners call both, in order, with the
+assertion in their own continuation before reservation, resolver, readiness or
+dispatch. The final runtime handoff also checks original lifecycle acceptance.

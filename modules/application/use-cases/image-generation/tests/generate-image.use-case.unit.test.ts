@@ -17,6 +17,7 @@ import { GenerateImageUseCase } from "../generate-image.use-case";
 import {ImageGenerationTaskAuthorityService} from "../../../services/image/image-generation-task-authority.service";
 import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
 import type {ApplicationRequestContext} from "../../../ports";
+import type {ApprovedImageGenerationAdmission} from "../../../ports/image/approved-image-generation.port";
 
 function createRuntimeTaskRegistryFake(): RuntimeTaskRegistryPort {
   return {
@@ -291,7 +292,7 @@ function scopedImageFixture(taskReconciler?: OwnedTaskReconcilerService) {
   type Stage = "authority" | "model" | "readiness" | "read";
   const context: ApplicationRequestContext = {workspaceId: "workspace-a", organizationId: "org-a" as never, principalId: "principal-a"};
   const state = {mutateAt: "" as Stage | "", allowed: true, runtimeReads: 0, statusWorkspace: "workspace-a",
-    statusRequest: "img-req-1", statusType: TaskType.IMAGE_GENERATION};
+    statusRequest: "img-req-1", statusType: TaskType.IMAGE_GENERATION, onStart: () => {}, onReady: () => {}, readinessObserved: false};
   const starts: Parameters<RuntimeTaskRegistryPort["startTask"]>[0][] = [];
   const readRequests: string[] = [], cancelRequests: string[] = [];
   const startReply = {requestId: "img-req-1", status: "queued" as const};
@@ -307,7 +308,7 @@ function scopedImageFixture(taskReconciler?: OwnedTaskReconcilerService) {
     }},
   });
   const runtimeTaskRegistry: RuntimeTaskRegistryPort = {
-    async startTask(command) {starts.push(command); return startReply;},
+    async startTask(command) {starts.push(command); state.onStart(); return startReply;},
     async getTaskStatus(requestId) {readRequests.push(requestId); state.runtimeReads++; return {requestId: state.statusRequest,
       workspaceId: state.statusWorkspace as never, taskType: state.statusType, status: "succeeded", concurrencyClass: "unknown"};},
     async cancelTask(requestId) {cancelRequests.push(requestId); return {requestId: "img-req-1", status: "cancelled", cancelled: true};},
@@ -315,11 +316,126 @@ function scopedImageFixture(taskReconciler?: OwnedTaskReconcilerService) {
   };
   const useCase = new GenerateImageUseCase({taskAuthority, runtimeTaskRegistry, taskReconciler, createRequestId: () => "img-req-1",
     modelCheckpointResolver: {async resolveCheckpoint(input) {modelScopes.push({...input}); stage("model"); return {checkpoint: "synthetic.safetensors"};}},
-    runtimeCapabilityGuard: {async requireCapabilityReady() {stage("readiness"); return createRuntimeCapabilityStatus({capabilityId: "image-generation", status: "ready"});}},
+    runtimeCapabilityGuard: {async requireCapabilityReady() {state.onReady(); state.readinessObserved = true; stage("readiness"); return createRuntimeCapabilityStatus({capabilityId: "image-generation", status: "ready"});}},
   });
   const start = () => useCase.startImageGeneration({prompt: "Synthetic image prompt", width: 64, height: 64, steps: 1}, context);
-  return {context, state, starts, modelScopes, useCase, start, mutate, startReply, readRequests, cancelRequests};
+  return {context, state, starts, modelScopes, useCase, start, mutate, startReply, readRequests, cancelRequests, taskAuthority};
 }
+
+function approvedImageFixture(lifecycle?: OwnedTaskReconcilerService) {
+  const f = scopedImageFixture(lifecycle), resolved: unknown[] = [];
+  const admission: {-readonly [K in keyof ApprovedImageGenerationAdmission]: ApprovedImageGenerationAdmission[K]} = {
+    isCurrent: () => f.context.workspaceId === "workspace-a" && f.context.organizationId === "org-a",
+    authorize: async () => f.state.allowed,
+    async resolveCheckpoint(selected, fence) {
+      await fence.authorize(); fence.assertCurrent(); resolved.push(selected);
+      if (f.state.mutateAt === "model") f.mutate();
+      await fence.authorize(); fence.assertCurrent(); return {checkpoint: "approved.safetensors"};
+    },
+  };
+  const request: ImageGenerationRequest = {prompt: "Synthetic approved image", width: 64, height: 64, steps: 1, model: "model.saved-image"};
+  const start = () => f.useCase.startApprovedImageGeneration(request, f.context, admission);
+  return {...f, admission, request, resolved, approvedStart: start};
+}
+
+for (const stage of ["authority", "model", "readiness"] as const) {
+  it(`approved image revocation at ${stage} prevents later runtime dispatch and releases unaccepted ownership`, async () => {
+    const f = approvedImageFixture(); f.state.mutateAt = stage;
+    await assert.rejects(f.approvedStart(), /Approved image generation is unavailable/);
+    assert.equal(f.starts.length, 0); assert.equal(f.modelScopes.length, 0);
+    f.state.mutateAt = ""; f.context.workspaceId = "workspace-a"; f.context.organizationId = "org-a" as never;
+    await f.approvedStart(); assert.equal(f.starts.length, 1);
+  });
+}
+
+it("approved image captures request and original scope before policy waits and never uses the generic resolver", async () => {
+  const f = approvedImageFixture();
+  f.admission.authorize = async () => {f.request.prompt = "Replaced private text"; f.request.model = "wrong-model"; return true;};
+  await f.approvedStart(); assert.equal(f.modelScopes.length, 0); assert.equal(f.starts.length, 1);
+  assert.deepEqual(f.resolved, [{selectedModel: "model.saved-image", workspaceId: "workspace-a", taskTag: "text-to-image"}]);
+  const payload = f.starts[0].payload as ImageGenerationRequest;
+  assert.equal(payload.prompt, "Synthetic approved image"); assert.equal(payload.model, "approved.safetensors");
+  assert.equal(f.starts[0].workspaceId, "workspace-a");
+});
+
+it("approved image callback replacement or permission loss during a policy wait denies all later effects", async () => {
+  for (const change of ["current", "authorize", "resolver", "deny", "throw"] as const) {
+    const f = approvedImageFixture();
+    f.admission.authorize = async () => {
+      if (change === "current") f.admission.isCurrent = () => true;
+      if (change === "authorize") f.admission.authorize = async () => true;
+      if (change === "resolver") f.admission.resolveCheckpoint = async () => ({checkpoint: "other.safetensors"});
+      if (change === "throw") throw Error("private policy details");
+      return change !== "deny";
+    };
+    await assert.rejects(f.approvedStart(), /^Error: Approved image generation is unavailable\.$/);
+    assert.equal(f.resolved.length, 0); assert.equal(f.starts.length, 0);
+  }
+});
+
+it("approved image rejects missing, raw-path, executable and malformed checkpoint replies without fallback", async () => {
+  for (const result of [{}, {checkpoint: "C:/private/model.safetensors"}, {checkpoint: "../model.safetensors"},
+    {checkpoint: "model.ckpt"}, {checkpoint: "model.safetensors", raw: "private"}, {checkpoint: "x".repeat(241) + ".safetensors"}]) {
+    const f = approvedImageFixture(); f.admission.resolveCheckpoint = async () => result;
+    await assert.rejects(f.approvedStart(), /Approved image generation is unavailable/);
+    assert.equal(f.modelScopes.length, 0); assert.equal(f.starts.length, 0);
+  }
+});
+
+it("approved image refuses active admissions and async current predicates without invoking traps or leaking errors", async () => {
+  const f = approvedImageFixture(); let traps = 0;
+  const proxy = new Proxy(f.admission, {get() {traps++; throw Error("private admission");}});
+  await assert.rejects(f.useCase.startApprovedImageGeneration(f.request, f.context, proxy), /Approved image generation is unavailable/);
+  const accessor = {...f.admission}; Object.defineProperty(accessor, "authorize", {get() {traps++; throw Error("private admission");}});
+  await assert.rejects(f.useCase.startApprovedImageGeneration(f.request, f.context, accessor), /Approved image generation is unavailable/);
+  assert.equal(traps, 0);
+  f.admission.isCurrent = (() => Promise.reject(Error("private current failure"))) as never;
+  await assert.rejects(f.approvedStart(), /Approved image generation is unavailable/);
+  assert.equal(f.starts.length, 0);
+});
+
+it("approved image retains original accepted task custody when permission is withdrawn during runtime acceptance", async () => {
+  const f = approvedImageFixture(); f.state.onStart = () => {f.state.allowed = false;};
+  const result = await f.approvedStart(); assert.equal(result.requestId, "img-req-1"); assert.equal(f.starts.length, 1);
+  await assert.rejects(f.useCase.readImageGeneration(result.requestId, f.context), /forbidden/);
+  f.state.allowed = true;
+  const original = await f.useCase.readImageGeneration(result.requestId, f.context); assert.equal(original.requestId, result.requestId);
+  await assert.rejects(f.approvedStart(), /ownership capacity/); assert.equal(f.starts.length, 1);
+});
+
+it("queued withdrawal after each awaited approval cannot cross any original effect handoff", async () => {
+  const baseline = approvedImageFixture(); let boundaries = 0;
+  baseline.admission.authorize = async () => {boundaries++; return true;};
+  await baseline.approvedStart(); assert.ok(boundaries >= 4);
+  for (let withdrawAt = 1; withdrawAt <= boundaries; withdrawAt++) {
+    const f = approvedImageFixture(), lateEffects: string[] = [];
+    let checks = 0, armed = false, withdrawn = false;
+    const effect = (name: string) => {if (withdrawn) lateEffects.push(name);};
+    f.admission.isCurrent = () => {
+      if (armed) {armed = false; queueMicrotask(() => {withdrawn = true;});}
+      return !withdrawn;
+    };
+    f.admission.authorize = async () => {if (++checks === withdrawAt) armed = true; return true;};
+    const reserve = f.taskAuthority.reserve.bind(f.taskAuthority);
+    f.taskAuthority.reserve = async (...args) => {effect("reservation"); return reserve(...args);};
+    const resolve = f.admission.resolveCheckpoint;
+    f.admission.resolveCheckpoint = async (selected, fence) => {effect("resolver"); return resolve(selected, fence);};
+    f.state.onReady = () => effect("readiness"); f.state.onStart = () => effect("dispatch");
+    await assert.rejects(f.approvedStart(), /Approved image generation is unavailable/);
+    assert.equal(withdrawn, true); assert.deepEqual(lateEffects, [], "An original effect started after queued withdrawal.");
+    assert.equal(f.starts.length, 0);
+  }
+});
+
+it("approved image rechecks lifecycle acceptance after the final awaited policy check", async () => {
+  const lifecycle = new OwnedTaskReconcilerService();
+  try {
+    const f = approvedImageFixture(lifecycle);
+    f.admission.authorize = async () => {if (f.state.readinessObserved) lifecycle.stopAccepting(); return true;};
+    await assert.rejects(f.approvedStart(), /Background task lifecycle is unavailable/);
+    assert.equal(f.starts.length, 0); assert.equal(lifecycle.status.pending, 0);
+  } finally {lifecycle.stopObservation();}
+});
 
 for (const stage of ["authority", "model", "readiness"] as const) {
   it(`image caller scope remains original through ${stage} await`, async () => {

@@ -3736,3 +3736,11 @@ CPU and cleanup assertion still applies; the actual32filelimit is unchanged.
 The earlier actual training success/progress/cleanup remains positive evidence
 at its recorded source, while the failed aggregate receipt leaves Task72 pending.
 Both approved attempts are consumed; source tests never rearm them.
+
+The fixed image-owner profiles include the internal approved-image admission
+port and original use-case tests/types. Port edits select those actual consumers;
+missing, nonregular, shared-only or unknown sources keep conservative coverage.
+The exact owner/port/catalog/controller change scope runs the two complete related
+controller modules. It starts no model, runtime or Native process. Feature-only
+application changes need the image profiles, not an explicit unrelated controller
+suite. Approved-start source tests cannot grant public execution or parent closure.

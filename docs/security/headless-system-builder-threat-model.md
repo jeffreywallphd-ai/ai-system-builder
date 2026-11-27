@@ -4020,3 +4020,22 @@ This component cannot prove checkpoint bytes or current runtime admission. Do no
 feed its prepared request to a generic resolver as an exact execution grant: the
 original approval/file/runtime owners must still bind the selected model before
 dispatch. Separate approval remains mandatory for output import.
+
+An image approval checked only outside the ordinary use case can become stale
+during checkpoint or readiness waits. The internal approved-start method checks
+a captured trusted admission at each original handoff and supplies it to the
+exact resolver for nested effects. Callback replacement, non-boolean current
+results, policy failure and malformed checkpoint replies deny before later
+dispatch. Request/scope are detached before policy waits; errors are fixed. The
+new method cannot use the ordinary search/filename resolver as a fallback.
+The port is trusted host/application data, never JSON authority. Accepted runtime
+custody stays original after withdrawal; separate current disclosure and import
+authority remain necessary. No public execution is enabled by this source seam.
+
+Queued revocation can occur after an async fence checks current state but before
+its caller resumes. Each approved image effect therefore performs a synchronous
+current assertion after awaiting authorization, in the actual effect-owning
+continuation. A scheduling sweep withdraws authority at every observed policy
+await and checks for zero late reservation/resolver/readiness/dispatch effects.
+Shutdown during the final policy wait must also prevent dispatch through the
+original reconciler acceptance check.
