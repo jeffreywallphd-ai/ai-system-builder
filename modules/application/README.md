@@ -218,3 +218,13 @@ cannot supply those labels. Unknowns remain generic. Original settlement and
 cleanup still precede terminal delivery; ordinary registry training and cancellation
 keep their existing behavior. No exception messages, paths or training text are
 returned by this private failure projection.
+
+`PrepareHeadlessImageModelUseCase` privately combines the existing exact transient
+image binding with the original authorized persisted-only Model point reader. It
+requires an exact timestamp and saved safetensors image record, compares two
+independent metadata reads and rechecks actor, workspace, host and policy around
+awaits. Its frozen result is recorded-only selection, never runtime readiness,
+supply verification or permission. The private request contains prompt text and
+sets only the registered Model ID. Do not persist it or expose it publicly.
+Original approval, exact file selection, runtime admission and separate import
+remain required before physical generation. No public tool registers this helper.

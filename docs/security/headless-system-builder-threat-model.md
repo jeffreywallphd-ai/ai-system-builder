@@ -4009,3 +4009,14 @@ invalid samples, hidden quality claims, private metadata stripping, late policy
 withdrawal and snapshots before awaited policy callbacks. Original approved
 provenance stays authoritative. Missing current-file or hardware evidence remains
 missing. These tests never evaluate a real model or authorize another training run.
+
+Private image-model preparation adds no execution authority. It reuses the
+authorized persisted Model point reader, exact record/timestamp and two matching
+metadata snapshots, with current actor/workspace/host/callback identity and
+permission checks around awaits. Unsupported lifecycle, task or safe format,
+changed/missing records, active data and exceptions deny without raw text/paths.
+Only private transient input contains prompts; stored plans remain digest-only.
+This component cannot prove checkpoint bytes or current runtime admission. Do not
+feed its prepared request to a generic resolver as an exact execution grant: the
+original approval/file/runtime owners must still bind the selected model before
+dispatch. Separate approval remains mandatory for output import.

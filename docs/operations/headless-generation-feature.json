@@ -56,5 +56,21 @@
       "review_advisory_sha256": "865842d74a7d4923669d855437cd619a8f774c36dd73bfe295b9b83d0099a94f",
       "correction": "Reject lossy malformed-Unicode inputs in both transient prompts and test replacement-character collisions and valid pairs. No model effect."
     }
+  },
+  "recorded_model_support": {
+    "work_id": "headless-image-current-model-preparation-reviewed",
+    "scope": "Private exact host/workspace/record/timestamp selection through original authorized persisted-only metadata owner. Two matching read snapshots, current actor/policy fences and copied frozen request/record.",
+    "test_file": "modules/application/use-cases/image-generation/tests/prepare-headless-image-request.unit.test.ts",
+    "interpretation": "Recorded-only Model metadata; runtime readiness/supply/exact checkpoint bytes are not checked. No dispatch, approval, file effect or import.",
+    "pending_execution_risks": [
+      "Original generation must recheck delegated authority across checkpoint/readiness/start handoffs.",
+      "A generic filename-based checkpoint resolver cannot prove exact selected Model bytes.",
+      "Separate approved import and public Desktop/Managed qualification remain pending."
+    ],
+    "preserved_verification": {
+      "work_id": "headless-image-current-model-preparation",
+      "result": "Interrupted without a qualifying receipt after an inherited explicit controller check selected broad coverage. No model or Native effects.",
+      "correction": "Use only feature/type/docs/architecture profiles for this application-only source scope; control-plane sources are unchanged. Correct missing displayName and optional taskTags declarations in the synthetic typed fixture."
+    }
   }
 }

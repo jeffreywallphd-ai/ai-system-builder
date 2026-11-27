@@ -4,7 +4,10 @@ import test from "node:test";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {HEADLESS_CONTRACT_VERSION as version, isHeadlessHostIncarnationId, parseHeadlessReadRequest,
   parseHeadlessBuildPlanProposal} from "../../../../contracts/headless";
-import {prepareHeadlessImageRequest} from "../prepare-headless-image-request";
+import {prepareHeadlessImageRequest, PrepareHeadlessImageModelUseCase} from "../prepare-headless-image-request";
+import {ReadHeadlessModelMetadataUseCase} from "../../model/headless-model-metadata.use-case";
+import type {ModelInventoryRecord} from "../../../../contracts/model";
+import {organizationId, principalId} from "../../dataset-version/tests/headless-dataset-metadata.fixture";
 
 const digest = (text: string) => "sha256:" + createHash("sha256").update(text, "utf8").digest("hex");
 function fixture(prompt = "  Synthetic café 🌿\n", negativePrompt?: string) {
@@ -77,4 +80,92 @@ test("accessors and proxies are rejected without invoking their traps or leaking
     {...f.raw, plan: {...f.plan, input: new Proxy(f.plan.input, traps)}}, {...f.raw, negativePrompt: undefined}])
     assert.deepEqual(prepareHeadlessImageRequest(raw, f.host), {ok: false, code: "headless.invalid-request"});
   assert.equal(invoked, 0);
+});
+
+function modelFixture() {
+  const f = fixture(), state = {allowed: true, current: true, reads: 0, onRead: (_count: number) => {}};
+  let stored: ModelInventoryRecord | undefined = {workspaceId: f.plan.input.workspaceId,
+    modelRecordId: f.plan.input.model.modelRecordId, createdAt: f.plan.input.model.updatedAt,
+    updatedAt: f.plan.input.model.updatedAt, source: "local", lifecycleStatus: "downloaded", artifactForm: "checkpoint",
+    displayName: "Synthetic saved image model", provider: "huggingface", serializationFormat: "safetensors",
+    inferenceMode: "text-to-image", taskTags: ["text-to-image"]};
+  const authority = {hostIncarnationId: f.host, context: {organizationId, principalId, workspaceId: f.plan.input.workspaceId},
+    isCurrent: () => state.current, stillAllowed: async () => state.allowed};
+  const metadata = new ReadHeadlessModelMetadataUseCase({organizationId, models: {
+    async readRecordedModel(workspace, id) {
+      assert.equal(workspace, f.plan.input.workspaceId); assert.equal(id, f.plan.input.model.modelRecordId);
+      state.onRead(++state.reads); return stored;
+    }, async listModels() {throw Error("Inventory discovery must not occur.");},
+  }});
+  return {...f, state, authority, owner: new PrepareHeadlessImageModelUseCase({metadata}),
+    model: () => stored!, replace: (value: ModelInventoryRecord | undefined) => {stored = value;}};
+}
+
+test("saved image selection reuses the original point reader and keeps exact private data immutable", async () => {
+  const f = modelFixture(); let privateReads = 0;
+  Object.defineProperty(f.model(), "localPath", {get() {privateReads++; throw Error("private path");}});
+  const result = await f.owner.execute(f.raw, f.authority); assert.ok(result.ok);
+  assert.equal(f.state.reads, 2); assert.equal(privateReads, 0);
+  assert.equal(result.prepared.modelSelection, "recorded-only");
+  assert.equal(result.prepared.recordedModel.runtimeReadiness, "not-checked");
+  assert.equal(result.prepared.recordedModel.supplyVerification, "not-checked");
+  assert.equal(result.prepared.generationRequest.model, f.model().modelRecordId);
+  assert.equal(result.prepared.generationRequest.prompt, f.raw.prompt);
+  assert.equal(result.prepared.generationApprovalRequired, true); assert.equal(result.prepared.outputImportApprovalRequired, true);
+  f.model().taskTags!.length = 0; f.raw.prompt = "Replaced text";
+  assert.deepEqual(result.prepared.recordedModel.model.taskTags, ["text-to-image"]);
+  assert.ok(Object.isFrozen(result.prepared.recordedModel.model.taskTags));
+  assert.ok(Object.isFrozen(result.prepared.generationRequest));
+  assert.doesNotMatch(JSON.stringify(result.prepared.plan), /café|private path|localPath/);
+});
+
+test("stale timestamps and changed metadata cannot select a different saved image model", async () => {
+  const stale = modelFixture(); stale.model().updatedAt = "2026-11-26T00:00:00.000Z";
+  assert.deepEqual(await stale.owner.execute(stale.raw, stale.authority), {ok: false, code: "headless.stale"});
+  const changed = modelFixture(); changed.state.onRead = count => {if (count === 2) changed.model().sizeBytes = 42;};
+  assert.deepEqual(await changed.owner.execute(changed.raw, changed.authority), {ok: false, code: "headless.stale"});
+});
+
+test("unsupported, foreign and missing saved image records do not become runtime selections", async () => {
+  for (const patch of [{lifecycleStatus: "remote-reference"}, {lifecycleStatus: "saved-reference"}, {lifecycleStatus: "invalid"},
+    {artifactForm: "adapter"}, {serializationFormat: "pytorch-bin"}, {taskTags: ["chat"]}, {inferenceMode: "chat"},
+    {workspaceId: createWorkspaceId("workspace.foreign")}, {modelRecordId: "model.foreign"}] as Partial<ModelInventoryRecord>[]) {
+    const f = modelFixture(); f.replace({...f.model(), ...patch});
+    assert.deepEqual(await f.owner.execute(f.raw, f.authority), {ok: false, code: "headless.unavailable"});
+  }
+  const missing = modelFixture(); missing.replace(undefined);
+  assert.deepEqual(await missing.owner.execute(missing.raw, missing.authority), {ok: false, code: "headless.unavailable"});
+});
+
+test("current model policy and authority identity surround both awaited reads", async () => {
+  for (const count of [1, 2]) {
+    for (const mutate of ["permission", "host", "actor", "context", "callback"]) {
+      const f = modelFixture(); f.state.onRead = value => {
+        if (value !== count) return;
+        if (mutate === "permission") f.state.allowed = false;
+        if (mutate === "host") f.authority.hostIncarnationId = randomUUID() as typeof f.host;
+        if (mutate === "actor") f.authority.context.principalId = "foreign-principal" as typeof principalId;
+        if (mutate === "context") f.authority.context = {...f.authority.context};
+        if (mutate === "callback") f.authority.stillAllowed = async () => true;
+      };
+      assert.deepEqual(await f.owner.execute(f.raw, f.authority), {ok: false, code: "headless.forbidden"});
+    }
+  }
+  const denied = modelFixture(); denied.state.allowed = false;
+  assert.deepEqual(await denied.owner.execute(denied.raw, denied.authority), {ok: false, code: "headless.forbidden"});
+  assert.equal(denied.state.reads, 0);
+});
+
+test("active authority, hostile metadata and private provider failures return only closed results", async () => {
+  const f = modelFixture(); let traps = 0;
+  const active = {...f.authority}; Object.defineProperty(active, "context", {get() {traps++; throw Error("private authority");}});
+  assert.deepEqual(await f.owner.execute(f.raw, active), {ok: false, code: "headless.unavailable"});
+  const proxy = new Proxy(f.authority, {get() {traps++; throw Error("private authority");}});
+  assert.deepEqual(await f.owner.execute(f.raw, proxy), {ok: false, code: "headless.unavailable"}); assert.equal(traps, 0);
+  f.state.onRead = () => {throw Error("private provider path and credential");};
+  assert.deepEqual(await f.owner.execute(f.raw, f.authority), {ok: false, code: "headless.unavailable"});
+  const hostile = new PrepareHeadlessImageModelUseCase({metadata: {async execute() {
+    return new Proxy({}, {get() {throw Error("private metadata");}}) as never;
+  }}});
+  assert.deepEqual(await hostile.execute(f.raw, f.authority), {ok: false, code: "headless.unavailable"});
 });

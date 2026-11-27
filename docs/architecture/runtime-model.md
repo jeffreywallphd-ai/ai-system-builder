@@ -4215,3 +4215,10 @@ policy waits. Lower, equal and higher losses remain measurement-only. Review
 does not compute a new model score, dispatch a runtime or supply missing current
 files/hardware. See `docs/operations/headless-training-evaluation-feature.json`;
 these controlled fixtures do not complete the evaluation task or physical hosts.
+
+Private Headless image preparation uses the existing persisted-only Model point
+reader to match host, workspace, record and timestamp with the transient request.
+Saved safetensors image metadata must remain identical across both reads and
+current actor/policy fences. This is recorded-only preparation. Original runtime
+readiness, exact checkpoint bytes, generation approval and separate output-import
+approval remain execution-owned. It enables no public generation or model effect.

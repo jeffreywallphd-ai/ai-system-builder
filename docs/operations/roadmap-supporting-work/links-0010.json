@@ -1724,6 +1724,24 @@
         "No model accuracy/evaluation score, automatic Save, external transfer or public host pass. Historical unknown owners remain retained.",
         "Another checkout may lack exact local Work records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-candidate-evaluation-task-qualification",
+      "work_criteria": [
+        "original-controlled-comparison-review",
+        "read-policy-denials-and-snapshot",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "afc2d25ea41f241ad0583467a7f9e412533f9f07f68544f12e57eabf2819d870",
+      "review_digest": "0ca49a06a438d37a0fa424c12e7b7ef01cd3e54217d8db2d4f544d1929f26ded",
+      "scope": "At commit7a20a5ac, Task73 evaluation/review software completed under the approved controlled-metric policy. Ten focused checks and independent review passed; actual candidate/hardware support remains exact separate Task72 evidence.",
+      "limitations": [
+        "No real model accuracy, before/after quality score or learned-capability claim.",
+        "No public host, generation/import or parent qualification. Another checkout may lack local records."
+      ]
     }
   ]
 }
