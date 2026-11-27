@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-26T20:30:10Z`
+- Updated: `2026-11-27T00:18:24Z`
 
 ## Objective
 
@@ -450,7 +450,7 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Execute an exact approved download (`execute-approved-model-download`): complete
   - Connect downloads and owned task controls (`monitor-and-cancel-model-download`): complete
   - Review and save the completed model (`review-and-save-downloaded-model`): complete
-- **Fine-tune and evaluate**: 61 of 68 tasks complete
+- **Fine-tune and evaluate**: 62 of 68 tasks complete
   - Review fine-tuning inputs and settings (`review-fine-tuning-inputs-and-settings`): complete
   - Prepare training data and local loading controls (`prepare-local-training-files-and-load-policy`): complete
   - Inspect the selected local model files (`inspect-local-training-model-files`): complete
@@ -512,7 +512,7 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Track original training operations through cancellation (`track-original-parent-training-io`): complete
   - Use one original task executor for training and local exit proof (`stage-original-training-and-exit-on-one-executor`): complete
   - Coordinate training file closure and original worker shutdown (`coordinate-original-parent-and-worker-retirement`): complete
-  - Use replaceable bounded local training storage (`bind-pluggable-local-training-storage`): planned
+  - Use replaceable bounded local training storage (`bind-pluggable-local-training-storage`): complete
   - Connect the local training worker (`compose-local-training-producer`): planned
   - Retain verified local results through shutdown (`retain-verified-local-training-results`): planned
   - Connect candidate review and evaluation history (`connect-training-candidate-review-and-history`): planned
