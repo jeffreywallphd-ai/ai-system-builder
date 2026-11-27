@@ -64,5 +64,13 @@
     "Actual fine-tuning, progress, checkpoint/current-candidate results and original IO/worker retirement remain unqualified.",
     "The failed real run and its retained files remain unconfirmed. Source tests do not authorize historical cleanup, a fresh model lease or a retry.",
     "Review original ownership/recovery requirements before a further actual attempt. No model accuracy rerun is needed."
-  ]
+  ],
+  "pending_human_action": {
+    "responsible_role": "User",
+    "action": "Restart Windows before the next real training check and tell the agent when it is ready.",
+    "location": "Windows restart controls",
+    "reason": "The failed real attempt did not confirm its original worker stopped. A restart clears any earlier worker without adopting or deleting retained files.",
+    "scope": "Only another real training attempt waits. Independent software implementation and controlled tests can continue.",
+    "completion_condition": "The user reports the restart and the agent checks the post-restart environment before a fresh bounded test. The old failed run does not become a pass."
+  }
 }

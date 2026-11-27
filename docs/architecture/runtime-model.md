@@ -4178,3 +4178,13 @@ frames and final source acknowledgments without a Python buffered-reader exit
 lock. The inert-owner stdio subprocess tests qualify that source correction only.
 Earlier actual-run retirement remains unconfirmed until independently proved;
 neither source tests nor process IDs authorize cleanup, a fresh lease or retry.
+
+Recorded comparison review is a read-only software boundary. Core/SQLite tests
+follow the accepted original App result through its cache, task book and public
+completion codec. Reports retain exact approved model/data/recipe/proposal/task
+lineage and must match the existing fixed protocol, sample bounds and metrics.
+Permission is checked after the original reply, which is detached before later
+policy waits. Lower, equal and higher losses remain measurement-only. Review
+does not compute a new model score, dispatch a runtime or supply missing current
+files/hardware. See `docs/operations/headless-training-evaluation-feature.json`;
+these controlled fixtures do not complete the evaluation task or physical hosts.

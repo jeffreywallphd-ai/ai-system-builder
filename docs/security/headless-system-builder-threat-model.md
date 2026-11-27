@@ -3959,3 +3959,12 @@ real stdio with an inert owner and the parent writer still open, plus fragmented
 coalesced, oversized, invalid and EOF frames. Existing native retirement,
 controller-close and stderr-integrity requirements remain intact. A source
 correction does not retroactively prove the failed real run's retirement.
+
+Recorded comparison disclosure requires original task/actor/client/workspace/host
+correlation and current ModelRead authority. Do not accept report metrics in the
+wire request, trust arbitrary report protocols or turn numeric loss into a quality
+pass. Controlled Core/SQLite software tests check arithmetic/metric mismatch,
+invalid samples, hidden quality claims, private metadata stripping, late policy
+withdrawal and snapshots before awaited policy callbacks. Original approved
+provenance stays authoritative. Missing current-file or hardware evidence remains
+missing. These tests never evaluate a real model or authorize another training run.

@@ -1,0 +1,30 @@
+{
+  "schema_version": "headless-training-evaluation-feature-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "models-training-and-generation",
+  "task_id": "evaluate-trained-model-candidate",
+  "owning_work_id": "headless-candidate-comparison-review",
+  "scope": "Recorded candidate-comparison review software through original Core/SQLite approved inputs, application cache, accepted task book and public completion decoder.",
+  "evidence_policy": "Feature matrix only. The exact current Work receipt and separate accepted review qualify this supporting software outcome; this file grants no task or parent pass.",
+  "test_file": "modules/hosts/shared/composition/tests/headless-model-training-evaluation.unit.test.ts",
+  "controlled_cases": 26,
+  "preserved_failed_verification": {
+    "receipt_digest": "128746edfbbcaf6b18a74a66774dc92f121bf7e893dc40537004de2dff106dd1",
+    "failure": "The routing test incorrectly expected independently available evaluation checks to disappear when only the controller test file was missing. The planner correctly retained those checks and selected generic coverage with the full controller suite.",
+    "correction": "Assert that controller narrowing is disabled and generic coverage remains. Require evaluation checks to disappear only when one of their own required files is unavailable. A nonregular controller source still refuses policy hashing."
+  },
+  "covered": [
+    "Lower, equal and higher recorded baseline measurements preserve model, data, recipe, proposal and task lineage.",
+    "Source metrics, declared protocol, sample bounds and computed loss delta must agree.",
+    "Provider mutations and awaited policy callbacks cannot change the owned reply.",
+    "Actor, client, workspace, host and ModelRead changes cannot disclose the report.",
+    "Raw metadata, private paths and training text remain outside the public response.",
+    "Missing comparisons, current files and hardware stay unmeasured; measurement-only values never become quality or readiness passes.",
+    "Review never redispatches training or automatically saves the candidate."
+  ],
+  "limitations": [
+    "All comparison metrics are deterministic software fixtures. No model is loaded, evaluated or scored.",
+    "This support supplies no actual candidate-file, hardware, model-quality or public-host qualification and does not complete Task 73.",
+    "Task 72 real training and failed-run retirement remain pending. Source repair at commit 76a6311f does not grant a fresh lease or retry."
+  ]
+}

@@ -190,6 +190,13 @@ TRAINING_START_OWNER = "modules/hosts/shared/composition/composeHeadlessModelTra
 TRAINING_START_TEST = "modules/hosts/shared/composition/tests/headless-model-training-start.unit.test.ts"
 TRAINING_SHARED_FIXTURE = "modules/hosts/shared/composition/tests/headless-model-training-fixture.ts"
 TRAINING_BOUNDED_FEATURE = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
+TRAINING_EVALUATION_TEST = "modules/hosts/shared/composition/tests/headless-model-training-evaluation.unit.test.ts"
+TRAINING_EVALUATION_REQUIRED = (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE,
+    "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
+    "modules/application/use-cases/model/train-model.use-case.ts",
+    "modules/contracts/headless/headless-model-training-task.ts",
+    "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+    "modules/contracts/headless/tests/headless-model-training-task.unit.test.ts")
 TRAINING_HOST_REVIEW_CODE = (
     "modules/hosts/shared/composition/headlessTrainingPlanInputs.ts",
     "modules/hosts/shared/composition/headlessPlanReview.ts",
@@ -227,6 +234,11 @@ TRAINING_BOUNDED_SOURCE_REPAIR = (
 )
 TRAINING_BOUNDED_SCOPE = TRAINING_START_SCOPE + (TRAINING_SHARED_FIXTURE, TRAINING_BOUNDED_FEATURE,
     "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json") + TRAINING_BOUNDED_SOURCE_REPAIR
+TRAINING_EVALUATION_SCOPE = (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE, TRAINING_START_CONTROLLER_TEST,
+    "dev-tools/helpers/control_plane/catalog.py", "docs/operations/headless-training-evaluation-feature.json",
+    "docs/operations/headless-bounded-training-feature.json", "docs/operations/roadmap-supporting-work/links-0010.json",
+    "modules/hosts/README.md", "docs/architecture/runtime-model.md", "docs/security/headless-system-builder-threat-model.md",
+    "docs/diagnostics/ai-development-control-plane.md")
 
 STORY_TASK_SCOPE = (
     "dev-tools/helpers/control_plane/candidate.py", "dev-tools/helpers/control_plane/work.py",
@@ -971,6 +983,19 @@ PUBLISHED_FORM_CHECKS = {
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",
             TRAINING_BOUNDED_FEATURE, TRAINING_SHARED_FIXTURE),
+    },
+    "headless-training-evaluation-unit": {
+        "automatic_sources": (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE),
+        "automatic_required_files": TRAINING_EVALUATION_REQUIRED,
+        "sources": TRAINING_EVALUATION_REQUIRED,
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
+            TRAINING_EVALUATION_TEST, TRAINING_EVALUATION_REQUIRED[-2], TRAINING_EVALUATION_REQUIRED[-1]),
+    },
+    "headless-training-evaluation-types": {
+        "companion_to": "headless-training-evaluation-unit",
+        "sources": TRAINING_EVALUATION_REQUIRED,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") + TRAINING_EVALUATION_REQUIRED,
     },
     "headless-training-host-review-types": {
         "companion_to": "headless-training-host-review-unit",
@@ -4906,6 +4931,15 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 *[part for name in ("test_control_plane_headless_training_host_approval.", "test_control_plane_headless_training_execution.",
                     "test_control_plane_headless_training_owner.", "test_control_plane_headless_training_runtime.",
                     "test_control_plane_headless_native_model_graph.", "test_control_plane_focused.") for part in ("-k", name)]]
+    if ({"dev-tools/helpers/control_plane/catalog.py", TRAINING_EVALUATION_TEST, TRAINING_START_CONTROLLER_TEST} <= set(paths)
+            <= set(TRAINING_EVALUATION_SCOPE) and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": TRAINING_EVALUATION_REQUIRED + (TRAINING_START_CONTROLLER_TEST,)})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[part for name in ("test_control_plane_headless_training_host_approval.", "test_control_plane_headless_training_execution.",
+                    "test_control_plane_headless_training_owner.", "test_control_plane_focused.") for part in ("-k", name)]]
     session_exit_support = (TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE
         + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS)
         + tuple(name for identity in ("headless-training-session-exit-ready-unit", "headless-training-runtime-unit",

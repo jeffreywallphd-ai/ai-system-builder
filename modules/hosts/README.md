@@ -368,6 +368,13 @@ retirement comes first, then the App child verifies identity and removes itself,
 then the unchanged parent is removed. Controlled tests retain their default
 temporary parent and start no worker.
 
+Candidate evaluation-review tests reuse that controlled fixture through the
+actual App cache, original task book and public completion decoder on Core and
+SQLite. They validate recorded fixed-baseline numbers, exact approved lineage,
+privacy, current permissions and reply snapshots. The metrics are deterministic
+software inputs. No review reads a model, scores output or grants Save/readiness;
+missing current-file/hardware proof stays unavailable.
+
 The shared private training-review helper reuses the existing application compiler
 and original saved-input reader. It copies the exact target/requests, captures
 callbacks and the input reader across all awaits, and prepares minimized metadata

@@ -1325,6 +1325,63 @@
         "No model accuracy, protected storage service, physical quota, external effect, parent or current-source pass is granted.",
         "Another checkout may lack local completion records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-bounded-training-fixture-and-shutdown",
+      "work_criteria": [
+        "bounded-fixture-ownership",
+        "original-controller-stdio-lifetime",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "417d9b1763db1664c76514745055a6f06cf48cdc9da2c1e8eed9426fcf17b3f9",
+      "review_digest": "2a9e6c4989497881203721d756cd28e9c130e6fd02d6469553c67e0410db7208",
+      "scope": "Source repairs are complete at commit76a6311f. The App test stages inside its exact fresh permitted root with explicit child-before-parent cleanup. One bounded raw controller reader preserves boot/command framing and exits cleanly with the parent writer open. All20 focused source checks and independent review passed.",
+      "limitations": [
+        "This is source support only. The stdio subprocess used an inert owner and created no Native Job or model.",
+        "The real Task72 failures and unconfirmed original retirement remain pending. This record grants no fresh lease, retry, historical cleanup, task completion or parent qualification.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-bounded-training-fixture-and-shutdown",
+      "work_criteria": [
+        "bounded-fixture-ownership",
+        "original-controller-stdio-lifetime",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "417d9b1763db1664c76514745055a6f06cf48cdc9da2c1e8eed9426fcf17b3f9",
+      "review_digest": "2a9e6c4989497881203721d756cd28e9c130e6fd02d6469553c67e0410db7208",
+      "scope": "Source repairs are complete at commit76a6311f. The App test stages inside its exact fresh permitted root with explicit child-before-parent cleanup. One bounded raw controller reader preserves boot/command framing and exits cleanly with the parent writer open. All20 focused source checks and independent review passed.",
+      "limitations": [
+        "This is source support only. The stdio subprocess used an inert owner and created no Native Job or model.",
+        "The real Task72 failures and unconfirmed original retirement remain pending. This record grants no fresh lease, retry, historical cleanup, task completion or parent qualification.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-bounded-training-fixture-and-shutdown",
+      "work_criteria": [
+        "bounded-fixture-ownership",
+        "original-controller-stdio-lifetime",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "417d9b1763db1664c76514745055a6f06cf48cdc9da2c1e8eed9426fcf17b3f9",
+      "review_digest": "2a9e6c4989497881203721d756cd28e9c130e6fd02d6469553c67e0410db7208",
+      "scope": "Source repairs are complete at commit76a6311f. The App test stages inside its exact fresh permitted root with explicit child-before-parent cleanup. One bounded raw controller reader preserves boot/command framing and exits cleanly with the parent writer open. All20 focused source checks and independent review passed.",
+      "limitations": [
+        "This is source support only. The stdio subprocess used an inert owner and created no Native Job or model.",
+        "The real Task72 failures and unconfirmed original retirement remain pending. This record grants no fresh lease, retry, historical cleanup, task completion or parent qualification.",
+        "Another checkout may lack local completion records."
+      ]
     }
   ]
 }

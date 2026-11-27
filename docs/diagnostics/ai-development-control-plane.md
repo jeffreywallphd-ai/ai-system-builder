@@ -3670,3 +3670,10 @@ regressions. The fixed controller subset covers these exact importing features;
 missing or nonregular support, unknown changes and explicit generic requests
 retain conservative coverage. A failed model attempt and unconfirmed original
 retirement stay pending even when these source checks pass.
+
+The fixed `headless-training-evaluation-unit` and companion strict-type checks
+cover original recorded comparison review with controlled metrics. They include
+existing App and public-codec regressions and cannot launch the real training
+check. The exact source/controller scope has bounded fallback tests; unknown,
+missing/nonregular support or explicit generic requests retain conservative
+coverage. No model accuracy, Native or physical-host pass follows from this profile.

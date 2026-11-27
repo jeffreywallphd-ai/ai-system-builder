@@ -156,5 +156,55 @@ class TrainingHostApprovalRoutingTests(unittest.TestCase):
                     for title in ("Core/Desktop", "SQLite/Managed", "two saved training steps", "legacy training binding"):
                         self.assertIn(title, result.stdout)
 
+    def test_evaluation_profiles_execute_controlled_original_owner_and_codec_checks_only(self):
+        rows = self.select([catalog.TRAINING_EVALUATION_TEST])
+        profiles = ("headless-training-evaluation-unit", "headless-training-evaluation-types")
+        for name in profiles: self.assertIn(name, rows)
+        self.assertNotIn("focused-tests", rows); self.assertNotIn("headless-training-bounded-feature", rows)
+        environment = dict(os.environ); environment.pop("NODE_TEST_CONTEXT", None)
+        environment.pop("AISB_RUN_FIXED_NATIVE_QUALIFICATION", None)
+        for name in profiles:
+            result = subprocess.run(rows[name]["argv"], cwd=self.root, env=environment, text=True, capture_output=True, timeout=120)
+            self.assertEqual(result.returncode, 0, result.stdout[-6000:] + result.stderr[-2000:])
+            if name.endswith("-unit"):
+                counts = {key: int(value) for key, value in re.findall(r"^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$", result.stdout, re.MULTILINE)}
+                self.assertGreaterEqual(counts.get("tests", 0), 26); self.assertEqual(counts.get("tests"), counts.get("pass"))
+                for key in ("fail", "cancelled", "skipped", "todo"): self.assertEqual(counts.get(key), 0)
+                for title in ("Core original review preserves lower", "SQLite original review preserves higher", "awaited policy"):
+                    self.assertIn(title, result.stdout)
+
+    def test_evaluation_scope_keeps_conservative_unknown_explicit_missing_and_nonregular_fallback(self):
+        rows = self.select(catalog.TRAINING_EVALUATION_SCOPE)
+        self.assertIn("-k", rows["control-plane"]["argv"])
+        for paths, required in (([*catalog.TRAINING_EVALUATION_SCOPE, "modules/hosts/unknown-evaluation.ts"], ("architecture",)),
+                                (catalog.TRAINING_EVALUATION_SCOPE, ("focused-tests",))):
+            rows = self.select(paths, required=required); self.assertIn("focused-tests", rows)
+            self.assertNotIn("-k", rows["control-plane"]["argv"])
+        required = catalog.TRAINING_EVALUATION_REQUIRED + (catalog.TRAINING_START_CONTROLLER_TEST,)
+        self.assertLessEqual(len(required), 16)
+        with tempfile.TemporaryDirectory(prefix="evaluation-routing-") as temporary:
+            root = Path(temporary)
+            for relative in required:
+                path = root / relative; path.parent.mkdir(parents=True, exist_ok=True); path.write_text("// inert\n", encoding="utf8")
+            self.assertIn("-k", self.select(catalog.TRAINING_EVALUATION_SCOPE, root)["control-plane"]["argv"])
+            for relative in required:
+                path = root / relative; path.unlink()
+                for nonregular in (False, True):
+                    if nonregular: path.mkdir()
+                    if nonregular and relative == catalog.TRAINING_START_CONTROLLER_TEST:
+                        with self.assertRaises(OSError): self.select(catalog.TRAINING_EVALUATION_SCOPE, root)
+                    else:
+                        rows = self.select(catalog.TRAINING_EVALUATION_SCOPE, root)
+                        if relative == catalog.TRAINING_START_CONTROLLER_TEST:
+                            # A missing controller disables its narrow filter,
+                            # not the independently available software checks.
+                            self.assertIn("headless-training-evaluation-unit", rows)
+                        else:
+                            self.assertNotIn("headless-training-evaluation-unit", rows)
+                        self.assertIn("focused-tests", rows)
+                        self.assertNotIn("-k", rows["control-plane"]["argv"])
+                    if nonregular: path.rmdir()
+                path.write_text("// inert\n", encoding="utf8")
+
 
 if __name__ == "__main__": unittest.main()
