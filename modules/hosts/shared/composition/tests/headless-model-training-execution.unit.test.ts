@@ -227,6 +227,31 @@ test("current candidate capability rejects an accessor without calling it or rep
   await f.run(); assert.equal(f.state.starts, 1);
 });
 
+test("accepted training preserves its original inert Save binder and receiver", async t => {
+  const f = await fixture(t), options = await f.makeOptions(), start = await options.resolveStart();
+  let calls = 0, owner: any;
+  const result = await f.run({resolveStart: async () => async (...args) => {
+    const accepted = await start!(...args); if (accepted.kind !== "accepted") return accepted;
+    owner = {...accepted.task, createSaveSession() {assert.equal(this, owner); calls++; return undefined;}};
+    return {...accepted, task: owner};
+  }});
+  assert.equal(result.result.ok, true); assert.ok(f.retained?.task.createSaveSession); assert.equal(calls, 0);
+  owner.createSaveSession = () => {assert.fail("The replacement binder must not run.");};
+  assert.equal(f.retained.task.createSaveSession({saveId: randomUUID(), candidateDigest: "sha256:" + "a".repeat(64), name: "Model"},
+    {isCurrent: () => true, stillAllowed: async () => true, mayDiscard: async () => true}), undefined);
+  assert.equal(calls, 1); assert.equal(f.state.starts, 1);
+});
+
+test("Save binder accessors cannot be invoked or renew an accepted training dispatch", async t => {
+  const f = await fixture(t), options = await f.makeOptions(), start = await options.resolveStart(); let hooks = 0;
+  const result = await f.run({resolveStart: async () => async (...args) => {
+    const accepted = await start!(...args); if (accepted.kind !== "accepted") return accepted;
+    const task = {...accepted.task}; Object.defineProperty(task, "createSaveSession", {enumerable: true, get() {hooks++; assert.fail("No active property.");}});
+    return {...accepted, task};
+  }});
+  assert.deepEqual(result.result, {ok: false, code: "headless.operation-unconfirmed"}); assert.equal(hooks, 0); assert.equal(f.state.starts, 1);
+});
+
 for (const engine of ["Core", "SQLite"] as const) {
   test(engine + ": preparation Model source reuses the actual original reader and closes before accepted task controls", async t => {
     const f = await fixture(t, engine); let replacements = 0;

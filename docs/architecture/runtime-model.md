@@ -3988,3 +3988,29 @@ removes exclusively known unchanged fresh entries; substituted/foreign data or
 unknown operations retain their declarations. This cooperative local profile
 does not prove physical quotas, hostile same-account isolation, durable restart
 or whole-host qualification, and does not activate a product Root or service.
+
+The original accepted training task can retain a separate optional Save-session
+binder when current-candidate review and reviewed storage are configured. Binding
+captures a single Save identity, name, candidate digest and original controls
+without IO. Execution and task-book retention copy the original binder method
+and receiver before later waits. No public route or generic fallback is added.
+
+Save execution first rechecks the original settled candidate and exact digest,
+then checks the original app-owned output-stage identity and uses the captured
+reviewed-copy capability. Original task/business authority and separate Save
+controls remain current through returning an immutable private preparation.
+It retains original asynchronous review/copy ownership through withdrawal.
+Cleanup is independent of expired write consent and needs known original IO
+closure plus no-reference authority. Original staging remains retained. Registry
+publication, exact consent validation and lost-reply reconciliation remain in
+the later owning composition; a private preparation is not a saved Model.
+
+Malformed asynchronous returns from synchronous Save factories, current checks,
+fences or inspection remain unconfirmed. Safely observable original native
+Promises receive an intrinsic rejection observer before refusal, including an
+own-then hook. Observation requires the ordinary verified constructor/species
+path and never invokes supplied hooks, mutates the original or changes global
+rejection policy. Original settlement cannot turn an invalid contract into IO
+closure, retry, deletion or success. Isolated Node fixtures retain the normal
+process rejection policy and test these failure paths independently of model
+execution. Contradictory writing/closed-IO observations supply no retirement.

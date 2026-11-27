@@ -758,7 +758,43 @@ BOUNDED_LOCAL_MODEL_COPY_SCOPE = TRAINING_IO_RETIREMENT_SCOPE + (
 )
 BOUNDED_LOCAL_COPY_CONTROLLER_FILTERS = ("test_control_plane_training_io_retirement.", "test_control_plane_focused.", "test_control_plane_support_registry.")
 
+TRAINING_SAVE_OWNER_TESTS = (
+    "modules/application/use-cases/model/tests/approved-training-save-owner.unit.test.ts",
+    "modules/application/use-cases/model/tests/headless-approved-training-owner.unit.test.ts",
+    "modules/hosts/shared/composition/tests/headless-model-training-execution.unit.test.ts",
+    "modules/hosts/shared/composition/tests/headless-model-training-tasks.unit.test.ts",
+)
+TRAINING_SAVE_OWNER_REQUIRED = (
+    "modules/application/use-cases/model/create-approved-training-save-owner.ts",
+    "modules/application/ports/model/approved-local-model-training.port.ts",
+    "modules/application/use-cases/model/train-model.use-case.ts",
+    "modules/hosts/shared/composition/headlessModelTrainingExecution.ts",
+    "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
+    *TRAINING_SAVE_OWNER_TESTS,
+)
+TRAINING_SAVE_OWNER_SCOPE = TRAINING_SAVE_OWNER_REQUIRED + (
+    "dev-tools/helpers/tests/test_control_plane_headless_training_save.py",
+    "dev-tools/helpers/control_plane/catalog.py",
+    "docs/diagnostics/ai-development-control-plane.md",
+    "docs/architecture/runtime-model.md",
+    "docs/security/headless-system-builder-threat-model.md",
+    "modules/application/README.md",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "headless-training-save-owner-unit": {
+        "automatic_sources": (TRAINING_SAVE_OWNER_REQUIRED[0], TRAINING_SAVE_OWNER_TESTS[0]),
+        "automatic_required_files": TRAINING_SAVE_OWNER_REQUIRED,
+        "sources": TRAINING_SAVE_OWNER_SCOPE,
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", *TRAINING_SAVE_OWNER_TESTS),
+    },
+    "headless-training-save-owner-types": {
+        "companion_to": "headless-training-save-owner-unit",
+        "sources": TRAINING_SAVE_OWNER_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--jsx", "react-jsx", "--lib", "ES2021,DOM",
+            TRAINING_SAVE_OWNER_REQUIRED[0], TRAINING_SAVE_OWNER_REQUIRED[2], TRAINING_SAVE_OWNER_REQUIRED[3], TRAINING_SAVE_OWNER_REQUIRED[4], *TRAINING_SAVE_OWNER_TESTS),
+    },
     "native-training-result-files-contract": {
         "automatic_sources": NATIVE_TRAINING_FILE_FEATURE,
         "automatic_required_files": NATIVE_TRAINING_FILE_REQUIRED,
@@ -4800,6 +4836,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[part for name in BOUNDED_LOCAL_COPY_CONTROLLER_FILTERS for part in ("-k", name)]]
+    if ({"dev-tools/helpers/control_plane/catalog.py", TRAINING_SAVE_OWNER_REQUIRED[0], "dev-tools/helpers/tests/test_control_plane_headless_training_save.py"} <= set(paths)
+            <= set(TRAINING_SAVE_OWNER_SCOPE) and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": TRAINING_SAVE_OWNER_REQUIRED + ("dev-tools/helpers/tests/test_control_plane_headless_training_save.py",)})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[part for name in ("test_control_plane_headless_training_save.", "test_control_plane_headless_training_owner.",
+                    "test_control_plane_headless_training_tasks.", "test_control_plane_headless_training_execution.",
+                    "test_control_plane_focused.") for part in ("-k", name)]]
     session_exit_support = (TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE
         + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS)
         + tuple(name for identity in ("headless-training-session-exit-ready-unit", "headless-training-runtime-unit",

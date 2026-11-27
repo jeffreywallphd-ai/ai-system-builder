@@ -3768,3 +3768,31 @@ outcomes. This bounded-local profile trusts the signed-in user and installed
 dependencies; it supplies no hostile same-account isolation, exclusive physical
 quota, durable recovery or Native custody. Exact approval, actor/source binding,
 registry commit/replay and product-host activation remain application work.
+
+The original private training task may expose an internal Save binder only with
+its captured current-file reader and explicit reviewed-copy adapter. Capture the
+original binder/receiver through execution and task retention; never recover one
+from generic task history or a replacement runtime. Its closed request has only
+the new Save identity, approved candidate digest and bounded name. Caller paths,
+actor/workspace overrides, active properties and permission booleans are refused.
+
+One bound session rechecks original task/business authority, successful settled
+candidate identity and original app-owned staging before invoking the private
+copy. Separate exact Save controls remain required through the final handoff.
+Keep original review/copy Promises and unknown outcomes rather than treating
+timeout, status or cancellation as retirement. Only known closure and separately
+captured no-reference authority permit private-copy discard; original output
+staging is untouched. The immutable result contains private storage facts and
+retained candidate lineage, never approval or registry authority. Ordinary Save
+still refuses private tasks. Exact consent and transactional create-only Model
+registration/replay remain pending; no product Root, Native/service boundary,
+physical quota or real-model quality qualification follows.
+
+The Save owner observes safely observable malformed native Promise returns
+before denying their contracts. Synchronous factories, current checks, fences
+and inspection cannot acknowledge through a Promise. Intrinsic observation
+checks the ordinary constructor/species path without calling supplied then,
+constructor or species hooks. Unsupported active contracts remain unknown;
+original settlement grants no retirement or cleanup credit. There is no global
+rejection handler or Promise mutation. Isolated failure fixtures exercise native
+rejections, own hooks and contradictory IO state without a model or provider.

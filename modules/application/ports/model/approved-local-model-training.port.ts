@@ -3,6 +3,7 @@ import type {WorkspaceId} from "../../../contracts/workspace";
 import type {RuntimeTaskRecord, CancelRuntimeTaskResult} from "../../../contracts/runtime";
 import type {ApplicationRequestContext} from "../application-request-context";
 import type {TrainingResultVerifiedFiles} from "./training-result-file-byte-storage.port";
+import type {ReviewedGeneratedModelControl, ReviewedGeneratedModelResult} from "./generated-model-storage.port";
 
 /** Internal replaceable storage for the explicitly trusted-local profile.
  * Paths stay between the owning adapter and safe local loader, never API/IPC
@@ -128,7 +129,8 @@ export interface ApprovedLocalModelTrainingPort {
     modelSource?: ApprovedLocalTrainingModelReader): ApprovedLocalTrainingSession | undefined;
 }
 /** Host-private capability to the accepted original task. Read/cancel need fresh
- * caller policy AFTER original lineage lookup. This object has no Save method. */
+ * caller policy AFTER original lineage lookup. Save binding needs distinct exact
+ * Save controls; it grants no registry mutation or public execution authority. */
 export interface ApprovedLocalTrainingTask {
   readonly requestId: string;
   readonly workspaceId: WorkspaceId;
@@ -140,6 +142,34 @@ export interface ApprovedLocalTrainingTask {
   /** Separate current-file observation through the original settled session.
    * It does not poll/settle a runtime, register a Model or grant Save. */
   reviewCandidate?(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview>;
+  /** Synchronous private binding only, no IO. Absence grants no ordinary Save
+   * fallback. Only a separately approved exact Save may use the session. */
+  createSaveSession?(request: ApprovedLocalTrainingSaveRequest, control: ReviewedGeneratedModelControl): ApprovedLocalTrainingSaveSession | undefined;
+}
+export interface ApprovedLocalTrainingSaveRequest {
+  readonly saveId: string;
+  readonly candidateDigest: string;
+  readonly name: string;
+}
+/** Private app/registry handoff, never a transport response. */
+export interface ApprovedLocalTrainingSavePreparation {
+  readonly schema: "approved-training-save-preparation-v1";
+  readonly taskId: string;
+  readonly workspaceId: WorkspaceId;
+  readonly saveId: string;
+  readonly name: string;
+  readonly candidate: Extract<ApprovedLocalTrainingCandidateReview, {kind: "ready"}>;
+  readonly storage: ReviewedGeneratedModelResult;
+}
+export interface ApprovedLocalTrainingSaveSession {
+  write(): Promise<ApprovedLocalTrainingSavePreparation>;
+  fence(): void;
+  /** Synchronous final lifetime check for the registry publication owner. */
+  isCurrent(): boolean;
+  inspect(): Readonly<{phase: "bound" | "preparing" | "ready" | "failed" | "discarded" | "unconfirmed";
+    fenced: boolean; pendingOperations: number; ioClosed: boolean}>;
+  /** Requires independent no-reference authority and actual original closure. */
+  discard(): Promise<boolean>;
 }
 export type ApprovedLocalTrainingCandidateReview = {readonly kind: "not-ready"} | {
   readonly kind: "ready";

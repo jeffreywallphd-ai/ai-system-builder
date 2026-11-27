@@ -4,7 +4,8 @@ import { basename, isAbsolute, join, parse, relative, resolve } from "node:path"
 import { types } from "node:util";
 import {createHash} from "node:crypto";
 import {readStrictPassiveRecord, hasKnownPassiveCredential} from "../../../contracts/shared";
-import {isOrganizationId} from "../../../contracts/organization";
+import {isOrganizationId, createOrganizationId} from "../../../contracts/organization";
+import {createApprovedTrainingSaveOwner} from "./create-approved-training-save-owner";
 
 import {
   normalizeModelTrainingRequest,
@@ -588,7 +589,24 @@ export class TrainModelUseCase {
       this.requestContextByRequestId.set(id, {normalizedRequest: definition.request, baseModelRecordId: definition.request.baseModel.modelRecordId});
       retained();
       try {await this.dependencies.taskPowerLifecycle.startTask(id, TaskType.MODEL_TRAINING);} catch {}
+      let createSaveSession: ApprovedLocalTrainingTask["createSaveSession"];
+      if (verifyRetainedFiles && this.dependencies.generatedModelStorage) {
+        try {
+          const stage = this.runtimeOutputStages.get(id);
+          const createStorage = capturePrivateMethod<NonNullable<GeneratedModelStoragePort["createReviewedSession"]>>(
+            this.dependencies.generatedModelStorage, "createReviewedSession");
+          if (stage && stage.path === owner.outputPath) createSaveSession = createApprovedTrainingSaveOwner({taskId: id,
+            context: {organizationId: createOrganizationId(definition.owner.organizationId), principalId: definition.owner.principalId, workspaceId: definition.workspaceId},
+            isOriginalCurrent: () => this.privateTrainingOwners.get(id) === owner && owner.phase === "accepted" && owner.settled &&
+              this.runtimeOutputStages.get(id) === stage && owner.control.isCurrent(),
+            stillOriginalAllowed: owner.control.stillAllowed,
+            review: action => this.usePrivateTraining(owner, action, control => this.reviewPrivateTrainingCandidate(owner, control)),
+            sourceDirectory: async () => {await assertTrainingOutputStage(stage);
+              if (this.runtimeOutputStages.get(id) !== stage) throw privateUnavailable(); return stage.path;}, createStorage});
+        } catch { /* Missing/invalid optional storage supplies no Save fallback. */ }
+      }
       const task: ApprovedLocalTrainingTask = Object.freeze({requestId: id, workspaceId: definition.workspaceId,
+        ...(createSaveSession ? {createSaveSession} : {}),
         read: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, () => this.readTrainingInWorkspace(id, definition.workspaceId)),
         reviewCompletion: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action,
           async () => this.reviewPrivateTrainingCompletion(owner)),

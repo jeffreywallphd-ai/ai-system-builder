@@ -9,7 +9,7 @@ import {TaskType, type RuntimeTaskRecord, type CancelRuntimeTaskResult} from "..
 import type {ModelTrainingRequest} from "../../../../contracts/model";
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, ApprovedLocalTrainingDefinition,
   ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingStartAck,
-  ApprovedLocalTrainingControl, ApprovedLocalTrainingStart, ApprovedLocalTrainingModelReader, TrainingResultVerifiedFiles} from "../../../ports/model";
+  ApprovedLocalTrainingControl, ApprovedLocalTrainingStart, ApprovedLocalTrainingModelReader, TrainingResultVerifiedFiles, GeneratedModelStoragePort} from "../../../ports/model";
 import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
 import {TrainModelUseCase} from "../train-model.use-case";
 
@@ -18,7 +18,7 @@ const text = (value: string) => new TextEncoder().encode(value);
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const mutableVerification = (value: TrainingResultVerifiedFiles) => ({...value, files: value.files.map(file => ({...file}))});
 const exists = async (path: string | undefined) => Boolean(path && await lstat(path).catch(() => undefined));
-async function fixture(t: TestContext, options: {port?: false; reconciler?: false; verification?: boolean} = {}) {
+async function fixture(t: TestContext, options: {port?: false; reconciler?: false; verification?: boolean; storage?: GeneratedModelStoragePort} = {}) {
   const boundary = await realpath(tmpdir()), root = await realpath(await mkdtemp(join(boundary, "approved-training-test-")));
   const identity = await lstat(root, {bigint: true}); const old = {TEMP: process.env.TEMP, TMP: process.env.TMP, TMPDIR: process.env.TMPDIR};
   process.env.TEMP = root; process.env.TMP = root; process.env.TMPDIR = root;
@@ -84,6 +84,7 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
     }} : {})};
   const port: ApprovedLocalModelTrainingPort = {createSession(value, control, source) {state.creates++; definition = value; nativeControl = control; modelSource = source; return session;}};
   const owner = new TrainModelUseCase({...(options.port === false ? {} : {approvedLocalTraining: port}),
+    ...(options.storage ? {generatedModelStorage: options.storage} : {}),
     ...(options.reconciler === false ? {} : {taskReconciler: reconciler}),
     runtimeTaskRegistry: {async startTask() {assert.fail("No ordinary runtime start.");}, async startTaskWithoutInstalling() {assert.fail("No generic installed-only fallback.");},
       async getTaskStatus() {assert.fail("No shared-history task lookup.");}, async cancelTask() {assert.fail("No generic task cancellation.");}, async listTasks() {assert.fail("No task discovery.");}},
@@ -116,6 +117,34 @@ async function candidateFixture(t: TestContext) {
   const f = await fixture(t, {verification: true}), accepted = await f.accepted();
   f.state.status = "succeeded"; await f.reconcile(); return {...f, accepted};
 }
+
+test("private tasks omit Save without explicit reviewed storage and keep ordinary accept refused", async t => {
+  const f = await candidateFixture(t); assert.equal(f.accepted.task.createSaveSession, undefined);
+  await assert.rejects(f.owner.save(f.requestId, f.workspaceId));
+});
+
+test("private Save binds only original settled reviewed staging and does not register a Model", async t => {
+  let copies = 0, copiedSource: string | undefined, profile = "bound" as "bound" | "ready" | "discarded", fenced = false;
+  const storage: GeneratedModelStoragePort = {async storeGeneratedModel() {assert.fail("No ordinary copy fallback.");},
+    createReviewedSession(r, context, c) {
+      copies++; copiedSource = r.sourceDirectory; assert.equal(context.requestId, saveId); assert.equal(r.artifactForm, "adapter");
+      return {storageProfile: "bounded-local-v1", async write() {assert.equal(c.isCurrent(), true); assert.equal(await c.stillAllowed(), true); profile = "ready";
+        return {storageProfile: "bounded-local-v1", localPath: join(dirname(r.sourceDirectory), "saved-model"), candidateDigest: r.candidateDigest,
+          fileCount: r.files.length, totalBytes: r.files.reduce((n, f) => n + f.expectedSizeBytes, 0)};},
+        fence() {fenced = true;}, inspect() {return {phase: profile, fenced, pendingOperations: 0, openFiles: 0, ioClosed: true,
+          declaredPayloadBytes: 6, physicalQuotaEnforced: false};}, async discard() {if (await c.mayDiscard() !== true) return false; profile = "discarded"; return true;}};
+    }};
+  const f = await fixture(t, {verification: true, storage}), accepted = await f.accepted(), saveId = randomUUID();
+  assert.ok(accepted.task.createSaveSession); assert.equal(copies, 0);
+  f.state.status = "succeeded"; await f.reconcile();
+  const candidate = await accepted.task.reviewCandidate!(f.readControl); assert.equal(candidate.kind, "ready"); if (candidate.kind !== "ready") assert.fail();
+  const saved = accepted.task.createSaveSession({saveId, candidateDigest: candidate.candidateDigest, name: "Separately approved model"},
+    {isCurrent: () => true, stillAllowed: async () => true, mayDiscard: async () => true}); assert.ok(saved);
+  assert.equal(copies, 0); const result = await saved.write(); assert.equal(copies, 1); assert.equal(copiedSource, f.staged!.outputDirectory);
+  assert.equal(result.taskId, f.requestId); assert.equal(result.candidate.history.provenance.modelRecordId, "model.synthetic");
+  assert.equal(result.name, "Separately approved model"); assert.equal(saved.isCurrent(), true); assert.equal(await saved.discard(), true);
+  assert.equal(await exists(f.staged!.outputDirectory), true); // Source retention remains separate from private-copy cleanup.
+});
 
 const executionHistory = () => ({schema: "model-training-execution-v1", runId: "pipeline-original",
   startedAt: "2026-11-27T00:00:00.000Z", completedAt: "2026-11-27T00:00:01.000Z", durationMs: 950,

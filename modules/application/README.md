@@ -173,3 +173,19 @@ must remain separate, with a no-reference cleanup decision held independently
 of expired write consent. Pending/unknown operations, handles or registry
 outcomes cannot grant deletion, retry or resource credit. Ordinary storage
 callers and stronger Native storage profiles gain no fallback.
+
+An accepted private training task can retain an optional synchronous
+`createSaveSession` binder. It is present only with the original current-file
+reader and explicitly configured reviewed storage. One bound Save owns its
+original task, candidate digest, chosen name and Save identity. It performs no
+IO until `write`. Current settled candidate review and original app-owned staging
+identity precede copying. Original business authority and the separately supplied
+exact Save controls are checked through private result publication.
+
+The returned preparation is immutable private data for a later registry
+transaction. It does not approve, register, publish or load a Model. Retain the
+original review/copy operations until actual return. A fence stops further use;
+unknown operations or copy closure retain ownership. Discard needs independent
+no-reference authority and known IO closure, and never deletes original staging.
+The ordinary Save path still refuses private tasks. Exact approval, create-only
+registration/replay and product-host qualification remain separate work.

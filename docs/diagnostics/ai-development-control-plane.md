@@ -1,6 +1,15 @@
 
 ## Numeric capture at coding-session initialization
 
+Private original-task training Save uses `headless-training-save-owner-unit` and
+its strict type companion. They execute the whole Save owner, original training
+owner, execution bridge and task-book files with controlled storage/runtime
+responses. Exact source presence is mandatory. The closed owner/catalog scope
+runs whole related routing and focused-runner modules; missing, nonregular,
+unknown or explicit generic impact retains conservative coverage. No application,
+model, model accuracy, provider or physical Native test runs. These checks grant
+no Save approval, registry commit, product Root or parent qualification.
+
 Known native-training documentation changes, including the filesystem adapter
 README, use the existing passive runtime contracts rather than scanning that
 adapter directory for nonexistent tests. The exact catalog/routing-test pair
