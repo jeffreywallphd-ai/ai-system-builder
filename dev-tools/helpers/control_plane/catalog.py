@@ -239,9 +239,10 @@ TRAINING_BOUNDED_SOURCE_REPAIR = (
 )
 TRAINING_BOUNDED_SCOPE = TRAINING_START_SCOPE + (TRAINING_SHARED_FIXTURE, TRAINING_BOUNDED_FEATURE,
     "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json") + TRAINING_BOUNDED_SOURCE_REPAIR
+TRAINING_BOUNDED_PROFILE = "dev-tools/scripts/qualification/headless-training/bounded-training-feature-profile.ts"
 TRAINING_OBSERVATION = "dev-tools/scripts/qualification/headless-training/bounded-training-observation.ts"
 TRAINING_OBSERVATION_TEST = "dev-tools/scripts/qualification/headless-training/bounded-training-observation.unit.test.ts"
-TRAINING_FRESH_GUARD_SCOPE = (TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST,TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE,
+TRAINING_FRESH_GUARD_SCOPE = (TRAINING_BOUNDED_PROFILE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST,TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE,
     TRAINING_START_CONTROLLER_TEST, "dev-tools/helpers/control_plane/catalog.py",
     "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json",
     "docs/architecture/runtime-model.md", "docs/security/headless-system-builder-threat-model.md",
@@ -1017,13 +1018,13 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-training-observation-unit": {
         "companion_to": "headless-training-bounded-feature-types",
-        "sources": (TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST),
+        "sources": (TRAINING_BOUNDED_PROFILE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST),
         "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", TRAINING_OBSERVATION_TEST),
     },
     "headless-training-bounded-feature-types": {
-        "automatic_sources": (TRAINING_BOUNDED_FEATURE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST),
-        "automatic_required_files": (TRAINING_BOUNDED_FEATURE, TRAINING_SHARED_FIXTURE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST),
-        "sources": (TRAINING_BOUNDED_FEATURE, TRAINING_SHARED_FIXTURE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST,
+        "automatic_sources": (TRAINING_BOUNDED_FEATURE, TRAINING_BOUNDED_PROFILE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST),
+        "automatic_required_files": (TRAINING_BOUNDED_FEATURE, TRAINING_SHARED_FIXTURE, TRAINING_BOUNDED_PROFILE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST),
+        "sources": (TRAINING_BOUNDED_FEATURE, TRAINING_SHARED_FIXTURE, TRAINING_BOUNDED_PROFILE, TRAINING_OBSERVATION, TRAINING_OBSERVATION_TEST,
             "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json"),
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM",

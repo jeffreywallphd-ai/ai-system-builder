@@ -15,6 +15,7 @@ import {createFilesystemLocalTrainingResultPublication} from "../../../../module
 import type {TrainingResultFileIoRetirement} from "../../../../modules/application/ports/model";
 import {createOrganizationId} from "../../../../modules/contracts/organization";
 import {completeTrainingCleanup, observeTrainingResult, requireTrainingCandidate, trainingObservation, type TrainingObservationStage} from "./bounded-training-observation";
+import {boundedTrainingTempParent, BOUNDED_TRAINING_TEMP_PREFIX} from "./bounded-training-feature-profile";
 
 const GiB = 1024 ** 3, MiB = 1024 ** 2;
 // Existing generated, non-download Tiny input, not a quality benchmark.
@@ -73,7 +74,8 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
   // At most 64 small append-only diagnostic records; never replace old evidence.
   assert.ok((await readdir(evidenceDirectory)).length < 64, "Archive bounded test diagnostics before another run.");
   const evidenceFile = path.join(evidenceDirectory, randomBytes(16).toString("hex") + ".json");
-  const parent = await plainPath(path.resolve(".local-codex/t"), true), root = await realpath(await mkdtemp(path.join(parent, "bt-")));
+  const parent = await plainPath(boundedTrainingTempParent(process.env.LOCALAPPDATA), true);
+  const root = await realpath(await mkdtemp(path.join(parent, BOUNDED_TRAINING_TEMP_PREFIX)));
   const identity = await lstat(root, {bigint: true}), copyRoot = path.join(root, "copy"), outputRoot = path.join(root, "output"), selected = path.join(root, "selected");
   let hostCurrent = true, retired = false, sourceFactories = 0, outputFactories = 0, startup = "not-started";
   let phase: TrainingObservationStage = "configured";

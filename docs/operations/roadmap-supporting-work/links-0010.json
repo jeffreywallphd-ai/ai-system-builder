@@ -1648,6 +1648,25 @@
         "No raw errors, paths, user text or model accuracy checks are supplied. No further actual run is granted by this link.",
         "The latest failed trial proved its own cleanup only; earlier unknown owners remain retained. Another checkout may lack local records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-safe-stage-diagnostic-guard",
+      "work_criteria": [
+        "current-reviewed-observation",
+        "closed-final-cleanup-evidence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5a9265b21488c2a1c2ab0cde6e7d4ed6b92bb3c21cc567fb451cbaadbbf94e25",
+      "review_digest": "69f2ec295f61ed701a977abc928f7b6a995688ffbc61bb201ad724ffbecad1cd",
+      "scope": "At commit8f2d80ab, the first of two approved diagnostic admissions passed six source checks and independent review. Original limits/owners/records and v4 failure/cleanup requirements remain.",
+      "limitations": [
+        "Source admission support only. The actual diagnostic failed at dataset-loading and supplies no Task72/parent pass.",
+        "Actual diagnostic cleanup was separately observed. Only one further reviewed-fix verification is authorized and must prove that exact first cleanup.",
+        "No model accuracy, historical cleanup or third attempt is supplied. Another checkout may lack local records."
+      ]
     }
   ]
 }

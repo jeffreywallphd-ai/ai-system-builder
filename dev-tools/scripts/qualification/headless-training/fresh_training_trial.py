@@ -17,10 +17,14 @@ from control_plane.execution import execute
 from control_plane.records import Records
 from control_plane.work import Work
 
-GUARD_WORK = "headless-training-safe-stage-diagnostic-guard"
-TRIAL_WORK = "headless-bounded-training-safe-stage-diagnostic-20261127"
-DIRECTORY = ".local-codex/headless-training-safe-stage-diagnostic-20261127"
-AUTHORITY_REF = "user-approved-two-tiny-attempts-20261127-first-diagnostic"
+GUARD_WORK = "headless-training-short-cache-verification-guard"
+TRIAL_WORK = "headless-bounded-training-short-cache-verification-20261127"
+DIRECTORY = ".local-codex/headless-training-short-cache-verification-20261127"
+AUTHORITY_REF = "user-approved-two-tiny-attempts-20261127-second-verification"
+FIRST_DIAGNOSTIC_WORK = "headless-bounded-training-safe-stage-diagnostic-20261127"
+FIRST_DIAGNOSTIC_SOURCE = "cb0ef945d825c930651b9ed2788f99543c1acf235bd026118a7f4c19f6339dbc"
+FIRST_DIAGNOSTIC_RESULT = ".local-codex/headless-training-safe-stage-diagnostic-20261127/result.json"
+FIRST_DIAGNOSTIC_DIGEST = "97692f3bdd20e26944e6be49ef4da635faf6ec5c86c72e8f9c4fe995339ee4e0"
 PRIOR_CORRECTED_WORK = "headless-bounded-training-corrected-observation-20261127"
 PRIOR_FRESH_WORK = "headless-bounded-training-fresh-attempt-20261127-r2"
 RUNNER = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
@@ -28,8 +32,9 @@ PRIOR_WORK = "headless-bounded-training-feature"
 PRIOR = ["cb215d3c3409542e88860920fb889e4ad9baf8d9b859a1c3052f63a462084d41",
          "bf7abd87829766f0795638ab8fb8c7f098ba95c6aaaea34e289660bcf72bb093",
          "7a492d694beeb92e3259c9e16523dcc226fbc419c9537d70c223aa8b3fcc6129",
-         "06641de84df50609608ec6b3cd0e41d244281209ec4966c20eb0f4b39798c4bf"]
-PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK, PRIOR_CORRECTED_WORK)
+         "06641de84df50609608ec6b3cd0e41d244281209ec4966c20eb0f4b39798c4bf",
+         "1423b9672845ff345e8eebf9446353c49933eaff2d6e30a76a16eff2cc027105"]
+PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK, PRIOR_CORRECTED_WORK, FIRST_DIAGNOSTIC_WORK)
 LIMITS = {"process_memory_bytes": 2 * 1024**3, "job_memory_bytes": 4 * 1024**3,
           "maximum_active_processes": 32, "maximum_duration_ms": 690000,
           "task_duration_seconds": 600, "model_copy_bytes": 1024**2, "output_bytes": 4 * 1024**2}
@@ -193,6 +198,18 @@ def validate_prior_receipts(state):
              "fresh-trial.prior-receipt")
 
 
+def validate_first_diagnostic_cleanup(root):
+    result = read_record(root, root / FIRST_DIAGNOSTIC_RESULT)
+    need(digest(result) == FIRST_DIAGNOSTIC_DIGEST, "fresh-trial.diagnostic-proof-integrity")
+    need(result.get("source_digest") == FIRST_DIAGNOSTIC_SOURCE and result.get("source_stable") is True and
+         result.get("model_quality_tested") is False and result.get("status") == "failed", "fresh-trial.diagnostic-proof-source")
+    facts = result.get("diagnostic")
+    need(isinstance(facts, dict) and facts.get("schema") == "bounded-training-feature-diagnostic-v4" and
+         facts.get("modelQualityTested") is False and
+         all(facts.get(key) is True for key in ("workerRetirementConfirmed", "ownerClosureConfirmed",
+             "applicationCleanupConfirmed", "newRootRemoved")), "fresh-trial.diagnostic-proof-closure")
+
+
 def main():
     try:
         need(os.name == "nt", "fresh-trial.platform")
@@ -202,6 +219,7 @@ def main():
         state = Records(root).load(); guard = state["work_items"][GUARD_WORK]
         reviewed_guard(guard, Work(root).current_receipt(guard), source)
         validate_prior_receipts(state)
+        validate_first_diagnostic_cleanup(root)
         trial = state["work_items"][TRIAL_WORK]
         need(trial["status"] != "complete" and bool(trial.get("claim")) and
              any(t["task_id"] == "run-approved-fine-tuning" and t["coverage"] == "task-outcome" for t in trial["spec"]["task_targets"]),

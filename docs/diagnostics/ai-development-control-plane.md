@@ -3718,3 +3718,12 @@ category tests and related original-owner regressions supply source evidence onl
 Raw errors and private result data never enter these diagnostics. The failed
 corrected trial remains consumed; its version 3 evidence proved only failed
 terminal status/progress and new-root cleanup, not successful fine-tuning.
+
+The bounded Tiny qualification fixture uses a short, verified per-user Windows
+temporary root to avoid the installed local dataset reader's nested cache-path
+limit. A pure profile and denial tests bound the fresh root before effects;
+original worker/IO and root-identity cleanup requirements are unchanged. Second
+verification admission requires the exact first-diagnostic record and confirmed
+original cleanup before its one-use marker. The fixed source checks still exclude
+actual training; JSON-only probe observations diagnose the path failure and do
+not grant successful training or parent qualification.

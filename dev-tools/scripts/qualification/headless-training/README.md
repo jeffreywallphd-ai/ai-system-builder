@@ -110,3 +110,24 @@ conservatively. The existing consumed records stay untouched. The second is not
 implemented or admitted by this source: it needs separately reviewed current
 source and exact proof that the diagnostic worker, IO, App and root cleanup closed.
 No automatic retry, new model, accuracy test or limit increase is permitted.
+
+The first safe-stage diagnostic failed in dataset loading and proved all new
+cleanup. Separate tiny JSON-only reproductions (no Torch, model or Native Job)
+showed the unchanged installed reader failing with a 325-character cache lock
+path and passing with a 219-character path. The qualification wrapper had put
+HF_HOME under the deeply nested repository temporary root. A lock-only extended
+path experiment then failed later in Arrow cache writing, so no SDK patch is used.
+
+The fixture now creates its fresh `bt-` root under the verified local per-user
+Windows Temp folder. Its pure profile budgets the complete new root at 60
+characters before effects. Every parent still passes the existing no-alias
+plain-path check. Original child/root identity, worker/IO retirement and cleanup
+checks remain. It does not change global TEMP, model contents, locks, runtime
+limits or production settings. The child keeps its own bounded cache there.
+
+Only the second approved verification is available in this guard. Before any
+consumption, it reads the fixed first-diagnostic result record, checks its exact
+canonical digest/source/stability, and requires original worker, IO, App and root
+cleanup facts. All five failed receipts retain their original Work ownership and
+conservative charges. Missing, changed or incomplete proof denies; there is no
+third attempt, reset or historical cleanup. Source tests never start a model.

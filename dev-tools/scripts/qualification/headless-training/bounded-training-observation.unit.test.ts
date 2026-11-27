@@ -1,11 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {completeTrainingCleanup, observeTrainingResult, requireTrainingCandidate, trainingObservation, type TrainingObservationStage} from "./bounded-training-observation";
+import {boundedTrainingTempParent, BOUNDED_TRAINING_TEMP_PREFIX} from "./bounded-training-feature-profile";
 import type {ModelTrainingResult} from "../../../../modules/contracts/model/model-training";
 import type {ApprovedLocalTrainingCandidateReview} from "../../../../modules/application/ports/model/approved-local-model-training.port";
 
 const result = {runId: "task-id", status: "succeeded", reviewPending: true,
   generatedModelCandidate: {generatedFromRunId: "pipeline-id"}} as ModelTrainingResult;
+test("qualification cache uses only a short canonical local Windows temp parent", () => {
+  assert.equal(boundedTrainingTempParent("C:\\Users\\example\\AppData\\Local"), "C:\\Users\\example\\AppData\\Local\\Temp");
+  const boundary = "C:\\" + "a".repeat(42);
+  assert.equal(boundedTrainingTempParent(boundary).length + 1 + BOUNDED_TRAINING_TEMP_PREFIX.length + 6, 60);
+  for (const value of [undefined, null, {}, "", "relative", "C:relative", "C:\\bad:stream", "C:/Users/example", "\\\\server\\share",
+    "\\\\?\\C:\\Users", "C:\\one\\..\\two", "C:\\bad\u0000", boundary + "a"]) {
+    assert.throws(() => boundedTrainingTempParent(value), /short local Windows temporary folder/);
+  }
+});
 function candidate() {
   return {kind: "ready", requestId: "task-id", history: {requestId: "task-id"},
     execution: {runId: "pipeline-id", durationMs: 1, hardware: {devices: ["cpu"]}},
