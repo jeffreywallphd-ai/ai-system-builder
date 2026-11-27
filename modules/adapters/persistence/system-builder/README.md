@@ -1,5 +1,17 @@
 # Saved System Builder and Headless plan persistence
 
+Trained-model Save uses a separate version-5 stored review, with independent
+trusted new/stored flags. It requires a Save operation and all corresponding
+training/download/Context bindings in mixed plans. Older formats stay unchanged;
+legacy Model permission readers and step wrappers keep refusing this family.
+Current candidate observation is prepared outside transactions. Validators use
+only captured facts and accepted original actor/client/workspace/host/task/proposal
+point reads in the supplied owner. The private Save step enforces exact current
+revision/order/deadline and derives a distinct scope-bound effect. Authorization
+is read-only; a separate publication fence serializes the Model transaction with
+approval changes. Replay performs no fence mutation. Keep the v5 reader on
+rollback, disable its gates, and preserve all records. No Root is activated here.
+
 Private training proposals use a fixed complete Model-summary member order.
 Training binding reads validate passive metadata first, then require an exact
 request-plus-inputs SHA-256 match. They recognize at most four complete encodings:

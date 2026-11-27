@@ -3869,3 +3869,20 @@ can outlive write consent but never grants deletion of source staging, registere
 Models or historical data. Issued/uncertain publication and unknown IO deny it.
 This composes ADR-0049 account/dependency trust, not protected-service isolation
 or reserved quota. Product activation and actual-host qualification remain pending.
+
+Trained Save stored reviews use a separate strict version 5. Require explicit
+trusted new/stored/execution gates; training/download flags cannot activate it.
+Require the Save operation and all exact mixed-plan bindings; reject downgraded,
+missing, extra or mismatched records. Old formats and wrappers retain refusal.
+The private permission reader returns finite requirements under current exact
+target authority, never independent grants or source file lists.
+
+Original candidate observation is outside retriable metadata work. Capture the
+original callback and passive reply before further permission waits; supplied
+owner validation rechecks accepted actor/client/workspace/host/task/proposal
+lineage and the selected candidate digest. Current App rehash/copy still owns
+actual content proof. Separate pure authorization from the mutation fence;
+publication writes the existing approval fence in its owning transaction, while
+inspection/reconciliation does no fence mutation. Match the detached run-step
+frame to the prepared exact effect and refuse unrelated transient payloads.
+Private protocol tests supply no public activation, physical-model or parent pass.

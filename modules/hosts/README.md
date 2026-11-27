@@ -8,6 +8,15 @@ cleanup, independently of write expiry and still subject to the App closure guar
 Issued/uncertain publication or unknown IO keeps bytes retained. The original
 staging is never deleted here. Product host/Root qualification remains pending.
 
+Private trained Save can now use its own v5 stored review and approved step.
+Original current-candidate reads happen before metadata transactions; validators
+only compare captured facts and accepted lineage through the supplied owner.
+Separate trusted gates control new proposals, stored decisions and execution.
+Older wrappers refuse whole Save-containing plans. Permission reads and replay
+are read-only; a distinct owning-transaction fence serializes publication against
+approval changes. The run-step frame is copied and matched to the exact prepared
+effect. No public product Root is activated by this private protocol.
+
 The private original training task book can bind one separate Save session.
 It rechecks accepted actor/client/workspace/host/task/proposal lineage and
 combines that lookup with fresh exact Save controls. The original App factory

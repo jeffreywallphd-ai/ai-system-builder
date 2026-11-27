@@ -268,15 +268,21 @@ export async function validateHeadlessPlanSavedSources(
   validateModelDownload?: (request: import("../../../contracts/headless").HeadlessModelDownloadPlanRequest) => Promise<true | false | "stale">,
   validateModelReferenceSave?: (request: import("../../../contracts/headless").HeadlessModelReferenceSavePlanRequest) => Promise<true | false | "stale">,
   validateModelTraining?: (request: import("../../../contracts/headless").HeadlessModelTrainingPlanRequest) => Promise<true | false | "stale">,
+  validateTrainingSave?: (request: import("../../../contracts/headless").HeadlessModelTrainingSavePlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   // An existing download opt-in or inline preview cannot enable training.
   if (requests.some(request => request.operation === "models.train") && typeof validateModelTraining !== "function") return false;
+  if (requests.some(request => request.operation === "models.save-training") && typeof validateTrainingSave !== "function") return false;
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
-    // Proposal codecs cannot enable the original-owner Save execution capability.
-    if (operation === "models.save-training") return false;
+    if (operation === "models.save-training") {
+      if (typeof validateTrainingSave !== "function") return false;
+      const eligible = await validateTrainingSave(request);
+      if (!isCurrent() || eligible !== true) return isCurrent() ? eligible : false;
+      continue;
+    }
     if (operation === "models.train") {
       if (typeof validateModelTraining !== "function") return false;
       const eligible = await validateModelTraining(request);

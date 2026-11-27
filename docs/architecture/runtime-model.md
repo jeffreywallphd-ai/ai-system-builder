@@ -4093,3 +4093,28 @@ require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does
 not independently requalify file contents or IO retirement, delete files, grant
 consent or activate product roots. Full Task71 and host qualification remain.
+
+The separate trained Save protocol stores version-5 reviews with explicit
+`allowNew`/`allowStored` gates. Version 5 requires a trained Save and retains all
+required training/download/Context bindings for mixed plans. Versions 1-4 keep
+their existing formats and defaults; old Model permission readers still refuse
+training/Save. The private trained-Save permission reader exposes finite flags
+under current exact target authority, never file inventory or a permission grant.
+
+Original current-candidate review occurs outside proposal transactions. Capture
+original methods/data and retain only exact request/proposal facts in the returned
+validator; supplied organization-owner point reads recheck accepted original
+actor/client/workspace/host/task/proposal lineage. Missing or changed support has
+no cache, generic task or runtime fallback. The stored digest remains a reviewed
+identity; actual App Save must rehash the current candidate before copying.
+
+Only `prepareStructuredHeadlessPlanStepWithTrainingSave` admits the new private
+step. Legacy/download/training wrappers explicitly discard its gate and refuse
+the entire containing plan. Exact revision/order/deadline/actor/source checks
+derive a distinct scope-bound effect. Authorization reads stay pure; a separate
+`fenceSaveOwned` writes the existing approval execution fence only in the owning
+publication transaction. Inspection and lost-reply reconciliation do not call
+that fence. The run-step frame is detached before waits and matched to the exact
+prepared host/workspace/fingerprint/revision/ordinal; unrelated transient text
+is refused. Replies use the closed path-free trained-Model reference codec.
+Desktop/managed transport and product Root wiring and qualification remain pending.

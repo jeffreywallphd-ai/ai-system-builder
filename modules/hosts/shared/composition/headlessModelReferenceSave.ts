@@ -8,20 +8,81 @@ import {isHeadlessReadCurrent} from "./headlessReadCurrent";
 import {isDeepStrictEqual, types} from "node:util";
 import {createHash} from "node:crypto";
 import type {HeadlessPlanReviewTarget} from "../../../application/ports/system-builder/headless-build-plan-review.port";
-import {readHeadlessModelReferenceSavePlanRequest, readHeadlessPlanStepResult, type HeadlessBuildPlanRequest,
+import {readHeadlessModelReferenceSavePlanRequest, readHeadlessPlanStepRequest, readHeadlessPlanStepResult, type HeadlessBuildPlanRequest,
+  HEADLESS_MAX_BUILD_PLAN_STEPS,
+  readHeadlessModelTrainingSavePlanRequest, type HeadlessModelTrainingSavePlanRequest,
   type HeadlessModelReferenceSavePlanRequest, type HeadlessPlanStepRequest} from "../../../contracts/headless";
 import {copyHeadlessModelPlanData} from "./headlessModelDownloadReview";
-import type {prepareStructuredHeadlessPlanStepWithModels} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import type {prepareStructuredHeadlessPlanStepWithModels, prepareStructuredHeadlessPlanStepWithTrainingSave} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import {readStrictPassiveRecord} from "../../../contracts/shared";
 import {readStructuredTrainingPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
 import type {ApprovedLocalTrainingSaveSession, ApprovedLocalTrainingSavePreparation, ReviewedGeneratedModelControl} from "../../../application/ports/model";
-import {observeMalformedOriginalTrainingSaveReturn, type OriginalTrainingSaveQueryResult} from "./headlessModelTrainingTasks";
+import {observeMalformedOriginalTrainingSaveReturn, type OriginalTrainingSaveQueryResult,
+  type OriginalTrainingCandidateQueryResult} from "./headlessModelTrainingTasks";
 
 export type HeadlessModelReferenceSaveOwner = Pick<ModelDownloadTasksUseCase, "peekApprovedSourceRegistration">;
 type PreparedModelReferenceStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStepWithModels>>>, {kind: "model-reference"}>;
 function freeze<T>(value: T): T {
   if (value && typeof value === "object") {for (const child of Object.values(value)) freeze(child); Object.freeze(value);}
   return value;
+}
+function captureTrainingSaveMethod<F extends (...args: any[]) => any>(owner: object, key: string): F {
+  if (!owner || types.isProxy(owner)) throw new Error("The original trained Model Save method is unavailable.");
+  const d = Object.getOwnPropertyDescriptor(owner, key);
+  if (!d || !("value" in d) || typeof d.value !== "function" || types.isProxy(d.value))
+    throw new Error("The original trained Model Save method is unavailable.");
+  return ((...args: unknown[]) => Reflect.apply(d.value, owner, args)) as F;
+}
+
+/** Current original candidate observation occurs outside metadata transactions.
+ * Only frozen request/proposal facts enter the returned point-read validator. */
+export async function prepareHeadlessModelTrainingSaveReviews(options: {
+  readonly target: HeadlessPlanReviewTarget; readonly requests: readonly HeadlessBuildPlanRequest[];
+  readonly isCurrent: () => boolean; readonly stillAllowed: () => Promise<boolean>;
+  readonly reviewOriginalTask: (request: HeadlessModelTrainingSavePlanRequest) => Promise<OriginalTrainingCandidateQueryResult>;
+}) {
+  const unavailable = {ok: false, code: "headless.unavailable"} as const;
+  const forbidden = {ok: false, code: "headless.forbidden"} as const;
+  try {
+    const currentMethod = captureTrainingSaveMethod<() => boolean>(options, "isCurrent"),
+      allowed = captureTrainingSaveMethod<() => Promise<boolean>>(options, "stillAllowed"),
+      review = captureTrainingSaveMethod<typeof options.reviewOriginalTask>(options, "reviewOriginalTask");
+    const current = () => isHeadlessReadCurrent(currentMethod);
+    const requests = copyHeadlessModelPlanData(options.requests) as HeadlessBuildPlanRequest[];
+    const selected = requests.flatMap((request, index) => request.operation === "models.save-training" ? [{request, step: index + 1}] : []);
+    if (!selected.length || requests.length > HEADLESS_MAX_BUILD_PLAN_STEPS) return forbidden;
+    const first = selected[0], target = captureModelTrainingSaveEffect({key: first.request.input.idempotencyKey, target: options.target,
+      approvalRevision: 1, step: first.step, taskId: first.request.input.taskId, candidateDigest: first.request.input.candidateDigest, name: first.request.input.name}).target;
+    const prepared: {request: HeadlessModelTrainingSavePlanRequest; proposalDigest: string}[] = [];
+    for (const {request: raw} of selected) {
+      const parsed = readHeadlessModelTrainingSavePlanRequest(raw, target.hostIncarnationId);
+      if (!parsed.ok || parsed.request.input.workspaceId !== target.scope.workspaceId || !current() || await allowed() !== true || !current()) return forbidden;
+      const request = freeze(parsed.request);
+      const outer = readStrictPassiveRecord(copyHeadlessModelPlanData(await review(request)), ["ok", "value", "code"]);
+      if (outer.ok !== true || Object.keys(outer).length !== 2) return unavailable;
+      const value = readStrictPassiveRecord(outer.value, ["kind", "requestId", "workspaceId", "history", "retainedFiles", "candidateDigest", "execution"]);
+      if (Object.keys(value).length !== (value.execution === undefined ? 6 : 7)) return unavailable;
+      const reply = {ok: true, value} as unknown as Extract<OriginalTrainingCandidateQueryResult, {ok: true}>;
+      // The callback is the configured original task book, never cached history
+      // or caller-supplied candidate data. File lists stay private and unstored.
+      if (!reply || reply.ok !== true || reply.value.kind !== "ready") return unavailable;
+      const candidate = reply.value, history = candidate.history;
+      if (candidate.requestId !== request.input.taskId || candidate.workspaceId !== target.scope.workspaceId ||
+        candidate.candidateDigest !== request.input.candidateDigest || history?.kind !== "ready" ||
+        history.requestId !== candidate.requestId || history.workspaceId !== candidate.workspaceId ||
+        candidate.retainedFiles?.verification !== "sha256-current-local-v1" ||
+        typeof history.provenance?.proposalDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(history.provenance.proposalDigest)) return unavailable;
+      if (!current() || await allowed() !== true || !current()) return forbidden;
+      prepared.push({request, proposalDigest: history.provenance.proposalDigest});
+    }
+    return {ok: true, isCurrent: current,
+      async validate(partition: StructuredDocumentStore, request: HeadlessModelTrainingSavePlanRequest) {
+        const selected = prepared.find(row => isDeepStrictEqual(row.request, request));
+        if (!selected || !current() || partition.organizationId !== target.scope.organizationId) return false;
+        const lineage = await readStructuredTrainingPlanTaskLineage(partition, target.scope, target.hostIncarnationId, request.input.taskId);
+        return !!lineage && lineage.proposalDigest === selected.proposalDigest && current();
+      }} as const;
+  } catch {return unavailable;}
 }
 
 /** Cached owner access is outside proposal transactions. The returned validator
@@ -181,24 +242,21 @@ export function composeHeadlessTrainedModelSave(options: {
   readonly documents: StructuredDocumentStore; readonly rootDirectory: string;
   readonly effect: ModelTrainingSaveEffect; readonly isCurrent: () => boolean;
   readonly authorizeExactSave: (owner: StructuredDocumentStore, effect: ModelTrainingSaveEffect) => Promise<boolean>;
+  /** Approval serialization only at publication. Authorization/inspection must
+   * remain metadata-read-only and must not call this mutation fence. */
+  readonly fenceSaveOwned: (owner: StructuredDocumentStore, effect: ModelTrainingSaveEffect) => Promise<boolean>;
   readonly bindOriginalTask: (effect: ModelTrainingSaveEffect, control: ReviewedGeneratedModelControl) => Promise<OriginalTrainingSaveQueryResult>;
   readonly now?: () => number;
 }) {
-  const {documents, rootDirectory, isCurrent, authorizeExactSave, bindOriginalTask} = options;
+  const {documents, rootDirectory, isCurrent, authorizeExactSave, fenceSaveOwned, bindOriginalTask} = options;
   const effect = captureModelTrainingSaveEffect(options.effect), now = options.now ?? Date.now;
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction ||
-    [isCurrent, authorizeExactSave, bindOriginalTask, now].some(f => typeof f !== "function" || types.isProxy(f)))
+    [isCurrent, authorizeExactSave, fenceSaveOwned, bindOriginalTask, now].some(f => typeof f !== "function" || types.isProxy(f)))
     throw new Error("Trained Model Save requires the original owner and exact consent.");
   const transaction = documents.runInOwnedTransaction.bind(documents), current = () => isHeadlessReadCurrent(isCurrent);
   const failed = () => new Error("The original trained Model Save is unavailable.");
   const need = (condition: unknown) => {if (condition !== true) throw failed();};
   const record = (raw: unknown, keys: readonly string[]) => {if (types.isProxy(raw)) throw failed(); return readStrictPassiveRecord(raw, keys);};
-  function capture<F extends (...args: any[]) => any>(owner: object, key: string): F {
-    need(!!owner && !types.isProxy(owner));
-    const d = Object.getOwnPropertyDescriptor(owner, key);
-    need(!!d && "value" in d && typeof d.value === "function" && !types.isProxy(d.value));
-    return ((...args: unknown[]) => Reflect.apply(d!.value, owner, args)) as F;
-  }
   const retained: {kind: "bind" | "write" | "cleanup" | "sync"; original: unknown; settled: boolean; uncertain: boolean; observation?: unknown}[] = [];
   let attempted = false, publicationIssued = false, fenceAttempted = false, cleanupAttempted = false, cleaned = false;
   let session: ApprovedLocalTrainingSaveSession | undefined, write: ApprovedLocalTrainingSaveSession["write"] | undefined,
@@ -278,14 +336,15 @@ export function composeHeadlessTrainedModelSave(options: {
       session = reply.value as ApprovedLocalTrainingSaveSession;
       try {
         need(Object.keys(record(session, ["write", "fence", "isCurrent", "inspect", "discard"])).length === 5);
-        fence = capture(session, "fence"); discard = capture(session, "discard");
-        write = capture(session, "write"); sourceCurrent = capture(session, "isCurrent");
+        fence = captureTrainingSaveMethod(session, "fence"); discard = captureTrainingSaveMethod(session, "discard");
+        write = captureTrainingSaveMethod(session, "write"); sourceCurrent = captureTrainingSaveMethod(session, "isCurrent");
       } catch {unknown(session, "sync"); throw failed();}
       need(current());
       const preparation = freeze(copyHeadlessModelPlanData(await invoke("write", write))) as ApprovedLocalTrainingSavePreparation;
       need(sourceLive());
       const result = await transaction(async owner => {
         const partition = await authorized(owner); need(!!partition && sourceLive());
+        need(await fenceSaveOwned(owner, effect) === true && sourceLive());
         // This latch is monotonic across callback retries and lost replies.
         publicationIssued = true;
         const saved = await commitStructuredModelTrainingSave(partition!, rootDirectory, effect, preparation, now());
@@ -302,4 +361,43 @@ export function composeHeadlessTrainedModelSave(options: {
       return;
     }
   }});
+}
+
+type PreparedTrainingSaveStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStepWithTrainingSave>>>, {kind: "model-training-save"}>;
+/** The exact separately approved step is the only publication entry point. */
+export async function runPreparedHeadlessTrainedModelSave(options: {
+  readonly documents: StructuredDocumentStore; readonly rootDirectory: string; readonly prepared: PreparedTrainingSaveStep;
+  readonly request: HeadlessPlanStepRequest; readonly canUse: () => Promise<boolean>;
+  readonly bindOriginalTask: Parameters<typeof composeHeadlessTrainedModelSave>[0]["bindOriginalTask"];
+}) {
+  const forbidden = {result: {ok: false, code: "headless.forbidden"}} as const;
+  const unconfirmed = {result: {ok: false, code: "headless.operation-unconfirmed"}} as const;
+  try {
+    const {prepared, documents, rootDirectory} = options;
+    const effect = captureModelTrainingSaveEffect(prepared.effect), expiresAt = prepared.expiresAt;
+    const isCurrent = captureTrainingSaveMethod<PreparedTrainingSaveStep["isCurrent"]>(prepared, "isCurrent"),
+      authorizeExactSave = captureTrainingSaveMethod<PreparedTrainingSaveStep["authorizeSaveOwned"]>(prepared, "authorizeSaveOwned"),
+      fenceSaveOwned = captureTrainingSaveMethod<PreparedTrainingSaveStep["fenceSaveOwned"]>(prepared, "fenceSaveOwned"),
+      stillAllowed = captureTrainingSaveMethod<PreparedTrainingSaveStep["stillAllowed"]>(prepared, "stillAllowed"),
+      publishIfCurrent = captureTrainingSaveMethod<PreparedTrainingSaveStep["publishIfCurrent"]>(prepared, "publishIfCurrent"),
+      canUse = captureTrainingSaveMethod<typeof options.canUse>(options, "canUse"),
+      bindOriginalTask = captureTrainingSaveMethod<typeof options.bindOriginalTask>(options, "bindOriginalTask");
+    const decoded = readHeadlessPlanStepRequest(options.request, effect.target.hostIncarnationId);
+    if (!decoded.ok || decoded.request.transient || !Number.isSafeInteger(expiresAt) || expiresAt <= 0) return forbidden;
+    const request = decoded.request, selected = request.input;
+    if (selected.workspaceId !== effect.target.scope.workspaceId || selected.fingerprint !== effect.target.fingerprint ||
+      selected.approvalRevision !== effect.approvalRevision || selected.step !== effect.step) return forbidden;
+    // Construct the inert owner now: its original transaction method and exact
+    // effect are captured before a permission callback can replace shared data.
+    const owner = composeHeadlessTrainedModelSave({documents, rootDirectory, effect, isCurrent,
+      authorizeExactSave, fenceSaveOwned, bindOriginalTask});
+    if (!isHeadlessReadCurrent(isCurrent) || await canUse() !== true || !isHeadlessReadCurrent(isCurrent)) return forbidden;
+    const saved = await owner.save();
+    if (!isHeadlessReadCurrent(isCurrent) || await canUse() !== true || !isHeadlessReadCurrent(isCurrent) || await stillAllowed() !== true) return forbidden;
+    if (!saved) return unconfirmed;
+    const {fingerprint, approvalRevision, step} = request.input;
+    return {result: readHeadlessPlanStepResult({ok: true, value: {kind: saved.created ? "committed" : "replayed",
+      operation: "models.save-training", reference: saved.reference, fingerprint, approvalRevision, step, expiresAt}},
+      request.input, {allowLocalFileSave: false, allowModelTrainingSave: true}), publishIfCurrent};
+  } catch {return unconfirmed;}
 }

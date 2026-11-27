@@ -38,6 +38,9 @@ type RecordValue = {readonly version: 1; readonly proposal: unknown; readonly st
     readonly modelDownloads: readonly ModelDownloadReviewBinding[]; readonly contextModels?: readonly ContextPlanModelBinding[]} |
   {readonly version: 4; readonly proposal: unknown; readonly state: HeadlessPlanReviewState;
     readonly modelTrainings: readonly ModelTrainingReviewBinding[];
+    readonly modelDownloads?: readonly ModelDownloadReviewBinding[]; readonly contextModels?: readonly ContextPlanModelBinding[]} |
+  {readonly version: 5; readonly proposal: unknown; readonly state: HeadlessPlanReviewState;
+    readonly modelTrainings?: readonly ModelTrainingReviewBinding[];
     readonly modelDownloads?: readonly ModelDownloadReviewBinding[]; readonly contextModels?: readonly ContextPlanModelBinding[]};
 
 /** Metadata only inside the owned transaction. Provider IO must have finished
@@ -56,6 +59,8 @@ export interface ModelTrainingReviewOptions {
   readonly bind?: BindModelTrainingReviews;
   readonly allowStored?: boolean;
 }
+/** Separate trusted Save gates. Training/download support cannot enable them. */
+export interface ModelTrainingSaveReviewOptions {readonly allowNew?: boolean; readonly allowStored?: boolean;}
 
 function readContextModels(value: unknown, requests: readonly HeadlessBuildPlanRequest[]): readonly ContextPlanModelBinding[] | undefined {
   try {
@@ -93,10 +98,12 @@ export function createStructuredHeadlessPlanReviewRepository(
   allowStoredModelDownloads = false,
   allowModelReferenceSave = false,
   training?: ModelTrainingReviewOptions,
+  trainingSave?: ModelTrainingSaveReviewOptions,
 ): HeadlessPlanReviewRepository {
   const proposedTrainingBinder = training?.bind;
   const bindModelTrainings = typeof proposedTrainingBinder === "function" ? proposedTrainingBinder : undefined;
   const allowStoredModelTraining = training?.allowStored === true;
+  const allowNewTrainingSave = trainingSave?.allowNew === true, allowStoredTrainingSave = trainingSave?.allowStored === true;
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
   const runInOwnedTransaction = documents.runInOwnedTransaction.bind(documents);
@@ -145,13 +152,15 @@ export function createStructuredHeadlessPlanReviewRepository(
         allowDatasetResultSave && Boolean(validateNewProposal), allowContextPackGeneration && Boolean(validateNewProposal),
         allowContextRagGeneration && Boolean(validateNewProposal), allowContextResultSave && Boolean(validateNewProposal),
         allowContextQuery && Boolean(validateNewProposal), Boolean(bindModelDownloads && validateNewProposal),
-        allowModelReferenceSave && Boolean(validateNewProposal), Boolean(bindModelTrainings && validateNewProposal));
+        allowModelReferenceSave && Boolean(validateNewProposal), Boolean(bindModelTrainings && validateNewProposal),
+        allowNewTrainingSave && Boolean(validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
       return run(input, "propose", async (store, target, key, requireFresh, owningTransaction) => {
         const existing = await readReview(store, target, key);
         if (existing?.requests.some(request => request.operation === "models.download") && !bindModelDownloads) return denied;
         if (existing?.requests.some(request => request.operation === "models.train") && !bindModelTrainings) return denied;
         if (existing?.requests.some(request => request.operation === "models.save-download") && !allowModelReferenceSave) return denied;
+        if (existing?.requests.some(request => request.operation === "models.save-training") && !allowNewTrainingSave) return denied;
         if (existing) return requireFresh(existing.state.expiresAt) ? snapshot(existing) : expired;
         const eligible = validateNewProposal ? await validateNewProposal(store) : true;
         if (eligible === "stale") return { ok: false, code: "stale" } as const;
@@ -183,7 +192,10 @@ export function createStructuredHeadlessPlanReviewRepository(
         const raw = {
           ...proposal.scope, steps: proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })),
         };
-        const record: RecordValue = modelTrainings ? {version: 4, proposal: raw, state, modelTrainings,
+        const hasTrainingSave = proposal.requests.some(request => request.operation === "models.save-training");
+        const record: RecordValue = hasTrainingSave ? {version: 5, proposal: raw, state,
+          ...(modelTrainings ? {modelTrainings} : {}), ...(modelDownloads ? {modelDownloads} : {}), ...(contextModels ? {contextModels} : {})}
+          : modelTrainings ? {version: 4, proposal: raw, state, modelTrainings,
           ...(modelDownloads ? {modelDownloads} : {}), ...(contextModels ? {contextModels} : {})} : modelDownloads ? {version: 3, proposal: raw, state, modelDownloads,
           ...(contextModels ? {contextModels} : {})} : contextModels ? {version: 2, proposal: raw, state, contextModels} : {version: 1, proposal: raw, state};
         await store.writeDocument(REVIEWS, key, record, { expectedRevision: 0 });
@@ -201,6 +213,7 @@ export function createStructuredHeadlessPlanReviewRepository(
         if (review.requests.some(request => request.operation === "models.download") && !bindModelDownloads && allowStoredModelDownloads !== true) return denied;
         if (review.requests.some(request => request.operation === "models.train") && !bindModelTrainings && !allowStoredModelTraining) return denied;
         if (review.requests.some(request => request.operation === "models.save-download") && !allowModelReferenceSave) return denied;
+        if (review.requests.some(request => request.operation === "models.save-training") && !allowNewTrainingSave && !allowStoredTrainingSave) return denied;
         return requireFresh(review.state.expiresAt) ? snapshot(review) : expired;
       });
     },
@@ -211,6 +224,7 @@ export function createStructuredHeadlessPlanReviewRepository(
         if (review.requests.some(request => request.operation === "models.download") && !bindModelDownloads && allowStoredModelDownloads !== true) return denied;
         if (review.requests.some(request => request.operation === "models.train") && !bindModelTrainings && !allowStoredModelTraining) return denied;
         if (review.requests.some(request => request.operation === "models.save-download") && !allowModelReferenceSave) return denied;
+        if (review.requests.some(request => request.operation === "models.save-training") && !allowNewTrainingSave && !allowStoredTrainingSave) return denied;
         if (!requireFresh(review.state.expiresAt)) return expired;
         const previous = review.state;
         const outcome = input.update({ ...previous });
@@ -243,10 +257,11 @@ export function createStructuredHeadlessStoredPlanReviewRepository(
   allowModelDownloads = false,
   allowModelReferenceSave = false,
   allowModelTraining = false,
+  allowModelTrainingSave = false,
 ): Pick<HeadlessPlanReviewRepository, "read" | "decide"> {
   const store = createStructuredHeadlessPlanReviewRepository(documents, policy, now, undefined,
     false, false, false, false, false, false, undefined, false, false, undefined, allowModelDownloads === true, allowModelReferenceSave === true,
-    {allowStored: allowModelTraining === true});
+    {allowStored: allowModelTraining === true}, {allowStored: allowModelTrainingSave === true});
   return {read: store.read, decide: store.decide};
 }
 
@@ -266,10 +281,11 @@ function sha256(value: string) { return createHash("sha256").update(value, "utf8
 
 function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowLocalFileSave: boolean, allowProviderFileSave = false,
   allowLocalDatasetPreparation = false, allowDatasetResultSave = false, allowContextPackGeneration = false, allowContextRagGeneration = false,
-  allowContextResultSave = false, allowContextQuery = false, allowModelDownload = false, allowModelReferenceSave = false, allowModelTraining = false) {
+  allowContextResultSave = false, allowContextQuery = false, allowModelDownload = false, allowModelReferenceSave = false, allowModelTraining = false,
+  allowModelTrainingSave = false) {
   const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId,
     { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration,
-      allowContextResultSave, allowContextQuery, allowModelDownload, allowModelReferenceSave, allowModelTraining });
+      allowContextResultSave, allowContextQuery, allowModelDownload, allowModelReferenceSave, allowModelTraining, allowModelTrainingSave });
   if (proposal.ok && proposal.scope.workspaceId === target.scope.workspaceId &&
       sha256(JSON.stringify(proposal.preview)) === target.fingerprint) return proposal;
 }
@@ -279,24 +295,30 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
   if (!document) return;
   const raw = readStrictPassiveRecord(document.value, ["version", "proposal", "state", "contextModels", "modelDownloads", "modelTrainings"]);
   const {version, proposal, state} = raw;
-  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true, true, version === 3 || version === 4, true, version === 4);
+  const parsed = decodeProposal(proposal, target, true, true, true, true, true, true, true, true,
+    version === 3 || version === 4 || version === 5, true, version === 4 || version === 5, version === 5);
   if (!parsed) throw new Error("Stored plan review is unavailable.");
   const normalizedState = readState(state, document.revision, parsed.requests.length);
   const hasRag = parsed.requests.some(request => request.operation === "context.generate-rag");
   const hasDownloads = parsed.requests.some(request => request.operation === "models.download");
   const hasTraining = parsed.requests.some(request => request.operation === "models.train");
-  const contextModels = version === 2 || (version === 3 || version === 4) && hasRag ? readContextModels(raw.contextModels, parsed.requests) : undefined;
-  const modelDownloads = version === 3 || version === 4 && hasDownloads ? readModelDownloadReviewBindings(raw.modelDownloads, parsed.requests) : undefined;
-  const modelTrainings = version === 4 && hasTraining ? readModelTrainingReviewBindings(raw.modelTrainings, parsed.requests) : undefined;
+  const hasTrainingSave = parsed.requests.some(request => request.operation === "models.save-training");
+  const contextModels = version === 2 || (version === 3 || version === 4 || version === 5) && hasRag ? readContextModels(raw.contextModels, parsed.requests) : undefined;
+  const modelDownloads = version === 3 || (version === 4 || version === 5) && hasDownloads ? readModelDownloadReviewBindings(raw.modelDownloads, parsed.requests) : undefined;
+  const modelTrainings = (version === 4 || version === 5) && hasTraining ? readModelTrainingReviewBindings(raw.modelTrainings, parsed.requests) : undefined;
   if ((version === 1 && ("contextModels" in raw || hasRag)) ||
-      (version !== 3 && version !== 4 && "modelDownloads" in raw) ||
-      (version !== 4 && "modelTrainings" in raw) ||
+      (version !== 3 && version !== 4 && version !== 5 && "modelDownloads" in raw) ||
+      (version !== 4 && version !== 5 && "modelTrainings" in raw) ||
       (version === 2 && !contextModels) ||
       (version === 3 && (!modelDownloads || (hasRag ? !contextModels : "contextModels" in raw))) ||
       (version === 4 && (!modelTrainings || (hasDownloads ? !modelDownloads : "modelDownloads" in raw) ||
         (hasRag ? !contextModels : "contextModels" in raw))) ||
-      (version !== 1 && version !== 2 && version !== 3 && version !== 4)) throw new Error("Stored plan review is unavailable.");
-  const record: RecordValue = version === 4 && modelTrainings ? {version: 4, proposal, state: normalizedState, modelTrainings,
+      (version === 5 && (!hasTrainingSave || (hasTraining ? !modelTrainings : "modelTrainings" in raw) ||
+        (hasDownloads ? !modelDownloads : "modelDownloads" in raw) || (hasRag ? !contextModels : "contextModels" in raw))) ||
+      (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5)) throw new Error("Stored plan review is unavailable.");
+  const record: RecordValue = version === 5 ? {version: 5, proposal, state: normalizedState,
+    ...(modelTrainings ? {modelTrainings} : {}), ...(modelDownloads ? {modelDownloads} : {}), ...(contextModels ? {contextModels} : {})}
+    : version === 4 && modelTrainings ? {version: 4, proposal, state: normalizedState, modelTrainings,
     ...(modelDownloads ? {modelDownloads} : {}), ...(contextModels ? {contextModels} : {})} : version === 3 && modelDownloads ? {version: 3, proposal, state: normalizedState, modelDownloads,
     ...(contextModels ? {contextModels} : {})} : version === 2 && contextModels ? {version: 2, proposal, state: normalizedState, contextModels}
       : {version: 1, proposal, state: normalizedState};
@@ -310,7 +332,7 @@ export async function readStructuredHeadlessPlanModelPermission(partition: Struc
   const review = await readReview(partition, target, planKey(target));
   // Existing public approval compositions have no training permission owner.
   // A stored private preview cannot silently activate that missing policy.
-  if (review?.requests.some(request => request.operation === "models.train")) return;
+  if (review?.requests.some(request => request.operation === "models.train" || request.operation === "models.save-training")) return;
   return review ? {requiresModelRead: review.requests.some(request => request.operation === "context.generate-rag" || request.operation === "context.query"),
     requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result"),
     ...(review.requests.some(request => request.operation === "models.download" || request.operation === "models.save-download") ? {requiresModelWrite: true as const} : {})} : undefined;
@@ -329,8 +351,10 @@ export async function readStructuredHeadlessTrainingPlanReview(partition: Struct
     const target = copyBoundedPassiveData(rawTarget) as HeadlessPlanReviewTarget;
     if (!validTarget(target) || partition.organizationId !== target.scope.organizationId || await stillAllowed() !== true) return;
     const review = await readReview(partition, target, planKey(target));
-    if (!review || review.record.version !== 4 || await stillAllowed() !== true) return;
-    return structuredClone({requests: review.requests, bindings: review.record.modelTrainings, state: review.state});
+    if (!review) return;
+    const bindings = review.record.version === 4 || review.record.version === 5 ? review.record.modelTrainings : undefined;
+    if (!bindings || await stillAllowed() !== true) return;
+    return structuredClone({requests: review.requests, bindings, state: review.state});
   } catch {return;}
 }
 
@@ -344,6 +368,33 @@ export async function readStructuredHeadlessTrainingPlanPermission(partition: St
     requiresArtifactWrite: review.requests.some(request => request.operation === "context.save-result"),
     requiresModelWrite: true as const, requiresTrainingInputs: true as const,
     requiresModelSourceRead: review.requests.some(request => request.operation === "models.download" || request.operation === "models.save-download")};
+}
+
+/** Private metadata for the configured trained-Save review owner only. No files,
+ * runtime, permission grant or public transport response is supplied here. */
+export async function readStructuredHeadlessTrainingSavePlanReview(partition: StructuredDocumentStore,
+  rawTarget: HeadlessPlanReviewTarget, stillAllowed: () => Promise<boolean>) {
+  try {
+    if (types.isProxy(rawTarget) || typeof stillAllowed !== "function" || types.isProxy(stillAllowed)) return;
+    const outer = readStrictPassiveRecord(rawTarget, ["hostIncarnationId", "fingerprint", "scope"]);
+    if (Object.keys(outer).length !== 3 || types.isProxy(outer.scope)) return;
+    const scope = readStrictPassiveRecord(outer.scope, ["organizationId", "workspaceId", "principalId", "registeredClientId"]);
+    if (Object.keys(scope).length !== 4) return;
+    const target = copyBoundedPassiveData(rawTarget) as HeadlessPlanReviewTarget;
+    if (!validTarget(target) || partition.organizationId !== target.scope.organizationId || await stillAllowed() !== true) return;
+    const review = await readReview(partition, target, planKey(target));
+    if (!review || review.record.version !== 5 || await stillAllowed() !== true) return;
+    return structuredClone({requests: review.requests, state: review.state});
+  } catch {return;}
+}
+export async function readStructuredHeadlessTrainingSavePlanPermission(partition: StructuredDocumentStore,
+  target: HeadlessPlanReviewTarget, stillAllowed: () => Promise<boolean>) {
+  const review = await readStructuredHeadlessTrainingSavePlanReview(partition, target, stillAllowed); if (!review) return;
+  return {requiresModelRead: true as const, requiresModelWrite: true as const, requiresTrainedResultRead: true as const,
+    requiresArtifactWrite: review.requests.some(r => r.operation === "context.save-result" || r.operation === "data.save-local-source" ||
+      r.operation === "data.save-provider-source" || r.operation === "data.save-prepared-dataset"),
+    requiresTrainingInputs: review.requests.some(r => r.operation === "models.train"),
+    requiresModelSourceRead: review.requests.some(r => r.operation === "models.download" || r.operation === "models.save-download")};
 }
 
 /** Historic definition, never historic permission. The caller must first prove
@@ -389,8 +440,8 @@ export async function readStructuredApprovedPlan(
       (state.status !== "approved" && !(state.status === "pending" && state.mode === "each-change"))) return;
   return { expiresAt: state.expiresAt, requests: review.requests,
     contextModels: review.record.version !== 1 ? review.record.contextModels ?? [] : [],
-    modelDownloads: review.record.version === 3 || review.record.version === 4 ? review.record.modelDownloads ?? [] : [],
-    ...(review.record.version === 4 ? {modelTrainings: review.record.modelTrainings} : {}) };
+    modelDownloads: review.record.version === 3 || review.record.version === 4 || review.record.version === 5 ? review.record.modelDownloads ?? [] : [],
+    ...(review.record.version === 4 || review.record.version === 5 && review.record.modelTrainings ? {modelTrainings: review.record.modelTrainings} : {}) };
 }
 
 /** Serializes a real new write against approval changes, without changing its public decision revision. */

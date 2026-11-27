@@ -26,6 +26,13 @@ import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import {composeHeadlessModelReferenceSave, composeHeadlessTrainedModelSave} from "../headlessModelReferenceSave";
+import {prepareHeadlessModelTrainingSaveReviews, runPreparedHeadlessTrainedModelSave} from "../headlessModelReferenceSave";
+import {createStructuredHeadlessPlanReviewRepository, createStructuredHeadlessStoredPlanReviewRepository,
+  readStructuredHeadlessTrainingSavePlanPermission, readStructuredHeadlessPlanModelPermission} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import {prepareStructuredHeadlessPlanStep, prepareStructuredHeadlessPlanStepWithModels, prepareStructuredHeadlessPlanStepWithTraining,
+  prepareStructuredHeadlessPlanStepWithTrainingSave} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import {HeadlessBuildPlanReviewUseCase} from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
+import {parseHeadlessBuildPlanProposal, type HeadlessModelTrainingSavePlanRequest} from "../../../../contracts/headless";
 
 const SAVES = "headless/models/reference-saves", SOURCES = "headless/models/reference-save-sources";
 const sha = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -358,8 +365,9 @@ async function orchestratedTrainingFixture(t: TestContext, storage: "Core" | "SQ
     onAuthorize: undefined as (() => void) | undefined, preparation: undefined as ApprovedLocalTrainingSavePreparation | undefined,
     changePreparation: undefined as ((p: ApprovedLocalTrainingSavePreparation) => ApprovedLocalTrainingSavePreparation) | undefined};
   let control: ReviewedGeneratedModelControl | undefined, session: ApprovedLocalTrainingSaveSession | undefined;
-  const compose = (effect = f.effect) => composeHeadlessTrainedModelSave({documents: f.root, rootDirectory: f.directory, effect,
+  const saveConfiguration = (effect = f.effect): Parameters<typeof composeHeadlessTrainedModelSave>[0] => ({documents: f.root, rootDirectory: f.directory, effect,
     isCurrent: () => state.current, now: () => 10,
+    fenceSaveOwned: async () => true, // Controlled component fixture; real plan fencing is tested separately.
     authorizeExactSave: async (owner, actual) => {
       assert.equal(owner.organizationId, undefined); assert.equal(owner.runInOwnedTransaction, undefined);
       assert.deepEqual(actual, captureModelTrainingSaveEffect(effect)); state.onAuthorize?.(); return state.allowed;
@@ -379,7 +387,7 @@ async function orchestratedTrainingFixture(t: TestContext, storage: "Core" | "SQ
           return (async () => {
             await state.onWrite?.();
             if (state.failWrite || state.fences > 0 || !capturedControl.isCurrent() || !await capturedControl.stillAllowed()) throw new Error("Synthetic copy refusal");
-            state.preparation = structuredClone(f.preparation);
+            state.preparation = {...structuredClone(f.preparation), saveId: effect.key, name: effect.name};
             return state.changePreparation?.(state.preparation) ?? state.preparation;
           })();
         },
@@ -390,7 +398,8 @@ async function orchestratedTrainingFixture(t: TestContext, storage: "Core" | "SQ
       };
       return {ok: true, value: session};
     }});
-  return {...f, saveState: state, composeSave: compose, saveControl: () => control!, saveSession: () => session!};
+  const compose = (effect = f.effect) => composeHeadlessTrainedModelSave(saveConfiguration(effect));
+  return {...f, saveState: state, composeSave: compose, saveConfiguration, saveControl: () => control!, saveSession: () => session!};
 }
 
 for (const engine of ["Core", "SQLite"] as const) {
@@ -482,6 +491,171 @@ test("pending original write remains owned through an outward cleanup request", 
   assert.equal(f.saveState.discards, 0); release(); assert.equal(await saving, undefined);
   assert.equal(f.saveState.discards, 1); assert.equal(f.saveState.writes, 1); await f.unchanged();
 });
+
+async function storedTrainingSaveFixture(t: TestContext, engine: "Core" | "SQLite", channel: "app-popup" | "authenticated-chat" = "app-popup",
+  mode: "each-change" | "whole-plan" = "each-change") {
+  const f = await orchestratedTrainingFixture(t, engine);
+  const step = {operation: "models.save-training", idempotencyKey: f.effect.key, name: f.effect.name,
+    taskId: f.effect.taskId, candidateDigest: f.effect.candidateDigest};
+  const proposal = {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, steps: [step]};
+  const parsed = parseHeadlessBuildPlanProposal(proposal, f.host, {allowLocalFileSave: false, allowModelTrainingSave: true}); assert.ok(parsed.ok);
+  const selected = parsed.requests[0]; assert.equal(selected.operation, "models.save-training");
+  if (selected.operation !== "models.save-training") assert.fail();
+  const target = {hostIncarnationId: f.host, scope: f.scope, fingerprint: sha(parsed.preview)}, query = {target, isCurrent: () => f.saveState.current};
+  let reviews = 0;
+  const witness = await prepareHeadlessModelTrainingSaveReviews({target, requests: parsed.requests, isCurrent: query.isCurrent,
+    stillAllowed: async () => f.saveState.allowed, async reviewOriginalTask(request) {
+      reviews++; assert.deepEqual(request, selected); return {ok: true, value: structuredClone(f.preparation.candidate)};
+    }}); assert.ok(witness.ok);
+  const repository = createStructuredHeadlessPlanReviewRepository(f.root, async () => f.saveState.allowed, () => 10,
+    owner => witness.validate(owner, selected), false, false, false, false, false, false, undefined, false, false, undefined,
+    false, false, undefined, {allowNew: true});
+  const proposed = await repository.propose({...query, proposal}); assert.ok(proposed.ok);
+  const stored = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => f.saveState.allowed, () => 10, false, false, false, true);
+  const actor = {organizationId: f.scope.organizationId, principalId: f.scope.principalId, channel,
+    isCurrent: query.isCurrent, canDecide: async () => f.saveState.allowed};
+  const decide = (expectedRevision: number, decision: {kind: "approve"; mode: "whole-plan"} | {kind: "approve"; mode: "each-change"; step: number} | {kind: "revoke"}) =>
+    new HeadlessBuildPlanReviewUseCase(stored, () => 10).decide({fingerprint: target.fingerprint, expectedRevision, decision}, f.host, f.scope, actor);
+  const approved = await decide(1, mode === "whole-plan" ? {kind: "approve", mode} : {kind: "approve", mode, step: 1}); assert.ok(approved.ok);
+  const stepQuery = {...query, approvalRevision: approved.state.revision, step: 1};
+  const authorize: Parameters<typeof prepareStructuredHeadlessPlanStepWithTrainingSave>[2] = async (_owner, scope, request) => {
+    assert.deepEqual(scope, f.scope); if (request) assert.deepEqual(request, selected); return f.saveState.allowed;
+  };
+  const argumentsForStep: Parameters<typeof prepareStructuredHeadlessPlanStepWithTrainingSave> = [f.root, stepQuery, authorize, () => 10,
+    "serialized-owner", false, undefined, undefined, undefined, undefined, undefined, undefined, false, false, undefined, true];
+  const prepared = await prepareStructuredHeadlessPlanStepWithTrainingSave(...argumentsForStep);
+  assert.equal(prepared?.kind, "model-training-save"); if (prepared?.kind !== "model-training-save") assert.fail();
+  const request = {version: "aisb-headless-v1" as const, operation: "plan.run-step" as const,
+    input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, fingerprint: target.fingerprint, approvalRevision: approved.state.revision, step: 1}};
+  const run = (incoming = request) => runPreparedHeadlessTrainedModelSave({documents: f.root, rootDirectory: f.directory, prepared,
+    request: incoming, canUse: async () => f.saveState.allowed, bindOriginalTask: f.saveConfiguration(prepared.effect).bindOriginalTask});
+  return {...f, target, query, proposal, selected, parsed, witness, repository, stored, decide, prepared, argumentsForStep, request, run,
+    reviewCalls: () => reviews};
+}
+
+for (const engine of ["Core", "SQLite"] as const) for (const [channel, mode] of [
+  ["app-popup", "each-change"], ["app-popup", "whole-plan"], ["authenticated-chat", "each-change"], ["authenticated-chat", "whole-plan"]] as const)
+  test(`${engine}: stored trained Save through ${channel}/${mode} publishes exact Model once with read-only replay`, async t => {
+    const f = await storedTrainingSaveFixture(t, engine, channel, mode);
+    const records = await f.partition.listDocuments<{version: number}>("headless/system-builder/plan-reviews");
+    assert.equal(records.length, 1); assert.equal(records[0].value.version, 5); assert.equal(f.reviewCalls(), 1);
+    const defaultStore = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => 10);
+    const trainingOnly = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => 10, false, false, true);
+    assert.equal((await defaultStore.read(f.query)).ok, false); assert.equal((await trainingOnly.read(f.query)).ok, false);
+    assert.equal(await readStructuredHeadlessPlanModelPermission(f.partition, f.target), undefined);
+    const permissions = await readStructuredHeadlessTrainingSavePlanPermission(f.partition, f.target, async () => true);
+    assert.equal(permissions?.requiresTrainedResultRead, true); assert.equal(permissions?.requiresTrainingInputs, false);
+    assert.equal(permissions?.requiresModelRead, true); assert.equal(permissions?.requiresModelWrite, true);
+    const fenceNamespace = "headless/system-builder/plan-execution-fences", before = await f.partition.listDocuments(fenceNamespace);
+    assert.equal(await f.root.runInOwnedTransaction!(owner => f.prepared.authorizeSaveOwned(owner, f.prepared.effect), () => {}), true);
+    assert.deepEqual(await f.partition.listDocuments(fenceNamespace), before, "Permission checks do not write a fence.");
+    const saved = await f.run(); assert.ok(saved.result.ok); assert.ok("operation" in saved.result.value);
+    assert.equal(saved.result.value.operation, "models.save-training");
+    assert.equal(saved.result.value.kind, "committed"); assert.equal(f.saveState.writes, 1);
+    const after = await f.partition.listDocuments(fenceNamespace); assert.notDeepEqual(after, before, "Publication serializes approval changes.");
+    const replay = await f.run(); assert.ok(replay.result.ok); assert.equal(replay.result.value.kind, "replayed");
+    assert.deepEqual(await f.partition.listDocuments(fenceNamespace), after, "Replay does not mutate the approval fence.");
+    assert.equal(f.saveState.bindRequests, 1); assert.equal(f.saveState.writes, 1); assert.equal((await f.rows()).length, 2);
+    assert.doesNotMatch(JSON.stringify(saved.result), /localPath|metadata-only|history|files/);
+    assert.ok("publishIfCurrent" in saved);
+    let publications = 0; assert.equal(await saved.publishIfCurrent(() => {publications++; return true;}), true); assert.equal(publications, 1);
+    f.noEffects();
+  });
+
+test("legacy step wrappers refuse an entire trained Save plan even when given the new private flag", async t => {
+  const f = await storedTrainingSaveFixture(t, "Core"), args = f.argumentsForStep;
+  assert.equal(await prepareStructuredHeadlessPlanStep(...args), undefined);
+  assert.equal(await prepareStructuredHeadlessPlanStepWithModels(...args), undefined);
+  const withCompiler: typeof args = [...args]; withCompiler[14] = async () => undefined;
+  assert.equal(await prepareStructuredHeadlessPlanStepWithTraining(...withCompiler), undefined);
+  const noSave: typeof args = [...args]; noSave[15] = false;
+  assert.equal(await prepareStructuredHeadlessPlanStepWithTrainingSave(...noSave), undefined);
+  assert.equal(f.saveState.writes, 0); await f.unchanged();
+});
+
+for (const variant of ["revoked", "stale-revision", "wrong-plan", "wrong-workspace", "transient"] as const)
+  test(`stored trained Save refuses ${variant} without starting a copy`, async t => {
+    const f = await storedTrainingSaveFixture(t, "Core"); let request = f.request;
+    if (variant === "revoked") assert.ok((await f.decide(2, {kind: "revoke"})).ok);
+    if (variant === "stale-revision") request = {...request, input: {...request.input, approvalRevision: 1}};
+    if (variant === "wrong-plan") request = {...request, input: {...request.input, fingerprint: "a".repeat(64)}};
+    if (variant === "wrong-workspace") request = {...request, input: {...request.input, workspaceId: createWorkspaceId("workspace.foreign")}};
+    if (variant === "transient") request = {...request, transient: {contextQuery: "synthetic unused text"}} as typeof request;
+    assert.equal((await f.run(request)).result.ok, false); assert.equal(f.saveState.bindRequests, 0); assert.equal(f.saveState.writes, 0); await f.unchanged();
+  });
+
+test("stored trained Save loses no reply and performs no second copy or fence mutation", async t => {
+  const f = await storedTrainingSaveFixture(t, "SQLite"); f.state.dropReply = true;
+  const result = await f.run(); assert.ok(result.result.ok); assert.equal(result.result.value.kind, "replayed");
+  const fences = await f.partition.listDocuments("headless/system-builder/plan-execution-fences");
+  const again = await f.run(); assert.ok(again.result.ok); assert.equal(f.saveState.bindRequests, 1); assert.equal(f.saveState.writes, 1);
+  assert.deepEqual(await f.partition.listDocuments("headless/system-builder/plan-execution-fences"), fences); f.noEffects();
+});
+
+test("revoking the separate stored approval during copy prevents publication", async t => {
+  const f = await storedTrainingSaveFixture(t, "Core");
+  f.saveState.onWrite = async () => {assert.ok((await f.decide(2, {kind: "revoke"})).ok);};
+  assert.equal((await f.run()).result.ok, false); assert.equal(f.saveState.writes, 1);
+  assert.equal(f.saveState.discards, 1); await f.unchanged();
+});
+
+test("trained Save copies its exact run-step frame before later permission waits", async t => {
+  const f = await storedTrainingSaveFixture(t, "Core"), request = structuredClone(f.request);
+  const result = await runPreparedHeadlessTrainedModelSave({documents: f.root, rootDirectory: f.directory, prepared: f.prepared,
+    request, canUse: async () => {request.input.fingerprint = "b".repeat(64); return true;},
+    bindOriginalTask: f.saveConfiguration(f.prepared.effect).bindOriginalTask});
+  assert.ok(result.result.ok); assert.equal(result.result.value.fingerprint, f.target.fingerprint); assert.equal(f.saveState.writes, 1); f.noEffects();
+});
+
+test("trained Save retains original owners, prepared methods and effect across permission waits", async t => {
+  const f = await storedTrainingSaveFixture(t, "Core"), prepared = {...f.prepared, effect: structuredClone(f.prepared.effect)};
+  const originalPublish = prepared.publishIfCurrent, originalExpiry = prepared.expiresAt;
+  let replacements = 0, policies = 0;
+  const replaced = () => {replacements++; assert.fail("A replacement must not run.");};
+  const originalBind = f.saveConfiguration(prepared.effect).bindOriginalTask;
+  const options: Parameters<typeof runPreparedHeadlessTrainedModelSave>[0] = {
+    documents: f.root, rootDirectory: f.directory, prepared, request: f.request,
+    async canUse() {
+      assert.equal(this, options); policies++;
+      Object.assign(options, {documents: {}, rootDirectory: "https://example.invalid/changed", bindOriginalTask: replaced, canUse: replaced});
+      Object.assign(prepared, {effect: {...prepared.effect, name: "Changed", key: randomUUID()}, expiresAt: 1,
+        isCurrent: replaced, authorizeSaveOwned: replaced, fenceSaveOwned: replaced, stillAllowed: replaced, publishIfCurrent: replaced});
+      return true;
+    },
+    async bindOriginalTask(...args) {assert.equal(this, options); return originalBind(...args);},
+  };
+  const result = await runPreparedHeadlessTrainedModelSave(options);
+  assert.ok(result.result.ok); assert.equal(result.result.value.expiresAt, originalExpiry);
+  assert.equal((await f.rows()).find(row => row.modelRecordId !== f.base.modelRecordId)!.displayName, f.effect.name);
+  assert.equal(policies, 2); assert.equal(replacements, 0); assert.equal(f.saveState.bindRequests, 1); assert.equal(f.saveState.writes, 1);
+  assert.ok("publishIfCurrent" in result);
+  let publications = 0; assert.equal(await result.publishIfCurrent(() => {publications++; return true;}), true);
+  assert.equal(publications, 1); assert.notEqual(result.publishIfCurrent, originalPublish); f.noEffects();
+});
+
+for (const variant of ["not-ready", "wrong-digest", "foreign-task", "foreign-workspace", "wrong-proposal", "extra", "active"] as const)
+  test(`trained Save source review refuses ${variant} without a cached or runtime fallback`, async t => {
+    const f = await trainingFixture(t, "Core"), request: HeadlessModelTrainingSavePlanRequest = {version: "aisb-headless-v1", operation: "models.save-training",
+      input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, idempotencyKey: f.effect.key, taskId: f.effect.taskId,
+        candidateDigest: f.effect.candidateDigest, name: f.effect.name}};
+    let calls = 0, hooks = 0;
+    const reviewed = await prepareHeadlessModelTrainingSaveReviews({target: f.effect.target, requests: [request], isCurrent: () => true,
+      stillAllowed: async () => true, async reviewOriginalTask() {
+        calls++; const value = structuredClone(f.preparation.candidate);
+        if (variant === "not-ready") return {ok: true, value: {kind: "not-ready"}};
+        if (variant === "wrong-digest") Object.assign(value, {candidateDigest: "sha256:" + "a".repeat(64)});
+        if (variant === "foreign-task") Object.assign(value, {requestId: randomUUID()});
+        if (variant === "foreign-workspace") Object.assign(value, {workspaceId: createWorkspaceId("workspace.other")});
+        if (variant === "wrong-proposal") Object.assign(value.history.provenance, {proposalDigest: "sha256:" + "a".repeat(64)});
+        if (variant === "extra") Object.assign(value, {rawData: "synthetic forbidden extra"});
+        if (variant === "active") Object.defineProperty(value, "candidateDigest", {enumerable: true, get() {hooks++; assert.fail("No active candidate.");}});
+        return {ok: true, value};
+      }});
+    if (variant === "wrong-proposal") {
+      assert.ok(reviewed.ok); assert.equal(await reviewed.validate(f.partition, request), false);
+    } else assert.equal(reviewed.ok, false);
+    assert.equal(calls, 1); assert.equal(hooks, 0); await f.unchanged();
+  });
 
 for (const engine of ["Core", "SQLite"] as const) {
   for (const name of ["Prompt safety model", "Token classifier", "Workflow assistant"]) test(`${engine}: trained Model Save preserves ordinary label ${name}`, async t => {

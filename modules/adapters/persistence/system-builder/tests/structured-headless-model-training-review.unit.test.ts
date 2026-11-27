@@ -29,6 +29,61 @@ function reorderedJson<T>(value: T): T {
   return value;
 }
 
+async function mixedSaveReviewFixture(t: TestContext, storage: "Core" | "SQLite") {
+  const f = await fixture(t, storage);
+  const proposal = {...f.proposal, steps: [...f.proposal.steps, {operation: "models.save-training", idempotencyKey: randomUUID(),
+    name: "Reviewed earlier model", taskId: randomUUID(), candidateDigest: "sha256:" + "a".repeat(64)}]};
+  const parsed = parseHeadlessBuildPlanProposal(proposal, f.host, {allowLocalFileSave: false, allowModelTraining: true, allowModelTrainingSave: true}); assert.ok(parsed.ok);
+  const target = {...f.target, fingerprint: sha(parsed.preview)}, query = {target, isCurrent: () => f.state.current};
+  // Metadata family fixture only. The production host must separately validate
+  // original current candidate/accepted lineage, as the Save flow tests do.
+  const repository = createStructuredHeadlessPlanReviewRepository(f.root, async () => true, () => f.state.now,
+    async () => true, false, false, false, false, false, false, undefined, false, false, undefined, false, false,
+    {bind: async () => f.bindings}, {allowNew: true});
+  assert.ok((await repository.propose({...query, proposal})).ok);
+  return {...f, proposal, parsed, target, query, repository};
+}
+
+for (const storage of ["Core", "SQLite"] as const) {
+  test(`${storage}: v5 mixed training/Save preserves original bindings and needs both separate stored capabilities`, async t => {
+    const f = await mixedSaveReviewFixture(t, storage);
+    const record = (await f.partition.listDocuments<{version: number; modelTrainings: unknown}>(namespace))[0];
+    assert.equal(record.value.version, 5); assert.deepEqual(record.value.modelTrainings, f.bindings);
+    for (const [training, save] of [[false, false], [true, false], [false, true]]) {
+      const reader = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now, false, false, training, save);
+      assert.equal((await reader.read(f.query)).ok, false);
+    }
+    const reader = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now, false, false, true, true);
+    const visible = await reader.read(f.query); assert.ok(visible.ok); assert.equal(visible.snapshot.preview.version, "aisb-build-plan-preview-v14");
+    assert.doesNotMatch(JSON.stringify(visible), /modelTrainings|localPath|proposalDigest/);
+    assert.equal(await readStructuredHeadlessPlanModelPermission(f.partition, f.target), undefined);
+  });
+  for (const variant of ["downgrade", "missing-training", "extra-downloads", "extra-context"] as const)
+    test(`${storage}: stored v5 review refuses ${variant} even with a matching document revision`, async t => {
+      const f = await mixedSaveReviewFixture(t, storage);
+      const row = (await f.partition.listDocuments<any>(namespace))[0], value = copy(row.value);
+      value.state.revision = row.revision + 1;
+      if (variant === "downgrade") value.version = 4;
+      if (variant === "missing-training") delete value.modelTrainings;
+      if (variant === "extra-downloads") value.modelDownloads = [];
+      if (variant === "extra-context") value.contextModels = [];
+      await f.root.runInOwnedTransaction!(owner => owner.forOrganization(f.scope.organizationId).writeDocument(namespace, row.key, value,
+        {expectedRevision: row.revision}), () => {});
+      const reader = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now, false, false, true, true);
+      assert.equal((await reader.read(f.query)).ok, false);
+    });
+}
+
+test("v5 cannot be attached to an ordinary training-only record to borrow new Save authority", async t => {
+  const f = await fixture(t); assert.ok((await f.reviews().propose({...f.query, proposal: f.proposal})).ok);
+  const row = (await f.partition.listDocuments<any>(namespace))[0], value = copy(row.value);
+  value.version = 5; value.state.revision = row.revision + 1;
+  await f.root.runInOwnedTransaction!(owner => owner.forOrganization(f.scope.organizationId).writeDocument(namespace, row.key, value,
+    {expectedRevision: row.revision}), () => {});
+  const reader = createStructuredHeadlessStoredPlanReviewRepository(f.root, async () => true, () => f.state.now, false, false, true, true);
+  assert.equal((await reader.read(f.query)).ok, false);
+});
+
 async function fixture(t: TestContext, storage: "Core" | "SQLite" = "Core", mixed = false, ordinaryPrefix = false) {
   const boundary = await realpath(tmpdir()), directory = await realpath(await mkdtemp(join(boundary, "training-bound-review-")));
   const identity = await lstat(directory, {bigint: true});

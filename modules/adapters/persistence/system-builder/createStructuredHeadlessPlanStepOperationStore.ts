@@ -39,11 +39,12 @@ import {inspectStructuredModelPlanTask, reserveStructuredModelPlanTask, issueStr
   acceptStructuredModelPlanTask, recordStructuredModelTaskNotStarted, type ModelPlanTaskEffect} from "./createStructuredHeadlessModelPlanTaskStore";
 import type {HeadlessModelDownloadPlanRequest, HeadlessModelReferenceSavePlanRequest} from "../../../contracts/headless";
 import {captureModelReferenceSaveEffect, inspectStructuredModelReferenceSave,
-  type ModelReferenceSaveEffect} from "./createStructuredHeadlessModelReferenceStore";
+  captureModelTrainingSaveEffect, inspectStructuredModelTrainingSave, type ModelReferenceSaveEffect, type ModelTrainingSaveEffect} from "./createStructuredHeadlessModelReferenceStore";
 import {inspectStructuredTrainingPlanTask, reserveStructuredTrainingPlanTask, issueStructuredTrainingPlanTask,
   acceptStructuredTrainingPlanTask, recordStructuredTrainingTaskNotStarted, type TrainingPlanTaskEffect} from "./createStructuredHeadlessTrainingPlanTaskStore";
 import {readModelTrainingReviewBindings, type ModelTrainingReviewBinding} from "./headlessModelTrainingReviewBindings";
-import type {HeadlessModelTrainingPlanRequest} from "../../../contracts/headless";
+import type {HeadlessModelTrainingPlanRequest, HeadlessModelTrainingSavePlanRequest} from "../../../contracts/headless";
+import {readStructuredTrainingPlanTaskLineage} from "./createStructuredHeadlessTrainingPlanTaskStore";
 import type {PrepareHeadlessModelTrainingPlanUseCase} from "../../../application/use-cases/model/headless-model-training-plan.use-case";
 import {copyHeadlessModelWorkflowData} from "../../../application/use-cases/model/headless-model-download-preview.use-case";
 import {readStrictPassiveRecord} from "../../../contracts/shared";
@@ -85,8 +86,9 @@ export async function prepareStructuredHeadlessPlanStep(...input: Parameters<typ
   input[12] = false;
   input[13] = false;
   input[14] = undefined;
+  input[15] = false;
   const prepared = await prepareStoredPlanStep(...input);
-  return prepared?.kind === "model-download" || prepared?.kind === "model-reference" || prepared?.kind === "model-training" ? undefined : prepared;
+  return prepared?.kind === "model-download" || prepared?.kind === "model-reference" || prepared?.kind === "model-training" || prepared?.kind === "model-training-save" ? undefined : prepared;
 }
 
 /** Internal opt-in owner; public hosts must not select it before their exact
@@ -96,14 +98,23 @@ export async function prepareStructuredHeadlessPlanStepWithModels(...input: Para
   // opts into reference saving must still be able to explicitly disable downloads.
   if (input[12] === undefined) input[12] = true;
   input[14] = undefined;
+  input[15] = false;
   const prepared = await prepareStoredPlanStep(...input);
-  return prepared?.kind === "model-training" ? undefined : prepared;
+  return prepared?.kind === "model-training" || prepared?.kind === "model-training-save" ? undefined : prepared;
 }
 
 /** Internal metadata protocol only. This advertises no route or runtime support.
  * Both older wrappers discard this compiler and refuse the whole training plan. */
 export async function prepareStructuredHeadlessPlanStepWithTraining(...input: Parameters<typeof prepareStoredPlanStep>) {
   if (typeof input[14] !== "function" || types.isProxy(input[14])) return;
+  input[15] = false;
+  const prepared = await prepareStoredPlanStep(...input);
+  return prepared?.kind === "model-training-save" ? undefined : prepared;
+}
+
+/** Separate trusted Save opt-in. Original App publication remains a host duty. */
+export async function prepareStructuredHeadlessPlanStepWithTrainingSave(...input: Parameters<typeof prepareStoredPlanStep>) {
+  if (input[15] !== true || input[14] !== undefined && (typeof input[14] !== "function" || types.isProxy(input[14]))) return;
   return prepareStoredPlanStep(...input);
 }
 
@@ -121,6 +132,7 @@ async function prepareStoredPlanStep(
   allowModelDownload = false,
   allowModelReferenceSave = false,
   compileTraining?: CompileApprovedTrainingMetadata,
+  allowModelTrainingSave = false,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -140,12 +152,11 @@ async function prepareStoredPlanStep(
     const partition = owner.forOrganization(target.scope.organizationId);
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
-    if (approved.requests.some(candidate => candidate.operation === "models.save-training")) return;
+    if (!allowModelTrainingSave && approved.requests.some(candidate => candidate.operation === "models.save-training")) return;
     if (!compileTraining && approved.requests.some(candidate => candidate.operation === "models.train")) return;
     if (allowModelDownload !== true && approved.requests.some(candidate => candidate.operation === "models.download")) return;
     if ((allowModelReferenceSave !== true || !contextResultRootDirectory) && approved.requests.some(candidate => candidate.operation === "models.save-download")) return;
     const request = approved.requests[step - 1];
-    if (request?.operation === "models.save-training") return;
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
@@ -155,13 +166,15 @@ async function prepareStoredPlanStep(
         (!compileQuery && approved.requests.some(candidate => candidate.operation === "context.query")) ||
         ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source" ||
           request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" || request.operation === "models.save-download" || request.operation === "models.train") &&
+          request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" || request.operation === "models.save-download" || request.operation === "models.train" || request.operation === "models.save-training") &&
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
-      if (!previous || previous.operation === "models.save-training") return;
+      if (!previous) return;
       const previousTraining = approved.modelTrainings?.find(binding => binding.step === index + 1);
-      const received = previous.operation === "models.train"
+      const received = previous.operation === "models.save-training"
+        ? (await inspectStructuredModelTrainingSave(partition, trainingSaveEffect(target, previous, index + 1, approvalRevision))).kind === "committed"
+        : previous.operation === "models.train"
         ? previousTraining && (await inspectStructuredTrainingPlanTask(partition, trainingTaskEffect(target, previous,
           index + 1, approvalRevision, previousTraining))).kind === "accepted"
         : previous.operation === "models.save-download"
@@ -191,6 +204,7 @@ async function prepareStoredPlanStep(
         request.input.sourceManifest.manifestDigest) return;
     const trainingBinding = approved.modelTrainings?.find(binding => binding.step === step);
     if (request.operation === "models.train" && !trainingBinding) return;
+    if (request.operation === "models.save-training" && !await readStructuredTrainingPlanTaskLineage(partition, target.scope, target.hostIncarnationId, request.input.taskId)) return;
     return { request, expiresAt: approved.expiresAt, contextModel, trainingBinding };
   }
 
@@ -223,6 +237,30 @@ async function prepareStoredPlanStep(
       if (publication === "stable-reads") return await stableReads!(approvedForPublication, send);
       return await ownedTransaction!(async owner => await approvedForPublication(owner) && send(), () => {});
     } catch { return false; }
+  }
+
+  if (request.operation === "models.save-training") {
+    const effect = captureModelTrainingSaveEffect(trainingSaveEffect(target, request, step, approvalRevision));
+    async function authorizeSaveOwned(owner: StructuredDocumentStore, selected: ModelTrainingSaveEffect) {
+      if (!isDeepStrictEqual(selected, effect) || !current()) return false;
+      const latest = await select(owner);
+      return Boolean(latest && latest.expiresAt === deadline && latest.request.operation === "models.save-training" &&
+        stepKey(target, latest.request, step) === effect.key && current());
+    }
+    return {kind: "model-training-save" as const, request: freezeModelData(structuredClone(request)), effect,
+      expiresAt: prepared.expiresAt, isCurrent: current, authorizeSaveOwned,
+      async fenceSaveOwned(owner: StructuredDocumentStore, selected: ModelTrainingSaveEffect) {
+        return await authorizeSaveOwned(owner, selected) &&
+          await fenceStructuredApprovedPlan(owner.forOrganization(target.scope.organizationId), target, approvalRevision) && current();
+      },
+      async stillAllowed() {
+        try {return await ownedTransaction(async owner => await authorizeSaveOwned(owner, effect),
+          () => {if (!current()) throw new Error("The approved trained Model Save ended.");});} catch {return false;}
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => (await inspectStructuredModelTrainingSave(partition, effect)).kind === "committed");
+      },
+    };
   }
 
   if (request.operation === "models.train") {
@@ -905,7 +943,8 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "models.train" ? "aisb-approved-model-training-step-v1" :
+  const family = request.operation === "models.save-training" ? "aisb-approved-trained-model-save-step-v1" :
+    request.operation === "models.train" ? "aisb-approved-model-training-step-v1" :
     request.operation === "models.save-download" ? "aisb-approved-model-reference-step-v1" :
     request.operation === "models.download" ? "aisb-approved-model-download-step-v1" :
     request.operation === "context.query" ? "aisb-approved-context-query-step-v1" :
@@ -918,7 +957,7 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
     request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
   const parts = [family, target.hostIncarnationId, target.fingerprint, step, request.input.idempotencyKey];
   const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" || request.operation === "data.save-prepared-dataset" ||
-    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" || request.operation === "models.save-download" || request.operation === "models.train" ?
+    request.operation === "context.generate-pack" || request.operation === "context.generate-rag" || request.operation === "context.save-result" || request.operation === "context.query" || request.operation === "models.download" || request.operation === "models.save-download" || request.operation === "models.train" || request.operation === "models.save-training" ?
     [...parts, target.scope.organizationId, target.scope.workspaceId, target.scope.principalId, target.scope.registeredClientId] : parts));
   // Keep the existing validated internal UUID shape. The plan and ordinal
   // reserve a different key even when two proposals reuse a supplied key.
@@ -929,6 +968,12 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
 function modelTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessModelDownloadPlanRequest,
   step: number, approvalRevision: number): ModelPlanTaskEffect {
   return {key: stepKey(target, request, step), target, request, step, approvalRevision};
+}
+
+function trainingSaveEffect(target: HeadlessPlanReviewTarget, request: HeadlessModelTrainingSavePlanRequest,
+  step: number, approvalRevision: number): ModelTrainingSaveEffect {
+  return {key: stepKey(target, request, step), target, step, approvalRevision,
+    taskId: request.input.taskId, candidateDigest: request.input.candidateDigest, name: request.input.name};
 }
 function trainingTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessModelTrainingPlanRequest,
   step: number, approvalRevision: number, binding: ModelTrainingReviewBinding): TrainingPlanTaskEffect {
