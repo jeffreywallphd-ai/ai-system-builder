@@ -2269,10 +2269,10 @@ def _protected_dataset_loading_fixture(monkeypatch,fmt,contents):
         Kernel, SourceLaunchExchangeTests, TrainingInputCopyTests)
     media={"jsonl":"application/x-ndjson","json":"application/json","csv":"text/csv","parquet":"application/vnd.apache.parquet"}[fmt]
     bootstrap,node=SourceLaunchExchangeTests.bound_bootstrap,Kernel.node
-    def bind(self,definition=None,native_module=None):
+    def bind(self,definition=None,native_module=None,*,worker_configuration_data=False):
         for row,raw in zip(definition["inputs"],contents):
             row.update(sizeBytes=len(raw),digest="sha256:"+hashlib.sha256(raw).hexdigest())
-        return bootstrap(self,definition,native_module)
+        return bootstrap(self,definition,native_module,worker_configuration_data=worker_configuration_data)
     def stage(self,path,directory,data=b"",acl=None):
         for index,raw in enumerate(contents):
             if path=="X:\\inputs\\batch\\"+str(index+1).zfill(4)+"-input-"+str(index)+"."+fmt:
@@ -2680,6 +2680,93 @@ def _inert_transformers(monkeypatch, fail_at=None, *, successful_output=False):
     return calls
 
 
+def _execution_hardware_fixture(monkeypatch):
+    torch = ModuleType("torch")
+    torch.float32, torch.float16 = object(), object()
+    torch.__version__ = "2.9.0+cu128"
+    transformers = ModuleType("transformers")
+    transformers.__version__ = "4.57.1"
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(sys.modules, "transformers", transformers)
+    monkeypatch.setattr(train_model_module.os, "cpu_count", lambda: 8)
+    parameters = [SimpleNamespace(device=SimpleNamespace(type="cuda"), dtype=torch.float16),
+                  SimpleNamespace(device=SimpleNamespace(type="cpu"), dtype=torch.float32)]
+    return SimpleNamespace(parameters=lambda: iter(parameters)), torch, transformers, parameters
+
+
+def test_training_execution_probe_records_only_bounded_loaded_runtime_facts_without_imports(monkeypatch):
+    import builtins
+    model, torch, transformers, parameters = _execution_hardware_fixture(monkeypatch)
+    calls = []
+    original_import = builtins.__import__
+    def importing(name, *args, **kwargs):
+        if name in ("torch", "transformers", "huggingface_hub"):
+            calls.append(name)
+        return original_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, "__import__", importing)
+    result = train_model_module._capture_training_hardware(model)
+    assert result == {"devices": ["cpu", "cuda"], "precisions": ["float16", "float32"], "logicalCpuCount": 8,
+        "pythonVersion": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        "pytorchVersion": "2.9.0+cu128", "transformersVersion": "4.57.1"}
+    torch.__version__ = "private-mutation"
+    parameters[0].device.type = "private-mutation"
+    assert result["devices"] == ["cpu", "cuda"] and result["pytorchVersion"] == "2.9.0+cu128"
+    assert calls == [] and "private" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("value", [None, True, 0, -1, 4097, "8"])
+def test_training_execution_probe_does_not_invent_unavailable_cpu_counts(monkeypatch, value):
+    model, *_ = _execution_hardware_fixture(monkeypatch)
+    monkeypatch.setattr(train_model_module.os, "cpu_count", lambda: value)
+    assert train_model_module._capture_training_hardware(model)["logicalCpuCount"] is None
+
+
+@pytest.mark.parametrize("value", ["C:/private/runtime", "https://example.invalid", "2" * 65,
+    "2.9+hf_" + "a" * 30, None, object()])
+def test_training_execution_probe_omits_unsafe_or_unknown_software_versions(monkeypatch, value):
+    model, torch, transformers, _ = _execution_hardware_fixture(monkeypatch)
+    torch.__version__ = transformers.__version__ = value
+    result = train_model_module._capture_training_hardware(model)
+    assert result["pytorchVersion"] is None and result["transformersVersion"] is None
+
+
+def test_training_execution_probe_accepts_native_string_subclasses_without_virtual_string_hooks(monkeypatch):
+    model, torch, _, _ = _execution_hardware_fixture(monkeypatch)
+    class Version(str):
+        def __str__(self):
+            pytest.fail("A runtime version must not call a virtual conversion hook.")
+    torch.__version__ = Version("2.9.0a0+git123")
+    assert train_model_module._capture_training_hardware(model)["pytorchVersion"] == "2.9.0a0+git123"
+
+
+def test_training_execution_probe_bounds_parameter_iteration_and_omits_failed_or_empty_observations(monkeypatch):
+    model, _, _, parameters = _execution_hardware_fixture(monkeypatch)
+    count = 0
+    def too_many():
+        nonlocal count
+        for _ in range(9000):
+            count += 1
+            yield parameters[0]
+    model.parameters = too_many
+    assert train_model_module._capture_training_hardware(model) is None and count == 8193
+    model.parameters = lambda: iter(())
+    assert train_model_module._capture_training_hardware(model) is None
+    def failed():
+        raise OSError("PRIVATE-RUNTIME-PATH-AND-ERROR")
+    model.parameters = failed
+    assert train_model_module._capture_training_hardware(model) is None
+
+
+def test_training_execution_probe_uses_fixed_unknown_labels_without_converting_private_objects(monkeypatch):
+    model, _, _, parameters = _execution_hardware_fixture(monkeypatch)
+    class Private:
+        def __str__(self):
+            pytest.fail("Private device/dtype values must not be converted.")
+    parameters[:] = [SimpleNamespace(device=SimpleNamespace(type=Private()), dtype=Private())]
+    result = train_model_module._capture_training_hardware(model)
+    assert result["devices"] == result["precisions"] == ["other"]
+
+
 @pytest.mark.parametrize("method", ["lora", "qlora", "full-finetune"])
 def test_private_training_loader_uses_only_local_safe_weights(monkeypatch, tmp_path, method):
     calls = _inert_transformers(monkeypatch)
@@ -2777,7 +2864,20 @@ def test_private_training_refuses_link_or_reparse_root_before_effects(monkeypatc
 
 
 @pytest.mark.parametrize("compare", [False, True])
-def test_private_local_training_serializes_calls_validation_and_returns_candidate(monkeypatch, tmp_path, compare):
+@pytest.mark.parametrize("hardware_recorded", [False, True])
+@pytest.mark.parametrize("wall_day_jump", [0, 8, -1])
+def test_private_local_training_serializes_calls_validation_and_returns_candidate(monkeypatch, tmp_path, compare, hardware_recorded, wall_day_jump):
+    from datetime import datetime as RealDateTime, timedelta as TimeDelta, timezone
+    clock = {"seconds": 0, "days": 0}
+    class Clock:
+        @staticmethod
+        def now(tz):
+            return RealDateTime(2026, 11, 27, 6, 0, clock["seconds"], tzinfo=tz) + TimeDelta(days=clock["days"])
+    monkeypatch.setattr(train_model_module, "datetime", Clock)
+    monkeypatch.setattr(train_model_module, "monotonic_ns", lambda: 1_000_000_000 + clock["seconds"] * 1_000_000_000)
+    hardware = {"devices": ["cpu"], "precisions": ["float32"], "logicalCpuCount": 8,
+                "pythonVersion": "3.12.8", "pytorchVersion": "2.9.0+cpu", "transformersVersion": "4.57.1"}
+    monkeypatch.setattr(train_model_module, "_capture_training_hardware", lambda model: dict(hardware) if hardware_recorded else None)
     payload = _request(tmp_path)
     payload.baseModel.localPath = str(tmp_path)
     calls = _inert_transformers(monkeypatch, successful_output=True)
@@ -2790,6 +2890,8 @@ def test_private_local_training_serializes_calls_validation_and_returns_candidat
     observed_progress = []
     def run_trainer(*args, **kwargs):
         assert kwargs.get("compare_validation_baseline", False) is compare
+        clock["seconds"] = 4
+        clock["days"] = wall_day_jump
         if compare:
             for phase in ("baseline-validation", "training", "trained-validation", "comparison-complete"):
                 kwargs["on_validation_progress"](phase)
@@ -2813,6 +2915,18 @@ def test_private_local_training_serializes_calls_validation_and_returns_candidat
     assert (tmp_path / "out" / "adapter_model.safetensors").is_file()
     assert (tmp_path / "out" / "training-run.json").is_file()
     run_history = json.loads((tmp_path / "out" / "training-run.json").read_text(encoding="utf8"))
+    expected_execution = {"schema": "model-training-execution-v1", "runId": result.runId,
+        "startedAt": "2026-11-27T06:00:00.000Z",
+        "completedAt": (RealDateTime(2026, 11, 27, 6, 0, 4, tzinfo=timezone.utc) + TimeDelta(days=wall_day_jump))
+            .isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+        "durationMs": 4000, "hardware": hardware, "interpretation": "reported-runtime-facts"}
+    assert run_history["startedAt"] == expected_execution["startedAt"], "Start must precede training, not be written as completion."
+    assert run_history["completedAt"] == expected_execution["completedAt"] and run_history["durationMs"] == 4000
+    if hardware_recorded and wall_day_jump == 0:
+        assert run_history["executionHistory"] == result.generatedModelCandidate["metadata"]["executionHistory"] == expected_execution
+    else:
+        assert "executionHistory" not in run_history and "executionHistory" not in result.generatedModelCandidate["metadata"]
+    assert "qualified" not in json.dumps(expected_execution) and "readiness" not in json.dumps(expected_execution)
     if compare:
         expected = {"protocol": "fixed-first-32-validation-loss-v1", "maximumRows": 32, "sampleCount": 2,
                     "baselineLoss": 4.0, "trainedLoss": 3.0, "lossDelta": -1.0, "interpretation": "measurement-only"}

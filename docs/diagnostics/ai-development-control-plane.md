@@ -3194,18 +3194,23 @@ The distinct `model-training-worker-unit` check retains its exact complete
 training-task test file. Its 386-case controlled batch measured 179.34 seconds;
 the later 469-case batch measured 237.45 seconds. The added result-binding cases
 made the complete batch exceed its 240-second ceiling; all 29 new focused cases
-passed in 136.80 seconds. The fixed developer-test outer ceiling is now 420 seconds
+passed in 136.80 seconds. A later 526-case diagnostic passed 317 cases in 386.50
+seconds before an inherited fixture error. The corrected complete file now has
+a fixed developer-test outer ceiling of 600 seconds
 for the complete file. Preserve earlier failed receipts and every test case.
 Independent review also identified an inherited 270-second child cutoff. Only this exact text regression
-gets a 390-second child budget, leaving 30 seconds under its 420-second outer
+gets a 570-second child budget, leaving 30 seconds under its 600-second outer
 ceiling. Generic children keep 270 seconds and review-site children 630 seconds;
 no arbitrary timeout option or generic/profile budget change is introduced.
+Only this exact text test file uses `--maxfail=1`, so its first failure is
+reported before a later timeout. Passing still requires all cases; no selector,
+skip or retry is added. Retain the earlier failed evidence.
 Child timeout failures report a fixed `TimeoutExpired` diagnostic, without raw
 commands, output or exception text.
 Other checks and model/runtime limits remain unchanged; this
 developer-check calibration starts no real model or Native controller and grants
 no qualification retry, public capability or roadmap completion.
-The existing routing fixture uses that same 420-second text bound; its image
+The existing routing fixture uses that same 600-second text bound; its image
 subclass keeps 120 seconds. The complete four-file routing core may select the
 three existing related controller modules, with the original forwarding and
 result-routing tests, the fixed focused-check helper and only the six fixed

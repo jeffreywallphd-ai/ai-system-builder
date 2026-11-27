@@ -105,7 +105,7 @@ They use only the Python standard library.
 Copy `helpers.example.json` into an ignored local directory and pass it with
 `--config`. Command-line values override matching configuration values.
 The fixed `model-training-worker-unit` check retains the complete inert training
-test file with a 390-second child and 420-second outer ceiling. The 30-second
+test file with a 570-second child and 600-second outer ceiling. The 30-second
 grace allows fixed helper output and shutdown. Generic children retain 270 seconds
 and review-site children 630 seconds; no caller-selected timeout exists.
 Timeout failures print a fixed `TimeoutExpired` diagnostic without child command,
@@ -113,6 +113,10 @@ output or exception text.
 Prior calibration recorded 179.34
 seconds for 386 cases, then 237.45 seconds for 469 cases. The expanded batch
 timed out at 240 seconds; its 29 added focused cases passed in 136.80 seconds.
+The later 526-case diagnostic passed 317 cases in 386.50 seconds before an
+inherited fixture error. The fixture is corrected; the exact text file now uses
+`--maxfail=1` to expose the first failure before a timeout hides it. A passing
+run still executes every case. Other batches keep their existing behavior.
 Keep every case and the exact command. The measured developer-test calibration
 changes no model/runtime resource, memory, process, disk or Native permission
 limit and grants no controlled qualification retry.

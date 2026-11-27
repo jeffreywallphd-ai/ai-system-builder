@@ -1335,7 +1335,7 @@ PUBLISHED_FORM_CHECKS = {
         "interpreter": "python",
         # The complete batch exceeded240s after new result-binding regressions.
         # This developer-check ceiling does not change model/runtime limits.
-        "timeout": 420,
+        "timeout": 600,
         "automatic_sources": (
             "modules/adapters/runtime/python/worker/tasks/train_model.py",
             "modules/adapters/runtime/python/worker/tests/test_train_model_task.py",

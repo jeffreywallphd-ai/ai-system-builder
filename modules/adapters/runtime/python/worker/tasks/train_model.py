@@ -3,17 +3,19 @@ from __future__ import annotations
 import json
 import hashlib
 import re
+import os
 import stat
 import sys
 import tempfile
 from collections import OrderedDict
 from types import BuiltinMethodType, FunctionType, GetSetDescriptorType, MethodType, ModuleType
 from shutil import rmtree
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from math import ceil, isfinite
 from pathlib import Path
 from threading import get_ident
+from time import monotonic_ns
 from typing import Any, Callable
 from weakref import WeakKeyDictionary, ref
 
@@ -3298,6 +3300,50 @@ _PROTECTED_WORKFLOW_HELPERS = (_run_protected_training_pipeline,_validate_protec
     _NATIVE_CHECKPOINT_FAMILY_OWNER,_training_task_tags,_RESULT_API)
 
 
+def _capture_training_hardware(model) -> dict[str, Any] | None:
+    """Bounded descriptive facts from the model already used by this run.
+
+    Never import another runtime, read tensors, enumerate machines or probe a
+    provider. Observation failure leaves facts unrecorded, not training failed.
+    The original execution owner still enforces admission and process limits.
+    """
+    try:
+        torch_module = sys.modules.get("torch")
+        torch_fields = vars(torch_module) if isinstance(torch_module, ModuleType) else {}
+        precision_names = ("float32", "float16", "bfloat16", "float64", "int8", "uint8")
+        known_types = tuple((name, torch_fields.get(name)) for name in precision_names)
+        devices, precisions = set(), set()
+        for index, parameter in enumerate(model.parameters()):
+            if index >= 8192:
+                return None
+            device = parameter.device.type
+            devices.add(device if type(device) is str and device in ("cpu", "cuda", "mps", "xpu") else "other")
+            dtype = parameter.dtype
+            precisions.add(next((name for name, value in known_types if value is not None and dtype is value), "other"))
+        if not devices or not precisions:
+            return None
+
+        def loaded_version(name):
+            module = sys.modules.get(name)
+            value = vars(module).get("__version__") if isinstance(module, ModuleType) else None
+            if not isinstance(value, str):
+                return None
+            value = str.__str__(value)  # TorchVersion is a str subclass; do not call a custom __str__.
+            # Recognize ordinary distribution versions only. Unknown forms stay
+            # unrecorded; separators used by credentials/paths are not allowed.
+            return value if len(value) <= 64 and re.fullmatch(
+                r"[0-9]+\.[0-9]+(?:\.[0-9]+)*(?:a[0-9]+|b[0-9]+|rc[0-9]+)?"
+                r"(?:\.(?:dev|post)[0-9]+)?(?:\+[a-z0-9.]{1,32})?", value) else None
+
+        cpu_count = os.cpu_count()
+        return {"devices": sorted(devices), "precisions": sorted(precisions),
+            "logicalCpuCount": cpu_count if type(cpu_count) is int and 1 <= cpu_count <= 4096 else None,
+            "pythonVersion": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+            "pytorchVersion": loaded_version("torch"), "transformersVersion": loaded_version("transformers")}
+    except Exception:
+        return None
+
+
 def _write_run_metadata(output_path: Path, metadata: dict[str, Any]) -> str:
     run_metadata_path = output_path / "training-run.json"
     run_metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -3384,6 +3430,10 @@ def _train_model(
 
     training_seed = _text_training_settings(payload)[0] if training_task in TEXT_CAUSAL_TRAINING_TASKS else None
     seed_options = {"training_seed":training_seed} if training_seed is not None else {}
+
+    started_instant = datetime.now(timezone.utc)
+    started_at = started_instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    started_ns = monotonic_ns()
 
     run_id = (_protected_use._run_identity[0] if _protected_use is not None else
         f"train-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
@@ -3581,6 +3631,18 @@ def _train_model(
 
         stage = "run-metadata"
         _check_protected_use(_protected_use,payload)
+        # Model loading, training and serialization have ended. This is pipeline
+        # timing, not original worker/IO settlement or a resource-budget proof.
+        hardware = _capture_training_hardware(model) if local_model_ref is not None else None
+        completed_instant = datetime.now(timezone.utc)
+        completed_at = completed_instant.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        duration_ms = (monotonic_ns() - started_ns) // 1_000_000
+        recorded_duration = duration_ms if type(duration_ms) is int and 0 <= duration_ms <= 604_800_000 else None
+        execution_history = ({"schema": "model-training-execution-v1", "runId": run_id,
+            "startedAt": started_at, "completedAt": completed_at, "durationMs": recorded_duration,
+            "hardware": hardware, "interpretation": "reported-runtime-facts"}
+            if hardware is not None and recorded_duration is not None and
+                timedelta(0) <= completed_instant - started_instant <= timedelta(days=7) else None)
         run_metadata_path = _write_run_metadata(
             output_path,
             {
@@ -3589,10 +3651,13 @@ def _train_model(
                 "trainingTask": training_task,
                 "baseModel": payload.baseModel.model_dump(mode="json"),
                 "datasets": [dataset_entry.model_dump(mode="json") for dataset_entry in payload.datasets],
-                "startedAt": datetime.now(timezone.utc).isoformat(),
+                "startedAt": started_at,
+                "completedAt": completed_at,
+                **({"durationMs": recorded_duration} if recorded_duration is not None else {}),
                 "status": "failed" if validation_enabled and validation["status"] == "invalid" else "succeeded",
                 "serializationManifestPath": manifest_path,
                 **({"validationComparison": comparison} if comparison is not None else {}),
+                **({"executionHistory": execution_history} if execution_history is not None else {}),
             },
         )
 
@@ -3610,6 +3675,7 @@ def _train_model(
             "validation": validation,
             "serialization": serialization,
             **({"validationComparison": comparison} if comparison is not None else {}),
+            **({"executionHistory": execution_history} if execution_history is not None else {}),
         }
 
         final_status = "failed" if validation_enabled and validation["status"] == "invalid" else "succeeded"

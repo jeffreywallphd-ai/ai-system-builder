@@ -45,12 +45,23 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         selected=checks['model-training-worker-unit']
         self.assertEqual(selected['argv'],[sys.executable,'-B','dev-tools/helpers/run_focused_checks.py',
             '--regression-test','modules/adapters/runtime/python/worker/tests/test_train_model_task.py'])
-        self.assertEqual(selected['timeout'],420)
+        self.assertEqual(selected['timeout'],600)
         # No shorter selector or new runtime/model authorization follows from
         # allowing the complete inert feature batch to finish.
         self.assertNotIn('-k',selected['argv'])
         for name in ('headless-training-runtime-unit','headless-training-runtime-worker-unit','python-runtime-owned-worker'):
             self.assertEqual(checks[name]['timeout'],120)
+
+    def test_first_failure_diagnostics_keep_the_complete_exact_text_file(self):
+        target='modules/adapters/runtime/python/worker/tests/test_train_model_task.py'
+        for name in (target, 'modules/adapters/other/test_train_model_task.py',
+                     target+'.other', 'modules/adapters/runtime/python/worker/tests/test_train_model_multimodal.py'):
+            self.put(name, 'def test_value():\n    assert True\n')
+            command=focused.python_test_command(self.root,name)
+            self.assertEqual(command[-2:],['--',name])
+            self.assertEqual(command.count('--maxfail=1'),1 if name==target else 0)
+            self.assertNotIn('-k',command)
+            self.assertNotIn('--lf',command)
 
     def test_exact_training_bound_scope_executes_related_modules_and_preserves_fallback(self):
         root=Path(__file__).resolve().parents[3]
@@ -520,7 +531,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
 
     def test_only_the_exact_text_regression_gets_the_calibrated_child_budget(self):
         target='modules/adapters/runtime/python/worker/tests/test_train_model_task.py'
-        self.assertEqual(focused.profile_command_timeout(None,regression_test=target),390)
+        self.assertEqual(focused.profile_command_timeout(None,regression_test=target),570)
         for profile in (None,'functionality-outcomes','review-site'):
             self.assertEqual(focused.profile_command_timeout(profile),630 if profile=='review-site' else 270)
             for path in (None,'modules/adapters/other/test_train_model_task.py',target+'.other'):
@@ -533,10 +544,10 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             self.assertEqual(focused.main(),0)
             commands.assert_called_once_with(Path(focused.__file__).resolve().parents[2],[target],exact=True)
             self.assertEqual(run.call_args.args[0],command)
-            self.assertEqual(run.call_args.kwargs['timeout'],390)
+            self.assertEqual(run.call_args.kwargs['timeout'],570)
         outer=next(row for row in catalog.definitions(Path(__file__).resolve().parents[3])
             if row['id']=='model-training-worker-unit')['timeout']
-        self.assertEqual(outer,420);self.assertEqual(outer-390,30)
+        self.assertEqual(outer,600);self.assertEqual(outer-570,30)
 
     def test_child_timeout_reports_only_a_fixed_diagnostic_type(self):
         import io

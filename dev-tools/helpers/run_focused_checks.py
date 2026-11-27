@@ -70,8 +70,11 @@ def python_test_command(root, test):
     tree = ast.parse((root / test).read_text(encoding="utf-8-sig"))
     # Fixture functions need pytest even when the module does not import it.
     if any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_") for node in tree.body):
+        # Retain the full text batch, but expose its first failure before a
+        # later timeout can hide it. Other owned batches keep their behavior.
+        diagnostics = ["--maxfail=1"] if test == "modules/adapters/runtime/python/worker/tests/test_train_model_task.py" else []
         return [sys.executable, "-B", "-m", "pytest", "-c", "dev-tools/config/pytest-focused.ini",
-                "--noconftest", "-p", "no:cacheprovider", "-q", "--", test]
+                "--noconftest", "-p", "no:cacheprovider", "-q", *diagnostics, "--", test]
     return [sys.executable, "-B", "-m", "unittest", "discover", "-s", Path(test).parent.as_posix(), "-p", Path(test).name]
 
 
@@ -149,10 +152,10 @@ def profile_command_timeout(profile, *, regression_test=None):
     if profile == "review-site":
         return 630
     # Only this exact source-owned inert text batch has a measured calibration.
-    # Keep 30s grace below its 420s outer check and generic budgets unchanged.
+    # Keep 30s grace below its 600s outer check and generic budgets unchanged.
     if (profile is None and type(regression_test) is str and
             regression_test == "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"):
-        return 390
+        return 570
     if (profile is None and type(regression_test) is str and
             regression_test == "modules/adapters/runtime/python/worker/tests/test_original_training_output_retirement.py"):
         return 90
