@@ -194,6 +194,7 @@ TRAINING_FRESH_GUARD = "dev-tools/scripts/qualification/headless-training/fresh_
 TRAINING_FRESH_GUARD_TEST = "dev-tools/helpers/tests/test_control_plane_headless_training_trial.py"
 TRAINING_FRESH_DIAGNOSTIC_PRODUCERS = ("modules/contracts/headless/headless-authoring-result.ts",
     "modules/contracts/headless/headless-plan-step-wire.ts")
+TRAINING_FRESH_REVIEW_PRODUCER = "dev-tools/helpers/control_plane/work.py"
 TRAINING_EVALUATION_TEST = "modules/hosts/shared/composition/tests/headless-model-training-evaluation.unit.test.ts"
 TRAINING_EVALUATION_REQUIRED = (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE,
     "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
@@ -1001,9 +1002,9 @@ PUBLISHED_FORM_CHECKS = {
         "timeout": 900,
     },
     "headless-training-fresh-trial-guard-unit": {
-        "automatic_sources": (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
-        "automatic_required_files": (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
-        "sources": TRAINING_FRESH_GUARD_SCOPE + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
+        "automatic_sources": (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE, TRAINING_FRESH_REVIEW_PRODUCER) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
+        "automatic_required_files": (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE, TRAINING_FRESH_REVIEW_PRODUCER) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
+        "sources": TRAINING_FRESH_GUARD_SCOPE + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS + (TRAINING_FRESH_REVIEW_PRODUCER,),
         "interpreter": "python",
         "command": (TRAINING_FRESH_GUARD_TEST,),
     },
@@ -4993,17 +4994,18 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[part for name in ("test_control_plane_headless_image_generation.", "test_control_plane_focused.") for part in ("-k", name)]]
-    if ({TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST,
-            TRAINING_BOUNDED_FEATURE, TRAINING_START_CONTROLLER_TEST} <= set(paths) <= set(TRAINING_FRESH_GUARD_SCOPE)
+    if ({TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST} <= set(paths) <= set(TRAINING_FRESH_GUARD_SCOPE)
             and "focused-tests" not in explicit_required
             and _automatic_files_available(root, {"automatic_required_files": (
-                TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE, TRAINING_START_CONTROLLER_TEST) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS})):
+                TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE, TRAINING_START_CONTROLLER_TEST,
+                TRAINING_FRESH_REVIEW_PRODUCER) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS})):
         controller = next((check for check in selected if check["id"] == "control-plane"), None)
         if controller is not None:
+            filters = ("test_control_plane_headless_training_trial.", "test_control_plane_focused.") + (
+                ("test_control_plane_headless_training_host_approval.",) if TRAINING_START_CONTROLLER_TEST in paths else ())
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
-                *[part for name in ("test_control_plane_headless_training_trial.", "test_control_plane_headless_training_host_approval.",
-                    "test_control_plane_focused.") for part in ("-k", name)]]
+                *[part for name in filters for part in ("-k", name)]]
     session_exit_support = (TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE
         + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS)
         + tuple(name for identity in ("headless-training-session-exit-ready-unit", "headless-training-runtime-unit",

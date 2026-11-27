@@ -78,20 +78,36 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         with self.assertRaises(guard.AdmissionError): guard.read_record(self.root, target)
         with self.assertRaises(guard.AdmissionError): guard.plain(self.root, self.root.parent / "outside", True)
 
-    def test_current_independent_guard_review_is_required_and_cannot_include_real_execution(self):
+    def canonical_review_fixture(self):
         receipt = {"source_digest": self.source, "receipt_digest": "d" * 64,
             "plan": {"plan_digest": "e" * 64, "selected": [{"id": "headless-training-fresh-trial-guard-unit"}]}}
-        work = {"status": "complete", "contributors": ["author"], "completion": {"receipt_digest": "d" * 64, "review_digest": "f" * 64},
-            "reviews": [{"review_digest": "f" * 64, "disposition": "accepted", "receipt_digest": "d" * 64,
-                "source_digest": self.source, "plan_digest": "e" * 64, "invocation_id": "reviewer"}]}
+        work = {"status": "verifying", "contributors": ["author"], "spec": {"acceptance": [{"id": "one-use"}]}, "reviews": []}
+        state = {"work_items": {guard.GUARD_WORK: work}}
+        # Exercise the actual record producer instead of inventing review fields.
+        producer = guard.Work(self.root)
+        producer.records = SimpleNamespace(mutate=lambda operation: operation(state))
+        request = {"schema_version": "technical-review-v1", "work_id": guard.GUARD_WORK, "invocation_id": "reviewer",
+            "assurance": "host-attested", "disposition": "accepted", "receipt_digest": receipt["receipt_digest"],
+            "findings": [], "closures": [], "reviewed_criteria": ["one-use"]}
+        with patch.object(producer, "current_receipt", return_value=receipt), \
+                patch.object(producer, "_usage_boundary", side_effect=lambda result, *args, **kwargs: result):
+            result = producer.review(request)
+        self.assertNotIn("plan_digest", work["reviews"][0])
+        work["status"] = "complete"
+        work["completion"] = {"receipt_digest": receipt["receipt_digest"], "review_digest": result["review_digest"]}
+        return work, receipt
+
+    def test_current_independent_guard_review_is_required_and_cannot_include_real_execution(self):
+        work, receipt = self.canonical_review_fixture()
         guard.reviewed_guard(work, receipt, self.source)
-        for variant in ("source", "reviewer", "disposition", "complete", "real-run"):
+        for variant in ("source", "reviewer", "disposition", "complete", "real-run", "integrity"):
             w, r = copy.deepcopy(work), copy.deepcopy(receipt)
             if variant == "source": r["source_digest"] = "0" * 64
             if variant == "reviewer": w["reviews"][0]["invocation_id"] = "author"
             if variant == "disposition": w["reviews"][0]["disposition"] = "changes-requested"
             if variant == "complete": w["status"] = "active"
             if variant == "real-run": r["plan"]["selected"].append({"id": "headless-training-bounded-feature"})
+            if variant == "integrity": w["reviews"][0]["assurance"] = "changed"
             with self.assertRaises(guard.AdmissionError): guard.reviewed_guard(w, r, self.source)
 
     def test_rewritten_record_is_readable_without_cross_api_ctime_assumptions(self):
@@ -115,6 +131,41 @@ class FreshTinyAdmissionTests(unittest.TestCase):
             self.assertEqual(guard.main(), 1)
         execute.assert_not_called(); self.assertNotIn(str(self.root), output.getvalue())
         self.assertFalse((self.directory / "used.json").exists())
+
+    def test_main_accepts_canonical_review_and_calls_one_inert_child_only(self):
+        work, receipt = self.canonical_review_fixture()
+        prior = [{"qualification": "failed", "case": n} for n in (1, 2)]
+        for row in prior: row["receipt_digest"] = guard.digest(row)
+        references = [row["receipt_digest"] for row in prior]
+        (self.directory / "authorization.json").write_text(json.dumps({**self.authorization, "prior_receipts": references}))
+        python = self.root / "inert-python"; python.write_text("never executed")
+        model = self.root / "inert-model"; model.mkdir()
+        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior}, guard.TRIAL_WORK: {
+            "status": "active", "claim": {"owned": True}, "spec": {"task_targets": [{"task_id": "run-approved-fine-tuning", "coverage": "task-outcome"}]}}}}
+        def inert_child(root, command):
+            self.assertEqual(command["argv"], ["node", "--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", guard.RUNNER])
+            directory = root / ".local-codex/headless-training-feature"; directory.mkdir()
+            row = {"schema": "bounded-training-feature-diagnostic-v2", "phase": "complete", "startup": "stop-complete",
+                "sourceFactories": 1, "outputFactories": 1, "startCode": None, "workerRetirementConfirmed": True,
+                "ownerClosureConfirmed": True, "modelQualityTested": False, "interpretation": "diagnostic-only-not-qualification"}
+            (directory / ("9" * 32 + ".json")).write_text(json.dumps(row))
+            return {"status": "passed", "exit_code": 0, "duration_ms": 1, "output": {}}
+        with patch.object(guard, "ROOT", self.root), patch.object(guard, "PRIOR", references), \
+                patch.object(guard, "snapshot", return_value={"source_digest": self.source}), \
+                patch.object(guard, "Records") as records, patch.object(guard, "Work") as owner, \
+                patch.object(guard, "execute", side_effect=inert_child) as execute, \
+                patch.object(guard.shutil, "disk_usage", return_value=SimpleNamespace(free=1024**3)), \
+                patch.dict(os.environ, {"ASB_HEADLESS_TRAINING_TEST_PYTHON": str(python), "ASB_HEADLESS_TRAINING_TEST_INPUT": str(model)}), \
+                redirect_stdout(io.StringIO()):
+            records.return_value.load.return_value = state
+            owner.return_value.current_receipt.return_value = receipt
+            owner.return_value.context.return_value = ({"source_digest": self.source}, {"selected": [{"id": "headless-training-bounded-feature"}]})
+            self.assertEqual(guard.main(), 0)
+            self.assertEqual(guard.main(), 1)
+        execute.assert_called_once()
+        result = json.loads((self.directory / "result.json").read_text())
+        self.assertEqual(result["status"], "passed"); self.assertEqual(result["prior_released_bytes"], 0)
+        self.assertFalse(result["model_quality_tested"])
 
     def test_only_new_closed_diagnostics_are_disclosed_and_raw_fields_deny(self):
         directory = self.root / ".local-codex/headless-training-feature"; directory.mkdir()
@@ -173,6 +224,7 @@ class FreshTinyRoutingTests(unittest.TestCase):
         rows = self.select(scope); self.assertNotIn("focused-tests", rows); self.assertIn("-k", rows["control-plane"]["argv"])
         without_catalog = [name for name in scope if name != "dev-tools/helpers/control_plane/catalog.py"]
         self.assertIn("-k", self.select(without_catalog)["control-plane"]["argv"])
+        self.assertEqual(self.select([catalog.TRAINING_FRESH_GUARD, catalog.TRAINING_FRESH_GUARD_TEST])["control-plane"]["argv"].count("-k"), 2)
         for paths, required in (([*scope, "modules/hosts/unknown.ts"], ("architecture",)), (scope, ("focused-tests",))):
             rows = self.select(paths, required); self.assertIn("focused-tests", rows); self.assertNotIn("-k", rows["control-plane"]["argv"])
         with patch.object(catalog, "_automatic_files_available", return_value=False):

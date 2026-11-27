@@ -1,6 +1,14 @@
 
 ## Numeric capture at coding-session initialization
 
+Fresh Tiny admission validates the current complete receipt and the actual stored
+technical review's source, receipt digest, independent invocation and integrity.
+The receipt digest already binds its entire check plan; the review schema has no
+additional `plan_digest`. Guard regressions exercise `Work.review` itself and an
+inert successful admission, avoiding invented record fields. Related routing runs
+the guard and focused modules, adding host-routing tests only when those sources
+change. Missing or unknown impact keeps conservative coverage.
+
 `headless-training-fresh-trial-guard-unit` exercises only inert admission,
 retained-accounting, one-use, diagnostic and routing checks. Source edits select
 it and the existing strict Tiny test types, never the real trial. Explicit

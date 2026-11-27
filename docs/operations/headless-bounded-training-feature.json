@@ -72,8 +72,8 @@
     "process_to_stop": null,
     "prior_retirement": "unconfirmed",
     "prior_cleanup_authorized": false,
-    "guard_work_id": "headless-training-fresh-trial-guard",
-    "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127"
+    "guard_work_id": "headless-training-fresh-review-binding-fix",
+    "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2"
   },
   "fresh_trial_guard": {
     "status": "source-qualification-pending",
@@ -86,7 +86,7 @@
     "physical_quota_asserted": false,
     "scope": "Current reviewed source and active exact task Work; original failed receipts and unknown charges stay retained. No old-tree inspection, adoption, mutation or cleanup credit.",
     "cleanup": "Only the original new-worker and IO proof permits removal of the new test root. Failed/unconfirmed new files remain retained.",
-    "tracked_inert_test_cases": 12,
+    "tracked_inert_test_cases": 13,
     "preserved_source_verification": {
       "receipt_digest": "5463a1c748f31079b0fd33b1c3476dcae7dd0496cf26ecd6c8bdde9ff037918c",
       "result": "Unqualified: intentionally stopped an unintended full controller batch. Other selected source checks passed. No fresh actual training attempt was consumed.",
@@ -94,6 +94,15 @@
       "review_advisory_sha256": "4877053f3deae7fa555e627bdb59e769aee6f5e7ebf3182ab4e1a4299d7338a1",
       "diagnostic_correction": "Match all twelve declared plan-step failure codes and prove every failure code is diagnostic-only, never a pass; reject unknown/raw data.",
       "file_observation_correction": "On the pinned Windows Python, compare ctime before/after within each pathname/handle API. Preserve cross-observation identity, size, modification-time and link checks, plus same-API timestamp-change denial."
+    },
+    "pre_admission_composition_failure": {
+      "receipt_digest": "c74f75c1b3c0a14b98d5e1c29e3ec3c5e51c4f4e6be6020c3dee3ded1bb053f0",
+      "result": "The first admission writer failed before creating any authorization directory, consumed marker or model process. The subsequent guarded check denied missing authorization. The one approved actual attempt remains unused.",
+      "cause": "Guard incorrectly read plan_digest from the stored review, whose canonical schema binds the complete plan indirectly through receipt_digest.",
+      "source_fix_work_id": "headless-training-fresh-review-binding-fix",
+      "correction": "Use the actual Work.review producer in regressions, verify current receipt/source and independent review integrity, and test a complete inert one-child admission.",
+      "actual_attempt_consumed": false,
+      "model_or_native_run": false
     }
   }
 }

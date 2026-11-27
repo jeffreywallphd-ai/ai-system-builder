@@ -39,6 +39,10 @@ old-tree size or an operating-system physical quota. No old tree is inspected,
 adopted, moved, deleted or released. The signed-in-user/dependency trust in ADR49
 is unchanged. Only original new-worker and IO closure allow new fixture cleanup.
 The small authorization/consumed/result records remain as bounded audit evidence.
+The stored technical review binds the complete validated check plan through its
+receipt digest. It has no separate `plan_digest` field. Guard tests use the actual
+`Work.review` record producer and an inert complete admission path, with current
+source, independent review integrity and single-child checks.
 All declared plan-step refusal codes stay visible as diagnostic facts; any such
 code prevents a pass. Unknown codes and raw error fields deny. Record identity,
 size, modification time and links must agree across observations; creation/change

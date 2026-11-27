@@ -17,8 +17,8 @@ from control_plane.execution import execute
 from control_plane.records import Records
 from control_plane.work import Work
 
-GUARD_WORK = "headless-training-fresh-trial-guard"
-TRIAL_WORK = "headless-bounded-training-fresh-attempt-20261127"
+GUARD_WORK = "headless-training-fresh-review-binding-fix"
+TRIAL_WORK = "headless-bounded-training-fresh-attempt-20261127-r2"
 DIRECTORY = ".local-codex/headless-training-fresh-trial-20261127"
 RUNNER = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
 PRIOR_WORK = "headless-bounded-training-feature"
@@ -118,9 +118,12 @@ def reviewed_guard(work, receipt, source):
          work["completion"]["receipt_digest"] == receipt["receipt_digest"], "fresh-trial.guard-not-current")
     review = next((r for r in work["reviews"] if r["review_digest"] == work["completion"]["review_digest"]), None)
     need(review is not None and review["disposition"] == "accepted" and
+         review["review_digest"] == digest({k: v for k, v in review.items() if k != "review_digest"}) and
          review["receipt_digest"] == receipt["receipt_digest"] and review["source_digest"] == source and
-         review["plan_digest"] == receipt["plan"]["plan_digest"] and review["invocation_id"] not in work["contributors"],
+         review["invocation_id"] not in work["contributors"],
          "fresh-trial.guard-review")
+    # current_receipt validates the complete current plan. The review's exact
+    # receipt digest binds that plan; the stored v1 review has no plan_digest.
     selected = {row["id"] for row in receipt["plan"]["selected"]}
     need("headless-training-fresh-trial-guard-unit" in selected and "headless-training-bounded-feature" not in selected,
          "fresh-trial.guard-scope")
