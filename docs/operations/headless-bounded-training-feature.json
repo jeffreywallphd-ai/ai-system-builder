@@ -1,0 +1,68 @@
+{
+  "schema_version": "headless-bounded-training-feature-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "models-training-and-generation",
+  "task_id": "run-approved-fine-tuning",
+  "owning_work_id": "headless-bounded-training-feature",
+  "evidence_policy": "Feature definition and failed history only. Qualification requires the exact current executed owning Work receipt and separate accepted review. Source repair supplies no actual training or past retirement pass.",
+  "test_file": "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts",
+  "check_id": "headless-training-bounded-feature",
+  "input_profile": "existing-generated-tiny-qwen2-v1",
+  "scope": "One actual CPU fine-tuning step through the approved Core ledger, original data/model readers, private application and bounded-local worker; controlled related tests retain SQLite, permission, replay, resource and separate-Save regressions.",
+  "limits": {
+    "process_memory_bytes": 2147483648,
+    "job_memory_bytes": 4294967296,
+    "maximum_processes": 32,
+    "native_duration_ms": 690000,
+    "task_duration_seconds": 600,
+    "model_copy_bytes": 1048576,
+    "output_bytes": 4194304,
+    "minimum_free_disk_bytes": 134217728
+  },
+  "required_observations": [
+    "The approved original task starts and reaches succeeded without ordinary fallback.",
+    "Original progress and completion, checkpoint/output history and current candidate are available.",
+    "Original input hashes are unchanged, replay starts no second worker and no generated Model is registered.",
+    "Original worker retirement and closed source, destination and verification IO precede fixture cleanup."
+  ],
+  "limitations": [
+    "No model accuracy or before/after quality score is tested.",
+    "Public paired-host qualification, evaluation software and generation/import remain later tasks.",
+    "No protected storage service, physical disk quota, historical recovery, parent or whole-roadmap pass is supplied."
+  ],
+  "source_support_work_id": "headless-bounded-training-fixture-and-shutdown",
+  "status": "technical-check-pending",
+  "failed_attempts": [
+    {
+      "source_digest": "4f6032d221caee29bc8f73b7dd5768fae83ac569b738c2a49239e975c3eb2c2f",
+      "receipt_digest": "cb215d3c3409542e88860920fb889e4ad9baf8d9b859a1c3052f63a462084d41",
+      "result": "failed-before-original-channel-startup",
+      "finding": "Output setup supplied four retained owner methods where the strict private verifier accepts exactly two. Corrected with a narrow original-method adapter; decoder unchanged."
+    },
+    {
+      "source_digest": "30c2db44cd07f936fc3a39c0ffe9a48ac808a4e15639b5afff33b0bf35048b47",
+      "receipt_digest": "bf7abd87829766f0795638ab8fb8c7f098ba95c6aaaea34e289660bcf72bb093",
+      "result": "failed-after-worker-readiness",
+      "diagnostics": {
+        "phase": "approved-start",
+        "startup": "health-ready",
+        "source_factories": 1,
+        "output_factories": 1,
+        "worker_retirement_confirmed": false,
+        "owner_closure_confirmed": false
+      },
+      "finding": "App data and output stages were siblings of the permitted root. The containment guard rejects them. A separately reproduced daemon buffered-stdin shutdown failure is also applicable to the controller; it does not prove the historical run retired."
+    }
+  ],
+  "source_repairs": [
+    "Nest the entire App fixture beneath its exact fresh bounded root and explicitly clean its child before removing the parent.",
+    "Use one bounded original raw stdin reader for boot and commands, preserving frame/queue/count limits and final source acknowledgments.",
+    "Test real stdio shutdown with an inert owner and the parent writer still open. This starts no model or Native Job.",
+    "Retain bounded append-only closed diagnostic facts and all earlier failed evidence."
+  ],
+  "remaining_qualification": [
+    "Actual fine-tuning, progress, checkpoint/current-candidate results and original IO/worker retirement remain unqualified.",
+    "The failed real run and its retained files remain unconfirmed. Source tests do not authorize historical cleanup, a fresh model lease or a retry.",
+    "Review original ownership/recovery requirements before a further actual attempt. No model accuracy rerun is needed."
+  ]
+}

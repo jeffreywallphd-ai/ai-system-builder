@@ -13,6 +13,19 @@ recovery. It preserves the existing default factory and model memory policy.
 
 # Python Runtime Worker
 
+## Original controller command input
+
+The controller captures one bounded raw reader from its original standard-input
+descriptor for both boot and command frames. It preserves partial and coalesced
+lines, EOF, frame/queue/count limits and final source acknowledgments. A daemon
+that reads `sys.stdin.buffer` can hold Python's buffered-reader lock during exit;
+raw reads avoid that shutdown crash while the parent keeps its writer open.
+The descriptor is borrowed and is never reopened or closed by the reader.
+Native retirement and actual controller close remain separate mandatory proofs.
+The regression test starts one small Python child with an inert owner and a
+five-second bound per response. It creates no Native Job, model or worker and
+cannot qualify actual historical retirement or grant another model attempt.
+
 ## Protected source-copy component
 
 The fixed original controller can privately construct a same-byte protected

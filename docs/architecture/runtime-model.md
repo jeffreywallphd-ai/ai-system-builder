@@ -4157,3 +4157,24 @@ ordinary browsing does not initialize this owner. The existing ledger, applicati
 admission and original runtime session retain effect and lifetime ownership.
 Controlled Core/SQLite checks qualify this composition only. Actual bounded
 fine-tuning, public host wiring and physical qualification remain separate work.
+
+The explicit bounded Headless training feature check composes the existing
+approved-plan fixture with the real private foundation and filesystem adapters.
+Its generated Tiny input is hash-verified and copied into fresh owned test
+storage. The original application still stages the exact approved data, retains
+task ownership and keeps Save separate. Pipeline execution IDs and app task IDs
+remain distinct. Check actual progress, checkpoint inventory, current candidate
+hashes and runtime history; do not turn a software workflow test into an accuracy
+benchmark. The test's pinned finite profile and result policy are documented in
+`docs/operations/headless-bounded-training-feature.json`. Only its current executed
+receipt and independent review can support qualification.
+
+The actual test nests App staging inside the same fresh bounded root; it never
+widens containment to a shared temporary directory. Explicit teardown retires
+the original runtime/IO, then closes the App fixture and restores TEMP, then
+removes its unchanged outer root. Controller boot and command input share one
+bounded raw reader over the original stdin descriptor. This preserves queued
+frames and final source acknowledgments without a Python buffered-reader exit
+lock. The inert-owner stdio subprocess tests qualify that source correction only.
+Earlier actual-run retirement remains unconfirmed until independently proved;
+neither source tests nor process IDs authorize cleanup, a fresh lease or retry.

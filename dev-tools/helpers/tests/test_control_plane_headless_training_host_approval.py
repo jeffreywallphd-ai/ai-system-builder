@@ -97,6 +97,45 @@ class TrainingHostApprovalRoutingTests(unittest.TestCase):
                     if directory: path.rmdir()
                 path.write_text("// inert\n", encoding="utf8")
 
+    def test_real_training_requires_explicit_selection_and_fixture_edits_only_run_controlled_tests(self):
+        for path in (catalog.TRAINING_BOUNDED_FEATURE, catalog.TRAINING_SHARED_FIXTURE):
+            rows = self.select([path])
+            self.assertNotIn("headless-training-bounded-feature", rows)
+            self.assertNotIn("focused-tests", rows)
+        rows = self.select([catalog.TRAINING_BOUNDED_FEATURE])
+        self.assertIn("headless-training-bounded-feature-types", rows)
+        self.assertIn("--noEmit", rows["headless-training-bounded-feature-types"]["argv"])
+        rows = self.select([catalog.TRAINING_BOUNDED_FEATURE], required=("headless-training-bounded-feature",))
+        self.assertEqual(rows["headless-training-bounded-feature"]["argv"][-1], catalog.TRAINING_BOUNDED_FEATURE)
+        self.assertNotIn(".test.", catalog.TRAINING_BOUNDED_FEATURE)
+
+    def test_bounded_training_controller_scope_preserves_unknown_and_missing_fallback(self):
+        rows = self.select(catalog.TRAINING_BOUNDED_SCOPE)
+        self.assertIn("-k", rows["control-plane"]["argv"])
+        self.assertNotIn("headless-training-bounded-feature", rows)
+        self.assertNotIn("-k", self.select([*catalog.TRAINING_BOUNDED_SCOPE, "modules/hosts/unknown.ts"])["control-plane"]["argv"])
+        self.assertNotIn("-k", self.select(catalog.TRAINING_BOUNDED_SCOPE, required=("focused-tests",))["control-plane"]["argv"])
+        required = catalog.PUBLISHED_FORM_CHECKS["headless-training-execution-unit"]["automatic_required_files"] + (
+            catalog.TRAINING_SHARED_FIXTURE, catalog.TRAINING_BOUNDED_FEATURE, catalog.TRAINING_START_CONTROLLER_TEST) + catalog.TRAINING_BOUNDED_SOURCE_REPAIR
+        self.assertLessEqual(len(required), 32)
+        with tempfile.TemporaryDirectory(prefix="bounded-routing-") as temporary:
+            root = Path(temporary)
+            for relative in required:
+                path = root / relative; path.parent.mkdir(parents=True, exist_ok=True); path.write_text("// inert\n", encoding="utf8")
+            self.assertIn("-k", self.select(catalog.TRAINING_BOUNDED_SCOPE, root)["control-plane"]["argv"])
+            for relative in required:
+                path = root / relative; path.unlink()
+                for nonregular in (False, True):
+                    if nonregular: path.mkdir()
+                    if nonregular and relative == catalog.TRAINING_START_CONTROLLER_TEST:
+                        # A malformed verification-policy source refuses planning
+                        # during policy hashing; it must not select narrower tests.
+                        with self.assertRaises(OSError): self.select(catalog.TRAINING_BOUNDED_SCOPE, root)
+                    else:
+                        self.assertNotIn("-k", self.select(catalog.TRAINING_BOUNDED_SCOPE, root)["control-plane"]["argv"])
+                    if nonregular: path.rmdir()
+                path.write_text("// inert\n", encoding="utf8")
+
     def test_fixed_commands_execute_actual_assertions_strict_consumers_and_existing_server_build(self):
         rows = self.select([self.test_file])
         environment = dict(os.environ)

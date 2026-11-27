@@ -6,10 +6,13 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 from queue import Queue
 import struct
+import subprocess
 import sys
+import time
 from threading import Event, Thread, get_ident
 from types import ModuleType
 import unittest
@@ -3091,4 +3094,84 @@ class ModelGraphTests(unittest.TestCase):
             with self.assertRaises(n.LaunchUnavailable): self.graph(value)
 
 
-if __name__ == "__main__": unittest.main()
+class CommandFrameReaderTests(unittest.TestCase):
+    def test_partial_coalesced_lines_and_eof_share_one_bounded_reader(self):
+        chunks = iter((b"one\ntw", b"o\nthree\n", b"tail", b"")); calls = []
+        def read(count):
+            calls.append(count); return next(chunks)
+        reader = n.BoundedCommandFrameReader(read)
+        self.assertEqual([reader.readline(100) for _ in range(5)], [b"one\n", b"two\n", b"three\n", b"tail", b""])
+        self.assertTrue(all(0 < count <= n.CHUNK_BYTES for count in calls))
+
+    def test_oversized_frame_stays_bounded_and_existing_parser_refuses_it(self):
+        payload = bytearray(b"x" * (n.FRAME_BYTES + 2) + b"\n")
+        def read(count):
+            value = bytes(payload[:count]); del payload[:count]; return value
+        reader = n.BoundedCommandFrameReader(read)
+        frame = reader.readline(n.FRAME_BYTES + 1)
+        self.assertEqual(len(frame), n.FRAME_BYTES + 1)
+        with self.assertRaises(n.LaunchUnavailable): n.parse_frame(frame)
+        self.assertEqual(reader.readline(n.FRAME_BYTES + 1), b"x\n")
+        for maximum in (True, 0, -1, n.FRAME_BYTES + 2):
+            with self.assertRaises(n.LaunchUnavailable): reader.readline(maximum)
+
+    def test_raw_read_errors_and_invalid_callback_bytes_never_become_eof_credit(self):
+        for value in (None, bytearray(b"a"), b"a" * (n.CHUNK_BYTES + 1)):
+            with self.subTest(value_type=type(value).__name__), self.assertRaises(n.LaunchUnavailable):
+                n.BoundedCommandFrameReader(lambda count: value).readline(n.FRAME_BYTES + 1)
+        def failed(count): raise OSError("synthetic original read failure")
+        with self.assertRaises(OSError): n.BoundedCommandFrameReader(failed).readline(10)
+
+    def test_real_controller_stdio_exits_with_parent_writer_open_and_inert_owner(self):
+        # Only this small Python child is real. The owner creates no process,
+        # Native Job, model, storage or network connection.
+        environment = {key: os.environ[key] for key in ("SystemRoot", "WINDIR", "PATH", "TEMP", "TMP") if key in os.environ}
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        process = subprocess.Popen([sys.executable, "-I", "-B", str(Path(__file__).resolve()), "--controller-stdio-fixture"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, env=environment,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+        frames = Queue(maxsize=8)
+        def drain():
+            for _ in range(8):
+                value = process.stdout.readline(n.FRAME_BYTES + 1)
+                if not value: return
+                frames.put_nowait(value)
+        reader = Thread(target=drain, daemon=True); reader.start()
+        try:
+            value = boot(); process.stdin.write((json.dumps(value) + "\n").encode()); process.stdin.flush()
+            self.assertEqual(json.loads(frames.get(timeout=5))["kind"], "suspended")
+            for action, expected in (("resume", "running"), ("stop", "retired")):
+                request = {"schema": "windows-original-worker-command-v1", "nonce": value["nonce"],
+                           "profileDigest": value["profileDigest"], "action": action}
+                process.stdin.write((json.dumps(request) + "\n").encode()); process.stdin.flush()
+                self.assertEqual(json.loads(frames.get(timeout=5))["kind"], expected)
+            # communicate() would close stdin and conceal the shutdown defect.
+            self.assertFalse(process.stdin.closed)
+            self.assertEqual(process.wait(timeout=5), 0)
+            self.assertEqual(process.stderr.read(8192), b"")
+        finally:
+            if process.poll() is None: process.kill(); process.wait(timeout=5)
+            process.stdin.close(); reader.join(timeout=2)
+            process.stdout.close(); process.stderr.close()
+        self.assertFalse(reader.is_alive())
+
+
+def _controller_stdio_fixture():
+    class InertOwner:
+        def __init__(self, value):
+            self.profile, self.lock, self.clock = value["profile"], n.RLock(), time.monotonic
+            self.started_at, self.unknown, self.stop_attempted, self.job = self.clock(), False, False, None
+        def prepare(self): pass
+        def start_readers(self, publish): pass
+        def worker_exited(self): return False
+        def resume(self, current): n.need(current())
+        def request_stop(self): self.stop_attempted = True
+        def observe_retirement(self): return self.stop_attempted
+    original = n.serve
+    n.serve = lambda stdin, stdout: original(stdin, stdout, owner_factory=InertOwner)
+    return n.main()
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["--controller-stdio-fixture"]: raise SystemExit(_controller_stdio_fixture())
+    unittest.main()

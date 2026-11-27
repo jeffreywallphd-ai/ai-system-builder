@@ -3653,3 +3653,20 @@ the exact known source/routing change selects the bounded controller subset;
 missing or nonregular support, unknown impact and explicit generic requests keep
 conservative coverage. These feature checks do not run a model, qualify a worker
 or replace final roadmap qualification.
+
+`headless-training-bounded-feature` is an explicit real-worker check. Source
+changes alone cannot select it. Its separate strict-type profile and controlled
+fixture checks can run automatically. The runner deliberately has no `*.test`
+filename. See `dev-tools/scripts/qualification/headless-training/README.md` for
+the fixed offline Tiny profile and required local test inputs. Failure diagnostics
+show a closed test phase, startup state and factory counts; raw worker output,
+paths and training text are not diagnostic authority. Missing or malformed
+support retains conservative coverage or refuses a malformed verification policy.
+
+The bounded training source-repair checks exclude the real-worker check. They
+include actual stdio shutdown with an inert owner, controlled App staging and
+explicit child-before-parent cleanup, strict consumers and existing runtime
+regressions. The fixed controller subset covers these exact importing features;
+missing or nonregular support, unknown changes and explicit generic requests
+retain conservative coverage. A failed model attempt and unconfirmed original
+retirement stay pending even when these source checks pass.

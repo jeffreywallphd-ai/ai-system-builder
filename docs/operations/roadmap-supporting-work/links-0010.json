@@ -1268,6 +1268,63 @@
         "No model accuracy, protected storage service, physical quota or external publication test is claimed. Earlier failures and retained data remain unchanged.",
         "Another checkout may lack local receipt records. This link supplies no current-source or whole-roadmap pass."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-deferred-training-start-owner",
+      "work_criteria": [
+        "original-lazy-training-owner",
+        "approved-application-bridge-and-focused-routing",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "9ccf786edbc356a380c52a1d6656d04bc5d0e4b811218c940c670f50bdad8bcf",
+      "review_digest": "8bb43d5ddf492f3ab58e00e3f224eba1c770d505ef9249e22faaf6b5587e7632",
+      "scope": "The private lazy training resolver is complete at commit d4ce9ddf. It captures original configuration and port methods, creates one application owner on demand, and preserves approved Core/SQLite execution, replay and current permissions. All11 focused checks and independent review passed.",
+      "limitations": [
+        "This component support does not complete Task72 or assert actual worker execution. The current bounded Tiny feature check and later product-host qualification supply separate evidence.",
+        "No model accuracy, protected storage service, physical quota, external effect, parent or current-source pass is granted.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-deferred-training-start-owner",
+      "work_criteria": [
+        "original-lazy-training-owner",
+        "approved-application-bridge-and-focused-routing",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "9ccf786edbc356a380c52a1d6656d04bc5d0e4b811218c940c670f50bdad8bcf",
+      "review_digest": "8bb43d5ddf492f3ab58e00e3f224eba1c770d505ef9249e22faaf6b5587e7632",
+      "scope": "The private lazy training resolver is complete at commit d4ce9ddf. It captures original configuration and port methods, creates one application owner on demand, and preserves approved Core/SQLite execution, replay and current permissions. All11 focused checks and independent review passed.",
+      "limitations": [
+        "This component support does not complete Task72 or assert actual worker execution. The current bounded Tiny feature check and later product-host qualification supply separate evidence.",
+        "No model accuracy, protected storage service, physical quota, external effect, parent or current-source pass is granted.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-deferred-training-start-owner",
+      "work_criteria": [
+        "original-lazy-training-owner",
+        "approved-application-bridge-and-focused-routing",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "9ccf786edbc356a380c52a1d6656d04bc5d0e4b811218c940c670f50bdad8bcf",
+      "review_digest": "8bb43d5ddf492f3ab58e00e3f224eba1c770d505ef9249e22faaf6b5587e7632",
+      "scope": "The private lazy training resolver is complete at commit d4ce9ddf. It captures original configuration and port methods, creates one application owner on demand, and preserves approved Core/SQLite execution, replay and current permissions. All11 focused checks and independent review passed.",
+      "limitations": [
+        "This component support does not complete Task72 or assert actual worker execution. The current bounded Tiny feature check and later product-host qualification supply separate evidence.",
+        "No model accuracy, protected storage service, physical quota, external effect, parent or current-source pass is granted.",
+        "Another checkout may lack local completion records."
+      ]
     }
   ]
 }

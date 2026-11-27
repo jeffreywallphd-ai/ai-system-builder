@@ -3934,3 +3934,28 @@ concurrent resolution and permission withdrawal during the wait. This is an
 in-process composition boundary under ADR49's trusted-account assumption, not
 isolation from installed code. Worker, storage and public-host qualification are
 not supplied by these controlled tests.
+
+The explicit real-worker feature test protects original model bytes, synthetic
+training data, actor/plan lineage and original worker/IO ownership. Hash-check the
+existing safe-format Tiny files and installed interpreter before effects; use
+only current fixed worker entry points, offline settings and a child environment
+without provider secrets. Its bounded-local test profile retains the approved
+2 GiB process/4 GiB Job ceilings and finite process/time/byte/disk limits.
+The runner is outside ordinary test discovery and source edits select only types
+or controlled fixtures. Refuse missing prerequisites and unknown retirement.
+Clean only its fresh unchanged root after actual original worker and all copy,
+publication and verification IO have closed. Keep failures and historical input
+untouched. Trusted-account assumptions, TOCTOU and cooperative logical disk bounds
+remain ADR49 limits; this is no protected-service, physical-quota or public-host
+claim. Pipeline/task IDs, quality scoring and separate Save stay distinct.
+
+Retain the existing containment guard when a test stages files outside its
+approved root. Correct the fixture's ownership and ordering instead. Original
+controller input now borrows one captured stdin descriptor and reads bounded
+raw bytes for both boot and commands. It does not discover, reopen or close a
+descriptor, relax frame validation or end source reads prematurely after Stop.
+This avoids a daemon BufferedReader lock at interpreter exit. Tests exercise
+real stdio with an inert owner and the parent writer still open, plus fragmented,
+coalesced, oversized, invalid and EOF frames. Existing native retirement,
+controller-close and stderr-integrity requirements remain intact. A source
+correction does not retroactively prove the failed real run's retirement.

@@ -355,6 +355,19 @@ Original port/storage methods keep their receivers. Approval, input reads and
 task admission remain with their existing owners. This private seam does not
 activate public Roots or qualify actual worker execution.
 
+The shared training test fixture registers no tests and uses controlled sessions
+by default. The explicit bounded Tiny feature runner can supply an original
+runtime port and selected safe input, while reusing the actual approved Core
+ledger and application path. It must prove original worker and IO closure before
+fixture cleanup. This does not activate product Roots or register a candidate.
+
+An actual bounded fixture supplies its fresh temporary parent explicitly. App
+dataset, recipe and output stages stay beneath the worker's existing containment
+root. Its owner registers child cleanup with the outer test: original runtime/IO
+retirement comes first, then the App child verifies identity and removes itself,
+then the unchanged parent is removed. Controlled tests retain their default
+temporary parent and start no worker.
+
 The shared private training-review helper reuses the existing application compiler
 and original saved-input reader. It copies the exact target/requests, captures
 callbacks and the input reader across all awaits, and prepares minimized metadata

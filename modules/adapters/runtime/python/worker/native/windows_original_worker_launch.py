@@ -3695,9 +3695,40 @@ def serve(stdin, stdout, *, owner_factory=OriginalWorker):
             time.sleep(1)
 
 
+class BoundedCommandFrameReader:
+    """One sequential raw reader for boot and commands, without a buffered lock.
+
+    The original stdin descriptor is borrowed, never reopened or closed here.
+    Source-mode final acknowledgments can still arrive after Stop. Only the
+    controller process closing supplies its separate lifetime acknowledgment.
+    """
+    def __init__(self, read):
+        need(callable(read))
+        self._read, self._pending, self._eof = read, bytearray(), False
+
+    def readline(self, maximum):
+        need(type(maximum) is int and 1 <= maximum <= FRAME_BYTES + 1)
+        while True:
+            newline = self._pending.find(b"\n", 0, maximum)
+            size = newline + 1 if newline >= 0 else maximum if len(self._pending) >= maximum else len(self._pending) if self._eof else 0
+            if size or self._eof:
+                result = bytes(self._pending[:size]); del self._pending[:size]
+                return result
+            count = min(CHUNK_BYTES, maximum - len(self._pending))
+            data = self._read(count)
+            need(type(data) is bytes and len(data) <= count)
+            if not data: self._eof = True
+            else: self._pending.extend(data)
+
+
 def main():
     try:
-        return serve(sys.stdin.buffer, sys.stdout.buffer)
+        # A daemon blocked in BufferedReader.readline can abort CPython during
+        # finalization while the parent keeps its writer open. Capture the
+        # original raw read and descriptor BEFORE either boot or command reads;
+        # mixing buffered boot with raw commands would strand prefetched bytes.
+        read, descriptor = os.read, sys.stdin.fileno()
+        return serve(BoundedCommandFrameReader(lambda count: read(descriptor, count)), sys.stdout.buffer)
     except BaseException:
         # No raw exception, command, path or environment reaches public sinks.
         return 75
