@@ -3970,3 +3970,21 @@ Private current-candidate review consumes optional `model-training-execution-v1`
 The existing Headless `models.review-training` read supports explicit `mode: current-files`; omitted mode remains historical cache-only. Current mode reuses the original candidate read and its owned Promise slot under fresh original client/workspace/host policy. It returns only the verified candidate/manifest digests, file counts, total bytes and optional bounded execution facts alongside the existing historical provenance/comparison. Missing or unready current support never falls back to cache or runtime. Desktop, Managed, HTTP and MCP independently copy and correlate mode and reply. The same MCP tool gains an optional selector field; public root activation, separate Save and final host qualification remain later work.
 
 The standalone Headless trained-model Save intent is `models.save-training`. It binds the original task UUID and current candidate digest to the current host/workspace, exact name and idempotency key. Its closed decoder detaches and freezes the request using existing training label and identity bounds. It supplies no approval, current-file proof or storage/registry authority, and default read/training-plan parsers remain unchanged. Separate approval, original source rechecks, create-only/expected saved-record checks, model storage and exactly-once registration remain owning-layer work under ADR-0049; this schema activates no route or root.
+
+The existing generated-model storage adapter can explicitly bind a private
+reviewed-copy session under ADR-0049. Closed copied task/save/context/manifest
+facts and captured original controls precede all IO. Only the known unsharded
+full-model or adapter file list is copied from original named staging into a
+fresh private leaf. Source/destination SHA256, size, identity, finite bytes/files/
+time and observed disk headroom are checked, with fixed-size buffers. Default
+copying remains unchanged; the private leaf is not a discoverable cache snapshot.
+
+Original IO Promises and file handles remain owned until their actual returns
+and closes. A fence or elapsed deadline cannot release them. Successful private
+copying grants no Model registration or runtime readiness. Application publication
+must use current original authority and exact separate Save consent. Cleanup
+uses independent no-reference authority only after original IO closure and
+removes exclusively known unchanged fresh entries; substituted/foreign data or
+unknown operations retain their declarations. This cooperative local profile
+does not prove physical quotas, hostile same-account isolation, durable restart
+or whole-host qualification, and does not activate a product Root or service.

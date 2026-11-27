@@ -38,3 +38,29 @@ preserves that file and tries the existing bounded suffix sequence. Other copy
 errors are not retried. Existing cache-hit and model-selection behavior is
 unchanged. This cooperative cache operation supplies no Native file identity,
 immutable source, reservation or Headless execution authority.
+
+The optional `reviewedStorage` configuration adds a private reviewed-copy session
+to the existing generated-model adapter. Default callers retain the ordinary
+copy method. Binding captures closed request, context, limits and original
+control methods synchronously, without IO. The application must supply its
+original named staging directory, exact reviewed hashes and separate Save
+consent; no public request can select a directory through this capability.
+
+The session copies only its safe, flat full-model or adapter inventory into one
+exclusively fresh private leaf. It checks source and copied bytes, file identity,
+finite payload/time limits and observed free disk space. Copies use at most
+1 MiB buffers. The private leaf is outside ordinary cache-discovery naming.
+Successful copying grants no Model registration, approval or readiness.
+
+Keep the original write Promise through any outward timeout. A fence stops new
+write work; it does not close an original read/write/open/close operation. Status
+exposes actual pending operations and handles. Unknown IO stays unconfirmed.
+Discard requires actual original IO closure and an independent application
+decision that no committed or uncertain Model reference can use the copy. It
+removes only its unchanged known files and empty owned leaf, never the source,
+foreign additions or substituted data. This is ADR-0049 bounded-local storage:
+the signed-in user and installed dependencies remain trusted. Observed disk
+headroom and declared bytes are not an OS quota, durable reservation, protected
+restart or protection from another process using the same account. The separate
+protected-storage proposal, exact Save/registry integration and host
+qualification remain outside this component.

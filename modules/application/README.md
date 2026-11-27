@@ -162,3 +162,14 @@ file inventory, method-appropriate safe weights and canonical content digest.
 The candidate digest binds original actor/task/history/content, not Save approval.
 Unknown original verification retains its owner and prevents retry or cleanup;
 legacy completion remains cache-only. Public/host entry wiring is separate.
+
+`GeneratedModelStoragePort.createReviewedSession` is an optional private
+bounded-local capability. The application owns original task/actor/workspace
+and source binding, current permission and exact separate Save approval. It
+passes an exact reviewed inventory and retains the original write Promise,
+including after outward cancellation or timeout. Ready private copy results
+grant no registry write. Registry publication and lost-reply reconciliation
+must remain separate, with a no-reference cleanup decision held independently
+of expired write consent. Pending/unknown operations, handles or registry
+outcomes cannot grant deletion, retry or resource credit. Ordinary storage
+callers and stronger Native storage profiles gain no fallback.

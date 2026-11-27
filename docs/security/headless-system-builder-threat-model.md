@@ -3749,3 +3749,22 @@ Execution-history consumption keeps the original task UUID as the ownership and 
 Current training review is explicit in both request and response. A current-files request cannot accept cached history without its verified summary, and a default cached request rejects unsolicited current data. The original candidate reader, policy and pending/unknown read ownership remain authoritative; there is no ordinary runtime or cache fallback. Public summaries exclude publication IDs, inventory keys, file locators and raw output. Counts, byte totals, digests and optional reports are closed and bounded; recorded execution/validation facts grant no resource, readiness, output-quality or Save authority. HTTP and MCP independently preserve the original copied request target and mode through transport waits. Synthetic tests cover downgrade, private-field injection and policy loss without model accuracy runs.
 
 Training Save intent is untrusted data, not permission. Accept only the current host/workspace, a task UUID, canonical candidate digest, bounded nonsecret name and idempotency key. Copy before later policy waits and freeze the decoded primitive record. Refuse private paths/provider controls, actor/tenant overrides, approval booleans, unknown fields, active properties and malformed identities. The operation is create-only intent; actual saving must independently bind the original reviewed candidate and current actor/client/workspace, require separate exact user consent and validate the expected saved record at publication/replay. The standalone schema performs no IO and changes no default execution, Native or local-storage controls.
+
+The opt-in reviewed generated-model copy is a private filesystem boundary, not
+the Save approval or registry boundary. Validate passive descriptors and capture
+original request/context/control methods before IO. Require an exact safe flat
+inventory, expected size/hash, source/root identity, nonlink single-link regular
+files, fresh exclusive destination, finite bounds and observed free disk. Check
+fresh original write permission through copying and verification. No wire path,
+callback selector, provider or executable model format is admitted.
+
+Capture original operations and handles before checking late results. Fence new
+writes after withdrawal/deadline; pending or unknown IO cannot become successful
+copying or cleanup credit. Safe discard needs actual original IO closure and
+independent application proof that no committed or uncertain registry reference
+can use the copy. It checks all known unchanged entries before deleting individual
+files and the empty owned leaf. Keep foreign/replaced content and uncertain
+outcomes. This bounded-local profile trusts the signed-in user and installed
+dependencies; it supplies no hostile same-account isolation, exclusive physical
+quota, durable recovery or Native custody. Exact approval, actor/source binding,
+registry commit/replay and product-host activation remain application work.

@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 import { constants, type BigIntStats } from "node:fs";
 import {
   lstat,
@@ -11,6 +12,8 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import path, { join } from "node:path";
+import {createReviewedGeneratedModelStorageFactory, type ReviewedGeneratedModelCopyHooks,
+  type ReviewedGeneratedModelStorageOptions} from "./createReviewedGeneratedModelStorageSession";
 
 import type {
   GeneratedModelStoragePort,
@@ -22,6 +25,8 @@ export interface CreateLocalGeneratedModelStorageAdapterOptions {
   homeDirectory?: string;
   maximumSourceBytes?: number;
   maximumSourceFiles?: number;
+  /** Private opt-in only. Does not activate Save or register a Model. */
+  reviewedStorage?: ReviewedGeneratedModelStorageOptions;
 }
 
 function normalizeOptionalText(value: string | undefined): string | undefined {
@@ -166,40 +171,70 @@ async function stageGeneratedModelFile(
   canonicalSource: string,
   inspected: BigIntStats,
   target: string,
+  hooks?: ReviewedGeneratedModelCopyHooks,
 ): Promise<void> {
   const changedSource = "Generated model source changed while being staged.";
   const noFollow = constants.O_NOFOLLOW ?? 0;
-  const input = await open(source, constants.O_RDONLY | noFollow | (constants.O_NONBLOCK ?? 0));
+  const effect = <T>(action: () => Promise<T>): Promise<T> => hooks ? hooks.effect(action) : action();
+  if (hooks) await hooks.beforeEffect();
+  hooks?.check();
+  const input = await effect(() => open(source, constants.O_RDONLY | noFollow | (constants.O_NONBLOCK ?? 0)));
+  hooks?.opened(input);
   try {
-    if (!isSameFileSnapshot(inspected, await input.stat({ bigint: true }))) {
+    hooks?.check();
+    if (!isSameFileSnapshot(inspected, await effect(() => input.stat({ bigint: true })))) {
       throw new TypeError(changedSource);
     }
-    const output = await open(target, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600);
+    if (hooks) await hooks.beforeEffect();
+    hooks?.check();
+    const output = await effect(() => open(target, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600));
+    hooks?.opened(output);
     try {
+      hooks?.check();
       // The walk already checked the size against the total byte limit.
       let remaining = Number(inspected.size);
-      const buffer = Buffer.allocUnsafe(Math.min(remaining, COPY_BUFFER_BYTES));
+      const buffer = Buffer.allocUnsafe(Math.min(remaining, hooks ? 1024 ** 2 : COPY_BUFFER_BYTES));
+      const hash = hooks ? createHash("sha256") : undefined;
       while (remaining > 0) {
-        const { bytesRead } = await input.read(buffer, 0, Math.min(remaining, buffer.length), null);
-        if (bytesRead === 0) throw new TypeError(changedSource);
+        if (hooks) await hooks.beforeEffect();
+        hooks?.check();
+        const requested = Math.min(remaining, buffer.length);
+        const { bytesRead } = await effect(() => input.read(buffer, 0, requested, null));
+        hooks?.check();
+        if (!Number.isSafeInteger(bytesRead) || bytesRead <= 0 || bytesRead > requested) throw new TypeError(changedSource);
+        hash?.update(buffer.subarray(0, bytesRead));
         let offset = 0;
         while (offset < bytesRead) {
-          const { bytesWritten } = await output.write(buffer, offset, bytesRead - offset, null);
-          if (bytesWritten === 0) throw new Error("Generated model staging write made no progress.");
+          if (hooks) await hooks.beforeEffect();
+          hooks?.check();
+          const { bytesWritten } = await effect(() => output.write(buffer, offset, bytesRead - offset, null));
+          hooks?.check();
+          if (!Number.isSafeInteger(bytesWritten) || bytesWritten <= 0 || bytesWritten > bytesRead - offset)
+            throw new Error("Generated model staging write made no progress.");
           offset += bytesWritten;
         }
         remaining -= bytesRead;
       }
+      if (hooks) {
+        if ("sha256:" + hash!.digest("hex") !== hooks.expectedSha256) throw new TypeError(changedSource);
+        await hooks.beforeEffect(); hooks.check(); await effect(() => output.sync()); hooks.check();
+      }
     } finally {
-      await output.close();
+      // Remember even a partial fresh file, but never let a failed observation
+      // suppress the original close. Closing does not need renewed write consent.
+      try {if (hooks) hooks.remember(target, await effect(() => output.stat({bigint: true})));}
+      finally {await effect(() => output.close()); hooks?.closed(output);}
     }
-    if (await realpath(source) !== canonicalSource
-      || !isSameFileSnapshot(inspected, await lstat(source, { bigint: true }))
-      || !isSameFileSnapshot(inspected, await input.stat({ bigint: true }))) {
+    if (hooks) await hooks.beforeEffect();
+    hooks?.check();
+    if (path.relative(await effect(() => realpath(source)), canonicalSource) !== ""
+      || !isSameFileSnapshot(inspected, await effect(() => lstat(source, { bigint: true })))
+      || !isSameFileSnapshot(inspected, await effect(() => input.stat({ bigint: true })))) {
       throw new TypeError(changedSource);
     }
+    hooks?.check();
   } finally {
-    await input.close();
+    await effect(() => input.close()); hooks?.closed(input);
   }
 }
 
@@ -290,8 +325,11 @@ export function createLocalGeneratedModelStorageAdapter(
     Math.max(options.maximumSourceFiles ?? 100_000, 1),
     1_000_000,
   );
+  const createReviewedSession = options.reviewedStorage === undefined ? undefined
+    : createReviewedGeneratedModelStorageFactory(options.reviewedStorage, stageGeneratedModelFile);
 
   return {
+    ...(createReviewedSession ? {createReviewedSession} : {}),
     async storeGeneratedModel(request) {
       const modelId = toCacheRepositoryId(request);
       const repositoryDirectoryName = toHuggingFaceCacheDirectoryName(modelId);
