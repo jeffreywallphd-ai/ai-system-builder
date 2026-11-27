@@ -76,31 +76,30 @@
   "remaining_qualification": [
     "Original actual training success, current checkpoint/candidate results and final new-root removal still need a newly authorized guarded test. The consumed attempt confirmed worker/IO retirement before afterhook only.",
     "Prior unconfirmed attempts and retained files remain unchanged. No old-tree inspection, adoption or cleanup credit.",
-    "The test now preserves App redaction and verifies current inventory; v3 finite status/count/cleanup diagnostics need source qualification. No automatic retry or model quality test."
+    "One corrected guarded attempt is separately approved. Qualify its current guard before actual execution; do not reset or rearm the old admission. No model quality test."
   ],
   "operator_decision": {
-    "authority_ref": "user-approved-fresh-tiny-trial-20261127",
-    "approved": "One guarded fresh Tiny test after source testing and independent review; clean new files after confirmed original closure.",
+    "authority_ref": "user-approved-corrected-observation-tiny-trial-20261127",
+    "approved": "One corrected guarded Tiny attempt after guard source testing and independent review; clean only new files after confirmed original shutdown.",
     "restart_required": false,
     "process_to_stop": null,
-    "prior_retirement": "unconfirmed",
     "prior_cleanup_authorized": false,
-    "guard_work_id": "headless-training-fresh-review-binding-fix",
-    "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2",
-    "actual_attempt_consumed": true
+    "actual_attempt_consumed": false,
+    "guard_work_id": "headless-training-corrected-observation-trial-guard",
+    "actual_trial_work_id": "headless-bounded-training-corrected-observation-20261127"
   },
   "fresh_trial_guard": {
-    "status": "source-qualified-at-4528da56-actual-attempt-consumed",
+    "status": "corrected-observation-source-qualification-pending",
     "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
     "maximum_attempts": 1,
     "retained_logical_bytes_per_old_attempt": 33554432,
-    "old_attempts": 2,
+    "old_attempts": 3,
     "fresh_logical_reservation_bytes": 33554432,
     "minimum_free_bytes_in_addition": 134217728,
     "physical_quota_asserted": false,
     "scope": "Current reviewed source and active exact task Work; original failed receipts and unknown charges stay retained. No old-tree inspection, adoption, mutation or cleanup credit.",
     "cleanup": "Only the original new-worker and IO proof permits removal of the new test root. Failed/unconfirmed new files remain retained.",
-    "tracked_inert_test_cases": 13,
+    "tracked_inert_test_cases": 15,
     "preserved_source_verification": {
       "receipt_digest": "5463a1c748f31079b0fd33b1c3476dcae7dd0496cf26ecd6c8bdde9ff037918c",
       "result": "Unqualified: intentionally stopped an unintended full controller batch. Other selected source checks passed. No fresh actual training attempt was consumed.",
@@ -118,5 +117,18 @@
       "actual_attempt_consumed": false,
       "model_or_native_run": false
     }
-  }
+  },
+  "prior_operator_decisions": [
+    {
+      "authority_ref": "user-approved-fresh-tiny-trial-20261127",
+      "approved": "One guarded fresh Tiny test after source testing and independent review; clean new files after confirmed original closure.",
+      "restart_required": false,
+      "process_to_stop": null,
+      "prior_retirement": "unconfirmed",
+      "prior_cleanup_authorized": false,
+      "guard_work_id": "headless-training-fresh-review-binding-fix",
+      "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127-r2",
+      "actual_attempt_consumed": true
+    }
+  ]
 }

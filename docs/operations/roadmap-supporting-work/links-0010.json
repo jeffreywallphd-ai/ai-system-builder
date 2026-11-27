@@ -1610,6 +1610,25 @@
         "The one-use actual attempt failed. Worker and IO retirement were observed before the old afterhook; final root removal and terminal task status were not recorded.",
         "No old-tree mutation, model accuracy rerun or automatic retry is authorized. Another checkout may lack local records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-image-transient-prompt-binding",
+      "work_criteria": [
+        "exact-private-prompt-binding",
+        "no-effect-and-privacy-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "9cd5ea1a3af2041448657de329ca8592b821bc5aa10a92252f3407303871bd00",
+      "review_digest": "5f13fb9a84a9fde54369d5fc6f7a42f06618cdcb94483ec688f187da550faa75",
+      "scope": "At commit24bdb5bd, exact transient image text binds to the passive plan with bounded existing settings and malformed-Unicode substitution denials. Six focused checks passed with independent review.",
+      "limitations": [
+        "Private preparation only; no actual generation, import, Model/runtime selection, public activation or Task74/parent pass.",
+        "The prepared generation request contains private text and must not be persisted in plans or diagnostics.",
+        "Another checkout may lack local completion records."
+      ]
     }
   ]
 }

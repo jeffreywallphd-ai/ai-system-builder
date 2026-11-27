@@ -17,13 +17,17 @@ from control_plane.execution import execute
 from control_plane.records import Records
 from control_plane.work import Work
 
-GUARD_WORK = "headless-training-fresh-review-binding-fix"
-TRIAL_WORK = "headless-bounded-training-fresh-attempt-20261127-r2"
-DIRECTORY = ".local-codex/headless-training-fresh-trial-20261127"
+GUARD_WORK = "headless-training-corrected-observation-trial-guard"
+TRIAL_WORK = "headless-bounded-training-corrected-observation-20261127"
+DIRECTORY = ".local-codex/headless-training-corrected-observation-trial-20261127"
+AUTHORITY_REF = "user-approved-corrected-observation-tiny-trial-20261127"
+PRIOR_FRESH_WORK = "headless-bounded-training-fresh-attempt-20261127-r2"
 RUNNER = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
 PRIOR_WORK = "headless-bounded-training-feature"
 PRIOR = ["cb215d3c3409542e88860920fb889e4ad9baf8d9b859a1c3052f63a462084d41",
-         "bf7abd87829766f0795638ab8fb8c7f098ba95c6aaaea34e289660bcf72bb093"]
+         "bf7abd87829766f0795638ab8fb8c7f098ba95c6aaaea34e289660bcf72bb093",
+         "7a492d694beeb92e3259c9e16523dcc226fbc419c9537d70c223aa8b3fcc6129"]
+PRIOR_OWNERS = (PRIOR_WORK, PRIOR_WORK, PRIOR_FRESH_WORK)
 LIMITS = {"process_memory_bytes": 2 * 1024**3, "job_memory_bytes": 4 * 1024**3,
           "maximum_active_processes": 32, "maximum_duration_ms": 690000,
           "task_duration_seconds": 600, "model_copy_bytes": 1024**2, "output_bytes": 4 * 1024**2}
@@ -47,7 +51,7 @@ def validate_authorization(value, source):
     keys = {"schema_version", "authorization_ref", "attempts", "nonce", "source_digest", "guard_work_id", "prior_receipts", "limits"}
     need(isinstance(value, dict) and set(value) == keys, "fresh-trial.schema")
     need(value["schema_version"] == "headless-fresh-tiny-authorization-v1" and
-         value["authorization_ref"] == "user-approved-fresh-tiny-trial-20261127" and
+         value["authorization_ref"] == AUTHORITY_REF and
          type(value["attempts"]) is int and value["attempts"] == 1, "fresh-trial.authority")
     need(isinstance(source, str) and re.fullmatch(r"[a-f0-9]{64}", source) is not None and
          value["source_digest"] == source and value["guard_work_id"] == GUARD_WORK, "fresh-trial.source")
@@ -170,6 +174,14 @@ def qualified_result(attempt, stable, diagnostic):
         diagnostic["applicationCleanupConfirmed"] is True and diagnostic["newRootRemoved"] is True
 
 
+def validate_prior_receipts(state):
+    for reference, owner in zip(PRIOR, PRIOR_OWNERS, strict=True):
+        prior = state["work_items"][owner]
+        receipt = next(r for r in prior["receipts"] if r["receipt_digest"] == reference)
+        need(receipt["qualification"] == "failed" and digest({k: v for k, v in receipt.items() if k != "receipt_digest"}) == reference,
+             "fresh-trial.prior-receipt")
+
+
 def main():
     try:
         need(os.name == "nt", "fresh-trial.platform")
@@ -178,11 +190,7 @@ def main():
         authorization = validate_authorization(read_record(root, directory / "authorization.json"), source)
         state = Records(root).load(); guard = state["work_items"][GUARD_WORK]
         reviewed_guard(guard, Work(root).current_receipt(guard), source)
-        prior = state["work_items"][PRIOR_WORK]
-        for reference in PRIOR:
-            receipt = next(r for r in prior["receipts"] if r["receipt_digest"] == reference)
-            need(receipt["qualification"] == "failed" and digest({k: v for k, v in receipt.items() if k != "receipt_digest"}) == reference,
-                 "fresh-trial.prior-receipt")
+        validate_prior_receipts(state)
         trial = state["work_items"][TRIAL_WORK]
         need(trial["status"] != "complete" and bool(trial.get("claim")) and
              any(t["task_id"] == "run-approved-fine-tuning" and t["coverage"] == "task-outcome" for t in trial["spec"]["task_targets"]),

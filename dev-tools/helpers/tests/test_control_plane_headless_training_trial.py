@@ -28,7 +28,7 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         self.directory = self.root / guard.DIRECTORY; self.directory.mkdir(parents=True)
         self.source = "a" * 64
         self.authorization = {"schema_version": "headless-fresh-tiny-authorization-v1",
-            "authorization_ref": "user-approved-fresh-tiny-trial-20261127", "attempts": 1, "nonce": "b" * 32,
+            "authorization_ref": guard.AUTHORITY_REF, "attempts": 1, "nonce": "b" * 32,
             "source_digest": self.source, "guard_work_id": guard.GUARD_WORK, "prior_receipts": list(guard.PRIOR), "limits": dict(guard.LIMITS)}
 
     def tearDown(self):
@@ -42,7 +42,7 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         marker = guard.consume(self.root, self.authorization, self.source, 1024**3)
         used = self.directory / "used.json"; before = used.read_bytes()
         self.assertEqual(marker["prior_retirement"], "unconfirmed"); self.assertEqual(marker["prior_released_bytes"], 0)
-        self.assertEqual(marker["retained_logical_bytes"], 2 * guard.RETAINED_DECLARATION)
+        self.assertEqual(marker["retained_logical_bytes"], len(guard.PRIOR) * guard.RETAINED_DECLARATION)
         self.assertFalse(marker["physical_quota_asserted"])
         with self.assertRaises(FileExistsError): guard.consume(self.root, self.authorization, self.source, 1024**3)
         self.assertEqual(used.read_bytes(), before)
@@ -60,7 +60,7 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         self.assertFalse((self.directory / "used.json").exists())
 
     def test_retained_plus_fresh_headroom_is_required_before_consumption(self):
-        required = guard.MINIMUM_FREE + 3 * guard.RETAINED_DECLARATION
+        required = guard.MINIMUM_FREE + (len(guard.PRIOR) + 1) * guard.RETAINED_DECLARATION
         for free in (True, required - 1, -1):
             with self.assertRaises(guard.AdmissionError): guard.consume(self.root, self.authorization, self.source, free)
             self.assertFalse((self.directory / "used.json").exists())
@@ -134,13 +134,13 @@ class FreshTinyAdmissionTests(unittest.TestCase):
 
     def test_main_accepts_canonical_review_and_calls_one_inert_child_only(self):
         work, receipt = self.canonical_review_fixture()
-        prior = [{"qualification": "failed", "case": n} for n in (1, 2)]
+        prior = [{"qualification": "failed", "case": n} for n in (1, 2, 3)]
         for row in prior: row["receipt_digest"] = guard.digest(row)
         references = [row["receipt_digest"] for row in prior]
         (self.directory / "authorization.json").write_text(json.dumps({**self.authorization, "prior_receipts": references}))
         python = self.root / "inert-python"; python.write_text("never executed")
         model = self.root / "inert-model"; model.mkdir()
-        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior}, guard.TRIAL_WORK: {
+        state = {"work_items": {guard.GUARD_WORK: work, guard.PRIOR_WORK: {"receipts": prior[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": prior[2:]}, guard.TRIAL_WORK: {
             "status": "active", "claim": {"owned": True}, "spec": {"task_targets": [{"task_id": "run-approved-fine-tuning", "coverage": "task-outcome"}]}}}}
         def inert_child(root, command):
             self.assertEqual(command["argv"], ["node", "--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--", guard.RUNNER])
@@ -168,6 +168,24 @@ class FreshTinyAdmissionTests(unittest.TestCase):
         result = json.loads((self.directory / "result.json").read_text())
         self.assertEqual(result["status"], "passed"); self.assertEqual(result["prior_released_bytes"], 0)
         self.assertFalse(result["model_quality_tested"])
+
+    def test_all_prior_failures_remain_bound_to_original_work_and_integrity(self):
+        rows = [{"qualification": "failed", "case": n} for n in (1, 2, 3)]
+        for row in rows: row["receipt_digest"] = guard.digest(row)
+        references = [r["receipt_digest"] for r in rows]
+        state = {"work_items": {guard.PRIOR_WORK: {"receipts": rows[:2]}, guard.PRIOR_FRESH_WORK: {"receipts": rows[2:]}}}
+        with patch.object(guard, "PRIOR", references):
+            guard.validate_prior_receipts(state)
+            for mutation in ("missing", "wrong-owner", "tampered", "passed"):
+                bad = copy.deepcopy(state)
+                if mutation == "missing": bad["work_items"][guard.PRIOR_FRESH_WORK]["receipts"] = []
+                if mutation == "wrong-owner": bad["work_items"][guard.PRIOR_WORK]["receipts"] += bad["work_items"][guard.PRIOR_FRESH_WORK].pop("receipts")
+                if mutation == "tampered": bad["work_items"][guard.PRIOR_FRESH_WORK]["receipts"][0]["case"] = 4
+                if mutation == "passed": bad["work_items"][guard.PRIOR_FRESH_WORK]["receipts"][0]["qualification"] = "passed"
+                with self.assertRaises((guard.AdmissionError, StopIteration, KeyError)): guard.validate_prior_receipts(bad)
+        self.assertEqual(guard.PRIOR_FRESH_WORK, "headless-bounded-training-fresh-attempt-20261127-r2")
+        self.assertEqual(guard.DIRECTORY, ".local-codex/headless-training-corrected-observation-trial-20261127")
+        self.assertNotEqual(guard.DIRECTORY, ".local-codex/headless-training-fresh-trial-20261127")
 
     def test_only_new_closed_diagnostics_are_disclosed_and_raw_fields_deny(self):
         directory = self.root / ".local-codex/headless-training-feature"; directory.mkdir()

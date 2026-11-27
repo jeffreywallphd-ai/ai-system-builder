@@ -26,13 +26,13 @@ does not use a `*.test` filename and is outside normal unit discovery.
 
 The explicit check uses `fresh_training_trial.py` for the one fresh attempt
 approved on 2026-11-27. Its closed local authorization binds current source,
-the separately completed/reviewed guard Work, both prior failed receipts and
+the separately completed/reviewed guard Work, all three prior failed receipts and
 unchanged limits. An active exact task-outcome Work must own the test. The driver
 consumes a durable exclusive marker before its fixed Node command; interruption,
 failure or absent results never rearm it. It accepts no command, arguments,
 recovery path or executable input from the authorization record.
 
-The two old attempts remain unconfirmed. Each retains a conservative 32 MiB
+The three earlier attempts retain unconfirmed cleanup. Each retains a conservative 32 MiB
 logical declaration, and the new attempt reserves another 32 MiB in addition to
 the 128 MiB free-disk reserve. This is developer-test accounting, not a measured
 old-tree size or an operating-system physical quota. No old tree is inspected,
@@ -80,3 +80,12 @@ record after attempted cleanup, even when cleanup fails. Application cleanup and
 new-root removal become true only after their actual awaited actions. Child
 success alone, a version 2 record or pre-cleanup retirement cannot qualify cleanup.
 The observation unit tests are inert; source discovery cannot run the real trial.
+
+The user separately approved one corrected-observation trial after the earlier
+one-use attempt was consumed. Its authorization uses a new fixed directory and
+reference; the previous authorization, consumed marker and result remain intact.
+The driver validates each of three failed receipts under its original Work owner,
+retains three 32 MiB logical charges and reserves one more. All original limits,
+current source/review/task checks and v3 post-cleanup requirements remain. This
+is exactly one new attempt, not a reusable retry permission. Source checks execute
+only inert admission and observation tests before the separate actual Work.
