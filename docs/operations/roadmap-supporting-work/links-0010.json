@@ -1553,6 +1553,63 @@
         "The prior broad fallback failure remains historical; combined/full qualification is pending at the approved final boundary.",
         "Another checkout may lack local completion records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-fresh-trial-guard",
+      "work_criteria": [
+        "one-use-current-candidate-admission",
+        "fixed-run-and-cleanup-boundary",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "80b78b423c7b572779e6d50d83d8b9231cd9de0bda147430ff8ffa55ede07023",
+      "review_digest": "dc9b5bdb3122f88c7138e5349fca415f1ceada4dec2d5398747c3913183ba422",
+      "scope": "Completed reviewed source support for bounded one-use Tiny admission or corrected current-file observations and post-cleanup diagnostics. The exact source receipt/review governs only that support.",
+      "limitations": [
+        "No actual training, Task72, parent or current-source pass is supplied by this link.",
+        "The one-use actual attempt failed. Worker and IO retirement were observed before the old afterhook; final root removal and terminal task status were not recorded.",
+        "No old-tree mutation, model accuracy rerun or automatic retry is authorized. Another checkout may lack local records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-fresh-review-binding-fix",
+      "work_criteria": [
+        "one-use-current-candidate-admission",
+        "fixed-run-and-cleanup-boundary",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d976457bb4c9928a4b5b88d1b17c133a761e3ceeca54c6c2628c5a42bf61eec5",
+      "review_digest": "e18b8249fac4432513b1a733c495eba283d7481b2903ba25d0a6b5a847154b26",
+      "scope": "Completed reviewed source support for bounded one-use Tiny admission or corrected current-file observations and post-cleanup diagnostics. The exact source receipt/review governs only that support.",
+      "limitations": [
+        "No actual training, Task72, parent or current-source pass is supplied by this link.",
+        "The one-use actual attempt failed. Worker and IO retirement were observed before the old afterhook; final root removal and terminal task status were not recorded.",
+        "No old-tree mutation, model accuracy rerun or automatic retry is authorized. Another checkout may lack local records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-observation-correction",
+      "work_criteria": [
+        "current-reviewed-observation",
+        "closed-final-cleanup-evidence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "c4092491a071ad29653631f58cd72aab49b45c5d6a2e972457c2bf5afa08fe0b",
+      "review_digest": "ced651a22107dc02ad96365838afdd70a41f78d4b4803981daedbfebfa64dda1",
+      "scope": "Completed reviewed source support for bounded one-use Tiny admission or corrected current-file observations and post-cleanup diagnostics. The exact source receipt/review governs only that support.",
+      "limitations": [
+        "No actual training, Task72, parent or current-source pass is supplied by this link.",
+        "The one-use actual attempt failed. Worker and IO retirement were observed before the old afterhook; final root removal and terminal task status were not recorded.",
+        "No old-tree mutation, model accuracy rerun or automatic retry is authorized. Another checkout may lack local records."
+      ]
     }
   ]
 }

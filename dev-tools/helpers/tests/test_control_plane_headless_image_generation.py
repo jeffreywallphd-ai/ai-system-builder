@@ -19,7 +19,7 @@ class ImageGenerationOwnerRoutingTests(unittest.TestCase):
         return {row["id"]: row for row in catalog.plan(root or self.root, list(paths), list(required), "a" * 64)["selected"]}
 
     def test_original_owner_edits_select_related_authority_lifecycle_contract_and_strict_checks(self):
-        for path in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2]:
+        for path in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2] + catalog.IMAGE_GENERATION_OWNER_REQUIRED[-2:]:
             rows = self.select([path])
             for name in self.profiles: self.assertIn(name, rows)
             self.assertNotIn("focused-tests", rows)
@@ -31,6 +31,9 @@ class ImageGenerationOwnerRoutingTests(unittest.TestCase):
     def test_shared_unknown_and_explicit_generic_changes_do_not_borrow_the_narrow_scope(self):
         rows = self.select(catalog.IMAGE_GENERATION_OWNER_SCOPE)
         self.assertIn("-k", rows["control-plane"]["argv"])
+        new_scope = [p for p in catalog.IMAGE_GENERATION_OWNER_SCOPE if p not in catalog.IMAGE_GENERATION_OWNER_REQUIRED[:2]]
+        self.assertIn("-k", self.select(new_scope)["control-plane"]["argv"])
+        self.assertNotIn("focused-tests", self.select(new_scope))
         self.assertNotIn("focused-tests", rows)
         self.assertIn("focused-tests", self.select([catalog.IMAGE_GENERATION_OWNER_REQUIRED[2]]))
         for paths, required in (([*catalog.IMAGE_GENERATION_OWNER_SCOPE, "modules/application/use-cases/unknown-image.ts"], ("architecture",)),

@@ -39,5 +39,22 @@
       "routing_correction": "Map the accompanying application README to the fixed image source closure and assert that this exact closed scope does not select broad generic testing. Unknown, missing source and explicit generic requests retain conservative coverage.",
       "scope_limit": "Do not rerun broader testing during this feature pass. Combined/full-system qualification remains pending at the approved final boundary."
     }
+  },
+  "transient_prompt_support": {
+    "work_id": "headless-image-transient-prompt-binding",
+    "scope": "Internal pure UTF-8 binding of exact transient positive/optional negative prompts to the fixed passive intent.",
+    "test_file": "modules/application/use-cases/image-generation/tests/prepare-headless-image-request.unit.test.ts",
+    "limitations": [
+      "No invocation, runtime/model selection, approval, import, public root or task completion.",
+      "Raw text is private prepared input only; digest correlation is neither secrecy nor permission.",
+      "The original owners still need current model/runtime preparation and exact approvals."
+    ],
+    "unicode_binding": "Reject malformed surrogate sequences before UTF-8 hashing. Preserve valid Unicode, normalization and whitespace exactly.",
+    "preserved_verification": {
+      "receipt_digest": "ad5873abbac49c1827b27d5bce6bcf6580a0da00f60807c64f024ebb61980ddb",
+      "result": "First source receipt failed strict type coverage and the controller which executes that strict command. Unit tests passed. Corrected the public decoder call in the synthetic test.",
+      "review_advisory_sha256": "865842d74a7d4923669d855437cd619a8f774c36dd73bfe295b9b83d0099a94f",
+      "correction": "Reject lossy malformed-Unicode inputs in both transient prompts and test replacement-character collisions and valid pairs. No model effect."
+    }
   }
 }

@@ -197,3 +197,15 @@ unknown operations or copy closure retain ownership. Discard needs independent
 no-reference authority and known IO closure, and never deletes original staging.
 The ordinary Save path still refuses private tasks. Exact approval, create-only
 registration/replay and product-host qualification remain separate work.
+
+The internal `prepareHeadlessImageRequest` function binds transient prompt text to
+the fixed image intent by exact UTF-8 digests. It reuses existing image bounds and
+returns immutable private data; raw text stays out of the returned plan. Keep the
+private generation request out of plans, logs, receipts and public metadata. This
+preparation does not select a Model, authorize generation, check runtime readiness
+or approve output import. Original current-policy, approval and runtime owners
+still own those steps. Unknown fields, active data and mismatched content deny
+without echoing text. The helper is not registered in a public host or tool.
+Malformed UTF-16 surrogate sequences are rejected before UTF-8 hashing; otherwise
+different source strings could collapse to replacement-character bytes. Valid
+surrogate pairs, replacement characters, whitespace and normalization remain exact.
