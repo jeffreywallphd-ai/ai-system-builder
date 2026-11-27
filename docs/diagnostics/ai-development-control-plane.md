@@ -1,6 +1,15 @@
 
 ## Numeric capture at coding-session initialization
 
+`headless-training-fresh-trial-guard-unit` exercises only inert admission,
+retained-accounting, one-use, diagnostic and routing checks. Source edits select
+it and the existing strict Tiny test types, never the real trial. Explicit
+`headless-training-bounded-feature` uses the fixed Python guard, which requires
+current reviewed source and consumes one approved attempt before the original
+Node feature test. Exact source coverage keeps this a focused loop; unknown,
+missing and explicitly generic impact retain conservative checks. The guard
+adds no product runtime or recovery authority.
+
 The `headless-image-generation-owner-unit` profile runs the complete original
 image use-case, real image-authority, owned-lifecycle and image-contract unit
 files. Its strict type companion checks the same source closure. Only exact

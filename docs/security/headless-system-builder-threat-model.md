@@ -1,5 +1,20 @@
 # Headless System Builder threat model
 
+### One approved prospective Tiny qualification
+
+The developer-only fresh-trial driver requires the exact user authorization,
+current source, completed independently reviewed guard Work and active exact
+task-outcome Work before its fixed Node command. It checks the original failed
+receipt integrity, retains their unknown declarations and requires fresh disk
+headroom without old cleanup credit. A durable exclusive consumed record precedes
+effects and is never overwritten or removed after failure, partial write or
+interruption. Closed records and new diagnostic facts are bounded; commands,
+arbitrary paths, raw errors and private payloads cannot enter them. Existing
+offline safe inputs, Native memory/process/time limits and original new-run
+cleanup proof remain mandatory. No old tree is inspected or modified. Process
+absence is corroboration only. This uses ADR49 local-user/dependency trust and
+logical accounting, with no OS physical quota or protected anti-rollback claim.
+
 ### Original image task scope
 
 The image use case owns original primitive workspace/organization facts before

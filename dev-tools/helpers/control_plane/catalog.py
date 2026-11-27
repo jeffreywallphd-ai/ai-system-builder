@@ -190,6 +190,10 @@ TRAINING_START_OWNER = "modules/hosts/shared/composition/composeHeadlessModelTra
 TRAINING_START_TEST = "modules/hosts/shared/composition/tests/headless-model-training-start.unit.test.ts"
 TRAINING_SHARED_FIXTURE = "modules/hosts/shared/composition/tests/headless-model-training-fixture.ts"
 TRAINING_BOUNDED_FEATURE = "dev-tools/scripts/qualification/headless-training/bounded-training-feature.ts"
+TRAINING_FRESH_GUARD = "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py"
+TRAINING_FRESH_GUARD_TEST = "dev-tools/helpers/tests/test_control_plane_headless_training_trial.py"
+TRAINING_FRESH_DIAGNOSTIC_PRODUCERS = ("modules/contracts/headless/headless-authoring-result.ts",
+    "modules/contracts/headless/headless-plan-step-wire.ts")
 TRAINING_EVALUATION_TEST = "modules/hosts/shared/composition/tests/headless-model-training-evaluation.unit.test.ts"
 TRAINING_EVALUATION_REQUIRED = (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE,
     "modules/hosts/shared/composition/headlessModelTrainingTasks.ts",
@@ -234,6 +238,11 @@ TRAINING_BOUNDED_SOURCE_REPAIR = (
 )
 TRAINING_BOUNDED_SCOPE = TRAINING_START_SCOPE + (TRAINING_SHARED_FIXTURE, TRAINING_BOUNDED_FEATURE,
     "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json") + TRAINING_BOUNDED_SOURCE_REPAIR
+TRAINING_FRESH_GUARD_SCOPE = (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE,
+    TRAINING_START_CONTROLLER_TEST, "dev-tools/helpers/control_plane/catalog.py",
+    "dev-tools/scripts/qualification/headless-training/README.md", "docs/operations/headless-bounded-training-feature.json",
+    "docs/architecture/runtime-model.md", "docs/security/headless-system-builder-threat-model.md",
+    "docs/diagnostics/ai-development-control-plane.md", "docs/operations/roadmap-supporting-work/links-0010.json")
 TRAINING_EVALUATION_SCOPE = (TRAINING_EVALUATION_TEST, TRAINING_SHARED_FIXTURE, TRAINING_START_CONTROLLER_TEST,
     "dev-tools/helpers/control_plane/catalog.py", "docs/operations/headless-training-evaluation-feature.json",
     "docs/operations/headless-bounded-training-feature.json", "docs/operations/roadmap-supporting-work/links-0010.json",
@@ -987,9 +996,16 @@ PUBLISHED_FORM_CHECKS = {
         # Explicit real-worker qualification only; source edits do not select it.
         "sources": (TRAINING_BOUNDED_FEATURE, TRAINING_SHARED_FIXTURE,
             "docs/operations/headless-bounded-training-feature.json"),
-        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--test-concurrency=1", "--",
-            TRAINING_BOUNDED_FEATURE),
+        "interpreter": "python",
+        "command": (TRAINING_FRESH_GUARD,),
         "timeout": 900,
+    },
+    "headless-training-fresh-trial-guard-unit": {
+        "automatic_sources": (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
+        "automatic_required_files": (TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
+        "sources": TRAINING_FRESH_GUARD_SCOPE + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS,
+        "interpreter": "python",
+        "command": (TRAINING_FRESH_GUARD_TEST,),
     },
     "headless-training-bounded-feature-types": {
         "automatic_sources": (TRAINING_BOUNDED_FEATURE,),
@@ -4977,6 +4993,17 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 *[part for name in ("test_control_plane_headless_image_generation.", "test_control_plane_focused.") for part in ("-k", name)]]
+    if ({TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST,
+            TRAINING_BOUNDED_FEATURE, TRAINING_START_CONTROLLER_TEST} <= set(paths) <= set(TRAINING_FRESH_GUARD_SCOPE)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": (
+                TRAINING_FRESH_GUARD, TRAINING_FRESH_GUARD_TEST, TRAINING_BOUNDED_FEATURE, TRAINING_START_CONTROLLER_TEST) + TRAINING_FRESH_DIAGNOSTIC_PRODUCERS})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                *[part for name in ("test_control_plane_headless_training_trial.", "test_control_plane_headless_training_host_approval.",
+                    "test_control_plane_focused.") for part in ("-k", name)]]
     session_exit_support = (TRAINING_SESSION_EXIT_SCOPE + TRAINING_SESSION_EXIT_OWNER_SCOPE
         + tuple("dev-tools/helpers/tests/" + name.split(".")[0] + ".py" for name in TRAINING_SESSION_EXIT_CONTROLLER_FILTERS)
         + tuple(name for identity in ("headless-training-session-exit-ready-unit", "headless-training-runtime-unit",

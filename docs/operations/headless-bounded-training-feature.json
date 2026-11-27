@@ -61,16 +61,39 @@
     "Retain bounded append-only closed diagnostic facts and all earlier failed evidence."
   ],
   "remaining_qualification": [
-    "Actual fine-tuning, progress, checkpoint/current-candidate results and original IO/worker retirement remain unqualified.",
-    "The failed real run and its retained files remain unconfirmed. Source tests do not authorize historical cleanup, a fresh model lease or a retry.",
-    "Review original ownership/recovery requirements before a further actual attempt. No model accuracy rerun is needed."
+    "Actual fine-tuning, progress, checkpoint/current-candidate results and original new-run IO/worker retirement remain unqualified.",
+    "The prior failed run and its retained files remain unconfirmed. Source tests and process absence supply no historical cleanup or retirement credit.",
+    "The user approved one guarded prospective fresh trial without reboot. Qualify and review the guard before that separate actual task-outcome Work. No accuracy test or download is included."
   ],
-  "pending_human_action": {
-    "responsible_role": "User",
-    "action": "Restart Windows before the next real training check and tell the agent when it is ready.",
-    "location": "Windows restart controls",
-    "reason": "The failed real attempt did not confirm its original worker stopped. A restart clears any earlier worker without adopting or deleting retained files.",
-    "scope": "Only another real training attempt waits. Independent software implementation and controlled tests can continue.",
-    "completion_condition": "The user reports the restart and the agent checks the post-restart environment before a fresh bounded test. The old failed run does not become a pass."
+  "operator_decision": {
+    "authority_ref": "user-approved-fresh-tiny-trial-20261127",
+    "approved": "One guarded fresh Tiny test after source testing and independent review; clean new files after confirmed original closure.",
+    "restart_required": false,
+    "process_to_stop": null,
+    "prior_retirement": "unconfirmed",
+    "prior_cleanup_authorized": false,
+    "guard_work_id": "headless-training-fresh-trial-guard",
+    "actual_trial_work_id": "headless-bounded-training-fresh-attempt-20261127"
+  },
+  "fresh_trial_guard": {
+    "status": "source-qualification-pending",
+    "driver": "dev-tools/scripts/qualification/headless-training/fresh_training_trial.py",
+    "maximum_attempts": 1,
+    "retained_logical_bytes_per_old_attempt": 33554432,
+    "old_attempts": 2,
+    "fresh_logical_reservation_bytes": 33554432,
+    "minimum_free_bytes_in_addition": 134217728,
+    "physical_quota_asserted": false,
+    "scope": "Current reviewed source and active exact task Work; original failed receipts and unknown charges stay retained. No old-tree inspection, adoption, mutation or cleanup credit.",
+    "cleanup": "Only the original new-worker and IO proof permits removal of the new test root. Failed/unconfirmed new files remain retained.",
+    "tracked_inert_test_cases": 12,
+    "preserved_source_verification": {
+      "receipt_digest": "5463a1c748f31079b0fd33b1c3476dcae7dd0496cf26ecd6c8bdde9ff037918c",
+      "result": "Unqualified: intentionally stopped an unintended full controller batch. Other selected source checks passed. No fresh actual training attempt was consumed.",
+      "routing_correction": "The exact guard/runner/routing source scope now selects related controller modules even when catalog identities were registered before the Work baseline. Unknown, unavailable and explicitly generic impact still retain conservative coverage.",
+      "review_advisory_sha256": "4877053f3deae7fa555e627bdb59e769aee6f5e7ebf3182ab4e1a4299d7338a1",
+      "diagnostic_correction": "Match all twelve declared plan-step failure codes and prove every failure code is diagnostic-only, never a pass; reject unknown/raw data.",
+      "file_observation_correction": "On the pinned Windows Python, compare ctime before/after within each pathname/handle API. Preserve cross-observation identity, size, modification-time and link checks, plus same-API timestamp-change denial."
+    }
   }
 }

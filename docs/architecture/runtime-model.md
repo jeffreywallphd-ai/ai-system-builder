@@ -1,5 +1,14 @@
 # Runtime Model
 
+One prospective Tiny qualification may run under the user-approved fresh-trial
+driver after separate guard review. It binds current source and exact task Work,
+consumes one durable admission before a fixed child command, and retains the two
+prior failed-attempt declarations with no release or retirement credit. Fresh
+headroom includes those declarations, a new reservation and the existing reserve.
+The original Node test still requires original new-worker/IO closure before
+cleaning only its own new files. This developer-test policy adds no product
+runtime fallback, old-owner recovery, physical quota or protected-service claim.
+
 The original image application owner pins workspace/organization primitives
 before asynchronous authorization, model resolution and readiness. Dispatch,
 status validation and owned lifecycle callbacks retain the original task ID and

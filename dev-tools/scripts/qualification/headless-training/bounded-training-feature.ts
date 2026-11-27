@@ -75,6 +75,7 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
   const parent = await plainPath(path.resolve(".local-codex/t"), true), root = await realpath(await mkdtemp(path.join(parent, "bt-")));
   const identity = await lstat(root, {bigint: true}), copyRoot = path.join(root, "copy"), outputRoot = path.join(root, "output"), selected = path.join(root, "selected");
   let hostCurrent = true, retired = false, sourceFactories = 0, outputFactories = 0, phase = "configured", startup = "not-started";
+  let startCode: string | null = null;
   const copies: ReturnType<typeof createFilesystemLocalTrainingModelCopyStorage>[] = [];
   const publications: ReturnType<typeof createFilesystemLocalTrainingResultPublication>[] = [];
   const ioOwners: TrainingResultFileIoRetirement[] = [];
@@ -149,7 +150,9 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
     registerCleanup(cleanup) {assert.equal(applicationCleanup, undefined); applicationCleanup = cleanup;}, beforeCleanup: async () => closed()}});
   try {
     phase = "approved-start";
-    const started = await f.run(); assert.equal(started.result.ok, true, "Original approved training did not start."); assert.ok(f.retained);
+    const started = await f.run();
+    if (!started.result.ok) startCode = started.result.code;
+    assert.equal(started.result.ok, true, "Original approved training did not start."); assert.ok(f.retained);
     const control = {isCurrent: () => true, stillAllowed: async () => true};
     let result = await f.retained.task.read(control), observations = 0, progressObservations = 0;
     const observe = () => {observations++; if (result.progress && (typeof result.progress.stage === "string" && result.progress.stage.length > 0 ||
@@ -187,7 +190,7 @@ test("Core approved bounded Tiny fine-tuning keeps original progress, history an
   } finally {
     try {await foundation.supervisor.stop(); retired = true;} finally {
       let ownerClosureConfirmed = false; try {ownerClosureConfirmed = closed();} catch { /* Preserve unknown closure. */ }
-      const evidence = {schema: "bounded-training-feature-diagnostic-v1", phase, startup, sourceFactories, outputFactories,
+      const evidence = {schema: "bounded-training-feature-diagnostic-v2", phase, startup, sourceFactories, outputFactories, startCode,
         workerRetirementConfirmed: retired, ownerClosureConfirmed, modelQualityTested: false,
         interpretation: "diagnostic-only-not-qualification"};
       const bytes = JSON.stringify(evidence) + "\n"; assert.ok(Buffer.byteLength(bytes) <= 2048);

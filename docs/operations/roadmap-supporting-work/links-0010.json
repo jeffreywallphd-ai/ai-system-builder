@@ -1496,6 +1496,63 @@
         "Prompt digests are correlation metadata, not anonymization or permission; original owners and real-host wiring remain pending.",
         "Another checkout may lack local completion records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-image-generation-request-scope",
+      "work_criteria": [
+        "request-scope-snapshot",
+        "read-and-lifecycle-scope-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "6591fe1c9e5ab44f8420db93d54f249a2035272f91bffa49a3b069bd003b42c4",
+      "review_digest": "f8983e161b4a7023e659046cff545e3d4cab20150f721145477d188631288170",
+      "scope": "Original image task scope is repaired at commitd3df09e6. Nine reproduced failures now pass within the full22case use-case file; real authority/lifecycle and related image contract files plus strict consumers passed all7 focused checks with independent review.",
+      "limitations": [
+        "This is shared headed-owner software support only; no actual model/image output, import, public Headless activation, Task74 or parent pass.",
+        "The prior broad fallback failure remains historical; combined/full qualification is pending at the approved final boundary.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-image-generation-request-scope",
+      "work_criteria": [
+        "request-scope-snapshot",
+        "read-and-lifecycle-scope-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "6591fe1c9e5ab44f8420db93d54f249a2035272f91bffa49a3b069bd003b42c4",
+      "review_digest": "f8983e161b4a7023e659046cff545e3d4cab20150f721145477d188631288170",
+      "scope": "Original image task scope is repaired at commitd3df09e6. Nine reproduced failures now pass within the full22case use-case file; real authority/lifecycle and related image contract files plus strict consumers passed all7 focused checks with independent review.",
+      "limitations": [
+        "This is shared headed-owner software support only; no actual model/image output, import, public Headless activation, Task74 or parent pass.",
+        "The prior broad fallback failure remains historical; combined/full qualification is pending at the approved final boundary.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-image-generation-request-scope",
+      "work_criteria": [
+        "request-scope-snapshot",
+        "read-and-lifecycle-scope-denials",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "6591fe1c9e5ab44f8420db93d54f249a2035272f91bffa49a3b069bd003b42c4",
+      "review_digest": "f8983e161b4a7023e659046cff545e3d4cab20150f721145477d188631288170",
+      "scope": "Original image task scope is repaired at commitd3df09e6. Nine reproduced failures now pass within the full22case use-case file; real authority/lifecycle and related image contract files plus strict consumers passed all7 focused checks with independent review.",
+      "limitations": [
+        "This is shared headed-owner software support only; no actual model/image output, import, public Headless activation, Task74 or parent pass.",
+        "The prior broad fallback failure remains historical; combined/full qualification is pending at the approved final boundary.",
+        "Another checkout may lack local completion records."
+      ]
     }
   ]
 }

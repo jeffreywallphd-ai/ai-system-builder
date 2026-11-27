@@ -106,7 +106,7 @@ class TrainingHostApprovalRoutingTests(unittest.TestCase):
         self.assertIn("headless-training-bounded-feature-types", rows)
         self.assertIn("--noEmit", rows["headless-training-bounded-feature-types"]["argv"])
         rows = self.select([catalog.TRAINING_BOUNDED_FEATURE], required=("headless-training-bounded-feature",))
-        self.assertEqual(rows["headless-training-bounded-feature"]["argv"][-1], catalog.TRAINING_BOUNDED_FEATURE)
+        self.assertEqual(rows["headless-training-bounded-feature"]["argv"], [sys.executable, "-B", catalog.TRAINING_FRESH_GUARD])
         self.assertNotIn(".test.", catalog.TRAINING_BOUNDED_FEATURE)
 
     def test_bounded_training_controller_scope_preserves_unknown_and_missing_fallback(self):
