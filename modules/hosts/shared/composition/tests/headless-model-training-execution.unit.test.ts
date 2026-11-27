@@ -498,6 +498,61 @@ function taskQuery(f: Awaited<ReturnType<typeof fixture>>, operation: "models.tr
     authorize: async () => f.state.allowed, request: {version: HEADLESS_CONTRACT_VERSION, operation,
       input: {hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, selection: {kind: "task", taskId: f.definition!.requestId}}}};
 }
+test("current review book captures the original callback/receiver and copies replies before later policy waits", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f), start = await options.resolveStart();
+  let calls = 0, originalOwner: any, reply: any;
+  assert.ok((await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const result = await start!(...args); if (result.kind !== "accepted") return result;
+    const owner = {...result.task, async reviewCandidate(control: ApprovedLocalTrainingControl) {
+      assert.equal(this, owner); assert.equal(control.isCurrent(), true); assert.equal(await control.stillAllowed(), true);
+      calls++; reply = {kind: "not-ready" as const}; return reply;
+    }}; originalOwner = owner; return {...result, task: owner};
+  }})).result.ok);
+  originalOwner.reviewCandidate = async () => assert.fail("No replacement callback.");
+  const result = await book.reviewCandidate({...taskQuery(f), authorize: async () => {
+    if (reply) reply.kind = "private-mutation-after-return"; return true;
+  }});
+  assert.deepEqual(result, {ok: true, value: {kind: "not-ready"}}); assert.equal(calls, 1);
+  assert.equal(f.state.starts, 1); assert.equal(f.state.reads, 0); assert.equal(f.state.cancels, 0);
+});
+
+test("current review retains an original pending read across caller loss and denies overlapping reads until known settlement", async t => {
+  const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f), start = await options.resolveStart();
+  const gate = f.gate(); let calls = 0, open = true;
+  assert.ok((await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+    const result = await start!(...args); if (result.kind !== "accepted") return result;
+    return {...result, task: {...result.task, async reviewCandidate() {calls++; await gate.wait(); return {kind: "not-ready" as const};}}};
+  }})).result.ok);
+  const first = f.track(book.reviewCandidate({...taskQuery(f), isCurrent: () => open})); await gate.started;
+  open = false;
+  assert.deepEqual(await book.reviewCandidate(taskQuery(f)), {ok: false, code: "headless.unavailable"}); assert.equal(calls, 1);
+  // The owned metadata transaction refuses its ended read fence. No reply is
+  // disclosed; the known ended original read can be observed by a fresh caller.
+  gate.release(); assert.deepEqual(await first, {ok: false, code: "headless.unavailable"});
+  assert.deepEqual(await book.reviewCandidate(taskQuery(f)), {ok: true, value: {kind: "not-ready"}}); assert.equal(calls, 2);
+  assert.equal(f.state.starts, 1); assert.equal(f.state.reads, 0);
+});
+
+for (const variant of ["thenable", "throw", "own-then", "constructor"] as const) {
+  test(`current review quarantines an unknown ${variant} contract without calling hooks or repeating it`, async t => {
+    const f = await fixture(t), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f), start = await options.resolveStart();
+    let calls = 0, hooks = 0;
+    assert.ok((await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+      const result = await start!(...args); if (result.kind !== "accepted") return result;
+      return {...result, task: {...result.task, reviewCandidate: (() => {
+        calls++;
+        if (variant === "throw") throw Error("PRIVATE");
+        if (variant === "thenable") return Object.defineProperty({}, "then", {get() {hooks++; throw Error("PRIVATE");}});
+        const pending = Promise.resolve({kind: "not-ready" as const});
+        Object.defineProperty(pending, variant === "constructor" ? "constructor" : "then", {get() {hooks++; throw Error("PRIVATE");}});
+        return pending;
+      }) as unknown as NonNullable<typeof result.task.reviewCandidate>}};
+    }})).result.ok);
+    assert.deepEqual(await book.reviewCandidate(taskQuery(f)), {ok: false, code: "headless.unavailable"});
+    assert.deepEqual(await book.reviewCandidate(taskQuery(f)), {ok: false, code: "headless.unavailable"});
+    assert.equal(calls, 1); assert.equal(hooks, 0); assert.equal(f.state.starts, 1); assert.equal(f.state.reads, 0);
+  });
+}
 for (const engine of ["Core", "SQLite"] as const) {
   test(engine + ": original book completion review reads actual cached App provenance without runtime or Save", async t => {
     const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner();

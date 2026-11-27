@@ -26,8 +26,9 @@ test("missing accepted training lineage cannot be turned into a generic task loo
     workspaceId: scope.workspaceId, selection: {kind: "task", taskId: randomUUID()}}};
   assert.deepEqual(await book.read({...base, request}), {ok: false, code: "headless.forbidden"});
   assert.deepEqual(await book.reviewCompletion({...base, request}), {ok: false, code: "headless.forbidden"});
+  assert.deepEqual(await book.reviewCandidate({...base, request}), {ok: false, code: "headless.forbidden"});
   assert.deepEqual(await book.cancel({...base, request: {...request, operation: "models.cancel-training"}}), {ok: false, code: "headless.forbidden"});
-  assert.equal(authorizations, 3);
+  assert.equal(authorizations, 4);
   const count = authorizations;
   assert.deepEqual(await book.read({...base, request: {...request, operation: "models.task"}}), {ok: false, code: "headless.invalid-request"});
   assert.equal(authorizations, count);

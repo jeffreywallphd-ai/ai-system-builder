@@ -319,3 +319,5 @@ optional finite comparison are historical facts only, not current verification
 or quality acceptance. Files/readiness/hardware/quality sentinels and separate
 Save approval remain in force. Native production wiring, protected retained
 outputs and real-host qualification are still pending.
+
+The optional private `readTrainingCandidate` entry reuses the original training task book, captured Managed registration, actual host/request lifetime and current workspace/ModelRead policy. Metadata admission/disclosure stays transactional; the original candidate reader runs outside transactions. File locators stay host-private, and cached completion/public capability exposure remains unchanged.

@@ -3958,3 +3958,5 @@ history remain separate pending work.
 Current candidate review rejects a recorded serialization format that conflicts
 with the method and verified unsharded safe pair. Null historical format remains
 unrecorded. This checks consistency without loading or scoring a model.
+
+Private Headless current candidate review is a separate task-book operation from cached completion. Both host review compositions bind the accepted original task/plan/client/workspace and current ModelRead authority. Read the captured original application capability outside metadata transactions, own returned passive data before further policy waits, and independently validate complete history, inventory and canonical manifest/candidate digests. One original native Promise occupies the slot until known return; unknown callback/Promise contracts retain it without replay. Historical cache, current file observation, runtime readiness, evaluation measurements and separate Save authority remain distinct. No public root or transport is activated by this internal entry.

@@ -3737,3 +3737,5 @@ history and content. Unknown original verifier operations retain their reference
 and prevent retry or cleanup. Shared dispatch/book custody accepts only captured
 original methods; it adds no public activation, runtime lookup, transfer replay,
 provider call, model execution, registration or Save authority.
+
+Current candidate review preserves the original training ledger, actor/client/workspace and host identity. Reauthorize before and after the captured original read; never use caller inventory, generic task lookup or a replacement callback. Copy bounded passive data before policy waits and validate exact task/proposal/history, workspace publication keys, file roles/layout/sizes/digests and the original-owner candidate digest. A pending or unknown original read retains the private slot. File locators never enter public transport, and review grants no Save, cleanup, readiness or model-quality authority. Controlled fixtures cover substitution, malformed data, authority loss and overlapping/unknown reads; actual host execution and full Task70 qualification remain separate.

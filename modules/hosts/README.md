@@ -308,3 +308,5 @@ cannot supply a capability. The optional member cannot make an accepted original
 task fail the old task shape, and dispatch replay starts no new worker or read.
 This is passive custody only. Cached completion stays unchanged; current host
 entry wiring, public transport and actual-host qualification remain separate.
+
+Private `readTrainingCandidate` is separate from cached completion. Desktop and Managed reuse the original accepted task ledger and current ModelRead authority, before and after the original reader outside transactions. The task book owns and validates copied history, workspace file inventory, serialization, manifest and original-scope candidate digests. Pending/unknown original reads retain their slot; no overlap, replay or fallback is allowed. File locators remain private. This grants no Save, runtime readiness, public activation or physical host qualification.

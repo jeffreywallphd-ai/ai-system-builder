@@ -25,7 +25,8 @@ import {ReadDatasetVersionUseCase} from "../../../../application/use-cases/datas
 import {ReadHeadlessModelTrainingModelUseCase} from "../../../../application/use-cases/model/headless-model-training-model.use-case";
 import {ReadHeadlessModelTrainingDatasetUseCase} from "../../../../application/use-cases/model/headless-model-training-dataset.use-case";
 import type {ArtifactObjectStoragePort} from "../../../../application/ports/storage";
-import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl, ApprovedLocalTrainingCompletionReview} from "../../../../application/ports/model";
+import type {ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl, ApprovedLocalTrainingCompletionReview,
+  ApprovedLocalTrainingCandidateReview} from "../../../../application/ports/model";
 import type {ModelTrainingResult} from "../../../../contracts/model";
 import {composeHeadlessModelMetadata} from "../headlessModelMetadata";
 import type {OriginalTrainingRunOptions} from "../headlessModelTrainingTasks";
@@ -181,6 +182,8 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
   }
   const execution = {starts: 0, reads: 0, cancels: 0, resolutions: 0, readerFactories: 0,
     completionEnabled: false, completionReads: 0, onCompletion: undefined as (() => Promise<void>) | undefined,
+    candidateEnabled: false, candidateReads: 0, onCandidate: undefined as (() => Promise<void>) | undefined,
+    transformCandidate: undefined as ((value: unknown) => unknown) | undefined,
     currentState: "running" as ModelTrainingResult["status"], onStart: undefined as (() => Promise<void>) | undefined,
     onRead: undefined as (() => Promise<void>) | undefined, onCancel: undefined as (() => Promise<void>) | undefined,
     business: undefined as ApprovedLocalTrainingControl | undefined, admission: undefined as ApprovedLocalTrainingAdmission | undefined};
@@ -225,6 +228,23 @@ async function fixture(t: TestContext, storage: "Core" | "SQLite", stepCount: 1 
           ...(execution.completionEnabled ? {async reviewCompletion(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCompletionReview> {
             assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.completionReads++;
             await execution.onCompletion?.(); return execution.currentState === "succeeded" ? clone(completion) : {kind: "not-ready"};
+          }} : {}),
+          ...(execution.candidateEnabled ? {async reviewCandidate(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview> {
+            assert.equal(transactionDepth, 0); assert.ok(control.isCurrent() && await control.stillAllowed()); execution.candidateReads++;
+            await execution.onCandidate?.();
+            if (execution.currentState !== "succeeded") return {kind: "not-ready"};
+            const files = ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"].map((name, fileIndex) => ({
+              fileIndex, groupIndex: 0, name, role: "candidate" as const,
+              mediaType: name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
+              expectedSizeBytes: 3, expectedSha256: "sha256:" + "b".repeat(64),
+              key: `workspaces/${workspaceId}/artifacts/training-results/${"a".repeat(32)}/${fileIndex}`}));
+            const snapshot = {schema: "training-result-finalized-files-v1" as const, publicationId: "a".repeat(32), totalBytes: 9, files};
+            const manifestDigest = "sha256:" + hash(snapshot), history = clone(completion);
+            const value: ApprovedLocalTrainingCandidateReview = {kind: "ready", requestId: admission.requestId, workspaceId, history,
+              retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest},
+              candidateDigest: "sha256:" + hash({requestId: admission.requestId, workspaceId,
+                owner: {organizationId, principalId, clientId: registeredClientId, hostIncarnationId}, history, manifestDigest})};
+            return (execution.transformCandidate ? execution.transformCandidate(value) : value) as ApprovedLocalTrainingCandidateReview;
           }} : {})}};
     };
   };
@@ -569,8 +589,116 @@ async function executableTrainingHost(t: TestContext, storage: "Core" | "SQLite"
     return desktop ? desktop.owner.readTrainingReview!(request, f.grant, async () => f.grant)
       : managed!.owner.readTrainingReview!(request, f.registration, current);
   };
-  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion, review};
+  const candidate = (selection?: Parameters<typeof query>[1]) => desktop
+    ? desktop.owner.readTrainingCandidate!(query("read", selection), f.grant, async () => f.grant)
+    : managed!.owner.readTrainingCandidate!(query("read", selection), f.registration, current);
+  return {...f, desktopHost: desktop, managedHost: managed, step, run, query, control, completion, review, candidate};
 }
+
+for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
+  test(`${storage}/${host}: current candidate review uses original private files/history and grants no Save or cached-read fallback`, async t => {
+    const f = await executableTrainingHost(t, storage, host); f.execution.candidateEnabled = true;
+    assert.ok((await f.run()).result.ok); const before = {...f.execution};
+    assert.deepEqual(await f.candidate(), {ok: true, value: {kind: "not-ready"}});
+    f.execution.currentState = "succeeded";
+    const result = await f.candidate(); assert.ok(result.ok); assert.equal(result.value.kind, "ready");
+    if (result.value.kind !== "ready") throw Error("Missing candidate.");
+    assert.equal(result.value.requestId, f.execution.admission!.requestId);
+    assert.equal(result.value.retainedFiles.verification, "sha256-current-local-v1");
+    assert.equal(result.value.history.registration, "requires-separate-approval");
+    assert.equal(result.value.history.verification.outputQuality, "not-evaluated");
+    assert.deepEqual(await f.candidate({kind: "task", taskId: f.execution.admission!.requestId}), result);
+    assert.deepEqual(await f.completion(), {ok: false, code: "headless.unavailable"}, "Current read never fills legacy cache.");
+    for (const key of ["starts", "reads", "cancels", "resolutions", "readerFactories", "completionReads"] as const) assert.equal(f.execution[key], before[key], key);
+    assert.doesNotMatch(JSON.stringify(result), /localPath|outputDirectory|logs|Synthetic answer/);
+    const count = f.execution.candidateReads;
+    assert.equal((await f.candidate({kind: "task", taskId: randomUUID()})).ok, false);
+    const foreignClient = randomUUID(), request = f.query("read");
+    const foreign = f.desktopHost
+      ? await f.desktopHost.owner.readTrainingCandidate!(request, {...f.grant, registeredClientId: foreignClient}, async () => ({...f.grant, registeredClientId: foreignClient}))
+      : await f.managedHost!.owner.readTrainingCandidate!(request, {...f.registration, registeredClientId: foreignClient}, () => true);
+    assert.equal(foreign.ok, false);
+    const wrongWorkspace = {...request, input: {...request.input, workspaceId: createWorkspaceId("workspace.other")}};
+    assert.equal((f.desktopHost ? await f.desktopHost.owner.readTrainingCandidate!(wrongWorkspace, f.grant, async () => f.grant)
+      : await f.managedHost!.owner.readTrainingCandidate!(wrongWorkspace, f.registration, () => true)).ok, false);
+    await inspectServiceScopes(["model:read"], async () => {assert.equal((await f.candidate()).ok, false);});
+    assert.equal(f.execution.candidateReads, count);
+    // Preserve the existing training-review policy, including its ModelWrite
+    // requirement. This component does not silently weaken that policy.
+    await inspectServiceScopes(["model:write"], async () => {assert.equal((await f.candidate()).ok, false);});
+    assert.equal(f.execution.candidateReads, count);
+  });
+  test(`${storage}/${host}: current candidate review refuses missing capability and late authority loss`, async t => {
+    const legacy = await executableTrainingHost(t, storage, host); assert.ok((await legacy.run()).result.ok);
+    assert.deepEqual(await legacy.candidate(), {ok: false, code: "headless.unavailable"});
+    assert.equal(legacy.execution.reads, 0); assert.equal(legacy.execution.candidateReads, 0);
+    const f = await executableTrainingHost(t, storage, host); f.execution.candidateEnabled = true;
+    assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+    f.execution.onCandidate = async () => {f.state.readCurrent = false; f.state.hostOpen = false;};
+    assert.equal((await f.candidate()).ok, false); assert.equal(f.execution.candidateReads, 1);
+    assert.equal(f.execution.starts, 1); assert.equal(f.execution.reads, 0);
+  });
+}
+
+function resealControlledCandidate(value: any, f: Awaited<ReturnType<typeof executableTrainingHost>>) {
+  const {schema, publicationId, totalBytes, files} = value.retainedFiles;
+  const manifestDigest = "sha256:" + hash({schema, publicationId, totalBytes, files});
+  value.retainedFiles.manifestDigest = manifestDigest;
+  value.candidateDigest = "sha256:" + hash({requestId: value.requestId, workspaceId: value.workspaceId,
+    owner: {organizationId: f.scope.organizationId, principalId: f.scope.principalId,
+      clientId: f.scope.registeredClientId, hostIncarnationId: f.target.hostIncarnationId}, history: value.history, manifestDigest});
+  return value;
+}
+
+for (const variant of ["task", "workspace", "history", "model", "dataset", "recipe", "training-task", "name", "foreign-key", "role", "group", "required-file", "size", "duplicate-name",
+  "serialization", "quality", "manifest", "candidate-digest", "extra", "proxy", "getter"] as const) {
+  test(`private current candidate boundary rejects ${variant}, even with self-consistent digests`, async t => {
+    const f = await executableTrainingHost(t, "Core", "Desktop"); f.execution.candidateEnabled = true;
+    assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded"; let hooks = 0;
+    f.execution.transformCandidate = (raw: any) => {
+      if (variant === "task") raw.requestId = randomUUID();
+      if (variant === "workspace") raw.workspaceId = createWorkspaceId("workspace.other");
+      if (variant === "history") raw.history.provenance.proposalDigest = "sha256:" + "f".repeat(64);
+      if (variant === "model") raw.history.provenance.modelRecordId = "model.different";
+      if (variant === "dataset") raw.history.provenance.versionDigest = "sha256:" + "f".repeat(64);
+      if (variant === "recipe") raw.history.provenance.recipeDigest = "sha256:" + "f".repeat(64);
+      if (variant === "training-task") raw.history.provenance.trainingTask = "llm-causal";
+      if (variant === "name") raw.history.candidate.requestedName = "Different candidate";
+      if (variant === "foreign-key") raw.retainedFiles.files[0].key = "workspaces/workspace.other/artifacts/training-results/foreign/0";
+      if (variant === "role") raw.retainedFiles.files[0].role = "checkpoint";
+      if (variant === "group") raw.retainedFiles.files[0].groupIndex = 2;
+      if (variant === "required-file") raw.retainedFiles.files[0].name = "generation_config.json";
+      if (variant === "size") raw.retainedFiles.totalBytes = 8;
+      if (variant === "duplicate-name") raw.retainedFiles.files[2].name = "adapter_config.json";
+      if (variant === "serialization") raw.history.candidate.serializationFormat = "safetensors";
+      if (variant === "quality") raw.history.verification.outputQuality = "passed";
+      if (variant === "extra") raw.logs = ["PRIVATE"];
+      resealControlledCandidate(raw, f);
+      if (variant === "manifest") raw.retainedFiles.manifestDigest = "sha256:" + "f".repeat(64);
+      if (variant === "candidate-digest") raw.candidateDigest = "sha256:" + "f".repeat(64);
+      if (variant === "proxy") raw.retainedFiles.files[0] = new Proxy(raw.retainedFiles.files[0], {getPrototypeOf() {hooks++; throw Error("PRIVATE");}});
+      if (variant === "getter") Object.defineProperty(raw.retainedFiles, "totalBytes", {enumerable: true, get() {hooks++; throw Error("PRIVATE");}});
+      return raw;
+    };
+    assert.deepEqual(await f.candidate(), {ok: false, code: "headless.unavailable"}); assert.equal(hooks, 0);
+    assert.equal(f.execution.candidateReads, 1); assert.equal(f.execution.starts, 1); assert.equal(f.execution.reads, 0);
+  });
+}
+
+test("current candidate review preserves controlled evaluation measurements without granting quality or runtime readiness", async t => {
+  const f = await executableTrainingHost(t, "Core", "Managed"); f.execution.candidateEnabled = true;
+  assert.ok((await f.run()).result.ok); f.execution.currentState = "succeeded";
+  f.execution.transformCandidate = (raw: any) => {
+    raw.history.comparison = {state: "recorded", report: {protocol: "fixed-first-32-validation-loss-v1", maximumRows: 32,
+      sampleCount: 4, baselineLoss: 2, trainedLoss: 1.5, lossDelta: -0.5, interpretation: "measurement-only"}};
+    return resealControlledCandidate(raw, f);
+  };
+  const result = await f.candidate(); assert.ok(result.ok && result.value.kind === "ready");
+  assert.equal(result.value.history.comparison.state, "recorded");
+  assert.equal(result.value.history.verification.outputQuality, "not-evaluated");
+  assert.equal(result.value.history.verification.runtimeReadiness, "not-checked");
+  assert.equal(result.value.history.registration, "requires-separate-approval");
+});
 
 for (const storage of ["Core", "SQLite"] as const) for (const host of ["Desktop", "Managed"] as const) {
   test(`${storage}/${host}: private host completion uses original history and read policy without new dependencies`, async t => {

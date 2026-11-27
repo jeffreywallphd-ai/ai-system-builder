@@ -348,3 +348,5 @@ optional finite comparison are historical facts only, not current verification
 or quality acceptance. Files/readiness/hardware/quality sentinels and separate
 Save approval remain in force. Native production wiring, protected retained
 outputs and real-host qualification are still pending.
+
+The optional private `readTrainingCandidate` entry uses the original training task book, captured Desktop grant/read lifetime and fresh original-client workspace/ModelRead policy. It returns only a validated current candidate to trusted host composition. Legacy cached completion stays free of file IO. This entry installs no transport, grants no Save and starts no Model/runtime dependency.

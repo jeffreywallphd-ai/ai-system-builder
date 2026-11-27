@@ -1,10 +1,12 @@
 /** Private original-task controls. No Root, worker, generic task or Save owner. */
 import {isDeepStrictEqual, types} from "node:util";
+import {createHash} from "node:crypto";
 import type {StructuredDocumentStore} from "../../../adapters/persistence/shared";
 import {readStructuredOwnedTrainingPlanTask, readStructuredOwnedTrainingPlanTaskByPlan,
   readStructuredOwnedTrainingPlanTaskProposalDigest, readStructuredTrainingPlanTaskLineage} from "../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
 import type {HeadlessOperationScope} from "../../../application/ports/system-builder";
-import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask, ApprovedLocalTrainingCompletionReview} from "../../../application/ports/model";
+import type {ApprovedLocalTrainingControl, ApprovedLocalTrainingTask, ApprovedLocalTrainingCompletionReview,
+  ApprovedLocalTrainingCandidateReview, TrainingResultVerifiedFiles} from "../../../application/ports/model";
 import {isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessTrainingTaskRequest,
   readHeadlessTrainingTaskValue, isHeadlessModelRecordId, isHeadlessModelTimestamp,
   readHeadlessTrainingCompletionRequest, readHeadlessTrainingCompletionResult, type HeadlessTrainingCompletionResult,
@@ -41,14 +43,21 @@ export interface OriginalTrainingTaskQuery {
 /** Internal host result only. This is not a public tool/transport response. */
 export type OriginalTrainingCompletionQueryResult = {readonly ok: true; readonly value: ApprovedLocalTrainingCompletionReview} |
   Extract<HeadlessTrainingTaskResult, {ok: false}>;
+/** Private current observation. Inventory locators must never cross transport. */
+export type OriginalTrainingCandidateQueryResult = {readonly ok: true; readonly value: ApprovedLocalTrainingCandidateReview} |
+  Extract<HeadlessTrainingTaskResult, {ok: false}>;
 interface Slot {
   readonly scope: HeadlessOperationScope;
   readonly selection: Selection;
+  readonly binding: Run["prepared"]["binding"];
+  readonly request: Run["prepared"]["request"];
   mayHaveStarted: boolean;
   expectedTaskId?: string;
   proposalDigest?: string;
   task?: ApprovedLocalTrainingTask;
   cancellationAttempted: boolean;
+  candidateRead?: {pending: boolean; unknown: boolean; original?: Promise<ApprovedLocalTrainingCandidateReview>;
+    observation?: Promise<unknown>};
 }
 const forbidden = {ok: false, code: "headless.forbidden"} as const;
 const unavailable = {ok: false, code: "headless.unavailable"} as const;
@@ -128,6 +137,59 @@ function scope(raw: unknown): HeadlessOperationScope {
     value.principalId.length <= 160 && !/[\x00-\x1f\x7f]/.test(value.principalId) && !hasKnownPassiveCredential(value.principalId));
   return Object.freeze(value) as unknown as HeadlessOperationScope;
 }
+function currentCandidate(raw: unknown, taskId: string, owner: HeadlessOperationScope, host: string,
+  proposalDigest: string, original: Pick<Slot, "binding" | "request">): ApprovedLocalTrainingCandidateReview {
+  const row = record(raw, ["kind", "requestId", "workspaceId", "history", "retainedFiles", "candidateDigest"]);
+  if (row.kind === "not-ready") {need(Object.keys(row).length === 1); return {kind: "not-ready"};}
+  need(row.kind === "ready" && Object.keys(row).length === 6 && row.requestId === taskId && row.workspaceId === owner.workspaceId);
+  const history = completion(row.history, taskId, owner.workspaceId, proposalDigest);
+  need(history.kind === "ready"); if (history.kind !== "ready") throw failed();
+  const source = original.request.input, inputs = original.binding.inputs;
+  need(history.provenance.modelRecordId === source.model.modelRecordId && history.provenance.modelUpdatedAt === source.model.updatedAt &&
+    history.provenance.datasetId === source.dataset.datasetId && history.provenance.versionId === source.dataset.versionId &&
+    history.provenance.versionDigest === source.dataset.versionDigest && history.provenance.recipeDigest === inputs.dataset.version.recipeDigest &&
+    history.provenance.trainingTask === source.training.trainingTask && history.provenance.method === source.training.method &&
+    history.candidate.requestedName === source.name);
+  const adapter = ["lora", "qlora"].includes(history.provenance.method);
+  need(history.candidate.artifactForm === (adapter ? "adapter" : "full-model") &&
+    (history.candidate.serializationFormat === null || history.candidate.serializationFormat === (adapter ? "adapter-safetensors" : "safetensors")));
+  const inventory = record(row.retainedFiles, ["schema", "publicationId", "totalBytes", "files", "verification", "manifestDigest"]);
+  need(Object.keys(inventory).length === 6 && inventory.schema === "training-result-finalized-files-v1" &&
+    inventory.verification === "sha256-current-local-v1" && typeof inventory.publicationId === "string" &&
+    /^[a-f0-9]{32}$/.test(inventory.publicationId) && Array.isArray(inventory.files) && inventory.files.length > 0 && inventory.files.length <= 256);
+  const names = new Set(["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json",
+    "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors", "adapter_config.json", "adapter_model.safetensors",
+    "serialization_manifest.json", "training-run.json"]);
+  let total = 0, group = 0; const seen = new Set<string>();
+  const files: TrainingResultVerifiedFiles["files"] = (inventory.files as unknown[]).map((item, index) => {
+    const file = record(item, ["fileIndex", "groupIndex", "name", "role", "mediaType", "expectedSizeBytes", "expectedSha256", "key"]);
+    need(Object.keys(file).length === 8 && file.fileIndex === index && typeof file.groupIndex === "number" &&
+      Number.isSafeInteger(file.groupIndex) && file.groupIndex >= 0 && file.groupIndex <= 255 &&
+      (file.groupIndex === group || index > 0 && file.groupIndex === group + 1) && typeof file.name === "string" && names.has(file.name) &&
+      ["checkpoint", "candidate"].includes(file.role as string) && file.mediaType === ((file.name as string).endsWith(".json") ? "application/json" : "application/octet-stream") &&
+      typeof file.expectedSizeBytes === "number" && Number.isSafeInteger(file.expectedSizeBytes) && file.expectedSizeBytes > 0 &&
+      file.expectedSizeBytes <= Number.MAX_SAFE_INTEGER - total && typeof file.expectedSha256 === "string" && /^sha256:[a-f0-9]{64}$/.test(file.expectedSha256) &&
+      file.key === `workspaces/${owner.workspaceId}/artifacts/training-results/${inventory.publicationId}/${index}`);
+    group = file.groupIndex as number; total += file.expectedSizeBytes as number;
+    const unique = `${group}/${file.name}`; need(!seen.has(unique)); seen.add(unique);
+    return {fileIndex: index, groupIndex: group, name: file.name as string, role: file.role as "checkpoint" | "candidate",
+      mediaType: file.mediaType as "application/json" | "application/octet-stream", expectedSizeBytes: file.expectedSizeBytes as number,
+      expectedSha256: file.expectedSha256 as string, key: file.key as string};
+  });
+  need(inventory.totalBytes === total && files.every(file => file.role === (file.groupIndex === group ? "candidate" : "checkpoint")));
+  const candidate = new Set(files.filter(file => file.groupIndex === group).map(file => file.name));
+  need((adapter ? ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"] : ["config.json", "model.safetensors", "tokenizer.json"])
+    .every(name => candidate.has(name)) && !(adapter ? ["config.json", "model.safetensors"] : ["adapter_config.json", "adapter_model.safetensors"])
+    .some(name => candidate.has(name)));
+  const snapshot = {schema: "training-result-finalized-files-v1" as const, publicationId: inventory.publicationId as string, totalBytes: total, files};
+  const hash = (value: unknown) => "sha256:" + createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  const manifestDigest = hash(snapshot); need(inventory.manifestDigest === manifestDigest);
+  const candidateDigest = hash({requestId: taskId, workspaceId: owner.workspaceId,
+    owner: {organizationId: owner.organizationId, principalId: owner.principalId, clientId: owner.registeredClientId, hostIncarnationId: host}, history, manifestDigest});
+  need(row.candidateDigest === candidateDigest);
+  return {kind: "ready", requestId: taskId, workspaceId: owner.workspaceId, history,
+    retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest}, candidateDigest};
+}
 function key(owner: HeadlessOperationScope, host: string, fingerprint: string, step: number) {
   need(isHeadlessHostIncarnationId(host) && /^[a-f0-9]{64}$/.test(fingerprint) && Number.isSafeInteger(step) && step > 0);
   // Same point identity as the dedicated ledger; approval revisions cannot adopt
@@ -181,12 +243,14 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const isHostCurrent = capture<Run["isHostCurrent"]>(raw, "isHostCurrent");
       const stillBusinessAllowed = capture<Run["stillBusinessAllowed"]>(raw, "stillBusinessAllowed");
       const capturedRequest = copy(fields.request) as Run["request"], context = copy(fields.context) as Run["context"];
+      const originalBinding = copy(metadata.binding) as Slot["binding"], originalRequest = copy(metadata.request) as Slot["request"];
       const result = await runOriginal({prepared, request: capturedRequest, context, canUse, isHostCurrent, stillBusinessAllowed, getReaders,
         async resolveStart() {
           // The original runner calls this only for an absent admitted effect.
           // Reserve BEFORE the resolver's first await, not after the task ACK.
           if (slots.has(slotKey!) || slots.size >= maximum) return undefined;
-          originalSlot = {scope: originalScope, selection, mayHaveStarted: false, cancellationAttempted: false};
+          originalSlot = {scope: originalScope, selection, binding: originalBinding, request: originalRequest,
+            mayHaveStarted: false, cancellationAttempted: false};
           slots.set(slotKey!, originalSlot);
           const start = await resolveStart();
           if (typeof start !== "function" || types.isProxy(start)) return undefined;
@@ -233,9 +297,10 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
   }
 
   function control(raw: OriginalTrainingTaskQuery, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
+  function control(raw: OriginalTrainingTaskQuery, action: "review-candidate"): Promise<OriginalTrainingCandidateQueryResult>;
   function control(raw: OriginalTrainingTaskQuery, action: "read-completion"): Promise<HeadlessTrainingCompletionResult>;
   function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
-  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review" | "read-completion"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | HeadlessTrainingCompletionResult> {
+  async function control(raw: OriginalTrainingTaskQuery, action: "read" | "cancel" | "review" | "read-completion" | "review-candidate"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | OriginalTrainingCandidateQueryResult | HeadlessTrainingCompletionResult> {
     let effectPossible = false;
     try {
       const fields = record(raw, ["documents", "hostIncarnationId", "scope", "request", "isCurrent", "authorize"]);
@@ -272,6 +337,27 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
       const same = () => current() && slots.get(originalKey) === slot && slot.task === task;
       const fresh = async () => {const value = await admit(); return !!value && same() && isDeepStrictEqual(value, admitted);};
       const caller: ApprovedLocalTrainingControl = Object.freeze({isCurrent: same, stillAllowed: fresh});
+      if (action === "review-candidate") {
+        if (!task.reviewCandidate || slot.candidateRead) return unavailable;
+        const reading: NonNullable<Slot["candidateRead"]> = {pending: true, unknown: false}; slot.candidateRead = reading;
+        let operation: Promise<ApprovedLocalTrainingCandidateReview>;
+        try {
+          operation = task.reviewCandidate(caller); reading.original = operation;
+          need(types.isPromise(operation) && !types.isProxy(operation) && Object.getPrototypeOf(operation) === Promise.prototype &&
+            !Object.getOwnPropertyDescriptor(operation, "constructor"));
+        } catch {reading.unknown = true; throw failed();}
+        const observation = (async () => {try {return {ok: true as const, value: await operation};}
+          catch {return {ok: false as const};} finally {reading.pending = false;}})();
+        reading.observation = observation;
+        if (Object.getOwnPropertyDescriptor(operation, "then")) {reading.unknown = true; throw failed();}
+        let owned: unknown;
+        try {const result = await observation; need(result.ok); owned = copyHeadlessModelPlanData(result.ok ? result.value : undefined);}
+        finally {if (!reading.pending && !reading.unknown && slot.candidateRead === reading) slot.candidateRead = undefined;}
+        if (!await fresh() || !same()) return forbidden;
+        const value = currentCandidate(owned, task.requestId, originalScope, host, admitted.proposalDigest, slot);
+        if (!await fresh() || !same()) return forbidden;
+        return {ok: true, value};
+      }
       if (action === "review" || action === "read-completion") {
         if (!task.reviewCompletion) return unavailable; // No ordinary read or runtime fallback.
         const owned = copyHeadlessModelPlanData(await task.reviewCompletion(caller)); // Reject proxies; own reply BEFORE policy waits.
@@ -303,5 +389,6 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
   return Object.freeze({runPrepared, read: (query: OriginalTrainingTaskQuery) => control(query, "read"),
     cancel: (query: OriginalTrainingTaskQuery) => control(query, "cancel"),
     readCompletion: (query: OriginalTrainingTaskQuery) => control(query, "read-completion"),
-    reviewCompletion: (query: OriginalTrainingTaskQuery) => control(query, "review")});
+    reviewCompletion: (query: OriginalTrainingTaskQuery) => control(query, "review"),
+    reviewCandidate: (query: OriginalTrainingTaskQuery) => control(query, "review-candidate")});
 }

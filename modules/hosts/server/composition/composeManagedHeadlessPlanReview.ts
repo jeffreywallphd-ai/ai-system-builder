@@ -2,7 +2,8 @@ import {prepareHeadlessModelTrainingReviews, type GetHeadlessModelTrainingInputs
 import {captureHeadlessTrainingMethod, copyHeadlessTrainingPlanInput, composeOwnedHeadlessTrainingMetadata,
   verifyHeadlessTrainingReviewInputs, verifyStoredHeadlessTrainingReviewInputs, compileHeadlessTrainingStepMetadata,
   composeOwnedHeadlessTrainingBusinessPolicy, authorizeOwnedHeadlessTrainingWorkspace, HEADLESS_TRAINING_REVIEW_SCOPES} from "../../shared/composition/headlessTrainingPlanInputs";
-import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions, type OriginalTrainingCompletionQueryResult} from "../../shared/composition/headlessModelTrainingTasks";
+import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions, type OriginalTrainingCompletionQueryResult,
+  type OriginalTrainingCandidateQueryResult} from "../../shared/composition/headlessModelTrainingTasks";
 import {readStructuredHeadlessTrainingPlanPermission, type BindModelTrainingReviews} from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import {compileHeadlessContextQueryInputs, runPreparedHeadlessContextQuery, composeOwnedHeadlessContextQueryPolicy,
   type HeadlessContextQueryOwner} from "../../shared/composition/headlessContextQueryExecution";
@@ -528,11 +529,13 @@ export function composeManagedHeadlessPlanReview(options: {
   function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
     isOpen: () => boolean, action: "review"): Promise<OriginalTrainingCompletionQueryResult>;
   function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
+    isOpen: () => boolean, action: "review-candidate"): Promise<OriginalTrainingCandidateQueryResult>;
+  function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
     isOpen: () => boolean, action: "read" | "cancel"): Promise<HeadlessTrainingTaskResult>;
   function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
     isOpen: () => boolean, action: "read-completion"): Promise<HeadlessTrainingCompletionResult>;
   async function controlTraining(incoming: unknown, originalRegistration: ManagedPlanReviewRegistration,
-    isOpen: () => boolean, action: "read" | "cancel" | "review" | "read-completion"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | HeadlessTrainingCompletionResult> {
+    isOpen: () => boolean, action: "read" | "cancel" | "review" | "read-completion" | "review-candidate"): Promise<HeadlessTrainingTaskResult | OriginalTrainingCompletionQueryResult | OriginalTrainingCandidateQueryResult | HeadlessTrainingCompletionResult> {
     let effectPossible = false;
     try {
       if (!trainingTasks || !trainingHostCurrent) return forbidden;
@@ -550,7 +553,7 @@ export function composeManagedHeadlessPlanReview(options: {
         authorize: async (owner: StructuredDocumentStore) => access.current() &&
           await authorizeOwnedHeadlessTrainingWorkspace(owner, rootDirectory, placement, scope, access.current) && access.current()};
       effectPossible = action === "cancel";
-      const result = await (action === "read-completion" ? trainingTasks.readCompletion(query) : action === "review" ? trainingTasks.reviewCompletion(query) : action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
+      const result = await (action === "review-candidate" ? trainingTasks.reviewCandidate(query) : action === "read-completion" ? trainingTasks.readCompletion(query) : action === "review" ? trainingTasks.reviewCompletion(query) : action === "read" ? trainingTasks.read(query) : trainingTasks.cancel(query));
       if (!access.current() || !await access.authorizeCurrent() || !access.current()) return effectPossible ? unconfirmed : forbidden;
       return result;
     } catch {return effectPossible ? unconfirmed : unavailable;}
@@ -575,6 +578,8 @@ export function composeManagedHeadlessPlanReview(options: {
       controlTraining(request, registration, current, "read-completion") : undefined,
     readTrainingCompletion: trainingTasks ? (request: unknown, registration: ManagedPlanReviewRegistration, current: () => boolean) =>
       controlTraining(request, registration, current, "review") : undefined,
+    readTrainingCandidate: trainingTasks ? (request: unknown, registration: ManagedPlanReviewRegistration, current: () => boolean) =>
+      controlTraining(request, registration, current, "review-candidate") : undefined,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads
       ? (request: HeadlessLocalFileImportRequest, registration: ManagedPlanReviewRegistration, isOpen: () => boolean) =>
         previewSelectedFile(request.input, registration, isOpen, {
