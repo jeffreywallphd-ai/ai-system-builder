@@ -67,6 +67,36 @@ class TrainingHostApprovalRoutingTests(unittest.TestCase):
                 raise RuntimeError("Owned training-review fixture changed; cleanup refused.")
             shutil.rmtree(directory)
 
+    def test_deferred_start_sources_select_strict_original_host_checks(self):
+        for path in (catalog.TRAINING_START_OWNER, catalog.TRAINING_START_TEST):
+            rows = self.select([path])
+            for name in self.profiles: self.assertIn(name, rows)
+            self.assertNotIn("focused-tests", rows)
+            self.assertIn(catalog.TRAINING_START_OWNER, rows[self.profiles[1]]["argv"])
+            self.assertIn(catalog.TRAINING_START_TEST, rows[self.profiles[0]]["argv"])
+        rows = self.select(catalog.TRAINING_START_SCOPE)
+        self.assertIn("test_control_plane_headless_training_host_approval.", rows["control-plane"]["argv"])
+        for paths, required in (([*catalog.TRAINING_START_SCOPE, "modules/hosts/shared/composition/unknown.ts"], ("architecture",)),
+                                (catalog.TRAINING_START_SCOPE, ("focused-tests",))):
+            rows = self.select(paths, required=required)
+            self.assertNotIn("-k", rows["control-plane"]["argv"])
+
+    def test_missing_start_source_keeps_full_controller_and_generic_coverage(self):
+        required = catalog.PUBLISHED_FORM_CHECKS[self.profiles[0]]["automatic_required_files"]
+        with tempfile.TemporaryDirectory(prefix="start-routing-") as temporary:
+            root = Path(temporary)
+            for relative in (*required, catalog.TRAINING_START_CONTROLLER_TEST):
+                path = root / relative; path.parent.mkdir(parents=True, exist_ok=True); path.write_text("// inert\n", encoding="utf8")
+            for relative in (catalog.TRAINING_START_OWNER, catalog.TRAINING_START_TEST):
+                path = root / relative; path.unlink()
+                for directory in (False, True):
+                    if directory: path.mkdir()
+                    rows = self.select(catalog.TRAINING_START_SCOPE, root)
+                    self.assertNotIn(self.profiles[0], rows); self.assertIn("focused-tests", rows)
+                    self.assertNotIn("-k", rows["control-plane"]["argv"])
+                    if directory: path.rmdir()
+                path.write_text("// inert\n", encoding="utf8")
+
     def test_fixed_commands_execute_actual_assertions_strict_consumers_and_existing_server_build(self):
         rows = self.select([self.test_file])
         environment = dict(os.environ)

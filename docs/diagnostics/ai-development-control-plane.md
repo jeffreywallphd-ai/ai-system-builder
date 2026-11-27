@@ -3645,3 +3645,11 @@ The parent still independently verifies process/job/source outcomes; fixture
 error0 alone cannot pass qualification. An unexpected mutation stops immediately
 without reverse rename, stream cleanup, ACL changes or another attempt. No raw
 error text, private path or data is emitted. Earlier failed files stay untouched.
+
+The fixed training-host review profile also covers the deferred private training
+start resolver and its negative configuration cases. It includes actual
+Core/SQLite approved-ledger/application integration and strict consumers. Only
+the exact known source/routing change selects the bounded controller subset;
+missing or nonregular support, unknown impact and explicit generic requests keep
+conservative coverage. These feature checks do not run a model, qualify a worker
+or replace final roadmap qualification.

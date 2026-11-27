@@ -4147,3 +4147,13 @@ that fence. The run-step frame is detached before waits and matched to the exact
 prepared host/workspace/fingerprint/revision/ordinal; unrelated transient text
 is refused. Replies use the closed path-free trained-Model reference codec.
 Desktop/managed transport and product Root wiring and qualification remain pending.
+
+Private training start composition uses `composeHeadlessModelTrainingStart`.
+The trusted host supplies original dependencies and a no-argument configuration
+callback. The resolver caches one application owner, including unavailable or
+rejected initialization. It captures configured training/storage methods and
+receivers and exposes only approved start. No task payload chooses configuration;
+ordinary browsing does not initialize this owner. The existing ledger, application
+admission and original runtime session retain effect and lifetime ownership.
+Controlled Core/SQLite checks qualify this composition only. Actual bounded
+fine-tuning, public host wiring and physical qualification remain separate work.

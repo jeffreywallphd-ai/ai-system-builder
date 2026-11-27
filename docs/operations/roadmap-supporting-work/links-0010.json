@@ -1211,6 +1211,63 @@
         "Actual product Root/transport and physical-copy host qualification plus current Task 71 qualification remain pending. No model accuracy test was repeated and no protected service, physical quota or external publication authority is granted.",
         "Another checkout may not contain the local completion records. This link supplies no current-source or parent qualification pass."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-trained-model-save-task-qualification",
+      "work_criteria": [
+        "original-reviewed-candidate-and-copy",
+        "separate-save-and-atomic-model-publication",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "0fa5bd5466a2fbbf54c4b48fe49c370dd6349d81ba4a305422234de60f78d949",
+      "review_digest": "e3002f070b46e3e2bad818eaef8365cbf253860097365d19b7adf77396d0eb00",
+      "scope": "Task 71 is complete at commit e06dadac. Both private hosts use the actual application Save owner and real bounded filesystem copying, with separate approval and atomic Model publication. Tests cover original bytes, revocation, drift, limits, replay and retained uncertain publication.",
+      "limitations": [
+        "This supports the completed local Save task at its recorded source. Actual fine-tuning, product host wiring and current parent qualification remain separate.",
+        "No model accuracy, protected storage service, physical quota or external publication test is claimed. Earlier failures and retained data remain unchanged.",
+        "Another checkout may lack local receipt records. This link supplies no current-source or whole-roadmap pass."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-trained-model-save-task-qualification",
+      "work_criteria": [
+        "original-reviewed-candidate-and-copy",
+        "separate-save-and-atomic-model-publication",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "0fa5bd5466a2fbbf54c4b48fe49c370dd6349d81ba4a305422234de60f78d949",
+      "review_digest": "e3002f070b46e3e2bad818eaef8365cbf253860097365d19b7adf77396d0eb00",
+      "scope": "Task 71 is complete at commit e06dadac. Both private hosts use the actual application Save owner and real bounded filesystem copying, with separate approval and atomic Model publication. Tests cover original bytes, revocation, drift, limits, replay and retained uncertain publication.",
+      "limitations": [
+        "This supports the completed local Save task at its recorded source. Actual fine-tuning, product host wiring and current parent qualification remain separate.",
+        "No model accuracy, protected storage service, physical quota or external publication test is claimed. Earlier failures and retained data remain unchanged.",
+        "Another checkout may lack local receipt records. This link supplies no current-source or whole-roadmap pass."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-trained-model-save-task-qualification",
+      "work_criteria": [
+        "original-reviewed-candidate-and-copy",
+        "separate-save-and-atomic-model-publication",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "0fa5bd5466a2fbbf54c4b48fe49c370dd6349d81ba4a305422234de60f78d949",
+      "review_digest": "e3002f070b46e3e2bad818eaef8365cbf253860097365d19b7adf77396d0eb00",
+      "scope": "Task 71 is complete at commit e06dadac. Both private hosts use the actual application Save owner and real bounded filesystem copying, with separate approval and atomic Model publication. Tests cover original bytes, revocation, drift, limits, replay and retained uncertain publication.",
+      "limitations": [
+        "This supports the completed local Save task at its recorded source. Actual fine-tuning, product host wiring and current parent qualification remain separate.",
+        "No model accuracy, protected storage service, physical quota or external publication test is claimed. Earlier failures and retained data remain unchanged.",
+        "Another checkout may lack local receipt records. This link supplies no current-source or whole-roadmap pass."
+      ]
     }
   ]
 }

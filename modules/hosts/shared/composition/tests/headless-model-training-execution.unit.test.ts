@@ -27,6 +27,7 @@ import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
 import type {ModelInventoryRecord} from "../../../../contracts/model";
 import {runPreparedHeadlessModelTraining, type RetainedHeadlessTrainingTask} from "../headlessModelTrainingExecution";
 import {createOriginalHeadlessTrainingTaskOwner, type OriginalTrainingRunOptions, type OriginalTrainingTaskQuery} from "../headlessModelTrainingTasks";
+import {composeHeadlessModelTrainingStart} from "../composeHeadlessModelTrainingStart";
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const sha = (value: Uint8Array | string) => "sha256:" + createHash("sha256").update(value).digest("hex");
@@ -37,7 +38,7 @@ type RunOptions = Parameters<typeof runPreparedHeadlessModelTraining>[0];
 const originalTemporary = {TEMP: process.env.TEMP, TMP: process.env.TMP, TMPDIR: process.env.TMPDIR};
 const fixtureParent = tmpdir();
 
-async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", options: {port?: false; legacy?: boolean; split?: false} = {}) {
+async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", options: {port?: false; legacy?: boolean; split?: false; deferred?: boolean} = {}) {
   const boundary = await realpath(fixtureParent), directory = await realpath(await mkdtemp(join(boundary, "tbridge-")));
   const identity = await lstat(directory, {bigint: true}), previous = originalTemporary;
   process.env.TEMP = directory; process.env.TMP = directory; process.env.TMPDIR = directory;
@@ -46,6 +47,7 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
   const state = {current: true, host: true, allowed: true, business: true, modelRead: true, now: 1000, gets: 0, resolves: 0,
     modelReads: 0, datasetReads: 0, starts: 0, creates: 0, prepares: 0, retained: 0, reads: 0, cancels: 0,
     status: "queued" as RuntimeTaskRecord["status"], issued: 0, retain: true, compiles: 0,
+    configurations: 0, onConfiguration: undefined as (() => Promise<void>) | undefined,
     onPolicy: undefined as (() => Promise<void>) | undefined,
     onPrepare: undefined as (() => Promise<void>) | undefined,
     onStart: undefined as (() => Promise<void>) | undefined,
@@ -149,8 +151,9 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
   let definition: ApprovedLocalTrainingDefinition | undefined, staged: ApprovedLocalTrainingStagedInput | undefined;
   let control: ApprovedLocalTrainingControl | undefined;
   let modelSource: ApprovedLocalTrainingModelReader | undefined;
-  const train = new TrainModelUseCase({taskReconciler: reconciler,
+  const dependencies: ConstructorParameters<typeof TrainModelUseCase>[0] = {taskReconciler: reconciler,
     ...(options.port === false ? {} : {approvedLocalTraining: {createSession(value, originalControl, source) {
+      assert.equal(this, approvedLocalTraining);
       state.creates++; definition = value; control = originalControl; modelSource = source;
       return {requestId: value.requestId, workspaceId: value.workspaceId,
         async prepare() {state.prepares++; await state.onPrepare?.(); return "ready" as const;},
@@ -169,7 +172,15 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
     modelRegistry: {async listModels() {assert.fail();}, async getModelRecord() {assert.fail();}, async saveModelReference() {assert.fail();},
       async registerDownloadedModel() {assert.fail();}, async updateModelRecord() {assert.fail();}, async deleteModelRecord() {assert.fail();}, async registerGeneratedModel() {assert.fail("No automatic Save.");}},
     storageBindings: {async readArtifactStorageBindings() {assert.fail("No binding lookup.");}}, storage: {async retrieveArtifact() {assert.fail("Only private copies.");}},
-    taskPowerLifecycle: {async startTask() {await state.onPowerStart?.();}, async completeTask() {}}, runtimeCapabilityGuard: {async requireCapabilityReady() {assert.fail("No installation.");}}});
+    taskPowerLifecycle: {async startTask() {await state.onPowerStart?.();}, async completeTask() {}}, runtimeCapabilityGuard: {async requireCapabilityReady() {assert.fail("No installation.");}}};
+  const train = new TrainModelUseCase(dependencies);
+  const {approvedLocalTraining, generatedModelStorage, ...baseDependencies} = dependencies;
+  const configuration = {async getConfiguration() {
+    assert.equal(this, configuration); assert.equal(arguments.length, 0); state.configurations++; await state.onConfiguration?.();
+    return approvedLocalTraining ? {approvedLocalTraining, ...(generatedModelStorage ? {generatedModelStorage} : {})} : undefined;
+  }};
+  const resolveStart = composeHeadlessModelTrainingStart({dependencies: baseDependencies,
+    getConfiguration: (...args) => Reflect.apply(configuration.getConfiguration, configuration, args)});
   let retained: RetainedHeadlessTrainingTask | undefined;
   const modelReader = {async execute(...args: Parameters<ReadHeadlessModelTrainingModelUseCase["execute"]>) {
     assert.equal(this, modelReader); state.modelReads++;
@@ -188,15 +199,43 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
     canUse: async () => {await state.onPolicy?.(); return state.allowed;}, isHostCurrent: () => state.host,
     stillBusinessAllowed: async () => state.business,
     getReaders: async () => {state.gets++; return {model: modelReader, dataset: datasetReader};},
-    resolveStart: async () => {state.resolves++; return train.startApprovedLocal.bind(train);},
+    resolveStart: async () => {state.resolves++; return options.deferred ? resolveStart() : train.startApprovedLocal.bind(train);},
     retainTask(value) {state.retained++; retained = value; return state.retain;}});
   const run = async (changes: Partial<RunOptions> = {}) => tracked(runPreparedHeadlessModelTraining({...await makeOptions(), ...changes}));
   const gate = () => {let open!: () => void, entered!: () => void; const waiting = new Promise<void>(r => open = r), started = new Promise<void>(r => entered = r);
     releases.push(open); return {started, release: open, async wait() {entered(); await waiting;}};};
   return {state, scope, context, host, root, request, binding, inputs, version, content, retrieved, modelRecord, modelReader, datasetReader,
-    train, prepare, makeOptions, run, gate, track: tracked, get retained() {return retained;}, get definition() {return definition;}, get staged() {return staged;},
+    train, approvedLocalTraining, prepare, makeOptions, run, gate, track: tracked, get retained() {return retained;}, get definition() {return definition;}, get staged() {return staged;},
     get control() {return control;}, get modelSource() {return modelSource;},
     rows: () => root.forOrganization(scope.organizationId).listDocuments<{phase: string}>("headless/models/training-plan-tasks")};
+}
+
+for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + " deferred original application starts once and retains approved task progress", async t => {
+    const f = await fixture(t, engine, {deferred: true});
+    assert.equal(f.state.configurations, 0); assert.equal(f.state.creates, 0);
+    const original = await (await f.makeOptions()).resolveStart(); assert.equal(typeof original, "function");
+    f.approvedLocalTraining!.createSession = () => {assert.fail("Captured original port must remain selected.");};
+    const result = await f.run(); assert.equal(result.result.ok, true);
+    assert.equal(f.state.configurations, 1); assert.equal(f.state.starts, 1); assert.ok(f.retained);
+    f.state.status = "running"; f.state.progress = {details: {epoch: 1, totalEpochs: 2, batch: 1, totalBatches: 4}};
+    const access = {isCurrent: () => true, stillAllowed: async () => true};
+    const value = await f.retained.task.read(access); assert.equal(value.status, "running"); assert.equal(value.progress?.batch, 1);
+    await f.run(); assert.equal(f.state.configurations, 1); assert.equal(f.state.starts, 1);
+    await f.retained.task.cancel(access); assert.equal(f.state.cancels, 1);
+  });
+  test(engine + " unavailable deferred configuration never reads inputs or starts ordinary work", async t => {
+    const f = await fixture(t, engine, {deferred: true, port: false});
+    assert.equal((await f.run()).result.ok, false); await f.run();
+    assert.equal(f.state.configurations, 1); assert.equal(f.state.creates, 0);
+    assert.equal(f.state.modelReads, 0); assert.equal(f.state.datasetReads, 0); assert.equal(f.state.starts, 0);
+  });
+  test(engine + " deferred configuration cannot authorize a revoked plan after its wait", async t => {
+    const f = await fixture(t, engine, {deferred: true}), gate = f.gate(); f.state.onConfiguration = gate.wait;
+    const result = f.run(); await gate.started; f.state.allowed = false; gate.release();
+    assert.deepEqual((await result).result, {ok: false, code: "headless.forbidden"});
+    assert.equal(f.state.configurations, 1); assert.equal(f.state.creates, 0); assert.equal(f.state.datasetReads, 0);
+  });
 }
 
 test("current candidate capability retains its original method and receiver with the accepted task", async t => {

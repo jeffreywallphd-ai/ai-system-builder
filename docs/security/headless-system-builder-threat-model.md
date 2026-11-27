@@ -3922,3 +3922,15 @@ synthetic safetensors-named bytes grant no real training, model-quality, hardwar
 public-host or parent qualification. Use the
 [versioned feature matrix](../operations/headless-training-save-task-qualification.json)
 with current receipts/review; declarations alone never qualify the task.
+
+The private deferred training resolver is security-relevant: protect original
+host dependencies, configured execution capabilities and separate approval.
+Capture trusted configuration and port/storage methods without evaluating
+accessors or Proxies. Configuration receives no task data. Cache unavailable or
+rejected initialization; never select ordinary training, install dependencies or
+retry uncertain initialization as a fallback. The application still validates
+admission after configuration resolves. Tests cover withheld configuration,
+concurrent resolution and permission withdrawal during the wait. This is an
+in-process composition boundary under ADR49's trusted-account assumption, not
+isolation from installed code. Worker, storage and public-host qualification are
+not supplied by these controlled tests.

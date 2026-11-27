@@ -347,6 +347,14 @@ remain separate from actual app/provider/native and parent qualification.
 
 ### Private training approval preparation
 
+`composeHeadlessModelTrainingStart` captures trusted host dependencies and a
+no-argument configuration method. It resolves one private application owner on
+demand and exposes only `startApprovedLocal`. Missing or failed configuration is
+cached as unavailable. Construction does not load a runtime or start a task.
+Original port/storage methods keep their receivers. Approval, input reads and
+task admission remain with their existing owners. This private seam does not
+activate public Roots or qualify actual worker execution.
+
 The shared private training-review helper reuses the existing application compiler
 and original saved-input reader. It copies the exact target/requests, captures
 callbacks and the input reader across all awaits, and prepares minimized metadata
