@@ -232,3 +232,23 @@ it is false while issue is in flight and after terminal, denied or unknown issue
 It is not an issue acknowledgement, async policy/metadata check or native proof.
 Keep it separate from requester `isCurrent()` so legitimate historical reads still
 work. Future execution must compose both with its own required current proofs.
+
+The structured Model save family also has a distinct private trained-Model
+transaction. Its closed effect binds an exact candidate digest, task, user,
+workspace, host, name and new Save identity. Capture the private preparation
+before store waits. Accepted original training ledger/proposal, bounded history,
+safe file inventory/content identity and copied-Model facts are checked. A point
+read binds the recorded base Model version; local-only base references remain
+private and available for adapter loading.
+
+Create the generated Model, causal receipt and original-task index in one owned
+transaction. Never replace a foreign row. Exact unchanged replay is read-only;
+edited, deleted, duplicate or conflicting Model/receipt/index data is refused.
+Canonical JSON digests tolerate storage key reordering. No discovery, filesystem,
+runtime or provider operation occurs in this metadata adapter.
+
+The owning composition must require new exact Save approval, current ModelRead
+and ModelWrite, the original app candidate/copy capability and its final lifetime
+fence inside the same transaction. Metadata cannot independently prove copied
+bytes, IO closure, runtime readiness, quality, rights or protected storage. These
+private helpers activate no product route or Root and grant no parent pass.

@@ -9,13 +9,18 @@ import {openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy} from "../../.
 import {acceptStructuredModelPlanTask, issueStructuredModelPlanTask, reserveStructuredModelPlanTask,
   type ModelPlanTaskEffect} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessModelPlanTaskStore";
 import {captureModelReferenceSaveEffect, commitStructuredModelReferenceSave, inspectStructuredModelReferenceSave,
-  type ModelReferenceSaveEffect} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessModelReferenceStore";
+  captureModelTrainingSaveEffect, commitStructuredModelTrainingSave, inspectStructuredModelTrainingSave,
+  type ModelReferenceSaveEffect, type ModelTrainingSaveEffect} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessModelReferenceStore";
+import {reserveStructuredTrainingPlanTask, issueStructuredTrainingPlanTask, acceptStructuredTrainingPlanTask,
+  type TrainingPlanTaskEffect} from "../../../../adapters/persistence/system-builder/createStructuredHeadlessTrainingPlanTaskStore";
 import {createLocalModelRegistryAdapter} from "../../../../adapters/persistence/model/createLocalModelRegistryAdapter";
 import {ModelDownloadTasksUseCase} from "../../../../application/use-cases/model/model-download-tasks.use-case";
 import {OwnedTaskReconcilerService} from "../../../../application/services/runtime/owned-task-reconciler.service";
-import type {ApprovedModelSourceRegistrationPreparation} from "../../../../application/ports/model";
-import {isHeadlessHostIncarnationId, readHeadlessModelDownloadPlanRequest, type HeadlessHostIncarnationId} from "../../../../contracts/headless";
-import {readModelDownloadSource, type ModelInventoryRecord} from "../../../../contracts/model";
+import type {ApprovedModelSourceRegistrationPreparation, ApprovedLocalTrainingSavePreparation} from "../../../../application/ports/model";
+import {canonicalHeadlessModelTrainingInputs} from "../../../../application/use-cases/model/headless-model-training-plan.use-case";
+import {isHeadlessHostIncarnationId, readHeadlessModelDownloadPlanRequest, readHeadlessModelTrainingPlanRequest,
+  readHeadlessModelTrainingInputsValue, type HeadlessHostIncarnationId} from "../../../../contracts/headless";
+import {readModelDownloadSource, readModelTrainingExecutionHistory, type ModelInventoryRecord} from "../../../../contracts/model";
 import {createOrganizationId} from "../../../../contracts/organization";
 import {createWorkspaceId} from "../../../../contracts/workspace";
 import {TaskType, type RuntimeTaskRecord} from "../../../../contracts/runtime";
@@ -270,4 +275,188 @@ test("save retains its original synchronous host callback; replacement and async
   const invalid = composeHeadlessModelReferenceSave({...input,
     isCurrent: (() => Promise.reject(new Error("synthetic async current refusal"))) as never});
   assert.equal(await invalid.save(), undefined); await f.empty();
+});
+
+const TRAINED_SAVES = "headless/models/training-saves", TRAINED_SOURCES = "headless/models/training-save-sources";
+/** Metadata-only fixture. No worker, model bytes, filesystem copy or quality
+ * measurement is performed or qualified by this synthetic preparation. */
+async function trainingFixture(t: TestContext, storage: "Core" | "SQLite", options: {adapter?: boolean; localBase?: boolean; accepted?: boolean; checkpoints?: boolean} = {}) {
+  const f = await fixture(t, storage);
+  const base = JSON.parse(JSON.stringify((await f.registry.registerDownloadedModel({workspaceId: f.scope.workspaceId, modelRecordId: "model.training-base", displayName: "Training base",
+    source: "huggingface", provider: "huggingface", ...(options.localBase ? {} : {modelId: "fixture/base"}), artifactForm: "full-model",
+    localPath: path.join(f.directory, "metadata-only-base"), inferenceMode: "causal", serializationFormat: "safetensors", taskTags: ["chat"]})).model)) as ModelInventoryRecord;
+  const at = base.updatedAt ?? base.createdAt, versionDigest = "sha256:" + "c".repeat(64), recipeDigest = "sha256:" + "d".repeat(64);
+  const parsed = readHeadlessModelTrainingPlanRequest({version: "aisb-headless-v1", operation: "models.train", input: {
+    hostIncarnationId: f.host, workspaceId: f.scope.workspaceId, idempotencyKey: randomUUID(), name: "Synthetic training result",
+    model: {modelRecordId: base.modelRecordId, updatedAt: at}, dataset: {datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest},
+    training: {trainingTask: "llm-instruction", method: options.adapter ? "lora" : "full-finetune", commonParameters: {maxSteps: 1, batchSize: 1}}}}, f.host);
+  assert.ok(parsed.ok); const request = parsed.request;
+  const inputsValue = readHeadlessModelTrainingInputsValue({workspaceId: f.scope.workspaceId,
+    model: {modelRecordId: base.modelRecordId, updatedAt: at, source: base.source, lifecycleStatus: base.lifecycleStatus,
+      artifactForm: base.artifactForm, provider: base.provider, ...(base.modelId ? {modelId: base.modelId} : {}), inferenceMode: "causal", serializationFormat: "safetensors", taskTags: ["chat"]},
+    dataset: {datasetId: "dataset.synthetic", version: {versionId: "version.synthetic", versionDigest, createdAt: at, totalRows: 1, sourceCount: 1, artifactCount: 2,
+      parentVersionId: null, splitSeed: null, recipeDigest, quality: {policyFingerprint: versionDigest, reportFingerprint: versionDigest},
+      splits: [{role: "train", rowCount: 1}, {role: "validation", rowCount: null}, {role: "test", rowCount: null}]}},
+    verification: {inputBytes: "not-checked", runtimeReadiness: "not-checked", trainingCompatibility: "not-checked", resourceAdmission: "not-checked",
+      licenseRights: "not-checked", qualityReport: "recorded-not-rechecked"}, trainingApproval: "required"}, request.input);
+  assert.ok(inputsValue); const inputs = canonicalHeadlessModelTrainingInputs(inputsValue), proposalDigest = "sha256:" + sha({request, inputs});
+  const training: TrainingPlanTaskEffect = {key: randomUUID(), target: {hostIncarnationId: f.host, scope: f.scope, fingerprint: "e".repeat(64)},
+    approvalRevision: 1, step: 1, request, binding: {step: 1, inputs, proposalDigest}};
+  const reserved = await f.txn(owner => reserveStructuredTrainingPlanTask(owner, training, proposalDigest, 1)); assert.equal(reserved.kind, "new");
+  if (reserved.kind !== "new") assert.fail(); const taskId = reserved.taskId;
+  assert.ok(await f.txn(owner => issueStructuredTrainingPlanTask(owner, training, taskId, proposalDigest, 2)));
+  if (options.accepted !== false) assert.ok(await f.txn(owner => acceptStructuredTrainingPlanTask(owner, training, taskId, 3)));
+  const publicationId = "a".repeat(32), names = options.adapter ? ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"] : ["config.json", "model.safetensors", "tokenizer.json"];
+  const files = [...(options.checkpoints ? names : []), ...names].map((name, index) => ({fileIndex: index, groupIndex: options.checkpoints && index >= 3 ? 1 : 0,
+    name, role: options.checkpoints && index < 3 ? "checkpoint" as const : "candidate" as const,
+    mediaType: name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const, expectedSizeBytes: 2,
+    expectedSha256: "sha256:" + "f".repeat(64), key: `workspaces/${f.scope.workspaceId}/artifacts/training-results/${publicationId}/${index}`}));
+  const snapshot = {schema: "training-result-finalized-files-v1" as const, publicationId, totalBytes: files.length * 2, files};
+  const manifestDigest = "sha256:" + sha(snapshot);
+  const history: Extract<ApprovedLocalTrainingSavePreparation["candidate"]["history"], {kind: "ready"}> = {
+    kind: "ready", requestId: taskId, workspaceId: f.scope.workspaceId,
+    provenance: {modelRecordId: base.modelRecordId, modelUpdatedAt: at, datasetId: request.input.dataset.datasetId, versionId: request.input.dataset.versionId,
+      versionDigest: request.input.dataset.versionDigest, recipeDigest, proposalDigest, trainingTask: "llm-instruction", method: request.input.training.method,
+      trainingInputCount: 1, validationInputCount: 0, inputBytes: 2, recipeBytes: 2},
+    candidate: {requestedName: request.input.name, artifactForm: options.adapter ? "adapter" : "full-model", serializationFormat: options.adapter ? "adapter-safetensors" : "safetensors", recordedSizeBytes: null},
+    comparison: {state: "not-recorded"}, verification: {inputs: "recorded-not-rechecked", retainedFiles: "not-checked", runtimeReadiness: "not-checked", hardware: "not-recorded", outputQuality: "not-evaluated"},
+    registration: "requires-separate-approval"};
+  const candidateDigest = "sha256:" + sha({requestId: taskId, workspaceId: f.scope.workspaceId,
+    owner: {organizationId: f.scope.organizationId, principalId: f.scope.principalId, clientId: f.scope.registeredClientId, hostIncarnationId: f.host}, history, manifestDigest});
+  const effect: ModelTrainingSaveEffect = {key: randomUUID(), target: {hostIncarnationId: f.host, scope: f.scope, fingerprint: "f".repeat(64)}, approvalRevision: 1, step: 1,
+    taskId, candidateDigest, name: "Saved trained model"};
+  const preparation: ApprovedLocalTrainingSavePreparation = {schema: "approved-training-save-preparation-v1", taskId, workspaceId: f.scope.workspaceId, saveId: effect.key, name: effect.name,
+    candidate: {kind: "ready", requestId: taskId, workspaceId: f.scope.workspaceId, candidateDigest, history,
+      retainedFiles: {...snapshot, verification: "sha256-current-local-v1", manifestDigest}},
+    storage: {storageProfile: "bounded-local-v1", localPath: path.join(f.directory, "metadata-only-reviewed-copy"), candidateDigest, fileCount: 3, totalBytes: 6}};
+  const commit = (e = effect, p = preparation, root = f.root) => root.runInOwnedTransaction!(owner =>
+    commitStructuredModelTrainingSave(owner.forOrganization(f.scope.organizationId), f.directory, e, p, 10), () => {});
+  const inspect = (e = effect) => inspectStructuredModelTrainingSave(f.partition, e);
+  const unchanged = async () => {assert.deepEqual(await f.rows(), [base]); assert.deepEqual(await f.partition.listDocuments(TRAINED_SAVES), []);
+    assert.deepEqual(await f.partition.listDocuments(TRAINED_SOURCES), []); f.noEffects();};
+  return {...f, base, training, effect, preparation, commit, inspect, unchanged};
+}
+
+function resealTrainingCandidate(f: Awaited<ReturnType<typeof trainingFixture>>, p: ApprovedLocalTrainingSavePreparation) {
+  const {schema, publicationId, totalBytes, files} = p.candidate.retainedFiles;
+  const manifestDigest = "sha256:" + sha({schema, publicationId, totalBytes, files});
+  const candidateDigest = "sha256:" + sha({requestId: f.effect.taskId, workspaceId: f.scope.workspaceId,
+    owner: {organizationId: f.scope.organizationId, principalId: f.scope.principalId, clientId: f.scope.registeredClientId, hostIncarnationId: f.host},
+    history: p.candidate.history, ...(p.candidate.execution ? {execution: p.candidate.execution} : {}), manifestDigest});
+  Object.assign(p.candidate.retainedFiles, {manifestDigest}); Object.assign(p.candidate, {candidateDigest}); Object.assign(p.storage, {candidateDigest});
+  return {...f.effect, candidateDigest};
+}
+
+for (const engine of ["Core", "SQLite"] as const) {
+  for (const adapter of [false, true]) test(`${engine}: trained ${adapter ? "adapter" : "full Model"} commits exact lineage once and replays without effects`, async t => {
+    const f = await trainingFixture(t, engine, {adapter, checkpoints: true}), saved = await f.commit(); assert.equal(saved.created, true);
+    const rows = await f.rows(); assert.equal(rows.length, 2); const row = rows.find(r => r.modelRecordId === saved.reference.modelRecordId)!;
+    assert.equal(row.localPath, f.preparation.storage.localPath); assert.equal(row.source, "generated"); assert.equal(row.baseModelId, f.base.modelId);
+    assert.equal(row.adapterOfModelId, adapter ? f.base.modelId : undefined); assert.equal(row.sizeBytes, 6);
+    assert.deepEqual(row.taskTags, ["text-generation"]); assert.equal(row.generatedFromRunId, f.effect.taskId);
+    const lineage = row.metadata!.headlessTraining as {history: unknown; runtimeReadiness: string; outputQuality: string};
+    assert.deepEqual(lineage.history, f.preparation.candidate.history); assert.equal(lineage.runtimeReadiness, "not-checked"); assert.equal(lineage.outputQuality, "not-evaluated");
+    assert.doesNotMatch(JSON.stringify(saved.reference), /localPath|metadata-only|principal|registeredClient|history|files/);
+    const again = await f.commit({...f.effect, approvalRevision: 2}); assert.equal(again.created, false); assert.deepEqual(again.reference, saved.reference);
+    assert.deepEqual(await f.rows(), rows); assert.equal((await f.partition.listDocuments(TRAINED_SAVES)).length, 1); assert.equal((await f.partition.listDocuments(TRAINED_SOURCES)).length, 1); f.noEffects();
+  });
+  test(`${engine}: local-only base reference stays usable and concurrent trained saves produce one winner`, async t => {
+    const f = await trainingFixture(t, engine, {adapter: true, localBase: true});
+    const saved = await Promise.all([f.commit(), f.commit()]); assert.equal(saved.filter(r => r.created).length, 1);
+    const row = (await f.rows()).find(r => r.modelRecordId === saved[0].reference.modelRecordId)!;
+    assert.equal(row.baseModelId, f.base.localPath); assert.equal(row.adapterOfModelId, f.base.localPath); f.noEffects();
+  });
+  test(`${engine}: lost training Save reply is reconciled read-only with no duplicate registry mutation`, async t => {
+    const f = await trainingFixture(t, engine); let dropped = false;
+    const root: StructuredDocumentStore = {...f.root, async runInOwnedTransaction(work, beforeCommit) {
+      const result = await f.root.runInOwnedTransaction!(work, beforeCommit); dropped = true; throw Error("Synthetic lost reply.");
+    }};
+    await assert.rejects(f.commit(f.effect, f.preparation, root)); assert.equal(dropped, true);
+    const rows = await f.rows(), recovered = await f.inspect(); assert.equal(recovered.kind, "committed");
+    assert.deepEqual(await f.rows(), rows); assert.equal(rows.length, 2); assert.equal((await f.commit()).created, false); f.noEffects();
+  });
+  test(`${engine}: training Save rollback preserves base and leaves no partial Model, receipt or index`, async t => {
+    const f = await trainingFixture(t, engine);
+    const wrap = (owner: StructuredDocumentStore): StructuredDocumentStore => ({...owner, forOrganization: id => wrap(owner.forOrganization(id)),
+      async writeDocument(namespace, key, value, options) {if (namespace === TRAINED_SOURCES) throw Error("Synthetic index refusal."); return owner.writeDocument(namespace, key, value, options);}});
+    const root: StructuredDocumentStore = {...f.root, runInOwnedTransaction: (work, fence) => f.root.runInOwnedTransaction!(owner => work(wrap(owner)), fence)};
+    await assert.rejects(f.commit(f.effect, f.preparation, root)); await f.unchanged();
+  });
+  test(`${engine}: reordered private JSON and bounded execution history keep exact content identity`, async t => {
+    const f = await trainingFixture(t, engine), p = structuredClone(f.preparation);
+    const execution = readModelTrainingExecutionHistory({schema: "model-training-execution-v1", runId: "pipeline-original",
+      startedAt: "2026-11-27T00:00:00.000Z", completedAt: "2026-11-27T00:00:01.000Z", durationMs: 900,
+      hardware: {devices: ["cpu"], precisions: ["float32"], logicalCpuCount: 4, pythonVersion: "3.12.8", pytorchVersion: "2.7.0", transformersVersion: "4.52.0"}, interpretation: "reported-runtime-facts"});
+    assert.ok(execution); Object.assign(p.candidate, {execution}); // The original app hashes this canonical report.
+    const e = resealTrainingCandidate(f, p);
+    const reverse = (v: unknown): unknown => Array.isArray(v) ? v.map(reverse) : v && typeof v === "object"
+      ? Object.fromEntries(Object.entries(v).reverse().map(([k, c]) => [k, reverse(c)])) : v;
+    const saved = await f.commit(e, reverse(p) as typeof p), row = (await f.rows()).find(r => r.modelRecordId === saved.reference.modelRecordId)!;
+    assert.equal((row.metadata!.headlessTraining as {execution: {runId: string}}).execution.runId, "pipeline-original"); f.noEffects();
+  });
+  for (const change of ["unsafe-weight", "mixed-weight", "file-index", "group", "role", "foreign-key", "boolean-size", "extra-field", "format"] as const)
+    test(`${engine}: self-consistent digests cannot admit invalid ${change} metadata`, async t => {
+      const f = await trainingFixture(t, engine), p = structuredClone(f.preparation), files = p.candidate.retainedFiles.files;
+      if (change === "unsafe-weight") Object.assign(files[1]!, {name: "model.bin", mediaType: "application/octet-stream"});
+      if (change === "mixed-weight") Object.assign(files[1]!, {name: "adapter_model.safetensors"});
+      if (change === "file-index") Object.assign(files[1]!, {fileIndex: 0});
+      if (change === "group") Object.assign(files[0]!, {groupIndex: 1});
+      if (change === "role") Object.assign(files[0]!, {role: "checkpoint"});
+      if (change === "foreign-key") Object.assign(files[0]!, {key: "workspaces/foreign/artifacts/other"});
+      if (change === "boolean-size") Object.assign(files[0]!, {expectedSizeBytes: true});
+      if (change === "extra-field") Object.assign(files[0]!, {privatePath: "must-not-be-consumed"});
+      if (change === "format") Object.assign(p.candidate.history.candidate, {serializationFormat: "sharded-safetensors"});
+      const e = resealTrainingCandidate(f, p); await assert.rejects(f.commit(e, p)); await f.unchanged();
+    });
+  for (const change of ["task", "scope", "candidate", "manifest", "history", "copy", "path", "unaccepted", "base-version", "duplicate-base"] as const)
+    test(`${engine}: training Save refuses ${change} before registration`, async t => {
+      const f = await trainingFixture(t, engine, {accepted: change !== "unaccepted"}), p = structuredClone(f.preparation), e = structuredClone(f.effect);
+      if (change === "task") Object.assign(e, {taskId: randomUUID()});
+      if (change === "scope") Object.assign(e.target.scope, {registeredClientId: randomUUID()});
+      if (change === "candidate") Object.assign(p.candidate, {candidateDigest: "sha256:" + "e".repeat(64)});
+      if (change === "manifest") Object.assign(p.candidate.retainedFiles, {manifestDigest: "sha256:" + "e".repeat(64)});
+      if (change === "history") Object.assign(p.candidate.history.provenance, {recipeDigest: "sha256:" + "e".repeat(64)});
+      if (change === "copy") Object.assign(p.storage, {totalBytes: 7});
+      if (change === "path") Object.assign(p.storage, {localPath: "https://example.invalid/model"});
+      if (change === "base-version") await f.partition.writeDocument("model-registry", "models.json", {models: [{...f.base, updatedAt: "2020-01-01T00:00:00.000Z"}]});
+      if (change === "duplicate-base") await f.partition.writeDocument("model-registry", "models.json", {models: [f.base, f.base]});
+      const before = await f.rows(); await assert.rejects(f.commit(e, p)); assert.deepEqual(await f.rows(), before);
+      assert.deepEqual(await f.partition.listDocuments(TRAINED_SAVES), []); assert.deepEqual(await f.partition.listDocuments(TRAINED_SOURCES), []); f.noEffects();
+    });
+  test(`${engine}: training Save preserves a foreign deterministic Model and denies another key for the original task`, async t => {
+    const f = await trainingFixture(t, engine), id = `model_headless_trained_${sha([f.scope.organizationId, f.scope.workspaceId, f.effect.key]).slice(0, 32)}`;
+    await f.registry.registerDownloadedModel({workspaceId: f.scope.workspaceId, modelRecordId: id, displayName: "Preserve ordinary Model", provider: "huggingface", source: "huggingface", artifactForm: "full-model", modelId: "fixture/other"});
+    const before = await f.rows(); await assert.rejects(f.commit()); assert.deepEqual(await f.rows(), before);
+    const g = await trainingFixture(t, engine); await g.commit(); const key = randomUUID();
+    await assert.rejects(g.commit({...g.effect, key}, {...g.preparation, saveId: key})); assert.equal((await g.rows()).length, 2); g.noEffects();
+  });
+  for (const change of ["model", "deleted-model", "duplicate-model", "receipt", "index", "deleted-receipt", "deleted-index"] as const)
+    test(`${engine}: changed ${change} cannot replay a trained Model Save`, async t => {
+      const f = await trainingFixture(t, engine), saved = await f.commit();
+      if (change === "model") await f.registry.updateModelRecord({workspaceId: f.scope.workspaceId, modelRecordId: saved.reference.modelRecordId, patch: {displayName: "User changed"}});
+      else if (change === "deleted-model") await f.registry.deleteModelRecord({workspaceId: f.scope.workspaceId, modelRecordId: saved.reference.modelRecordId});
+      else if (change === "duplicate-model") {const rows = await f.rows(); await f.partition.writeDocument("model-registry", "models.json", {models: [...rows, rows[1]]});}
+      else {const namespace = change.includes("receipt") ? TRAINED_SAVES : TRAINED_SOURCES, [row] = await f.partition.listDocuments(namespace); assert.ok(row);
+        if (change.startsWith("deleted")) assert.ok(await f.partition.deleteDocument(namespace, row.key, row.revision));
+        else await f.partition.writeDocument(namespace, row.key, row.value);}
+      const before = await f.rows(); await assert.rejects(f.inspect()); await assert.rejects(f.commit()); assert.deepEqual(await f.rows(), before); f.noEffects();
+    });
+}
+
+test("training Save copies effects and preparation before awaits, refuses active data and non-owning mutation", async t => {
+  const f = await trainingFixture(t, "Core"); let hooks = 0;
+  const getter = Object.defineProperty({...f.effect}, "name", {enumerable: true, get() {hooks++; assert.fail("No active property.");}});
+  assert.throws(() => captureModelTrainingSaveEffect(getter));
+  const proxy = new Proxy(f.effect.target.scope, {getPrototypeOf() {hooks++; assert.fail("No Proxy hook.");}});
+  assert.throws(() => captureModelTrainingSaveEffect({...f.effect, target: {...f.effect.target, scope: proxy}})); assert.equal(hooks, 0);
+  const active = structuredClone(f.preparation); Object.defineProperty(active.storage, "localPath", {enumerable: true, get() {hooks++; assert.fail("No private active property.");}});
+  await assert.rejects(f.commit(f.effect, active)); assert.equal(hooks, 0); await f.unchanged();
+  await assert.rejects(commitStructuredModelTrainingSave(f.partition, f.directory, f.effect, f.preparation, 10)); await f.unchanged();
+  const raw = structuredClone(f.preparation), actual = structuredClone(f.effect); let mutated = false;
+  const wrap = (owner: StructuredDocumentStore): StructuredDocumentStore => ({...owner, forOrganization: id => wrap(owner.forOrganization(id)),
+    async readDocument(...args) {if (!mutated) {mutated = true; Object.assign(raw.storage, {localPath: "https://example.invalid/changed"}); Object.assign(actual, {name: "Changed"});}
+      return owner.readDocument(...args);}});
+  const saved = await f.txn(owner => commitStructuredModelTrainingSave(wrap(owner), f.directory, actual, raw, 10));
+  const row = (await f.rows()).find(r => r.modelRecordId === saved.reference.modelRecordId)!;
+  assert.equal(row.displayName, f.effect.name); assert.equal(row.localPath, f.preparation.storage.localPath); f.noEffects();
 });

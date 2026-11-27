@@ -1021,6 +1021,63 @@
         "This records a reviewed code component. It does not complete Task70, Increment7 or the roadmap, and does not prove a real app run.",
         "Fresh full-task qualification is recorded separately. Model accuracy checks were not repeated. Saving a trained model needs separate app-user approval; physical quotas and protected storage are outside this evidence."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-save-intent-contract",
+      "work_criteria": [
+        "exact-save-intent",
+        "save-intent-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "939820264802b953da9ae988bbd1e2666b2ba8031f1f001cd5a780e8087fcaab",
+      "review_digest": "b9a29b1207a5bc38bcb2afd297f665fbfdd30b2be95f8a24873c8171815dc1d6",
+      "scope": "The trained-model Save request identifies the exact task, candidate and chosen name. Its closed data contract and refusal checks passed independent review before commit 61a7a73.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task71, Increment7, the roadmap or real host qualification.",
+        "Further exact Save approval and integration checks remain pending. Accepted model accuracy tests were not repeated. No physical quota, protected service or publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link never supplies a current-source or parent qualification pass."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-reviewed-training-model-copy",
+      "work_criteria": [
+        "reviewed-copy-and-original-io",
+        "copy-refusal-and-owned-cleanup",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "95b34c2aa5de22d3a40e7c3dbbe91c968cc9396ac2c505a72e9613e8cb5b0ad5",
+      "review_digest": "3d4b26ff1dec9ae5c95318c23a6665cb7c4479ed40f7cfd49da6e9ee78738653",
+      "scope": "An opt-in storage adapter copies only the reviewed model files and checks their hashes. Focused tests cover cancellation, open files, changed data and safe cleanup; independent review passed before commit 18eb97e.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task71, Increment7, the roadmap or real host qualification.",
+        "Further exact Save approval and integration checks remain pending. Accepted model accuracy tests were not repeated. No physical quota, protected service or publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link never supplies a current-source or parent qualification pass."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-training-save-owner-integration",
+      "work_criteria": [
+        "original-candidate-save-session",
+        "save-session-refusal-and-retirement",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "b14595f8bfcc0b43952fb9f3cda8e66aedb2cc1b4bdc5faa8ead71038bfff713",
+      "review_digest": "cad945509779daab295c8de7a8c8117ec17073f6e1ef927eec6d5c0215054d48",
+      "scope": "The original training task prepares one exact reviewed model copy under separate Save controls. Its original task, source folder and pending file operations stay owned through cancellation. Focused checks and independent review passed before commit c073b61.",
+      "limitations": [
+        "This is reviewed component support at its recorded source. It does not complete Task71, Increment7, the roadmap or real host qualification.",
+        "Further exact Save approval and integration checks remain pending. Accepted model accuracy tests were not repeated. No physical quota, protected service or publication authority is granted.",
+        "Another checkout may not contain the local completion records. This link never supplies a current-source or parent qualification pass."
+      ]
     }
   ]
 }

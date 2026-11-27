@@ -4014,3 +4014,27 @@ rejection policy. Original settlement cannot turn an invalid contract into IO
 closure, retry, deletion or success. Isolated Node fixtures retain the normal
 process rejection policy and test these failure paths independently of model
 execution. Contradictory writing/closed-IO observations supply no retirement.
+
+Private trained-Model registration reuses the existing structured Model save
+family and Model registry. A distinct `models.save-training` effect binds the
+original task and current candidate digest to exact Save identity/name/scope.
+Capture private preparation before any metadata wait. Accepted original training
+lineage/proposal, canonical historical facts, optional execution report and full
+safe inventory/content identity are checked alongside exact private copy facts.
+The original recorded base Model version is read without discovery. Its provider
+ID or private local reference supports later adapter loading; saved task tags
+describe the recorded training task rather than copying unrelated base tags.
+
+One root-owned organization transaction creates a new generated Model, causal
+receipt and original-task index. Deterministic training IDs and separate receipt
+namespaces preserve download Save behavior. Canonical whole-row digests and
+expected new document revisions refuse conflicting, edited, deleted or duplicate
+records. A lost reply is resolved through read-only inspection, never another
+Model mutation. Original history, measured-only reports and runtime-not-checked
+state remain distinct from actual model-quality or readiness qualification.
+
+The owning composition must still bind the original app Save capability and
+require new exact Save approval, current ModelRead/Write and a final source/
+approval lifetime fence in that same transaction. This metadata component does
+not independently requalify file contents or IO retirement, delete files, grant
+consent or activate product roots. Full Task71 and host qualification remain.

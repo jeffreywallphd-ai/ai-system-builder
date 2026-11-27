@@ -3796,3 +3796,26 @@ constructor or species hooks. Unsupported active contracts remain unknown;
 original settlement grants no retirement or cleanup credit. There is no global
 rejection handler or Promise mutation. Isolated failure fixtures exercise native
 rejections, own hooks and contradictory IO state without a model or provider.
+
+The trained-Model registry save is a separate private metadata boundary. Its
+effect has no path or approval boolean. Reject active or unknown properties;
+capture the complete passive preparation before metadata waits. Require the
+original accepted actor/client/workspace/host task and proposal, canonical
+history/inventory/content digest, safe method-appropriate weight pair and exact
+copied candidate count/size/profile. Point-read the original base Model version
+without discovery. Base/runtime paths and artifact locators remain private.
+
+The root-owned transaction must create the generated Model and causal receipt/
+source index together, with new document revisions and no existing target row.
+Whole-row canonical hashes prevent replay of changed Model metadata. Missing,
+edited, duplicate or conflicting receipts/indexes deny; original-task indexing
+prevents a second Save key from duplicating a Model. Lost replies allow only
+read-only reconciliation. Rollback cannot grant file cleanup or retry authority.
+
+The owning caller must enforce fresh exact separate Save consent, ModelRead and
+ModelWrite and the original app copy/source lifetime before mutation and at final
+transaction commit. A private preparation is not wire authority or independent
+proof of current files, closed IO, runtime readiness, license rights or quality.
+No provider, filesystem, Native/service or deletion operation is introduced.
+Original retained bytes remain owned until the true publication/cleanup outcome
+is known; this component supplies no parent or real-host qualification.
