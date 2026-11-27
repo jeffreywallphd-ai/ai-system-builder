@@ -5,7 +5,7 @@ import {createWorkspaceId} from "../../workspace";
 import {MODEL_TRAINING_METHODS, normalizeModelTrainingRequest} from "../../model";
 import {DATASET_PREPARATION_TASK_TYPES} from "../../runtime";
 import {HEADLESS_CONTRACT_VERSION as version, isHeadlessHostIncarnationId, parseHeadlessReadRequest,
-  readHeadlessModelTrainingPlanRequest, readHeadlessModelTrainingSettings} from "..";
+  readHeadlessModelTrainingPlanRequest, readHeadlessModelTrainingSettings, readHeadlessModelTrainingSavePlanRequest} from "..";
 
 function fixture() {
   const host = randomUUID(); assert.ok(isHeadlessHostIncarnationId(host));
@@ -20,6 +20,55 @@ function fixture() {
     dataset: {datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64)}, training}};
   return {host, request, training};
 }
+
+function saveFixture() {
+  const f = fixture();
+  return {host: f.host, request: {version, operation: "models.save-training", input: {hostIncarnationId: f.host,
+    workspaceId: f.request.input.workspaceId, idempotencyKey: randomUUID(), taskId: randomUUID(),
+    candidateDigest: "sha256:" + "d".repeat(64), name: "Saved training trial"}}};
+}
+
+test("trained-model Save intent binds exact original task and candidate without authorizing effects", () => {
+  const f = saveFixture(), result = readHeadlessModelTrainingSavePlanRequest(f.request, f.host); assert.ok(result.ok);
+  assert.deepEqual(result.request, f.request); assert.notEqual(result.request.input, f.request.input);
+  assert.ok(Object.isFrozen(result.request) && Object.isFrozen(result.request.input));
+  f.request.input.taskId = randomUUID(); f.request.input.name = "Changed after capture";
+  assert.equal(result.request.input.name, "Saved training trial"); assert.notEqual(result.request.input.taskId, f.request.input.taskId);
+  assert.equal(parseHeadlessReadRequest(result.request, f.host).ok, false);
+  assert.equal(readHeadlessModelTrainingPlanRequest(result.request, f.host).ok, false);
+});
+
+for (const variant of ["version", "operation", "host", "workspace", "key", "task", "digest", "name", "name-bound", "path-name",
+  "credential-name", "private-path", "foreign-actor", "approval", "missing-digest", "symbol"] as const) {
+  test(`trained-model Save intent refuses ${variant}`, () => {
+    const f = saveFixture(), raw: any = f.request;
+    if (variant === "version") raw.version = 99;
+    if (variant === "operation") raw.operation = "models.train";
+    if (variant === "host") raw.input.hostIncarnationId = randomUUID();
+    if (variant === "workspace") raw.input.workspaceId = "../foreign";
+    if (variant === "key") raw.input.idempotencyKey = "invalid";
+    if (variant === "task") raw.input.taskId = "pipeline-run-is-not-a-task-uuid";
+    if (variant === "digest") raw.input.candidateDigest = "sha256:" + "A".repeat(64);
+    if (variant === "name") raw.input.name = " padded ";
+    if (variant === "name-bound") raw.input.name = "a".repeat(121);
+    if (variant === "path-name") raw.input.name = "../private-model";
+    if (variant === "credential-name") raw.input.name = "api_key=synthetic-value";
+    if (variant === "private-path") raw.input.localPath = "private/model/path";
+    if (variant === "foreign-actor") raw.input.organizationId = "foreign-org";
+    if (variant === "approval") raw.input.approved = true;
+    if (variant === "missing-digest") delete raw.input.candidateDigest;
+    if (variant === "symbol") raw.input[Symbol("authority")] = true;
+    assert.deepEqual(readHeadlessModelTrainingSavePlanRequest(raw, f.host), {ok: false,
+      code: variant === "host" ? "headless.host-changed" : "headless.invalid-request"});
+  });
+}
+
+test("trained-model Save intent refuses active properties without running them", () => {
+  const f = saveFixture(); let hooks = 0;
+  Object.defineProperty(f.request.input, "name", {enumerable: true, get() {hooks++; throw Error("Do not execute input.");}});
+  assert.deepEqual(readHeadlessModelTrainingSavePlanRequest(f.request, f.host), {ok: false, code: "headless.invalid-request"});
+  assert.equal(hooks, 0);
+});
 
 test("exact training intent preserves every supported setting and existing normalizer meaning", () => {
   const f = fixture(), result = readHeadlessModelTrainingPlanRequest(f.request, f.host); assert.ok(result.ok);

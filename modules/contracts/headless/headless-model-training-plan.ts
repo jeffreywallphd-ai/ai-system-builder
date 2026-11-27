@@ -5,6 +5,7 @@ import {DATASET_PREPARATION_TASK_TYPES, type DatasetPreparationTaskType} from ".
 import {MODEL_TASK_TAGS, type ModelTaskTag} from "../../domain/model";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 import {readHeadlessModelTrainingInputsRequest, type HeadlessModelTrainingInputsRequest} from "./headless-model-training-inputs";
+import {isWorkspaceId, type WorkspaceId} from "../workspace";
 
 /** Syntax and explicit settings only. Compatibility/resource/file checks and
  * exact training approval remain the responsibility of the execution owner. */
@@ -20,6 +21,15 @@ export interface HeadlessModelTrainingPlanRequest {
   readonly operation: "models.train";
   readonly input: HeadlessModelTrainingInputsRequest["input"] & {readonly idempotencyKey: string; readonly name: string;
     readonly training: HeadlessModelTrainingSettings};
+}
+/** Exact create-only Save intent. Data is not approval, current file proof or
+ * registry authority. Original task/candidate and fresh permission must be
+ * rechecked by the future save owner; this schema enables no public route. */
+export interface HeadlessModelTrainingSavePlanRequest {
+  readonly version: typeof HEADLESS_CONTRACT_VERSION;
+  readonly operation: "models.save-training";
+  readonly input: {readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId;
+    readonly idempotencyKey: string; readonly taskId: string; readonly candidateDigest: string; readonly name: string};
 }
 const invalid = {ok: false, code: "headless.invalid-request"} as const;
 function fail(): never {throw new Error("Invalid training proposal settings.");}
@@ -114,5 +124,25 @@ export function readHeadlessModelTrainingPlanRequest(value: unknown, host: Headl
     const training = readHeadlessModelTrainingSettings(row.training); if (!training) return invalid;
     return {ok: true, request: {version: HEADLESS_CONTRACT_VERSION, operation: "models.train", input: {
       ...selected.request.input, idempotencyKey: row.idempotencyKey, name, training}} satisfies HeadlessModelTrainingPlanRequest} as const;
+  } catch {return invalid;}
+}
+
+/** Additive standalone intent only. Default training/read parsers stay closed. */
+export function readHeadlessModelTrainingSavePlanRequest(value: unknown, host: HeadlessHostIncarnationId) {
+  try {
+    const outer = readStrictPassiveRecord(copyBoundedPassiveData(value), ["version", "operation", "input"]);
+    if (outer.version !== HEADLESS_CONTRACT_VERSION || outer.operation !== "models.save-training" || !isHeadlessHostIncarnationId(host)) return invalid;
+    const row = readStrictPassiveRecord(outer.input, ["hostIncarnationId", "workspaceId", "idempotencyKey", "taskId", "candidateDigest", "name"]);
+    if (!isHeadlessHostIncarnationId(row.hostIncarnationId) || !isWorkspaceId(row.workspaceId) ||
+        !isHeadlessHostIncarnationId(row.idempotencyKey) || !isHeadlessHostIncarnationId(row.taskId) ||
+        typeof row.candidateDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(row.candidateDigest)) return invalid;
+    const name = label(row.name, 120, /^[^\\/:*?"<>|\u0000-\u001f\u007f]+$/);
+    if (name === "." || name === ".." || /\b(?:token|secret|password|api[_-]?key|authorization)\s*[:=]/i.test(name)) return invalid;
+    if (row.hostIncarnationId !== host) return {ok: false, code: "headless.host-changed"} as const;
+    const input = Object.freeze({hostIncarnationId: host, workspaceId: row.workspaceId,
+      idempotencyKey: row.idempotencyKey, taskId: row.taskId, candidateDigest: row.candidateDigest, name});
+    const request: HeadlessModelTrainingSavePlanRequest = Object.freeze({version: HEADLESS_CONTRACT_VERSION,
+      operation: "models.save-training", input});
+    return {ok: true, request} as const;
   } catch {return invalid;}
 }

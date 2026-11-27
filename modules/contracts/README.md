@@ -1,5 +1,12 @@
 # Contracts
 
+The standalone `models.save-training` intent binds an exact original training
+task and current candidate digest to a name and idempotency key. Its decoder
+copies and freezes closed data, using the existing training name/identity
+bounds. It accepts no path, actor override or approval claim. This data schema
+does not enable a public plan operation, storage effect or registry mutation;
+the save owner still needs separate exact consent and current source checks.
+
 Training completion defaults to cached history. An explicit `current-files`
 mode requires a current original-owner candidate summary: verified digests,
 bounded counts/bytes and optional descriptive Model execution facts. A missing
