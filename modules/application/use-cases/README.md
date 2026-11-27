@@ -397,3 +397,16 @@ dispatch fence; its adapter must check that fence and business policy after its
 own waits and immediately before physical dispatch. It cannot serialize this
 callback or treat it as native proof. Admission ending after dispatch does not
 erase the original acknowledgement or revoke otherwise permitted accepted work.
+
+Private current training-candidate review reuses the original accepted task and
+its captured settled-session verifier. It does not call ordinary task lookup,
+readiness, Model discovery, file discovery, provider, runtime settle or Save.
+Capture original/caller controls before waits and own returned data before later
+policy. Exact workspace/publication/file/hash/group checks and method-appropriate
+safe pairs precede a scope/history/content-bound candidate digest. Retain unknown
+original operations without retry or output cleanup. The legacy historical read
+keeps its existing behavior. Full execution history and host activation remain
+separate; controlled software metrics are not model-quality qualification.
+A non-null historical serialization format must agree with the method and
+verified unsharded layout. Null remains an unrecorded historical fact; it is
+not inferred model readiness or a model-quality result.

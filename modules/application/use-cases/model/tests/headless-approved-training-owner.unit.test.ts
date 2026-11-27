@@ -9,15 +9,16 @@ import {TaskType, type RuntimeTaskRecord, type CancelRuntimeTaskResult} from "..
 import type {ModelTrainingRequest} from "../../../../contracts/model";
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, ApprovedLocalTrainingDefinition,
   ApprovedLocalTrainingSession, ApprovedLocalTrainingStagedInput, ApprovedLocalTrainingStartAck,
-  ApprovedLocalTrainingControl, ApprovedLocalTrainingStart, ApprovedLocalTrainingModelReader} from "../../../ports/model";
+  ApprovedLocalTrainingControl, ApprovedLocalTrainingStart, ApprovedLocalTrainingModelReader, TrainingResultVerifiedFiles} from "../../../ports/model";
 import {OwnedTaskReconcilerService} from "../../../services/runtime/owned-task-reconciler.service";
 import {TrainModelUseCase} from "../train-model.use-case";
 
 const digest = (value: Uint8Array) => "sha256:" + createHash("sha256").update(value).digest("hex");
 const text = (value: string) => new TextEncoder().encode(value);
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const mutableVerification = (value: TrainingResultVerifiedFiles) => ({...value, files: value.files.map(file => ({...file}))});
 const exists = async (path: string | undefined) => Boolean(path && await lstat(path).catch(() => undefined));
-async function fixture(t: TestContext, options: {port?: false; reconciler?: false} = {}) {
+async function fixture(t: TestContext, options: {port?: false; reconciler?: false; verification?: boolean} = {}) {
   const boundary = await realpath(tmpdir()), root = await realpath(await mkdtemp(join(boundary, "approved-training-test-")));
   const identity = await lstat(root, {bigint: true}); const old = {TEMP: process.env.TEMP, TMP: process.env.TMP, TMPDIR: process.env.TMPDIR};
   process.env.TEMP = root; process.env.TMP = root; process.env.TMPDIR = root;
@@ -43,11 +44,12 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
     datasets: [{artifactId: "input-0", splitRole: "train", format: "jsonl"}], method: "lora", commonParameters: {maxSteps: 1, batchSize: 1},
     output: {outputModelName: "Private candidate", destination: {local: {enabled: false}}}, validation: {enabled: false}};
   const state = {host: true, allowed: true, admission: true, reader: true, readAllowed: true, settled: true,
-    status: "running" as RuntimeTaskRecord["status"], creates: 0, prepares: 0, starts: 0, reads: 0, cancels: 0, settles: 0, issues: 0,
+    status: "running" as RuntimeTaskRecord["status"], creates: 0, prepares: 0, starts: 0, reads: 0, cancels: 0, settles: 0, issues: 0, verifies: 0,
     onPrepare: undefined as (() => Promise<void>) | undefined,
     onStart: undefined as (() => Promise<void>) | undefined,
     onRead: undefined as (() => Promise<void>) | undefined,
-    onSettle: undefined as (() => Promise<void>) | undefined};
+    onSettle: undefined as (() => Promise<void>) | undefined,
+    onVerify: undefined as ((control: ApprovedLocalTrainingControl) => Promise<void>) | undefined};
   const admission: ApprovedLocalTrainingAdmission = {requestId, organizationId: "organization.private-training", principalId: "principal.synthetic",
     clientId: randomUUID(), hostIncarnationId: randomUUID(), modelUpdatedAt: "2026-11-22T00:00:00.000Z",
     datasetId: "dataset.synthetic", versionId: "version.synthetic", versionDigest: "sha256:" + "a".repeat(64), proposalDigest: "sha256:" + "b".repeat(64),
@@ -58,6 +60,16 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
   let modelSource: ApprovedLocalTrainingModelReader | undefined;
   let ack: ApprovedLocalTrainingStartAck | undefined, record: RuntimeTaskRecord | undefined, cancellation: CancelRuntimeTaskResult | undefined;
   let startAdmission: (() => boolean) | undefined;
+  let verified: unknown;
+  const verification = (): TrainingResultVerifiedFiles => {
+    const publicationId = "c".repeat(32), adapter = ["lora", "qlora"].includes(definition!.request.method);
+    const names = adapter ? ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"] : ["config.json", "model.safetensors", "tokenizer.json"];
+    const snapshot = {schema: "training-result-finalized-files-v1" as const, publicationId, totalBytes: 6,
+      files: names.map((name, fileIndex) => ({fileIndex, groupIndex: 0, name, role: "candidate" as const,
+        mediaType: name.endsWith(".json") ? "application/json" as const : "application/octet-stream" as const,
+        expectedSizeBytes: 2, expectedSha256: digest(text("{}")), key: `workspaces/${workspaceId}/artifacts/training-results/${publicationId}/${fileIndex}`}))};
+    return {...snapshot, verification: "sha256-current-local-v1", manifestDigest: digest(text(JSON.stringify(snapshot)))};
+  };
   const session: ApprovedLocalTrainingSession = {requestId, workspaceId,
     async prepare() {state.prepares++; await state.onPrepare?.(); return "ready";},
     async start(value, admit) {state.starts++; staged = value; startAdmission = admit; await state.onStart?.(); return ack ?? {kind: "accepted", requestId, workspaceId, status: "queued"};},
@@ -65,7 +77,11 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
       status: state.status, concurrencyClass: "unknown", ...(state.status === "succeeded" ? {data: {runId: "train-inner-label", status: "succeeded",
         outputDirectory: staged!.outputDirectory, generatedModelCandidate: {displayName: "Synthetic candidate", artifactForm: "adapter", localPath: staged!.outputDirectory}}} : {})};},
     async cancel() {state.cancels++; state.status = "cancelled"; return cancellation ?? {requestId, status: "cancelled", cancelled: true};},
-    async settle() {state.settles++; await state.onSettle?.(); return state.settled;}};
+    async settle() {state.settles++; await state.onSettle?.(); return state.settled;},
+    ...(options.verification ? {async verifyRetainedFiles(control: ApprovedLocalTrainingControl) {
+      assert.equal(this, session); state.verifies++; assert.equal(control.isCurrent(), true); assert.equal(await control.stillAllowed(), true);
+      await state.onVerify?.(control); return (verified ?? verification()) as TrainingResultVerifiedFiles;
+    }} : {})};
   const port: ApprovedLocalModelTrainingPort = {createSession(value, control, source) {state.creates++; definition = value; nativeControl = control; modelSource = source; return session;}};
   const owner = new TrainModelUseCase({...(options.port === false ? {} : {approvedLocalTraining: port}),
     ...(options.reconciler === false ? {} : {taskReconciler: reconciler}),
@@ -89,11 +105,124 @@ async function fixture(t: TestContext, options: {port?: false; reconciler?: fals
     get startAdmission() {return startAdmission;},
     setAck(value: ApprovedLocalTrainingStartAck) {ack = value;}, setRecord(value: RuntimeTaskRecord) {record = value;},
     setCancellation(value: CancelRuntimeTaskResult) {cancellation = value;},
+    verification, setVerification(value: unknown) {verified = value;},
     read: () => track(result!.task.read(readControl)), cancel: () => track(result!.task.cancel(readControl)),
     readWithControl: (control: ApprovedLocalTrainingControl) => track(result!.task.read(control)),
     reconcile: () => track(reconciler.reconcileNow()), stop: () => track(reconciler.settleAfterRuntimeStop(["python"])),
     gate() {let release!: () => void; const wait = new Promise<void>(resolve => {release = resolve;}); releases.push(release); return {wait, release};}};
 }
+
+async function candidateFixture(t: TestContext) {
+  const f = await fixture(t, {verification: true}), accepted = await f.accepted();
+  f.state.status = "succeeded"; await f.reconcile(); return {...f, accepted};
+}
+
+test("current candidate review combines original settled history and verified content without ordinary runtime effects", async t => {
+  const f = await candidateFixture(t), before = {...f.state};
+  const result = await f.accepted.task.reviewCandidate!(f.readControl);
+  assert.equal(result.kind, "ready"); if (result.kind !== "ready") throw Error("Missing controlled current candidate.");
+  assert.equal(result.requestId, f.requestId); assert.equal(result.workspaceId, f.workspaceId);
+  assert.equal(result.history.provenance.recipeDigest, f.admission.recipe.digest);
+  assert.equal(result.history.provenance.proposalDigest, f.admission.proposalDigest);
+  assert.deepEqual(result.retainedFiles, f.verification()); assert.match(result.candidateDigest, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(result.history.verification.retainedFiles, "not-checked", "Historical facts retain their own scope.");
+  assert.equal(f.state.verifies, before.verifies + 1); assert.equal(f.state.reads, before.reads); assert.equal(f.state.settles, before.settles);
+  assert.equal(f.state.starts, 1); assert.equal(f.state.issues, 1);
+  const expectedDigest = result.candidateDigest; (result.retainedFiles.files[0]! as {name: string}).name = "caller-changed";
+  const next = await f.accepted.task.reviewCandidate!(f.readControl); assert.equal(next.kind, "ready");
+  if (next.kind === "ready") {assert.equal(next.candidateDigest, expectedDigest); assert.equal(next.retainedFiles.files[0]!.name, "adapter_config.json");}
+  assert.doesNotMatch(JSON.stringify(next), /approved-training-test|localPath|outputDirectory|model-private/);
+});
+
+test("current candidate review remains absent without configuration", async t => {
+  const old = await fixture(t), legacy = await old.accepted(); assert.equal(legacy.task.reviewCandidate, undefined);
+});
+
+test("current candidate review is not ready before actual original session settlement", async t => {
+  const f = await fixture(t, {verification: true}), accepted = await f.accepted();
+  assert.deepEqual(await accepted.task.reviewCandidate!(f.readControl), {kind: "not-ready"});
+  f.state.status = "succeeded"; f.state.settled = false; await f.reconcile();
+  assert.deepEqual(await accepted.task.reviewCandidate!(f.readControl), {kind: "not-ready"}); assert.equal(f.state.verifies, 0);
+  f.state.settled = true; await f.reconcile(); assert.equal((await accepted.task.reviewCandidate!(f.readControl)).kind, "ready");
+});
+
+test("current candidate review captures the original optional session method before preparation", async t => {
+  const f = await candidateFixture(t);
+  f.session.verifyRetainedFiles = async () => {throw Error("replacement must not execute");};
+  assert.equal((await f.accepted.task.reviewCandidate!(f.readControl)).kind, "ready"); assert.equal(f.state.verifies, 1);
+});
+
+for (const change of ["workspace", "role", "pair", "tokenizer", "overflow", "digest"] as const) {
+  test(`current candidate review refuses substituted ${change} verification facts`, async t => {
+    const f = await candidateFixture(t), result = mutableVerification(f.verification());
+    if (change === "workspace") result.files[0]!.key = "workspaces/other/artifacts/training-results/" + result.publicationId + "/0";
+    if (change === "role") result.files[0]!.role = "checkpoint";
+    if (change === "pair") {result.files[0]!.name = "config.json"; result.files[1]!.name = "model.safetensors";}
+    if (change === "tokenizer") {result.files = result.files.slice(0, 2); result.totalBytes = 4;}
+    if (change === "overflow") result.files[0]!.expectedSizeBytes = Number.MAX_SAFE_INTEGER;
+    const {verification: _verification, manifestDigest: _digest, ...snapshot} = result;
+    result.manifestDigest = change === "digest" ? "sha256:" + "0".repeat(64) : digest(text(JSON.stringify(snapshot)));
+    f.setVerification(result); await assert.rejects(f.accepted.task.reviewCandidate!(f.readControl), /private training/);
+    assert.equal(f.state.starts, 1); assert.equal(f.state.issues, 1);
+  });
+}
+
+test("current candidate review rejects metadata hooks before invoking them", async t => {
+  const f = await candidateFixture(t), result = mutableVerification(f.verification()); let hooks = 0;
+  Object.defineProperty(result.files[0], "name", {enumerable: true, get() {hooks++; throw Error("must not execute");}});
+  f.setVerification(result); await assert.rejects(f.accepted.task.reviewCandidate!(f.readControl)); assert.equal(hooks, 0);
+  f.setVerification(new Proxy(f.verification(), {ownKeys() {hooks++; throw Error("must not execute");}}));
+  await assert.rejects(f.accepted.task.reviewCandidate!(f.readControl)); assert.equal(hooks, 0);
+});
+
+for (const [method, format] of [["lora", "safetensors"], ["qlora", "sharded-safetensors"],
+  ["full-finetune", "adapter-safetensors"], ["full-finetune", "sharded-safetensors"]] as const) {
+  test(`current candidate review refuses ${method} history with contradictory ${format} serialization before file reads`, async t => {
+    const f = await fixture(t, {verification: true}); f.request.method = method; const accepted = await f.accepted();
+    f.setRecord({requestId: f.requestId, workspaceId: f.workspaceId, taskType: TaskType.MODEL_TRAINING,
+      concurrencyClass: "unknown", status: "succeeded", data: {runId: f.requestId, status: "succeeded", outputDirectory: f.staged!.outputDirectory,
+        generatedModelCandidate: {displayName: "Synthetic candidate", artifactForm: method === "full-finetune" ? "full-model" : "adapter",
+          serializationFormat: format, localPath: f.staged!.outputDirectory}}});
+    await f.reconcile(); await assert.rejects(accepted.task.reviewCandidate!(f.readControl)); assert.equal(f.state.verifies, 0);
+    const historical = await accepted.task.reviewCompletion!(f.readControl); assert.equal(historical.kind, "ready");
+    if (historical.kind === "ready") assert.equal(historical.candidate.serializationFormat, format, "Keep original recorded facts unchanged.");
+  });
+}
+
+test("current candidate review uses captured fresh authority and owns bytes before later policy", async t => {
+  const f = await candidateFixture(t), result = mutableVerification(f.verification()); let returned = false;
+  f.setVerification(result); f.state.onVerify = async () => {returned = true;};
+  const control = {isCurrent: () => true, async stillAllowed() {
+    if (returned) {result.files[0]!.name = "private-synthetic"; result.manifestDigest = "sha256:" + "0".repeat(64);} return true;
+  }};
+  const observed = await f.accepted.task.reviewCandidate!(control); assert.equal(observed.kind, "ready");
+  if (observed.kind === "ready") assert.equal(observed.retainedFiles.files[0]!.name, "adapter_config.json");
+});
+
+test("current candidate review denies withdrawn original or caller permission before and after verification", async t => {
+  const f = await candidateFixture(t);
+  for (const flag of ["host", "allowed", "reader", "readAllowed"] as const) {
+    const before = f.state.verifies; f.state[flag] = false;
+    await assert.rejects(f.accepted.task.reviewCandidate!(f.readControl)); f.state[flag] = true;
+    assert.equal(f.state.verifies, before);
+  }
+  f.state.onVerify = async () => {f.state.readAllowed = false;};
+  await assert.rejects(f.accepted.task.reviewCandidate!(f.readControl)); assert.equal(f.state.verifies, 1);
+});
+
+test("current candidate review retains unknown original verification and prevents output cleanup or retry", async t => {
+  const f = await fixture(t, {verification: true}); let calls = 0, hooks = 0, reject!: (error: Error) => void;
+  const original = new Promise<TrainingResultVerifiedFiles>((_, no) => {reject = no;});
+  Object.defineProperty(original, "then", {get() {hooks++; throw Error("must not execute");}});
+  f.session.verifyRetainedFiles = () => {calls++; return original;};
+  const accepted = await f.accepted(); f.state.status = "succeeded"; await f.reconcile();
+  try {
+    await assert.rejects(accepted.task.reviewCandidate!(f.readControl));
+    reject(Error("synthetic private verification")); await new Promise(resolve => setTimeout(resolve, 5));
+    await assert.rejects(accepted.task.reviewCandidate!(f.readControl)); assert.equal(calls, 1); assert.equal(hooks, 0);
+    await f.stop(); assert.ok(await exists(f.staged!.outputDirectory)); assert.equal(calls, 1);
+  } finally {reject(Error("synthetic private verification"));}
+});
 
 test("Approved local training owner stages exact copied data and a private output through one original installed-only session", async t => {
   const f = await fixture(t), result = await f.accepted();

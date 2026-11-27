@@ -294,3 +294,11 @@ reader for every selected step, including after provider waits. Inspect bounded 
 descriptors; refuse accessors/proxies without invoking them. Retain the original
 receiver through a frozen facade without reading function name/length getters.
 Recheck policy before metadata invocation or reporting reader availability.
+
+Shared private training dispatch and its original task book can retain the
+optional current-candidate reader alongside the existing cached-completion reader.
+Capture original methods and receivers before later waits; getters and proxies
+cannot supply a capability. The optional member cannot make an accepted original
+task fail the old task shape, and dispatch replay starts no new worker or read.
+This is passive custody only. Cached completion stays unchanged; current host
+entry wiring, public transport and actual-host qualification remain separate.

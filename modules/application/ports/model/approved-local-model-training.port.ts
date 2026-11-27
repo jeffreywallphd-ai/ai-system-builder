@@ -137,7 +137,19 @@ export interface ApprovedLocalTrainingTask {
   /** Optional original cached read; absence grants no generic read fallback.
    * Never starts/observes a runtime, reads files or saves a candidate. */
   reviewCompletion?(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCompletionReview>;
+  /** Separate current-file observation through the original settled session.
+   * It does not poll/settle a runtime, register a Model or grant Save. */
+  reviewCandidate?(control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview>;
 }
+export type ApprovedLocalTrainingCandidateReview = {readonly kind: "not-ready"} | {
+  readonly kind: "ready";
+  readonly requestId: string;
+  readonly workspaceId: WorkspaceId;
+  readonly history: Extract<ApprovedLocalTrainingCompletionReview, {kind: "ready"}>;
+  readonly retainedFiles: TrainingResultVerifiedFiles;
+  /** Exact original scope/history/content identity, never approval authority. */
+  readonly candidateDigest: string;
+};
 /** Historical approved facts, not current file, native, resource or quality proof.
  * Private host data only; no public transport is enabled by this shape. */
 export type ApprovedLocalTrainingCompletionReview = {readonly kind: "not-ready"} | {

@@ -20,7 +20,7 @@ import type { GeneratedModelStoragePort, ModelPublisherPort, ModelRegistryPort }
 import type {ApprovedLocalModelTrainingPort, ApprovedLocalTrainingAdmission, ApprovedLocalTrainingControl,
   ApprovedLocalTrainingDefinition, ApprovedLocalTrainingSession, ApprovedLocalTrainingStart,
   ApprovedLocalTrainingTask, ApprovedLocalTrainingBytes, ApprovedLocalTrainingCompletionReview,
-  ApprovedLocalTrainingModelReader} from "../../ports/model";
+  ApprovedLocalTrainingModelReader, ApprovedLocalTrainingCandidateReview, TrainingResultVerifiedFiles} from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../../ports/storage";
 import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
@@ -189,6 +189,7 @@ type PrivateTrainingOwner = {
   readonly definition: ApprovedLocalTrainingDefinition; readonly control: ApprovedLocalTrainingControl; readonly lease: OwnedTaskLease;
   phase: "preparing" | "accepted" | "unconfirmed" | "not-started"; settled: boolean; actions: number;
   session?: ApprovedLocalTrainingSession; inputPath?: string; outputPath?: string; stageUnconfirmed?: boolean;
+  candidateRead?: {pending: boolean; unknown: boolean; original?: unknown; observation?: Promise<unknown>};
 };
 type TrainingOutputStage = {
   readonly path: string;
@@ -489,7 +490,7 @@ export class TrainModelUseCase {
         if (owner.phase === "accepted") await owner.session?.cancel();
       }, async () => {
         // A generic Python stop cannot close a different original native/IO owner.
-        if (this.reads.has(id) || owner.actions || this.reviewActionRequestIds.has(id)) throw privateUnavailable();
+        if (this.reads.has(id) || owner.actions || owner.candidateRead?.pending || owner.candidateRead?.unknown || this.reviewActionRequestIds.has(id)) throw privateUnavailable();
         await this.settlePrivateTraining(owner);
         if (this.reads.has(id) || owner.actions) throw privateUnavailable();
         if (owner.stageUnconfirmed) throw privateUnavailable();
@@ -534,6 +535,14 @@ export class TrainModelUseCase {
       owner.session = Object.freeze({requestId: id, workspaceId: definition.workspaceId,
         prepare: capturePrivateMethod(session, "prepare"), start: capturePrivateMethod(session, "start"),
         read: capturePrivateMethod(session, "read"), cancel: capturePrivateMethod(session, "cancel"), settle: capturePrivateMethod(session, "settle")});
+      let verifyRetainedFiles: ApprovedLocalTrainingSession["verifyRetainedFiles"];
+      for (let at: object | null = session, depth = 0; at && at !== Object.prototype && depth < 8; at = Object.getPrototypeOf(at), depth++) {
+        if (types.isProxy(at)) return uncertain();
+        if (Object.getOwnPropertyDescriptor(at, "verifyRetainedFiles")) {
+          verifyRetainedFiles = capturePrivateMethod<NonNullable<ApprovedLocalTrainingSession["verifyRetainedFiles"]>>(session, "verifyRetainedFiles"); break;
+        }
+      }
+      if (verifyRetainedFiles) owner.session = Object.freeze({...owner.session, verifyRetainedFiles});
       let ready: Awaited<ReturnType<ApprovedLocalTrainingSession["prepare"]>>;
       try {ready = await owner.session.prepare();} finally {closeModelSource();}
       if (ready === "unavailable") return await unavailable();
@@ -581,6 +590,8 @@ export class TrainModelUseCase {
         read: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, () => this.readTrainingInWorkspace(id, definition.workspaceId)),
         reviewCompletion: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action,
           async () => this.reviewPrivateTrainingCompletion(owner)),
+        ...(verifyRetainedFiles ? {reviewCandidate: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action,
+          control => this.reviewPrivateTrainingCandidate(owner, control))} : {}),
         cancel: (action: ApprovedLocalTrainingControl) => this.usePrivateTraining(owner, action, async () => {
           if (!owner.settled) {
             const raw = copyPrivateTrainingData(await owner.session!.cancel()), cancel = privateRecord(raw, ["requestId", "cancelled", "status", "message"]);
@@ -603,7 +614,7 @@ export class TrainModelUseCase {
     if (!owner.session || await owner.session.settle() !== true) throw privateUnavailable();
     owner.settled = true;
   }
-  private async usePrivateTraining<T>(owner: PrivateTrainingOwner, raw: ApprovedLocalTrainingControl, action: () => Promise<T>): Promise<T> {
+  private async usePrivateTraining<T>(owner: PrivateTrainingOwner, raw: ApprovedLocalTrainingControl, action: (control: ApprovedLocalTrainingControl) => Promise<T>): Promise<T> {
     const control = capturePrivateControl(raw), current = () => this.privateTrainingOwners.get(owner.definition.requestId) === owner && owner.phase === "accepted" && owner.control.isCurrent() && control.isCurrent();
     const allowed = async () => {try {
       if (!current() || await control.stillAllowed() !== true || !current()) return false;
@@ -611,8 +622,70 @@ export class TrainModelUseCase {
     } catch {return false;}};
     if (!await allowed() || !current()) throw privateUnavailable();
     owner.actions++;
-    try {const result = await action(); if (!await allowed() || !current()) throw privateUnavailable(); return copyPrivateTrainingData(result);}
+    try {const result = await action(Object.freeze({isCurrent: current, stillAllowed: allowed}));
+      if (!await allowed() || !current()) throw privateUnavailable(); return copyPrivateTrainingData(result);}
     finally {owner.actions--;}
+  }
+
+  /** Separate current read. Historical completion remains cache-only. */
+  private async reviewPrivateTrainingCandidate(owner: PrivateTrainingOwner, control: ApprovedLocalTrainingControl): Promise<ApprovedLocalTrainingCandidateReview> {
+    const history = this.reviewPrivateTrainingCompletion(owner), verify = owner.session?.verifyRetainedFiles;
+    if (history.kind !== "ready" || !verify) return {kind: "not-ready"};
+    const adapter = ["lora", "qlora"].includes(owner.definition.request.method);
+    if (history.candidate.artifactForm !== (adapter ? "adapter" : "full-model") ||
+        history.candidate.serializationFormat !== null && history.candidate.serializationFormat !== (adapter ? "adapter-safetensors" : "safetensors"))
+      throw privateUnavailable();
+    if (owner.candidateRead) throw privateUnavailable();
+    const read: NonNullable<PrivateTrainingOwner["candidateRead"]> = {pending: true, unknown: false}; owner.candidateRead = read;
+    let operation: Promise<TrainingResultVerifiedFiles>;
+    try {
+      operation = verify(control); read.original = operation;
+      if (!types.isPromise(operation) || types.isProxy(operation) || Object.getPrototypeOf(operation) !== Promise.prototype ||
+          Object.getOwnPropertyDescriptor(operation, "constructor")) throw privateUnavailable();
+    } catch {read.unknown = true; throw privateUnavailable();}
+    const observation = (async () => {try {return {ok: true, value: await operation};}
+      catch {return {ok: false, value: undefined};} finally {read.pending = false;}})();
+    read.observation = observation;
+    if (Object.getOwnPropertyDescriptor(operation, "then")) {read.unknown = true; throw privateUnavailable();}
+    let rawResult: unknown;
+    try {const result = await observation; if (!result.ok) throw privateUnavailable(); rawResult = result.value;}
+    finally {if (!read.pending && !read.unknown && owner.candidateRead === read) owner.candidateRead = undefined;}
+    const data = copyPrivateTrainingData(rawResult); // Detach before any later policy wait.
+    const raw = privateRecord(data, ["schema", "publicationId", "totalBytes", "files", "verification", "manifestDigest"]);
+    if (Object.keys(raw).length !== 6 || raw.schema !== "training-result-finalized-files-v1" || raw.verification !== "sha256-current-local-v1" ||
+        typeof raw.publicationId !== "string" || !/^[a-f0-9]{32}$/.test(raw.publicationId) || !Array.isArray(raw.files) ||
+        raw.files.length < 1 || raw.files.length > 256) throw privateUnavailable();
+    const publicationId = raw.publicationId, names = new Set(["config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+      "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt", "model.safetensors",
+      "adapter_config.json", "adapter_model.safetensors", "serialization_manifest.json", "training-run.json"]);
+    let total = 0, group = 0; const seen = new Set<string>();
+    const files = raw.files.map((value, index) => {
+      const row = privateRecord(value, ["fileIndex", "groupIndex", "name", "role", "mediaType", "expectedSizeBytes", "expectedSha256", "key"]);
+      if (Object.keys(row).length !== 8 || row.fileIndex !== index || typeof row.groupIndex !== "number" || !Number.isSafeInteger(row.groupIndex) ||
+          row.groupIndex < 0 || row.groupIndex > 255 || row.groupIndex !== group && !(index > 0 && row.groupIndex === group + 1) ||
+          typeof row.name !== "string" || !names.has(row.name) || !["checkpoint", "candidate"].includes(row.role as string) ||
+          row.mediaType !== (row.name.endsWith(".json") ? "application/json" : "application/octet-stream") ||
+          typeof row.expectedSizeBytes !== "number" || !Number.isSafeInteger(row.expectedSizeBytes) || row.expectedSizeBytes < 1 ||
+          row.expectedSizeBytes > Number.MAX_SAFE_INTEGER - total || typeof row.expectedSha256 !== "string" || !/^sha256:[a-f0-9]{64}$/.test(row.expectedSha256) ||
+          row.key !== `workspaces/${owner.definition.workspaceId}/artifacts/training-results/${publicationId}/${index}`) throw privateUnavailable();
+      group = row.groupIndex; total += row.expectedSizeBytes;
+      const unique = `${group}/${row.name}`; if (seen.has(unique)) throw privateUnavailable(); seen.add(unique);
+      return Object.freeze({fileIndex: index, groupIndex: group, name: row.name, role: row.role as "checkpoint" | "candidate",
+        mediaType: row.mediaType as "application/json" | "application/octet-stream", expectedSizeBytes: row.expectedSizeBytes,
+        expectedSha256: row.expectedSha256, key: row.key as string});
+    });
+    if (raw.totalBytes !== total || files.some(file => file.role !== (file.groupIndex === group ? "candidate" : "checkpoint"))) throw privateUnavailable();
+    const candidate = new Set(files.filter(file => file.groupIndex === group).map(file => file.name));
+    const required = adapter ? ["adapter_config.json", "adapter_model.safetensors", "tokenizer.json"] : ["config.json", "model.safetensors", "tokenizer.json"];
+    const forbidden = adapter ? ["config.json", "model.safetensors"] : ["adapter_config.json", "adapter_model.safetensors"];
+    if (!required.every(name => candidate.has(name)) || forbidden.some(name => candidate.has(name))) throw privateUnavailable();
+    const snapshot = Object.freeze({schema: "training-result-finalized-files-v1" as const, publicationId, totalBytes: total, files: Object.freeze(files)});
+    const manifestDigest = "sha256:" + createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+    if (raw.manifestDigest !== manifestDigest) throw privateUnavailable();
+    const retainedFiles: TrainingResultVerifiedFiles = Object.freeze({...snapshot, verification: "sha256-current-local-v1", manifestDigest});
+    const candidateDigest = "sha256:" + createHash("sha256").update(JSON.stringify({requestId: owner.definition.requestId,
+      workspaceId: owner.definition.workspaceId, owner: owner.definition.owner, history, manifestDigest})).digest("hex");
+    return {kind: "ready", requestId: owner.definition.requestId, workspaceId: owner.definition.workspaceId, history, retainedFiles, candidateDigest};
   }
 
   /** Cache and original definition only. In particular, do not call readOwned:

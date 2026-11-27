@@ -5,7 +5,7 @@ observations under separately captured read authority. It verifies original
 finalized file metadata with bounded streaming and actual handle closure. This
 does not replace original task success/retirement, complete provenance, runtime
 readiness, evaluation or separate Save approval. Historical file acknowledgements
-alone remain insufficient; no raw storage locator crosses the port.
+alone remain insufficient; no operating-system file path crosses the port.
 
 Private approved training can carry a separate preparation-only Model reader.
 Shared composition reuses the original authorized saved-Model owner and compares
@@ -152,5 +152,13 @@ Customization target lists use a fresh per-operation view of exact definition id
 The optional original local session can bind current-file verification after
 successful completed delivery and actual worker/IO retirement. It requires fresh
 original and caller read controls, bounds the review lifetime and compares all
-returned facts with its original receiver inventory. This private capability
-still needs application/history/host composition; it grants no Save authority.
+returned facts with its original receiver inventory. The application can combine this with original cached history; host entry and complete execution history remain pending. It grants no Save authority.
+
+The accepted task now has a separate optional current-candidate read. Required
+retirement methods are retained before optional verifier reflection. Fresh read
+controls are captured once and forwarded through the original session. Combine
+only settled successful cached history with exact current workspace/publication,
+file inventory, method-appropriate safe weights and canonical content digest.
+The candidate digest binds original actor/task/history/content, not Save approval.
+Unknown original verification retains its owner and prevents retry or cleanup;
+legacy completion remains cache-only. Public/host entry wiring is separate.

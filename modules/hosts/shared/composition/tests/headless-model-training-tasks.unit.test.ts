@@ -37,3 +37,12 @@ test("malformed original runner inputs have no effect or task authority", async 
   assert.deepEqual(await book.runPrepared({prepared: new Proxy({}, {get() {assert.fail("No proxy getter.");}})} as never),
     {result: {ok: false, code: "headless.operation-unconfirmed"}});
 });
+
+test("current candidate readers cannot be injected through task-book configuration", () => {
+  let calls = 0;
+  assert.throws(() => createOriginalHeadlessTrainingTaskOwner({maximumRetainedTasks: 1,
+    reviewCandidate: async () => {calls++; return {kind: "not-ready"};}} as never));
+  const getter = Object.defineProperty({maximumRetainedTasks: 1}, "reviewCandidate", {enumerable: true,
+    get() {calls++; throw Error("must not execute");}});
+  assert.throws(() => createOriginalHeadlessTrainingTaskOwner(getter)); assert.equal(calls, 0);
+});

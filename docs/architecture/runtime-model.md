@@ -3941,3 +3941,20 @@ fields in order: schema, publicationId, totalBytes, files; each file uses fileIn
 groupIndex, name, role, mediaType, expectedSizeBytes, expectedSha256, key. Immutable
 path-free observations supply no readiness, evaluation or Save. Application/host
 history and current-candidate integration remain separate pending work.
+
+The accepted application task optionally captures current-file verification from
+its original session before preparation. Keep the required retirement owner even
+if optional capability reflection fails. A separate current-candidate read uses
+one captured original/caller control through the action, requires settled
+successful cached completion, and validates the entire canonical retained file
+inventory and method-appropriate safe candidate pair. Its digest binds original
+actor/task/workspace, historical lineage and current content. Historical review
+remains cache-only; current review performs no runtime lookup, startup or Save.
+Pending/unknown original verifier calls retain their exact owner and fence retry
+or cleanup. Shared dispatch and the original task book preserve the optional
+reader by capturing its original method/receiver, without adding public transport
+or changing cached completion. Host current-review entry and complete execution
+history remain separate pending work.
+Current candidate review rejects a recorded serialization format that conflicts
+with the method and verified unsharded safe pair. Null historical format remains
+unrecorded. This checks consistency without loading or scoring a model.

@@ -68,11 +68,13 @@ function capture<Fn extends (...args: any[]) => any>(owner: object, key: string)
   }
   throw failed();
 }
-function optionalCompletion(owner: ApprovedLocalTrainingTask): ApprovedLocalTrainingTask["reviewCompletion"] {
+function optionalRead(owner: ApprovedLocalTrainingTask, key: "reviewCompletion"): ApprovedLocalTrainingTask["reviewCompletion"];
+function optionalRead(owner: ApprovedLocalTrainingTask, key: "reviewCandidate"): ApprovedLocalTrainingTask["reviewCandidate"];
+function optionalRead(owner: ApprovedLocalTrainingTask, key: "reviewCompletion" | "reviewCandidate") {
   for (let at: object | null = owner, depth = 0; at && at !== Object.prototype && depth < 8; at = Object.getPrototypeOf(at), depth++) {
     need(!types.isProxy(at));
-    if (Object.getOwnPropertyDescriptor(at, "reviewCompletion"))
-      return capture<NonNullable<ApprovedLocalTrainingTask["reviewCompletion"]>>(owner, "reviewCompletion");
+    if (Object.getOwnPropertyDescriptor(at, key))
+      return capture<NonNullable<ApprovedLocalTrainingTask[typeof key]>>(owner, key);
   }
   return undefined;
 }
@@ -206,13 +208,13 @@ export function createOriginalHeadlessTrainingTaskOwner(options: {readonly maxim
           const retained = record(value, ["scope", "selection", "proposalDigest", "task"]);
           if (!isDeepStrictEqual(copy(retained.scope), slot.scope) || !isDeepStrictEqual(copy(retained.selection), slot.selection) || retained.proposalDigest !== slot.proposalDigest) return false;
           const task = retained.task as ApprovedLocalTrainingTask;
-          const identity = record(task, ["requestId", "workspaceId", "read", "cancel", "reviewCompletion"]);
+          const identity = record(task, ["requestId", "workspaceId", "read", "cancel", "reviewCompletion", "reviewCandidate"]);
           if (identity.requestId !== slot.expectedTaskId || identity.workspaceId !== slot.scope.workspaceId) return false;
           // Custody only; never renew the ended outward caller's admission here.
-          const reviewCompletion = optionalCompletion(task);
+          const reviewCompletion = optionalRead(task, "reviewCompletion"), reviewCandidate = optionalRead(task, "reviewCandidate");
           slot.task = Object.freeze({requestId: task.requestId, workspaceId: task.workspaceId,
             read: capture<ApprovedLocalTrainingTask["read"]>(task, "read"), cancel: capture<ApprovedLocalTrainingTask["cancel"]>(task, "cancel"),
-            ...(reviewCompletion ? {reviewCompletion} : {})});
+            ...(reviewCompletion ? {reviewCompletion} : {}), ...(reviewCandidate ? {reviewCandidate} : {})});
           return true;
         },
       });

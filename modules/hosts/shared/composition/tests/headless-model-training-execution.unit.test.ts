@@ -199,6 +199,34 @@ async function fixture(t: TestContext, engine: "Core" | "SQLite" = "Core", optio
     rows: () => root.forOrganization(scope.organizationId).listDocuments<{phase: string}>("headless/models/training-plan-tasks")};
 }
 
+test("current candidate capability retains its original method and receiver with the accepted task", async t => {
+  const f = await fixture(t), options = await f.makeOptions(), start = await options.resolveStart();
+  let calls = 0, owner: any;
+  const result = await f.run({resolveStart: async () => async (...args) => {
+    const accepted = await start!(...args); if (accepted.kind !== "accepted") return accepted;
+    owner = {...accepted.task, async reviewCandidate(control: ApprovedLocalTrainingControl) {
+      assert.equal(this, owner); assert.equal(control.isCurrent(), true); assert.equal(await control.stillAllowed(), true);
+      calls++; return {kind: "not-ready" as const};
+    }}; return {...accepted, task: owner};
+  }});
+  assert.equal(result.result.ok, true); assert.equal(f.state.retained, 1); assert.ok(f.retained?.task.reviewCandidate);
+  owner.reviewCandidate = async () => {throw Error("replacement must not execute");};
+  assert.deepEqual(await f.retained!.task.reviewCandidate!({isCurrent: () => true, stillAllowed: async () => true}), {kind: "not-ready"});
+  assert.equal(calls, 1); assert.equal(f.state.starts, 1);
+});
+
+test("current candidate capability rejects an accessor without calling it or repeating dispatch", async t => {
+  const f = await fixture(t), options = await f.makeOptions(), start = await options.resolveStart(); let hooks = 0;
+  const result = await f.run({resolveStart: async () => async (...args) => {
+    const accepted = await start!(...args); if (accepted.kind !== "accepted") return accepted;
+    const task = {...accepted.task}; Object.defineProperty(task, "reviewCandidate", {enumerable: true, get() {hooks++; throw Error("must not execute");}});
+    return {...accepted, task};
+  }});
+  assert.deepEqual(result.result, {ok: false, code: "headless.operation-unconfirmed"}); assert.equal(hooks, 0);
+  assert.equal(f.state.starts, 1); assert.equal(f.state.retained, 0);
+  await f.run(); assert.equal(f.state.starts, 1);
+});
+
 for (const engine of ["Core", "SQLite"] as const) {
   test(engine + ": preparation Model source reuses the actual original reader and closes before accepted task controls", async t => {
     const f = await fixture(t, engine); let replacements = 0;
@@ -449,6 +477,21 @@ test("a new training attempt checks business policy before resolving an applicat
 
 async function bookOptions(f: Awaited<ReturnType<typeof fixture>>): Promise<OriginalTrainingRunOptions> {
   const {retainTask: _retentionIsOwnedByBook, ...options} = await f.makeOptions(); return options;
+}
+for (const engine of ["Core", "SQLite"] as const) {
+  test(engine + ": current candidate capability is accepted by the original book without changing cached reads", async t => {
+    const f = await fixture(t, engine), book = createOriginalHeadlessTrainingTaskOwner(), options = await bookOptions(f), start = await options.resolveStart();
+    let currentReads = 0;
+    const started = await book.runPrepared({...options, resolveStart: async () => async (...args) => {
+      const accepted = await start!(...args); if (accepted.kind !== "accepted") return accepted;
+      return {...accepted, task: {...accepted.task, async reviewCandidate() {currentReads++; return {kind: "not-ready" as const};}}};
+    }});
+    assert.ok(started.result.ok, JSON.stringify(started)); f.state.status = "succeeded";
+    assert.ok((await book.read(taskQuery(f))).ok); const history = await book.reviewCompletion(taskQuery(f));
+    assert.ok(history.ok); assert.equal(history.value.kind, "ready"); assert.equal(currentReads, 0);
+    const replay = await book.runPrepared(await bookOptions(f)); assert.ok(replay.result.ok);
+    assert.equal(f.state.starts, 1); assert.equal(currentReads, 0);
+  });
 }
 function taskQuery(f: Awaited<ReturnType<typeof fixture>>, operation: "models.training-task" | "models.cancel-training" = "models.training-task"): OriginalTrainingTaskQuery {
   return {documents: f.root, hostIncarnationId: f.host, scope: f.scope, isCurrent: () => f.state.host,

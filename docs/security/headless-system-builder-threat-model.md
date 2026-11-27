@@ -3726,3 +3726,14 @@ original review calls through deadlines; unknown operation contracts prevent a
 new review. Fixed failures disclose no raw paths, bytes or private exceptions.
 No review can restart training, repeat transfer, use a generic runtime lookup,
 register a candidate, authorize Save or qualify the stronger storage service.
+
+Application current-candidate reads retain the original session and task. Capture
+required retirement methods before optional verifier reflection and capture fresh
+read controls once. Only settled successful cached history can join freshly
+verified exact workspace/publication/file metadata. Reject wrong groups, roles,
+keys, sizes, hashes, missing safe files and incompatible method pairs. Own returned
+metadata before policy waits and bind a candidate digest to original scope,
+history and content. Unknown original verifier operations retain their references
+and prevent retry or cleanup. Shared dispatch/book custody accepts only captured
+original methods; it adds no public activation, runtime lookup, transfer replay,
+provider call, model execution, registration or Save authority.
