@@ -1382,6 +1382,63 @@
         "The real Task72 failures and unconfirmed original retirement remain pending. This record grants no fresh lease, retry, historical cleanup, task completion or parent qualification.",
         "Another checkout may lack local completion records."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-candidate-comparison-review",
+      "work_criteria": [
+        "original-controlled-comparison-review",
+        "read-policy-denials-and-snapshot",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e12bb0fe0e13aabc81aaab44ebaa483d0259bf58a640d6c58762591a2649cb09",
+      "review_digest": "97652d1a663d73b7c9acb54655f4b3a7b5654e606f8a5977dcc679a2eb09aff3",
+      "scope": "Comparison-review software is complete at commitb8919450. Core/SQLite original approved inputs, App cache, task book and public codec preserve fixed-baseline controlled reports, exact lineage, policy withdrawal, snapshot privacy and honest missing evidence. All13 current checks passed with independent review.",
+      "limitations": [
+        "Controlled software measurements only; no actual model evaluation, quality score, current candidate/hardware/public-host proof, Task73 or parent pass.",
+        "Task72 actual training and prior retirement remain pending a safe restart. No fresh lease or retry is granted.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-candidate-comparison-review",
+      "work_criteria": [
+        "original-controlled-comparison-review",
+        "read-policy-denials-and-snapshot",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e12bb0fe0e13aabc81aaab44ebaa483d0259bf58a640d6c58762591a2649cb09",
+      "review_digest": "97652d1a663d73b7c9acb54655f4b3a7b5654e606f8a5977dcc679a2eb09aff3",
+      "scope": "Comparison-review software is complete at commitb8919450. Core/SQLite original approved inputs, App cache, task book and public codec preserve fixed-baseline controlled reports, exact lineage, policy withdrawal, snapshot privacy and honest missing evidence. All13 current checks passed with independent review.",
+      "limitations": [
+        "Controlled software measurements only; no actual model evaluation, quality score, current candidate/hardware/public-host proof, Task73 or parent pass.",
+        "Task72 actual training and prior retirement remain pending a safe restart. No fresh lease or retry is granted.",
+        "Another checkout may lack local completion records."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-candidate-comparison-review",
+      "work_criteria": [
+        "original-controlled-comparison-review",
+        "read-policy-denials-and-snapshot",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "e12bb0fe0e13aabc81aaab44ebaa483d0259bf58a640d6c58762591a2649cb09",
+      "review_digest": "97652d1a663d73b7c9acb54655f4b3a7b5654e606f8a5977dcc679a2eb09aff3",
+      "scope": "Comparison-review software is complete at commitb8919450. Core/SQLite original approved inputs, App cache, task book and public codec preserve fixed-baseline controlled reports, exact lineage, policy withdrawal, snapshot privacy and honest missing evidence. All13 current checks passed with independent review.",
+      "limitations": [
+        "Controlled software measurements only; no actual model evaluation, quality score, current candidate/hardware/public-host proof, Task73 or parent pass.",
+        "Task72 actual training and prior retirement remain pending a safe restart. No fresh lease or retry is granted.",
+        "Another checkout may lack local completion records."
+      ]
     }
   ]
 }

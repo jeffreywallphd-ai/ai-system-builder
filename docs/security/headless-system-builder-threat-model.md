@@ -1,5 +1,20 @@
 # Headless System Builder threat model
 
+### Private image-generation intent
+
+Treat the standalone image intent as untrusted data. Strict passive decoding
+owns and freezes exact host/workspace/key, current Model-selection metadata,
+prompt digests and explicit numeric settings. The existing image validator owns
+numeric syntax ceilings. Unknown fields, accessors/cycles, raw text/paths,
+credentials, actor/approval claims and engine hints deny. No public plan or read
+catalog recognizes this operation yet. No decoder grants authority, current
+Model/file proof, resource admission, runtime readiness, result import or Save.
+Prompt SHA-256 values correlate exact text; they do not anonymize low-entropy
+prompts and must not enter ordinary diagnostics. Future execution must match the
+original transient text and recheck exact current ownership, approval and limits.
+Referenced face/latent inputs remain unavailable in this initial Headless schema.
+Rollback removes the additive codec without changing existing headed generation.
+
 Training bindings must survive JSON object-member reordering without weakening
 integrity or changing an accepted task identity. Decode the complete bounded
 passive inputs first. New proposals use a fixed complete Model-summary layout.

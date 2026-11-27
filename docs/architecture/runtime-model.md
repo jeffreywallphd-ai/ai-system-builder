@@ -1,5 +1,15 @@
 # Runtime Model
 
+The standalone Headless `models.generate-image` intent describes bounded
+text-to-image settings and a timestamped registered Model. It reuses the existing
+image contract's numeric ceilings, which do not prove runtime compatibility or
+resource admission. Raw prompt text and engine overrides cannot enter this
+intent. Future original owners must match transient text to the exact prompt
+digests, recheck Model/actor/workspace policy and obtain exact approval before
+dispatch. Parsing currently enables no public plan, runtime, import or Save.
+Headed image behavior is unchanged; text generation, image execution, approved
+result import and actual-host qualification remain pending for the I7 outcome.
+
 Private Headless training proposal hashes use a fixed complete representation of
 already validated Model metadata. JSON stores may reorder object members. The
 binding reader therefore checks the full exact digest against current canonical,

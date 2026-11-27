@@ -1,0 +1,28 @@
+{
+  "schema_version": "headless-generation-feature-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "models-training-and-generation",
+  "task_id": "generate-and-import-model-output",
+  "owning_work_id": "headless-image-generation-intent",
+  "scope": "Standalone passive text-to-image intent with exact Model metadata, prompt digests and explicit settings.",
+  "evidence_policy": "The current Work receipt and separate review govern this supporting software outcome. This feature matrix grants no task or parent qualification.",
+  "test_file": "modules/contracts/headless/tests/headless-model-image-plan.unit.test.ts",
+  "controlled_cases": 48,
+  "boundaries": [
+    "Reuse the existing image request numeric ceilings; do not replace runtime or machine-specific admission.",
+    "Copy and freeze exact host/workspace/key, registered Model timestamp and generation settings.",
+    "Reject raw prompt text, paths, credentials, actor/approval claims and engine overrides.",
+    "Keep existing public plan/read catalogs closed for this standalone codec.",
+    "Prompt digests are correlation metadata and do not conceal low-entropy text or grant permission."
+  ],
+  "pending": [
+    "Original Model/runtime preparation, exact approval and transient-prompt matching.",
+    "Supported text generation and image dispatch with owned task progress, cancellation and exact output history.",
+    "Separately approved output import and actual Desktop/Managed host qualification.",
+    "Referenced face/latent image support is not supplied by this initial schema."
+  ],
+  "task_completed": false,
+  "model_called": false,
+  "output_imported": false,
+  "parent_qualified": false
+}

@@ -1,5 +1,16 @@
 # Contracts
 
+`models.generate-image` has a standalone passive intent for text-to-image work.
+It binds a timestamped registered Model, prompt digests and explicit image
+settings. Numeric ceilings come from the existing headed image request validator.
+The result is detached and frozen; raw prompts, paths, actor/approval claims and
+engine overrides are rejected. Prompt hashes are correlation metadata, not
+encryption or proof of permission. This schema enables no public plan/read
+operation, execution, result import or Save. Original owner, approval, transient
+prompt matching, hardware admission and output-history wiring remain pending.
+Referenced latent/face images are outside this initial Headless schema; the
+headed request and its existing features are unchanged.
+
 The standalone `models.save-training` intent binds an exact original training
 task and current candidate digest to a name and idempotency key. Its decoder
 copies and freezes closed data, using the existing training name/identity
