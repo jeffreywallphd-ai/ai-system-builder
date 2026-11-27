@@ -53,6 +53,7 @@ describe("model family invariants", () => {
       "recommendModelInferenceMode",
       "readModelDownloadSourceRequest",
       "readModelDownloadSource",
+      "readModelTrainingExecutionHistory",
     ].sort());
   });
 });

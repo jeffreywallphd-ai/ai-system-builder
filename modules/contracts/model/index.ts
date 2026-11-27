@@ -17,6 +17,7 @@ export * from "./model-management-operations";
 export { normalizeListModelFilesResult } from "./model-management-operations";
 export * from "./model-download-task";
 export * from "./model-training";
+export * from "./model-training-execution";
 
 export * from "./model-publishing";
 export * from "./model-download-source";

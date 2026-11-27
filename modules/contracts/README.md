@@ -242,3 +242,5 @@ Versions 1–12 retain their existing previews and fingerprints.
 The fixed Model-owner unit/type checks include the training approval contract and
 rendered two-channel/two-mode tests. These are software workflow checks; they do
 not run model-quality tests, model loads, Native retries or full-software suites.
+
+The Model family exports `ModelTrainingExecutionHistory` and its closed `readModelTrainingExecutionHistory` decoder. The versioned report contains only original run identity, canonical UTC timestamps, monotonic elapsed time and finite reported device, precision, CPU-count and software-version facts. Explicit null facts remain unrecorded. The caller owns task/workspace/source binding and fresh authorization. The record is descriptive, not model quality, runtime readiness, resource admission, retention, Save or host qualification.
