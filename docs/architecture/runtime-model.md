@@ -4041,6 +4041,18 @@ path/URL, control, private-key, oversized opaque-token and structured-payload
 denials. Other passive metadata filters, wire shapes, digests, current-file
 mode and task/Save authority remain unchanged. Registry Save reuses this codec.
 
+Separate trusted `allowModelTrainingSave` extends build plans with
+`models.save-training` under canonical preview v14. Preserve old versions/bytes
+when no trained Save is present. Its exact original task, candidate digest, name
+and idempotency key describe a bounded local candidate copy and create-only
+Models record, zero model/provider calls, mandatory exact review and unchecked
+runtime readiness. Both approval channels reconstruct every effect and input;
+training/download flags cannot enable Save. The shared popup/chat describes
+the permissions and local account/dependency trust, retained original bytes and
+unchecked license/quality. Path-free closed saved references correlate Model,
+task, workspace and candidate. Unconfigured host/store paths explicitly refuse;
+this proposal/UI component enables no runtime, original-owner copy or Root.
+
 The owning composition must still bind the original app Save capability and
 require new exact Save approval, current ModelRead/Write and a final source/
 approval lifetime fence in that same transaction. This metadata component does

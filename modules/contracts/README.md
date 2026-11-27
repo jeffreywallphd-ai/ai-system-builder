@@ -7,6 +7,15 @@ bounds. It accepts no path, actor override or approval claim. This data schema
 does not enable a public plan operation, storage effect or registry mutation;
 the save owner still needs separate exact consent and current source checks.
 
+Trusted `allowModelTrainingSave` separately admits that intent into build plans.
+Its v14 preview binds the exact original task, candidate digest, name and key,
+and describes a bounded local copy plus Models registration with no model or
+provider calls. Older plans retain their existing bytes and versions. Both
+approval channels reconstruct all effect fields; neither training nor download
+capabilities enable this Save. Closed saved-result replies contain only scoped
+Model/task/candidate identifiers and unchecked runtime status. Unconfigured
+storage and host paths refuse this family; codecs and UI enable no Root.
+
 Training completion defaults to cached history. An explicit `current-files`
 mode requires a current original-owner candidate summary: verified digests,
 bounded counts/bytes and optional descriptive Model execution facts. A missing

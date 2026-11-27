@@ -275,6 +275,8 @@ export async function validateHeadlessPlanSavedSources(
   for (const request of requests) {
     const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
+    // Proposal codecs cannot enable the original-owner Save execution capability.
+    if (operation === "models.save-training") return false;
     if (operation === "models.train") {
       if (typeof validateModelTraining !== "function") return false;
       const eligible = await validateModelTraining(request);

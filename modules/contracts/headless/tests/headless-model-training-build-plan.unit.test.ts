@@ -8,7 +8,7 @@ import {createStructuredHeadlessPlanReviewRepository} from "../../../adapters/pe
 import {validateHeadlessPlanSavedSources} from "../../../hosts/shared/composition/headlessPlanReview";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   parseHeadlessReadRequest, readDesktopPlanApprovalView, readHeadlessPlanReviewAgentRequest,
-  readManagedBrowserPlanApprovalValue} from "..";
+  readManagedBrowserPlanApprovalValue, readHeadlessPlanStepResult} from "..";
 
 function fixture() {
   const host = randomUUID(); assert.ok(isHeadlessHostIncarnationId(host));
@@ -123,6 +123,102 @@ test("active, hidden, cyclic and malformed settings fail without executing gette
 test("unconfigured real storage and saved-source host validation deny without invoking authorization or file validators", async () => {
   const f = fixture(), documents = createInMemoryStructuredDocumentStore();
   let authorizations = 0, validations = 0;
+  const repository = createStructuredHeadlessPlanReviewRepository(documents, async () => {authorizations++; return true;});
+  const scope = {workspaceId: f.proposal.workspaceId, organizationId: createOrganizationId("organization.training-approval"),
+    principalId: "principal.synthetic", registeredClientId: f.selection.registeredClientId};
+  assert.deepEqual(await repository.propose({target: {hostIncarnationId: f.host, scope, fingerprint: f.fingerprint},
+    proposal: f.proposal, isCurrent: () => true}), {ok: false, code: "invalid"});
+  assert.equal(await validateHeadlessPlanSavedSources(documents, scope.workspaceId, f.parsed.requests,
+    () => true, async () => {validations++; return true;}), false);
+  assert.equal(authorizations, 0); assert.equal(validations, 0);
+});
+
+function saveFixture() {
+  const f = fixture(), step = {operation: "models.save-training", idempotencyKey: randomUUID(), name: "Token classifier",
+    taskId: randomUUID(), candidateDigest: "sha256:" + "d".repeat(64)};
+  const caps = {allowLocalFileSave: false, allowModelTrainingSave: true};
+  const proposal = {...f.proposal, steps: [step]}, parsed = parseHeadlessBuildPlanProposal(proposal, f.host, caps); assert.ok(parsed.ok);
+  const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+  const selection = {...f.selection, fingerprint};
+  const packet = {...f.packet, selection, preview: parsed.preview, state: {...f.packet.state, fingerprint}};
+  const managed = {...f.managed, selection};
+  return {...f, step, caps, proposal, parsed, fingerprint, selection, packet, managed};
+}
+
+test("trained Save is a separate exact opted-in proposal with truthful copy/registry effects", () => {
+  const f = saveFixture(), {operation, ...input} = f.step;
+  assert.equal(f.parsed.preview.version, "aisb-build-plan-preview-v14");
+  assert.deepEqual(f.parsed.preview.steps, [{operation, input, effect: "save-reviewed-trained-model", externalProviderCalls: 0,
+    modelCalls: 0, loadsModel: false, writesModelRegistry: true, storageAuthority: "bounded-local-copy",
+    runtimeReadiness: "not-checked", exactReviewRequired: true}]);
+  assert.equal(parseHeadlessBuildPlanProposal(f.proposal, f.host).ok, false);
+  for (const caps of [{allowLocalFileSave: true}, fixture().caps,
+    {...f.caps, allowModelTrainingSave: false}, {allowLocalFileSave: false, allowModelReferenceSave: true}])
+    assert.equal(parseHeadlessBuildPlanProposal(f.proposal, f.host, caps).ok, false);
+  for (const change of [{taskId: randomUUID()}, {candidateDigest: "sha256:" + "e".repeat(64)},
+    {name: "Another trained model"}, {idempotencyKey: randomUUID()}]) {
+    const changed = parseHeadlessBuildPlanProposal({...f.proposal, steps: [{...f.step, ...change}]}, f.host, f.caps); assert.ok(changed.ok);
+    assert.notEqual(createHash("sha256").update(JSON.stringify(changed.preview)).digest("hex"), f.fingerprint);
+  }
+  const submit = {version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit", input: {...f.proposal, fingerprint: f.fingerprint}};
+  assert.equal(readHeadlessPlanReviewAgentRequest(submit, f.host).ok, false);
+  const decoded = readHeadlessPlanReviewAgentRequest(submit, f.host, f.caps); assert.ok(decoded.ok && decoded.request.operation === "plan.submit");
+  assert.deepEqual(decoded.request.proposal, f.parsed);
+  f.step.name = "Changed later";
+  assert.equal(f.parsed.preview.steps[0].input.name, "Token classifier");
+});
+
+test("trained Save views reconstruct exact permissions on both channels and deny tampering", () => {
+  const f = saveFixture(), expected = {selection: f.selection, viewId: f.packet.viewId, preview: f.parsed.preview, state: f.packet.state};
+  assert.deepEqual(readDesktopPlanApprovalView(f.packet, f.selection, f.caps), expected);
+  assert.deepEqual(readManagedBrowserPlanApprovalValue(f.managed, f.packet, f.caps), expected);
+  assert.equal(readDesktopPlanApprovalView(f.packet, f.selection, fixture().caps), undefined);
+  for (const patch of [{modelCalls: "required"}, {loadsModel: true}, {writesModelRegistry: false}, {storageAuthority: "reference-only"},
+    {storageAuthority: "protected-service"}, {runtimeReadiness: "ready"}, {exactReviewRequired: false}, {externalProviderCalls: "required"},
+    {effect: "save-reviewed-model-reference"}, {maximumTotalBytes: 1}, {approved: true}]) {
+    const packet = {...f.packet, preview: {...f.packet.preview, steps: [{...f.packet.preview.steps[0], ...patch}]}};
+    assert.equal(readDesktopPlanApprovalView(packet, f.selection, f.caps), undefined);
+    assert.equal(readManagedBrowserPlanApprovalValue(f.managed, packet, f.caps), undefined);
+  }
+  for (const field of ["storageAuthority", "modelCalls", "exactReviewRequired"]) {
+    const step: Record<string, unknown> = {...f.packet.preview.steps[0]}; delete step[field];
+    assert.equal(readDesktopPlanApprovalView({...f.packet, preview: {...f.packet.preview, steps: [step]}}, f.selection, f.caps), undefined);
+  }
+  assert.equal(readDesktopPlanApprovalView({...f.packet, preview: {...f.packet.preview, version: "aisb-build-plan-preview-v13"}}, f.selection, f.caps), undefined);
+});
+
+test("trained Save input stays closed and cannot assert consent, paths or future training results", () => {
+  const f = saveFixture(); let reads = 0;
+  const active = {...f.step}; Object.defineProperty(active, "candidateDigest", {enumerable: true, get() {reads++; return f.step.candidateDigest;}});
+  for (const step of [active, {...f.step, approved: true}, {...f.step, allowModelTrainingSave: true}, {...f.step, localPath: "private"},
+    {...f.step, taskId: "later-step"}, {...f.step, candidateDigest: "unknown"}, {...f.step, storageProfile: "protected-service"}])
+    assert.equal(parseHeadlessBuildPlanProposal({...f.proposal, steps: [step]}, f.host, f.caps).ok, false);
+  assert.equal(reads, 0);
+  assert.equal(parseHeadlessBuildPlanProposal({...f.proposal, allowModelTrainingSave: true}, f.host, f.caps).ok, false);
+  assert.equal(parseHeadlessBuildPlanProposal({...f.proposal, steps: [f.step, {...f.step, idempotencyKey: randomUUID()}]}, f.host, f.caps).ok, false);
+  const old = fixture(), caps = {...old.caps, ...f.caps};
+  assert.deepEqual(parseHeadlessBuildPlanProposal(old.proposal, old.host, caps), old.parsed, "Old training preview bytes remain unchanged.");
+  const mixed = parseHeadlessBuildPlanProposal({...f.proposal, steps: [old.step, f.step]}, f.host, caps); assert.ok(mixed.ok);
+  assert.deepEqual(mixed.preview.steps.map(s => s.operation), ["models.train", "models.save-training"]);
+});
+
+test("trained Save replies are path-free, correlated and cannot claim runtime readiness or foreign authority", () => {
+  const f = saveFixture(), target = {...f.proposal, fingerprint: f.fingerprint, approvalRevision: 1, step: 1};
+  const reference = {workspaceId: f.proposal.workspaceId, modelRecordId: "model_headless_trained_" + "a".repeat(32),
+    taskId: f.step.taskId, candidateDigest: f.step.candidateDigest, storageProfile: "bounded-local-v1", runtimeReadiness: "not-checked"};
+  const value = {kind: "committed", operation: "models.save-training", fingerprint: f.fingerprint, approvalRevision: 1, step: 1,
+    expiresAt: Date.now() + 60000, reference};
+  assert.deepEqual(readHeadlessPlanStepResult({ok: true, value}, target, f.caps), {ok: true, value});
+  assert.equal(readHeadlessPlanStepResult({ok: true, value}, target).ok, false);
+  for (const patch of [{workspaceId: createWorkspaceId("workspace.foreign")}, {localPath: "private"}, {runtimeReadiness: "ready"},
+    {modelRecordId: "model_headless_" + "a".repeat(32)}, {storageProfile: "protected-service"}, {candidateDigest: "unknown"}])
+    assert.equal(readHeadlessPlanStepResult({ok: true, value: {...value, reference: {...reference, ...patch}}}, target, f.caps).ok, false);
+  for (const patch of [{kind: "started"}, {approvalRevision: 2}, {fingerprint: "b".repeat(64)}, {step: 2}])
+    assert.equal(readHeadlessPlanStepResult({ok: true, value: {...value, ...patch}}, target, f.caps).ok, false);
+});
+
+test("unconfigured trained Save proposal cannot reach generic storage or source validation", async () => {
+  const f = saveFixture(), documents = createInMemoryStructuredDocumentStore(); let authorizations = 0, validations = 0;
   const repository = createStructuredHeadlessPlanReviewRepository(documents, async () => {authorizations++; return true;});
   const scope = {workspaceId: f.proposal.workspaceId, organizationId: createOrganizationId("organization.training-approval"),
     principalId: "principal.synthetic", registeredClientId: f.selection.registeredClientId};

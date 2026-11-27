@@ -140,10 +140,12 @@ async function prepareStoredPlanStep(
     const partition = owner.forOrganization(target.scope.organizationId);
     const approved = await readStructuredApprovedPlan(partition, target, approvalRevision, step);
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
+    if (approved.requests.some(candidate => candidate.operation === "models.save-training")) return;
     if (!compileTraining && approved.requests.some(candidate => candidate.operation === "models.train")) return;
     if (allowModelDownload !== true && approved.requests.some(candidate => candidate.operation === "models.download")) return;
     if ((allowModelReferenceSave !== true || !contextResultRootDirectory) && approved.requests.some(candidate => candidate.operation === "models.save-download")) return;
     const request = approved.requests[step - 1];
+    if (request?.operation === "models.save-training") return;
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
         (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
@@ -157,7 +159,7 @@ async function prepareStoredPlanStep(
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
-      if (!previous) return;
+      if (!previous || previous.operation === "models.save-training") return;
       const previousTraining = approved.modelTrainings?.find(binding => binding.step === index + 1);
       const received = previous.operation === "models.train"
         ? previousTraining && (await inspectStructuredTrainingPlanTask(partition, trainingTaskEffect(target, previous,

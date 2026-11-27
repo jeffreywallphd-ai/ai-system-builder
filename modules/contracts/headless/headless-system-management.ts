@@ -20,8 +20,9 @@ import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEA
 import type { HeadlessSemanticBatchRequest } from "./headless-semantic-batch";
 import {readHeadlessModelDownloadPlanRequest, readHeadlessModelReferenceSavePlanRequest,
   type HeadlessModelDownloadPlanRequest, type HeadlessModelReferenceSavePlanRequest} from "./headless-model-download-plan";
-import {readHeadlessModelTrainingPlanRequest, type HeadlessModelTrainingPlanRequest} from "./headless-model-training-plan";
-import {projectHeadlessModelTrainingBuildPlanStep} from "./headless-model-training-build-plan";
+import {readHeadlessModelTrainingPlanRequest, readHeadlessModelTrainingSavePlanRequest,
+  type HeadlessModelTrainingPlanRequest, type HeadlessModelTrainingSavePlanRequest} from "./headless-model-training-plan";
+import {projectHeadlessModelTrainingBuildPlanStep, projectHeadlessModelTrainingSaveBuildPlanStep} from "./headless-model-training-build-plan";
 
 interface ManagementTarget {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -48,7 +49,8 @@ type PreQueryBuildPlanRequest = HeadlessSystemManagementRequest | HeadlessLocalF
 type PreModelBuildPlanRequest = PreQueryBuildPlanRequest | HeadlessContextQueryPlanRequest;
 type PreReferenceBuildPlanRequest = PreModelBuildPlanRequest | HeadlessModelDownloadPlanRequest;
 type PreTrainingBuildPlanRequest = PreReferenceBuildPlanRequest | HeadlessModelReferenceSavePlanRequest;
-export type HeadlessBuildPlanRequest = PreTrainingBuildPlanRequest | HeadlessModelTrainingPlanRequest;
+type PreTrainingSaveBuildPlanRequest = PreTrainingBuildPlanRequest | HeadlessModelTrainingPlanRequest;
+export type HeadlessBuildPlanRequest = PreTrainingSaveBuildPlanRequest | HeadlessModelTrainingSavePlanRequest;
 type PreContextResultBuildPlanRequest = Exclude<PreQueryBuildPlanRequest, HeadlessContextResultSavePlanRequest>;
 type LegacyBuildPlanRequest = Exclude<PreContextResultBuildPlanRequest, HeadlessContextGenerationPlanRequest>;
 export interface HeadlessBuildPlanCapabilities {
@@ -64,6 +66,8 @@ export interface HeadlessBuildPlanCapabilities {
   readonly allowModelReferenceSave?: boolean;
   /** Trusted private opt-in; parsing alone cannot approve or start training. */
   readonly allowModelTraining?: boolean;
+  /** Separate exact Save permission; training/download capabilities do not enable it. */
+  readonly allowModelTrainingSave?: boolean;
 }
 
 /** Serialize the saved effect without the connection identity or its receipt key. */
@@ -95,10 +99,11 @@ const CONTEXT_QUERY_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v10";
 const MODEL_DOWNLOAD_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v11";
 const MODEL_REFERENCE_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v12";
 const MODEL_TRAINING_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v13";
+const MODEL_TRAINING_SAVE_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v14";
 const proposalFields = ["operation", "idempotencyKey", "name", "templateId", "systemId",
   "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision", "sources", "recipe", "split", "qualityPreset",
   "reportFingerprint", "outputBaseName", "settings", "rebuildOf", "reference", "queryDigest", "modelRecordId", "modelUpdatedAt", "maximumResults", "embeddingDevice",
-  "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode", "model", "dataset", "training"];
+  "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode", "model", "dataset", "training", "candidateDigest"];
 
 /** A decoded request carries data only. The running host supplies and checks identity. */
 export function parseHeadlessSystemManagementRequest(value: unknown, host: HeadlessHostIncarnationId):
@@ -233,8 +238,11 @@ function projectModelReferencePlanStep({operation, input: {hostIncarnationId: _h
 function projectFullBuildPlanStep(request: PreTrainingBuildPlanRequest) {
   return request.operation === "models.save-download" ? projectModelReferencePlanStep(request) : projectAnyBuildPlanStep(request);
 }
-function projectTrainingOrExistingPlanStep(request: HeadlessBuildPlanRequest) {
+function projectTrainingOrExistingPlanStep(request: PreTrainingSaveBuildPlanRequest) {
   return request.operation === "models.train" ? projectHeadlessModelTrainingBuildPlanStep(request) : projectFullBuildPlanStep(request);
+}
+function projectTrainingSaveOrExistingPlanStep(request: HeadlessBuildPlanRequest) {
+  return request.operation === "models.save-training" ? projectHeadlessModelTrainingSaveBuildPlanStep(request) : projectTrainingOrExistingPlanStep(request);
 }
 
 type PlanScope = { readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId };
@@ -262,7 +270,8 @@ type MixedPreview = PlanPreview<typeof LOCAL_FILE_PLAN_PREVIEW_VERSION, SystemSt
   PlanPreview<typeof CONTEXT_QUERY_PLAN_PREVIEW_VERSION, ReturnType<typeof projectBuildPlanStep> | ReturnType<typeof projectContextQueryPlanStep>> |
   PlanPreview<typeof MODEL_DOWNLOAD_PLAN_PREVIEW_VERSION, ReturnType<typeof projectAnyBuildPlanStep>> |
   PlanPreview<typeof MODEL_REFERENCE_PLAN_PREVIEW_VERSION, ReturnType<typeof projectFullBuildPlanStep>> |
-  PlanPreview<typeof MODEL_TRAINING_PLAN_PREVIEW_VERSION, ReturnType<typeof projectTrainingOrExistingPlanStep>>;
+  PlanPreview<typeof MODEL_TRAINING_PLAN_PREVIEW_VERSION, ReturnType<typeof projectTrainingOrExistingPlanStep>> |
+  PlanPreview<typeof MODEL_TRAINING_SAVE_PLAN_PREVIEW_VERSION, ReturnType<typeof projectTrainingSaveOrExistingPlanStep>>;
 type PlanSuccess<Request, Preview> = { readonly ok: true; readonly scope: PlanScope; readonly requests: readonly Request[];
   readonly preview: Preview };
 type PlanFailure = typeof invalid | { readonly ok: false; readonly code: "headless.host-changed" };
@@ -296,7 +305,9 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
     for (const step of steps) {
       const { operation, ...fields } = readStrictPassiveRecord(step, proposalFields);
       const input = { version: HEADLESS_CONTRACT_VERSION, operation, input: { ...scope, ...fields } };
-      const decoded = operation === "models.train" && options?.allowModelTraining === true
+      const decoded = operation === "models.save-training" && options?.allowModelTrainingSave === true
+        ? readHeadlessModelTrainingSavePlanRequest(input, host)
+        : operation === "models.train" && options?.allowModelTraining === true
         ? readHeadlessModelTrainingPlanRequest(input, host)
         : operation === "models.save-download" && options?.allowModelReferenceSave
         ? readHeadlessModelReferenceSavePlanRequest(input, host)
@@ -345,7 +356,7 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       } else if (request.operation === "context.save-result") {
         if (savedContexts.has(request.input.taskId)) return invalid;
         savedContexts.add(request.input.taskId);
-      } else if (request.operation === "models.save-download") {
+      } else if (request.operation === "models.save-download" || request.operation === "models.save-training") {
         if (savedModels.has(request.input.taskId)) return invalid;
         savedModels.add(request.input.taskId);
       } else if (request.operation === "models.download") {
@@ -361,9 +372,12 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       proposed.push(request);
     }
     const previewScope = { ...scope, approval: "required" as const };
-    if (proposed.some(request => request.operation === "models.train")) return {ok: true, scope, requests: proposed,
-      preview: {version: MODEL_TRAINING_PLAN_PREVIEW_VERSION, ...previewScope, steps: proposed.map(projectTrainingOrExistingPlanStep)}};
-    const existingRequests = proposed.filter((request): request is PreTrainingBuildPlanRequest => request.operation !== "models.train");
+    if (proposed.some(request => request.operation === "models.save-training")) return {ok: true, scope, requests: proposed,
+      preview: {version: MODEL_TRAINING_SAVE_PLAN_PREVIEW_VERSION, ...previewScope, steps: proposed.map(projectTrainingSaveOrExistingPlanStep)}};
+    const trainingRequests = proposed.filter((request): request is PreTrainingSaveBuildPlanRequest => request.operation !== "models.save-training");
+    if (trainingRequests.some(request => request.operation === "models.train")) return {ok: true, scope, requests: trainingRequests,
+      preview: {version: MODEL_TRAINING_PLAN_PREVIEW_VERSION, ...previewScope, steps: trainingRequests.map(projectTrainingOrExistingPlanStep)}};
+    const existingRequests = trainingRequests.filter((request): request is PreTrainingBuildPlanRequest => request.operation !== "models.train");
     if (savedModels.size) return {ok: true, scope, requests: existingRequests,
       preview: {version: MODEL_REFERENCE_PLAN_PREVIEW_VERSION, ...previewScope, steps: existingRequests.map(projectFullBuildPlanStep)}};
     const preReferenceRequests = existingRequests.filter((request): request is PreReferenceBuildPlanRequest => request.operation !== "models.save-download");

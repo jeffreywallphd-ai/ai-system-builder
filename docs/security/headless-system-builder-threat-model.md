@@ -3828,3 +3828,15 @@ payload denials. Labels stay literal untrusted text; no text grants permission,
 executes instructions, selects a path or proves current candidate integrity.
 Cached/current completion and Core/SQLite registry fixtures check this boundary
 without running a model or changing original-task and separate Save authority.
+
+The separate trained Save build-plan capability is trusted configuration only.
+Its v14 canonical preview binds original task, candidate digest, exact name/key
+and bounded-local-copy/Models effects. Reject untrusted capability flags, widened
+or missing limits, readiness/service claims, duplicate task Saves and private
+locators. Preserve older canonical previews. Popup/chat and both approval modes
+use existing decision revision/expiry checks and inert text; viewing a request
+cannot grant it. Saved replies remain closed and path-free. Generic unconfigured
+storage/source paths deny this family. Proposal and UI support do not establish
+current files, original task ownership, consent, registry commit or cleanup proof.
+Original-owner orchestration and real-host qualification remain separate work;
+ADR-0049 signed-in account/dependency trust and no reserved quota remain explicit.

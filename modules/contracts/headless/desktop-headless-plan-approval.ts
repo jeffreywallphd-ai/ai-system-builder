@@ -3,7 +3,7 @@ import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { isDesktopHeadlessClientId, isDesktopHeadlessFingerprint } from "./desktop-headless-pairing";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "./headless-read-request";
 import {readHeadlessModelDownloadPlanRequest, readHeadlessModelReferenceSavePlanRequest} from "./headless-model-download-plan";
-import {readHeadlessModelTrainingPlanRequest} from "./headless-model-training-plan";
+import {readHeadlessModelTrainingPlanRequest, readHeadlessModelTrainingSavePlanRequest} from "./headless-model-training-plan";
 import { readHeadlessPlanReviewAgentResult, readHeadlessPlanReviewDecisionChoice,
   type HeadlessPlanReviewAgentResult, type HeadlessPlanReviewDecisionChoice } from "./headless-plan-review-wire";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
@@ -122,6 +122,10 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
       const modelDownload = operation === "models.download";
       const modelSaving = operation === "models.save-download";
       const modelTraining = operation === "models.train";
+      const trainedModelSaving = operation === "models.save-training";
+      const trainedSave = trainedModelSaving ? readHeadlessModelTrainingSavePlanRequest({version: HEADLESS_CONTRACT_VERSION, operation,
+        input: {...readStrictPassiveRecord(input, ["idempotencyKey", "name", "taskId", "candidateDigest"]),
+          hostIncarnationId, workspaceId}}, hostIncarnationId) : undefined;
       const training = modelTraining ? readHeadlessModelTrainingPlanRequest({version: HEADLESS_CONTRACT_VERSION, operation,
         input: {...readStrictPassiveRecord(input, ["idempotencyKey", "name", "model", "dataset", "training"]),
           hostIncarnationId, workspaceId}}, hostIncarnationId) : undefined;
@@ -131,7 +135,11 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
         input: {...readStrictPassiveRecord(input, ["idempotencyKey", "name", "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode"]),
           hostIncarnationId, workspaceId}}, hostIncarnationId) : undefined;
       const contextGeneration = contextPack || contextRag;
-      if (modelTraining ? !training?.ok || !exactLimitFields(limits,
+      if (trainedModelSaving ? !trainedSave?.ok || !exactLimitFields(limits,
+          ["modelCalls", "loadsModel", "writesModelRegistry", "storageAuthority", "runtimeReadiness", "exactReviewRequired"]) ||
+          limits.modelCalls !== 0 || limits.loadsModel !== false || limits.writesModelRegistry !== true ||
+          limits.storageAuthority !== "bounded-local-copy" || limits.runtimeReadiness !== "not-checked" || limits.exactReviewRequired !== true :
+          modelTraining ? !training?.ok || !exactLimitFields(limits,
           ["modelCalls", "loadsModel", "writesModelRegistry", "explicitSaveRequired", "runtimeReadiness", "resourceAdmission"]) ||
           limits.modelCalls !== "required" || limits.loadsModel !== true || limits.writesModelRegistry !== false ||
           limits.explicitSaveRequired !== true || limits.runtimeReadiness !== "not-checked" || limits.resourceAdmission !== "not-checked" :
@@ -164,10 +172,11 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
         throw new Error("Invalid processing limits.");
       const providerFile = operation === "data.save-provider-source";
       const savingFile = operation === "data.save-local-source" || providerFile;
-      if (effect !== (modelTraining ? "train-local-model" : modelSaving ? "save-reviewed-model-reference" : modelDownload ? "download-model-files" : contextQuery ? "query-saved-context" : contextSave ? "save-reviewed-context" : contextRag ? "generate-rag-database" : contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
+      if (effect !== (trainedModelSaving ? "save-reviewed-trained-model" : modelTraining ? "train-local-model" : modelSaving ? "save-reviewed-model-reference" : modelDownload ? "download-model-files" : contextQuery ? "query-saved-context" : contextSave ? "save-reviewed-context" : contextRag ? "generate-rag-database" : contextPack ? "generate-context-pack" : dataset ? "prepare-local-dataset" : resultSave ? "save-prepared-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
           externalProviderCalls !== (providerFile || modelDownload ? "required" : 0))
         throw new Error("Invalid approval effects.");
-      const fields = readStrictPassiveRecord(input, modelTraining ? ["idempotencyKey", "name", "model", "dataset", "training"] :
+      const fields = readStrictPassiveRecord(input, trainedModelSaving ? ["idempotencyKey", "name", "taskId", "candidateDigest"] :
+        modelTraining ? ["idempotencyKey", "name", "model", "dataset", "training"] :
         modelSaving ? ["idempotencyKey", "name", "taskId", "sourceManifest"] :
         modelDownload ? ["idempotencyKey", "name", "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode"] :
         contextQuery ? ["idempotencyKey", "reference", "queryDigest", "modelRecordId", "modelUpdatedAt", "maximumResults", "embeddingDevice"] :

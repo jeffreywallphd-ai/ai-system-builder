@@ -203,6 +203,7 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const modelDownloading = view.preview.steps.some(step => step.operation === "models.download");
   const modelSaving = view.preview.steps.some(step => step.operation === "models.save-download");
   const modelTraining = view.preview.steps.some(step => step.operation === "models.train");
+  const trainedModelSaving = view.preview.steps.some(step => step.operation === "models.save-training");
   const processing = datasetProcessing || contextProcessing || ragProcessing || contextQuerying || modelDownloading || modelTraining;
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
@@ -264,6 +265,13 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
         <li>Before training starts, the app must check the input files, runtime support and available memory and disk space. This preview does not confirm those checks.</li>
         <li>Each training step covers local training only. Model downloads, software installation, outside publication and window control need their own approval.</li>
       </> : null}
+      {trainedModelSaving ? <>
+        <li>Copy only the reviewed trained candidate from the original task below, within the app’s local file and disk-space limits.</li>
+        <li>Add that copy to this workspace’s Models list with the exact name and candidate fingerprint shown below.</li>
+        <li>Check current files and your permissions again before saving. Keep original files until the save and cleanup outcome is known.</li>
+        <li>This uses local storage under your signed-in account. It does not provide a separate protected storage service or a reserved disk quota.</li>
+        <li>Saving starts no model calls, downloads or training. Runtime support, license rights and model quality stay unchecked. Publication and window control need separate permission.</li>
+      </> : null}
       <li>Limit of {state.stepCount} {contextQuerying || modelDownloading ? state.stepCount === 1 ? "work item" : "work items" : `${processing ? "" : "saved "}${state.stepCount === 1 ? "change" : "changes"}`} for this plan.</li>
       {modelDownloading ? <li>Outside file transfers are required. This request makes no paid model calls.</li> : providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
@@ -274,7 +282,12 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     </time>.</p>
     <ol aria-label="Requested changes">
       {view.preview.steps.map((step, index) => <li key={step.input.idempotencyKey}>
-        {step.operation === "models.train" ? <>
+        {step.operation === "models.save-training" ? <>
+          <strong>Save reviewed trained model: {step.input.name}</strong>
+          <div style={{overflowWrap: "anywhere"}}>Original training task: <code>{step.input.taskId}</code></div>
+          <div style={{overflowWrap: "anywhere"}}>Candidate fingerprint: <code>{step.input.candidateDigest}</code></div>
+          <div>Copy the exact reviewed candidate and create its Models record. Runtime support, license rights and model quality remain unchecked.</div>
+        </> : step.operation === "models.train" ? <>
           <strong>Train a local model: {step.input.name}</strong>
           <div>Model record: {step.input.model.modelRecordId}. Saved at {step.input.model.updatedAt}.</div>
           <div>Dataset: {step.input.dataset.datasetId}. Saved version: {step.input.dataset.versionId}.</div>

@@ -11,6 +11,70 @@ import {isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal, readDesktop
   readManagedBrowserPlanApprovalValue, type DesktopPlanApprovalDecision} from "../../../../contracts/headless";
 import {HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient} from "../HeadlessPlanApprovalDialog";
 
+test("trained Model Save displays its exact separate permission in popup/chat and both decision modes", async () => {
+  const host = randomUUID(); assert.ok(isHeadlessHostIncarnationId(host));
+  const workspaceId = createWorkspaceId("workspace.trained-save-ui"), taskId = randomUUID();
+  const name = "Prompt safety & training model", candidateDigest = "sha256:" + "a".repeat(64);
+  const caps = {allowLocalFileSave: false, allowModelTrainingSave: true};
+  const parsed = parseHeadlessBuildPlanProposal({hostIncarnationId: host, workspaceId, steps: [
+    {operation: "models.save-training", idempotencyKey: randomUUID(), name, taskId, candidateDigest}]}, host, caps); assert.ok(parsed.ok);
+  const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+  const selection = {workspaceId, fingerprint, registeredClientId: randomUUID()}, viewId = randomUUID(), expiresAt = Date.now() + 60000;
+  const state = {fingerprint, revision: 1, stepCount: 1, approvedSteps: 0, expiresAt, status: "pending" as const};
+  const packet = {selection, viewId, preview: parsed.preview, state};
+  const view = readDesktopPlanApprovalView(packet, selection, caps); assert.ok(view);
+  assert.deepEqual(readManagedBrowserPlanApprovalValue({operation: "open", selection,
+    document: {hostIncarnationId: host, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID()}}, packet, caps), view);
+  const dom = new JSDOM("<body><div id='app'></div></body>", {pretendToBeVisual: true});
+  const globals = {window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true};
+  const originals = Object.fromEntries(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  Object.assign(globalThis, globals);
+  try {
+    for (const surface of ["popup", "chat"] as const) for (const mode of ["each-change", "whole-plan"] as const) {
+      const decisions: DesktopPlanApprovalDecision[] = [];
+      const client: HeadlessPlanApprovalClient = {
+        async list() {return [{...selection, expiresAt}];}, async open() {return view;}, async dismiss() {},
+        async decide(decision) {decisions.push(decision); return {...state, revision: 2, mode, approvedSteps: 1, status: "approved"};},
+      };
+      const root = createRoot(dom.window.document.getElementById("app")!);
+      const button = (text: string, prefix = false) => {
+        const found = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find(b =>
+          prefix ? b.textContent?.trim().startsWith(text) : b.textContent?.trim() === text);
+        assert.ok(found, "Missing expected action: " + text); return found;
+      };
+      try {
+        await act(async () => root.render(<HeadlessPlanApprovalDialog workspaceId={workspaceId} workspaceName="Training workspace" client={client} surface={surface} />));
+        await act(async () => button(surface === "popup" ? "Review plan requests" : "Open plan approval chat").click());
+        await act(async () => button("Review request " + fingerprint.slice(0, 8), true).click());
+        const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]')?.textContent ?? "";
+        for (const expected of [/Copy only the reviewed trained candidate/, /local file and disk-space limits/, /Models list/, /candidate fingerprint/,
+          /Check current files and your permissions again/, /Keep original files/, /signed-in account/, /does not provide a separate protected storage service/,
+          /no model calls, downloads or training/, /license rights and model quality stay unchecked/, /Publication and window control need separate permission/])
+          assert.match(permissions, expected);
+        assert.doesNotMatch(permissions, /library metadata only|Saving makes no.*file changes/);
+        const changes = dom.window.document.querySelector('[aria-label="Requested changes"]')?.textContent ?? "";
+        for (const expected of [name, taskId, candidateDigest]) assert.ok(changes.includes(expected));
+        assert.match(changes, /Save reviewed trained model/);
+        assert.equal(dom.window.document.querySelector('[aria-label="Training settings"]'), null);
+        assert.equal(dom.window.document.querySelectorAll("img, script").length, 0);
+        assert.deepEqual(decisions, [], "Viewing a permission request cannot grant it.");
+        if (mode === "whole-plan") await act(async () => {
+          const radio = [...dom.window.document.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
+            .find(r => r.parentElement?.textContent?.includes("Approve all listed changes")); assert.ok(radio); radio.click();
+        });
+        await act(async () => button(mode === "whole-plan" ? "Approve all changes" : "Approve change 1").click());
+        assert.deepEqual(decisions, [{selection, viewId, expectedRevision: 1,
+          decision: mode === "whole-plan" ? {kind: "approve", mode} : {kind: "approve", mode, step: 1}}]);
+      } finally {await act(async () => root.unmount());}
+    }
+  } finally {
+    for (const [key, descriptor] of Object.entries(originals)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key);
+    }
+    dom.window.close();
+  }
+});
+
 for (const variant of ["minimal", "full-mixed", "with-download"] as const) test(
   variant + " training preview shows exact permissions and settings in both approval modes and channels", async () => {
   const host = randomUUID(); assert.ok(isHeadlessHostIncarnationId(host));

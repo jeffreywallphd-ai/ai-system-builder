@@ -31,6 +31,27 @@ export interface HeadlessModelTrainingSavePlanRequest {
   readonly input: {readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId;
     readonly idempotencyKey: string; readonly taskId: string; readonly candidateDigest: string; readonly name: string};
 }
+/** Saved metadata reference only, never a filesystem locator or runtime claim. */
+export interface HeadlessSavedTrainingModelReference {
+  readonly workspaceId: WorkspaceId;
+  readonly modelRecordId: string;
+  readonly taskId: string;
+  readonly candidateDigest: string;
+  readonly storageProfile: "bounded-local-v1";
+  readonly runtimeReadiness: "not-checked";
+}
+export function readHeadlessSavedTrainingModelReference(raw: unknown, workspaceId: WorkspaceId): HeadlessSavedTrainingModelReference | undefined {
+  try {
+    const r = readStrictPassiveRecord(copyBoundedPassiveData(raw),
+      ["workspaceId", "modelRecordId", "taskId", "candidateDigest", "storageProfile", "runtimeReadiness"]);
+    if (!isWorkspaceId(workspaceId) || r.workspaceId !== workspaceId || typeof r.modelRecordId !== "string" ||
+      !/^model_headless_trained_[a-f0-9]{32}$/.test(r.modelRecordId) || !isHeadlessHostIncarnationId(r.taskId) ||
+      typeof r.candidateDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(r.candidateDigest) ||
+      r.storageProfile !== "bounded-local-v1" || r.runtimeReadiness !== "not-checked") return;
+    return {workspaceId, modelRecordId: r.modelRecordId, taskId: r.taskId, candidateDigest: r.candidateDigest,
+      storageProfile: "bounded-local-v1", runtimeReadiness: "not-checked"};
+  } catch {return;}
+}
 const invalid = {ok: false, code: "headless.invalid-request"} as const;
 function fail(): never {throw new Error("Invalid training proposal settings.");}
 function number(value: unknown, integer: boolean, minimum: number, maximum = Number.MAX_SAFE_INTEGER, exclusiveMinimum = false): number {

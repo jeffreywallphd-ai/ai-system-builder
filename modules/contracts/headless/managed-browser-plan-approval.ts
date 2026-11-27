@@ -90,6 +90,7 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
         allowModelDownload: options?.allowModelDownload === true,
         allowModelReferenceSave: options?.allowModelReferenceSave === true,
         allowModelTraining: options?.allowModelTraining === true,
+        allowModelTrainingSave: options?.allowModelTrainingSave === true,
       });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }
