@@ -1,14 +1,17 @@
 import type {ApplicationRequestContext} from "../../../../application/ports";
 import {types} from "node:util";
-import {statfs} from "node:fs/promises";
+import {createHash} from "node:crypto";
+import {constants} from "node:fs";
+import {lstat, open, statfs, type FileHandle} from "node:fs/promises";
 import path from "node:path";
-import type {TrainingResultFileByteStoragePort, TrainingResultFinalizedFiles, TrainingResultFileIoRetirement} from "../../../../application/ports/model";
+import type {TrainingResultFileByteStoragePort, TrainingResultFinalizedFiles, TrainingResultFileIoRetirement,
+  TrainingResultRetainedFileVerificationPort} from "../../../../application/ports/model";
 import type {OrganizationRequestContextProviderPort} from "../../../../application/ports/organization";
 import {isOrganizationId} from "../../../../contracts/organization";
 import {createContractError, readStrictPassiveRecord} from "../../../../contracts/shared";
 import {createStoreArtifactFailureResult, createStoreArtifactSuccessResult} from "../../../../contracts/storage";
 import {createWorkspaceId, isWorkspaceId} from "../../../../contracts/workspace";
-import {writeContainedFileStream, createContainedFileStreamLifetime, inspectContainedFileStreamLifetime,
+import {writeContainedFileStream, createContainedFileStreamLifetime, inspectContainedFileStreamLifetime, statContainedFile,
   type ContainedFileStreamLifetime} from "../../../filesystem-security";
 import {resolveOrganizationStorageKey} from "../organizationStorageScope";
 import {verifiedPublicationStream} from "./verifiedPublicationStream";
@@ -160,7 +163,7 @@ export function createFilesystemLocalTrainingResultPublication(options: {
   readonly limits: {readonly maximumFiles: number; readonly maximumFileBytes: number;
     readonly maximumTotalBytes: number; readonly minimumFreeBytes: number; readonly maximumDurationMs: number};
   readonly control: {assertCurrent(): void; assertAllowed(): Promise<void>};
-}): {readonly storage: TrainingResultFileByteStoragePort; readonly originalOwner: {
+}): {readonly storage: TrainingResultFileByteStoragePort; readonly originalOwner: TrainingResultRetainedFileVerificationPort & {
   fencePublication(): void;
   inspectFinalizedFiles(context: ApplicationRequestContext): TrainingResultFinalizedFiles;
 }} {
@@ -280,14 +283,109 @@ export function createFilesystemLocalTrainingResultPublication(options: {
       }
     },
   });
-  return Object.freeze({storage, originalOwner: Object.freeze({fencePublication: fence,
-    inspectFinalizedFiles(supplied: ApplicationRequestContext): TrainingResultFinalizedFiles {
+  const finalized = (supplied: ApplicationRequestContext): TrainingResultFinalizedFiles => {
       match(supplied); const state = inspect();
       need(fenced && !preparing && !uncertain && pending.size === 0 && !!inventory && acknowledged === inventory.files.length &&
         state.phase === "closed" && state.pendingOperations === 0 && !state.publicationUnconfirmed);
       return Object.freeze({schema: "training-result-finalized-files-v1" as const, publicationId, totalBytes: inventory.totalBytes,
         files: Object.freeze(inventory.files.map(file => Object.freeze({...file,
           key: `workspaces/${scope.workspaceId}/artifacts/training-results/${publicationId}/${file.fileIndex}`})))});
-    },
+  };
+  let reading = false, readUnknown = false;
+  const readPending = new Set<{original?: unknown; observation?: Promise<unknown>}>(), readHandles = new Set<FileHandle>();
+  const unknownReadOwners: unknown[] = [];
+  // Retain the original read attempt through an outward deadline. An unknown
+  // operation/close remains retained even after its caller has received failure.
+  let readAttempt: {original?: Promise<unknown>} | undefined;
+  const verifyFinalizedFiles: TrainingResultRetainedFileVerificationPort["verifyFinalizedFiles"] = async (supplied, rawControl) => {
+    const snapshot = finalized(supplied);
+    const controls = record(rawControl, ["assertCurrent", "assertAllowed"]);
+    need(Object.values(controls).every(value => typeof value === "function" && !types.isProxy(value)) &&
+      !types.isAsyncFunction(controls.assertCurrent) && !types.isGeneratorFunction(controls.assertCurrent) &&
+      !types.isGeneratorFunction(controls.assertAllowed));
+    need(!reading && !readUnknown && readPending.size === 0 && readHandles.size === 0 && !readAttempt);
+    const current = controls.assertCurrent as Function, allowed = controls.assertAllowed as Function;
+    const deadline = Date.now() + (limits.maximumDurationMs as number);
+    let expired = false;
+    const check = () => {
+      need(!expired && !readUnknown && Date.now() < deadline);
+      const result: unknown = Reflect.apply(current, rawControl, []);
+      if (result !== undefined) {
+        readUnknown = true; unknownReadOwners.push(result);
+        if (types.isPromise(result) && !types.isProxy(result) && Object.getPrototypeOf(result) === Promise.prototype &&
+            !Object.getOwnPropertyDescriptor(result, "constructor")) void (async () => {try {await result;} catch {}})();
+      }
+      need(result === undefined && !expired && Date.now() < deadline);
+    };
+    const original = async <T>(action: () => Promise<T>): Promise<T> => {
+      const token: {original?: unknown; observation?: Promise<unknown>} = {};
+      need(readPending.size < 8); readPending.add(token);
+      let operation: Promise<T>;
+      try {operation = action(); token.original = operation;
+        need(types.isPromise(operation) && !types.isProxy(operation) && Object.getPrototypeOf(operation) === Promise.prototype &&
+          !Object.getOwnPropertyDescriptor(operation, "constructor"));}
+      catch {readUnknown = true; throw new Error("Private training verification is unavailable.");}
+      const observed = (async () => {try {return {ok: true, value: await operation};}
+        catch {return {ok: false, value: undefined};} finally {readPending.delete(token);}})();
+      token.observation = observed;
+      if (Object.getOwnPropertyDescriptor(operation, "then")) {readUnknown = true; throw new Error("Private training verification is unavailable.");}
+      const result = await observed; need(result.ok); return result.value as T;
+    };
+    const permission = async () => {check(); need(await original(() => Reflect.apply(allowed, rawControl, [])) === undefined); check();};
+    type Facts = {dev: bigint; ino: bigint; mode: bigint; nlink: bigint; size: bigint; mtimeNs: bigint; ctimeNs: bigint};
+    const facts = (value: Facts, size: number): Facts => {
+      need(value.ino > 0n && value.nlink === 1n && value.size === BigInt(size) && (value.mode & 0o170000n) === 0o100000n);
+      return Object.freeze(Object.fromEntries(["dev", "ino", "mode", "nlink", "size", "mtimeNs", "ctimeNs"]
+        .map(key => [key, value[key as keyof Facts]]))) as Facts;
+    };
+    const same = (left: Facts, right: Facts) => Object.keys(left).every(key => left[key as keyof Facts] === right[key as keyof Facts]);
+    reading = true; const attempt: {original?: Promise<unknown>} = {}; readAttempt = attempt;
+    const work = (async () => {
+      try {
+        await permission(); const buffer = Buffer.alloc(65536);
+        for (const file of snapshot.files) {
+          check();
+          const key = resolveOrganizationStorageKey(file.key, {getCurrentOrganizationContext: () => organization});
+          const selected = await original(() => statContainedFile({rootDirectory, key})); check();
+          const before = facts(await original(() => lstat(selected.absolutePath, {bigint: true})), file.expectedSizeBytes); check();
+          const handle = await original(() => open(selected.absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)));
+          readHandles.add(handle); // Retain a late open before checking its deadline.
+          try {
+            check(); need(same(before, facts(await original(() => handle.stat({bigint: true})), file.expectedSizeBytes))); check();
+            const hash = createHash("sha256"); let total = 0;
+            for (;;) {
+              check(); const value = await original(() => handle.read(buffer, 0, buffer.length, null)); check();
+              need(Number.isSafeInteger(value.bytesRead) && value.bytesRead >= 0 && value.bytesRead <= buffer.length &&
+                value.bytesRead <= file.expectedSizeBytes - total);
+              if (value.bytesRead === 0) break;
+              total += value.bytesRead; hash.update(buffer.subarray(0, value.bytesRead));
+            }
+            need(total === file.expectedSizeBytes && "sha256:" + hash.digest("hex") === file.expectedSha256);
+            const after = facts(await original(() => handle.stat({bigint: true})), file.expectedSizeBytes); check();
+            need(same(before, after) && same(before, facts(await original(() => lstat(selected.absolutePath, {bigint: true})), file.expectedSizeBytes))); check();
+            const contained = await original(() => statContainedFile({rootDirectory, key})); check();
+            need(contained.absolutePath === selected.absolutePath);
+          } finally {
+            try {need(await original(() => handle.close()) === undefined); readHandles.delete(handle);}
+            catch {readUnknown = true; throw new Error("Private training verification is unavailable.");}
+          }
+          await permission();
+        }
+        await permission(); need(readPending.size === 0 && readHandles.size === 0 && !readUnknown);
+        return Object.freeze({...snapshot, verification: "sha256-current-local-v1" as const,
+          manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(snapshot)).digest("hex")});
+      } catch {throw new Error("Private training verification is unavailable.");}
+      finally {reading = false; if (!readUnknown) readAttempt = undefined;}
+    })();
+    attempt.original = work;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {return await Promise.race([work, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {expired = true; reject(new Error("Private training verification is unavailable."));},
+        Math.max(1, deadline - Date.now()));
+    })]);} finally {if (timer) clearTimeout(timer);}
+  };
+  return Object.freeze({storage, originalOwner: Object.freeze({fencePublication: fence, inspectFinalizedFiles: finalized,
+    verifyFinalizedFiles, inspectVerification() {return Object.freeze({phase: readUnknown ? "unconfirmed" as const : reading ? "reading" as const : "idle" as const,
+      pendingOperations: readPending.size, openFiles: readHandles.size});},
   })});
 }

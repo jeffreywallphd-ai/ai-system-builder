@@ -16,6 +16,30 @@ export interface TrainingResultFinalizedFiles {
   }>[];
 }
 
+/** Fresh private read authority, separate from the ended publication lifetime.
+ * These capabilities never come from API/IPC or confer Save/cleanup permission. */
+export interface TrainingResultFileVerificationControl {
+  assertCurrent(): void;
+  assertAllowed(): Promise<void>;
+}
+export interface TrainingResultVerifiedFiles extends TrainingResultFinalizedFiles {
+  readonly verification: "sha256-current-local-v1";
+  /** Content inventory identity only, never permission or durable custody. */
+  readonly manifestDigest: string;
+}
+export interface TrainingResultRetainedFileVerificationPort {
+  /** Verify original known files with bounded memory and actual handle closure.
+   * The caller separately proves original task success/retirement and current
+   * review permission. Returned observations do not establish model readiness. */
+  verifyFinalizedFiles(context: ApplicationRequestContext,
+    control: TrainingResultFileVerificationControl): Promise<TrainingResultVerifiedFiles>;
+  inspectVerification(): Readonly<{
+    phase: "idle" | "reading" | "unconfirmed";
+    pendingOperations: number;
+    openFiles: number;
+  }>;
+}
+
 /** Captured private adapter lifetime, never request-selected or Native custody.
  * Capture, fence and inspection are strictly synchronous. Fence returns exactly
  * undefined; Promise results cannot establish local retirement. */

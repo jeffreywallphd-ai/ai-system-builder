@@ -41,3 +41,15 @@ and its handles must close before IO reports closed. Invalid callback or Promise
 contracts stay unconfirmed. A corrupt or denied publication remains failed and
 retained even when its execution resources can retire through the original
 worker and receiver barriers. It cannot produce a finalized file inventory.
+
+The local publication owner also implements the private retained-file verifier.
+It requires finalized original inventory and fresh captured read controls. Each
+contained regular single-link file is streamed through a fixed 64 KiB buffer;
+size, SHA-256 and file identity must match before and after reading. All original
+handles must close before detached current facts return. A read deadline retains
+the original operation and prevents a concurrent attempt until it actually ends.
+A lost close or invalid operation contract stays unconfirmed. This capability
+loads no model and grants no worker, cleanup, registration or Save authority.
+Synchronous currentness is checked before and after every chunk. Fresh business
+permission is checked before and after each file and before facts return. A
+permission-only withdrawal cannot disclose facts or start reading another file.

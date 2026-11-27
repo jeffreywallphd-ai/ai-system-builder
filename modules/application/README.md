@@ -1,5 +1,12 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+`TrainingResultRetainedFileVerificationPort` provides private current-file
+observations under separately captured read authority. It verifies original
+finalized file metadata with bounded streaming and actual handle closure. This
+does not replace original task success/retirement, complete provenance, runtime
+readiness, evaluation or separate Save approval. Historical file acknowledgements
+alone remain insufficient; no raw storage locator crosses the port.
+
 Private approved training can carry a separate preparation-only Model reader.
 Shared composition reuses the original authorized saved-Model owner and compares
 the complete selected binding. The application captures its method and receiver,

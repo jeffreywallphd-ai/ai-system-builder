@@ -3704,3 +3704,14 @@ The original worker/Job and receiver barriers still own execution release. No
 timeout, late result or closed-IO value authorizes retry, result deletion,
 storage credit, finalized candidate data or Save. This failure-path correction
 changes no local trust boundary or deferred protected-service requirement.
+
+Retained-file verification treats current local content as untrusted. Only the
+original finalized publication and exact actor/task/workspace select the known
+files; callers cannot provide paths or substitute inventory. Fresh original read
+permission, finite time/bytes/files, contained regular single-link checks,
+streamed hashes and before/after file identities guard observations. Original
+operations and handles remain retained through an outward deadline; unknown
+close or callback contracts refuse another attempt. Fixed safe failures disclose
+no path, bytes or private exception. Verification performs no mutation, model
+load, provider access or Save, and cannot qualify task retirement or output
+quality. The trusted-user boundary and stronger storage-service work remain.

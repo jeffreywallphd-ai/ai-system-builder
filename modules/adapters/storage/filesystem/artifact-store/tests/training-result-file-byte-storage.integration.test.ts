@@ -134,6 +134,173 @@ function localPublicationFixture(rootDirectory: string) {
   return {...f, state, options, make};
 }
 
+async function localRetainedFixture(root: string, maximumDurationMs = 2000) {
+  const f = localPublicationFixture(root); f.options.limits.maximumDurationMs = maximumDurationMs;
+  const adapter = f.make(); await adapter.storage.preparePublication!(f.inventory(), f.actor);
+  for (const index of [0, 1]) assert.equal((await adapter.storage.publishResultFile(f.packet(index), f.actor)).ok, true);
+  adapter.originalOwner.fencePublication();
+  return {...f, adapter, owner: adapter.originalOwner,
+    target: path.join(root, "organizations", f.actor.organizationId, key(0)),
+    readControl: {assertCurrent() {}, async assertAllowed() {}}};
+}
+
+test("local verification rechecks real retained files and returns immutable path-free facts", async () => {
+  await fixture(async root => {
+    const f = await localRetainedFixture(root), result = await f.owner.verifyFinalizedFiles(f.actor, f.readControl);
+    assert.equal(result.verification, "sha256-current-local-v1"); assert.match(result.manifestDigest, /^sha256:[a-f0-9]{64}$/);
+    assert.equal(result.totalBytes, 5); assert.equal(result.files.length, 2);
+    assert.ok(Object.isFrozen(result) && Object.isFrozen(result.files) && result.files.every(Object.isFrozen)); safe(result);
+    const again = await f.owner.verifyFinalizedFiles(f.actor, f.readControl);
+    assert.notEqual(again, result); assert.notEqual(again.files, result.files); assert.equal(again.manifestDigest, result.manifestDigest);
+    assert.deepEqual(f.owner.inspectVerification(), {phase: "idle", pendingOperations: 0, openFiles: 0});
+    assert.deepEqual(await readFile(f.target), f.values[0]);
+  });
+});
+
+test("local verification needs finalized publication and exact scope before read permission", async () => {
+  await fixture(async root => {
+    const f = localPublicationFixture(root), adapter = f.make(); let permissions = 0;
+    const control = {assertCurrent() {}, async assertAllowed() {permissions++;}};
+    await assert.rejects(adapter.originalOwner.verifyFinalizedFiles(f.actor, control));
+    await adapter.storage.preparePublication!(f.inventory(), f.actor);
+    assert.equal((await adapter.storage.publishResultFile(f.packet(0), f.actor)).ok, true);
+    adapter.originalOwner.fencePublication(); await assert.rejects(adapter.originalOwner.verifyFinalizedFiles(f.actor, control));
+    assert.equal(permissions, 0);
+  });
+  await fixture(async root => {
+    const f = await localRetainedFixture(root); let permissions = 0;
+    for (const key of ["workspaceId", "requestId", "organizationId", "principalId", "correlationId"])
+      await assert.rejects(f.owner.verifyFinalizedFiles({...f.actor, [key]: "other"},
+        {assertCurrent() {}, async assertAllowed() {permissions++;}}));
+    assert.equal(permissions, 0); assert.deepEqual(f.owner.inspectVerification(), {phase: "idle", pendingOperations: 0, openFiles: 0});
+  });
+});
+
+for (const mode of ["hash", "size", "missing", "directory", "hardlink"] as const) {
+  test(`local verification refuses ${mode} changes without returning current facts`, async () => {
+    await fixture(async root => {
+      const f = await localRetainedFixture(root);
+      if (mode === "hash") await writeFile(f.target, Buffer.from("!!"));
+      if (mode === "size") await writeFile(f.target, Buffer.from("changed size"));
+      if (mode === "missing" || mode === "directory") await fs.unlink(f.target);
+      if (mode === "directory") await mkdir(f.target);
+      if (mode === "hardlink") await fs.link(f.target, path.join(root, "retained-link"));
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, f.readControl), {message: "Private training verification is unavailable."});
+      assert.deepEqual(f.owner.inspectVerification(), {phase: "idle", pendingOperations: 0, openFiles: 0});
+      assert.equal(f.adapter.storage.inspectPublication().acknowledgedFileCount, 2);
+    });
+  });
+}
+
+test("local verification captures original read controls before their first wait", async () => {
+  await fixture(async root => {
+    const f = await localRetainedFixture(root), wait = gate(); let entered = false;
+    const control = {assertCurrent() {}, async assertAllowed() {entered = true; await wait.promise;}};
+    const result = f.owner.verifyFinalizedFiles(f.actor, control); await untilNative(() => entered);
+    control.assertCurrent = () => {throw Error("replacement must not execute");};
+    control.assertAllowed = async () => {throw Error("replacement must not execute");};
+    wait.resolve(); assert.equal((await result).verification, "sha256-current-local-v1");
+  });
+});
+
+test("local verification retains late original permission after its outward deadline", {timeout: 5000}, async () => {
+  await fixture(async root => {
+    const f = await localRetainedFixture(root, 200), wait = gate(); let entered = false;
+    const pending = f.owner.verifyFinalizedFiles(f.actor, {assertCurrent() {}, async assertAllowed() {entered = true; await wait.promise;}});
+    try {
+      await untilNative(() => entered); await assert.rejects(pending);
+      assert.equal(f.owner.inspectVerification().phase, "reading"); assert.ok(f.owner.inspectVerification().pendingOperations > 0);
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, f.readControl));
+      wait.resolve(); await untilNative(() => f.owner.inspectVerification().phase === "idle");
+      assert.equal((await f.owner.verifyFinalizedFiles(f.actor, f.readControl)).verification, "sha256-current-local-v1");
+    } finally {wait.resolve();}
+  });
+});
+
+for (const stage of ["read", "close"] as const) {
+  test(`local verification awaits its actual original ${stage} after a deadline`, {timeout: 5000}, async () => {
+    await fixture(async root => {
+      const f = await localRetainedFixture(root, 200), wait = gate(); let entered = false;
+      const openOriginal = fs.open;
+      const patch = mock.method(fs, "open", (async (...args: Parameters<typeof fs.open>) => {
+        const handle = await Reflect.apply(openOriginal, fs, args), method = handle[stage].bind(handle);
+        (handle as any)[stage] = async (...values: unknown[]) => {entered = true; await wait.promise; return Reflect.apply(method, handle, values);};
+        return handle;
+      }) as typeof fs.open); syncBuiltinESMExports();
+      try {
+        const pending = f.owner.verifyFinalizedFiles(f.actor, f.readControl); await untilNative(() => entered); await assert.rejects(pending);
+        assert.equal(f.owner.inspectVerification().phase, "reading"); assert.equal(f.owner.inspectVerification().openFiles, 1);
+        await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, f.readControl));
+        wait.resolve(); await untilNative(() => f.owner.inspectVerification().phase === "idle");
+        assert.equal(f.owner.inspectVerification().openFiles, 0); assert.deepEqual(await readFile(f.target), f.values[0]);
+      } finally {wait.resolve(); patch.mock.restore(); syncBuiltinESMExports();}
+    });
+  });
+}
+
+test("local verification closes the original file after read authority is withdrawn", async () => {
+  await fixture(async root => {
+    const f = await localRetainedFixture(root); let current = true;
+    const openOriginal = fs.open;
+    const patch = mock.method(fs, "open", (async (...args: Parameters<typeof fs.open>) => {
+      const handle = await Reflect.apply(openOriginal, fs, args), read = handle.read.bind(handle);
+      (handle as any).read = async (...values: unknown[]) => {const result = await Reflect.apply(read, handle, values); current = false; return result;};
+      return handle;
+    }) as typeof fs.open); syncBuiltinESMExports();
+    try {
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, {assertCurrent() {assert.ok(current);}, async assertAllowed() {assert.ok(current);}}));
+      assert.deepEqual(f.owner.inspectVerification(), {phase: "idle", pendingOperations: 0, openFiles: 0});
+    } finally {patch.mock.restore(); syncBuiltinESMExports();}
+  });
+});
+
+test("local verification retains an unknown original close without retry or cleanup credit", async () => {
+  await fixture(async root => {
+    const f = await localRetainedFixture(root); const closes: (() => Promise<void>)[] = [], openOriginal = fs.open;
+    const patch = mock.method(fs, "open", (async (...args: Parameters<typeof fs.open>) => {
+      const handle = await Reflect.apply(openOriginal, fs, args); closes.push(handle.close.bind(handle));
+      handle.close = async () => {throw Error("private-synthetic close acknowledgement");}; return handle;
+    }) as typeof fs.open); syncBuiltinESMExports();
+    try {
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, f.readControl), {message: "Private training verification is unavailable."});
+      assert.deepEqual(f.owner.inspectVerification(), {phase: "unconfirmed", pendingOperations: 0, openFiles: 1});
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, f.readControl)); assert.equal(closes.length, 1);
+    } finally {patch.mock.restore(); syncBuiltinESMExports(); for (const close of closes) await close();}
+    assert.equal(f.owner.inspectVerification().phase, "unconfirmed", "Fixture cleanup cannot qualify the lost original close.");
+  });
+});
+
+test("local verification denies permission-only withdrawal before any next file or result", async () => {
+  await fixture(async root => {
+    const f = await localRetainedFixture(root); let allowed = true, opened = 0;
+    const openOriginal = fs.open;
+    const patch = mock.method(fs, "open", (async (...args: Parameters<typeof fs.open>) => {
+      opened++; const handle = await Reflect.apply(openOriginal, fs, args), read = handle.read.bind(handle);
+      (handle as any).read = async (...values: unknown[]) => {const result = await Reflect.apply(read, handle, values); allowed = false; return result;};
+      return handle;
+    }) as typeof fs.open); syncBuiltinESMExports();
+    try {
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, {assertCurrent() {}, async assertAllowed() {assert.ok(allowed);}}));
+      assert.equal(opened, 1); assert.deepEqual(f.owner.inspectVerification(), {phase: "idle", pendingOperations: 0, openFiles: 0});
+    } finally {patch.mock.restore(); syncBuiltinESMExports();}
+  });
+});
+
+for (const mode of ["thenable", "own-then", "own-constructor", "current-promise"] as const) {
+  test(`local verification retains an unknown ${mode} permission contract`, async () => {
+    await fixture(async root => {
+      const f = await localRetainedFixture(root), original = Promise.resolve(); let hooks = 0;
+      if (mode === "own-then") Object.defineProperty(original, "then", {get() {hooks++; throw Error("must not execute");}});
+      if (mode === "own-constructor") Object.defineProperty(original, "constructor", {get() {hooks++; throw Error("must not execute");}});
+      const control = {assertCurrent: (mode === "current-promise" ? () => original : () => {}) as () => void,
+        assertAllowed: () => mode === "thenable" ? ({then() {hooks++;}} as unknown as Promise<void>) : original};
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, control)); await tickNative();
+      assert.equal(f.owner.inspectVerification().phase, "unconfirmed"); assert.equal(f.owner.inspectVerification().openFiles, 0);
+      await assert.rejects(f.owner.verifyFinalizedFiles(f.actor, f.readControl)); assert.equal(hooks, 0);
+    });
+  });
+}
+
 test("local publication retains the complete original receiver inventory after real file IO closes", {timeout: 5000}, async () => {
   await fixture(async root => {
     const f = localPublicationFixture(root), adapter = f.make(), wire = nativeReceiverFixture(false, adapter.storage);
