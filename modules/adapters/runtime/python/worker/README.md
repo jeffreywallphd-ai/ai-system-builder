@@ -1,3 +1,11 @@
+## Single-prompt causal generation
+
+Single-prompt causal generation asks the tokenizer to omit segment token IDs.
+Generic fast tokenizers can otherwise add `token_type_ids` that decoder models
+such as Qwen2 reject. Input IDs, attention masks, generation limits, constrained
+decoding and output slicing retain their existing behavior. This does not change
+chat-template or text-to-text tokenization, model loading or resource guards.
+
 ## Read-binding diagnostic boundary
 
 The fixed developer-only `qualify_windows_offload_read_binding.py` entry reuses

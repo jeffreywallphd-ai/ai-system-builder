@@ -76,8 +76,8 @@ class _FakeTokenizer:
     def __init__(self):
         self.message_calls: list[list[dict[str, str]]] = []
 
-    def __call__(self, prompt: str, return_tensors: str = "pt"):
-        del return_tensors
+    def __call__(self, prompt: str, return_tensors: str = "pt", return_token_type_ids=None):
+        del return_tensors, return_token_type_ids
         if prompt == "prompt":
             return {"input_ids": _FakeTensor([11, 22, 33])}
         return {"input_ids": _FakeTensor([1, 2, 3])}
@@ -1486,6 +1486,40 @@ class LocalTextGenerationTests(unittest.TestCase):
 
         self.assertEqual(generator.generate_text("prompt"), "44 55")
         self.assertEqual(fake_model.generate_calls[0]["pad_token_id"], 0)
+
+    def test_causal_generic_fast_tokenizer_does_not_send_segment_ids_to_decoder(self) -> None:
+        calls = []
+
+        class GenericFastTokenizer(_FakeTokenizer):
+            def __call__(self, prompt, return_tensors="pt", return_token_type_ids=None):
+                calls.append(return_token_type_ids)
+                result = super().__call__(prompt, return_tensors)
+                result["attention_mask"] = _FakeTensor([1, 1, 1])
+                if return_token_type_ids is not False:
+                    result["token_type_ids"] = _FakeTensor([0, 0, 0])
+                return result
+
+        class DecoderWithoutSegmentIds(_FakeModel):
+            def generate(self, **kwargs):
+                if "token_type_ids" in kwargs:
+                    raise ValueError("token_type_ids are not used by this decoder")
+                return super().generate(**kwargs)
+
+        config = ExampleGenerationConfig.model_validate({"mode": "qa", "model": {
+            "provider": "transformers", "modelId": "synthetic/causal-tokenizer", "inferenceMode": "causal"}})
+        model = DecoderWithoutSegmentIds()
+        decoder = _FakeConstrainedJsonDecoder()
+        with patch("modules.adapters.runtime.python.worker.tasks.local_text_generation.TransformersCausalGenerator._load_model",
+                   return_value=(GenericFastTokenizer(), model)), patch(
+            "modules.adapters.runtime.python.worker.tasks.local_text_generation.ConstrainedJsonDecoder", return_value=decoder):
+            generator = get_or_create_local_text_generator(config)
+            self.assertEqual(generator.generate_text("prompt"), "44 55")
+            self.assertEqual(generator.generate_text("prompt", constrained_json_schema={}), '{"answer":"ok"}')
+        self.assertEqual(calls, [False, False])
+        self.assertNotIn("token_type_ids", model.generate_calls[0])
+        self.assertNotIn("token_type_ids", decoder.calls[0]["generation_inputs"])
+        self.assertEqual(model.generate_calls[0]["attention_mask"].values, [1, 1, 1])
+        self.assertEqual(model.generate_calls[0]["max_new_tokens"], DEFAULT_MAX_NEW_TOKENS)
 
     def test_causal_mode_routes_an_explicit_schema_through_the_decoder(self) -> None:
         config = ExampleGenerationConfig.model_validate(

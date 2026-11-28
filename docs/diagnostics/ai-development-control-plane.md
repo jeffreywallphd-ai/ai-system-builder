@@ -3770,3 +3770,9 @@ installed interpreter/model settings, pinned files, unchanged native resource
 ceilings and private diagnostic limits are described in the qualification
 README. The generated cache is not supplier provenance. No model accuracy test,
 image execution, new download, public-host or parent qualification is implied.
+
+`headless-text-tokenization-unit` selects the exact local text generator worker
+test module when its source or tests change. It uses controlled tokenizer/model
+objects, includes decoder argument compatibility and keeps existing generation
+neighbors. It never launches a model. Only complete known source coverage may
+narrow the related controller checks; unknown or missing support keeps fallback.

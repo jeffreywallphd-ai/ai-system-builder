@@ -32,6 +32,19 @@ class TextWorkflowRoutingTests(unittest.TestCase):
         self.assertIn(catalog.TEXT_WORKFLOW_FEATURE, checks["headless-bounded-text-feature"]["argv"])
         self.assertLessEqual(checks["headless-bounded-text-feature"]["timeout"], 300)
 
+    def test_worker_tokenization_has_exact_software_coverage_without_physical_execution(self):
+        for name in catalog.TEXT_TOKENIZATION_REQUIRED:
+            checks = self.select([name])
+            self.assertIn("headless-text-tokenization-unit", checks)
+            self.assertNotIn("headless-bounded-text-feature", checks)
+            self.assertNotIn("focused-tests", checks)
+            self.assertEqual(checks["headless-text-tokenization-unit"]["argv"][-1],
+                             "modules.adapters.runtime.python.worker.tests.test_local_text_generation")
+        checks = self.select(catalog.TEXT_TOKENIZATION_SCOPE)
+        self.assertIn("headless-text-tokenization-unit", checks)
+        self.assertIn("-k", checks["control-plane"]["argv"])
+        self.assertNotIn("headless-bounded-text-feature", checks)
+
     def test_complete_controller_scope_is_focused_but_unknown_and_explicit_fallback_remain(self):
         checks = self.select(catalog.TEXT_WORKFLOW_SCOPE)
         self.assertIn("-k", checks["control-plane"]["argv"])
@@ -43,7 +56,7 @@ class TextWorkflowRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.select(catalog.TEXT_WORKFLOW_SCOPE, ("focused-tests",)))
 
     def test_missing_source_or_directory_never_borrows_the_complete_profile(self):
-        names = (*catalog.TEXT_WORKFLOW_REQUIRED, catalog.TEXT_WORKFLOW_CONTROLLER,
+        names = (*catalog.TEXT_WORKFLOW_REQUIRED, *catalog.TEXT_TOKENIZATION_REQUIRED, catalog.TEXT_WORKFLOW_CONTROLLER,
                  "dev-tools/helpers/tests/test_control_plane_focused.py")
         with tempfile.TemporaryDirectory(prefix="text-workflow-routing-") as temporary:
             root = Path(temporary)
@@ -79,6 +92,32 @@ class TextWorkflowRoutingTests(unittest.TestCase):
         self.assertIn('HF_HUB_OFFLINE: "1"', source)
         self.assertIn('modelQualityTested: false', source)
         self.assertNotIn('ensureModelDownloaded(', source)
+
+    def test_missing_tokenization_support_preserves_conservative_coverage(self):
+        names = (*catalog.TEXT_WORKFLOW_REQUIRED, *catalog.TEXT_TOKENIZATION_REQUIRED, catalog.TEXT_WORKFLOW_CONTROLLER,
+                 "dev-tools/helpers/tests/test_control_plane_focused.py")
+        with tempfile.TemporaryDirectory(prefix="text-tokenization-routing-") as temporary:
+            root = Path(temporary)
+            configuration = Path("dev-tools/config/contributor-check-profiles.json")
+            (root / configuration).parent.mkdir(parents=True)
+            (root / configuration).write_bytes((self.root / configuration).read_bytes())
+            for name in names:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("// inert\n")
+            for name in catalog.TEXT_TOKENIZATION_REQUIRED:
+                target = root / name
+                target.unlink()
+                for directory in (False, True):
+                    if directory:
+                        target.mkdir()
+                    checks = self.select(catalog.TEXT_TOKENIZATION_SCOPE, root=root)
+                    self.assertNotIn("headless-text-tokenization-unit", checks)
+                    self.assertIn("focused-tests", checks)
+                    self.assertNotIn("-k", checks["control-plane"]["argv"])
+                    if directory:
+                        target.rmdir()
+                target.write_text("// inert\n")
 
 
 if __name__ == "__main__":

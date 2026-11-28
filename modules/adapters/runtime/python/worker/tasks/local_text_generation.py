@@ -1128,6 +1128,7 @@ class TransformersCausalGenerator(LocalTextGenerator):
         tokenized = self._tokenizer(
             _compose_non_chat_prompt(prompt, system_prompt),
             return_tensors="pt",
+            return_token_type_ids=False,
         )
         input_ids = tokenized["input_ids"]
         generation_inputs = _move_tokenized_inputs_to_model_device(tokenized, self._model)

@@ -66,6 +66,8 @@
     "actual_execution": "pending separate explicit qualification Work and original owned cleanup proof",
     "quality_scored": false,
     "failure_diagnostics_work_id": "headless-text-failure-diagnostics",
-    "failure_diagnostics_scope": "Fixed workflow checkpoints and allowlisted original runtime status/error code/class only; no arbitrary detail text. The first actual Tiny text receipt remains failed with original worker, fixture, IO and fresh-root cleanup confirmed."
+    "failure_diagnostics_scope": "Fixed workflow checkpoints and allowlisted original runtime status/error code/class only; no arbitrary detail text. The first actual Tiny text receipt remains failed with original worker, fixture, IO and fresh-root cleanup confirmed.",
+    "causal_tokenizer_work_id": "headless-causal-tokenizer-inputs",
+    "causal_tokenizer_scope": "Single-prompt causal tokenization omits unsupported segment IDs. A generic fast-tokenizer/decoder regression first reproduced ValueError, then verifies retained attention masks, generation limits, constrained decoding and output slicing. This is software proof only; the actual original ValueError still requires a fresh explicit execution check."
   }
 }
