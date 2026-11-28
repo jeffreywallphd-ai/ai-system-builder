@@ -360,6 +360,19 @@ MODEL_WINDOW_JOURNEY_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_mo
 MODEL_WINDOW_JOURNEY_SCOPE = MODEL_WINDOW_JOURNEY_REQUIRED + (MODEL_WINDOW_JOURNEY_CONTROLLER,
     "dev-tools/helpers/control_plane/catalog.py", "dev-tools/scripts/qualification/headless-training/README.md",
     "docs/diagnostics/ai-development-control-plane.md", "docs/operations/headless-text-generation-feature.json")
+MANAGED_MODEL_WINDOW_REQUIRED = (
+    "dev-tools/scripts/qualification/visual-composer/managed-headless-model-window.ts",
+    "dev-tools/scripts/qualification/tests/managed-headless-model-window.unit.test.ts",
+    "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+    "dev-tools/scripts/qualification/visual-composer/managed-reference-database.mjs",
+    "dev-tools/scripts/qualification/visual-composer/managed-reference-lifecycle.mjs",
+    "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts",
+    "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+    "dev-tools/scripts/qualification/tests/managed-reference-database.unit.test.mjs")
+MANAGED_MODEL_WINDOW_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_managed_model_window.py"
+MANAGED_MODEL_WINDOW_SCOPE = MANAGED_MODEL_WINDOW_REQUIRED + (MANAGED_MODEL_WINDOW_CONTROLLER,
+    "dev-tools/helpers/control_plane/catalog.py", "dev-tools/scripts/qualification/headless-training/README.md",
+    "docs/diagnostics/ai-development-control-plane.md", "docs/operations/headless-text-generation-feature.json")
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
@@ -1183,6 +1196,18 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_required_files": MODEL_WINDOW_JOURNEY_REQUIRED,
         "sources": MODEL_WINDOW_JOURNEY_SCOPE,
         "command": ("--import", "tsx", "--test", "--", MODEL_WINDOW_JOURNEY_REQUIRED[3], MODEL_WINDOW_JOURNEY_REQUIRED[5], MODEL_WINDOW_JOURNEY_REQUIRED[-1]),
+    },
+    "headless-managed-model-window-unit": {
+        "automatic_sources": MANAGED_MODEL_WINDOW_REQUIRED[:2],
+        "automatic_required_files": MANAGED_MODEL_WINDOW_REQUIRED,
+        "sources": MANAGED_MODEL_WINDOW_SCOPE,
+        "command": ("--import", "tsx", "--test", "--", MANAGED_MODEL_WINDOW_REQUIRED[1], *MANAGED_MODEL_WINDOW_REQUIRED[-2:]),
+    },
+    "headless-managed-model-window-journey": {
+        "automatic_sources": MANAGED_MODEL_WINDOW_REQUIRED[:2],
+        "automatic_required_files": MANAGED_MODEL_WINDOW_REQUIRED,
+        "sources": MANAGED_MODEL_WINDOW_SCOPE, "timeout": 900,
+        "command": ("--import", "tsx", MANAGED_MODEL_WINDOW_REQUIRED[0]),
     },
     "headless-model-window-profile-types": {
         "companion_to": "headless-model-window-profile-unit", "sources": MODEL_WINDOW_JOURNEY_SCOPE,
@@ -4969,6 +4994,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_model_window_journey.", "-k", "test_control_plane_focused."]
+    if (paths and set(paths) <= set(MANAGED_MODEL_WINDOW_SCOPE)
+            and ("dev-tools/helpers/control_plane/catalog.py" in paths or MANAGED_MODEL_WINDOW_CONTROLLER in paths)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": MANAGED_MODEL_WINDOW_REQUIRED +
+                (MANAGED_MODEL_WINDOW_CONTROLLER, "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_managed_model_window.", "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

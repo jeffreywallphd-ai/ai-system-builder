@@ -3808,6 +3808,18 @@ the original Windows launcher. Native and launcher zero exit plus observer
 closure are required before removing the fresh profile. Shell text and PID
 absence cannot supply this proof; earlier uncertain profiles stay retained.
 
+`headless-managed-model-window-unit` checks finite saved-selector projection and
+the existing disposable database/lifecycle invariants. Its fixed journey builds
+the current thin client and executes only the corresponding real Managed Model
+display case with OIDC, PostgreSQL, verified local TLS, background Chrome and an
+official MCP client. It uses one newly acquired local hash-pinned database, never
+pulls or adopts, and requires existing host cleanup plus exact container stop.
+Only fixed stages and boolean outcomes reach evidence. It accepts no arguments
+and grants no model/provider or conversation-key authority. Complete known source
+coverage narrows only related controller tests; missing dependencies, unknown
+impact and explicit generic checks retain conservative routing. Whole-system
+and other actual model/runtime qualification remain separate.
+
 `headless-model-record-presentation-unit` exercises the original recorded Model
 reader, exact selector and shared card. Its strict companion compiles production
 reader/card/Desktop Root and related typed tests. The existing window authority,

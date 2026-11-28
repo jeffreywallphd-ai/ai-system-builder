@@ -13,6 +13,28 @@ This is a feature UI test. It starts no model, Python runtime, download,
 training, provider call or accuracy evaluation. Trace, screenshots and video are
 off because pairing uses an ephemeral credential.
 
+The separate `headless-managed-model-window-journey` check runs the matching
+Managed browser feature. Its fixed driver accepts no arguments:
+
+```text
+node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-model-window.ts
+```
+
+It builds the current thin client, acquires a fresh database from the existing
+installed hash-pinned local Docker image, and reuses the real OIDC, TLS and
+PostgreSQL host fixture. Headless Chrome and an official MCP client check exact
+saved Model display, separate window consent, stale refusal, replay, minimal
+context, revoke and restored manual controls. Browser requests are restricted
+to the pinned local test origin. Only the fixed local Docker endpoint is used;
+there is no image pull, remote Docker selection or adoption of older resources.
+The existing host owners close their processes. The exact new database container
+is stopped after the host closes. A failure in any required cleanup step keeps
+the run unqualified. Evidence contains fixed stages and booleans, not credentials,
+private configuration, model output or arbitrary errors. There are no model,
+provider, training, generation, download or accuracy calls. The controlled host
+health worker remains the existing fixture. This grants no actual-model,
+conversation-key-policy, Task75 or parent qualification.
+
 The developer-only fixed driver accepts no arguments:
 
 ```text

@@ -88,6 +88,13 @@
     "model_runtime_executed": false,
     "limitations": "Synthetic saved metadata reference only. No actual model/provider/download/training/accuracy, Managed key policy, Task75 or parent qualification."
   },
+  "managed_model_display_journey": {
+    "work_id": "headless-managed-model-window-qualification",
+    "scope": "Current built thin client, real local OIDC/TLS/PostgreSQL host, official MCP client and original saved Model reference, with separate exact browser consent, stale refusal, replay/context, revoke and owned fixture cleanup.",
+    "evidence_policy": "The exact executed Work receipt and independent review must establish this result. This declaration supplies no pass.",
+    "model_runtime_executed": false,
+    "limitations": "Synthetic Model metadata only. No actual model, provider, download, training, generation, accuracy, Managed conversation-key choice, Task75 or parent qualification. The controlled host health worker stays separate from actual model evidence."
+  },
   "shared_fixture_support": {
     "work_id": "headless-bounded-text-workflow-test",
     "fixture": "modules/hosts/desktop/composition/tests/headless-text-workflow.fixture.ts",
