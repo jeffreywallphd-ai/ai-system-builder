@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-28T07:34:19Z`
+- Updated: `2026-11-28T13:21:27Z`
 
 ## Objective
 
@@ -445,13 +445,13 @@ Select, download and verify an appropriate supported local model. Fine-tune and 
 
 Task counts show implementation tracking. Technical qualification remains separate.
 
-- **Discover and acquire supported models**: 5 of 6 tasks complete
+- **Discover and acquire supported models**: 6 of 6 tasks complete
   - Inspect installed models (`inspect-installed-models`): complete
   - Inspect the exact model source (`review-pinned-model-source`): complete
   - Execute an exact approved download (`execute-approved-model-download`): complete
   - Connect downloads and owned task controls (`monitor-and-cancel-model-download`): complete
   - Review and save the completed model (`review-and-save-downloaded-model`): complete
-  - Connect approved model downloads on both hosts (`connect-approved-model-downloads`): planned
+  - Connect approved model downloads on both hosts (`connect-approved-model-downloads`): complete
 - **Fine-tune and evaluate**: 68 of 70 tasks complete
   - Review fine-tuning inputs and settings (`review-fine-tuning-inputs-and-settings`): complete
   - Prepare training data and local loading controls (`prepare-local-training-files-and-load-policy`): complete
