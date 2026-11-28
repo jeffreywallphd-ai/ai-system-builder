@@ -90,6 +90,12 @@ Reapprove the exact revised Asset scope and obtain a fresh, separate technical
 review of the retained checks. This event does not qualify the release profile
 and is not a general way to remove technical acceptance.
 
+For an explicit user request to move unfinished technical work to a later increment,
+use `technical-scope-deferred` in `references/events.md`. Preserve all requirements
+in a real pending recipient, completed tasks, security criteria and evidence.
+Review the complete transfer semantics separately; record narrow reapproval and
+obtain fresh checks for the retained scope. A deferral is never a test pass.
+
 For an explicitly authorized change to a pending technical acceptance policy,
 use `technical-acceptance-revised` as documented in `references/events.md`.
 This governed replacement-only event preserves criterion identity/qualification,

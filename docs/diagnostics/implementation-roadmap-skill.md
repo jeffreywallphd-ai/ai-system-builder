@@ -22,6 +22,12 @@ executes, reviews, and resumes substantial implementation roadmaps as ordered
 increments. It also maintains repository-based progress so work can be reviewed
 or resumed without depending on one AI task's conversation state.
 
+Explicit technical scope deferral uses `technical-scope-deferred` in the skill
+event reference. It archives exact source scope, plan, prior approval and completed
+task IDs, and inserts one pending recipient before final qualification. Separate
+semantic review and narrow user-directed reapproval are required. Security
+criteria, evidence and completed tasks stay intact; no qualification is granted.
+
 ## Automatic routing
 
 The repository's contributor control plane extends this workflow through

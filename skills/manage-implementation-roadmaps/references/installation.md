@@ -39,6 +39,12 @@ Keep both policy-specific denial paths and semantic classification tests on all
 supported agent hosts. Product human approval controls are never acceptance-test
 scope to remove.
 
+Install the fixed `scripts/roadmap_scope_deferral.py` sibling with the engine,
+its `tests/test_scope_deferral.py` runner bridge and event guidance. Older writers
+that cannot validate this optional archive must not mutate a deferred roadmap.
+Installation creates no event, approval, test pass or scope transfer. Keep the
+restricted Headless policy and story/refinement lineage tests with this adapter.
+
 The canonical skill lives at
 `skills/manage-implementation-roadmaps/SKILL.md` and follows the open Agent Skills
 format. Keep one canonical copy in this repository. Let installers place or adapt it

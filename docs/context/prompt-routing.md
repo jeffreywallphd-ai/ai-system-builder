@@ -8,6 +8,11 @@ approved scope or technical qualification.
 For story/task review display, include the read-only projection, task-description
 companion and exact paging/compact-join tests. Copy and counts never adopt scope.
 
+User-directed technical deferral routes to the roadmap skill and its
+`technical-scope-deferred` event. Use docs-standards and security for the
+authority/history boundary. Preserve requirements in a pending recipient;
+human-acceptance events cannot defer model or runtime qualification.
+
 Use this guide to select **minimum-sufficient** context packs. Start with `index.pack.md`, then add only packs that materially affect the requested work.
 
 ## Baseline

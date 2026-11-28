@@ -35,6 +35,21 @@ class RoadmapError(ValueError):
     """Raised when roadmap input or a state transition is invalid."""
 
 
+def scope_deferral_module():
+    """Load only the fixed portable sibling; no arbitrary plugin path."""
+    spec = importlib.util.spec_from_file_location(
+        "roadmap_scope_deferral", Path(__file__).with_name("roadmap_scope_deferral.py"))
+    if spec is None or spec.loader is None:
+        raise RoadmapError("The compatible technical scope deferral adapter is unavailable.")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def handle_technical_scope_deferred(state: dict[str, Any], event: dict[str, Any]) -> None:
+    scope_deferral_module().handle(globals(), state, event)
+
+
 def now_utc() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -972,6 +987,12 @@ def validate_story_tracking(state: dict[str, Any]) -> None:
             if key in refinement_versions:
                 raise RoadmapError("Story tracking cannot join duplicate refinement archives.")
             refinement_versions[key] = archive.get("replacementPlan")
+    for archive in require_list(state.get("technicalScopeDeferrals", []), "technical deferrals"):
+        identity = archive["incrementId"]
+        for key in ("originalPlan", "revisedPlan"):
+            plan = archive[key]
+            plan_versions[identity][fingerprint(plan)] = plan
+        refinement_versions[(identity, fingerprint(archive["event"]), fingerprint(archive))] = archive["revisedPlan"]
     keys = {"incrementId", "revision", "priorDigest", "planDigest", "storiesDigest", "assignments",
             "approvedScopeDigest", "authorityRef", "reason", "recordedAt", "eventFingerprint"}
     for row, (history_index, event) in zip(revisions, events):
@@ -981,7 +1002,8 @@ def validate_story_tracking(state: dict[str, Any]) -> None:
             raise RoadmapError("Story revisions require every exact audit field.")
         identity = require_identifier(row["incrementId"], "story increment")
         previous = latest.get(identity)
-        expected_type = "work-chunks-reconfigured" if previous else "story-tasks-assigned"
+        expected_type = ("technical-scope-deferred" if event.get("type") == "technical-scope-deferred"
+                         else "work-chunks-reconfigured") if previous else "story-tasks-assigned"
         if (type(row["revision"]) is not int or row["revision"] != (previous or {}).get("revision", 0) + 1
                 or row["priorDigest"] != (fingerprint(previous) if previous else None)
                 or event.get("type") != expected_type
@@ -1014,7 +1036,7 @@ def validate_story_tracking(state: dict[str, Any]) -> None:
             owners[item["taskId"]] = item["storyId"]
             seen.add(item["taskId"])
         plan = plan_versions.get(identity, {}).get(row["planDigest"])
-        refined = refinement_versions.get((identity, row["eventFingerprint"], event.get("chunkPlanRevisionDigest")))
+        refined = refinement_versions.get((identity, row["eventFingerprint"], event.get("chunkPlanRevisionDigest") or event.get("scopeDeferralDigest")))
         if plan is None or (previous and refined != plan):
             raise RoadmapError("Story revisions must bind the exact adoption or refinement plan lineage.")
         tasks = require_list(plan.get("chunks"), "historical task plan", minimum=1)
@@ -1961,11 +1983,10 @@ def validate_headless_workflow_restriction_history(state: dict[str, Any]) -> Non
 
 def validate_headless_workflow_chunk_lineage(state: dict[str, Any], restriction: dict[str, Any],
                                             increment: dict[str, Any]) -> None:
-    """Accept tracking additions, never a replacement of the fixed test scope.
+    """Fold audited tracking refinements and explicit technical deferrals.
 
-    The original archive remains immutable. Each later refinement must retain
-    its complete event/archive lineage and every original chunk obligation.
-    This is local consistency, not authentication against a whole-state writer.
+    Deferral changes future work ownership, never the original quality-test
+    exclusion or any already completed definition/proof.
     """
     history = [require_object(row, "Headless history row") for row in state["history"]]
     marker = next(index for index, row in enumerate(history)
@@ -1975,21 +1996,35 @@ def validate_headless_workflow_chunk_lineage(state: dict[str, Any], restriction:
     archives = state.get("workChunkPlanRevisions", [])
     if len(rows) != len(archives):
         raise RoadmapError("The Headless chunk lineage requires every refinement archive and event.")
+    transitions = [(index, row, archive, False) for archive, (index, row) in zip(archives, rows)]
+    deferrals = state.get("technicalScopeDeferrals", [])
+    deferred_rows = [(index, row) for index, row in enumerate(history)
+                     if row.get("type") == "technical-scope-deferred"]
+    transitions += [(index, row, archive, True) for archive, (index, row) in zip(deferrals, deferred_rows)]
     root = restriction["revisedPlan"]
     expected = root
     original_chunks = {chunk["id"]: chunk for chunk in root["chunks"]}
+    scope_digest = HEADLESS_WORKFLOW_REAPPROVED_SCOPE
     criterion_ids = [criterion["id"] for criterion in increment["acceptanceCriteria"]]
-    for archive, (index, row) in zip(archives, rows):
+    for index, row, archive, deferred in sorted(transitions, key=lambda item: item[0]):
+        if type(row.get("sequence")) is not int or row["sequence"] != index + 1:
+            raise RoadmapError("The Headless archives must keep their ordered events.")
+        if index <= marker:
+            continue
+        if deferred:
+            if archive["incrementId"] != increment["id"]:
+                continue
+            if (archive["originalPlan"] != expected
+                    or archive["previousApproval"]["fingerprint"] != scope_digest):
+                raise RoadmapError("A technical deferral must join the exact restricted plan and approval chain.")
+            expected = root = archive["revisedPlan"]
+            scope_digest = archive["revisedScopeDigest"]
+            original_chunks = {chunk["id"]: chunk for chunk in root["chunks"]
+                               if chunk["id"] in archive["completedTaskIds"]}
+            continue
         replacement = archive["replacementPlan"]
         data = {key: value for key, value in replacement.items()
                 if key not in {"recordedAt", "fingerprint", "outlineOnly"}}
-        if type(row.get("sequence")) is not int or row["sequence"] != index + 1:
-            raise RoadmapError("The Headless chunk archives must keep their ordered refinement events.")
-        if index <= marker:
-            continue
-        # The event contains original input; the archive contains normalized
-        # values. Preserve raw event identity instead of reconstructing it from
-        # trimmed prose. Bind all normalized fields in the same history row.
         event_digest = archive.get("eventFingerprint")
         if (not isinstance(event_digest, str) or not re.fullmatch(r"[a-f0-9]{64}", event_digest)
                 or row.get("eventFingerprint") != event_digest
@@ -2003,7 +2038,7 @@ def validate_headless_workflow_chunk_lineage(state: dict[str, Any], restriction:
         chunks = {chunk["id"]: chunk for chunk in replacement["chunks"]}
         if (archive["originalPlan"] != expected or replacement != canonical
                 or archive["criterionIds"] != criterion_ids
-                or archive["approvedScopeDigest"] != HEADLESS_WORKFLOW_REAPPROVED_SCOPE
+                or archive["approvedScopeDigest"] != scope_digest
                 or tuple(completed[:len(HEADLESS_WORKFLOW_COMPLETED)]) != HEADLESS_WORKFLOW_COMPLETED
                 or completed != increment["completedChunks"][:len(completed)]
                 or any(data[key] != root[key] for key in data if key != "chunks")
@@ -2013,6 +2048,7 @@ def validate_headless_workflow_chunk_lineage(state: dict[str, Any], restriction:
         expected = replacement
     if increment["plan"] != expected:
         raise RoadmapError("The current Headless plan must end its exact restricted chunk lineage.")
+
 
 
 def validate_technical_replacement(value: Any, label: str) -> dict[str, Any]:
@@ -2770,6 +2806,7 @@ EVENT_HANDLERS = {
     "acceptance-scope-revised": handle_acceptance_scope_revised,
     "legacy-acceptance-scope-revised": handle_legacy_acceptance_scope_revised,
     "technical-acceptance-revised": handle_technical_acceptance_revised,
+    "technical-scope-deferred": handle_technical_scope_deferred,
     "contextual-form-scope-aligned": handle_contextual_form_scope_aligned,
     "asset-legacy-assessment-excluded": handle_asset_legacy_assessment_excluded,
     "asset-security-review-recorded": handle_asset_security_review_recorded,
@@ -2821,6 +2858,8 @@ def apply_event(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
     if event_type == "technical-acceptance-revised" and event.get("restrictionProfile") == HEADLESS_WORKFLOW_RESTRICTION:
         history_row.update(restrictionProfile=HEADLESS_WORKFLOW_RESTRICTION,
                            revisionDigest=fingerprint(updated["technicalAcceptanceRevisions"][-1]))
+    if event_type == "technical-scope-deferred":
+        history_row["scopeDeferralDigest"] = fingerprint(updated["technicalScopeDeferrals"][-1])
     if event_type == "work-chunks-reconfigured":
         history_row["chunkPlanRevisionDigest"] = fingerprint(updated["workChunkPlanRevisions"][-1])
     if event_type == "story-tasks-assigned" or "storyAssignments" in event:
@@ -2860,6 +2899,7 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "acceptanceScopeRevisions",
         "legacyAcceptanceScopeRevisions",
         "technicalAcceptanceRevisions",
+        "technicalScopeDeferrals",
         "contextualFormScopeAlignment",
         "assetLegacyAssessmentExclusion",
         "assetRevisedSecurityProofs",
@@ -2868,6 +2908,7 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "storyTaskTracking",
     }
     reject_unknown(state, allowed, "state")
+    scope_deferral_module().validate_history(globals(), state)
     validate_story_tracking(state)
     validate_task_completion_history(state)
     for revision in require_list(state.get("workChunkPlanRevisions", []), "state.workChunkPlanRevisions"):
@@ -3366,6 +3407,11 @@ def render_roadmap(state: dict[str, Any]) -> str:
                 lines.append(f"  - Original `{revision['originalCriterion']['id']}`: {markdown(revision['originalCriterion']['description'])}")
                 lines.append(f"  - Superseded requirements: {markdown('; '.join(revision['supersededRequirements']))}")
                 lines.append(f"  - Retained requirements: {markdown('; '.join(revision['retainedRequirements']))}")
+        for transfer in state.get("technicalScopeDeferrals", []):
+            if transfer["incrementId"] == increment["id"]:
+                lines.extend(["", "### Deferred technical work", "",
+                              f"- {markdown(transfer['event']['reason'])}",
+                              f"- Pending owner: `{transfer['recipientDefinition']['id']}`. No test pass or completion is asserted."])
         form_alignment = state.get("contextualFormScopeAlignment")
         if form_alignment and increment["id"] == FORM_INCREMENT:
             lines.extend(["", "### Contextual Form scope history", "",

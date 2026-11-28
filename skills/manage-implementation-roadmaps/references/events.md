@@ -957,3 +957,44 @@ verification stage. Without active work, all completed increments yield
 `roadmap-ready-to-close`; all implemented increments with outstanding qualification
 yield `implementation-complete-qualification-pending`; a remaining pending increment
 yields `ready`. None of these labels grants qualification or closes work.
+
+
+### `technical-scope-deferred`
+
+Use only for explicit user-directed transfer of unfinished technical scope from
+an active, researched, formally planned `control-plane-v1` increment. This is
+not a waiver, a human-acceptance event, or permission to start future work.
+Independently compare all source requirements, new scope and recipient meaning.
+The engine checks structure and exact history; prose semantics and actual user
+authority remain the contributor and separate reviewer's responsibility.
+
+Required fields:
+
+- `type: technical-scope-deferred`, exact `incrementId`, `authorityRef`, and `reason`.
+- `approvedFingerprint`, whole `expectedDefinitionDigest`, whole `expectedPlanDigest`,
+  and `expectedTrackingDigest` (null only for unadopted history).
+- `replacement`: complete source increment definition. Keep identity, number,
+  title, dependencies, rollback, pending policy, story IDs/titles, every criterion
+  ID/qualification, and every security criterion unchanged.
+- `plan`: complete revised formal source plan. Preserve task IDs/order and all
+  completed task definitions. No completion or evidence field is accepted.
+- `recipient`: complete new pending increment definition, including security,
+  verification, rollback, exclusions and work packages. Insert it immediately
+  before the unstarted final qualification increment; depend on the source.
+- `requirements`: bounded nonempty mappings of `sourceCriterionId`, exact removed
+  `requirement` clause and `recipientCriterionId`. Every changed source criterion
+  needs a mapping. Review the complete meaning; substring checks prove no coverage.
+- For adopted tracking, `storyAssignments`: complete unchanged primary owners
+  with current task definitions, atomically linked to the new plan.
+
+Release source claims before applying. Existing publication/Records guards still
+apply. The event archives exact old/new definitions and plans, completed IDs,
+prior approval, recipient, original final definition and full event. It preserves
+all evidence, task proofs, failure history and status, invalidates approval, and
+keeps the source active. Use `roadmap-approved` for the actual narrowly authorized
+new scope; explicit user direction may supply this authority without another
+question. Start fresh candidate-bound Work after the authority change. Never
+retag old receipts or call transferred checks passed. Later pending-suffix edits
+must retain the recipient's complete technical obligations; final qualification
+remains last. Scope archives preserve optional tracking and restricted Headless
+workflow-only testing history, including later ordinary task refinements.

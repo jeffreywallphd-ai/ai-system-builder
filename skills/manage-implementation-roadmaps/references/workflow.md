@@ -58,6 +58,13 @@ checks, and all product human-approval controls. Independently review the semant
 classification and record actual narrow user reapproval. A legacy human-only
 transfer may close only when every retained technical criterion already passes.
 
+Explicit technical deferral uses `technical-scope-deferred`; it is not human
+acceptance transfer. Archive source definition/plan/approval, map removed clauses
+to a complete pending recipient before final qualification, preserve completed
+tasks and security, and review actual meaning. Release source claims before
+publication, record the user-directed narrow reapproval, and start fresh Work
+against the new authority. Old Work is historical support, never retagged.
+
 ## Invariants
 
 - Repository instructions and implemented behavior remain authoritative.
