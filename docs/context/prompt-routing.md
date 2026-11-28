@@ -1,5 +1,11 @@
 # Prompt Routing
 
+Requests for approved Headless model downloads use security/runtime guidance and
+the portable Model/build-plan guides. Inspect the production Root, public parser,
+original task owner and trusted approval codecs together. Exact source consent,
+transfer approval, cancellation and result Save are separate. Keep unavailable
+original-owner/runtime and actual-host qualification gaps explicit.
+
 Requests to show a saved Model through Headless window control use the security
 and runtime-model packs plus the portable Model guide. Keep the exact recorded
 ID/update timestamp, current ModelRead and separate window consent. Display is

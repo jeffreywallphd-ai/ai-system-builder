@@ -192,7 +192,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, modelTaskControlAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
-    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, allowModelDownload: enablePlanReview, allowModelReferenceSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent, allowApprovedSessionIds: false,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
@@ -242,7 +242,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const authorization = `Bearer ${credential}`;
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress, modelTaskControlAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
-    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, allowModelDownload: enablePlanReview, allowModelReferenceSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation,
     allowApprovedSessionIds: true});
 }
@@ -262,6 +262,8 @@ function createForwarder(options: {
   allowContextRagGeneration?: boolean;
   allowContextResultSave?: boolean;
   allowContextQuery?: boolean;
+  allowModelDownload?: boolean;
+  allowModelReferenceSave?: boolean;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -377,7 +379,8 @@ function createForwarder(options: {
             allowLocalDatasetPreparation: options.allowLocalDatasetPreparation === true,
             allowDatasetResultSave: options.allowDatasetResultSave === true, allowContextPackGeneration: options.allowContextPackGeneration === true,
             allowContextRagGeneration: options.allowContextRagGeneration === true,
-            allowContextResultSave: options.allowContextResultSave === true, allowContextQuery: options.allowContextQuery === true });
+            allowContextResultSave: options.allowContextResultSave === true, allowContextQuery: options.allowContextQuery === true,
+            allowModelDownload: options.allowModelDownload === true, allowModelReferenceSave: options.allowModelReferenceSave === true });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         if (status === 503 && !result.ok && result.code === "headless.not-started") return result;
@@ -411,6 +414,10 @@ function createForwarder(options: {
         return {ok: false, code: "headless.forbidden"};
       if (!options.allowContextResultSave && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "context.save-result"))
+        return {ok: false, code: "headless.forbidden"};
+      if (input.operation === "plan.submit" && input.proposal.requests.some(step =>
+          step.operation === "models.download" && options.allowModelDownload !== true ||
+          step.operation === "models.save-download" && options.allowModelReferenceSave !== true))
         return {ok: false, code: "headless.forbidden"};
       if (!options.allowDatasetResultSave && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.save-prepared-dataset"))

@@ -1,5 +1,14 @@
 # Build from a written request
 
+## Include a requested model download
+
+Read [the Model guide](models.md) before adding `models.download` or
+`models.save-download`. Preserve the exact returned source manifest and transfer
+limits. Preview, source/key-use consent, transfer approval, progress/cancellation
+and result Save have separate authority. A download and its later Save must not
+be replaced by an ordinary registry write. Keep an uncertain operation's original
+key and target; check its original status before considering another operation.
+
 Workflow version 1
 
 ## Identify the target

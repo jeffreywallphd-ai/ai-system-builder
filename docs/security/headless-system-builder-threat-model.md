@@ -1,5 +1,31 @@
 # Headless System Builder threat model
 
+## Public model-download plan connection
+
+The public Roots now compose the original source-only Model download and
+separately approved reference Save chain. Treat source manifests as untrusted
+metadata. The official MCP preview compares the exact current source or original
+completion; it grants no approval, file proof or authority. HTTP parsing admits
+only host-configured operations. Incomplete configuration cannot fall back to an
+ordinary model start or registry write. Source/key-use consent remains separate
+from transfer approval, task control and Save.
+
+Desktop supplies request-scoped read/operation fences to initial and fresh plan
+grants. A closed outward request cannot authorize later proposal work or fresh
+dispatch. Accepted original work retains its independent business lifetime.
+Managed rechecks a supplied host lifetime during Model proposal/status as well as
+execution. Source readers resolve the current organization partition; no tenant
+source preview is cached globally. Retained original Model owners alone provide
+status, cancellation and current registration proof. UI codecs can display those
+admitted Model previews but cannot create a permission or use the agent channel
+as a trusted popup/chat reviewer. Keep registry reference-only storage semantics,
+installed-only starts, transfer origin/hash/byte/deadline controls and conservative
+unknown/cleanup states unchanged. Rollback disables the additive connections and
+retains saved approvals and accepted task custody.
+
+Focused Root/SDK/codec tests use synthetic source metadata. Actual provider bytes,
+worker outcomes, PostgreSQL/RLS and paired-app qualification remain separate.
+
 ### Exact saved Model presentation
 
 `show-model` is an additive finite read/display intent, not execution. Capture

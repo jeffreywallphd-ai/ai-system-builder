@@ -2150,7 +2150,10 @@ function planApprovalControls(ipc: IpcRendererInvokePort,
       try {
         const raw = await ipc.invoke(channels.open, selection);
         const result = readStrictPassiveRecord(raw, ["ok", "view"]);
-        if (result.ok === true) return readDesktopPlanApprovalView(result.view, selection);
+        if (result.ok === true) return readDesktopPlanApprovalView(result.view, selection, {allowLocalFileSave: true,
+          allowProviderFileSave: true, allowLocalDatasetPreparation: true, allowDatasetResultSave: true,
+          allowContextPackGeneration: true, allowContextRagGeneration: true, allowContextResultSave: true,
+          allowContextQuery: true, allowModelDownload: true, allowModelReferenceSave: true});
       } catch { return undefined; }
     },
     async decide(rawDecision: DesktopPlanApprovalDecision) {

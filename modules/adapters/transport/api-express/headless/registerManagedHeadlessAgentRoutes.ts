@@ -75,6 +75,8 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly allowContextResultSave?: boolean;
   readonly allowContextQuery?: boolean;
   readonly allowModelSourceRead?: boolean;
+  readonly allowModelDownload?: boolean;
+  readonly allowModelReferenceSave?: boolean;
   readonly modelTaskControl?: (input: HeadlessModelTaskCancellationRequest, agent: Agent,
     current: () => boolean) => Promise<HeadlessModelTaskCancellationResult>;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
@@ -176,7 +178,9 @@ async function respond<Agent>(
         allowDatasetResultSave: handlers.allowDatasetResultSave === true,
         allowContextPackGeneration: handlers.allowContextPackGeneration === true,
         allowContextRagGeneration: handlers.allowContextRagGeneration === true,
-        allowContextResultSave: handlers.allowContextResultSave === true, allowContextQuery: handlers.allowContextQuery === true });
+        allowContextResultSave: handlers.allowContextResultSave === true, allowContextQuery: handlers.allowContextQuery === true,
+        allowModelDownload: handlers.allowModelDownload === true,
+        allowModelReferenceSave: handlers.allowModelReferenceSave === true });
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
     const input = parsed.request;
@@ -215,7 +219,9 @@ async function respond<Agent>(
         allowDatasetResultSave: handlers.allowDatasetResultSave === true,
         allowContextPackGeneration: handlers.allowContextPackGeneration === true,
         allowContextRagGeneration: handlers.allowContextRagGeneration === true,
-        allowContextResultSave: handlers.allowContextResultSave === true, allowContextQuery: handlers.allowContextQuery === true });
+        allowContextResultSave: handlers.allowContextResultSave === true, allowContextQuery: handlers.allowContextQuery === true,
+        allowModelDownload: handlers.allowModelDownload === true,
+        allowModelReferenceSave: handlers.allowModelReferenceSave === true });
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;

@@ -17,7 +17,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from control_plane.common import digest, read_json
 from control_plane.contracts import ControlError
-from control_plane.records import Records, ARCHIVE_SCHEMA, STORAGE_SCHEMA
+from control_plane.records import Records, ARCHIVE_SCHEMA, STORAGE_SCHEMA, MAX_ARCHIVE_INPUT_BYTES, MAX_JSON
 from control_plane.storage import atomic_write, canonical_bytes, exclusive_lock
 from test_control_plane_delivery import Fixture
 
@@ -145,7 +145,7 @@ class CompletedArchiveTests(unittest.TestCase):
         self.archive(); before = self.records.path.read_bytes()
         with patch("control_plane.records.MAX_ARCHIVES", 1), self.assertRaises(ControlError): self.archive(["work-b"])
         one = len(canonical_bytes(completed("work-a"))); two = len(canonical_bytes(completed("work-b")))
-        with patch("control_plane.records.MAX_JSON", one + two - 1), self.assertRaises(ControlError): self.archive(["work-b"])
+        with patch("control_plane.records.MAX_ARCHIVE_INPUT_BYTES", one + two - 1), self.assertRaises(ControlError): self.archive(["work-b"])
         with patch("control_plane.records.MAX_ARCHIVE_EVENTS", 1), self.assertRaises(ControlError): self.archive(["work-b"])
         self.assertEqual(self.records.path.read_bytes(), before)
         self.assertEqual(len(list((self.records.path.parent / "archives").glob("*.json"))), 1)
@@ -153,8 +153,60 @@ class CompletedArchiveTests(unittest.TestCase):
     def test_full_load_checks_aggregate_archive_input_before_hydration(self):
         self.archive(["work-a", "work-b"])
         total = sum(p.stat().st_size for p in (self.records.path.parent / "archives").glob("*.json"))
-        with patch("control_plane.records.MAX_JSON", total - 1), patch.object(self.records, "_read_archive", side_effect=AssertionError("No hydration before aggregate admission")):
+        with patch("control_plane.records.MAX_ARCHIVE_INPUT_BYTES", total - 1), patch.object(self.records, "_read_archive", side_effect=AssertionError("No hydration before aggregate admission")):
             with self.assertRaises(ControlError): self.records.load()
+
+    def test_aggregate_history_above_eight_mib_preserves_every_original_record(self):
+        self.assertEqual(MAX_JSON, 8 * 1024 * 1024)
+        self.assertEqual(MAX_ARCHIVE_INPUT_BYTES, 32 * 1024 * 1024)
+        originals = {}
+        # Archive in two steps: neither hot state nor any object exceeds 8 MiB.
+        # All three repeated evidence fields are retained, including failure.
+        for identity in ("work-a", "work-b"):
+            original = completed(identity, "retained synthetic evidence;" * 60_000)
+            originals[identity] = original
+            self.assertLess(len(canonical_bytes(original)), MAX_JSON)
+            self.records.mutate(lambda state: state["work_items"].update({identity: original}))
+            self.archive([identity])
+        paths = [self.archive_file(identity) for identity in originals]
+        total = sum(path.stat().st_size for path in paths)
+        self.assertGreater(total, MAX_JSON)
+        self.assertLess(total, MAX_ARCHIVE_INPUT_BYTES)
+        self.assertEqual(self.records.load()["work_items"], originals)
+        for identity, original in originals.items():
+            self.assertEqual(self.archive_file(identity).read_bytes(), canonical_bytes(original))
+        self.assertLessEqual(self.records.path.stat().st_size, MAX_JSON)
+        self.assertFalse(self.records.journal.exists())
+
+    def test_exact_aggregate_boundary_and_overflow_before_publication_and_hydration(self):
+        self.archive(["work-a"])
+        before = self.records.path.read_bytes()
+        index = self.records.index.read_bytes()
+        directory = self.records.path.parent / "archives"
+        files = {path.name: path.read_bytes() for path in directory.glob("*.json")}
+        total = sum(len(canonical_bytes(completed(identity))) for identity in ("work-a", "work-b"))
+        with patch("control_plane.records.MAX_ARCHIVE_INPUT_BYTES", total - 1):
+            with self.assertRaises(ControlError): self.archive(["work-b"])
+        self.assertEqual(self.records.path.read_bytes(), before)
+        self.assertEqual(self.records.index.read_bytes(), index)
+        self.assertEqual({path.name: path.read_bytes() for path in directory.glob("*.json")}, files)
+        with patch("control_plane.records.MAX_ARCHIVE_INPUT_BYTES", total):
+            self.archive(["work-b"])
+            self.assertEqual(self.records.load()["work_items"], {key: completed(key) for key in ("work-a", "work-b")})
+        with patch("control_plane.records.MAX_ARCHIVE_INPUT_BYTES", total - 1), patch.object(
+                self.records, "_read_archive", side_effect=AssertionError("No hydration before aggregate admission")):
+            with self.assertRaises(ControlError): self.records.load()
+
+    def test_aggregate_allowance_cannot_override_an_archive_object_limit(self):
+        self.archive(["work-a"])
+        size = self.archive_file().stat().st_size
+        with patch("control_plane.records.MAX_JSON", size - 1):
+            with self.assertRaises(ControlError): self.records.load()
+        request = archive_request(self.records, ["work-b"])
+        request["maximum_archive_input_bytes"] = MAX_ARCHIVE_INPUT_BYTES * 2
+        before = self.records.path.read_bytes()
+        with self.assertRaises(ControlError): self.records.archive_completed(request)
+        self.assertEqual(self.records.path.read_bytes(), before)
 
     def test_linked_archive_and_excess_reference_count_fail_before_history_is_returned(self):
         self.archive(); path = self.archive_file(); link = self.root / "owned-test-archive-alias.json"

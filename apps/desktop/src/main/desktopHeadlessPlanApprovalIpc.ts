@@ -79,7 +79,9 @@ export function registerDesktopHeadlessPlanApprovalIpc(options: {
         const view = readDesktopPlanApprovalView({
           selection, viewId: randomUUID(), preview: result.snapshot.preview,
           state: publicState(selection.fingerprint, result.snapshot.state),
-        }, selection);
+        }, selection, {allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true,
+          allowDatasetResultSave: true, allowContextPackGeneration: true, allowContextRagGeneration: true,
+          allowContextResultSave: true, allowContextQuery: true, allowModelDownload: true, allowModelReferenceSave: true});
         if (!view) return unavailable;
         const fingerprint = createHash("sha256").update(JSON.stringify(view.preview), "utf8").digest("hex");
         if (fingerprint !== selection.fingerprint || !isCurrent() || view.state.expiresAt <= Date.now()) return unavailable;

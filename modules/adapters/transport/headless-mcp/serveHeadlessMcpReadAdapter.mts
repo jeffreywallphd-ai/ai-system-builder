@@ -191,6 +191,8 @@ function addSystemBuilderTools(server: McpServer) {
   const allowContextRagGeneration = enablePlanReview;
   const allowContextResultSave = enablePlanReview;
   const allowContextQuery = enablePlanReview;
+  const allowModelDownload = enablePlanReview;
+  const allowModelReferenceSave = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -382,7 +384,24 @@ function addSystemBuilderTools(server: McpServer) {
     const parsed = headless.parseHeadlessReadRequest({version, operation: "data.ingestion-status", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
     return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
   });
+  const modelSourceManifest = z.strictObject({
+    source: z.strictObject({provider: z.literal("huggingface"), modelId: z.string().min(3).max(193),
+      revision: z.string().regex(/^[a-f0-9]{40}$/), format: z.literal("transformers-safetensors"),
+      license: z.discriminatedUnion("kind", [z.strictObject({kind: z.literal("unknown")}),
+        z.strictObject({kind: z.literal("provider-declared"), identifier: z.string().min(1).max(80).regex(/^[A-Za-z0-9][A-Za-z0-9+._-]{0,79}$/)})]),
+      files: z.array(z.strictObject({path: z.string().min(1).max(512), sizeBytes: z.number().int().positive().max(20 * 1024 ** 3),
+        integrity: z.discriminatedUnion("algorithm", [z.strictObject({algorithm: z.literal("sha256"), digest: z.string().regex(/^[a-f0-9]{64}$/)}),
+          z.strictObject({algorithm: z.literal("git-blob-sha1"), digest: z.string().regex(/^[a-f0-9]{40}$/)})])})).min(3).max(64),
+      totalBytes: z.number().int().positive().max(20 * 1024 ** 3), excludedFileCount: z.number().int().min(0).max(256),
+      sourceVerification: z.literal("provider-metadata"), bytesVerification: z.literal("not-checked"), runtimeReadiness: z.literal("not-checked")}),
+    manifestDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+  });
   const step = z.discriminatedUnion("operation", [
+    z.strictObject({operation: z.literal("models.download"), idempotencyKey, name: z.string().min(1).max(160),
+      sourceManifest: modelSourceManifest, allowedOrigins: z.array(z.string().url()).min(1).max(4),
+      maximumDurationSeconds: z.number().int().min(1).max(3600), inferenceMode: z.enum(["text2text", "causal", "chat", "text-to-image"]).optional()}),
+    z.strictObject({operation: z.literal("models.save-download"), idempotencyKey, name: z.string().min(1).max(160),
+      taskId: z.string().uuid(), sourceManifest: modelSourceManifest}),
     z.strictObject({operation: z.literal("context.query"), idempotencyKey, reference: savedContextReference.extend({kind: z.literal("rag-database")}),
       queryDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/), modelRecordId: z.string().min(1).max(160),
       modelUpdatedAt: z.string().datetime({offset: true}), maximumResults: z.number().int().min(1).max(20), embeddingDevice: z.enum(["cpu", "cuda"])}),
@@ -421,7 +440,7 @@ function addSystemBuilderTools(server: McpServer) {
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery, allowModelDownload, allowModelReferenceSave });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -431,6 +450,30 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "models.download") {
+        const selected = {hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId,
+          modelId: request.input.sourceManifest.source.modelId, revision: request.input.sourceManifest.source.revision};
+        const response = await forward?.({version, operation: "models.preview-source", input: selected}, signal);
+        if (!response?.ok || !("operation" in response) || response.operation !== "models.preview-source")
+          return toolResult(response?.ok ? unavailable : response ?? unavailable);
+        const current = headless.readHeadlessModelSourcePreviewValue(response.value, selected);
+        if (!current || current.manifestDigest !== request.input.sourceManifest.manifestDigest ||
+            !isDeepStrictEqual(current.source, request.input.sourceManifest.source)) return toolResult({ok: false, code: "headless.stale"});
+        continue;
+      }
+      if (request.operation === "models.save-download") {
+        const selected = {hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId,
+          selection: {kind: "task" as const, taskId: request.input.taskId}};
+        const response = await forward?.({version, operation: "models.review-download", input: selected}, signal);
+        if (!response?.ok || !("operation" in response) || response.operation !== "models.review-download")
+          return toolResult(response?.ok ? unavailable : response ?? unavailable);
+        const completion = headless.readHeadlessModelDownloadReviewValue(response.value, selected);
+        if (!completion || completion.manifestDigest !== request.input.sourceManifest.manifestDigest ||
+            completion.modelId !== request.input.sourceManifest.source.modelId || completion.revision !== request.input.sourceManifest.source.revision)
+          return toolResult({ok: false, code: "headless.stale"});
+        // Historical completion is only preview input. The host separately checks current original files before Save approval.
+        continue;
+      }
       if (request.operation === "context.query") {
         const target = {hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId, reference: request.input.reference};
         const prior = await forward?.({version, operation: "context.preview-rebuild", input: target}, signal);
@@ -561,7 +604,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave, allowLocalDatasetPreparation, allowDatasetResultSave, allowContextPackGeneration, allowContextRagGeneration, allowContextResultSave, allowContextQuery, allowModelDownload, allowModelReferenceSave });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

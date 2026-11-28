@@ -2275,6 +2275,12 @@ export function composeDesktopHost(
               });
             })() : undefined;
           let headlessModelSource: Promise<import("../../../application/use-cases/model").PreviewHeadlessModelSourceUseCase> | undefined;
+          const getHeadlessModelSource = organizationDocuments ? () => headlessModelSource ??= (async () => {
+            const [{composeHeadlessModelSourcePreview}, {createHuggingFaceModelBrowseDetailsAdapter}] = await Promise.all([
+              import("../../shared/composition/headlessModelSourcePreview"), import("../../../adapters/model/huggingface")]);
+            return composeHeadlessModelSourcePreview(organizationDocuments,
+              createHuggingFaceModelBrowseDetailsAdapter({accessTokenProvider: () => tokenConfigStore.getToken()}));
+          })() : undefined;
           const modelTaskReaders = platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction
             ? composeHeadlessModelTaskReaders({documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
               hostIncarnationId, placement: createTenantPlacementConfig({mode: "dedicated", organizationId: identity.organizationId}),
@@ -2323,12 +2329,7 @@ export function composeDesktopHost(
               const {composeHeadlessModelMetadata} = await import("../../shared/composition/headlessModelMetadata");
               return composeHeadlessModelMetadata(organizationDocuments, registerOptions.storageRootDirectory);
             } : undefined,
-            getModelSource: organizationDocuments ? () => headlessModelSource ??= (async () => {
-              const [{composeHeadlessModelSourcePreview}, {createHuggingFaceModelBrowseDetailsAdapter}] = await Promise.all([
-                import("../../shared/composition/headlessModelSourcePreview"), import("../../../adapters/model/huggingface")]);
-              return composeHeadlessModelSourcePreview(organizationDocuments,
-                createHuggingFaceModelBrowseDetailsAdapter({accessTokenProvider: () => tokenConfigStore.getToken()}));
-            })() : undefined,
+            getModelSource: getHeadlessModelSource,
             getDatasetInputs: organizationDocuments ? async () => {
               const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
               const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");
@@ -2443,17 +2444,15 @@ export function composeDesktopHost(
               ? { hostIncarnationId, identity, platform: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
                   isOpen: () => !headlessReadAdmissionClosed }
               : undefined;
-            headlessConnection = composeDesktopHeadlessConnection({
-              documents: organizationDocuments,
-              identity,
-              ...(organizationDocuments ? {allowNewModelSourcePairings: true as const} : {}),
-              workspaces: startupWorkspaceShell.workspaceRepository,
-              authorization: workspaceAuthorization,
-              read: headlessReadHandler,
-              conversation: headlessConversation,
-              presentation: uiControlOwner,
-              planReview: planReviewOwner ? composeDesktopHeadlessPlanReview({
+            const headlessPlanReview = planReviewOwner ? Object.assign(composeDesktopHeadlessPlanReview({
                 ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                getModelSourcePreview: getHeadlessModelSource,
+                getModelDownloadStart: async () => {
+                  const owner = (await getModelFeatures()).modelDownloadTasksUseCase;
+                  return owner.startApprovedSource.bind(owner);
+                },
+                peekModelDownloadTasks: () => modelDownloadTaskOwner,
+                peekModelReferenceSave: () => modelDownloadTaskOwner,
                 getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
                 getDatasetStart: async () => {
                   const dataset = (await getDatasetPreparationFeatures()).prepareTrainingDatasetUseCase;
@@ -2467,7 +2466,20 @@ export function composeDesktopHost(
                 peekContextResults: () => contextResultOwner,
                 getContextQueryOwner: async () => (await getContextManagementFeatures()).browser,
                 systems: systemBuilder, audit: headlessAudit,
-              }) : undefined,
+              }), {allowModelDownload: true as const, allowModelReferenceSave: true as const}) : undefined;
+            headlessConnection = composeDesktopHeadlessConnection({
+              documents: organizationDocuments,
+              identity,
+              ...(organizationDocuments ? {allowNewModelSourcePairings: true as const} : {}),
+              workspaces: startupWorkspaceShell.workspaceRepository,
+              authorization: workspaceAuthorization,
+              read: headlessReadHandler,
+              conversation: headlessConversation,
+              presentation: uiControlOwner,
+              planReview: headlessPlanReview,
+              modelTaskControl: headlessPlanReview?.cancelModelDownload ? {
+                hostIncarnationId, execute: headlessPlanReview.cancelModelDownload,
+              } : undefined,
               dataPreview: planReviewOwner ? {
                 hostIncarnationId,
                 execute: async (request, grant) => headlessLocalFileSelection?.preview(request, grant) ??
@@ -2483,6 +2495,7 @@ export function composeDesktopHost(
             });
             if (planReviewOwner) headlessPlanApprovals = composeDesktopHeadlessPlanApprovals({
               ...planReviewOwner, capturePlanReviewClients: headlessConnection.capturePlanReviewClients,
+              allowModelDownloadReview: true, allowModelReferenceSaveReview: true,
             });
             if (planReviewOwner) headlessLocalFileSelection = composeDesktopHeadlessLocalFileSelection({
               ...planReviewOwner,

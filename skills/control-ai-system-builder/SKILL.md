@@ -28,6 +28,10 @@ use [Build from a written request](references/build-plans.md). It covers the
 supported plan connections, exact resources, approval choices, ordered
 execution and recovery. Open it before preparing a plan.
 
+For a requested model download, read [the Model guide](references/models.md)
+before previewing its exact source, requesting transfer approval or proposing
+a separately approved result Save. Keep original task ownership and keys.
+
 For saved model selection or review of a completed download, read
 [Recorded model metadata](references/models.md). Completion review is a read;
 omitted mode reads cached history. The guide's explicit `current-files` mode can

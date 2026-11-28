@@ -1,5 +1,24 @@
 # Server host composition
 
+## Public approved model downloads
+
+The Managed production Root connects the original Model source preview, source-only
+start, retained task readers/Stop and current downloaded-reference Save owner to
+the plan workflow. These are not ordinary download or registry-write fallbacks.
+Proposal metadata is prepared outside the transaction. Current original actor,
+workspace, client, source consent and Model policy remain required. Positive
+popup/chat decisions and transfer/Save approvals are separate. Incomplete support
+stays unavailable; an exact replay cannot start another task.
+
+Desktop keeps source preview lazy and retains one loaded Model feature owner.
+Managed resolves the current organization partition per request and requires
+stable publication plus the explicit Model-source registration switch. Host
+retirement closes new Model proposal/control admission. Public transports carry
+only the corresponding configured download/Save capabilities. Their request
+lifetimes do not replace accepted-task business ownership. Actual two-host
+provider transfer, resource and cleanup qualification remains pending separately;
+synthetic metadata/software tests provide no real model or parent pass.
+
 Managed `show-model` presentation requires current ModelRead as well as the
 existing workspace/asset read and independently approved exact browser lease.
 The original recorded metadata reader checks the exact saved ID/update time in

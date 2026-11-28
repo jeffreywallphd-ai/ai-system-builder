@@ -1,4 +1,19 @@
 
+
+## Focused public Model download checks
+
+The `headless-model-download-public-unit` and corresponding strict type profile
+cover production Root proposal/approval admission, explicit host capability
+propagation, request-lifetime fences and official MCP/IPC/preload/Managed view
+codecs. The fixture uses bounded synthetic provider metadata and local SQLite;
+it starts no model, worker or real provider transfer. Keep those local passes
+separate from actual two-host task/resource/cleanup and parent qualification.
+The fixed profile adds no completion suite, model accuracy test or automatic retry.
+Only the complete declared public-download source/test/catalog scope selects its
+new routing tests and existing focused-executor tests for controller checks.
+Unknown mixed changes, incomplete support and explicit generic checks retain
+conservative coverage. All selected host, transport and Model checks still run.
+
 ## Numeric capture at coding-session initialization
 
 Fresh Tiny admission validates the current complete receipt and the actual stored
@@ -2517,8 +2532,12 @@ archive objects deny full loading. Normal mutation cannot edit archived work.
 Legacy state and journals remain readable. New recovery matches aligned physical
 and logical predecessors and verifies the final index. It retains unfinished
 journals and harmless unreferenced objects instead of deleting them. Per-file and
-journal limits remain 8 MiB; archive input is capped at 8 MiB and 1,024 objects,
+journal limits remain 8 MiB; aggregate archive input is capped at 32 MiB and 1,024 objects,
 with at most 128 IDs per request and 64 archive audit entries.
+Each archive object and source snapshot also retains its 8 MiB limit. The
+separate aggregate allowance admits at most 40 MiB of serialized input for a
+full logical read, including the physical state. Hashes, immutable objects,
+single-link and non-reparse checks, conflict detection and recovery are unchanged.
 
 If capacity prevents even a repair work record, do not raise the limit, delete
 records, invent a claim or reuse an unrelated work item. Prepare a narrow

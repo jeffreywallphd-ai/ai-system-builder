@@ -23,6 +23,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   readonly conversation?: ReturnType<typeof composeDesktopHeadlessConversation>;
   readonly presentation?: Parameters<typeof startDesktopHeadlessLoopback>[0]["presentation"];
   readonly planReview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["planReview"];
+  readonly modelTaskControl?: Parameters<typeof startDesktopHeadlessLoopback>[0]["modelTaskControl"];
   readonly allowNewModelSourcePairings?: true;
   readonly dataPreview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["dataPreview"];
   /** Synthetic composition may exercise access without registering a dispatch handler. */
@@ -93,6 +94,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
       }, read: dependencies.read, authoring: dependencies.authoring, conversation: dependencies.conversation,
       presentation: dependencies.presentation,
       planReview: dependencies.planReview,
+      modelTaskControl: dependencies.modelTaskControl,
       dataPreview: dependencies.dataPreview,
       isAdmitted: () => open && endpoint !== undefined,
     });

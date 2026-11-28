@@ -164,6 +164,13 @@ formatting does not grant qualification or remove old work. Capacity and
 interrupted-recovery regressions are in
 `tests/test_control_plane_journal_capacity.py`.
 
+Completed history can occupy at most 32 MiB across 1,024 immutable archive
+objects. Each object, physical state file, snapshot and recovery journal still
+has an 8 MiB limit. A full logical read therefore admits at most 40 MiB of
+serialized state and archive input. Archival preserves every record, inner
+digest and failed attempt; it does not grant a test pass. Aggregate overflow is
+refused before history hydration or archive publication.
+
 Roadmap state is separate from that local store. Its unchanged one-MiB physical
 limit can use `roadmap-record-tree-v1` JSON for repeated full plans. Read it through
 `control_plane.roadmap_state.read_roadmap_state`, not raw `json.loads`. The portable

@@ -25,6 +25,7 @@ def state_bytes(value):
 
 
 MAX_ARCHIVES = 1024
+MAX_ARCHIVE_INPUT_BYTES = 32 * 1024 * 1024
 MAX_ARCHIVE_BATCH = 128
 MAX_ARCHIVE_EVENTS = 64
 STORAGE_SCHEMA = "development-state-storage-v1"
@@ -71,8 +72,9 @@ class Records:
     def load(self):
         """Return the same logical v1 objects, including completed history.
 
-        Physical index and archive input are each bounded to MAX_JSON. Loading
-        at most their combined 16 MiB does not increase any individual JSON,
+        The physical index is bounded to MAX_JSON; combined archive input is
+        bounded to MAX_ARCHIVE_INPUT_BYTES. Loading at most their combined
+        40 MiB does not increase any individual JSON,
         journal, model, process or disk admission limit.
         """
         return self._load_storage()[0]
@@ -182,7 +184,7 @@ class Records:
                 if info is None:
                     refuse("archive.unavailable", "Completed history is missing; original references were preserved.")
                 total += info.st_size
-            if total > MAX_JSON:
+            if total > MAX_ARCHIVE_INPUT_BYTES:
                 refuse("archive.capacity", "Completed-work input exceeds its fixed aggregate bound.")
             logical = dict(wire)
             logical["work_items"] = dict(wire["work_items"])
@@ -407,7 +409,7 @@ class Records:
                     if work_id not in payloads:
                         refuse("archive.unavailable", "Completed history is missing; no successor was published.")
                     total += len(payloads[work_id])
-            if total > MAX_JSON:
+            if total > MAX_ARCHIVE_INPUT_BYTES:
                 refuse("archive.capacity", "Completed-work input exceeds its fixed aggregate bound.")
             successor.pop("state_digest", None)
             successor["revision"] = current["revision"] + 1

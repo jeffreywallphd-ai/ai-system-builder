@@ -1,5 +1,18 @@
 # Headless client skill
 
+## Request a model download
+
+Install the complete skill directory and generated catalog from the same
+revision. The portable Model guide explains the exact `models.download` plan,
+source manifest and duration/origin bounds. Source preview can use the saved
+provider key; the public transfer profile supports public models without a key.
+A separate popup or authenticated-chat decision approves transfer. Poll only the
+returned original task. Stop uses the separately opted-in model-task-control mode;
+unknown outcomes do not authorize retries. Saving a completed download needs a
+new `models.save-download` approval and fresh original file proof. Ordinary
+registry Save is a different path. Both production Roots are connected; actual
+paired provider/worker qualification is still tracked separately.
+
 ## Inspect a model source
 
 On Desktop, pair again through the updated native consent if the existing

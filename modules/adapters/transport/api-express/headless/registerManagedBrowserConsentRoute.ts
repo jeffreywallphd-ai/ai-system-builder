@@ -172,7 +172,8 @@ async function respondPlanApproval<Identity>(raw: unknown, request: Request, res
       allowDatasetResultSave: result.publishIfCurrent !== undefined,
       allowContextPackGeneration: result.publishIfCurrent !== undefined,
       allowContextRagGeneration: result.publishIfCurrent !== undefined,
-      allowContextResultSave: result.publishIfCurrent !== undefined, allowContextQuery: result.publishIfCurrent !== undefined});
+      allowContextResultSave: result.publishIfCurrent !== undefined, allowContextQuery: result.publishIfCurrent !== undefined,
+      allowModelDownload: result.publishIfCurrent !== undefined, allowModelReferenceSave: result.publishIfCurrent !== undefined});
   if (value === undefined || Buffer.byteLength(JSON.stringify(value)) > MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES) return error(response, 503);
   if (fileSelection || result.publishIfCurrent) {
     const sent = await result.publishIfCurrent?.(() => {

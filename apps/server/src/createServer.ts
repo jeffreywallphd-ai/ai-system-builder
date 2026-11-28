@@ -497,19 +497,7 @@ export async function createServer(
         allowModelSourceRead: clientPolicy.modelSourceReadAvailable,
         read: handlers.read,
         author: async (input, agent, current) => agent.purpose === "agent" ? handlers.author(input, agent, current) : denied,
-        identify: (input, kind) => {
-          const planOnly = kind === "plan-review" || kind === "plan-step" ||
-            kind === "local-file-preview" || kind === "provider-file-preview";
-          if (!planOnly) {
-            const author = clientPolicy.identify({...input, purpose: "agent"});
-            if (author?.purpose === "agent") return author;
-          }
-          if (planReview && (kind === "read" || planOnly)) {
-            const planner = clientPolicy.identify({...input, purpose: "plan-review"});
-            if (planner?.purpose === "plan-review") return planner;
-          }
-          return undefined;
-        },
+        identify: (input, kind) => identifyManagedHeadlessRouteCaller(clientPolicy, input, kind, planReview !== undefined),
         isCurrent: (admitted) => admitted.isCurrent(),
         ...(planReview ? { allowLocalFileSave: planReview.allowLocalFileSave, allowProviderFileSave: planReview.allowProviderFileSave,
           allowLocalDatasetPreparation: planReview.allowLocalDatasetPreparation,
@@ -518,6 +506,10 @@ export async function createServer(
           allowContextRagGeneration: planReview.allowContextRagGeneration,
           allowContextResultSave: planReview.allowContextResultSave,
           allowContextQuery: planReview.allowContextQuery,
+          allowModelDownload: planReview.allowModelDownload,
+          allowModelReferenceSave: planReview.allowModelReferenceSave,
+          ...(planReview.cancelModelDownload ? {modelTaskControl: async (input, agent, current) =>
+            agent.purpose === "plan-review" ? planReview.cancelModelDownload!(input, agent, current) : denied} : {}),
           planReview: async (input, agent, current) =>
             agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(runPlanStep ? { planStep: async (input, agent, current) =>
@@ -720,4 +712,25 @@ export function createServerListener(
   }
 
   return http.createServer(createdServer.app);
+}
+
+/** Keep route-to-registration admission in the production server, before dispatch.
+ * A plan's approval grants no ordinary agent registration and vice versa. */
+export function identifyManagedHeadlessRouteCaller(
+  policy: Pick<NonNullable<ReturnType<typeof resolveManagedHeadlessClientPolicy>>, "identify">,
+  input: Omit<Parameters<NonNullable<ReturnType<typeof resolveManagedHeadlessClientPolicy>>["identify"]>[0], "purpose">,
+  kind: keyof typeof MANAGED_HEADLESS_AGENT_PATHS,
+  planReviewAvailable: boolean,
+) {
+  const planOnly = kind === "plan-review" || kind === "plan-step" || kind === "model-task-control" ||
+    kind === "local-file-preview" || kind === "provider-file-preview";
+  if (!planOnly) {
+    const agent = policy.identify({...input, purpose: "agent"});
+    if (agent?.purpose === "agent") return agent;
+  }
+  if (planReviewAvailable && (kind === "read" || planOnly)) {
+    const planner = policy.identify({...input, purpose: "plan-review"});
+    if (planner?.purpose === "plan-review") return planner;
+  }
+  return undefined;
 }

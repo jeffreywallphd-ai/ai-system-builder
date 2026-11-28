@@ -304,7 +304,7 @@ export function composeManagedHeadlessPlanReview(options: {
         } catch {return false;}
       };
       const current = () => access.current() && (!(preparesModel || preparesModelSave || readsModel) || registration.modelSourceRead === true) &&
-        (!preparesModelSave || isHeadlessReadCurrent(isModelHostCurrent)) && (!(preparesTraining || readsTraining || preparesTrainingSave || readsTrainingSave) || trainingCurrent()) &&
+        (!(preparesModel || readsModel || preparesModelSave) || (isModelHostCurrent === undefined && !preparesModelSave || isHeadlessReadCurrent(isModelHostCurrent))) && (!(preparesTraining || readsTraining || preparesTrainingSave || readsTrainingSave) || trainingCurrent()) &&
         (!(preparesTrainingSave || readsTrainingSave) || isHeadlessReadCurrent(trainingHostCurrent));
       const canUse = async () => current() && await access.authorizeCurrent() &&
         (!readsModel || await modelReviewAccess?.authorizeCurrent() === true) &&

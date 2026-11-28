@@ -674,7 +674,9 @@ export interface ServerHostComposition {
     readonly workflowReads?: true;
     readonly read: ReturnType<typeof composeManagedAgentReads>;
     readonly author: ReturnType<typeof composeManagedHeadlessAuthoring>["execute"];
-    readonly planReview?: ReturnType<typeof composeManagedHeadlessPlanReview>;
+    readonly planReview?: ReturnType<typeof composeManagedHeadlessPlanReview> & {
+      readonly allowModelDownload?: true; readonly allowModelReferenceSave?: true;
+    };
   } | undefined;
   closeRuntimeDatabases: () => Promise<void>;
   shutdownBackgroundTasks: () => Promise<void>;
@@ -1792,7 +1794,7 @@ export function composeServerHost(
                 comparisons: new CompareDatasetVersionsUseCase(dependencies)});
             } : undefined,
           }),
-          ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
+          ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: Object.assign(composeManagedHeadlessPlanReview({
             ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
             placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
             enableFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
@@ -1803,7 +1805,17 @@ export function composeServerHost(
             getContextStart: async () => contextGenerationUseCase.startAdmittedContext.bind(contextGenerationUseCase),
             peekContextResults: () => contextGenerationUseCase,
             getContextQueryOwner: async () => contextBrowserUseCases,
-          }) } : {}),
+            getModelSourcePreview: options.managedHeadlessAgent.modelSourceRead === true ? async () => {
+              const {composeHeadlessModelSourcePreview} = await import("../../shared/composition/headlessModelSourcePreview");
+              // Resolve the request's current organization partition. Never cache it across tenants.
+              return organizationDocuments ? composeHeadlessModelSourcePreview(organizationDocuments, huggingFaceModelBrowseDetails) : undefined;
+            } : undefined,
+            getModelDownloadStart: async () => modelDownloadTasksUseCase.startApprovedSource.bind(modelDownloadTasksUseCase),
+            isModelHostCurrent: () => {try {taskReconciler.assertAccepting(); return true;} catch {return false;}},
+            peekModelDownloadTasks: () => modelDownloadTasksUseCase,
+            peekModelReferenceSave: options.managedHeadlessAgent.modelSourceRead === true ? () => modelDownloadTasksUseCase : undefined,
+          }), options.managedHeadlessAgent.modelSourceRead === true ?
+            {allowModelDownload: true as const, allowModelReferenceSave: true as const} : {}) } : {}),
         };
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {
           const observation = new AuthorizeWorkspaceOperationService({organizationContext: contexts,
@@ -1835,7 +1847,9 @@ export function composeServerHost(
             allowContextPackGeneration: Boolean(managedDocuments.publishWithStableReads),
             allowContextRagGeneration: Boolean(managedDocuments.publishWithStableReads),
             allowContextResultSave: Boolean(managedDocuments.publishWithStableReads),
-            allowContextQuery: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
+            allowContextQuery: Boolean(managedDocuments.publishWithStableReads),
+            allowModelDownloadReview: options.managedHeadlessAgent.modelSourceRead === true,
+            allowModelReferenceSaveReview: options.managedHeadlessAgent.modelSourceRead === true}) : undefined;
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),

@@ -112,7 +112,7 @@ test("both production host sources bind the captured cache into existing storage
 });
 
 for (const host of ["Desktop", "Managed"] as const)
-test(`${host} root connects read-only original Model task ownership without enabling effects`, async () => {
+test(`${host} Root task reads retain original Model ownership without effect ports`, async () => {
   const relative = host === "Desktop" ? "modules/hosts/desktop/composition/composeDesktopHost.ts"
     : "modules/hosts/server/composition/composeServerHost.ts";
   const text = await readFile(relative, "utf8"), source = ts.createSourceFile(relative, text, ts.ScriptTarget.Latest, true);
@@ -154,9 +154,8 @@ test(`${host} root connects read-only original Model task ownership without enab
   const reads = properties(handlers[0]!);
   for (const name of ["readModelTask", "readModelCompletion"])
     assert.equal(reads.get(name)?.getText(source), `modelTaskReaders?.${name}`);
-  const plans = named(host === "Desktop" ? "composeDesktopHeadlessPlanReview" : "composeManagedHeadlessPlanReview");
-  assert.equal(plans.length, 1);
-  const plan = properties(plans[0]!);
+  // Approved plan execution is now a separate, explicitly connected Root path.
+  // Passive read composition must still never receive an execution or Save port.
   for (const name of ["getModelDownloadStart", "peekModelDownloadTasks", "peekModelReferenceSave"])
-    assert.equal(plan.has(name), false, "Read wiring cannot activate a Model effect.");
+    assert.equal(reads.has(name), false, "Passive read wiring cannot accept a Model effect port.");
 });

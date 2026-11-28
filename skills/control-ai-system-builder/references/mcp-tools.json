@@ -1938,6 +1938,435 @@
                   "properties": {
                     "operation": {
                       "type": "string",
+                      "const": "models.download"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "sourceManifest": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "const": "huggingface"
+                            },
+                            "modelId": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 193
+                            },
+                            "revision": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{40}$"
+                            },
+                            "format": {
+                              "type": "string",
+                              "const": "transformers-safetensors"
+                            },
+                            "license": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "provider-declared"
+                                    },
+                                    "identifier": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80,
+                                      "pattern": "^[A-Za-z0-9][A-Za-z0-9+._-]{0,79}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "identifier"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "files": {
+                              "minItems": 3,
+                              "maxItems": 64,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "sizeBytes": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 21474836480
+                                  },
+                                  "integrity": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "sha256"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{64}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "git-blob-sha1"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{40}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sizeBytes",
+                                  "integrity"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "totalBytes": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 21474836480
+                            },
+                            "excludedFileCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 256
+                            },
+                            "sourceVerification": {
+                              "type": "string",
+                              "const": "provider-metadata"
+                            },
+                            "bytesVerification": {
+                              "type": "string",
+                              "const": "not-checked"
+                            },
+                            "runtimeReadiness": {
+                              "type": "string",
+                              "const": "not-checked"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "modelId",
+                            "revision",
+                            "format",
+                            "license",
+                            "files",
+                            "totalBytes",
+                            "excludedFileCount",
+                            "sourceVerification",
+                            "bytesVerification",
+                            "runtimeReadiness"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "manifestDigest": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "manifestDigest"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "allowedOrigins": {
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    },
+                    "maximumDurationSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 3600
+                    },
+                    "inferenceMode": {
+                      "type": "string",
+                      "enum": [
+                        "text2text",
+                        "causal",
+                        "chat",
+                        "text-to-image"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "name",
+                    "sourceManifest",
+                    "allowedOrigins",
+                    "maximumDurationSeconds"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "models.save-download"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "sourceManifest": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "const": "huggingface"
+                            },
+                            "modelId": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 193
+                            },
+                            "revision": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{40}$"
+                            },
+                            "format": {
+                              "type": "string",
+                              "const": "transformers-safetensors"
+                            },
+                            "license": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "provider-declared"
+                                    },
+                                    "identifier": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80,
+                                      "pattern": "^[A-Za-z0-9][A-Za-z0-9+._-]{0,79}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "identifier"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "files": {
+                              "minItems": 3,
+                              "maxItems": 64,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "sizeBytes": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 21474836480
+                                  },
+                                  "integrity": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "sha256"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{64}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "git-blob-sha1"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{40}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sizeBytes",
+                                  "integrity"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "totalBytes": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 21474836480
+                            },
+                            "excludedFileCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 256
+                            },
+                            "sourceVerification": {
+                              "type": "string",
+                              "const": "provider-metadata"
+                            },
+                            "bytesVerification": {
+                              "type": "string",
+                              "const": "not-checked"
+                            },
+                            "runtimeReadiness": {
+                              "type": "string",
+                              "const": "not-checked"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "modelId",
+                            "revision",
+                            "format",
+                            "license",
+                            "files",
+                            "totalBytes",
+                            "excludedFileCount",
+                            "sourceVerification",
+                            "bytesVerification",
+                            "runtimeReadiness"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "manifestDigest": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "manifestDigest"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "name",
+                    "taskId",
+                    "sourceManifest"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
                       "const": "context.query"
                     },
                     "idempotencyKey": {
@@ -4005,6 +4434,435 @@
             "type": "array",
             "items": {
               "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "models.download"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "sourceManifest": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "const": "huggingface"
+                            },
+                            "modelId": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 193
+                            },
+                            "revision": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{40}$"
+                            },
+                            "format": {
+                              "type": "string",
+                              "const": "transformers-safetensors"
+                            },
+                            "license": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "provider-declared"
+                                    },
+                                    "identifier": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80,
+                                      "pattern": "^[A-Za-z0-9][A-Za-z0-9+._-]{0,79}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "identifier"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "files": {
+                              "minItems": 3,
+                              "maxItems": 64,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "sizeBytes": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 21474836480
+                                  },
+                                  "integrity": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "sha256"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{64}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "git-blob-sha1"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{40}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sizeBytes",
+                                  "integrity"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "totalBytes": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 21474836480
+                            },
+                            "excludedFileCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 256
+                            },
+                            "sourceVerification": {
+                              "type": "string",
+                              "const": "provider-metadata"
+                            },
+                            "bytesVerification": {
+                              "type": "string",
+                              "const": "not-checked"
+                            },
+                            "runtimeReadiness": {
+                              "type": "string",
+                              "const": "not-checked"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "modelId",
+                            "revision",
+                            "format",
+                            "license",
+                            "files",
+                            "totalBytes",
+                            "excludedFileCount",
+                            "sourceVerification",
+                            "bytesVerification",
+                            "runtimeReadiness"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "manifestDigest": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "manifestDigest"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "allowedOrigins": {
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    },
+                    "maximumDurationSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 3600
+                    },
+                    "inferenceMode": {
+                      "type": "string",
+                      "enum": [
+                        "text2text",
+                        "causal",
+                        "chat",
+                        "text-to-image"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "name",
+                    "sourceManifest",
+                    "allowedOrigins",
+                    "maximumDurationSeconds"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "models.save-download"
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "sourceManifest": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "provider": {
+                              "type": "string",
+                              "const": "huggingface"
+                            },
+                            "modelId": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 193
+                            },
+                            "revision": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{40}$"
+                            },
+                            "format": {
+                              "type": "string",
+                              "const": "transformers-safetensors"
+                            },
+                            "license": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "provider-declared"
+                                    },
+                                    "identifier": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80,
+                                      "pattern": "^[A-Za-z0-9][A-Za-z0-9+._-]{0,79}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "identifier"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "files": {
+                              "minItems": 3,
+                              "maxItems": 64,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "sizeBytes": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 21474836480
+                                  },
+                                  "integrity": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "sha256"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{64}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "algorithm": {
+                                            "type": "string",
+                                            "const": "git-blob-sha1"
+                                          },
+                                          "digest": {
+                                            "type": "string",
+                                            "pattern": "^[a-f0-9]{40}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "algorithm",
+                                          "digest"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sizeBytes",
+                                  "integrity"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "totalBytes": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 21474836480
+                            },
+                            "excludedFileCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 256
+                            },
+                            "sourceVerification": {
+                              "type": "string",
+                              "const": "provider-metadata"
+                            },
+                            "bytesVerification": {
+                              "type": "string",
+                              "const": "not-checked"
+                            },
+                            "runtimeReadiness": {
+                              "type": "string",
+                              "const": "not-checked"
+                            }
+                          },
+                          "required": [
+                            "provider",
+                            "modelId",
+                            "revision",
+                            "format",
+                            "license",
+                            "files",
+                            "totalBytes",
+                            "excludedFileCount",
+                            "sourceVerification",
+                            "bytesVerification",
+                            "runtimeReadiness"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "manifestDigest": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "manifestDigest"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "idempotencyKey",
+                    "name",
+                    "taskId",
+                    "sourceManifest"
+                  ],
+                  "additionalProperties": false
+                },
                 {
                   "type": "object",
                   "properties": {

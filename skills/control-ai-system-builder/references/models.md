@@ -1,5 +1,43 @@
 # Recorded model metadata
 
+## Propose a download and separately save its result
+
+Use a plan-review connection for an explicitly requested model download. The
+installed skill and generated tool catalog must come from one revision. A tool
+schema describes a request; it does not grant host permission or prove readiness.
+
+1. Use `aisb_model_workflow` with `selection.kind: source` and the exact model
+   and commit. Source preview requires separate source-access consent and current
+   Model read and provider-key-use permission. The download proposal also needs
+   current Model write permission. Keep the returned source
+   manifest unchanged. Provider-declared licensing is metadata, not permission.
+2. Put `models.download` in `aisb_preview_build_plan`. Supply a fresh
+   `idempotencyKey`, name, exact `sourceManifest`, `allowedOrigins` and a
+   `maximumDurationSeconds` limit (1 to 3600 seconds). Use the existing public
+   Hugging Face transfer profile. Private or gated transfers are unavailable.
+   An optional `inferenceMode` is a model task type, not CPU/GPU placement.
+   Preview rechecks the same source. It starts no download or installation.
+3. Send that exact preview with `aisb_request_build_plan_approval`. The user can
+   approve the scoped plan or each change in the app popup or authenticated chat.
+   Wait for its recorded approval. Source access and a successful preview do not
+   approve a transfer. Run the exact next step with its approval revision through
+   `aisb_run_approved_build_step`. An unavailable host has no alternate start path.
+4. Keep the returned original task and plan-step IDs. Poll `aisb_model_workflow`
+   with `selection.kind: task`. Cancellation requires the separate
+   `model-task-control` mode and `aisb_cancel_model_download`; its acknowledgement
+   does not establish shutdown. An unknown reply grants no fresh attempt or key.
+5. After completion, read `selection.kind: completed-download`. This reports
+   historical verification only. Propose a separate `models.save-download` step
+   with the same task and source manifest, a new change key and the desired name.
+   The host must obtain fresh current-file proof from the original owner before
+   approval and registration. Download approval never grants Save permission.
+
+Reuse the original key and exact request to reconcile an uncertain reply. Do not
+switch to an ordinary Model download or Save operation. Partial configuration,
+changed files, retired authority or an unavailable original owner must fail closed.
+Actual provider/worker/host qualification remains separate from these software
+integration checks. No accuracy test is part of this workflow.
+
 ## Show one saved Model
 
 Use `show-model` through `aisb_present_in_window` only after separate window
