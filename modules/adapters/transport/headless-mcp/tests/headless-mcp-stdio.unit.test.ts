@@ -492,7 +492,16 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       assert.deepEqual(await present({...delivery, commandId, intent}), {ok: true, value: {kind: "command",
         receipt: {sequence: 1, commandId, status: "accepted"}, duplicate: false}});
     }
+    const modelIntent = {action: "show-model", modelRecordId: "model.saved", modelUpdatedAt: "2026-11-28T00:00:00.000Z"};
+    const modelCommandId = randomUUID();
+    assert.deepEqual(await present({...delivery, commandId: modelCommandId, intent: modelIntent}), {ok: true, value: {kind: "command",
+      receipt: {sequence: 1, commandId: modelCommandId, status: "accepted"}, duplicate: false}});
     const beforeMalformedContext = requests.length;
+    for (const intent of [{...modelIntent, modelUpdatedAt: "latest"}, {...modelIntent, localPath: "private/model"},
+      {...modelIntent, modelRecordId: "../model"}, {...modelIntent, load: true}]) {
+      const denied = await presentationClient.callTool({name: "aisb_present_in_window", arguments: {...delivery, intent}});
+      assert.equal(denied.isError, true); assert.equal(requests.length, beforeMalformedContext);
+    }
     const malformedContext = await presentationClient.callTool({name: "aisb_present_in_window", arguments: {...delivery,
       intent: {action: "show-context-artifact", reference: {...contextReference, path: "private/context.zip"}}}});
     assert.equal(malformedContext.isError, true); assert.equal(requests.length, beforeMalformedContext);

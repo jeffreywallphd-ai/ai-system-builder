@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import {mkdtemp, realpath, rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import path from "node:path";
+import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
+import {createStructuredOrganizationRepositories} from "../../../../adapters/persistence/organization";
+import {createLocalWorkspaceRepository} from "../../../../adapters/persistence/workspace";
+import {createLocalModelRegistryAdapter} from "../../../../adapters/persistence/model";
+import {AuthorizeOperationService, createOrganizationAuthorizationPolicy} from "../../../../application/services/security";
+import {createTenantPlacementConfig} from "../../../../contracts/config";
+import {composeServerHost} from "../composeServerHost";
 
 import { UI_CONTROL_VERSION, readUiControlObservation, viewForUiPresentationIntent, type HeadlessHostIncarnationId, type HeadlessWindowRequest } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
@@ -17,6 +27,76 @@ const browser = {purpose: "browser" as const, organizationId, principalId, regis
 const agent = {purpose: "agent" as const, organizationId, principalId, registeredClientId: randomUUID(),
   isCurrent: () => true, agentSessionId: randomUUID()};
 const active = () => true;
+
+test("Managed Root composes exact recorded Model display with fresh ModelRead and separate browser consent", {timeout: 30_000}, async t => {
+  const parent = await realpath(tmpdir()), folder = await realpath(await mkdtemp(path.join(parent, "model-window-root-")));
+  const documents = createInMemoryStructuredDocumentStore(), partition = documents.forOrganization(organizationId);
+  const repositories = createStructuredOrganizationRepositories(documents), at = "2026-11-28T00:00:00.000Z";
+  await repositories.organizations.saveOrganization({organizationId, displayName: "Synthetic", status: "active", createdAt: at, updatedAt: at});
+  await repositories.memberships.saveMembership({organizationId, principalId, role: "owner", status: "active", createdAt: at, updatedAt: at});
+  await createLocalWorkspaceRepository({rootDirectory: folder, documents: partition}).saveWorkspace({workspaceId, organizationId,
+    displayName: "Synthetic", status: "active", createdAt: at, updatedAt: at});
+  await createLocalModelRegistryAdapter({documents: partition, rootDirectory: folder,
+    filePath: path.join(folder, "model-registry/models.json"), discovery: {enabled: false}, now: () => at})
+    .registerDownloadedModel({workspaceId, modelRecordId: "model.saved", displayName: "Private model label", provider: "huggingface",
+      source: "local", artifactForm: "full-model", localPath: "private/model", taskTags: ["text-generation"]});
+  let modelAllowed = false, modelChecks = 0, runtimeStarts = 0;
+  const original = AuthorizeOperationService.prototype.execute;
+  t.mock.method(AuthorizeOperationService.prototype, "execute", async function(this: AuthorizeOperationService, input: Parameters<AuthorizeOperationService["execute"]>[0]) {
+    if (input.requiredScopes.includes("model:read")) {modelChecks++; if (!modelAllowed) throw new Error("Synthetic ModelRead refusal.");}
+    return original.call(this, input);
+  });
+  const placement = createTenantPlacementConfig({mode: "dedicated", organizationId});
+  const authorize = new AuthorizeOperationService(createOrganizationAuthorizationPolicy({...repositories, tenantPlacement: placement}),
+    {createEventId: randomUUID, now: () => at});
+  const host = composeServerHost({env: {NODE_ENV: "test"}, persistence: {documents, organizationDocuments: partition},
+    organizationContextProvider: {getCurrentOrganizationContext: () => ({organizationId, principalId})}, organizationAuthorizer: authorize,
+    managedSavedState: {authorize, listActiveSystems: async () => []},
+    managedHeadlessAgent: {placement, browserObservationAuthorizer: authorize},
+    pythonRuntimeEnvironmentPreparer: async () => {runtimeStarts++; throw new Error("Display must not start a runtime.");},
+    settings: {localSettingsFilePath: path.join(folder, "settings.json")},
+    artifactRepo: {providerCredentialRootDirectory: path.join(folder, "credentials"), huggingFaceTokenConfigFilePath: path.join(folder, "no-token.json")},
+    now: () => at, logSink() {},
+  });
+  try {
+    host.registerApi({app: {get() {}, post() {}, patch() {}, delete() {}}, storageRootDirectory: folder, runtimeRootDirectory: path.join(folder, "runtime")});
+    await host.waitForAssetFoundation();
+    const service = host.getManagedBrowserConsent(); assert.ok(service);
+    const document = await service.register(browser, workspaceId, active); assert.ok(document?.target && document.proof);
+    const tab = {target: document.target, proof: document.proof, identity: browser};
+    const request = await service.execute({version: UI_CONTROL_VERSION, operation: "window.request", input: {
+      target: document.target, taskId: randomUUID(), requestKey: randomUUID(),
+    }}, agent, active);
+    assert.ok(request.ok && request.value.kind === "request");
+    const reserved = await service.consent(tab, request.value.request.target, "accept", active); assert.ok(reserved);
+    const target = reserved.target, intent = {action: "show-model", modelRecordId: "model.saved", modelUpdatedAt: at} as const;
+    const present = {version: UI_CONTROL_VERSION, operation: "window.present", input: {target, intent, commandId: randomUUID()}} as const;
+    assert.deepEqual(await service.execute(present, agent, active), {ok: false, code: "headless.forbidden"});
+    assert.ok(await service.consent(tab, target, "ready", active));
+    assert.deepEqual(await service.execute(present, agent, active), {ok: false, code: "headless.forbidden"});
+    assert.ok(modelChecks > 0, "The actual Root must require ModelRead before its recorded reader.");
+    modelAllowed = true;
+    const queued = await service.execute(present, agent, active); assert.ok(queued.ok && queued.value.kind === "command");
+    const delivered = await service.pullPresentation(tab, {target, sequence: 1}, active);
+    assert.ok(delivered?.result.status === "command" && delivered.canPublish());
+    assert.deepEqual(delivered.result.command.intent, intent);
+    assert.equal(delivered.result.detail.title, "Saved model");
+    assert.doesNotMatch(JSON.stringify(delivered.result), /private\/model|Private model label/);
+    modelAllowed = false;
+    const refused = await service.pullPresentation(tab, {target, sequence: 1}, active);
+    assert.ok(!refused || refused.result.status !== "command");
+    modelAllowed = true;
+    assert.deepEqual(await service.execute({...present, input: {...present.input, commandId: randomUUID(),
+      intent: {...intent, modelUpdatedAt: "2026-11-27T00:00:00.000Z"}}}, agent, active), {ok: false, code: "headless.forbidden"});
+    assert.equal(await service.revoke(tab, target, active), true);
+    assert.deepEqual(await service.execute(present, agent, active), {ok: false, code: "headless.forbidden"});
+    assert.equal(runtimeStarts, 0);
+  } finally {
+    await host.closeRuntimeDatabases();
+    const target = await realpath(folder); assert.equal(target, folder); assert.equal(path.dirname(target), parent);
+    await rm(target, {recursive: true, force: true});
+  }
+});
 
 test("only observations use the passive workspace authorizer and its denial retires the document", async () => {
   let normalReads = 0;
@@ -44,8 +124,9 @@ test("only observations use the passive workspace authorizer and its denial reti
   } finally {service.close();}
 });
 
-for (const query of [false, true]) test(`only the active managed lease receives ${query ? "query" : "saved"} presentation and fresh minimal context`, async () => {
-  const intent = query ? {action: "show-context-query", taskId: randomUUID()} as const : {action:"open-system", systemId:"fixture.saved", revisionId:"revision-1"} as const;
+for (const kind of ["saved", "query", "model"] as const) test(`only the active managed lease receives ${kind} presentation and fresh minimal context`, async () => {
+  const intent = kind === "model" ? {action: "show-model", modelRecordId: "model.saved", modelUpdatedAt: "2026-11-28T00:00:00.000Z"} as const :
+    kind === "query" ? {action: "show-context-query", taskId: randomUUID()} as const : {action:"open-system", systemId:"fixture.saved", revisionId:"revision-1"} as const;
   let resourceAllowed = true;
   const resourcePolicyModes: boolean[] = [];
   let now = 0;
@@ -103,7 +184,7 @@ for (const query of [false, true]) test(`only the active managed lease receives 
     const response = await openContext;
     assert.deepEqual(response,{ok:true,value:{kind:"context",context}});
     assert.equal(service.canPublish(read,response,agent),true);
-    if (query) {
+    if (kind !== "saved") {
       resourceAllowed = false;
       const deniedRead = service.execute(read, agent, active);
       const deniedChallenge = await service.readContextChallenge(tab, target, active);

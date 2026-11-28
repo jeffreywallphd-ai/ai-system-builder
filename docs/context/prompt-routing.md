@@ -1,5 +1,12 @@
 # Prompt Routing
 
+Requests to show a saved Model through Headless window control use the security
+and runtime-model packs plus the portable Model guide. Keep the exact recorded
+ID/update timestamp, current ModelRead and separate window consent. Display is
+recorded metadata only; it neither loads a model nor establishes runtime or supply
+qualification. Install the complete portable guide and generated tool catalog
+from the same source revision.
+
 Requests about fixed roadmap stories, expandable tasks or their execution
 evidence use the existing implementation-roadmap skill and docs-standards pack.
 Keep execution Work separate from planned tasks, preserve compatible chunk IDs,

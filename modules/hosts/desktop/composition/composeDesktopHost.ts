@@ -16,7 +16,8 @@ import { composeDesktopHeadlessLocalFileSelection } from "./composeDesktopHeadle
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
-import {isUiContextPresentationIntent, isUiDataPresentationIntent} from "../../../contracts/headless";
+import {isUiContextPresentationIntent, isUiDataPresentationIntent, isUiModelPresentationIntent} from "../../../contracts/headless";
+import {composeHeadlessModelPresentation} from "../../shared/composition/headlessModelPresentation";
 import {composeHeadlessDataPresentation} from "../../shared/composition/headlessDataPresentation";
 import {composeHeadlessContextPresentation} from "../../shared/composition/headlessContextPresentation";
 import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
@@ -2359,6 +2360,11 @@ export function composeDesktopHost(
               audit: headlessAudit,
               isOpen: () => !headlessReadAdmissionClosed,
               async canPresent(workspaceId, intent, stillAllowed) {
+                if (isUiModelPresentationIntent(intent)) {
+                  return composeHeadlessModelPresentation({documents: platformDocuments!,
+                    rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId})(intent,
+                    {organizationId: identity.organizationId, principalId: identity.principalId, workspaceId}, stillAllowed);
+                }
                 if (isUiContextPresentationIntent(intent)) {
                   const context = {organizationId: identity.organizationId, principalId: identity.principalId, workspaceId};
                   const reader = composeHeadlessContextPresentation({documents: platformDocuments!,

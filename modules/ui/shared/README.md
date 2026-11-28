@@ -1,5 +1,11 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The takeover resource card also supports exact saved Models. It shows the Model
+record ID and saved update timestamp, with a fixed status/type summary from the
+original reader. It offers no execution controls or private file details. Current
+ModelRead and separate window consent remain host-owned; changing the card's
+display cannot grant authority or qualify a runtime.
+
 The existing takeover resource card shows exact saved Context IDs/digests or
 accepted Context task IDs with fixed bounded summaries from the owning reader.
 It renders no source/query/model content. Existing consent, dirty navigation,

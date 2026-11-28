@@ -318,6 +318,32 @@ MANAGED_WORKFLOW_TRANSPORT_SCOPE = MANAGED_WORKFLOW_TRANSPORT_REQUIRED + (
     "modules/adapters/transport/headless-mcp/README.md", "modules/hosts/server/composition/README.md",
     "modules/adapters/transport/api-express/README.md", "docs/security/headless-system-builder-threat-model.md",
     "docs/operations/headless-text-generation-feature.json", "docs/diagnostics/ai-development-control-plane.md")
+MODEL_PRESENTATION_REQUIRED = (
+    "modules/hosts/shared/composition/headlessModelPresentation.ts",
+    "modules/hosts/shared/composition/tests/headless-model-presentation.unit.test.ts",
+    "modules/contracts/headless/ui-control-authority.ts", "modules/contracts/headless/ui-control-delivery.ts",
+    "modules/contracts/headless/tests/ui-control-delivery.unit.test.ts",
+    "modules/ui/shared/takeover/PresentedWindowResource.tsx",
+    "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+    "modules/hosts/desktop/composition/composeDesktopUiControl.ts",
+    "modules/hosts/desktop/composition/composeDesktopHost.ts",
+    "modules/hosts/server/composition/composeServerHost.ts",
+    "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+    "modules/hosts/desktop/composition/tests/desktop-ui-control.unit.test.ts",
+    "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts")
+MODEL_PRESENTATION_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_model_presentation.py"
+MODEL_PRESENTATION_SCOPE = MODEL_PRESENTATION_REQUIRED + (MODEL_PRESENTATION_CONTROLLER,
+    "modules/hosts/desktop/composition/tests/desktop-ui-control.unit.test.ts",
+    "modules/hosts/server/composition/composeManagedBrowserPresentationResources.ts",
+    "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+    "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+    "skills/control-ai-system-builder/references/mcp-tools.json", "skills/control-ai-system-builder/references/models.md",
+    "skills/control-ai-system-builder/SKILL.md", "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
+    "docs/context/prompt-routing.md", "modules/hosts/desktop/composition/README.md",
+    "modules/hosts/server/composition/README.md", "modules/hosts/shared/README.md", "modules/ui/shared/README.md",
+    "modules/adapters/transport/headless-mcp/README.md", "docs/security/headless-system-builder-threat-model.md",
+    "docs/operations/headless-text-generation-feature.json", "dev-tools/helpers/control_plane/catalog.py",
+    "docs/diagnostics/ai-development-control-plane.md")
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
@@ -1127,6 +1153,21 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_required_files": MANAGED_WORKFLOW_TRANSPORT_REQUIRED,
         "sources": MANAGED_WORKFLOW_TRANSPORT_SCOPE,
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--") + MANAGED_WORKFLOW_TRANSPORT_TESTS,
+    },
+    "headless-model-record-presentation-unit": {
+        "automatic_sources": MODEL_PRESENTATION_REQUIRED,
+        "automatic_required_files": MODEL_PRESENTATION_REQUIRED,
+        "sources": MODEL_PRESENTATION_SCOPE,
+        "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--")
+            + (MODEL_PRESENTATION_REQUIRED[1], MODEL_PRESENTATION_REQUIRED[4], MODEL_PRESENTATION_REQUIRED[6])
+            + MODEL_PRESENTATION_REQUIRED[-2:],
+    },
+    "headless-model-record-presentation-types": {
+        "companion_to": "headless-model-record-presentation-unit", "sources": MODEL_PRESENTATION_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM,DOM.Iterable",
+            "--jsx", "react-jsx") + (MODEL_PRESENTATION_REQUIRED[1], MODEL_PRESENTATION_REQUIRED[4],
+                MODEL_PRESENTATION_REQUIRED[5], MODEL_PRESENTATION_REQUIRED[8]),
     },
     "managed-workflow-transport-types": {
         "companion_to": "managed-workflow-transport-unit", "sources": MANAGED_WORKFLOW_TRANSPORT_SCOPE,
@@ -4874,6 +4915,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_managed_workflow_transport.", "-k", "test_control_plane_managed_workflow_reads.",
                 "-k", "test_control_plane_focused."]
+    if (paths and set(paths) <= set(MODEL_PRESENTATION_SCOPE)
+            and ("dev-tools/helpers/control_plane/catalog.py" in paths or MODEL_PRESENTATION_CONTROLLER in paths)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": MODEL_PRESENTATION_REQUIRED +
+                (MODEL_PRESENTATION_CONTROLLER, "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_model_presentation.", "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

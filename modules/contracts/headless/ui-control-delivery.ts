@@ -6,6 +6,7 @@ import { normalizeDatasetId, normalizeDatasetVersionId } from "../dataset";
 import { isHeadlessHostIncarnationId } from "./headless-read-request";
 import {isWorkspaceId} from "../workspace";
 import {readHeadlessSavedContextReference, type HeadlessSavedContextReference} from "./headless-context-result-plan";
+import {isHeadlessModelRecordId, isHeadlessModelTimestamp} from "./headless-model-metadata";
 import { isUiControlId, readUiControlLeaseTarget, type UiControlLeaseTarget } from "./ui-control-authority";
 
 export const UI_PRESENTATION_LIMITS = Object.freeze({
@@ -25,7 +26,13 @@ export type UiPresentationIntent = SystemPresentation
   | { readonly action: "show-dataset-task"; readonly taskId: string }
   | { readonly action: "show-context-artifact"; readonly reference: HeadlessSavedContextReference }
   | { readonly action: "show-context-task"; readonly taskId: string }
-  | { readonly action: "show-context-query"; readonly taskId: string };
+  | { readonly action: "show-context-query"; readonly taskId: string }
+  | { readonly action: "show-model"; readonly modelRecordId: string; readonly modelUpdatedAt: string };
+
+export type UiModelPresentationIntent = Extract<UiPresentationIntent, {action: "show-model"}>;
+export function isUiModelPresentationIntent(intent: UiPresentationIntent): intent is UiModelPresentationIntent {
+  return intent.action === "show-model";
+}
 
 export type UiContextPresentationIntent = Extract<UiPresentationIntent, {action: "show-context-artifact" | "show-context-task" | "show-context-query"}>;
 export function isUiContextPresentationIntent(intent: UiPresentationIntent): intent is UiContextPresentationIntent {
@@ -134,7 +141,7 @@ export function readUiPresentationPublication(raw: unknown) {
 }
 
 export type UiPresentationContext = {
-  readonly view: "system" | "component" | "run" | "artifact" | "validation" | "data-source" | "dataset-version" | "dataset-task" | "context-artifact" | "context-task" | "context-query" | "other";
+  readonly view: "system" | "component" | "run" | "artifact" | "validation" | "data-source" | "dataset-version" | "dataset-task" | "context-artifact" | "context-task" | "context-query" | "model" | "other";
   readonly ready: boolean;
   readonly dirtyNavigationBlocked: boolean;
   readonly selection?: UiPresentationIntent;
@@ -152,6 +159,7 @@ const contextSelection = {
   "show-context-artifact": "context-artifact",
   "show-context-task": "context-task",
   "show-context-query": "context-query",
+  "show-model": "model",
 } as const;
 
 export function viewForUiPresentationIntent(intent: UiPresentationIntent): UiPresentationContext["view"] {
@@ -165,7 +173,7 @@ export function readUiPresentationContext(raw: unknown): UiPresentationContext |
     if (typeof ready !== "boolean" || typeof dirtyNavigationBlocked !== "boolean") return;
     if (view !== "system" && view !== "component" && view !== "run" && view !== "artifact" &&
         view !== "validation" && view !== "data-source" && view !== "dataset-version" && view !== "dataset-task" &&
-        view !== "context-artifact" && view !== "context-task" && view !== "context-query" && view !== "other") return;
+        view !== "context-artifact" && view !== "context-task" && view !== "context-query" && view !== "model" && view !== "other") return;
     if (!("selection" in row)) return { view, ready, dirtyNavigationBlocked };
     const selection = readUiPresentationIntent(row.selection);
     if (!selection || !ready || contextSelection[selection.action] !== view) return;
@@ -195,10 +203,14 @@ export function sameUiControlLease(left: UiControlLeaseTarget, right: UiControlL
 export function readUiPresentationIntent(raw: unknown): UiPresentationIntent | undefined {
   try {
     const row = readStrictPassiveRecord(raw, ["action", "systemId", "revisionId", "instanceId", "runId", "artifactId",
-      "taskId", "fileId", "taskRevision", "datasetId", "versionId", "versionDigest", "reference"]);
+      "taskId", "fileId", "taskRevision", "datasetId", "versionId", "versionDigest", "reference", "modelRecordId", "modelUpdatedAt"]);
     const { action, systemId, revisionId, instanceId, runId, artifactId } = row;
     const keys = Object.keys(row).length;
     switch (action) {
+      case "show-model":
+        if (keys === 3 && isHeadlessModelRecordId(row.modelRecordId) && isHeadlessModelTimestamp(row.modelUpdatedAt))
+          return {action, modelRecordId: row.modelRecordId, modelUpdatedAt: row.modelUpdatedAt};
+        break;
       case "open-system":
       case "show-validation":
         if (keys === 3 && isResourceId(systemId) && isSystemBuilderSystemId(systemId) &&

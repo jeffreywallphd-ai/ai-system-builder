@@ -3786,6 +3786,14 @@ only the matching controller routing tests; missing or unknown impact preserves
 fallback. No model, provider, public host or whole-system qualification is run
 by these component checks.
 
+`headless-model-record-presentation-unit` exercises the original recorded Model
+reader, exact selector and shared card. Its strict companion compiles production
+reader/card/Desktop Root and related typed tests. The existing window authority,
+two-host consent/delivery and MCP neighbors remain required. Only complete known
+source coverage narrows controller routing; missing, unknown or explicitly generic
+impact keeps conservative checks. These feature checks start no model/provider
+and grant no actual-host or parent qualification.
+
 `managed-workflow-transport-unit` covers the shared passive result decoder,
 authenticated HTTP path and actual Managed Root wiring with focused fixtures.
 Its strict type companions compile those tests and the actual ESM MCP entry

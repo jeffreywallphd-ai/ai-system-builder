@@ -1,5 +1,21 @@
 # Headless System Builder threat model
 
+### Exact saved Model presentation
+
+`show-model` is an additive finite read/display intent, not execution. Capture
+the passive record ID and canonical update timestamp before awaits. Both original
+window owners require current workspace/asset/Model read and the independent
+exact user-approved lease. The shared reader pins original organization, actor
+and workspace, rechecks access before/after the original recorded-only Model read,
+and denies a changed saved timestamp. Missing, wrong-context, private/extra fields
+and withdrawn authority refuse disclosure. Do not run discovery, provider, model,
+download, file or Save paths. Display contains fixed status/type and ID/time;
+readiness and supply stay not checked. Only opaque selectors reach window context.
+Existing dirty navigation, renewal, delivery and revoke rules still apply.
+Focused software/UI/SDK fixtures are not actual paired-model qualification.
+Rollback removes this additive selector/binding without changing stored Models,
+other presentation families or execution permission.
+
 ### Managed workflow metadata and status reads
 
 The production Root reuses original workflow/status services and the exact active

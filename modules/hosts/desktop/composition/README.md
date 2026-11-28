@@ -1,5 +1,11 @@
 # Desktop host composition
 
+`show-model` uses the original recorded-only Model metadata reader after fresh
+workspace/asset/Model read checks. It binds both saved Model ID and update time,
+and returns only a fixed status/type summary to the separately consented window.
+The existing lease, current permission, dirty navigation and revoke rules remain
+authoritative. Display starts no model, runtime, provider, download or file scan.
+
 The configured `models.review-training` read keeps omitted mode cache-only.
 Explicit `current-files` mode forwards to the original settled candidate owner,
 with the same captured grant lifetime and fresh read permission. Decode and

@@ -51,7 +51,9 @@ for (const intent of [
 });
 
 
-test("query presentation alone requires ModelRead before metadata and at final publication", async t => {
+for (const intent of [{action: "show-context-query", taskId: "ca353bdd-7793-44c6-8c36-c470be8c537c"},
+  {action: "show-model", modelRecordId: "model.saved", modelUpdatedAt: "2026-11-28T00:00:00.000Z"}] as const)
+test(`${intent.action} requires ModelRead before metadata and at final publication`, async t => {
   const documents = createInMemoryStructuredDocumentStore(), organizationId = createOrganizationId("org.query-window");
   const workspaceId = createWorkspaceId("workspace.query-window"), hostIncarnationId = randomUUID(); assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
   const at = "2026-11-18T00:00:00.000Z", identity = {organizationId, principalId: "principal.synthetic", principalDisplayName: "Synthetic", createdAt: at, updatedAt: at};
@@ -68,10 +70,10 @@ test("query presentation alone requires ModelRead before metadata and at final p
   });
   const control = composeDesktopUiControl({documents, identity, hostIncarnationId, rootDirectory: ".", isOpen: () => true,
     async canPresent() {metadataReads++; if (revokeAtReturn) modelAllowed = false; return {title: "Synthetic query summary"};}});
-  const query = {action: "show-context-query", taskId: randomUUID()} as const;
+  const query = intent;
   try {
     assert.equal(await control.authorizeIntent(workspaceId, query), undefined); assert.equal(metadataReads, 0);
-    assert.ok(await control.authorizeIntent(workspaceId, {action: "show-context-task", taskId: query.taskId}));
+    assert.ok(await control.authorizeIntent(workspaceId, {action: "show-context-task", taskId: randomUUID()}));
     assert.equal(metadataReads, 1, "Generation task display keeps artifact-only permission.");
     modelAllowed = true; assert.ok(await control.authorizeIntent(workspaceId, query)); assert.equal(metadataReads, 2);
     revokeAtReturn = true; assert.equal(await control.authorizeIntent(workspaceId, query), undefined);

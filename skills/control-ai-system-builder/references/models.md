@@ -1,5 +1,21 @@
 # Recorded model metadata
 
+## Show one saved Model
+
+Use `show-model` through `aisb_present_in_window` only after separate window
+consent. Supply the exact `modelRecordId` and its `updatedAt` as `modelUpdatedAt`
+from the recorded Model result. The same user, host and workspace must retain
+Model read permission. A changed timestamp requires a fresh recorded read; do
+not replace it with `latest` or omit the timestamp.
+
+The existing shared card shows the saved ID, saved version and fixed status/type
+summary. Runtime and supply checks remain not checked. The window context exposes
+only the Model selector and view. It includes no private path, prompt, model
+content or credentials. Display starts no model or provider and grants no
+execution, download or Save authority. Revoke or expiry ends further display and
+fresh context. Physical model execution and real-app qualification are separate.
+Install this guide, `SKILL.md` and the generated `mcp-tools.json` from one revision.
+
 Use this guide to inspect models already recorded in the selected workspace.
 Install this file with the entire skill directory and generated `mcp-tools.json`
 from the same repository revision. It grants no permission by itself.

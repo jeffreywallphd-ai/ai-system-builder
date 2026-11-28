@@ -2,6 +2,25 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readUiPresentationIntent, readUiPresentationDelivery, readUiPresentationContext, viewForUiPresentationIntent } from "..";
 
+test("Model display binds an exact saved record timestamp without private or effect fields", () => {
+  const raw = {action: "show-model", modelRecordId: "model.saved", modelUpdatedAt: "2026-11-28T00:00:00.000Z"};
+  const parsed = readUiPresentationIntent(raw); assert.deepEqual(parsed, raw); assert.ok(parsed);
+  const context = {view: "model", ready: true, dirtyNavigationBlocked: false, selection: raw};
+  assert.deepEqual(readUiPresentationContext(context), context);
+  assert.equal(readUiPresentationContext({...context, view: "artifact"}), undefined);
+  for (const extra of [{localPath: "private/model"}, {load: true}, {principalId: "other"}, {prompt: "private"}])
+    assert.equal(readUiPresentationIntent({...raw, ...extra}), undefined);
+  for (const modelRecordId of ["../model", "https://example.test/model", "", "model\nother"])
+    assert.equal(readUiPresentationIntent({...raw, modelRecordId}), undefined);
+  for (const modelUpdatedAt of ["latest", "2026-11-28", "2026-02-30T00:00:00.000Z"])
+    assert.equal(readUiPresentationIntent({...raw, modelUpdatedAt}), undefined);
+  let getters = 0;
+  assert.equal(readUiPresentationIntent(Object.defineProperty({...raw}, "modelRecordId", {enumerable: true, get() {getters++; return raw.modelRecordId;}})), undefined);
+  assert.equal(getters, 0);
+  raw.modelRecordId = "model.other";
+  assert.equal(parsed.action === "show-model" && parsed.modelRecordId, "model.saved");
+});
+
 test("Context display copies only exact saved references or accepted-task selectors", () => {
   const reference = {workspaceId: "context-workspace", contextId: "ca353bdd-7793-44c6-8c36-c470be8c537c",
     taskId: "ca353bdd-7793-44c6-8c36-c470be8c537d", kind: "rag-database", artifactDigest: `sha256:${"a".repeat(64)}`};

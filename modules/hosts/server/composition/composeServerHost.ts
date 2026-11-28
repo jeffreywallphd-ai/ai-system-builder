@@ -264,7 +264,8 @@ import { composeManagedSavedState } from "./composeManagedSavedState";
 import { composeManagedAgentReads } from "./composeManagedAgentReads";
 import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
 import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
-import {isUiContextPresentationIntent, isUiDataPresentationIntent} from "../../../contracts/headless";
+import {isUiContextPresentationIntent, isUiDataPresentationIntent, isUiModelPresentationIntent} from "../../../contracts/headless";
+import {composeHeadlessModelPresentation} from "../../shared/composition/headlessModelPresentation";
 import {composeHeadlessDataPresentation} from "../../shared/composition/headlessDataPresentation";
 import {composeHeadlessContextPresentation} from "../../shared/composition/headlessContextPresentation";
 import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
@@ -1839,12 +1840,14 @@ export function composeServerHost(
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),
             async resolvePresentation(principal, workspaceId, intent, {passive}) {
-              const scopes = intent.action === "show-context-query" ? [...readScopes, "artifact:read", "model:read"] as const : intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
+              const scopes = isUiModelPresentationIntent(intent) ? [...readScopes, "model:read"] as const : intent.action === "show-context-query" ? [...readScopes, "artifact:read", "model:read"] as const : intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
                 intent.action === "show-artifact" || isUiDataPresentationIntent(intent) || isUiContextPresentationIntent(intent) ? [...readScopes, "artifact:read"] as const : readScopes;
               const mayRead = authorize(passive ? observation : workspaceAuthorization, scopes);
               if (!await mayRead(principal, workspaceId)) return;
               const context = {organizationId: principal.organizationId, principalId: principal.principalId, workspaceId};
-              const value = isUiContextPresentationIntent(intent) ? await composeHeadlessContextPresentation({documents: managedDocuments,
+              const value = isUiModelPresentationIntent(intent) ? await composeHeadlessModelPresentation({documents: managedDocuments,
+                rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId})(intent, context, () => mayRead(principal, workspaceId)) :
+                isUiContextPresentationIntent(intent) ? await composeHeadlessContextPresentation({documents: managedDocuments,
                 rootDirectory: registerOptions.storageRootDirectory, hostIncarnationId,
                 peekProcessor: () => contextGenerationUseCase, peekQueryOwner: () => contextBrowserUseCases})(context)?.execute(intent, context, () => mayRead(principal, workspaceId)) :
                 isUiDataPresentationIntent(intent) ? await composeHeadlessDataPresentation({documents: managedDocuments,

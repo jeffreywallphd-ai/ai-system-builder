@@ -1,5 +1,13 @@
 # Server host composition
 
+Managed `show-model` presentation requires current ModelRead as well as the
+existing workspace/asset read and independently approved exact browser lease.
+The original recorded metadata reader checks the exact saved ID/update time in
+the authorized organization partition. Normal/passive presentation checks apply
+the same ModelRead requirement before and after the read. The generic saved
+system resolver cannot treat a Model selector as a system. No model, provider,
+runtime, download, discovery or Save effect is added.
+
 The Managed read composition optionally accepts the existing workflow metadata
 and exact conversation-status readers. Only current registered agents with the
 same organization/principal and workspace/asset/runtime read authority may use

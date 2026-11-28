@@ -75,6 +75,8 @@ function addPresentationTools(server: McpServer) {
     z.strictObject({ action: z.literal("select-component"), systemId, revisionId: exactResource, instanceId: exactResource }),
     z.strictObject({ action: z.literal("show-validation"), systemId, revisionId: exactResource }),
     z.strictObject({ action: z.literal("show-run"), runId: exactResource }),
+    z.strictObject({action: z.literal("show-model"), modelRecordId: z.string().refine(headless.isHeadlessModelRecordId),
+      modelUpdatedAt: z.string().refine(headless.isHeadlessModelTimestamp)}),
     z.strictObject({ action: z.literal("show-artifact"), artifactId: z.string().min(1).max(512) }),
     z.strictObject({ action: z.literal("show-data-source"), taskId: exactResource, fileId: exactResource,
       taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) }),

@@ -20,6 +20,14 @@ const workspaceId = createWorkspaceId("workspace.facilities");
 const scope = { hostIncarnationId, workspaceId };
 const planModes = new Set(["plan-review", "managed-plan-review", "model-task-control", "managed-model-task-control"]);
 
+test("portable Model display guidance preserves exact saved version and separate read/window authority", () => {
+  const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8").replace(/\s+/g, " ");
+  for (const text of ["show-model", "modelRecordId", "modelUpdatedAt", "separate window consent", "Model read permission",
+    "changed timestamp", "Display starts no model or provider", "Revoke or expiry", "real-app qualification are separate",
+    "generated `mcp-tools.json` from one revision"])
+    assert.ok(guide.includes(text), `Missing Model display boundary: ${text}`);
+});
+
 function literalHostPlanTools(sourcePath: string, mode: "plan-review" | "managed-plan-review", suppliedSource?: string) {
   const source = ts.createSourceFile(sourcePath, suppliedSource ?? readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const arrays: ts.ArrayLiteralExpression[] = [];

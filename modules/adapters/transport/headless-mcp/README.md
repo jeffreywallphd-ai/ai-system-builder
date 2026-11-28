@@ -1,5 +1,12 @@
 # Local desktop tools over MCP
 
+`aisb_present_in_window` accepts `show-model` with an exact `modelRecordId` and
+`modelUpdatedAt`. Both hosts require their current ModelRead and separate window
+lease. The strict SDK schema rejects paths, effect flags and malformed versions.
+The existing shared card shows recorded status only; display neither loads a
+model nor establishes readiness, supply or quality. Keep the portable Model guide
+and generated tool reference from the same revision.
+
 Ordinary Managed agent connections also expose `aisb_list_workflows`,
 `aisb_prepare_workflow` and `aisb_read_conversation_task`. Check the running host's
 operation list before use. They forward only to the existing authenticated read

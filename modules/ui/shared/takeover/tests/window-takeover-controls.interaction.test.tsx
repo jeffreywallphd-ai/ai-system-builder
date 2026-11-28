@@ -14,6 +14,19 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, N
 after(() => dom.window.close());
 const id = (index: number) => `e38b2781-e605-4de3-83e1-${String(index).padStart(12, "0")}`;
 
+test("Model card shows the exact record and saved version without execution or private fields", async () => {
+  const app = document.getElementById("app")!, root = createRoot(app);
+  const intent = {action: "show-model", modelRecordId: "model.saved", modelUpdatedAt: "2026-11-28T00:00:00.000Z"} as const;
+  try {
+    await act(async () => {root.render(<PresentedWindowResource elementRef={null} intent={intent}
+      detail={{title: "Saved model", summary: "Status: downloaded. Runtime and supply checks: not checked."}} />);});
+    assert.deepEqual([...app.querySelectorAll("code")].map(node => node.textContent), [intent.modelRecordId, intent.modelUpdatedAt]);
+    assert.match(app.textContent!, /Saved model.*not checked.*Saved version/);
+    assert.equal(app.querySelectorAll("button, input, form").length, 0);
+    assert.doesNotMatch(app.textContent!, /undefined|private|Load model|Download model/);
+  } finally {await act(async () => root.unmount());}
+});
+
 test("Context cards show the exact saved selection or accepted task without missing identifiers", async () => {
   const app = document.getElementById("app")!, root = createRoot(app);
   const reference = {workspaceId: "example" as never, contextId: id(31), taskId: id(32), kind: "rag-database" as const,

@@ -1708,6 +1708,27 @@
                 "properties": {
                   "action": {
                     "type": "string",
+                    "const": "show-model"
+                  },
+                  "modelRecordId": {
+                    "type": "string"
+                  },
+                  "modelUpdatedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "action",
+                  "modelRecordId",
+                  "modelUpdatedAt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
                     "const": "show-artifact"
                   },
                   "artifactId": {
