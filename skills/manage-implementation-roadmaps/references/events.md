@@ -358,8 +358,11 @@ it is different from the plan's internal `fingerprint` field.
 }
 ```
 
-The target must be the current researched, implementing increment or an untouched
-pending increment. Existing plans may change only their `chunks`. Every criterion
+The target must be the current researched, implementing or verifying increment,
+or an untouched pending increment. Adding pending in-scope work to a verifying
+increment returns it to implementing. Prior evidence and completed tasks do not
+change. A verifying plan must already have completion records for every planned
+task. Existing plans may change only their `chunks`. Every criterion
 must stay mapped, IDs must be unique, and the plan must fit the review site's
 100-chunk bound. Completed chunks cannot be deleted, edited or reordered. Missing
 or stale digests, no-op changes, unapproved scope and human-action blockers refuse

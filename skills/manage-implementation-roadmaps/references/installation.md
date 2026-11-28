@@ -67,6 +67,12 @@ cannot repair a saved chain by rewriting its root.
 Keep its direct-runner bridge and nonzero-collection regression when installing;
 placing a new test file beside a fixed runner does not make that gate execute it.
 
+Install the verifying-plan refinement handler and its positive/denial cases
+together. It permits new pending in-scope tasks in a current researched verifying
+increment and returns that increment to implementation. Completed tasks, approval,
+acceptance and evidence remain unchanged. It grants no cross-roadmap scope or
+qualification transfer.
+
 ## GitHub CLI skill commands
 
 GitHub CLI 2.90 or later includes public-preview `gh skill` commands. Preview the

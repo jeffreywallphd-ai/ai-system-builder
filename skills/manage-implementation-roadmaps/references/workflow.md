@@ -419,6 +419,14 @@ increment research and `increment-plan-recorded` are still required. Reconcile t
 outline with that research. Record completed chunks only from real implementation,
 focused checks and independent review, never from a split or a commit alone.
 
+A current researched verifying increment can receive additional pending tasks
+within its approved scope. Audited refinement returns it to implementation; prior
+passes, failures and pending evidence do not change. For an authorized tracking
+move between roadmaps, first publish the recipient task and verify its complete
+requirements, then refine the source plan. If either step fails, retain the source
+task and report the incomplete transfer. Do not move acceptance or completion
+claims through this tracking-only procedure.
+
 #### Commit reviewed chunks
 
 Commit a coherent completed, tested and independently reviewed chunk before

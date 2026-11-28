@@ -83,6 +83,41 @@ class WorkChunkRefinementTests(unittest.TestCase):
         self.assertTrue(roadmap.approval_is_current(current))
         self.assertFalse(roadmap.implementation_ready_for_overall(current))
 
+    def test_verifying_refinement_returns_pending_work_to_implementation_without_a_pass(self):
+        for chunk in self.engine.state["increments"][0]["plan"]["chunks"]:
+            self.record(chunk["id"])
+        before = copy.deepcopy(self.engine.state)
+        self.assertEqual(before["increments"][0]["status"], "verifying")
+        event = self.event()
+        event["plan"]["chunks"] = copy.deepcopy(before["increments"][0]["plan"]["chunks"])
+        event["plan"]["chunks"].append({**copy.deepcopy(event["plan"]["chunks"][-1]), "id": "additional-in-scope-task"})
+        self.engine.apply(event)
+        current = self.engine.state
+        self.assertEqual(current["increments"][0]["status"], "implementing")
+        self.assertEqual(current["status"], "executing")
+        self.assertEqual(current["increments"][0]["completedChunks"], before["increments"][0]["completedChunks"])
+        for key in ("roadmapApproval", "currentIncrementId", "chunks", "evidence", "blockers", "completion"):
+            self.assertEqual(current[key], before[key])
+        self.assertFalse(roadmap.implementation_ready_for_overall(current))
+        self.assert_refused(current, {"type": "increment-completed", "summary": "Pending work is not complete."})
+        roadmap.validate_state_shape(self.engine.repo, current)
+
+    def test_verifying_refinement_still_refuses_completed_edits_or_foreign_active_state(self):
+        for chunk in self.engine.state["increments"][0]["plan"]["chunks"]:
+            self.record(chunk["id"])
+        before = copy.deepcopy(self.engine.state)
+        for mutation in ("edit", "delete", "reorder", "foreign-current", "no-research"):
+            state = copy.deepcopy(before)
+            event = self.event()
+            event["plan"]["chunks"] = copy.deepcopy(before["increments"][0]["plan"]["chunks"])
+            event["plan"]["chunks"].append({**copy.deepcopy(event["plan"]["chunks"][-1]), "id": "additional-in-scope-task"})
+            if mutation == "edit": event["plan"]["chunks"][0]["outcome"] = "Changed completed result"
+            elif mutation == "delete": event["plan"]["chunks"].pop(0)
+            elif mutation == "reorder": event["plan"]["chunks"][:2] = reversed(event["plan"]["chunks"][:2])
+            elif mutation == "foreign-current": state["currentIncrementId"] = "increment-2"
+            else: state["increments"][0]["research"] = []
+            with self.subTest(mutation=mutation): self.assert_refused(state, event)
+
     def test_pending_outline_cannot_start_or_complete_work_without_normal_gates(self):
         self.engine.apply(self.event(2))
         target = self.engine.state["increments"][1]
@@ -170,7 +205,7 @@ class WorkChunkRefinementTests(unittest.TestCase):
                 self.assert_refused(self.engine.state, event)
 
     def test_unapproved_human_blocked_and_closed_targets_are_refused(self):
-        for mutation in ("approval", "scope", "human", "verifying", "completed", "researching"):
+        for mutation in ("approval", "scope", "human", "verifying", "implemented-pending-qualification", "completed", "researching"):
             state = copy.deepcopy(self.engine.state)
             if mutation == "approval": state["roadmapApproval"] = None
             elif mutation == "scope": state["objective"] = "Unapproved different product"

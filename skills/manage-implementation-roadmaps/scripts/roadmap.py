@@ -1568,7 +1568,10 @@ def handle_work_chunks_reconfigured(state: dict[str, Any], event: dict[str, Any]
     target = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
     pending = (target["status"] == "pending" and not target.get("startedAt")
                and not target.get("research") and not target.get("completedChunks"))
-    active = (state.get("currentIncrementId") == target["id"] and target["status"] == "implementing"
+    fully_recorded = (bool(target.get("plan")) and bool(target["plan"].get("chunks"))
+                      and set(target.get("completedChunks", [])) == {c["id"] for c in target["plan"]["chunks"]})
+    active = (state.get("currentIncrementId") == target["id"]
+              and (target["status"] == "implementing" or target["status"] == "verifying" and fully_recorded)
               and bool(target.get("research")) and bool(target.get("plan"))
               and not target["plan"].get("outlineOnly"))
     if not pending and not active:
@@ -1618,6 +1621,10 @@ def handle_work_chunks_reconfigured(state: dict[str, Any], event: dict[str, Any]
         record_story_tracking(state, target, event, event["storyAssignments"])
     elif "storyAssignments" in event or "expectedTrackingDigest" in event:
         raise RoadmapError("Adopt the researched formal task plan before refining story ownership.")
+    if active:
+        # An unfinished in-scope task returns qualification work to implementation.
+        # This changes no acceptance, completion evidence or recorded task result.
+        derive_progress_status(state)
 
 
 def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:

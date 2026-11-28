@@ -28,6 +28,12 @@ task IDs, and inserts one pending recipient before final qualification. Separate
 semantic review and narrow user-directed reapproval are required. Security
 criteria, evidence and completed tasks stay intact; no qualification is granted.
 
+A researched current increment in Technical check pending can return to
+implementation when an audited plan refinement adds pending work in its approved
+scope. Completed tasks and all technical evidence stay unchanged. A user-directed
+move of unfinished task tracking publishes the recipient before the source task
+is removed. Both roadmap criteria and final qualification remain required.
+
 ## Automatic routing
 
 The repository's contributor control plane extends this workflow through

@@ -175,6 +175,13 @@ stays queued in its plan, without inventing a blocker or automatic cross-roadmap
 gate. For actual blockers, use the skill's `resumed` reconciliation before a new
 increment; current approval, ordering and dependencies remain mandatory.
 
+Requests to move unfinished task tracking between roadmaps use the roadmap skill
+and exact audited plan refinements. Publish and verify the complete pending
+recipient before removing the source task. A current researched verifying plan
+may add in-scope pending work and return to implementation. Retain all completed
+definitions, approval, criteria and evidence. A real technical-scope transfer
+still needs its separate governed scope event; tracking supplies no pass.
+
 Requests to commit completed and tested roadmap chunks also use the roadmap
 skill. Its scoped checkpoint procedure preserves unrelated changes and pending
 parent qualification; a checkpoint grants no publication or main advancement.

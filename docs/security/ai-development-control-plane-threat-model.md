@@ -21,6 +21,16 @@ history on overflow. Task counts and labels cannot grant scope approval or paren
 qualification. Semantic coverage and actual authority still need independent
 review within the existing cooperative-local trust model.
 
+A current researched verifying plan may return to implementation when additional
+pending tasks are admitted within its unchanged approved scope. Require that
+all previously planned tasks were actually recorded before accepting this
+verifying-stage refinement. Keep exact completed definitions/order, original
+approval, every technical criterion and all evidence; the state transition grants
+no pass. Source-claim and whole-plan/tracking guards remain in force. A
+user-directed cross-roadmap tracking move publishes and validates the recipient
+first. If source removal then fails, both pending records remain visible until
+reconciled; no parent duty is removed or qualified by the move.
+
 Task-bound Work uses a versioned optional target contract, not new fields in the
 legacy increment binding. Validate unique known task/story IDs, exact definition
 and ownership digests, selected scoped Work criteria, explicit outcome/support

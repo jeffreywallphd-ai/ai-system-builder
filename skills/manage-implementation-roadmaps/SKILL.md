@@ -332,6 +332,13 @@ Checkpoint current source work before changing its plan; never invalidate a
 candidate that is still under verification or review. See the workflow reference
 for refinement and the existing owned-change commit procedure.
 
+Refine tracking only in the current researched, formally planned increment. A
+verifying increment may return to implementation when a pending in-scope task is
+added. Preserve all completed tasks, technical criteria and evidence. This is no
+qualification pass. For a user-directed move between roadmaps, publish and check
+the pending recipient task first, then remove only the unfinished source task
+through its own audited refinement. Keep both parent qualification duties intact.
+
 ## Preserve plan continuity across approval turns
 
 An approval checkpoint ends a conversation turn, not the larger roadmap task. Never
