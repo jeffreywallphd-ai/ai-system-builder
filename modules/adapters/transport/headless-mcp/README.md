@@ -1,5 +1,14 @@
 # Local desktop tools over MCP
 
+Ordinary Managed agent connections also expose `aisb_list_workflows`,
+`aisb_prepare_workflow` and `aisb_read_conversation_task`. Check the running host's
+operation list before use. They forward only to the existing authenticated read
+route, with the exact configured organization/workspace. The SDK captures the
+target and validates finite metadata or matching session/turn status. It rejects
+private fields and separate approved-session handles. Managed plan-review mode
+does not gain these agent tools; no Managed conversation submission is enabled.
+Desktop retains its existing separately authorized session-handle behavior.
+
 The existing `completed-training` selector optionally accepts
 `mode: current-files`. Omitted mode reads only cached history. Explicit mode
 uses the original settled candidate reader and returns verified digests,

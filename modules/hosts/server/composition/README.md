@@ -9,10 +9,13 @@ after asynchronous work. This read grant does not disclose separately approved
 conversation-session handles. Original status reads return only exact saved
 session/turn/run status, with no prompt or output text.
 
-These optional host readers start no business or model task. Missing readers
-are not advertised. Public transport, production Root composition, actual
-execution and paired browser qualification require their separate integration;
-these component fixtures do not activate them or grant a parent pass.
+The configured Managed production Root connects these readers to its original
+workflow and conversation repositories. Current membership supplies the role;
+host retirement denies subsequent reads. The authenticated HTTP and official MCP
+agent paths expose only those configured operations. Plan-review clients gain no
+workflow read grant. These readers start no business or model task. Missing
+readers are not advertised. Source, protocol and Root fixtures do not qualify
+actual model execution, window reveal or paired browser journeys.
 
 The configured `models.review-training` read forwards explicit `current-files`
 mode to the original candidate owner. Omitted mode remains cache-only. Preserve

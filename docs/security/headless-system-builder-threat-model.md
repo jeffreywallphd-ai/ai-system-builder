@@ -1,5 +1,23 @@
 # Headless System Builder threat model
 
+### Managed workflow metadata and status reads
+
+The production Root reuses original workflow/status services and the exact active
+membership role. Organization, principal, registered agent, workspace and
+workspace/asset/runtime read policy stay current across asynchronous work. Host
+retirement denies disclosure. The HTTP boundary is default-off until configured;
+it owns an independent frozen request before calling a handler. HTTP and MCP use
+the shared bounded passive decoder to bind profiles, source revisions/digests and
+session/turn IDs. Reject unknown fields, private content, active properties and
+separate approved-session handles. The Desktop trusted projection can retain its
+existing authorized-session list; remote reply data cannot enable that option.
+Managed plan-review clients gain neither agent reads nor conversation permission.
+No model/provider invocation or window grant is added. Local synthetic TLS/MCP,
+HTTP and Root evidence qualifies this integration only. Actual paired execution,
+result reveal/revoke, resource/cleanup and parent qualification remain pending.
+Rollback removes these additive read bindings without changing execution policy
+or stored user data.
+
 ### One approved prospective Tiny qualification
 
 The developer-only fresh-trial driver requires the exact user authorization,

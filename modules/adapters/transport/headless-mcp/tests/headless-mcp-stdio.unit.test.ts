@@ -113,6 +113,73 @@ function contextQueryPreview(input: HeadlessContextQueryPreviewRequest["input"])
 }
 // This fixture opens several real CLI processes with empty tsx caches and
 // waits once for the managed request deadline. Bound the whole fixture separately.
+test("managed workflow stdio exposes exact read metadata without a conversation grant", {timeout: 30_000}, async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "managed-workflow-mcp-"));
+  const certificate = await selfsigned.generate([{name: "commonName", value: "127.0.0.1"}], {
+    keySize: 2048, extensions: [{name: "subjectAltName", altNames: [{type: 7, ip: "127.0.0.1"}]}],
+  });
+  const ca = path.join(directory, "synthetic-ca.pem");
+  await writeFile(ca, certificate.cert, {flag: "wx"});
+  const profile = {profileId: "builtin.workflow.conversation@1.0.0", title: "Controlled conversation",
+    source: {kind: "reviewed-execution-plan", sourceId: "plan.one", sourceRevision: "revision.one"},
+    availability: "available", blockers: []};
+  let mode = "valid", calls = 0;
+  const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
+    let body = "";
+    request.on("data", (chunk: Buffer) => {body += chunk.toString();});
+    request.on("end", () => {
+      calls++;
+      const input = JSON.parse(body);
+      assert.equal(request.url, "/api/headless/agent/read");
+      assert.equal(request.headers["x-organization-id"], organizationId);
+      assert.equal(request.headers.authorization, "Bearer synthetic-workflow-bearer");
+      const value = input.operation === "workflows.list" ? [profile] : input.operation === "workflows.prepare"
+        ? {profile: {...profile, source: {...profile.source, ...(mode === "source" ? {sourceRevision: "revision.other"} : {})}},
+          snapshotRevision: "snapshot.one", actions: [{actionId: "refresh", intent: "read", enabled: true, requiresConfirmation: false, fields: []}],
+          ...(mode === "grant" ? {approvedSessionIds: ["session.one"]} : {}), ...(mode === "private" ? {transcript: "private"} : {})}
+        : {sessionId: "session.one", turnId: mode === "turn" ? "turn.other" : "turn.one", turnStatus: "succeeded", run: null};
+      const payload = JSON.stringify({ok: true, operation: input.operation, value});
+      response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+    });
+  });
+  const client = new Client({name: "managed-workflow-fixture", version: "1.0.0"});
+  try {
+    await new Promise<void>((resolve, reject) => {listener.once("error", reject); listener.listen(0, "127.0.0.1", resolve);});
+    const address = listener.address(); assert.ok(address && typeof address !== "string");
+    await client.connect(new StdioClientTransport({command: process.execPath, args: ["--import", "tsx", entrypoint], env: {
+      AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_MANAGED_ORIGIN: `https://127.0.0.1:${address.port}`,
+      AISB_HEADLESS_MANAGED_CREDENTIAL: "synthetic-workflow-bearer", AISB_HEADLESS_MANAGED_ORGANIZATION_ID: organizationId,
+      AISB_HEADLESS_MANAGED_WORKSPACE_ID: workspaceId, NODE_EXTRA_CA_CERTS: ca, TSX_DISABLE_CACHE: "1",
+    }, stderr: "ignore", maxBufferSize: 256 * 1024}));
+    const tools = (await client.listTools()).tools.map(tool => tool.name);
+    for (const name of ["aisb_list_workflows", "aisb_prepare_workflow", "aisb_read_conversation_task"]) assert.ok(tools.includes(name));
+    assert.ok(!tools.includes("aisb_send_approved_turn"));
+    const target = {hostIncarnationId, workspaceId};
+    const prepare = async () => resultText(await client.callTool({name: "aisb_prepare_workflow", arguments: {
+      ...target, profileId: profile.profileId, source: profile.source,
+    }}));
+    const status = async () => resultText(await client.callTool({name: "aisb_read_conversation_task", arguments: {
+      ...target, sessionId: "session.one", turnId: "turn.one",
+    }}));
+    assert.deepEqual(resultText(await client.callTool({name: "aisb_list_workflows", arguments: {
+      ...target, sourceKind: "reviewed-execution-plan",
+    }})), {ok: true, operation: "workflows.list", value: [profile]});
+    assert.equal((await prepare()).ok, true);
+    assert.equal((await status()).ok, true);
+    for (mode of ["source", "grant", "private"]) assert.deepEqual(await prepare(), {ok: false, code: "headless.unavailable"});
+    mode = "turn"; assert.deepEqual(await status(), {ok: false, code: "headless.unavailable"});
+    const before = calls;
+    assert.deepEqual(resultText(await client.callTool({name: "aisb_list_workflows", arguments: {
+      ...target, workspaceId: "foreign-workspace", sourceKind: "reviewed-execution-plan",
+    }})), {ok: false, code: "headless.forbidden"});
+    assert.equal(calls, before);
+  } finally {
+    await client.close();
+    if (listener.listening) await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
+    await rm(directory, {recursive: true, force: true});
+  }
+});
+
 test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 60_000 }, async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "managed-mcp-"));
   const certificate = await selfsigned.generate([{name: "commonName", value: "127.0.0.1"}], {
@@ -358,7 +425,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     }
     const client = await connect({NODE_EXTRA_CA_CERTS: ca});
     assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(),
-      ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...authoringTools].sort());
+      ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", "aisb_list_workflows", "aisb_prepare_workflow", "aisb_read_conversation_task", ...authoringTools].sort());
     assert.equal(requests.length, 0);
     const discover = async (connection: Client) => resultText(await connection.callTool({name: "aisb_host_describe", arguments: {}}));
     assert.equal((await discover(client)).ok, true);

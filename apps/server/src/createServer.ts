@@ -493,6 +493,7 @@ export async function createServer(
       const denied = {ok: false, code: "headless.forbidden"} as const;
       return clientPolicy && handlers ? {
         hostIncarnationId: handlers.hostIncarnationId,
+        allowWorkflowReads: handlers.workflowReads === true,
         allowModelSourceRead: clientPolicy.modelSourceReadAvailable,
         read: handlers.read,
         author: async (input, agent, current) => agent.purpose === "agent" ? handlers.author(input, agent, current) : denied,

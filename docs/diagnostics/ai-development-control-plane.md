@@ -3785,3 +3785,12 @@ read/server neighbors remain selected. Complete known source coverage narrows
 only the matching controller routing tests; missing or unknown impact preserves
 fallback. No model, provider, public host or whole-system qualification is run
 by these component checks.
+
+`managed-workflow-transport-unit` covers the shared passive result decoder,
+authenticated HTTP path and actual Managed Root wiring with focused fixtures.
+Its strict type companions compile those tests and the actual ESM MCP entry
+and forwarder, including finite preview dispatch; existing MCP/Managed transport
+neighbors and the actual server build remain required. Complete exact source
+coverage can narrow only the related controller routing suites. Missing, unknown
+or explicitly generic impact retains fallback. These checks start no model or
+provider and cannot complete a host/model task or qualify a parent roadmap.

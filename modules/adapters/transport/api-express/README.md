@@ -14,6 +14,14 @@ explicit organization, compact JSON and a current request are required.
 The adapter bounds input, response size, active requests and time. The
 shared application service owns write scopes and the saved-result receipt.
 
+Trusted host composition can enable `workflows.list`, `workflows.prepare` and
+`conversation-tasks.read` on the existing agent read route. Unconfigured routes
+keep them unavailable. The adapter captures a detached exact request before the
+handler runs, rechecks current access and validates a closed correlated reply.
+Unknown/private fields and separately approved conversation-session handles are
+denied. Host metadata lists only configured operations. These reads grant no
+conversation execution or window permission.
+
 Managed browser consent uses a separate exact POST route. It requires the
 configured HTTPS browser origin, same-origin fetch metadata, the verified
 browser registration and current workspace access. After registration, a

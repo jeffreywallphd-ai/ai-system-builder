@@ -235,6 +235,8 @@ import {
   createSystemReviewWorkflowHandler,
 } from "../../../application/services/system-run-workflow";
 import { composeSystemRunWorkflow } from "../../shared/composition/composeSystemRunWorkflow";
+import {HeadlessWorkflowMetadataUseCase} from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
+import {HeadlessConversationStatusUseCase} from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
 import {
   createPythonConversationalRuntimeAdapterCatalog,
   createPythonConversationalRuntimeGuard,
@@ -668,6 +670,7 @@ export interface ServerHostComposition {
   getManagedBrowserConsent: () => (ReturnType<typeof composeManagedBrowserConsent> & {readonly hostIncarnationId: HeadlessHostIncarnationId}) | undefined;
   getManagedHeadlessAgent: () => {
     readonly hostIncarnationId: HeadlessHostIncarnationId;
+    readonly workflowReads?: true;
     readonly read: ReturnType<typeof composeManagedAgentReads>;
     readonly author: ReturnType<typeof composeManagedHeadlessAuthoring>["execute"];
     readonly planReview?: ReturnType<typeof composeManagedHeadlessPlanReview>;
@@ -1693,8 +1696,10 @@ export function composeServerHost(
           workspaces: workspaceFoundation.workspaceRepositories.workspaceRepository, contexts,
           authorization: new AuthorizeWorkspaceOperationService({ organizationContext: contexts, authorizer: managed.authorize }) });
       }
+      let workflowReadOwners: {metadata: HeadlessWorkflowMetadataUseCase; status: HeadlessConversationStatusUseCase} | undefined;
       if (options.managedHeadlessAgent && managedDocuments && systemBuilder && contexts && workspaceAuthorization) {
         const workspaces = workspaceFoundation.workspaceRepositories.workspaceRepository;
+        const memberships = createStructuredOrganizationRepositories(managedDocuments).memberships;
         const scoped = {hostIncarnationId, workspaces, contexts, authorization: workspaceAuthorization};
         const modelTaskReaders = managedDocuments.organizationId === undefined && managedDocuments.runInOwnedTransaction
           ? composeHeadlessModelTaskReaders({documents: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
@@ -1709,8 +1714,31 @@ export function composeServerHost(
         const providerFileSave = options.managedHeadlessAgent.browserObservationAuthorizer &&
           "finalizeApprovedProviderFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedProviderFile === "function"
           ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
-        managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
+        managedHeadlessAgent = {hostIncarnationId, workflowReads: true, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks,
+            getWorkflowMetadata: async () => {
+              taskReconciler.assertAccepting();
+              if (!workflowReadOwners) throw new Error("Workflow readers are unavailable.");
+              return workflowReadOwners.metadata;
+            },
+            getConversationStatus: async () => {
+              taskReconciler.assertAccepting();
+              if (!workflowReadOwners) throw new Error("Workflow readers are unavailable.");
+              const read = workflowReadOwners.status.read.bind(workflowReadOwners.status);
+              return {read: (workspaceId, sessionId, turnId, canRead) => read(workspaceId, sessionId, turnId, async () => {
+                taskReconciler.assertAccepting();
+                const allowed = await canRead();
+                taskReconciler.assertAccepting();
+                return allowed;
+              })};
+            },
+            readWorkflowRole: async identity => {
+              taskReconciler.assertAccepting();
+              const membership = await memberships.readMembership(identity);
+              taskReconciler.assertAccepting();
+              return membership?.status === "active" && membership.organizationId === identity.organizationId &&
+                membership.principalId === identity.principalId ? membership.role : undefined;
+            },
             readModelTask: modelTaskReaders?.readModelTask,
             readModelCompletion: modelTaskReaders?.readModelCompletion,
             getContextTask: async () => {
@@ -2617,6 +2645,17 @@ export function composeServerHost(
             : []),
         ],
       });
+
+      // These are the same repositories and workflow services used by the app.
+      // Reading metadata or saved status never starts a conversation/runtime.
+      workflowReadOwners = {
+        metadata: new HeadlessWorkflowMetadataUseCase(systemRunWorkflow.useCases),
+        status: new HeadlessConversationStatusUseCase({
+          sessions: conversationRepositories.conversationSessionRepository,
+          turns: conversationRepositories.conversationTurnRepository,
+          runs: executionRunRepositories.executionRunRepository,
+        }),
+      };
 
       registerExpressApi({
         app: registerOptions.app,

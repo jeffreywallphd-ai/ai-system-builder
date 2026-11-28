@@ -791,7 +791,7 @@ test("managed stdio exposes presentation only when both managed options are enab
         AISB_HEADLESS_MANAGED_ORGANIZATION_ID: "fixture-organization", AISB_HEADLESS_MANAGED_WORKSPACE_ID: "fixture-workspace",
       }}));
       const names = (await client.listTools()).tools.map(tool => tool.name).sort();
-      const expected = ["aisb_host_describe", "aisb_list_templates", "aisb_read_system",
+      const expected = ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", "aisb_list_workflows", "aisb_prepare_workflow", "aisb_read_conversation_task",
         ...(consent ? ["aisb_list_windows", "aisb_release_window", "aisb_request_window", "aisb_window_status"] : []),
         ...(consent && presentation ? ["aisb_present_in_window", "aisb_renew_window", "aisb_window_context"] : [])].sort();
       assert.deepEqual(names, expected);

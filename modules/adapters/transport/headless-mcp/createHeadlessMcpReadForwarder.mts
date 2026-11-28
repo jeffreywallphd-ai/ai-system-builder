@@ -152,7 +152,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false, enableModelTaskControl = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
-  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? [...headless.HEADLESS_MODEL_TASK_READ_OPERATIONS, "models.preview-source", ...headless.HEADLESS_MODEL_READ_OPERATIONS, ...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(!enablePlanReview ? headless.HEADLESS_WORKFLOW_READ_OPERATIONS : []), ...(enablePlanReview ? [...headless.HEADLESS_MODEL_TASK_READ_OPERATIONS, "models.preview-source", ...headless.HEADLESS_MODEL_READ_OPERATIONS, ...headless.HEADLESS_DATA_READ_OPERATIONS, "context.models", "context.preview-generation", "context.task", "context.saved", "context.preview-rebuild", "context.preview-query"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -193,7 +193,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, modelTaskControlAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
     allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
-    enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
+    enableConversation: false, enablePresentation: !enablePlanReview && enableConsent, allowApprovedSessionIds: false,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (input.operation === "context.preview-query") {
@@ -243,7 +243,8 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress, modelTaskControlAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
     agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, allowLocalDatasetPreparation: enablePlanReview, allowDatasetResultSave: enablePlanReview, allowContextPackGeneration: enablePlanReview, allowContextRagGeneration: enablePlanReview, allowContextResultSave: enablePlanReview, allowContextQuery: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
-    enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
+    enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation,
+    allowApprovedSessionIds: true});
 }
 
 function createForwarder(options: {
@@ -264,15 +265,27 @@ function createForwarder(options: {
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
+  allowApprovedSessionIds: boolean;
   managedSemanticApply?: boolean;
 }) {
   const {address, authoringAddress, conversationAddress, presentationAddress,
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
-  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
-    if (input.operation === "models.cancel-download") {
+  return async (suppliedInput: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    let workflowRequest: HeadlessReadRequest | undefined;
+    if (suppliedInput.operation === "workflows.list" || suppliedInput.operation === "workflows.prepare" || suppliedInput.operation === "conversation-tasks.read") {
+      try {
+        const copied = headless.parseHeadlessReadRequest(suppliedInput, suppliedInput.input.hostIncarnationId);
+        if (!copied.ok) return copied;
+        if (copied.request.operation === "workflows.prepare") Object.freeze(copied.request.input.source);
+        Object.freeze(copied.request.input); Object.freeze(copied.request);
+        workflowRequest = copied.request;
+      } catch {return unavailable;}
+    }
+    let copiedInput = workflowRequest ?? suppliedInput;
+    if (copiedInput.operation === "models.cancel-download") {
       if (!options.modelTaskControlAddress) return {ok: false, code: "headless.forbidden"};
-      const parsed = headless.readHeadlessModelTaskCancellationRequest(input, input.input.hostIncarnationId);
+      const parsed = headless.readHeadlessModelTaskCancellationRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!parsed.ok) return parsed;
       if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
       active++;
@@ -288,41 +301,42 @@ function createForwarder(options: {
     }
     // Both Desktop and Managed callers must lose their mutable request reference
     // before transport awaits. Correlate only against this exact dispatched copy.
-    if (input.operation === "models.review-training") {
-      const copied = headless.readHeadlessTrainingCompletionRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "models.review-training") {
+      const copied = headless.readHeadlessTrainingCompletionRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return copied;
-      input = copied.request;
+      copiedInput = copied.request;
     }
-    if (input.operation === "models.training-task") {
-      const copied = headless.readHeadlessTrainingTaskReadRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "models.training-task") {
+      const copied = headless.readHeadlessTrainingTaskReadRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return copied;
-      input = copied.request;
+      copiedInput = copied.request;
     }
-    if (input.operation === "models.task") {
-      const copied = headless.readHeadlessModelTaskRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "models.task") {
+      const copied = headless.readHeadlessModelTaskRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return copied;
-      input = copied.request;
+      copiedInput = copied.request;
     }
-    if (input.operation === "models.review-download") {
-      const copied = headless.readHeadlessModelDownloadReviewRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "models.review-download") {
+      const copied = headless.readHeadlessModelDownloadReviewRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return copied;
-      input = copied.request;
+      copiedInput = copied.request;
     }
-    if (input.operation === "models.preview-source") {
-      const copied = headless.readHeadlessModelSourcePreviewRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "models.preview-source") {
+      const copied = headless.readHeadlessModelSourcePreviewRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return copied;
-      input = copied.request;
+      copiedInput = copied.request;
     }
-    if (input.operation === "models.inventory" || input.operation === "models.record") {
-      const copied = headless.readHeadlessModelMetadataRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "models.inventory" || copiedInput.operation === "models.record") {
+      const copied = headless.readHeadlessModelMetadataRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return copied;
-      input = copied.request;
+      copiedInput = copied.request;
     }
-    if (input.operation === "context.preview-query") {
-      const copied = headless.readHeadlessContextQueryPreviewRequest(input, input.input.hostIncarnationId);
+    if (copiedInput.operation === "context.preview-query") {
+      const copied = headless.readHeadlessContextQueryPreviewRequest(copiedInput, copiedInput.input.hostIncarnationId);
       if (!copied.ok) return {ok: false, code: "headless.invalid-request"};
-      input = copied.request;
+      copiedInput = copied.request;
     }
+    const input = copiedInput;
     if ((headless.isHeadlessModelTaskReadOperation(input.operation) || input.operation === "models.preview-source" || headless.isHeadlessModelReadOperation(input.operation) || headless.isHeadlessDataReadOperation(input.operation) || headless.isHeadlessContextReadOperation(input.operation) || input.operation === "context.task" || input.operation === "context.saved" || input.operation === "context.preview-query" || input.operation === "context.preview-rebuild") && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
@@ -597,6 +611,8 @@ function createForwarder(options: {
             (actual.kind === "reviewed-execution-plan" && target.kind === "reviewed-execution-plan" && actual.sourceRevision !== target.sourceRevision))
           return unavailable;
       }
+      if (input.operation === "workflows.list" || input.operation === "workflows.prepare" || input.operation === "conversation-tasks.read")
+        return headless.readHeadlessWorkflowReadResult(parsed.data, input, {allowApprovedSessionIds: options.allowApprovedSessionIds});
       return parsed.data;
     } catch {
       return converse ? unknownTurn : author && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;

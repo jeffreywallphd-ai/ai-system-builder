@@ -300,6 +300,24 @@ MANAGED_WORKFLOW_READ_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_m
 MANAGED_WORKFLOW_READ_SCOPE = MANAGED_WORKFLOW_READ_REQUIRED + (MANAGED_WORKFLOW_READ_CONTROLLER,
     "dev-tools/helpers/control_plane/catalog.py", "modules/hosts/server/composition/README.md",
     "docs/operations/headless-text-generation-feature.json", "docs/diagnostics/ai-development-control-plane.md")
+MANAGED_WORKFLOW_TRANSPORT_TESTS = (
+    "modules/contracts/headless/tests/headless-workflow-read-result.unit.test.ts",
+    "modules/adapters/transport/api-express/headless/tests/managed-workflow-read-routes.integration.test.ts",
+    "modules/hosts/server/composition/tests/managed-workflow-host-wiring.unit.test.ts")
+MANAGED_WORKFLOW_TRANSPORT_REQUIRED = MANAGED_WORKFLOW_TRANSPORT_TESTS + (
+    "modules/contracts/headless/headless-workflow-read-result.ts", "modules/contracts/headless/index.ts",
+    "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+    "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+    "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+    "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+    "modules/hosts/server/composition/composeServerHost.ts", "apps/server/src/createServer.ts")
+MANAGED_WORKFLOW_TRANSPORT_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_managed_workflow_transport.py"
+MANAGED_WORKFLOW_TRANSPORT_SCOPE = MANAGED_WORKFLOW_TRANSPORT_REQUIRED + (
+    "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+    MANAGED_WORKFLOW_TRANSPORT_CONTROLLER, "dev-tools/helpers/control_plane/catalog.py",
+    "modules/adapters/transport/headless-mcp/README.md", "modules/hosts/server/composition/README.md",
+    "modules/adapters/transport/api-express/README.md", "docs/security/headless-system-builder-threat-model.md",
+    "docs/operations/headless-text-generation-feature.json", "docs/diagnostics/ai-development-control-plane.md")
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
@@ -1103,6 +1121,24 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_required_files": MANAGED_WORKFLOW_READ_REQUIRED,
         "sources": MANAGED_WORKFLOW_READ_SCOPE,
         "command": ("--import", "tsx", "--test", "--", MANAGED_WORKFLOW_READ_REQUIRED[1]),
+    },
+    "managed-workflow-transport-unit": {
+        "automatic_sources": MANAGED_WORKFLOW_TRANSPORT_REQUIRED,
+        "automatic_required_files": MANAGED_WORKFLOW_TRANSPORT_REQUIRED,
+        "sources": MANAGED_WORKFLOW_TRANSPORT_SCOPE,
+        "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--") + MANAGED_WORKFLOW_TRANSPORT_TESTS,
+    },
+    "managed-workflow-transport-types": {
+        "companion_to": "managed-workflow-transport-unit", "sources": MANAGED_WORKFLOW_TRANSPORT_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM")
+            + MANAGED_WORKFLOW_TRANSPORT_TESTS,
+    },
+    "managed-workflow-mcp-types": {
+        "companion_to": "managed-workflow-transport-unit", "sources": MANAGED_WORKFLOW_TRANSPORT_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2022",
+            "--module", "nodenext", "--moduleResolution", "nodenext", "--esModuleInterop", "--lib", "ES2022,DOM")
+            + MANAGED_WORKFLOW_TRANSPORT_REQUIRED[6:8],
     },
     "managed-workflow-read-types": {
         "companion_to": "managed-workflow-read-unit", "sources": MANAGED_WORKFLOW_READ_SCOPE,
@@ -4827,6 +4863,17 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_managed_workflow_reads.", "-k", "test_control_plane_focused."]
+    if (paths and set(paths) <= set(MANAGED_WORKFLOW_TRANSPORT_SCOPE)
+            and ("dev-tools/helpers/control_plane/catalog.py" in paths or MANAGED_WORKFLOW_TRANSPORT_CONTROLLER in paths)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": MANAGED_WORKFLOW_TRANSPORT_REQUIRED +
+                (MANAGED_WORKFLOW_TRANSPORT_CONTROLLER, "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_managed_workflow_transport.", "-k", "test_control_plane_managed_workflow_reads.",
+                "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

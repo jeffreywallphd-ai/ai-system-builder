@@ -509,6 +509,10 @@ function addSystemBuilderTools(server: McpServer) {
         if (!templates.has(request.input.templateId)) return toolResult({ ok: false, code: "headless.not-found" });
         continue;
       }
+      // Every non-system family must use its explicit preview above. Never
+      // interpret an unsupported family as a saved-system edit.
+      if (request.operation !== "systems.clone" && request.operation !== "systems.rename")
+        return toolResult(unavailable);
       const { systemId, baseRecordRevision, baseRevisionId } = request.input;
       let record = records.get(systemId);
       if (!record) {
@@ -635,19 +639,19 @@ serveStdio(() => {
       hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId, cursor,
     } }, context.mcpReq.signal);
   });
-  if (!managed) server.registerTool("aisb_list_workflows", {
+  if (!managed || !enablePlanReview) server.registerTool("aisb_list_workflows", {
     description: "Read the supported workflow metadata in the exact workspace; starts no work.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sourceKind: z.enum(headless.HEADLESS_WORKFLOW_SOURCE_KINDS) }), annotations,
   }, (input, context) => invoke({ version, operation: "workflows.list", input: {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  if (!managed) server.registerTool("aisb_prepare_workflow", {
+  if (!managed || !enablePlanReview) server.registerTool("aisb_prepare_workflow", {
     description: "Read exact source readiness, snapshot revision and approved read-field metadata. Does not invoke any action.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, profileId: workflowId, source: workflowSource }), annotations,
   }, (input, context) => invoke({ version, operation: "workflows.prepare", input: {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  if (!managed) server.registerTool("aisb_read_conversation_task", {
+  if (!managed || !enablePlanReview) server.registerTool("aisb_read_conversation_task", {
     description: "Read the saved status of one exact conversation turn and its run; never starts or cancels it.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sessionId: workflowId, turnId: workflowId }), annotations,
   }, (input, context) => invoke({ version, operation: "conversation-tasks.read", input: {

@@ -32,7 +32,8 @@ import {
 } from "../../../../contracts/headless";
 import { isManagedWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
   readManagedWindowResult } from "../../../../contracts/headless";
-import { hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../../contracts/shared";
+import { copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../../contracts/shared";
+import {isHeadlessWorkflowReadOperation, readHeadlessWorkflowReadResult} from "../../../../contracts/headless";
 import { SYSTEM_BUILDER_TEMPLATE_IDS, isSystemBuilderStatus, isSystemBuilderSystemId, normalizeSystemBuilderRevisionId } from "../../../../contracts/system-builder";
 import { isWorkspaceId } from "../../../../contracts/workspace";
 import { MANAGED_HEADLESS_AGENT_PATHS } from "../security/apiRouteSecurityPolicy";
@@ -62,6 +63,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly identify: (request: AuthAdmission, kind: keyof typeof MANAGED_HEADLESS_AGENT_PATHS) => Agent | undefined;
   readonly isCurrent: (agent: Agent) => boolean;
   readonly read: (input: HeadlessReadRequest, agent: Agent, current: () => boolean) => Promise<HeadlessReadResult>;
+  readonly allowWorkflowReads?: boolean;
   readonly author: (input: Authoring, agent: Agent, current: () => boolean) => Promise<unknown>;
   readonly planReview?: (input: HeadlessPlanReviewAgentRequest, agent: Agent, current: () => boolean) => Promise<HeadlessPlanReviewAgentResult>;
   readonly allowLocalFileSave?: boolean;
@@ -268,8 +270,15 @@ async function respond<Agent>(
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     const dataRead = (isHeadlessModelTaskReadOperation(parsed.request.operation) || (parsed.request.operation === "models.preview-source" && handlers.allowModelSourceRead === true) || isHeadlessModelReadOperation(parsed.request.operation) || isHeadlessDataReadOperation(parsed.request.operation) || isHeadlessContextReadOperation(parsed.request.operation) ||
       parsed.request.operation === "context.task" || parsed.request.operation === "context.saved" || parsed.request.operation === "context.preview-query" || parsed.request.operation === "context.preview-rebuild") && Boolean(handlers.planReview);
-    if (!dataRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
+    const workflowRead = handlers.allowWorkflowReads === true && isHeadlessWorkflowReadOperation(parsed.request.operation);
+    if (!dataRead && !workflowRead && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
+    const workflowProof = workflowRead ? parseHeadlessReadRequest(copyBoundedPassiveData(parsed.request), handlers.hostIncarnationId) : undefined;
+    if (workflowProof && !workflowProof.ok) return failure(response, 400, "headless.invalid-request");
+    if (workflowProof?.ok) {
+      if (workflowProof.request.operation === "workflows.prepare") Object.freeze(workflowProof.request.input.source);
+      Object.freeze(workflowProof.request.input); Object.freeze(workflowProof.request);
+    }
     const questionProof = parsed.request.operation === "context.preview-query" ? (() => {
       const {query, ...target} = parsed.request.input;
       return {target: {...target, reference: {...target.reference}},
@@ -312,6 +321,10 @@ async function respond<Agent>(
       const code = readFailures.has(result.code) ? result.code : "headless.unavailable";
       return failure(response, requestErrorStatus(code), code);
     }
+    if (workflowProof?.ok) {
+      const decoded = readHeadlessWorkflowReadResult(result, workflowProof.request);
+      return decoded.ok ? send(response, decoded) : failure(response, requestErrorStatus(decoded.code), decoded.code);
+    }
     if (taskProof?.ok) {
       if (result.operation !== "models.task") return failure(response, 503, "headless.unavailable");
       const value = readHeadlessModelTaskValue(result.value, taskProof.request.input);
@@ -327,6 +340,7 @@ async function respond<Agent>(
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
+          ...(handlers.allowWorkflowReads === true ? result.value.operations.filter(isHeadlessWorkflowReadOperation) : []),
           ...(handlers.planReview ? result.value.operations.filter(operation => isHeadlessModelTaskReadOperation(operation) || operation === "models.preview-source" && handlers.allowModelSourceRead === true || isHeadlessModelReadOperation(operation) || isHeadlessDataReadOperation(operation) ||
             isHeadlessContextReadOperation(operation) || operation === "context.task" || operation === "context.saved" || operation === "context.preview-query" || operation === "context.preview-rebuild") : [])]}});
     }

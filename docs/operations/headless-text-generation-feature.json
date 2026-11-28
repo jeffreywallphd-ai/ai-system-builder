@@ -68,18 +68,23 @@
   "managed_read_component": {
     "work_id": "headless-managed-workflow-read-ownership",
     "scope": "Optional original workflow metadata and exact conversation-status readers under captured current Managed identity, membership role and read policy.",
-    "limitations": "Component support only. Production Root and public HTTP/MCP activation, accepted text invocation, window reveal/revoke and actual paired host qualification remain pending Task75."
+    "limitations": "The reviewed component now has source integration through production Root and public HTTP/MCP read paths. Accepted text invocation, window reveal/revoke and actual paired host qualification remain pending Task75."
+  },
+  "managed_read_transport": {
+    "work_id": "headless-managed-workflow-read-public-integration",
+    "scope": "Original workflow/status readers, current active membership and host lifetime; finite exact-target HTTP/MCP replies with synthetic local protocol and Root fixtures.",
+    "limitations": "Read integration only. No approved-turn invocation, secret policy, model/provider start, window grant or Task75/parent pass."
   },
   "shared_fixture_support": {
     "work_id": "headless-bounded-text-workflow-test",
     "fixture": "modules/hosts/desktop/composition/tests/headless-text-workflow.fixture.ts",
     "explicit_driver": "dev-tools/scripts/qualification/headless-training/bounded-text-generation-feature.ts",
     "scope": "Reuse original composed workflow with controlled software cases or a separately invoked bounded installed-model runtime. Source checks execute controlled cases and compile the driver only.",
-    "actual_execution": "pending separate explicit qualification Work and original owned cleanup proof",
+    "actual_execution": "The separate Task74 actual_text_outcome records original Tiny execution and owned cleanup; these source checks remain controlled-only.",
     "quality_scored": false,
     "failure_diagnostics_work_id": "headless-text-failure-diagnostics",
     "failure_diagnostics_scope": "Fixed workflow checkpoints and allowlisted original runtime status/error code/class only; no arbitrary detail text. The first actual Tiny text receipt remains failed with original worker, fixture, IO and fresh-root cleanup confirmed.",
     "causal_tokenizer_work_id": "headless-causal-tokenizer-inputs",
-    "causal_tokenizer_scope": "Single-prompt causal tokenization omits unsupported segment IDs. A generic fast-tokenizer/decoder regression first reproduced ValueError, then verifies retained attention masks, generation limits, constrained decoding and output slicing. This is software proof only; the actual original ValueError still requires a fresh explicit execution check."
+    "causal_tokenizer_scope": "Single-prompt causal tokenization omits unsupported segment IDs. A generic fast-tokenizer/decoder regression first reproduced ValueError, then verifies retained attention masks, generation limits, constrained decoding and output slicing. The separate actual_text_outcome records the successful original Tiny execution after this fix. Earlier failures remain preserved."
   }
 }
