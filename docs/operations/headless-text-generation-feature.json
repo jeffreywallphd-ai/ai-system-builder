@@ -53,11 +53,23 @@
   "task_completed": false,
   "parent_qualified": false,
   "pending": [
-    "Actual bounded supported text inference through the original composed path, without accuracy scoring.",
-    "Current exact Task74 outcome verification and independent review.",
     "Task75 public paired Desktop and Managed MCP/application-view execution, exact result/reveal permission, resource refusal and owned cleanup.",
     "Image generation and separately approved image-output import remain in the user-directed later image increment."
   ],
+  "actual_text_outcome": {
+    "status": "complete",
+    "work_id": "headless-actual-tiny-text-tokenizer-verification",
+    "source_digest": "7640d5a82acee8547832dd7f470c1d998a311b328853dedbba63c7de41cf219f",
+    "receipt_digest": "f1672c7746e7a063ff054f5809c57521ed09a10dd706eb8d4e984e2a2d149d30",
+    "review_digest": "fe01d1db63e5da56c877ec3b84533a6d41257a6e54fdd8260190b14e4d6f0488",
+    "facts": {"starts": 1, "status_reads": 61, "response_characters": 2047, "association_groups": 4, "original_cleanup_confirmed": true},
+    "scope": "Reviewed original approved Tiny text execution and exact saved response; Task74 recorded. No accuracy score, download, image, artifact import, public paired host or parent qualification. Earlier failed receipts remain preserved."
+  },
+  "managed_read_component": {
+    "work_id": "headless-managed-workflow-read-ownership",
+    "scope": "Optional original workflow metadata and exact conversation-status readers under captured current Managed identity, membership role and read policy.",
+    "limitations": "Component support only. Production Root and public HTTP/MCP activation, accepted text invocation, window reveal/revoke and actual paired host qualification remain pending Task75."
+  },
   "shared_fixture_support": {
     "work_id": "headless-bounded-text-workflow-test",
     "fixture": "modules/hosts/desktop/composition/tests/headless-text-workflow.fixture.ts",

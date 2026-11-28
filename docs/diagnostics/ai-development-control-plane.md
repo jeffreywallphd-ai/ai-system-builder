@@ -3776,3 +3776,12 @@ test module when its source or tests change. It uses controlled tokenizer/model
 objects, includes decoder argument compatibility and keeps existing generation
 neighbors. It never launches a model. Only complete known source coverage may
 narrow the related controller checks; unknown or missing support keeps fallback.
+
+`managed-workflow-read-unit` exercises the optional original Managed metadata
+and exact conversation-status readers, including identity, role, asynchronous
+currentness and target capture. Its companion checks compile strict feature
+types and execute the server's actual TypeScript build. The existing Managed
+read/server neighbors remain selected. Complete known source coverage narrows
+only the matching controller routing tests; missing or unknown impact preserves
+fallback. No model, provider, public host or whole-system qualification is run
+by these component checks.

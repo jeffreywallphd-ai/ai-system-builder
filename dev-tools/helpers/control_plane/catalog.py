@@ -291,6 +291,15 @@ TEXT_WORKFLOW_SCOPE = TEXT_WORKFLOW_REQUIRED + (TEXT_WORKFLOW_CONTROLLER,
 TEXT_TOKENIZATION_SCOPE = TEXT_TOKENIZATION_REQUIRED + (TEXT_WORKFLOW_CONTROLLER,
     "dev-tools/helpers/control_plane/catalog.py", "docs/operations/headless-text-generation-feature.json",
     "modules/adapters/runtime/python/worker/README.md", "docs/diagnostics/ai-development-control-plane.md")
+MANAGED_WORKFLOW_READ_REQUIRED = (
+    "modules/hosts/server/composition/composeManagedAgentReads.ts",
+    "modules/hosts/server/composition/tests/managed-workflow-reads.unit.test.ts",
+    "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
+    "modules/application/use-cases/system-run-workflow/headless-conversation-status.use-case.ts")
+MANAGED_WORKFLOW_READ_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_managed_workflow_reads.py"
+MANAGED_WORKFLOW_READ_SCOPE = MANAGED_WORKFLOW_READ_REQUIRED + (MANAGED_WORKFLOW_READ_CONTROLLER,
+    "dev-tools/helpers/control_plane/catalog.py", "modules/hosts/server/composition/README.md",
+    "docs/operations/headless-text-generation-feature.json", "docs/diagnostics/ai-development-control-plane.md")
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
@@ -1088,6 +1097,21 @@ PUBLISHED_FORM_CHECKS = {
         "sources": TEXT_TOKENIZATION_SCOPE,
         "interpreter": "python",
         "command": ("-m", "unittest", "modules.adapters.runtime.python.worker.tests.test_local_text_generation"),
+    },
+    "managed-workflow-read-unit": {
+        "automatic_sources": MANAGED_WORKFLOW_READ_REQUIRED[:2],
+        "automatic_required_files": MANAGED_WORKFLOW_READ_REQUIRED,
+        "sources": MANAGED_WORKFLOW_READ_SCOPE,
+        "command": ("--import", "tsx", "--test", "--", MANAGED_WORKFLOW_READ_REQUIRED[1]),
+    },
+    "managed-workflow-read-types": {
+        "companion_to": "managed-workflow-read-unit", "sources": MANAGED_WORKFLOW_READ_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") + MANAGED_WORKFLOW_READ_REQUIRED[:2],
+    },
+    "managed-workflow-read-server-build": {
+        "companion_to": "managed-workflow-read-unit", "sources": MANAGED_WORKFLOW_READ_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "-p", "apps/server/tsconfig.json"),
     },
     "headless-image-generation-owner-unit": {
         "automatic_sources": IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_ADMISSION_PORT,) + IMAGE_CHECKPOINT_REQUIRED,
@@ -4793,6 +4817,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_headless_text_generation.", "-k", "test_control_plane_focused."]
+    if (paths and set(paths) <= set(MANAGED_WORKFLOW_READ_SCOPE)
+            and ("dev-tools/helpers/control_plane/catalog.py" in paths or MANAGED_WORKFLOW_READ_CONTROLLER in paths)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": MANAGED_WORKFLOW_READ_REQUIRED +
+                (MANAGED_WORKFLOW_READ_CONTROLLER, "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_managed_workflow_reads.", "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

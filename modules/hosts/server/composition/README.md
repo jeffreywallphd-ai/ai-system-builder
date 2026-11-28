@@ -1,5 +1,19 @@
 # Server host composition
 
+The Managed read composition optionally accepts the existing workflow metadata
+and exact conversation-status readers. Only current registered agents with the
+same organization/principal and workspace/asset/runtime read authority may use
+them. Copied frozen request targets and captured reader methods survive caller
+mutation. Metadata rechecks the original membership role and current permission
+after asynchronous work. This read grant does not disclose separately approved
+conversation-session handles. Original status reads return only exact saved
+session/turn/run status, with no prompt or output text.
+
+These optional host readers start no business or model task. Missing readers
+are not advertised. Public transport, production Root composition, actual
+execution and paired browser qualification require their separate integration;
+these component fixtures do not activate them or grant a parent pass.
+
 The configured `models.review-training` read forwards explicit `current-files`
 mode to the original candidate owner. Omitted mode remains cache-only. Preserve
 the captured registration/host lifetime, fresh ModelRead and original-client
