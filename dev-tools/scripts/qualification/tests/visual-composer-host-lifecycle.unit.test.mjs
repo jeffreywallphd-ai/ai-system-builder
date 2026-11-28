@@ -11,9 +11,25 @@ import {
   stopVisualComposerOwnedProcess,
   waitForVisualComposerEndpoint,
 } from "../visual-composer/visual-composer-host-lifecycle.mjs";
-import { buildPackagedDesktopFromCurrentWorktree, preparePackagedDesktopQualificationIdentity } from "../visual-composer/visual-composer-global-setup.mjs";
+import { buildPackagedDesktopFromCurrentWorktree, preparePackagedDesktopQualificationIdentity, resolveModelWindowSeedOptions } from "../visual-composer/visual-composer-global-setup.mjs";
 import { resolveVisualComposerQualificationEnvironment } from "../visual-composer/visual-composer-qualification-environment.mjs";
 import { createProvidedDatasetHostLaunchPlan } from "../visual-composer/provided-dataset-host-launch-plan.mjs";
+
+test("only the fixed Model-window profile selects the current installed Node for metadata seeds", () => {
+  assert.deepEqual(resolveModelWindowSeedOptions({}), {});
+  assert.deepEqual(resolveModelWindowSeedOptions({VISUAL_COMPOSER_MODEL_WINDOW_NODE_SEED: "1"}, process.execPath),
+    {electronNodeExecutablePath: process.execPath});
+  for (const value of ["0", "true", "yes", ""]) assert.throws(() => resolveModelWindowSeedOptions({VISUAL_COMPOSER_MODEL_WINDOW_NODE_SEED: value}));
+  assert.throws(() => resolveModelWindowSeedOptions({VISUAL_COMPOSER_MODEL_WINDOW_NODE_SEED: "1"}, "relative-node"));
+  assert.throws(() => resolveModelWindowSeedOptions({VISUAL_COMPOSER_MODEL_WINDOW_NODE_SEED: "1"}, process.execPath + "\n"));
+  const normal = createVisualComposerHostLaunchPlan({repoRoot: process.cwd(), runId: "normal-seed-default"});
+  const selected = createVisualComposerHostLaunchPlan({repoRoot: process.cwd(), runId: "normal-seed-default",
+    ...resolveModelWindowSeedOptions({VISUAL_COMPOSER_MODEL_WINDOW_NODE_SEED: "1"})});
+  assert.equal(selected.desktop.seed.command, process.execPath);
+  assert.equal(normal.desktop.executablePath, selected.desktop.executablePath);
+  assert.deepEqual(normal.server, selected.server);
+  assert.deepEqual(normal.thinClient, selected.thinClient);
+});
 
 test("visual composer host plan isolates roots, security, ports, and direct child commands", () => {
   const repoRoot = path.resolve("C:/work/ai-system-builder");

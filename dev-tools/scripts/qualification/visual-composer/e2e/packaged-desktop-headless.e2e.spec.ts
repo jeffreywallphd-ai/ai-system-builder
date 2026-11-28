@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { lstat, mkdir, readdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
 import path from "node:path";
@@ -18,6 +19,110 @@ if (process.env.VISUAL_COMPOSER_CONTEXT_MODEL_ACQUISITION)
   test("packaged Desktop approves saves queries rebuilds and reveals real Context through MCP", runHeadlessContextDesktopJourney);
 type Client = Awaited<ReturnType<typeof connectMcp>>;
 type WireValue = { ok?: boolean; operation?: string; code?: string; value?: unknown };
+
+test("packaged Desktop shows an exact saved Model with separate window consent", async () => {
+  test.setTimeout(120_000);
+  const stages: string[] = [];
+  const checkpoint = (stage: "launch" | "bind-original-app" | "first-window" | "workspace" | "save-reference" | "pairing" | "mcp" |
+    "window-consent" | "stale-reference" | "show-reference" | "context" | "revoke" | "sdk-close" | "app-close" | "cleanup-complete") => {
+    stages.push(stage);
+    writeFileSync(test.info().outputPath("model-display-checkpoint.json"),
+      JSON.stringify({schema: "model-display-checkpoint-v1", stages: stages.slice(-16)}) + "\n");
+  };
+  const profile = prepareHeadlessDesktopProfile("model-reveal");
+  if (!profile.modelProfile) throw new Error("The Model display profile is unavailable.");
+  let app: ElectronApplication | undefined, client: Client | undefined;
+  let closeProfile: (() => Promise<{originalAppClosed: boolean; freshProfileRemoved: boolean}>) | undefined;
+  try {
+    checkpoint("launch");
+    app = await electron.launch({executablePath: profile.executablePath, env: profile.env,
+      args: [`--user-data-dir=${profile.dataRoot}`, "--disable-gpu"], timeout: 60_000});
+    checkpoint("bind-original-app");
+    closeProfile = await profile.modelProfile.bindOriginalApp(app);
+    checkpoint("first-window");
+    const page = await app.firstWindow({timeout: 60_000});
+    await expect(page.getByRole("heading", {name: "Create a Workspace", exact: true})).toBeVisible({timeout: 60_000});
+    checkpoint("workspace");
+    const workspaceId = await createFormWorkspace(page, "Model display qualification");
+    // Setup saves a metadata reference through ordinary app IPC. It does not
+    // download a model, inspect provider files or start a runtime.
+    checkpoint("save-reference");
+    const model = await page.evaluate(async workspaceId => {
+      const api = (window as unknown as {desktopApi?: {saveModelReference(input: object): Promise<{
+        ok: boolean; value?: {model?: {modelRecordId?: string; updatedAt?: string; createdAt?: string}};
+      }>}}).desktopApi;
+      const result = await api?.saveModelReference({workspaceId, provider: "huggingface", modelId: "qualification/recorded-model",
+        displayName: "Synthetic saved Model", inferenceMode: "chat", taskTags: ["text-generation"], artifactForm: "full-model"});
+      const row = result?.value?.model, updatedAt = row?.updatedAt ?? row?.createdAt;
+      if (!result?.ok || typeof row?.modelRecordId !== "string" || typeof updatedAt !== "string") return;
+      return {modelRecordId: row.modelRecordId, modelUpdatedAt: updatedAt};
+    }, workspaceId);
+    if (!model) throw new Error("The synthetic recorded Model was not saved.");
+    checkpoint("pairing");
+    const region = await connectorSettings(app, page);
+    await installPairingDialogDriver(app, true, "presentation");
+    await region.getByRole("button", {name: "Pair a client that can request window control", exact: true}).click();
+    const {address, fingerprint} = await runningAddress(region);
+    const credential = await exchangePairing(address, fingerprint, await takePairingCode(app));
+    checkpoint("mcp");
+    client = await connectMcp(address, fingerprint, credential, undefined, "presentation");
+    const workspace = {hostIncarnationId: await hostId(client), workspaceId};
+    const windows = await call(client, "aisb_list_windows", workspace);
+    const target = (windows.value as {windows?: unknown[]} | undefined)?.windows?.[0];
+    if (!windows.ok || !target) throw new Error("The Model display window was not found.");
+    checkpoint("window-consent");
+    const request = await call(client, "aisb_request_window", {target, requestKey: randomUUID(), taskId: randomUUID()});
+    const attempt = (request.value as {request?: {target: unknown}} | undefined)?.request?.target;
+    if (!request.ok || !attempt) throw new Error("The Model display request was not created.");
+    await page.getByRole("dialog", {name: "Automation takeover request", exact: true})
+      .getByRole("button", {name: "Accept automation takeover", exact: true}).click();
+    let lease: unknown;
+    await expect.poll(async () => {
+      const status = await call(client!, "aisb_window_status", {target: attempt});
+      lease = (status.value as {lease?: unknown} | undefined)?.lease;
+      return status.ok && !!lease;
+    }).toBe(true);
+    const intent = {action: "show-model", ...model};
+    checkpoint("stale-reference");
+    const stale = await call(client, "aisb_present_in_window", {target: lease, commandId: randomUUID(),
+      intent: {...intent, modelUpdatedAt: "2000-01-01T00:00:00.000Z"}});
+    expect(stale).toEqual({ok: false, code: "headless.forbidden"});
+    const commandId = randomUUID(), command = {target: lease, commandId, intent};
+    checkpoint("show-reference");
+    const queued = await call(client, "aisb_present_in_window", command);
+    expect(queued.ok).toBe(true);
+    expect((queued.value as {receipt?: {commandId?: string}} | undefined)?.receipt?.commandId).toBe(commandId);
+    const card = page.getByRole("region", {name: "Resource shown by automation", exact: true});
+    await expect(card.getByRole("heading", {name: "Saved model", exact: true})).toBeVisible();
+    await expect(card.locator("code").nth(0)).toHaveText(model.modelRecordId);
+    await expect(card.locator("code").nth(1)).toHaveText(model.modelUpdatedAt);
+    await expect(card).toContainText("Runtime and supply checks: not checked.");
+    await expect(card.locator("button, input, form")).toHaveCount(0);
+    expect(await call(client, "aisb_present_in_window", command)).toMatchObject({ok: true, value: {duplicate: true}});
+    checkpoint("context");
+    await expect.poll(() => call(client!, "aisb_window_context", {target: lease})).toEqual({ok: true, value: {kind: "context",
+      context: {view: "model", ready: true, dirtyNavigationBlocked: false, selection: intent}}});
+    checkpoint("revoke");
+    await page.getByRole("button", {name: "Revoke automation takeover", exact: true}).click();
+    expect(await call(client, "aisb_window_context", {target: lease})).toEqual({ok: false, code: "headless.forbidden"});
+    expect(await call(client, "aisb_present_in_window", {...command, commandId: randomUUID()}))
+      .toEqual({ok: false, code: "headless.forbidden"});
+    const home = page.getByRole("button", {name: "Home", exact: true});
+    await expect(home).toBeEnabled(); await home.click();
+    await expect(page.getByRole("heading", {name: "Model display qualification", exact: true})).toBeVisible();
+  } finally {
+    let clientClosed = false;
+    try {checkpoint("sdk-close"); await client?.close(); clientClosed = true;}
+    finally {
+      if (closeProfile && clientClosed) {
+        checkpoint("app-close");
+        const cleanup = await closeProfile();
+        expect(cleanup).toMatchObject({originalAppClosed: true, freshProfileRemoved: true});
+        checkpoint("cleanup-complete");
+      } else if (app) await app.close(); // Retain unknown profile ownership.
+    }
+  }
+});
 
 async function call(client: Client, name: string, args: Record<string, unknown>) {
   const result = await client.callTool({ name, arguments: args });

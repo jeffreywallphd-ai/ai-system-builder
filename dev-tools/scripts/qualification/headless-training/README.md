@@ -2,6 +2,53 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+## Saved Model display in Desktop
+
+The separate fixed `headless-model-window-desktop-journey` check builds the
+current Desktop package and runs only “packaged Desktop shows an exact saved
+Model with separate window consent”. It creates a synthetic saved reference,
+pairs an official MCP presentation client, accepts the actual window request,
+and checks exact ID/time, stale-version refusal, minimal context and revoke.
+This is a feature UI test. It starts no model, Python runtime, download,
+training, provider call or accuracy evaluation. Trace, screenshots and video are
+off because pairing uses an ephemeral credential.
+
+The developer-only fixed driver accepts no arguments:
+
+```text
+node --import tsx dev-tools/scripts/qualification/visual-composer/headless-model-window-profile.ts
+```
+
+Use the installed npm CLI through `npm_execpath`, or its standard Windows Node
+installation path. The original qualification setup packages this worktree and
+checks source identity. This dedicated driver selects the current installed test
+Node for its two metadata-only identity seeds through the existing launch-plan
+option. The isolated profile also keeps the existing explicit Node-worker
+prerequisite used by UI fixtures. Startup checks its installed entry point with
+`node --check`; this journey does not start that worker. It does not depend on
+the operator's Python installation. Fixed checkpoint names identify a stalled
+step without logging pairing credentials or application responses.
+The app still runs the packaged Electron executable. Ordinary test
+defaults stay unchanged; no development Electron download or runtime installation
+is needed. One case, one worker and zero retries are fixed; the
+outer check allows 720 seconds, including the existing 300-second build limit.
+It does not select the full UI or system suites.
+
+A unique fresh run owns `headless-model-reveal`; an existing tree cannot be
+adopted. Cleanup captures the original app methods, launcher and actual main
+process identity. The app's own `userData` path must match the fresh profile.
+This supports Windows' command-shell launcher without parsing shell text. The
+existing root-bound native observer holds the actual Electron process through
+shutdown; both native and launcher exits must be zero, and the observer must
+close. After confirmed graceful original shutdown and SDK closure, cleanup
+checks directory identity, aliases and bounds before removing only this new
+profile. Limits are 4,096 entries, depth 24, 32 MiB per file and 128 MiB total.
+Unknown shutdown, replacement, shared files or excess data are retained for
+diagnosis; they are never credited as cleanup. These are ordinary developer
+fixture checks, with no protected-storage or hostile same-account race claim.
+Actual model execution, Managed display and Task75/parent qualification remain
+separate from this metadata-only Desktop journey.
+
 This explicit Windows x64 test runs one real CPU LoRA step through the approved
 Core metadata ledger, original input readers, private application owner and
 bounded-local runtime. It uses the existing generated Tiny input. It does not

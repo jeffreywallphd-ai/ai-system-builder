@@ -80,6 +80,14 @@
     "scope": "Exact saved Model ID/update timestamp through original recorded metadata and separate current Desktop/Managed window consent with ModelRead; existing shared card and finite MCP schema.",
     "limitations": "Focused software/UI/SDK proof only. No model/provider/start/Save, signing-key policy, actual paired host/model qualification or Task75/parent pass."
   },
+  "desktop_model_display_journey": {
+    "work_id": "headless-model-window-installed-node-seed",
+    "case": "packaged Desktop shows an exact saved Model with separate window consent",
+    "scope": "Current packaged app, official paired presentation client, actual consent/card/revoke and exact saved reference timestamp; original app-bound fresh profile cleanup. The dedicated metadata seeds reuse the current installed Node; app/runtime binaries and ordinary test defaults are unchanged.",
+    "evidence_policy": "The exact executed Work receipt and independent review must establish this feature result. This declaration supplies no pass.",
+    "model_runtime_executed": false,
+    "limitations": "Synthetic saved metadata reference only. No actual model/provider/download/training/accuracy, Managed key policy, Task75 or parent qualification."
+  },
   "shared_fixture_support": {
     "work_id": "headless-bounded-text-workflow-test",
     "fixture": "modules/hosts/desktop/composition/tests/headless-text-workflow.fixture.ts",

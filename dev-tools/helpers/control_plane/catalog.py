@@ -344,6 +344,22 @@ MODEL_PRESENTATION_SCOPE = MODEL_PRESENTATION_REQUIRED + (MODEL_PRESENTATION_CON
     "modules/adapters/transport/headless-mcp/README.md", "docs/security/headless-system-builder-threat-model.md",
     "docs/operations/headless-text-generation-feature.json", "dev-tools/helpers/control_plane/catalog.py",
     "docs/diagnostics/ai-development-control-plane.md")
+MODEL_WINDOW_JOURNEY_REQUIRED = (
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts",
+    "dev-tools/scripts/qualification/visual-composer/headless-model-window-profile.ts",
+    "dev-tools/scripts/qualification/tests/headless-model-window-profile.unit.test.ts",
+    "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
+    "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
+    "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
+    "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.mjs",
+    "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts",
+    "dev-tools/scripts/qualification/observe_windows_process_exit.py",
+    "dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs")
+MODEL_WINDOW_JOURNEY_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_model_window_journey.py"
+MODEL_WINDOW_JOURNEY_SCOPE = MODEL_WINDOW_JOURNEY_REQUIRED + (MODEL_WINDOW_JOURNEY_CONTROLLER,
+    "dev-tools/helpers/control_plane/catalog.py", "dev-tools/scripts/qualification/headless-training/README.md",
+    "docs/diagnostics/ai-development-control-plane.md", "docs/operations/headless-text-generation-feature.json")
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
@@ -1161,6 +1177,24 @@ PUBLISHED_FORM_CHECKS = {
         "command": ("--import", "tsx", "--test", "--test-concurrency=1", "--")
             + (MODEL_PRESENTATION_REQUIRED[1], MODEL_PRESENTATION_REQUIRED[4], MODEL_PRESENTATION_REQUIRED[6])
             + MODEL_PRESENTATION_REQUIRED[-2:],
+    },
+    "headless-model-window-profile-unit": {
+        "automatic_sources": MODEL_WINDOW_JOURNEY_REQUIRED,
+        "automatic_required_files": MODEL_WINDOW_JOURNEY_REQUIRED,
+        "sources": MODEL_WINDOW_JOURNEY_SCOPE,
+        "command": ("--import", "tsx", "--test", "--", MODEL_WINDOW_JOURNEY_REQUIRED[3], MODEL_WINDOW_JOURNEY_REQUIRED[5], MODEL_WINDOW_JOURNEY_REQUIRED[-1]),
+    },
+    "headless-model-window-profile-types": {
+        "companion_to": "headless-model-window-profile-unit", "sources": MODEL_WINDOW_JOURNEY_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM")
+            + MODEL_WINDOW_JOURNEY_REQUIRED[2:4],
+    },
+    "headless-model-window-desktop-journey": {
+        "automatic_sources": MODEL_WINDOW_JOURNEY_REQUIRED,
+        "automatic_required_files": MODEL_WINDOW_JOURNEY_REQUIRED,
+        "sources": MODEL_WINDOW_JOURNEY_SCOPE, "timeout": 720,
+        "command": ("--import", "tsx", MODEL_WINDOW_JOURNEY_REQUIRED[2]),
     },
     "headless-model-record-presentation-types": {
         "companion_to": "headless-model-record-presentation-unit", "sources": MODEL_PRESENTATION_SCOPE,
@@ -4925,6 +4959,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_model_presentation.", "-k", "test_control_plane_focused."]
+    if (paths and set(paths) <= set(MODEL_WINDOW_JOURNEY_SCOPE)
+            and ("dev-tools/helpers/control_plane/catalog.py" in paths or MODEL_WINDOW_JOURNEY_CONTROLLER in paths)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": MODEL_WINDOW_JOURNEY_REQUIRED +
+                (MODEL_WINDOW_JOURNEY_CONTROLLER, "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_model_window_journey.", "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

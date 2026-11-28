@@ -3786,6 +3786,28 @@ only the matching controller routing tests; missing or unknown impact preserves
 fallback. No model, provider, public host or whole-system qualification is run
 by these component checks.
 
+`headless-model-window-profile-unit` and its strict type companion exercise the
+exclusive fresh profile, original app receiver/shutdown and bounded cleanup
+refusals. The fixed `headless-model-window-desktop-journey` driver uses the
+existing current-worktree package setup and one exact Model-display UI case.
+It accepts no command/test arguments, starts no model/provider/runtime, disables
+retries and preserves unknown cleanup. Complete known scope narrows only related
+controller tests; missing/unknown/explicit generic impact keeps fallback. This
+single feature journey cannot supply Managed, model-runtime or parent completion.
+The dedicated driver also selects the already installed test Node for SQLite
+identity seeding through the existing launch-plan option. The actual app still
+uses its rebuilt Electron package. The default seed choice for other profiles
+stays unchanged; invalid fixed-profile configuration refuses startup.
+The fresh Model profile retains the existing explicit Node-worker prerequisite
+for the app's syntax-only startup check. It starts no worker and does not probe
+the operator's Python installation. A bounded fixed-name checkpoint file records
+at most sixteen fixed UI test stages without credentials, prompts or response data.
+The original app supplies its exact user-data path and main process identity.
+The existing root-bound native observer checks that Electron process beneath
+the original Windows launcher. Native and launcher zero exit plus observer
+closure are required before removing the fresh profile. Shell text and PID
+absence cannot supply this proof; earlier uncertain profiles stay retained.
+
 `headless-model-record-presentation-unit` exercises the original recorded Model
 reader, exact selector and shared card. Its strict companion compiles production
 reader/card/Desktop Root and related typed tests. The existing window authority,

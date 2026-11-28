@@ -93,7 +93,17 @@ export function compareFixedOcrPackageInventories(before, after) {
 }
 
 export default async function visualComposerGlobalSetup(config) {
-  return startVisualComposerQualification(config, createVisualComposerHostLaunchPlan());
+  return startVisualComposerQualification(config, createVisualComposerHostLaunchPlan(resolveModelWindowSeedOptions()));
+}
+
+// Trusted developer profile only. This changes metadata seeding, never the
+// packaged app/runtime executable, and keeps every ordinary default intact.
+export function resolveModelWindowSeedOptions(environment = process.env, nodeExecutable = process.execPath) {
+  const requested = environment.VISUAL_COMPOSER_MODEL_WINDOW_NODE_SEED;
+  if (requested === undefined) return {};
+  if (requested !== "1" || typeof nodeExecutable !== "string" || !path.isAbsolute(nodeExecutable) || /[\0\r\n]/.test(nodeExecutable))
+    throw new Error("Invalid fixed Model window seed configuration.");
+  return {electronNodeExecutablePath: nodeExecutable};
 }
 
 // Reuse authentication, lifecycle and teardown for a separately reviewed fixed
