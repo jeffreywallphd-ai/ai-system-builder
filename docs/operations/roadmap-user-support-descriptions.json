@@ -3045,6 +3045,112 @@
           "The trusted model resolver and future public approval process must verify the exact original selection and current permission. Another checkout may lack the local records."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c4d10dd64ef8630527343db2fd11f9abc826138faa722d3283f047a3b0531d5c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests checked that the app saves one response for one approved text request.",
+          "The tests used fixed runtime replies on both storage types."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c6a924f3227b37dab668a98d5945e112f76eb85997aa726ac3623fdab897e77f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These records show reviewed work at an earlier saved source version.",
+          "The agent must still finish the remaining host checks.",
+          "No task, increment or roadmap pass is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4738158563ae2f3725d6f8894489d4e7124b153a9051f35da2beb29e843306bf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish the paired Desktop and Managed model journeys.",
+          "Remaining checks cover exact results, window permission, resource refusals, recovery and cleanup."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8dafba4f8182835d955c22ce248e6ea8288083b487ae61423de64a0a87935da6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model accuracy tests stay closed.",
+          "Earlier failures and files with unknown owners are preserved.",
+          "These records grant no permission for new actions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "186cc1d383fe1c0797d1fe2a596e01b818a48efd04eac429b654d71ccd378ce0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed an extra input that caused text generation to fail.",
+          "Tests checked that attention masks and output limits stay in place."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0c72ef15ced35801f250c1aaa56faa64cb3684fbe87ac5d0b045b6a3fa6e82a4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The installed Tiny model completed one approved text request.",
+          "Tests verified the exact saved response and safe repeat handling.",
+          "The new test files were removed after worker shutdown was confirmed.",
+          "No accuracy test was run."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8523d9bad07fee745989be4a40c5ca14e44ccafb68333d1623caf97a06dcc69f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The server checks who is asking and which workspace they can read.",
+          "It checks access again before it returns workflow or saved conversation status."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e520f1d30ddfad4ca43d4178356ec7f011bd44a01a32bd1874f958a89d50dd72",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Connected the existing server readers to the agent connection.",
+          "Thirteen feature checks passed.",
+          "Replies omit private text and separate conversation permissions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2b52ecc7154b7146bde2546d0a95a1f80136ca7690990686fba74e61ba3dff11",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app can show one exact saved Model in an approved window.",
+          "Tests checked the saved timestamp, read access and ending window control.",
+          "Fourteen feature checks passed.",
+          "Displaying the record does not start a model."
+        ]
+      }
     }
   ]
 }

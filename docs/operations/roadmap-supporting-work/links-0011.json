@@ -1,0 +1,118 @@
+{
+  "schema_version": "roadmap-supporting-work-links-v1",
+  "links": [
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-composed-text-response-persistence",
+      "work_criteria": [
+        "original-text-persistence-chain",
+        "accepted-task-and-replay",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "50863cb91d317561e8b4f535c81511b167da09fa56768dba6f917e70dadf8e66",
+      "review_digest": "271cbebd68837893438c9b301c8448d7751da09dee84d7e002e4e348738d66f0",
+      "scope": "Tests checked the original approved text workflow and exact saved response on Core and SQLite. A controlled runtime supplied the text for these software checks.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete Task75 or pass a parent criterion or increment.",
+        "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
+        "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "work_id": "headless-causal-tokenizer-inputs",
+      "work_criteria": [
+        "decoder-input-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5f717a36a84a4ab5078c107bd98d015a62e5b80272dec10cc2d6050392d06dff",
+      "review_digest": "934fed64a3e38d0c59365f7f0509c3ffec9401bbf2eadb8d815ce6d274386cac",
+      "scope": "Fixed a real text-generation failure: the causal model no longer receives unsupported token segment IDs. Focused tests retain attention masks, output limits and decoder behavior.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete Task75 or pass a parent criterion or increment.",
+        "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
+        "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-actual-tiny-text-tokenizer-verification",
+      "work_criteria": [
+        "actual-approved-text-and-exact-history",
+        "current-access-and-owned-cleanup",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "f1672c7746e7a063ff054f5809c57521ed09a10dd706eb8d4e984e2a2d149d30",
+      "review_digest": "fe01d1db63e5da56c877ec3b84533a6d41257a6e54fdd8260190b14e4d6f0488",
+      "scope": "The original offline Tiny model completed one approved text turn. Tests compared its exact saved response, verified replay and current access, and confirmed worker shutdown and cleanup of the new test files. No accuracy score was calculated.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete Task75 or pass a parent criterion or increment.",
+        "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
+        "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-managed-workflow-read-ownership",
+      "work_criteria": [
+        "original-workflow-and-status-reads",
+        "current-managed-read-authority",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "39ec7cfc466399ebe8eb028ee11db409a8b8b2bbddd614c9b5459a14f9a8a606",
+      "review_digest": "8fa010646d540d2ec8a39b66e8afd09ff080e278d110492e2e600190ce93d82f",
+      "scope": "The server checks the current user, workspace, role and read permissions before returning workflow metadata or exact saved conversation status. Tests cover changed access during reads.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete Task75 or pass a parent criterion or increment.",
+        "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
+        "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-managed-workflow-read-public-integration",
+      "work_criteria": [
+        "finite-correlated-managed-read-transport",
+        "original-managed-host-reader-wiring",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "b5e1a574fe166bec6ba39352529f7f174e0f70fec27d83921cfaa8709fb051ea",
+      "review_digest": "7ca32f8d8a2f9d19f96f64796e32f7b680ce5e7960693ef4b0775fd4418eb963",
+      "scope": "Connected the original server readers to the authenticated HTTP and MCP read paths. Thirteen focused checks passed, including strict compilation, the server build and local protocol tests. Replies exclude private fields and separate conversation permission handles.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete Task75 or pass a parent criterion or increment.",
+        "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
+        "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-model-record-window-reveal",
+      "work_criteria": [
+        "exact-model-reveal",
+        "shared-card-and-client-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "88cab467b27bdbc865ef45abbd0d7129fd43d9d9726517983462acd20eeea8c7",
+      "review_digest": "452bd4a82364bce7b7dbf1eaa8db3801665254d2beb34fa09f366646e9cdcf48",
+      "scope": "Both hosts can show an exact saved Model ID and saved timestamp in a separately approved window. Fourteen checks passed, including the shared card, current Model read permission, an actual server Root fixture, stale versions and revocation. Display starts no model.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete Task75 or pass a parent criterion or increment.",
+        "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
+        "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
+      ]
+    }
+  ]
+}
